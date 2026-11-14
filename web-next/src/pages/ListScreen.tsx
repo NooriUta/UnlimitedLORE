@@ -3,6 +3,7 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
+import { ModelNotes } from '../record/ModelNotes';
 import { useChildRows } from '../lists/useChildRows';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyChunk } from '../shell/staleChunk';
@@ -482,9 +483,6 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     ...(def.note ? [def.note] : []),
     ...(def.closedNote && def.closedSlice && !loadClosed ? [def.closedNote] : []),
     ...(body ? sliceWarnings(body) : []),
-    // Оговорки про ось статусов — там же, где прочие: человек должен видеть,
-    // что список статусов взят не из модели, а из умолчания приложения.
-    ...(modelStatuses?.notes ?? []),
     // Цвет продукта не загрузился — список без колонки «Продукт», и это сказано.
     ...(paint && 'error' in paint ? [t('lists.productPaint.failed', { reason: paint.error })] : []),
   ];
@@ -744,6 +742,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           {warnings.map(w => <li key={w}>{w}</li>)}
         </ul>
       )}
+      {/* MP2-08 (владелица 13.11): оговорки модели (статусы взяты из умолчания, у статуса нет цвета)
+          — техническое сообщение, его место под значком тех. сведений, как в паспорте, а не полосой
+          над списком. Полоса выше — про ВЫДАЧУ (обрезано, закрытые скрыты), она остаётся на месте. */}
+      <ModelNotes notes={modelStatuses?.notes ?? []} />
       {content}
     </section>
   );
