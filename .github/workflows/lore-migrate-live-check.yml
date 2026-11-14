@@ -70,6 +70,13 @@ jobs:
         with:
           fetch-depth: 0   # дифф base...HEAD для migcheck-needed.sh
 
+      # OH-17: отмена прогона (cancel-in-progress) не выполняет шаги if: always(), и уборка
+      # «своего прогона» не срабатывает. Поэтому каждый прогон сперва снимает брошенное
+      # ЧУЖИМИ прогонами: только наше (метка lore.ci.run, lore-migcheck:*), старше 6 ч.
+      - name: Уборка брошенного отменёнными прогонами (старше 6 ч)
+        continue-on-error: true
+        run: bash .github/scripts/ci-teardown.sh --stale 6
+
       - name: Нужна ли проверка (менялись схема или инструмент)
         id: need
         env:

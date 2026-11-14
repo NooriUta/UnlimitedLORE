@@ -4599,7 +4599,7 @@
     "tone" : "var(--wrn)",
     "items" : [ {
       "section" : "settings",
-      "icon" : "cog",
+      "icon" : "material-symbols:settings-outline",
       "view" : "settings"
     } ]
   } ],

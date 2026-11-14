@@ -369,8 +369,17 @@ describe('PL-03: шаблон пустой базы lore-schema-vN.zip — ар�
   });
 
   it('контейнеры своего прогона убираются всегда (OH-17)', () => {
-    const t = st().find((s) => /ci-teardown\.sh/.test(s.body));
+    const t = st().find((s) => /ci-teardown\.sh "\$\{\{ github\.run_id \}\}"/.test(s.body));
     expect(t?.body).toMatch(/if: always\(\)/);
+  });
+
+  it('брошенное отменёнными прогонами снимается в начале прогона (OH-17, отмена не выполняет always())', () => {
+    const all = st();
+    const sweep = all.findIndex((s) => /ci-teardown\.sh --stale \d+/.test(s.body));
+    const own = all.findIndex((s) => /ci-teardown\.sh "\$\{\{ github\.run_id \}\}"/.test(s.body));
+    expect(sweep, 'шага уборки брошенного нет').toBeGreaterThanOrEqual(0);
+    expect(sweep, 'уборка брошенного — до работы прогона, а не в конце').toBeLessThan(own);
+    expect(all[sweep].body, 'уборка брошенного не валит прогон').toMatch(/continue-on-error: true/);
   });
 });
 
