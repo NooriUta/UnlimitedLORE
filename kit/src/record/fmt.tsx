@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
+import { ObjectMention } from '../elements/ObjectMention';
 import { toCssColor } from './graph';
 
 /** Результат overview/render конфига: строка — это Markdown (через ctx.md). */
@@ -65,15 +66,11 @@ export function StatusPill({ code, ctx, unknownTitle, kind }: { code: string; ct
  * Правило общее: название показывается, только когда говорит что-то помимо
  * кода; сравнение — без учёта регистра и крайних пробелов.
  */
-export function RecordRef({ id, ctx }: { id: string; ctx: KitCtx }) {
+export function RecordRef({ id, ctx, kind }: { id: string; ctx: KitCtx; /** Вид, если записи нет среди загруженных, но он известен (поле-ссылка, ребро). */ kind?: string }) {
   const r = findRecord(ctx, id);
-  const title = r?.title?.trim();
-  const same = !!title && title.toLocaleLowerCase() === id.trim().toLocaleLowerCase();
-  const head = title && !same ? title : id;
+  // K4-MENTION-LOOK: значок и цвет вида — общим элементом упоминания.
   return (
-    <a className="sk-rec-ref" href={ctx.href(id)} data-missing={r ? undefined : 'true'}>
-      <span className="sk-rec-ref__name">{head}</span>
-      {r && !same && title && <span className="sk-pill sk-pill--id">{id}</span>}
-    </a>
+    <ObjectMention id={id} kind={r?.kind ?? kind} title={r?.title} href={ctx.href(id)} kinds={ctx.config.kinds}
+      missing={!r} showId={!!r} className="sk-rec-ref" nameClassName="sk-rec-ref__name" />
   );
 }

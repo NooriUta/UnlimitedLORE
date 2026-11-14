@@ -30,6 +30,7 @@ import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
 import { Kbd } from '../elements/Kbd';
 import { Pill } from '../elements/Pill';
+import { ObjectMention } from '../elements/ObjectMention';
 import {
   LIST_RESERVED_KEYS, ariaKeyshortcuts, assertKeymap, findAction, isMacPlatform, kbdKeys,
 } from '../keyboard/keymap';
@@ -1736,9 +1737,9 @@ export function ListView({
   const feedRef = (x: { id: string; type: string }): ReactNode => {
     const target = data.records.find(rr => rr.id === x.id);
     const label = config.edges?.[x.type]?.label ?? x.type;
-    return href
-      ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
-      : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
+    // K4-MENTION-LOOK: связанная запись — упоминание: значок и цвет её вида; адреса нет — текст.
+    return <ObjectMention key={x.id} id={x.id} kind={target?.kind} href={href ? href(x.id) : null} kinds={config.kinds}
+      className="sk-feed__ref" hint={label}>{target?.title ?? x.id}</ObjectMention>;
   };
 
   const feedBecause = (r: KitRecord): ReactNode => {

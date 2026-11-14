@@ -24,6 +24,8 @@ import { sanitizeMd, sanitizeSvg } from './sanitizeHtml';
 import { kitT } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 import { useRefPeek, type MartRefPeek } from './RefPeekLayer';
+import { mentionColor, type MentionLook } from '../elements/ObjectMention';
+import { gameIconSvg } from '../elements/GameIcon';
 
 export type { MartRefPeek, MartPeekRef } from './RefPeekLayer';
 
@@ -273,9 +275,36 @@ function linkRefs(root: HTMLElement, refHref: MartRefHref) {
   });
 }
 
+/**
+ * Облик ссылки [[…]] по виду записи (SPRINT_UXR_S13_KIT4/K4-MENTION-LOOK): значок и цвет —
+ * те же, что у упоминания в свойствах и связях. Вид по ссылке называет приложение
+ * (тип в ссылке или форма кода); null — рамка без значка, как была.
+ */
+export type MartRefLook = (ref: { id: string; type: string | null }) => MentionLook | null;
+
+/** Рамкам .sk-wref — значок и цвет вида. Повторный проход ничего не дублирует. */
+function lookRefs(root: HTMLElement, refLook: MartRefLook) {
+  root.querySelectorAll<HTMLElement>('.sk-wref').forEach(el => {
+    if (el.hasAttribute('data-mention')) return;
+    const id = el.getAttribute('data-ref') ?? '';
+    const type = el.getAttribute('data-ref-type');
+    const look = id ? refLook({ id, type }) : null;
+    if (!look) return;
+    el.setAttribute('data-mention', '');
+    el.classList.add('sk-mention');
+    if (type) el.setAttribute('data-kind', type.toLowerCase());
+    const color = mentionColor(look.color);
+    if (color) { el.style.setProperty('--mention-c', color); el.setAttribute('data-tinted', 'true'); }
+    const svg = look.icon ? gameIconSvg(look.icon, 12, 'sk-icon sk-mention__icon') : null;
+    if (svg) el.insertAdjacentHTML('afterbegin', svg);
+  });
+}
+
 /** refPeek — карточка Peek со ссылки (S9-10): мышь — наведение, палец — нижний лист. */
-export function MartProse({ text, style, className, refHref, refPeek, blocks, narrow: narrowProp }: {
+export function MartProse({ text, style, className, refHref, refPeek, refLook, blocks, narrow: narrowProp }: {
   text?: string | null; style?: CSSProperties; className?: string; refHref?: MartRefHref; refPeek?: MartRefPeek;
+  /** K4-MENTION-LOOK: значок и цвет ссылок [[…]] по виду записи (даёт приложение). */
+  refLook?: MartRefLook;
   /** S6-04: живые блоки — язык фенса → исполнитель (даёт приложение). */
   blocks?: LiveBlocks;
   narrow?: boolean;
@@ -291,7 +320,8 @@ export function MartProse({ text, style, className, refHref, refPeek, blocks, na
   // После каждой отрисовки html (React перезаписывает innerHTML сегмента при смене текста).
   useLayoutEffect(() => {
     if (refHref && rootRef.current) linkRefs(rootRef.current, refHref);
-  }, [segments, refHref]);
+    if (refLook && rootRef.current) lookRefs(rootRef.current, refLook);
+  }, [segments, refHref, refLook]);
   // Хук — до раннего выхода: порядок хуков не должен зависеть от того, есть ли текст.
   const peek = useRefPeek(refPeek, { clickCard: true });
   if (!text) return null;

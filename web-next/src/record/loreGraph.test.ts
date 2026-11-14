@@ -4,6 +4,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { KitData } from '@seidr/kit';
 import { depthsOf, fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
+import { LORE_KIND_COLOR } from '../shell/loreKinds';
 
 const BODY: LoreGraphBody = {
   nodes: [
@@ -82,7 +83,12 @@ describe('GC-04 · клиент /lore/graph', () => {
 
   it('типы графа: подпись и цвет-токен у каждого типа LORE, без сырых цветов', () => {
     for (const t of ['sprint', 'task', 'adr', 'spec', 'decision', 'release', 'milestone', 'component', 'project']) {
-      expect(LORE_GRAPH_TYPES('ru')[t]?.color, t).toMatch(/^--(acc|suc|wrn|dng|inf|t1|t2|t3)$/);
+      expect(LORE_GRAPH_TYPES('ru')[t]?.color, t).toMatch(/^(--(acc|suc|wrn|dng|inf|t1|t2|t3)|var\(--type-[a-z]+\))$/);
     }
+  });
+
+  it('K4-MENTION-LOOK: узел графа — цветом вида, тем же, что упоминание (канон v1)', () => {
+    const g = LORE_GRAPH_TYPES('ru');
+    for (const [t, c] of Object.entries(LORE_KIND_COLOR)) expect(g[t]?.color, t).toBe(c);
   });
 });

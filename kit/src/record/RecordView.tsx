@@ -207,7 +207,7 @@ export function boolOf(v: unknown): boolean | null {
   return null;
 }
 
-function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string }): ReactNode {
+function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
   const lang = useKitLang();
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
@@ -222,9 +222,9 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title }: { type: string;
     // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
     // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
     // существующих полей, и тип поля об этом не знает.
-    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} fromLabel={t => ctx.config.kinds[t]?.inherited} />;
+    if (isChipList(value)) return <ValueChips value={value} href={ctx.href} fromLabel={t => ctx.config.kinds[t]?.inherited} kind={refKind} kinds={ctx.config.kinds} />;
     const ids = (Array.isArray(value) ? value : [value]).map(v => valueText(v));
-    return <span className="sk-rec-fields__refs">{ids.map(id => <RecordRef key={id} id={id} ctx={ctx} />)}</span>;
+    return <span className="sk-rec-fields__refs">{ids.map(id => <RecordRef key={id} id={id} ctx={ctx} kind={refKind} />)}</span>;
   }
   if (type === 'enum') return <span className="sk-pill sk-pill--value">{valueText(value)}</span>;
   if (type === 'number' || type === 'date') return <span className="sk-rec-fields__mono">{valueText(value)}</span>;
@@ -246,9 +246,9 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
     <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
       <dt>{f.title}</dt>
       <dd>{(() => {
-        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} />;
+        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} refKind={f.refKind} />;
         // S4-24: поле-связь (компоненты, проекты) — чипы с «Отвязать» и выбор с поиском.
-        if (f.type === 'ref' && f.relation) return <RelationField record={record} ctx={ctx} lang={lang} label={f.title} value={record.fields[f.key]} rel={f.relation.rel} dir={f.relation.dir} view={view} />;
+        if (f.type === 'ref' && f.relation) return <RelationField record={record} ctx={ctx} lang={lang} label={f.title} value={record.fields[f.key]} rel={f.relation.rel} dir={f.relation.dir} refKind={f.refKind} view={view} />;
         // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
         // enum без вариантов не правится — выбирать не из чего.
         // S4-24: варианты не загрузились — причина словами и «Повторить», а не свободный ввод.

@@ -15,6 +15,7 @@ import { ICON_CANON, SECTION_ICONS } from '@seidr/kit';
 import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { ADMIN_MODULE, adminMenu } from '../admin/adminModule';
+import { loreKinds } from './loreKinds';
 
 /**
  * Разделы меню v2 — они же id пунктов меню и ключи экранов.
@@ -186,32 +187,8 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
     },
-    kinds: {
-      // inherited — подпись значения, унаследованного от записи вида (K-14: слово LORE, не kit).
-      sprint: { title: t('shell.sec.sprint'), icon: 'sprint', inherited: t('shell.inherited.sprint') },
-      task: { title: t('shell.sec.task'), icon: ICON_CANON.sectionTask },
-      adr: { title: t('shell.sec.adr'), icon: 'scroll-quill' },
-      news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
-      // S4-V2-SECTIONS: виды записей новых разделов. Нужны палитре и
-      // «Недавнему» — без вида запись в них рисуется безымянной.
-      milestone: { title: t('shell.sec.milestone'), icon: 'crossed-axes' },
-      release: { title: t('shell.sec.release'), icon: 'open-book' },
-      decision: { title: t('shell.sec.decision'), icon: 'gavel' },
-      spec: { title: t('shell.sec.spec'), icon: 'scroll-unfurled' },
-      doc: { title: t('shell.sec.doc'), icon: 'bookshelf' },
-      question: { title: t('shell.sec.question'), icon: 'help' },
-      component: { title: t('shell.sec.component'), icon: 'cog' },
-      tech: { title: t('shell.sec.tech'), icon: 'gears' },
-      feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge', inherited: t('shell.inherited.feature') },
-      project: { title: t('shell.sec.project'), icon: 'open-folder' },
-      user: { title: t('shell.sec.user'), icon: 'person' },
-      agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
-      product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
-      actor: { title: t('shell.sec.actor'), icon: 'hooded-figure' },
-      pain: { title: t('shell.sec.pain'), icon: 'thorn-helix' },
-      gain: { title: t('shell.sec.gain'), icon: 'gift-of-knowledge' },
-      job: { title: t('shell.sec.job'), icon: 'archery-target' },
-    },
+    // K4-MENTION-LOOK: виды с подписью, значком и цветом — одним местом (loreKinds).
+    kinds: loreKinds(lang),
     statuses: {
       // Словарь из модели главнее: он данные, а рукописный список — умолчание.
       items: statusesFromModel?.length

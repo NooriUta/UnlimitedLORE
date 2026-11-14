@@ -156,7 +156,9 @@ class Collector {
     // Токен не из темы kit — возможно, свой токен приложения (это законно), а
     // возможно, опечатка. Поэтому предупреждение, а не отказ.
     const name = tokenName(v);
-    if (name && !(KIT_COLOR_TOKENS as readonly string[]).includes(name)) {
+    // K4-MENTION-LOOK: --type-* — палитра цветов видов в теме kit; имена видов называет
+    // приложение (K-14), поэтому валидатор знает семейство, а не перечень.
+    if (name && !(KIT_COLOR_TOKENS as readonly string[]).includes(name) && !name.startsWith('type-')) {
       this.warn(p, 'color-token-unknown',
         `${p}: токен «--${name}» не из темы kit — если это токен приложения, объявите его в своей теме; иначе проверьте опечатку`);
     }
@@ -238,7 +240,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       });
       // K-14: подпись наследования от записи вида («от спринта») — слово приложения.
       if (k.inherited !== undefined) c.str(k, 'inherited', p);
-      c.unknownKeys(k, ['title', 'icon', 'overview', 'tabs', 'fields', 'inherited'], p, 'kit его не прочтёт');
+      // K4-MENTION-LOOK: цвет вида — токен темы (упоминания, узлы графа).
+      c.color(k, 'color', p, false);
+      c.unknownKeys(k, ['title', 'icon', 'color', 'overview', 'tabs', 'fields', 'inherited'], p, 'kit его не прочтёт');
     }
   }
 

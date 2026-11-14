@@ -14,3 +14,5 @@ export * from './Segmented';
 // Канон иконок (S4-25) и вшитый lucide.
 export * from './iconCanon';
 export * from './MiniList';
+// K4-MENTION-LOOK: упоминание чужого объекта — значок и цвет его вида + ссылка.
+export * from './ObjectMention';
