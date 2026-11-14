@@ -5,9 +5,10 @@
 // листалка по списку и «⤢». Свой ушко «Свойства» RecordReader НЕ включаем (aside нет):
 // свойства во весь экран — рейка и свёртка самого RecordView (сессия kit, #914).
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
+import { RecordNotFound } from '../api/liveRecord';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
+  EmptyState, LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
   HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
@@ -91,6 +92,8 @@ export interface ListPassportProps {
   onGo?: (id: string) => void;
   /** «⤢» — развернуть на весь экран; нет — кнопки нет (уже во весь экран). */
   onFull?: () => void;
+  /** MP2-11: куда ⤢ возвращает из полного экрана — место, из которого вошли. */
+  backPlace?: RecordPlacement;
   /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
@@ -107,7 +110,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -284,7 +287,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // высотой и шириной между состояниями; теперь бар один и тот же.
   const barCrumbs = backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view?.record.id ?? id} /> : undefined;
   const barPager = onGo && ids.length > 0 ? <RecordPager ids={ids} current={view?.record.id ?? id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined;
-  const barTools = <PassportPlace value={placement} onPlace={setPlace} />;
+  const barTools = <PassportPlace value={placement} onPlace={setPlace} back={backPlace} />;
   // Дерево состояний ОДИНАКОВОЕ сверху: сборщик → оговорки → бар → тело.
   // Бар стоит на одном и том же месте во всех трёх ветках, поэтому React
   // сохраняет его узлы (и фокус, и раскрытое меню) при переходе
@@ -294,7 +297,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       <WarningsProvider>
         <ModelNotes notes={[...order.notes, ...statuses.notes]} />
         <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
-        <LoadError error={pp.error} onRetry={pp.reload} />
+        {/* «Записи нет» (404) — ответ, а не сбой: данные получены, и запись отсутствует (находка preprod 14.11). */}
+        {pp.error instanceof RecordNotFound
+          ? <EmptyState title={t('pp.notFound', { id })} hint={t('pp.notFoundHint', { id })} />
+          : <LoadError error={pp.error} onRetry={pp.reload} />}
       </WarningsProvider>
     );
   }

@@ -253,6 +253,8 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     // Вид обоих концов (сервер 11.11): kit отбирает по нему связь, не угадывая по записям.
     ...(str(l.fromKind) ? { fromKind: str(l.fromKind) } : {}),
     ...(str(l.toKind) ? { toKind: str(l.toKind) } : {}),
+    // S9-05 / D14: колонки таблицы детей по типу ребёнка — как прислал сервер.
+    ...(l.values && typeof l.values === 'object' && !Array.isArray(l.values) ? { values: l.values as Record<string, unknown> } : {}),
   }));
 
   const writeOf = (w: unknown): { endpoint: string; field: string } | null => {

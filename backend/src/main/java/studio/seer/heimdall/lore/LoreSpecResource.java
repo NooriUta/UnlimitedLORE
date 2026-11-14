@@ -54,12 +54,18 @@ public class LoreSpecResource extends LoreResourceBase {
      */
     public record SpecLinkRequest(String spec_id, String rel, String target_id, String mode) {}
 
+    /** Прежний upsert без режима — для внутренних вызовов (LoreTidyResource). */
+    public Response upsertSpec(SpecUpsertRequest req, String role) {
+        return upsertSpec(req, role, null);
+    }
+
     @POST
     @Path("spec")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response upsertSpec(SpecUpsertRequest req,
-                               @HeaderParam("X-Seer-Role") String role) {
+                               @HeaderParam("X-Seer-Role") String role,
+                               @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.spec_id() == null || req.spec_id().isBlank())
@@ -68,6 +74,8 @@ public class LoreSpecResource extends LoreResourceBase {
             return badParams("spec_id contains illegal characters");
         Response stale = versionConflict("spec", req.spec_id(), req.expected_version());
         if (stale != null) return stale;
+        Response taken = createOnly("spec", req.spec_id(), mode);   // MT-MCP-TRUTH п.1: ?mode=create
+        if (taken != null) return taken;
         // DS-4: только значение словаря — свободный текст снова растащил бы статус
         // по написаниям («Предложение», «proposal», «draft»), как было у решений.
         if (req.status() != null && !req.status().isBlank()) {

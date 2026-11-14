@@ -54,7 +54,13 @@ final class LoreRecordFrom {
         /** Первая непустая строка из колонок по порядку: «название, иначе ключ». */
         FIRST_OF,
         /** Первый элемент списка первой колонки, иначе строка второй: «ребро, иначе денормализация». */
-        HEAD_OR
+        HEAD_OR,
+        /**
+         * S9-05 / D14: прогресс «готово из всего» — {@code {done, total}} из колонок (статусы
+         * задач, всего): готово — статус с токеном плана {@code done} (тот же словарь, что факт
+         * «готово x/y» паспорта спринта). Числа «всего» нет — null («не посчитали»), а не 0/0.
+         */
+        PROGRESS
     }
 
     /**
@@ -117,7 +123,20 @@ final class LoreRecordFrom {
             case PRESENT -> LoreRecordValues.str(first) != null;
             case FIRST_OF -> firstOf(f.columns(), row);
             case HEAD_OR -> headOr(f.columns(), row);
+            case PROGRESS -> progress(f.columns(), row);
         };
+    }
+
+    private static Map<String, Object> progress(List<String> columns, Map<String, Object> row) {
+        Object total = row.get(columns.get(1));
+        if (!(total instanceof Number t)) return null;
+        int done = 0;
+        for (String raw : LoreRecordValues.arr(row.get(columns.get(0))))
+            if ("done".equals(LoreRecordValues.planToken(raw))) done++;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("done", done);
+        m.put("total", t.intValue());
+        return m;
     }
 
     private static String trim(String s) { return s == null ? null : s.trim(); }
@@ -169,8 +188,12 @@ final class LoreRecordFrom {
 
     /** Строка отдельного среза вкладки → связь. */
     static Map<String, Object> sliceLink(SliceLink sl, Map<String, Object> row) {
-        return LoreRecordValues.link(sl.rel(), sl.dir(), (String) apply(sl.id(), row), sl.type(),
+        Map<String, Object> link = LoreRecordValues.link(sl.rel(), sl.dir(), (String) apply(sl.id(), row), sl.type(),
             (String) apply(sl.title(), row), sl.status() == null ? null : (String) apply(sl.status(), row));
+        // S9-05 / D14: у ребёнка-задачи и ребёнка-спринта — значения колонок по его типу.
+        List<Val> child = CHILD_VALUES.get(sl.type());
+        if (child != null) link.put("values", assemble(child, row));
+        return link;
     }
 
     static SliceLink sliceLinkDef(String type, String key) {
@@ -421,6 +444,22 @@ final class LoreRecordFrom {
             s("title", "title"),
             s("date", "date_created"))));
 
+    /**
+     * SPRINT_UXR_S9_SCALE_OPT/S9-05, решение владелицы D14 «колонки по типу ребёнка»: значения
+     * колонок таблицы детей паспорта-родителя — по типу ребёнка, ключом {@code values} в связи из
+     * отдельного среза. Колонки читают срезы детей ({@link LoreSlices#CHILD_TASK_COLS},
+     * {@link LoreSlices#CHILD_SPRINT_COLS}). Прочие связи — без {@code values}: контракт прежний.
+     */
+    static final Map<String, List<Val>> CHILD_VALUES = Map.of(
+        "task", List.of(
+            s("executor", "executor_agent"),
+            v("effort", Transform.RAW, "effort_days"),
+            s("work_class", "work_class")),
+        "sprint", List.of(
+            v("progress", Transform.PROGRESS, "task_statuses", "tasks_total"),
+            v("planned_start", Transform.DATE10, "planned_start_date"),
+            v("planned_end", Transform.DATE10, "planned_end_date")));
+
     /** Связи из строки главного среза (S4-29 v3); пустой список — «проверено, связей нет». */
     static final Map<String, List<LinkFrom>> ROW_LINKS = Map.ofEntries(
         Map.entry("sprint", List.of(
@@ -450,8 +489,8 @@ final class LoreRecordFrom {
         Map.entry("question", List.of(
             lf("ANSWERS", "in", "decision", "answered_by"),
             lf("GATES", "out", "task", "gating_tasks"))),
+        // S9-05 B: спринты вехи — срезом milestone_sprints (SLICE_LINKS), а не сырыми id строки.
         Map.entry("milestone", List.of(
-            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"),
             // 11.11: фичи, целящие в веху (то же ребро, другой тип источника).
             lf("TARGETS_MILESTONE", "in", "feature", "feature_ids"))),
         // 11.11: ADR, выпущенные релизом; спринты и PR — отдельными срезами (SLICE_LINKS).
@@ -558,6 +597,10 @@ final class LoreRecordFrom {
                 from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
             new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
                 from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)),
+        // S9-05 B: «таблица детей» вехи — её спринты с названием и статусом, постранично.
+        "milestone", List.of(
+            new SliceLink("sprints", "milestone_sprints", "mid", "TARGETS_MILESTONE", "in", "sprint",
+                from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
         // S9-05 A: «таблица детей» человека и агента — задачи, где у него ОТКРЫТАЯ роль.
         "user", List.of(
             new SliceLink("tasks", "user_tasks", "kc_sub", "ROLE_HELD_BY", "in", "task",

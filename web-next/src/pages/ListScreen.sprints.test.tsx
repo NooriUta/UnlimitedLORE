@@ -70,15 +70,24 @@ describe('«Спринты» на ListScreen: паритет с SprintsPage', ()
     expect(container.querySelector('[data-record-id="SQ"] [data-progress="complete"]')!.textContent).toContain('1/1');
   });
 
-  it('раскрытие строки — задачи первым блоком; статус задачи меняется за два касания', async () => {
+  // PU-23 (владелица 14.11.2026, preprod: «в виде списка второй уровень почему не повторяет список
+  // верхнего уровня?»): задачи раскрытого спринта — СТРОКАМИ ТОЙ ЖЕ ТАБЛИЦЫ, в тех же колонках, а не
+  // потоком «иконка · код · название» в одной широкой ячейке. Статус задачи по-прежнему меняется за
+  // два касания (паритет со SprintsPage, S4-09).
+  it('PU-23: задачи раскрытого спринта — строками той же таблицы; статус меняется за два касания', async () => {
     const f = fakeFetch();
     const { container } = render(<ListScreen screen="sprints" fetchImpl={f.fn} urlState={false} />);
     await screen.findAllByText('Спринт SP');
     fireEvent.click(screen.getByRole('button', { name: 'Раскрыть: Спринт SP' }));
-    const xrow = container.querySelector('[data-expand-of="SP"] td') as HTMLElement;
-    const list = await within(xrow).findByRole('list', { name: 'Задачи спринта SP' });
-    expect(xrow.firstElementChild?.getAttribute('data-sprint-tasks')).toBe('SP');
-    fireEvent.click(within(list).getAllByRole('button', { name: /^Статус: / })[1]);
+    await waitFor(() => expect(container.querySelectorAll('tr[data-child-of="SP"]').length).toBe(2));
+    const parentCells = container.querySelector('tr[data-record-id="SP"]')!.querySelectorAll('td').length;
+    const kids = [...container.querySelectorAll('tr[data-child-of="SP"]')] as HTMLElement[];
+    for (const k of kids) expect(k.querySelectorAll('td').length).toBe(parentCells);
+    expect(kids.map(k => k.getAttribute('data-record-id'))).toEqual(['SP/T1', 'SP/T2']);
+    // Код — короткий код задачи, название — ссылка на паспорт задачи.
+    expect(within(kids[0]).getByText('T1')).toBeTruthy();
+    expect(within(kids[0]).getByRole('link', { name: 'Задача T1' }).getAttribute('href')).toMatch(/sec=task.*open=SP%2FT1|open=SP%2FT1.*sec=task/);
+    fireEvent.click(within(kids[1]).getByRole('button', { name: /^Статус: / }));
     fireEvent.click(screen.getByRole('menuitem', { name: /В работе/ }));
     await waitFor(() => expect(f.calls.some(u => u.pathname === '/lore/status')).toBe(true));
   });

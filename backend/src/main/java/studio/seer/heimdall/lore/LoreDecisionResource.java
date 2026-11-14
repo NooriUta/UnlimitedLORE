@@ -52,12 +52,18 @@ public class LoreDecisionResource extends LoreResourceBase {
 
     // ── Write-path: create / upsert KnowDecision ─────────────────────────────
 
+    /** Прежний upsert без режима — для внутренних вызовов (LoreTidyResource). */
+    public Response createDecision(DecisionCreateRequest req, String role) {
+        return createDecision(req, role, null);
+    }
+
     @POST
     @Path("decision")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createDecision(DecisionCreateRequest req,
-                                   @HeaderParam("X-Seer-Role") String role) {
+                                   @HeaderParam("X-Seer-Role") String role,
+                                   @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.decision_id() == null || req.decision_id().isBlank())
@@ -70,6 +76,8 @@ public class LoreDecisionResource extends LoreResourceBase {
             return badParams("status must be one of: "
                 + dictCodes("decision_status", DECISION_STATUSES_FALLBACK)
                 + " (словарь decision_status, правится в админке)");
+        Response taken = createOnly("decision", req.decision_id(), mode);   // MT-MCP-TRUTH п.1: ?mode=create
+        if (taken != null) return taken;
         // SE-02: у решения нет истории (плоская модель), поэтому «когда его
         // правили» жить может только отметкой на вершине. Пробуем СУЩЕСТВОВАНИЕ
         // ДО записи: после UPSERT «была ли запись раньше» уже неотличимо от

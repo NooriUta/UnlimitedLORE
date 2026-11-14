@@ -8,7 +8,8 @@ import java.util.List;
  *
  * <p>Переход в done:
  * <ol>
- *   <li>агент не ставит done никогда — 409 DONE_BY_HUMAN_ONLY;</li>
+ *   <li>агент не ставит done — 409 DONE_BY_HUMAN_ONLY; исключение — слово владелицы
+ *       ({@link #OWNER_WORD} с непустым evidence_ref, решение 14.11.2026 D4);</li>
  *   <li>только из review (ready_for_deploy и uat — его стадии) — 409 DONE_ONLY_FROM_REVIEW;</li>
  *   <li>приёмщика нет — закрывающий человек становится им сам (подставляет fillReviewer), но не если он
  *       исполнитель — 409 NO_REVIEWER; приёмщик = исполнитель — 409 REVIEWER_IS_EXECUTOR;</li>
@@ -34,35 +35,61 @@ final class LoreDoneGate {
 
     static final String DEFAULT_KIND = "dev";
 
+    /**
+     * Вид доказательства «слово владелицы» — решение 14.11.2026 (D4, «вариант б»): с ним done может
+     * поставить и агент; evidence_ref обязателен (дословная цитата или ссылка на её сообщение).
+     * Годится для любого вида работы — приёмку делает сама владелица. Прочие проверки (только из
+     * review, приёмщик ≠ исполнитель) остаются.
+     */
+    static final String OWNER_WORD = "owner_word";
+
     /** Вид работы по типу задачи; тип пуст или вне таблицы — dev (допущение A4). */
     static String kindOf(String taskType, LoreModelWorkflow.Workflow w) {
         String k = w.kindOf(taskType);
         return k != null ? k : DEFAULT_KIND;
     }
 
+    /**
+     * PU-29, правило владелицы 14.11.2026: done человека — само подтверждение («я нажала кнопку — это моё
+     * решение»). Сервер пишет доказательство сам: вид {@code human}, ссылка «кто · когда».
+     */
+    static final String HUMAN = "human";
+
+    /** Время (08:31) или дата (14.11 / 2026-11-14) — когда сказано. */
+    private static final java.util.regex.Pattern WHEN =
+        java.util.regex.Pattern.compile("\\d{1,2}[:.]\\d{2}|\\d{4}-\\d{2}-\\d{2}");
+    /** Дословная цитата в кавычках: «…», "…" или „…“. */
+    private static final java.util.regex.Pattern QUOTE =
+        java.util.regex.Pattern.compile("«[^»]{2,}»|\"[^\"]{2,}\"|„[^“”]{2,}[“”]");
+
+    /** Ссылка доказательства человека: имя (или «человек», если не опознан) · время. */
+    static String humanEvidenceRef(String caller, String at) {
+        return (blank(caller) ? "человек" : caller.trim()) + " · " + at;
+    }
+
     static Verdict done(Facts f, LoreModelWorkflow.Workflow w) {
-        if (f.agent())
+        // PU-29 (14.11.2026): «учётка не агента, а человека — тоже подтверждение; просто проверяй, что
+        // перенесено человеком, и не проси с человека доп. работы». Человек закрывает из любого статуса.
+        if (!f.agent()) return null;
+        boolean ownerWord = OWNER_WORD.equals(f.evidenceType());
+        if (!ownerWord)
             return new Verdict(409, "DONE_BY_HUMAN_ONLY", "агент не ставит done — переведите задачу в review "
-                + "(стадия stand_check или uat), done ставит человек-приёмщик (ADR-LORE-014-D5, правило 13.11.2026)");
+                + "(стадия stand_check или uat), done ставит человек. Исключение — слово человека: "
+                + "evidence_type=owner_word и evidence_ref со временем и дословной цитатой (правило 14.11.2026)");
+        // «По агенту необходим текст — время и цитата человека».
+        String ref = f.evidenceRef() == null ? "" : f.evidenceRef();
+        if (!WHEN.matcher(ref).find() || !QUOTE.matcher(ref).find())
+            return new Verdict(409, "NO_EVIDENCE", "done агента по слову человека (owner_word): в evidence_ref нужны "
+                + "время сказанного (08:31 или 14.11.2026) и дословная цитата в кавычках «…»; запись не сделана");
         if (!"review".equals(LoreWorkflowCore.core(f.currentToken())))
             return new Verdict(409, "DONE_ONLY_FROM_REVIEW", "done ставится только из review (приёмки); сейчас «"
-                + f.currentToken() + "» — сначала переведите в review, приложив доказательство");
+                + f.currentToken() + "» — сначала переведите в review");
         boolean noReviewer = blank(f.reviewer());
         if (noReviewer && !blank(f.caller()) && f.caller().equals(f.executor()))
             return new Verdict(409, "NO_REVIEWER", "приёмщика нет, а закрывает исполнитель — самоприёмка; "
                 + "назначьте приёмщика (reviewer_agent), отличного от исполнителя");
         if (!noReviewer && f.reviewer().equals(f.executor()))
             return new Verdict(409, "REVIEWER_IS_EXECUTOR", "приёмщик совпадает с исполнителем (" + f.executor() + ")");
-        String kind = kindOf(f.taskType(), w);
-        LoreModelWorkflow.Kind k = w.kinds().get(kind);
-        List<String> allowed = k.evidence().stream().map(LoreModelWorkflow.Evidence::type).toList();
-        String need = String.join("; ", k.evidence().stream().map(e -> e.type() + " — " + e.label()).toList());
-        if (blank(f.evidenceType()) || blank(f.evidenceRef()))
-            return new Verdict(409, "NO_EVIDENCE", "для вида «" + k.label() + "» done требует доказательства: " + need
-                + ". Передайте evidence_type и evidence_ref — запись не сделана");
-        if (!allowed.contains(f.evidenceType()))
-            return new Verdict(409, "NO_EVIDENCE", "доказательство «" + f.evidenceType() + "» не подходит виду «"
-                + k.label() + "»; подходит: " + need);
         return null;
     }
 
