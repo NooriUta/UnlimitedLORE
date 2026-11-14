@@ -3656,9 +3656,10 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__c-status, .sk-list__c-kind, .sk-list__c-id, .sk-list__c-title { min-width: 0; }
 .sk-list__c-id { overflow-wrap: anywhere; }
 /* Владелица 14.11.2026: щелчок по заголовку — сортировка по колонке; заголовок остаётся заголовком по виду. */
-.sk-list__th--sort { cursor: pointer; }
+/* S4-12: заголовок с сортировкой и ссылка-код — цели касания, на сенсоре не меньше --tap. */
+.sk-list__th--sort { cursor: pointer; min-height: var(--tap); }
 /* Код строки — ссылка на паспорт, как название (14.11.2026). */
-.sk-list__idlink { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none; }
+.sk-list__idlink { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0; border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none; }
 .sk-list__idlink:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .sk-list__th--sort:hover { color: var(--t1); }
 .sk-list__th--sort:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
