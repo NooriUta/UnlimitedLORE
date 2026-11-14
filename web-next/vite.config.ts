@@ -42,7 +42,7 @@ export default defineConfig({
   // корневой postcss.config.cjs v1 (Mantine-пресет), которого в джобе v2 нет.
   css: { postcss: {} },
   test: {
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'e2e/stand/**/*.test.ts'],
     setupFiles: ['src/test/setup.ts'],
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
     // PL-09: в CI контейнер джоба ограничен --memory=6g; без потолка vitest берёт

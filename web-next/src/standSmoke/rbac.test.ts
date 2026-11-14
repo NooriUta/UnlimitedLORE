@@ -2,7 +2,6 @@
 // разбор токена без подписи, срок токена.
 import { describe, expect, it } from 'vitest';
 import { authFileFor, isExpired, jwtPayload, RBAC_ACCOUNTS } from './rbac';
-import { storedAccessToken } from '../../e2e/stand/tokens';
 
 const b64url = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const jwt = (payload: unknown) => `${b64url({ alg: 'RS256' })}.${b64url(payload)}.sig`;
@@ -26,22 +25,6 @@ describe('isExpired', () => {
   it('exp в прошлом — истёк', () => expect(isExpired({ exp: 100 }, 101_000)).toBe(true));
   it('exp в будущем — жив', () => expect(isExpired({ exp: 100 }, 99_000)).toBe(false));
   it('без exp — не знаем, значит не «истёк»', () => expect(isExpired({}, 1)).toBe(false));
-});
-
-describe('storedAccessToken', () => {
-  const state = (key: string, value: string) => ({ cookies: [], origins: [{ origin: 'https://x', localStorage: [{ name: key, value }] }] });
-  it('берёт access_token из oidc.user:* сохранённого входа', () => {
-    expect(storedAccessToken(state('lore.v2.oidc.user:https://kc/realms/omilore:lore-app', JSON.stringify({ access_token: 'T' })))).toBe('T');
-  });
-  it('нет записи oidc.user — null', () => {
-    expect(storedAccessToken(state('other', '{}'))).toBeNull();
-  });
-  it('битый JSON в записи — null', () => {
-    expect(storedAccessToken(state('oidc.user:a', '{'))).toBeNull();
-  });
-  it('пустое состояние — null', () => {
-    expect(storedAccessToken({})).toBeNull();
-  });
 });
 
 describe('authFileFor', () => {
