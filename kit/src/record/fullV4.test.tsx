@@ -36,23 +36,18 @@ describe('S4-CONTENT-V4 (kit): паспорт во весь экран как v4
     expect(within(row).getByTestId('kit-fields').textContent).toContain('1.0');
   });
 
-  it('п.3 вертикальная рейка у края: Свойства раскрывает строку, Граф и Аналитика — вкладки', () => {
+  it('п.3 (S4-29, 14.11): рейки у края нет — значки вида в строке статуса; Свойства раскрывает строку, Аналитика — служебные вкладки', () => {
     const onTab = vi.fn();
     const { container } = render(<RecordView record={rec} ctx={ctx} tab="overview" onTab={onTab} placement="full" />);
-    const rail = screen.getByRole('navigation', { name: 'Разделы паспорта' });
-    // 09.11.2026: рейка стала «только иконками» (владелица: «три» на
-    // предложенные иконки, и «не только при полном развороте — это
-    // промежуточное состояние resizable состояния»). Поэтому имена проверяем
-    // доступными именами, а не видимым текстом: текста у кнопок больше нет, и
-    // прежняя форма утверждения запрещала бы саму мини-версию.
-    expect(within(rail).getAllByRole('button').map(b => b.getAttribute('aria-label')))
-      .toEqual(['Свойства', 'Граф', 'Аналитика']);
-    expect(within(rail).getAllByRole('button').map(b => b.textContent?.trim())).toEqual(['', '', '']);
-    fireEvent.click(within(rail).getByRole('button', { name: 'Свойства' }));
+    // Владелица 14.11.2026: «значки там и должны быть без левого меню в полноэкранном виде» — в
+    // строке статуса, а не отдельной рейкой. Имена — доступные (видимого текста у значков нет).
+    expect(screen.queryByRole('navigation', { name: 'Разделы паспорта' })).toBeNull();
+    const sw = screen.getByRole('group', { name: 'Вид паспорта' });
+    expect(within(sw).getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Контент', 'Свойства', 'Аналитика']);
+    expect(within(sw).getAllByRole('button').map(b => b.textContent?.trim())).toEqual(['', '', '']);
+    fireEvent.click(within(sw).getByRole('button', { name: 'Свойства' }));
     expect((container.querySelector('details.sk-rec-propsrow') as HTMLDetailsElement).open).toBe(true);
-    fireEvent.click(within(rail).getByRole('button', { name: 'Граф' }));
-    expect(onTab).toHaveBeenLastCalledWith('graph');
-    fireEvent.click(within(rail).getByRole('button', { name: 'Аналитика' }));
+    fireEvent.click(within(sw).getByRole('button', { name: 'Аналитика' }));
     expect(onTab).toHaveBeenLastCalledWith('links');
   });
 

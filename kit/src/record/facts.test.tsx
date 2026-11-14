@@ -119,7 +119,9 @@ describe('S5-01 · строка-вердикт в шапке', () => {
     view();
     const line = screen.getByTestId('kit-facts');
     const items = within(line).getAllByRole('listitem').map(li => li.getAttribute('data-fact'));
-    expect(items).toEqual(['status', 'tasks', 'due', 'fresh']);
+    // S4-29: последним в строке стоит хвост — переключатель вида паспорта значками (не факт, data-fact нет).
+    expect(items).toEqual(['status', 'tasks', 'due', 'fresh', null]);
+    expect(within(line).getByRole('group', { name: 'Вид паспорта' })).toBeTruthy();
     expect(line.textContent).toContain('В работе');
     expect(line.textContent).toContain('2/5');
     expect(line.textContent).toContain('Просрочено на 3 дн');

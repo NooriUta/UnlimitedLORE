@@ -104,7 +104,7 @@ describe('S4-MOBILE-COMPARE · у спринта на телефоне перв�
   it('положительный контроль (десктоп): без выбранной вкладки — обзор', () => {
     view('');
     // «Контент» — имя сегмента видов, во вкладках его нет (сегмент и означает контент).
-    expect(within(screen.getByRole('group', { name: 'Вид паспорта' })).getByRole('button', { pressed: true }).textContent).toBe('Контент');
+    expect(within(screen.getByRole('group', { name: 'Вид паспорта' })).getByRole('button', { pressed: true }).getAttribute('aria-label')).toBe('Контент');
   });
 
   it('телефон: без выбранной вкладки — первая по модели, «Задачи»', () => {
