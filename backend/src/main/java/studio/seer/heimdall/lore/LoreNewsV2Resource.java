@@ -85,6 +85,57 @@ public class LoreNewsV2Resource extends LoreResourceBase {
         return noStore(Response.ok(b.response));
     }
 
+    /**
+     * SPRINT_MINILORE_POLISH/PL-4: «дверь» для сервера miniLORE — только {@code metrics} (с дельтой
+     * к прошлому периоду) и {@code meta} того же расчёта, что GET /lore/news/v2. {@code period}:
+     * day=1, week=7 (по умолчанию, как у v2), month=30 дней — окно {@code days} v2; иное — 400.
+     * {@code project} — один слаг; вне скоупа или нет такого проекта — 404 «не найдено».
+     * Права — те же, что у v2 (GET открыт агентам: семейство news закрыто им только на запись).
+     */
+    @GET
+    @Path("news/summary")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response newsSummary(@QueryParam("period") String period, @QueryParam("project") String project,
+                                @QueryParam("tz") String tz, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Integer days = summaryDays(period);
+        if (days == null) return badParams("period: ожидается day, week или month");
+        String name = period == null ? "week" : period.strip().toLowerCase(Locale.ROOT);
+        String slug = project == null || project.isBlank() ? null : project.strip();
+        if (slug != null) {
+            Set<String> scope = lore.allowedProjectsOrNull(role);
+            boolean exists;
+            try {
+                exists = !ingestService.queryPublic("SELECT slug FROM KnowGitProject WHERE slug = :p", Map.of("p", slug)).isEmpty();
+            } catch (Exception e) {
+                LOG.warnf("[LORE NEWS summary] %s", e.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+            }
+            if (!exists || !projectVisible(scope, slug))
+                return noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", "проект «" + slug + "» не найден")));
+        }
+        Built b = build(null, null, days, tz, null, slug, null, null, null, null, null, null, null, null, null, null, null, role);
+        if (b.error != null) return b.error;
+        return noStore(Response.ok(NewsV2Engine.summary(b.response, name)));
+    }
+
+    /** PL-4: period сводки → окно {@code days} v2; {@code null} — неизвестный period (400). */
+    static Integer summaryDays(String period) {
+        if (period == null) return 7;
+        return switch (period.strip().toLowerCase(Locale.ROOT)) {
+            case "day" -> 1;
+            case "week" -> 7;
+            case "month" -> 30;
+            default -> null;
+        };
+    }
+
+    /** PL-4: проект виден вызывающему (скоупа нет — виден любой; без project — весь скоуп). */
+    static boolean projectVisible(Set<String> scope, String project) {
+        return project == null || scope == null || scope.contains(project);
+    }
+
     @GET
     @Path("news/v2/atom")
     @Produces("application/atom+xml")

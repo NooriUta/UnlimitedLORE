@@ -952,6 +952,21 @@ public final class NewsV2Engine {
         return out;
     }
 
+    /**
+     * SPRINT_MINILORE_POLISH/PL-4: ответ GET /lore/news/summary — из полного ответа {@link #compute}
+     * только {@code metrics} (с дельтой к прошлому периоду) и {@code meta}; своих подсчётов нет.
+     * {@code meta.summary_period} — какой период просили (day/week/month).
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> summary(Map<String, Object> full, String period) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("metrics", full.get("metrics"));
+        Map<String, Object> meta = new LinkedHashMap<>((Map<String, Object>) full.get("meta"));
+        meta.put("summary_period", period);
+        out.put("meta", meta);
+        return out;
+    }
+
     List<Map<String, Object>> feedRows(Core c, Query q, String axis) {
         Set<String> keep = new HashSet<>();
         for (Event e : c.E) keep.add(e.elKey() + "|" + e.kind() + "|" + dayOf(e));
