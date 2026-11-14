@@ -402,6 +402,7 @@
   "kit.scope.allN": "All projects · {n}",
   "kit.palette.trigger.search": "Search…",
   "kit.palette.trigger.commands": "Commands",
+  "kit.scope.recent": "Recent",
   "kit.scope.mine": "All mine",
   "kit.scope.mineTag": "mine",
   "kit.scope.summary.mine": "All mine ({n} own)",

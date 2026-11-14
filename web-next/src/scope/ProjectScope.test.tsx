@@ -49,6 +49,24 @@ describe('S4-03 · выбор проектов в шапке v2', () => {
     expect(new URLSearchParams(window.location.search).get('proj')).toBeNull();
   });
 
+  // S9-04: «Недавние» — приложение помнит последние выбранные проекты (свежие первыми, до 5),
+  // и при следующем открытии они стоят сверху отдельной группой.
+  it('S9-04: выбранный проект попадает в «Недавние» и помнится между открытиями', async () => {
+    const mem = new Map<string, string>();
+    const storage = { get: (k: string) => mem.get(k) ?? null, set: (k: string, v: string) => { mem.set(k, v); }, remove: (k: string) => { mem.delete(k); }, persistent: true, subscribe: () => () => {} };
+    const { unmount } = render(<ProjectScope fetch={fetcher()} sub="u1" narrow={false} storage={storage} />);
+    await flush();
+    fireEvent.click(trigger());
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Проекты' })).getByRole('checkbox', { name: /TYR/ }));
+    unmount();
+    window.history.replaceState(null, '', '/');
+    render(<ProjectScope fetch={fetcher()} sub="u1" narrow={false} storage={storage} />);
+    await flush();
+    fireEvent.click(trigger());
+    const recent = within(screen.getByRole('dialog', { name: 'Проекты' })).getByRole('list', { name: 'Недавние' });
+    expect(within(recent).getByRole('checkbox', { name: /TYR/ })).toBeTruthy();
+  });
+
   it('открытие по ссылке с ?proj= — кнопка сразу подписана выбором', async () => {
     window.history.replaceState(null, '', '/?proj=tyr');
     render(<ProjectScope fetch={fetcher()} sub="u1" narrow={false} />);

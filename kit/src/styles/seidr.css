@@ -5723,6 +5723,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 }
 .sk-scope__only:hover { color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); }
 .sk-scope__count { margin: 0; color: var(--t3); font-size: var(--fs-2xs); }
+/* S9-04: на телефоне выбор проектов — лист на всю высоту экрана (список длинный, до 23 проектов). */
+.sk-scope__sheet { height: 100dvh; max-height: 100dvh; }
 .sk-scope__sheet .sk-scope__body { padding: 4px 0 12px; }
 .sk-scope__sheet .sk-scope__check,
 .sk-scope__sheet .sk-scope__only,
