@@ -1,4 +1,4 @@
-// Встроенный график Völva в v2 (SPRINT_VIZ_EMBED/EMB-L2, VE-4) — перенос слоя
+﻿// Встроенный график Völva в v2 (SPRINT_VIZ_EMBED/EMB-L2, VE-4) — перенос слоя
 // v1 (src/components/lore/charts/LoreChart.tsx + chartLayer.ts).
 //
 // Почему перенос, а не «подключить»: v1 заморожен с 07.11 (S3-10), а в v2
@@ -26,6 +26,8 @@ export const VOLVA_SPRINTS_CHART = 'sprints_timeline';
 export const VOLVA_SOURCE = 'Völva';
 /** Иконка вида: провидица Völva — хрустальный шар (game-icons). */
 export const VOLVA_VIEW_ICON = 'crystal-ball';
+/** Ожидание первого сообщения встройки, мс; 0 — не ждать (VE-7: статическая встройка пока ничего не шлёт). */
+export const VOLVA_ANSWER_TIMEOUT_MS = 0;
 
 /** Слой графиков: volva — только явным значением; иначе echarts. */
 export function chartLayerOf(rows: readonly Pick<DictRow, 'code' | 'label_ru' | 'is_active'>[]): ChartLayer {
@@ -125,7 +127,10 @@ export function VolvaChart({ chart, title, projects, fetchImpl }: VolvaChartProp
     return () => ctrl.abort();
   }, [chart, key, fetchImpl, lang, attempt]);
   const retry = useCallback(() => setAttempt(n => n + 1), []);
-  return <EmbedChartFrame source={VOLVA_SOURCE} title={title} state={state} minHeight={320} onRetry={retry} />;
+  // VE-7 (Völva, 14.11.2026): статическая встройка родителю пока не шлёт ничего — ни metabase.frame, ни
+  // ошибки. Ожидание первого frame (kit, «не ответила» через 15 с) подменяло бы рабочий график отказом,
+  // поэтому оно выключено (0) до релиза Völva с отправкой; тогда — включить и слушать type:"error".
+  return <EmbedChartFrame source={VOLVA_SOURCE} title={title} state={state} minHeight={320} onRetry={retry} answerTimeoutMs={VOLVA_ANSWER_TIMEOUT_MS} />;
 }
 
 /** Подпись вида и заголовок рамки «Спринтов». */
