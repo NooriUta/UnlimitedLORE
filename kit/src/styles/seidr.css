@@ -5681,10 +5681,10 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   overflow: hidden;
 }
 .sk-scope__check input { accent-color: var(--acc); margin: 0; }
-/* PU-06 (приёмка v1.17.18): имя не сжимается — всё сжатие берёт slug; имя длиннее строки режется по её ширине. */
-.sk-scope__title { flex-shrink: 0; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
-/* PU-06: slug сжимается первым и с многоточием — имя проекта читается, пилюля «мой» не наезжает на «только этот». */
-.sk-scope__id { flex-shrink: 10; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
+/* PU-06 (приёмка v1.17.20): длинное имя сжимается с многоточием и не вытесняет пилюли («Студия — …» упиралось в «только этот»). */
+.sk-scope__title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
+/* PU-06: slug с базой 0 берёт только свободное место — короткое имя не срезается (v1.17.18), длинное не вытесняет пилюли. */
+.sk-scope__id { flex: 1 10 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); white-space: nowrap; }
 .sk-scope__tag {
   flex-shrink: 0;
   padding: 0 6px;
@@ -5698,6 +5698,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-scope__tag--wrn { background: color-mix(in srgb, var(--wrn) 14%, transparent); color: var(--wrn); }
 .sk-scope__only {
   flex-shrink: 0;
+  white-space: nowrap;
   min-height: max(var(--tap), 28px);
   padding: 0 8px;
   border: 0;
