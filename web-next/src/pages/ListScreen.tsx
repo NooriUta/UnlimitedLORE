@@ -254,6 +254,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const lang = useKitLang();
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
+  // MP2-11: последнее место дока (не «весь экран») — туда возвращает выход из полного экрана.
+  const lastDock = useRef<RecordPlacement>(open.place !== 'full' ? open.place : defaultPlace());
+  if (open.place !== 'full') lastDock.current = open.place;
   // «Библиотека» и «Календарь» (K2-VIEW-LIBRARY, K2-VIEW-CALENDAR): состояние — в адресе.
   const [lib] = useLibraryState(urlWin);
   // MP2-12: `?lib=1` на входе — начальный вид «Библиотека»; дальше видом
@@ -695,6 +698,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
 
   if (open.id && ready) {
     const place = open.place;
+    // MP2-11: выход из полного экрана — в место, из которого вошли (по ссылке ?place=full — в
+    // место из личной настройки), а не всегда вниз.
+    const backPlace: RecordPlacement = lastDock.current;
     const passportType = PASSPORT_OF[screen];
     content = (
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
@@ -702,7 +708,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       // содержимого, шапка и меню остаются видимыми и рабочими (замечание
       // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
       <RecordDock placement={place} modal={shell == null}
-        onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
+        onExitFull={() => setOpen({ ...open, place: backPlace })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         {open.id === NEW_RECORD_ID && createType ? (
           // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
           // доке открывается сама запись (то, что открывает «Читать целиком»).
@@ -716,7 +722,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             <ListPassport key={open.id} type={passportType} id={open.id} placement={place} fetchImpl={fetchImpl}
               backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}
               ids={ids} onGo={id => setOpen({ ...open, id })}
-              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} />
+              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} backPlace={backPlace}
+              // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
+              onPlace={p => setOpen({ ...open, place: p })} />
           </Suspense>
         ) : (
           // Паспорта у типа нет — это говорится словами и на месте щелчка, а не

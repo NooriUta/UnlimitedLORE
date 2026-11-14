@@ -91,6 +91,8 @@ export interface ListPassportProps {
   onGo?: (id: string) => void;
   /** «⤢» — развернуть на весь экран; нет — кнопки нет (уже во весь экран). */
   onFull?: () => void;
+  /** MP2-11: куда ⤢ возвращает из полного экрана — место, из которого вошли. */
+  backPlace?: RecordPlacement;
   /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
@@ -107,7 +109,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -284,7 +286,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // высотой и шириной между состояниями; теперь бар один и тот же.
   const barCrumbs = backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view?.record.id ?? id} /> : undefined;
   const barPager = onGo && ids.length > 0 ? <RecordPager ids={ids} current={view?.record.id ?? id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined;
-  const barTools = <PassportPlace value={placement} onPlace={setPlace} />;
+  const barTools = <PassportPlace value={placement} onPlace={setPlace} back={backPlace} />;
   // Дерево состояний ОДИНАКОВОЕ сверху: сборщик → оговорки → бар → тело.
   // Бар стоит на одном и том же месте во всех трёх ветках, поэтому React
   // сохраняет его узлы (и фокус, и раскрытое меню) при переходе
