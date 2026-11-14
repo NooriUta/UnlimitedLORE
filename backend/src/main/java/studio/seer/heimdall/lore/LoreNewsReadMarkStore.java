@@ -73,11 +73,13 @@ final class LoreNewsReadMarkStore {
     }
 
     /** Сдвиг черты действием пользователя. Черту назад не двигаем молча — это тоже действие, но явное. */
+    // Владелица 14.11.2026 «Черта «прочитано» недоступна … 400»: ответ ArcadeDB — «SQL syntax error … mismatched
+    // input ','» на «updated_at = :now»: NOW — ключевое слово, параметр :now не разбирается. Параметр — :ts.
     State set(Instant at, String by) {
         try {
-            command.accept("UPDATE " + TYPE + " SET mark_id = :id, mark_at = :at, updated_at = :now, updated_by = :by "
+            command.accept("UPDATE " + TYPE + " SET mark_id = :id, mark_at = :at, updated_at = :ts, updated_by = :by "
                     + "UPSERT WHERE mark_id = :id",
-                Map.of("id", SHARED, "at", at.toString(), "now", Instant.now().toString(), "by", by == null ? "unknown" : by));
+                Map.of("id", SHARED, "at", at.toString(), "ts", Instant.now().toString(), "by", by == null ? "unknown" : by));
             return get();
         } catch (Exception e) {
             // Владелица 14.11.2026: «Received: Bad Request, status code 400» без ответа базы — корень не
