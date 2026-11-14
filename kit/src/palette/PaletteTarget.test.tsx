@@ -108,7 +108,7 @@ describe('S4-14 · поиск через сервер', () => {
     const ids = Array.from(group.querySelectorAll('[role="option"]')).map(o => o.getAttribute('data-id'));
     expect(ids).toEqual(['record:ADR-77']);
     fireEvent.click(screen.getByRole('option', { name: /Решение с сервера/ }));
-    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'ADR-77' }));
+    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'ADR-77' }), { full: false });
   });
 
   it('сервер не ответил — причина словами, загруженное остаётся', async () => {

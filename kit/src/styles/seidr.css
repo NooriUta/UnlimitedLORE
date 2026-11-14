@@ -7179,3 +7179,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 /* Вид приложения в списке (ListView appViews): место под его отрисовку. */
 .sk-list__appview { min-width: 0; padding-top: var(--gap); }
+
+/* Поиск: открыть найденную запись во весь экран (владелица 14.11.2026). */
+.sk-palette__full { display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; min-width: 34px; padding: 3px 10px; border-radius: 999px; background: var(--acc); color: var(--bg0); cursor: pointer; flex: 0 0 auto; }
+.sk-palette__full:hover { filter: brightness(1.12); }

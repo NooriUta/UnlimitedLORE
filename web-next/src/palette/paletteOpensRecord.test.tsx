@@ -154,3 +154,25 @@ describe('D-01 · результат поиска открывает запис�
     expect(document.body.textContent).toContain('runbook');
   });
 });
+
+// Владелица 14.11.2026: «кнопка перехода на паспорт объекта в полной развёртке — когда надо
+// посмотреть один объект, а не искать его среди других». Кнопка «→» у найденной записи и Shift+Enter.
+describe('поиск → паспорт во весь экран', () => {
+  it('кнопка «→» у найденной записи: раздел, open и place=full', async () => {
+    const { w } = mount(found('sprint', 'SPRINT_A', 'Спринт А'));
+    openPalette();
+    await search('спринт');
+    await act(async () => { fireEvent.click(screen.getByTestId('kit-palette-full')); });
+    const p = new URLSearchParams(w.location.search);
+    expect(p.get('sec')).toBe('sprint');
+    expect(p.get('open')).toBe('SPRINT_A');
+    expect(p.get('place')).toBe('full');
+  });
+  it('обычный выбор — place не задаётся (как раньше)', async () => {
+    const { w } = mount(found('sprint', 'SPRINT_A', 'Спринт А'));
+    openPalette();
+    await search('спринт');
+    await act(async () => { fireEvent.click(screen.getByText('SPRINT_A')); });
+    expect(new URLSearchParams(w.location.search).get('place')).toBeNull();
+  });
+});
