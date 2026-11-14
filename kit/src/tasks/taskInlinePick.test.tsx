@@ -34,10 +34,10 @@ describe('PU-25 · правка в строке — выбором', () => {
     render(<TaskTable tasks={[TASK]} phases={PHASES} groupBy="none" dict={DICT} onSave={onSave} assigneeOptions={assigneeOptions} label="Задачи" />);
     const row = await openEdit();
     expect(assigneeOptions).toHaveBeenCalledWith(TASK);
-    for (const name of ['Тип', 'Класс', 'Автор', 'Исполнитель', 'Ревьюер'])
+    for (const name of ['Тип', 'Класс', 'Автор', 'Исполнитель', 'Принимающий'])
       expect(within(row).getByRole('combobox', { name }), name).toBeTruthy();
     // PU-17: свободного текста для ролей по-прежнему нет.
-    for (const name of ['Автор', 'Исполнитель', 'Ревьюер'])
+    for (const name of ['Автор', 'Исполнитель', 'Принимающий'])
       expect(within(row).queryByRole('textbox', { name })).toBeNull();
     const cls = within(row).getByRole('combobox', { name: 'Класс' }) as HTMLSelectElement;
     expect([...cls.options].map(o => o.value)).toEqual(['enb', 'uc', 'jtd']);
@@ -52,7 +52,7 @@ describe('PU-25 · правка в строке — выбором', () => {
     render(<TaskTable tasks={[{ ...TASK, reviewer: 'legacy-name' }]} phases={PHASES} groupBy="none" dict={DICT} onSave={onSave}
       assigneeOptions={async () => PEOPLE} label="Задачи" />);
     const row = await openEdit();
-    const rev = within(row).getByRole('combobox', { name: 'Ревьюер' }) as HTMLSelectElement;
+    const rev = within(row).getByRole('combobox', { name: 'Принимающий' }) as HTMLSelectElement;
     expect(rev.value).toBe('legacy-name');
     await act(async () => { fireEvent.click(within(row).getByRole('button', { name: 'Сохранить' })); });
     expect(onSave).not.toHaveBeenCalled();

@@ -10,7 +10,7 @@ import type { KitConfig, KitLang, KitRecord, ListSort } from '@seidr/kit';
 import type { LoreClient } from '../sprints/loreClient';
 import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
-import { loadSprintChildren, sprintChildCell } from '../sprints/sprintChildren';
+import { loadSprintChildren } from '../sprints/sprintChildren';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -148,11 +148,16 @@ export interface ListNested {
   /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
   render: (id: string, client: LoreClient) => ReactNode;
   /**
-   * PU-23: дети раскрытой строки — строками той же таблицы (те же колонки). Есть — render
-   * не используется; грузятся лениво, по раскрытию, свои ячейки подменяет cell.
+   * PU-23: дети раскрытой строки, грузятся лениво — по раскрытию. Как их рисовать, решает одно
+   * правило (lists/nestedExpand.tsx, владелица 14.11.2026): тип ребёнка ≠ тип строки — вложенная
+   * таблица дочернего типа с конфигом ЕГО экрана; тот же тип (иерархия) — строки той же таблицы,
+   * свои ячейки которых может подменить cell.
    */
   children?: {
-    load: (client: LoreClient, id: string, signal: AbortSignal) => Promise<KitRecord[]>;
+    /** Тип ребёнка (modelType его экрана). Не задан — берётся из kind загруженных записей. */
+    kind?: string;
+    /** Дети строки `parent` — записями дочернего типа, тем же маппингом, что у его экрана. */
+    load: (client: LoreClient, parent: KitRecord, signal: AbortSignal) => Promise<KitRecord[]>;
     cell?: (col: string, child: KitRecord, client: LoreClient) => ReactNode | undefined;
   };
 }
@@ -229,16 +234,6 @@ function sprintsConfig(lang: KitLang): KitConfig {
           // ЗАГОЛОВКЕ колонки («Оценка, дн»), а не в каждой ячейке: иначе «д»
           // повторяется в каждой строке и съедает ширину, за которую мы же и
           // боремся (S4-35).
-          { key: 'effort_total', title: f(lang, 'effortTotal'), type: 'number' },
-          { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
-        ],
-      },
-      // PU-23: задачи раскрытого спринта — строками той же таблицы. Поля задачи объявлены, чтобы
-      // колонки, которых у задачи нет (прогресс задач, проект, релиз…), честно читались «н/п».
-      task: {
-        title: appT(lang, 'sprints.kind.task'), icon: 'checkbox-tree',
-        fields: [
-          { key: 'code', title: appT(lang, 'sprintTree.field.code'), type: 'text' },
           { key: 'effort_total', title: f(lang, 'effortTotal'), type: 'number' },
           { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
         ],
@@ -722,7 +717,8 @@ export const LIST_SCREENS = {
       lateFields: TOTALS_FIELDS,
       load: loadSprintTotals,
       render: (id, client) => createElement(SprintTasks, { sprintId: id, client }),
-      children: { load: loadSprintChildren, cell: sprintChildCell },
+      // PU-23: задачи — другой тип, под спринтом встаёт вложенная таблица экрана «Задачи».
+      children: { kind: 'task', load: loadSprintChildren },
     },
   },
   adrs: {

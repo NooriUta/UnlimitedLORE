@@ -79,6 +79,13 @@ export interface RecordDockProps {
   /** Закрыть паспорт — кнопка дока, а не полоса над паспортом (владелица 08.11). */
   onClose?: () => void;
   /**
+   * Где управление «выйти из полного экрана» и «×» (владелица 14.11.2026: «опять две строки… крестик
+   * поставь за меню — строка станет одной»). `dock` (по умолчанию) — рисует сам док; `bar` — несёт
+   * строка записи приложения (переключатель ⤢ и «×» после ☰), док своей полосы и «×» не рисует.
+   * Esc работает в обоих режимах.
+   */
+  controls?: 'dock' | 'bar';
+  /**
    * Модальный ли слой «во весь экран». По умолчанию да — витрина и демо
    * открывают его поверх окна. Внутри оболочки шапка и меню остаются видимыми
    * и рабочими (замечание владелицы по v1.17.4), и тогда aria-modal был бы
@@ -95,7 +102,8 @@ export interface RecordDockProps {
   bottomHeight?: number;
 }
 
-export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true, widthStore, bottomHeight }: RecordDockProps) {
+export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true, widthStore, bottomHeight, controls = 'dock' }: RecordDockProps) {
+  const own = controls === 'dock';
   const lang = useKitLang();
   const full = placement === 'full';
   // S4-30: список и паспорт делят место, и границу между ними можно тянуть.
@@ -178,14 +186,14 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
       {/* Полный экран (S4-17, владелица 11.11: «крестик спорят с линией»): «Выйти» и «×» —
           одной группой в углу, вне панели. Плавающий «×» в панели при прокрутке вставал
           поверх «Выйти» и сужал всю запись со строкой вкладок. */}
-      {full && (onExitFull || onClose) && (
+      {own && full && (onExitFull || onClose) && (
         <div className="sk-dock__ctl">
           {onExitFull && <button type="button" className="sk-dock__exit" onClick={onExitFull} title="Esc">{kitT(lang, 'kit.record.dock.exitFull')}</button>}
           {onClose && <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>}
         </div>
       )}
       <section className="sk-dock__panel">
-        {onClose && !full && (
+        {own && onClose && !full && (
           <button type="button" className="sk-dock__close" onClick={onClose} aria-label={kitT(lang, 'kit.record.dock.close')} title={kitT(lang, 'kit.record.dock.close')}>×</button>
         )}
         {children}
