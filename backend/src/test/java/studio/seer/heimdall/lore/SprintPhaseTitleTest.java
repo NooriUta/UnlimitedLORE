@@ -22,7 +22,8 @@ class SprintPhaseTitleTest {
         assertFalse(sql.contains("status_raw[0]  AS title") || sql.matches("(?s).*status_raw\\[0\\]\\s+AS title.*"),
             "статус фазы не может приходить полем title: " + sql);
         assertTrue(sql.contains("coalesce(title, name"), "название фазы — из title или name вершины: " + sql);
-        assertTrue(sql.matches("(?s).*status_raw\\[0\\]\\s+AS status_raw.*"), "статус — своим полем: " + sql);
+        // Сверка 14.11.2026: статус — из открытой версии (COALESCE, StatusFromOpenVersionGuardTest).
+        assertTrue(sql.matches("(?s).*status_raw\\[0\\]\\)?\\s+AS status_raw.*"), "статус — своим полем: " + sql);
     }
 
     @Test
