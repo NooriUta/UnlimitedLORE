@@ -119,8 +119,8 @@ describe('PU-11 · хаб графа', () => {
     const ids = eng.getAttribute('data-ids')!.split(',');
     expect(ids.filter(i => i.startsWith('SPEC-'))).toHaveLength(0);
     expect(ids.some(i => i.includes('DOCUMENTED_IN'))).toBe(true);
+    // S9-08 (препрод 14.11): одиночное нажатие на кластер раскрывает его сразу, без карточки.
     fireEvent.click(screen.getByRole('button', { name: /узел .*DOCUMENTED_IN/ }));
-    fireEvent.click(await screen.findByRole('button', { name: /раскрыть/i }));
     const after = (await screen.findByTestId('eng-force')).getAttribute('data-ids')!.split(',');
     expect(after.filter(i => i.startsWith('SPEC-'))).toHaveLength(27);
   });
