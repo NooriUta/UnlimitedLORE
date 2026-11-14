@@ -710,8 +710,32 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-pop[data-align='start'] { top: calc(100% + 4px); right: auto; left: 0; }
 .sk-pop[data-align='end'] { top: calc(100% + 4px); right: 0; left: auto; }
-/* «Вправо от рейки»: внутри колонки шириной в иконку меню было бы обрезано. */
-.sk-pop[data-align='side'] { top: 0; right: auto; left: calc(100% + 4px); }
+/* «Вправо от рейки» (PU-26): слой ФИКСИРОВАН по координатам значка, которые
+   считает компонент (--pop-x/--pop-y: справа от значка, не влез — слева,
+   прижим к краям окна). Абсолютным он жил внутри колонки меню с overflow:auto
+   и уходил в её прокрутку: обрезался, а фокус на первой ссылке прокручивал
+   колонку вбок — список уезжал на рейку и за левый край окна. */
+.sk-pop[data-align='side'] {
+  position: fixed;
+  top: var(--pop-y, 0px);
+  right: auto;
+  left: var(--pop-x, 0px);
+  max-width: calc(100vw - 8px);
+  transform: none;
+}
+/* Телефон: слой рейки — нижний лист во всю ширину (S4-MOBILE-EDGE). */
+.sk-pop[data-sheet='bottom'] {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-width: none;
+  max-height: 70dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  transform: none;
+}
 /* «На своём месте в потоке, прижат вправо»: `top` не задан нарочно — у
    абсолютного элемента без top сохраняется статическое положение, то есть
    ровно под тем, за чем он стоит в разметке. Так всплывашка свёртки вкладок
@@ -720,7 +744,6 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-pop[data-align='under'] { right: 0; left: auto; margin-top: 4px; }
 /* Не хватило места внизу — раскрываемся вверх. */
 .sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
-.sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
 
 /* Мини-окно ссылки на запись в MD (SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW, ADR-LORE-050).
    Положение даёт .sk-pop; здесь — рамка, плотные IDE-размеры и честные состояния.
