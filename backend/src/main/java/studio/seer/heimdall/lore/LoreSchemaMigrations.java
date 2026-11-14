@@ -1639,7 +1639,28 @@ final class LoreSchemaMigrations {
         // теги не добавить). SQL — новый тип (IF NOT EXISTS); java — однократная копия прежних
         // точек lore.action с отметкой «неизвестно», без догадки. Прежние точки остаются.
         // V85 — PU-24 (#1342), выше.
-        new Step(86, 17, "java__agent_action_log", List.of(AgentActionLog.DDL))
+        new Step(86, 17, "java__agent_action_log", List.of(AgentActionLog.DDL)),
+
+        // SPRINT_LORE_WORK_ANY_KIND/WK-05 (ADR-LORE-014-D5, допущение A3 — «Да, как рекомендовано» 14.11):
+        // строка истории задачи несёт доказательство done (evidence_type/evidence_ref по виду работы),
+        // стадию внутри статуса ядра, адресат ожидания (waiting) и причину перехода. Аддитивно, major 17:
+        // только новые свойства, старые done задним числом не трогаются (развилка Г).
+        // Номер V87 сверен со «Стабильностью» 14.11 (V85 — PU-24, V86 — #1343).
+        // Новые статусы ядра waiting/review/failed — строками словарей задачи и спринта, как uat в V85:
+        // без строки модель отдаёт статус без цвета и значка («оговорки модели» в kit). Цвета — общие
+        // токены (своих --st-* у них пока нет), значки — из прототипа wk-05-workflow. UPSERT идемпотентен.
+        new Step(87, 17, "task_workflow_fields", List.of(
+            "CREATE PROPERTY KnowTaskHist.evidence_type IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.evidence_ref IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.stage IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.waiting_for IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.status_reason IF NOT EXISTS STRING",
+            "UPDATE KnowDictEntry SET dict_type='task_status', code='waiting', label_ru='Ждём ответа', label_en='Waiting', icon='hourglass', color='var(--inf)', sort_order=35, is_active=true UPSERT WHERE dict_type='task_status' AND code='waiting'",
+            "UPDATE KnowDictEntry SET dict_type='task_status', code='review', label_ru='На приёмке', label_en='Review', icon='magnifying-glass', color='var(--wrn)', sort_order=45, is_active=true UPSERT WHERE dict_type='task_status' AND code='review'",
+            "UPDATE KnowDictEntry SET dict_type='task_status', code='failed', label_ru='Неуспех', label_en='Failed', icon='cancel', color='var(--dng)', sort_order=65, is_active=true UPSERT WHERE dict_type='task_status' AND code='failed'",
+            "UPDATE KnowDictEntry SET dict_type='sprint_status', code='waiting', label_ru='Ждём ответа', label_en='Waiting', icon='hourglass', color='var(--inf)', sort_order=35, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='waiting'",
+            "UPDATE KnowDictEntry SET dict_type='sprint_status', code='review', label_ru='На приёмке', label_en='Review', icon='magnifying-glass', color='var(--wrn)', sort_order=45, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='review'",
+            "UPDATE KnowDictEntry SET dict_type='sprint_status', code='failed', label_ru='Неуспех', label_en='Failed', icon='cancel', color='var(--dng)', sort_order=65, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='failed'"))
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */

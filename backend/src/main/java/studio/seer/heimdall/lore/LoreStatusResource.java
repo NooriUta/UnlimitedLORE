@@ -37,9 +37,18 @@ public class LoreStatusResource extends LoreResourceBase {
 
     /** QG-16: reason — причина блокировки спринта (текст), пишется на открывшуюся строку истории. */
     /** S2-09: expected — «было» (токен или status_raw); не совпало с открытой версией → 409 CONFLICT. */
-    public record StatusUpdateRequest(String entity_type, String id, String status, String reason, String expected) {
+    /**
+     * WK-05 (ADR-LORE-014-D5): {@code evidence_type}/{@code evidence_ref} — доказательство done по виду работы
+     * (раздел модели workflow), {@code stage} — стадия внутри статуса ядра, {@code waiting_for} — чьего ответа
+     * ждём. Пишутся в новую строку истории задачи; доказательство переносится по строкам до done.
+     */
+    public record StatusUpdateRequest(String entity_type, String id, String status, String reason, String expected,
+                                      String evidence_type, String evidence_ref, String stage, String waiting_for) {
         public StatusUpdateRequest(String entity_type, String id, String status) { this(entity_type, id, status, null, null); }
         public StatusUpdateRequest(String entity_type, String id, String status, String reason) { this(entity_type, id, status, reason, null); }
+        public StatusUpdateRequest(String entity_type, String id, String status, String reason, String expected) {
+            this(entity_type, id, status, reason, expected, null, null, null, null);
+        }
     }
 
     /**
@@ -54,7 +63,7 @@ public class LoreStatusResource extends LoreResourceBase {
      * solved_at; задача снова открыта — метка снимается. Ребро не удаляется никогда.
      */
     static String gatesSolvedSql(String status) {
-        boolean closed = "done".equals(status) || "cancelled".equals(status);
+        boolean closed = "done".equals(status) || "cancelled".equals(status) || "failed".equals(status);
         return closed
             ? "UPDATE GATES SET solved_at = :now WHERE @in.task_uid = :id AND solved_at IS NULL"
             : "UPDATE GATES SET solved_at = null WHERE @in.task_uid = :id AND solved_at IS NOT NULL";
@@ -162,11 +171,11 @@ public class LoreStatusResource extends LoreResourceBase {
             // ADR-LORE-014 §4: →done is gated — refuse self-acceptance (reviewer_agent
             // unset or equal to executor_agent) BEFORE the SCD2 flip. Every other task
             // transition is ungated (RBAC-only, per the ADR's "one hard-gate" decision).
-            case "task"      -> ("done".equals(req.status())
-                                    ? checkTaskDoneGate(req.id(), role)
-                                    : Uni.createFrom().<Response>item((Response) null))
-                                  .chain(gate -> gate != null
-                                    ? Uni.createFrom().item(gate)
+            // WK-05 (ADR-LORE-014-D5): гейт — на каждый переход задачи (LoreDoneGate); отказ до записи.
+            // После смены — доказательство, стадия, адресат ожидания и причина на новую строку истории.
+            case "task"      -> taskGate(req, author)
+                                  .chain(gate -> gate.refusal() != null
+                                    ? Uni.createFrom().item(gate.refusal())
                                     : readTaskHistCarryFields(req.id())
                                         .chain(fields -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
                                           "task_uid", req.id(), req.status(), now, nsid, req.expected(), author)
@@ -180,6 +189,7 @@ public class LoreStatusResource extends LoreResourceBase {
                                                   "[LORE STATUS] task=%s note/effort carry-forward failed (status flip itself succeeded): %s",
                                                   req.id(), ex.getMessage()))
                                               .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
+                                              .chain(__ -> writeTaskWorkflowFields(req, nsid, gate, extras))
                                               .replaceWith(resp))));
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
             case "phase"     -> updateScd2Status("phase", "KnowPhase", "KnowPhaseHist",
@@ -475,12 +485,14 @@ public class LoreStatusResource extends LoreResourceBase {
     // release" — an intentional hold, so all-done must not silently flip it to
     // done). Best-effort: a failure here never fails the task status change.
     private static final java.util.Set<String> SPRINT_AUTO_GUARD =
-        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy", "uat");
+        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy", "uat",
+            // WK-05: review — та же приёмка, что RFD/UAT; waiting — намеренное ожидание; failed — исход.
+            "review", "waiting", "failed");
     // MT-SPRINT-STATUS-FOLLOWS-TASKS (decision:D-2026-SPRINT-STATUS-FOLLOWS-LAST-TASK):
     // «в работе» — только задачи, над которыми работают. "done" здесь был
     // дефектом: закрытие задачи открывало спринт (VE-1, 06.11.2026).
     private static final java.util.Set<String> TASK_PROGRESS =
-        java.util.Set.of("active", "partial", "ready_for_deploy", "uat");
+        java.util.Set.of("active", "partial", "ready_for_deploy", "uat", "waiting", "review");
     private static final java.util.Set<String> SPRINT_PROMOTABLE =
         java.util.Set.of("planned", "todo", "backlog");
 
@@ -501,6 +513,9 @@ public class LoreStatusResource extends LoreResourceBase {
         if (s.startsWith("📋")) return "planned";
         if (s.startsWith("⬜")) return "todo";
         if (s.startsWith("⏸")) return "deferred";
+        if (s.startsWith("⏳")) return "waiting";
+        if (s.startsWith("🔍")) return "review";
+        if (s.startsWith("❌")) return "failed";
         // Keyword fallbacks for legacy rows written before the emoji convention.
         String u = s.toUpperCase();
         if (u.startsWith("DONE") || u.startsWith("CLOSED") || u.startsWith("ЗАВЕРШ")) return "done";
@@ -515,6 +530,9 @@ public class LoreStatusResource extends LoreResourceBase {
         if (u.startsWith("PLAN") || u.startsWith("ЗАПЛАН")) return "planned";
         if (u.startsWith("TODO") || u.startsWith("НЕ НАЧ")) return "todo";
         if (u.startsWith("DEFER") || u.startsWith("ОТЛОЖ") || u.startsWith("HOLD") || u.startsWith("PAUSE")) return "deferred";
+        if (u.startsWith("WAITING") || u.startsWith("ЖДЁМ") || u.startsWith("ЖДЕМ")) return "waiting";
+        if (u.startsWith("REVIEW")) return "review";
+        if (u.startsWith("FAIL")) return "failed";
         return null;
     }
 
@@ -527,7 +545,8 @@ public class LoreStatusResource extends LoreResourceBase {
             if (tok == null) continue;
             total++;
             if (tok.equals("done")) done++;
-            if (tok.equals("cancelled")) cancelled++;
+            // WK-05: failed закрыт, но не «сделан» — как отменённая.
+            if (tok.equals("cancelled") || tok.equals("failed")) cancelled++;
             if (TASK_PROGRESS.contains(tok)) progress++;
         }
         String target = null;
@@ -737,7 +756,11 @@ public class LoreStatusResource extends LoreResourceBase {
      * display_name человека. Ключи ответа прежние, их читает doneGateRefusal.
      */
     static final String DONE_GATE_SQL = "SELECT task_uid, "
-        + holder("executor") + " AS executor_agent, " + holder("reviewer") + " AS reviewer_agent "
+        + holder("executor") + " AS executor_agent, " + holder("reviewer") + " AS reviewer_agent, "
+        // WK-05: текущий статус (открытая строка, иначе вершина), тип задачи и прикреплённое доказательство.
+        + "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], status_raw) AS status_raw, task_type, "
+        + "out('HAS_STATE')[valid_to IS NULL].evidence_type[0] AS evidence_type, "
+        + "out('HAS_STATE')[valid_to IS NULL].evidence_ref[0] AS evidence_ref "
         + "FROM KnowTask WHERE task_uid = :uid LIMIT 1";
 
     private static String holder(String role) {
@@ -745,36 +768,84 @@ public class LoreStatusResource extends LoreResourceBase {
         return "ifnull(" + e + "actor_id[0], " + e + "display_name[0])";
     }
 
-    private Uni<Response> checkTaskDoneGate(String taskUid, String role) {
-        // ADR-LORE-014-D4: полный носитель (admin/superadmin, agent-full) работает
-        // соло. Гейт рассчитан на ДВОИХ, а второго участника у него взять
-        // неоткуда — требование ревьюера превращалось бы в требование выдумать
-        // имя, то есть в фикцию, а не в проверку.
-        //
-        // Гейт остаётся для узких профилей: у architect/developer/pm/tester
-        // разделение исполнителя и ревьюера осмысленно, там есть кому принимать.
-        if (isFullScopeCaller(role)) return Uni.createFrom().nullItem();
+    /** Итог гейта: отказ (или null) и доказательство, которое ляжет на новую строку истории. */
+    record TaskGate(Response refusal, String evidenceType, String evidenceRef) {}
 
-        MartQuery q = new MartQuery("sql", DONE_GATE_SQL, Map.of("uid", taskUid), -1);
-        return client.query(db, basicAuth(), q).map(res -> {
-            List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
-            if (rows.isEmpty()) return null; // unknown task — let the normal flip report NOT_FOUND-shaped failure
-            String refusal = doneGateRefusal(rows.get(0));
-            return refusal == null ? null : noStore(Response.status(Response.Status.CONFLICT)
-                .entity(new LoreError("NO_SELF_ACCEPTANCE", refusal)));
-        });
+    /**
+     * WK-05 (ADR-LORE-014-D5, заменяет соло-закрытие D4): гейт на каждый переход задачи.
+     * Факты — одним чтением DONE_GATE_SQL; имя закрывающего человека — из KnowUser по kc_sub (тот же
+     * путь, что у fillReviewer). Неизвестная задача — без отказа: «не найдено» скажет обычная смена.
+     * Блокирующие чтения — на рабочем пуле.
+     */
+    Uni<TaskGate> taskGate(StatusUpdateRequest req, ChangeAuthor author) {
+        return Uni.createFrom().item(() -> {
+            List<Map<String, Object>> rows = ingestService.queryPublic(DONE_GATE_SQL, Map.of("uid", req.id()));
+            if (rows.isEmpty()) return new TaskGate(null, req.evidence_type(), req.evidence_ref());
+            Map<String, Object> row = rows.get(0);
+            String current = rawToToken(str(row.get("status_raw")));
+            String evType = !blank(req.evidence_type()) ? req.evidence_type() : str(row.get("evidence_type"));
+            String evRef = !blank(req.evidence_ref()) ? req.evidence_ref() : str(row.get("evidence_ref"));
+            LoreDoneGate.Verdict v = LoreDoneGate.transition(current, req.status(), req.reason(), req.waiting_for());
+            if (v == null && "done".equals(req.status())) {
+                boolean agent = callerAgentScope() != null
+                    || (author != null && ChangeAuthor.KIND_AGENT.equals(author.kind()));
+                v = LoreDoneGate.done(new LoreDoneGate.Facts(agent, agent ? null : callerName(author),
+                    str(row.get("executor_agent")), str(row.get("reviewer_agent")), current,
+                    str(row.get("task_type")), evType, evRef), LoreModelFile.content().workflow());
+            }
+            Response refusal = v == null ? null : noStore(Response.status(v.status()).entity(new LoreError(v.code(), v.detail())));
+            return new TaskGate(refusal, evType, evRef);
+        }).runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
     }
 
-    /** Решение гейта по строке DONE_GATE_SQL: текст отказа или null. */
-    static String doneGateRefusal(Map<String, Object> row) {
-        Object e = row.get("executor_agent"), r = row.get("reviewer_agent");
-        String executor = e == null ? null : String.valueOf(e);
-        String reviewer = r == null ? null : String.valueOf(r);
-        if (reviewer == null || reviewer.isBlank() || reviewer.equals(executor))
-            return "task cannot move to done: reviewer_agent must be set and differ from executor_agent "
-                + "(снимается только для полного носителя — admin/superadmin/agent-full, ADR-LORE-014-D4)";
+    /** display_name вызывающего человека; не опознан — null (тогда проверки «закрывает исполнитель» нет). */
+    private String callerName(ChangeAuthor author) {
+        ReviewerFill.Query q = ReviewerFill.resolveQuery(author);
+        if (q == null || !ChangeAuthor.KIND_HUMAN.equals(author.kind())) return null;
+        for (Map<String, Object> r : ingestService.queryPublic(q.sql(), q.params())) {
+            Object n = r.get("names");
+            if (n instanceof java.util.Collection<?> c && !c.isEmpty()) return String.valueOf(c.iterator().next());
+            if (n != null) return String.valueOf(n);
+        }
         return null;
     }
+
+    /**
+     * WK-05: доказательство (из запроса или перенесённое с прежней строки), стадия, адресат ожидания и
+     * причина — на свежую строку истории. Сбой не прячется: статус уже сменён, но ответ говорит, что
+     * доказательство не записано (правило «нет ok при невыполненной записи»).
+     */
+    Uni<Void> writeTaskWorkflowFields(StatusUpdateRequest req, String nsid, TaskGate gate, Map<String, Object> extras) {
+        Map<String, Object> p = new LinkedHashMap<>();
+        StringBuilder set = new StringBuilder();
+        java.util.function.BiConsumer<String, String> put = (k, v) -> {
+            if (blank(v)) return;
+            set.append(set.length() == 0 ? "" : ", ").append(k).append(" = :").append(k);
+            p.put(k, v.trim());
+        };
+        put.accept("evidence_type", gate.evidenceType());
+        put.accept("evidence_ref", gate.evidenceRef());
+        put.accept("stage", req.stage());
+        put.accept("waiting_for", req.waiting_for());
+        put.accept("status_reason", req.reason());
+        Map<String, Object> wf = new LinkedHashMap<>();
+        wf.put("core", LoreWorkflowCore.core(req.status()));
+        wf.put("stage", !blank(req.stage()) ? req.stage() : LoreWorkflowCore.stage(req.status()));
+        if (set.length() == 0) { extras.put("workflow", wf); return Uni.createFrom().voidItem(); }
+        p.put("nsid", nsid);
+        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowTaskHist SET " + set + " WHERE state_uid = :nsid", p))
+            .map(__ -> { p.remove("nsid"); wf.putAll(p); wf.put("written", true); extras.put("workflow", wf); return (Void) null; })
+            .onFailure().recoverWithItem(ex -> {
+                LOG.warnf("[LORE STATUS] task=%s поля workflow не записаны (статус сменён): %s", req.id(), ex.getMessage());
+                wf.put("written", false);
+                wf.put("error", "статус сменён, но доказательство/стадия не записаны: " + LoreUpstream.detail(ex));
+                extras.put("workflow", wf);
+                return null;
+            });
+    }
+
+    private static boolean blank(String s) { return s == null || s.isBlank(); }
 
     /** Read note_md / effort_days from the currently-open KnowTaskHist row BEFORE a SCD2 flip.
      * Package-private — see updateScd2Status's Javadoc (ADR-LORE-013 task/move reuse). */

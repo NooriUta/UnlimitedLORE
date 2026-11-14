@@ -32,7 +32,7 @@ class LoreHistoryPageLiveDbTest {
         post("/lore/sprint/create", "{\"sprint_id\":\"" + SPRINT + "\"}");
         post("/lore/task", "{\"sprint_id\":\"" + SPRINT + "\",\"task_id\":\"HP-1\",\"title\":\"история\"}");
         post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + TASK + "\",\"status\":\"active\"}");
-        post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + TASK + "\",\"status\":\"blocked\"}");
+        post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + TASK + "\",\"status\":\"blocked\",\"reason\":\"тест: ждём доступ\"}"); // WK-05: blocked — с причиной
 
         JsonPath all = given().header("X-Seer-Role", "admin")
             .when().get("/lore/history?type=task&id=" + TASK).then().statusCode(200).extract().jsonPath();

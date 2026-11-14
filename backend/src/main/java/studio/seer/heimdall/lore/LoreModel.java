@@ -141,6 +141,8 @@ final class LoreModel {
         Map<String, Object> create = new TreeMap<>();
         for (String ct : LoreModelFile.content().create().keySet()) create.put(ct, LoreModelCreate.block(ct));
         content.put("create", create);
+        // WK-05: ядро статусов, синонимы, переходы и виды работы — для паспорта и окна смены статуса.
+        content.put("workflow", LoreModelWorkflow.surface(LoreModelFile.content().workflow()));
         content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
         content.put("dictionaries", dictionaries);
         content.put("warnings", warnings);

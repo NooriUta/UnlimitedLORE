@@ -19,15 +19,16 @@ import { appT } from '../i18n';
 import { storage as safeStorage } from '../storage/safe';
 import { v2Key } from '../storage/storage';
 
+// MINI-03: адреса — серверные (LoreMeResource), один контракт с мобилкой; HTTP-клиент — loreViewsApi.ts.
 export const LORE_VIEWS_API = {
-  list: 'GET /lore/views?section={section}',
-  create: 'POST /lore/views',
-  update: 'PATCH /lore/views/{id}',
-  remove: 'DELETE /lore/views/{id}',
+  list: 'GET /lore/me/views?section={section}',
+  create: 'POST /lore/me/views',
+  update: 'POST /lore/me/views (view_uid + expected_version)',
+  remove: 'POST /lore/me/views/delete',
 } as const;
 
 /** Разделы v2 с видами (MVP D-2026-UXR-MVP: сначала спринты и ADR). */
-export const LORE_VIEW_SECTIONS = ['sprints', 'adrs'] as const;
+export const LORE_VIEW_SECTIONS = ['sprints', 'adrs', 'specs'] as const;
 export type LoreViewSection = (typeof LORE_VIEW_SECTIONS)[number];
 
 const q = (p: Partial<ListState>) => listStateToQuery({ ...DEFAULT_LIST_STATE, ...p });
@@ -45,6 +46,7 @@ export function loreTeamViews(lang: KitLang): KitSavedListView[] {
     team('team-sprints-active', 'sprints', 'views.team.sprintsActive', q({ quick: 'active', sort: { key: 'updated_at', dir: 'desc' } })),
     team('team-adrs-by-status', 'adrs', 'views.team.adrsByStatus', q({ group: 'status', sort: { key: 'updated_at', dir: 'desc' } }), true),
     team('team-adrs-proposed', 'adrs', 'views.team.adrsProposed', q({ quick: 'proposed', sort: { key: 'updated_at', dir: 'desc' } })),
+    team('team-specs-by-status', 'specs', 'views.team.specsByStatus', q({ group: 'status', sort: { key: 'updated_at', dir: 'desc' } }), true),
   ];
 }
 

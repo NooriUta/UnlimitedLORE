@@ -11,7 +11,10 @@
     "backlog",
     "design",
     "ready_for_deploy",
-    "uat"
+    "uat",
+    "waiting",
+    "review",
+    "failed"
   ],
   "adrStatuses": [
     "proposed",
@@ -160,6 +163,30 @@
         "TO DO",
         "НЕ НАЧАТ"
       ]
+    },
+    "waiting": {
+      "marker": "⏳",
+      "words": [
+        "WAITING",
+        "ЖДЁМ",
+        "ЖДЕМ",
+        "ОЖИДА"
+      ]
+    },
+    "review": {
+      "marker": "🔍",
+      "words": [
+        "REVIEW",
+        "РЕВЬЮ"
+      ]
+    },
+    "failed": {
+      "marker": "❌",
+      "words": [
+        "FAILED",
+        "FAIL",
+        "ПРОВАЛ"
+      ]
     }
   },
   "statusRaw": {
@@ -173,7 +200,10 @@
     "ready_for_deploy": "🚀 READY FOR DEPLOY",
     "uat": "🧪 UAT TESTING",
     "backlog": "🟣 BACKLOG",
-    "design": "🔬 DESIGN"
+    "design": "🔬 DESIGN",
+    "waiting": "⏳ WAITING",
+    "review": "🔍 REVIEW",
+    "failed": "❌ FAILED"
   },
   "_statusCategoriesComment": "SPRINT_UXR_S1_HONEST_API/S1-06. One axis of status categories for all types (decision:D-2026-UXR-STATUS-AXIS, SPEC-LORE-UXR-S1-CONTRACTS contract 2). Closed = only the `closed` categories. `accepted` on ADR/spec/decision is in_force (\"действует\") and OPEN: the naive mapping hid 180 of 241 accepted ADRs as closed. An unrecognized status is `unknown` and counts as OPEN: do not hide what was not recognized. Case and surrounding whitespace do not matter. plan.map keys cover planStatuses AND the statusMatch canons (free-text status_raw is read through statusMatch first). Decision `fixed`/`done` are S1-06 assumptions (in_force/finished), absent from the spec table. Mirrors: backend LoreStatusCategory (LoreStatusesConsistencyTest); the UI copy is guarded on the frontend side (check:statuses, S1-06 step 4).",
   "statusCategories": {
@@ -207,7 +237,10 @@
         "ready_for_deploy": "in_progress",
         "uat": "in_progress",
         "done": "finished",
-        "cancelled": "withdrawn"
+        "cancelled": "withdrawn",
+        "waiting": "in_progress",
+        "review": "in_progress",
+        "failed": "withdrawn"
       }
     },
     "doc": {
@@ -226,6 +259,42 @@
         "deprecated": "withdrawn",
         "superseded": "withdrawn"
       }
+    }
+  },
+  "_coreComment": "SPRINT_LORE_WORK_ANY_KIND/WK-05 (D-2026-LORE-UNIFIED-WORKFLOW-CORE, прототип wk-05-workflow одобрен 14.11.2026). Восемь статусов ядра для задач и спринтов любого вида работы. Старые значения planStatuses — синонимы: данные не мигрируются, читатель сводит токен к ядру через coreSynonyms. ready_for_deploy и uat — стадии review (развилка А): ядро остаётся восьмёркой. failed — известный отрицательный исход (отказали, проиграли, просрочили), категория withdrawn: закрыта, но не «сделано».",
+  "core": [
+    "planned",
+    "active",
+    "waiting",
+    "review",
+    "done",
+    "failed",
+    "blocked",
+    "cancelled"
+  ],
+  "coreSynonyms": {
+    "todo": {
+      "core": "planned"
+    },
+    "backlog": {
+      "core": "planned"
+    },
+    "design": {
+      "core": "planned"
+    },
+    "deferred": {
+      "core": "planned"
+    },
+    "partial": {
+      "core": "active"
+    },
+    "ready_for_deploy": {
+      "core": "review",
+      "stage": "stand_check"
+    },
+    "uat": {
+      "core": "review",
+      "stage": "uat"
     }
   }
 }

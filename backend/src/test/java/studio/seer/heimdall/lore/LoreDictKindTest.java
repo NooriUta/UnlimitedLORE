@@ -41,4 +41,11 @@ class LoreDictKindTest {
         assertFalse(LoreDictResource.sameAsStored(req("product", "service"), Map.of("kind", "tech")),
             "смена вида — правка, а не «ничего не изменилось»");
     }
+
+    /** WK-01, админка: экран «Словари» читает срез dictionary — без kind вид продукта не показать. */
+    @Test
+    void dictionarySliceReturnsKind() {
+        String sql = LoreSlices.compose("dictionary", Map.of()).sql();
+        assertTrue(sql.contains(", kind"), sql);
+    }
 }

@@ -12,6 +12,7 @@ import {
   useKitLang, useLoadState,
 } from '@seidr/kit';
 import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
+import { isRecordPlacement } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
@@ -73,7 +74,6 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // без паспорта v2: щелчок отвечает словами (NoPassport).
   products: 'product',
 };
-const PLACES: readonly RecordPlacement[] = ['left', 'right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
@@ -122,7 +122,7 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     const id = p.get('open');
     const raw = p.get('place') ?? '';
     // Места в адресе нет — личная настройка «Где открывать запись» (S4-24), иначе справа.
-    const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : defaultPlace();
+    const place = isRecordPlacement(raw) ? raw : defaultPlace();
     return { id: id || null, place };
   };
   const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: defaultPlace() }));

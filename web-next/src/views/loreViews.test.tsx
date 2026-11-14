@@ -15,13 +15,17 @@ function memStorage() {
 }
 
 describe('контракт S2 — адреса и формы', () => {
-  it('CRUD видов — /lore/views, раздел — параметром', () => {
+  it('CRUD видов — серверный /lore/me/views (MINI-03), раздел — параметром', () => {
     expect(LORE_VIEWS_API).toEqual({
-      list: 'GET /lore/views?section={section}',
-      create: 'POST /lore/views',
-      update: 'PATCH /lore/views/{id}',
-      remove: 'DELETE /lore/views/{id}',
+      list: 'GET /lore/me/views?section={section}',
+      create: 'POST /lore/me/views',
+      update: 'POST /lore/me/views (view_uid + expected_version)',
+      remove: 'POST /lore/me/views/delete',
     });
+  });
+
+  it('разделы с видами — спринты, ADR и спеки (MINI-03)', () => {
+    expect([...LORE_VIEW_SECTIONS]).toEqual(['sprints', 'adrs', 'specs']);
   });
 });
 
