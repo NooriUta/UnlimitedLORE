@@ -5774,6 +5774,14 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 /* S9-04: на телефоне выбор проектов — лист на всю высоту экрана (список длинный, до 23 проектов). */
 .sk-scope__sheet { height: 100dvh; max-height: 100dvh; }
 .sk-scope__sheet .sk-scope__body { padding: 4px 0 12px; }
+/* Приёмка на телефоне 14.11.2026 (ширина 300): строки листа были шире экрана (scrollWidth 688),
+   «только этот» уходил за правый край. В листе ничто не шире листа: строки сжимаются, slug режется. */
+.sk-scope__sheet .sk-sheet__body { overflow-x: hidden; }
+.sk-scope__sheet .sk-scope__body,
+.sk-scope__sheet .sk-scope__grp,
+.sk-scope__sheet .sk-scope__list { min-width: 0; max-width: 100%; }
+.sk-scope__sheet .sk-scope__row { min-width: 0; max-width: 100%; }
+.sk-scope__sheet .sk-scope__id { max-width: 34%; }
 .sk-scope__sheet .sk-scope__check,
 .sk-scope__sheet .sk-scope__only,
 .sk-scope__sheet .sk-scope__act,
