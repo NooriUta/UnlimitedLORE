@@ -71,6 +71,7 @@
   "kit.shell.modules": "Модули",
   "kit.shell.sections": "Разделы",
   "kit.shell.menu": "Меню",
+  "kit.shell.menuOf": "{module} · разделы",
   "kit.shell.skip": "Перейти к содержимому",
   "kit.shell.status": "Строка состояния",
   "kit.shell.planned": "скоро",
