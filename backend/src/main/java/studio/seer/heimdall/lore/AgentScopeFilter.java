@@ -204,6 +204,13 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // агенты»: агент пишет ОТ ИМЕНИ своего владельца (LoreMeResource берёт владельца
         // по OWNED_BY), поэтому открыто всем профилям. Строкой, а не пропуском
         // «неизвестного семейства» — чтобы решение было видно, а не подразумевалось.
+        // sources (SPRINT_LORE_AGENT_OBSERVABILITY/AO-02) — след прочитанного: MCP после
+        // успешного создания записи пишет рёбра SOURCED_FROM к источникам, которые агент
+        // читал. Пишет тот же профиль, что создал запись, поэтому открыто всем агентным
+        // профилям; запись в саму цель уже прошла матрицу по своему семейству. Строкой,
+        // а не пропуском «неизвестного семейства», — чтобы решение было видно.
+        Map.entry("sources",   Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
         Map.entry("me",        Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
         // link (SPRINT_UXR_S2_GRAPH_MEMORY/S2-06, D-2026-UXR-LINK-MENTION-EDGE) — «Связать»
