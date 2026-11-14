@@ -115,17 +115,43 @@ describe('«Спринты» v2: вид Völva рядом с таймлайно�
     expect(urls.some(u => u.includes('/embed/volva/'))).toBe(false);
   }, 15000);
 
-  it('charts.layer=volva, ключа нет (503) — вид Völva показывает «не настроено», таймлайн остаётся', async () => {
+  // Владелица 14.11.2026 (прод: charts.layer=volva без ключа): «фолбек на echarts
+  // должна быть у тех у кого нет настройки интеграции с volva». Не настроено —
+  // вида Völva нет, раздел остаётся на своих видах, как при echarts.
+  it('charts.layer=volva, ключа нет (503) — фолбэк: вида Völva нет, таймлайн на месте', async () => {
     window.history.replaceState(null, '', '/?proj=NooriUta%2FUnlimitedLORE');
     const { impl, urls } = net('volva', json({ error: 'NOT_CONFIGURED', detail: 'нет ключа' }, 503));
+    render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
+    await screen.findByText('Спринт SP', {}, { timeout: 8000 });
+    await waitFor(() => expect(urls.some(u => u.includes('/embed/volva/'))).toBe(true));
+    await new Promise(r => setTimeout(r, 50));
+    expect(screen.getByRole('radio', { name: /Таймлайн/ })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: /Völva/ })).toBeNull();
+    window.history.replaceState(null, '', '/');
+  }, 15000);
+
+  it('charts.layer=volva, графика нет в белом списке (404) — тоже фолбэк', async () => {
+    window.history.replaceState(null, '', '/?proj=NooriUta%2FUnlimitedLORE');
+    const { impl, urls } = net('volva', json({ error: 'UNKNOWN_CHART', detail: 'нет' }, 404));
+    render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
+    await screen.findByText('Спринт SP', {}, { timeout: 8000 });
+    await waitFor(() => expect(urls.some(u => u.includes('/embed/volva/'))).toBe(true));
+    await new Promise(r => setTimeout(r, 50));
+    expect(screen.queryByRole('radio', { name: /Völva/ })).toBeNull();
+    window.history.replaceState(null, '', '/');
+  }, 15000);
+
+  it('charts.layer=volva, Völva настроена — вид есть, рамка с адресом подписи', async () => {
+    window.history.replaceState(null, '', '/?proj=NooriUta%2FUnlimitedLORE');
+    const { impl, urls } = net('volva', json({ url: 'https://volva.example.org/embed/question/J', expires_at: 'x' }));
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     await screen.findByText('Спринт SP', {}, { timeout: 8000 });
     const radio = await screen.findByRole('radio', { name: /Völva/ }, { timeout: 8000 });
     expect(screen.getByRole('radio', { name: /Таймлайн/ })).toBeTruthy();
     fireEvent.click(radio);
-    await waitFor(() => expect(container.querySelector('[data-embed-state="not_configured"]')).not.toBeNull());
-    expect(container.querySelector('[data-embed-state="not_configured"]')!.textContent).toMatch(/не настроено/);
-    const req = urls.find(u => u.includes('/embed/volva/'))!;
+    await waitFor(() => expect(container.querySelector('iframe')).not.toBeNull());
+    // Первый запрос — проверка «настроена ли» (без проекта), последний — подпись рамки.
+    const req = urls.filter(u => u.includes('/embed/volva/')).pop()!;
     expect(req).toContain(`/embed/volva/${VOLVA_SPRINTS_CHART}`);
     expect(decodeURIComponent(req)).toContain('project=NooriUta/UnlimitedLORE');
     window.history.replaceState(null, '', '/');

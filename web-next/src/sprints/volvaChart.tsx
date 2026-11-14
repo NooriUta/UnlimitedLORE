@@ -37,17 +37,30 @@ export function chartLayerOf(rows: readonly Pick<DictRow, 'code' | 'label_ru' | 
 /**
  * Слой из app_setting. Пока не прочитан или прочитать не смогли — echarts:
  * встройку нельзя включать на догадке, а прежний вид остаётся рабочим.
+ *
+ * Фолбэк (владелица 14.11.2026, на проде charts.layer=volva без ключа): «фолбек
+ * на echarts должна быть у тех у кого нет настройки интеграции с volva». При
+ * volva и заданном `chart` подпись проверяется один раз: «не настроено» (нет
+ * ключа/адреса — 503, нет графика в белом списке — 404) → echarts, вида Völva
+ * нет. Нет прав, нужен проект, сбой сети — Völva остаётся и показывает это
+ * честно: это не «не настроено».
  */
-export function useChartLayer(fetchImpl?: typeof fetch, enabled = true): ChartLayer {
+export function useChartLayer(fetchImpl?: typeof fetch, enabled = true, chart?: string): ChartLayer {
   const [layer, setLayer] = useState<ChartLayer>('echarts');
   useEffect(() => {
     if (!enabled) return;
     const ctrl = new AbortController();
     fetchAppSettings(ctrl.signal, fetchImpl)
-      .then(rows => { if (!ctrl.signal.aborted) setLayer(chartLayerOf(rows)); })
+      .then(async rows => {
+        if (ctrl.signal.aborted) return;
+        const want = chartLayerOf(rows);
+        if (want !== 'volva' || !chart) { setLayer(want); return; }
+        const probe = await volvaEmbedState(chart, [], fetchImpl, { signal: ctrl.signal });
+        if (!ctrl.signal.aborted) setLayer(probe.kind === 'not_configured' ? 'echarts' : 'volva');
+      })
       .catch(() => { /* не прочитали — встройка не включается, вид прежний */ });
     return () => ctrl.abort();
-  }, [fetchImpl, enabled]);
+  }, [fetchImpl, enabled, chart]);
   return enabled ? layer : 'echarts';
 }
 

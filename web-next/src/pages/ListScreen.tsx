@@ -401,7 +401,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Встроенный график Völva (SPRINT_VIZ_EMBED/EMB-L2, D-2026-LORE-VIZ-EMBED-PLACES):
   // вид РЯДОМ с видами раздела, только при charts.layer=volva; иначе ничего не
   // меняется. Проект — из скоупа шапки; подпись — бэкенд LORE.
-  const volvaLayer = useChartLayer(fetchImpl, !!def.volvaChart);
+  const volvaLayer = useChartLayer(fetchImpl, !!def.volvaChart, def.volvaChart);
   const volvaLabels = useVolvaSprintsLabels();
   const appViews = useMemo(() => (def.volvaChart && volvaLayer === 'volva' ? [{
     id: 'volva',
