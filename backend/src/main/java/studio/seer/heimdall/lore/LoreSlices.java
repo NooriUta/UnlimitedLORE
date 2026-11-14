@@ -2021,6 +2021,14 @@ public final class LoreSlices {
         // ребра) — 30 читалось как «все», а чужой спринт с похожим именем — как свой.
         // Потолка нет: страница — общими limit/offset (SE-01, page.total/has_more).
         // ORDER BY — в хвосте: скоуп вставляется перед ним.
+        // SPRINT_UXR_S9_SCALE_OPT/S9-05 (часть B): «таблица детей» вехи — её спринты с названием и
+        // статусом. Раньше вкладка шла сырыми id из milestone_by_id (название = id, статус пуст).
+        slice("milestone_sprints",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+            "FROM KnowSprint WHERE out('TARGETS_MILESTONE').milestone_id CONTAINS :mid",
+            List.of("mid"), Map.of(), " ORDER BY sprint_id DESC");
+
         slice("component_sprints",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
@@ -3227,6 +3235,8 @@ public final class LoreSlices {
         Map.entry("sprint_deps_of", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("sprint_done_dates", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("component_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        // S9-05 B: спринты вехи — строки-спринты, скоуп по проекту спринта, как у компонента.
+        Map.entry("milestone_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("product_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_sprints_by_tag", "out('BELONGS_TO_PROJECT').slug"),

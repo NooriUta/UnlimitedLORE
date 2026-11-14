@@ -450,8 +450,8 @@ final class LoreRecordFrom {
         Map.entry("question", List.of(
             lf("ANSWERS", "in", "decision", "answered_by"),
             lf("GATES", "out", "task", "gating_tasks"))),
+        // S9-05 B: спринты вехи — срезом milestone_sprints (SLICE_LINKS), а не сырыми id строки.
         Map.entry("milestone", List.of(
-            lf("TARGETS_MILESTONE", "in", "sprint", "direct_sprint_ids"),
             // 11.11: фичи, целящие в веху (то же ребро, другой тип источника).
             lf("TARGETS_MILESTONE", "in", "feature", "feature_ids"))),
         // 11.11: ADR, выпущенные релизом; спринты и PR — отдельными срезами (SLICE_LINKS).
@@ -558,6 +558,10 @@ final class LoreRecordFrom {
                 from(Transform.STR, "file_path"), from(Transform.STR, "file_path"), null, true),
             new SliceLink("prs", "project_prs", "project", "BELONGS_TO_PROJECT", "in", "pr",
                 from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)),
+        // S9-05 B: «таблица детей» вехи — её спринты с названием и статусом, постранично.
+        "milestone", List.of(
+            new SliceLink("sprints", "milestone_sprints", "mid", "TARGETS_MILESTONE", "in", "sprint",
+                from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
         // S9-05 A: «таблица детей» человека и агента — задачи, где у него ОТКРЫТАЯ роль.
         "user", List.of(
             new SliceLink("tasks", "user_tasks", "kc_sub", "ROLE_HELD_BY", "in", "task",

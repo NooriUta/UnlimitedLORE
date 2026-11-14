@@ -613,7 +613,9 @@ class LoreRecordSnapshotTest {
                     l.addAll(links("ANSWERS", "in", "decision", arr(row.get("answered_by"))));
                     l.addAll(links("GATES", "out", "task", arr(row.get("gating_tasks"))));
                 }
-                case "milestone" -> l.addAll(links("TARGETS_MILESTONE", "in", "sprint", arr(row.get("direct_sprint_ids"))));
+                // S9-05 B: спринты вехи — срезом milestone_sprints (название, статус), а не сырыми id
+                // строки: из строки остаются только фичи вехи.
+                case "milestone" -> l.addAll(links("TARGETS_MILESTONE", "in", "feature", arr(row.get("feature_ids"))));
                 case "component" -> {
                     for (String s : arr(row.get("specs")))
                         l.add(link("DOCUMENTED_IN", "out", s, s.startsWith("SPEC-TECH-") ? "tech" : "spec", s, null));

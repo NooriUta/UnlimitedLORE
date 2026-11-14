@@ -40,8 +40,11 @@ class LoreRecordRowLinksTest {
 
     @Test
     void milestoneSprints() {
-        assertEquals(List.of("TARGETS_MILESTONE:in=SPRINT_A/sprint"),
+        // S9-05 B: спринты вехи — срезом milestone_sprints (MilestoneSprintsTableTest), не из строки.
+        assertEquals(List.of(),
             relDirs(LoreRecordValues.rowLinks("milestone", Map.of("direct_sprint_ids", List.of("SPRINT_A")))));
+        assertEquals(List.of("TARGETS_MILESTONE:in=UC-1/feature"),
+            relDirs(LoreRecordValues.rowLinks("milestone", Map.of("feature_ids", List.of("UC-1")))));
     }
 
     @Test
