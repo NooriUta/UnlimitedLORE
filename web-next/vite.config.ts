@@ -45,6 +45,11 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'e2e/stand/**/*.test.ts'],
     setupFiles: ['src/test/setup.ts'],
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
+    // CI-WEBNEXT-ISOLATION (14.11.2026): при нехватке CPU (контейнер --cpus 1.5) полный прогон
+    // красный 2 из 3 — «Test timed out in 5000ms» у axe по витрине и тяжёлых отрисовок; при
+    // 6 ядрах 10 из 10 зелёных. Лимит — потолок от зависания, а не норма скорости; как у kit (#869).
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
     // PL-09: в CI контейнер джоба ограничен --memory=6g; без потолка vitest берёт
     // воркеров по числу ядер хоста (24) — OOM, код 137. Локально — по умолчанию.
     maxWorkers: process.env.CI ? 4 : undefined,
