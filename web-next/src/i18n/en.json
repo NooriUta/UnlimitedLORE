@@ -234,6 +234,7 @@
   "pp.record": "Record",
   "pp.full.enter": "Full screen",
   "pp.full.exit": "Back to its place",
+  "pp.notFoundHint": "Record «{id}» does not exist: deleted, renamed or in another database. This is the server answer, not a load failure.",
   "pp.place": "Opened as",
   "pp.place.left": "left panel",
   "pp.place.right": "right panel",

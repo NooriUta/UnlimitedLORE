@@ -5,9 +5,10 @@
 // листалка по списку и «⤢». Свой ушко «Свойства» RecordReader НЕ включаем (aside нет):
 // свойства во весь экран — рейка и свёртка самого RecordView (сессия kit, #914).
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
+import { RecordNotFound } from '../api/liveRecord';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
+  EmptyState, LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
   HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
@@ -296,7 +297,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       <WarningsProvider>
         <ModelNotes notes={[...order.notes, ...statuses.notes]} />
         <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
-        <LoadError error={pp.error} onRetry={pp.reload} />
+        {/* «Записи нет» (404) — ответ, а не сбой: данные получены, и запись отсутствует (находка preprod 14.11). */}
+        {pp.error instanceof RecordNotFound
+          ? <EmptyState title={t('pp.notFound', { id })} hint={t('pp.notFoundHint', { id })} />
+          : <LoadError error={pp.error} onRetry={pp.reload} />}
       </WarningsProvider>
     );
   }
