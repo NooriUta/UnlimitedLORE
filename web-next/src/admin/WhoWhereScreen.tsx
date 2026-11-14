@@ -23,6 +23,7 @@ import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
+import { PersonTestDelete } from './TestAccountDelete';
 import { WhyNotSee } from './WhyNotSee';
 import { AgentChip } from './HarnessMark';
 import './Admin.css';
@@ -271,6 +272,8 @@ function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Per
               onClick={() => setOff(p.kc_sub)}>{t('admin.off.open')}</button>
           </div>
         )}
+      {/* AP-01: «Удалить» — только у тестового логина; у реальных людей — только «Отключить». */}
+      <PersonTestDelete kcSub={p.kc_sub} fetchImpl={fetchImpl} />
     </div>
   );
 }

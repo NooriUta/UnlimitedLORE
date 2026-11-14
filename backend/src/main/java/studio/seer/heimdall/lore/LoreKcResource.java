@@ -434,6 +434,63 @@ public class LoreKcResource extends LoreResourceBase {
     }
 
     /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-01: удалить ТЕСТОВУЮ учётку агента — клиент KC (его
+     * сервисного пользователя KC удаляет вместе с клиентом, это проверяется пробой) и
+     * актора агента в LORE со связкой «владелец». Только superadmin; имя — только под
+     * глоб D-2026-ONLY-TEST-PREFIXED-ACCOUNTS, иначе 403 (реальные — только выключить).
+     * {@code dry_run} — план «что уйдёт» без записи. KC зовётся той же служебной
+     * учёткой lore-admin, что create/disable/enable: прав ей LORE не добавляет —
+     * нет manage-clients, ответ 403 KC_FORBIDDEN, граф не тронут. Журнал AO-01 —
+     * фильтром, сущность записи — {@code client_id} (первое поле ответа и отказа).
+     */
+    public record TestDeleteRequest(Boolean dry_run) {}
+
+    @POST
+    @Path("agent-client/{clientId}/delete")
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteTestAgentClient(@PathParam("clientId") String clientId, TestDeleteRequest req,
+                                          @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireSuperAdmin(role);
+        if (!TestAccountDelete.isTestAgentClient(clientId))
+            return testAccountsOnly("client_id", clientId, TestAccountDelete.REAL_AGENT_REFUSAL);
+        if (!configured()) return notConfigured();
+        try {
+            KcOps.KcCall kcCall = call(adminToken());
+            TestAccountDelete.Graph g = testAccountGraph();
+            Map<String, Object> plan = TestAccountDelete.agentPlan(kcCall, g, clientId);
+            if (TestAccountDelete.isEmpty(plan))
+                return noStore(Response.status(404).entity(new LoreError("NOT_FOUND",
+                    clientId + " нет ни в Keycloak, ни в LORE — удалять нечего")));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("client_id", clientId);
+            out.put("ok", true);
+            if (req != null && Boolean.TRUE.equals(req.dry_run())) {
+                out.put("dry_run", true);
+                out.put("plan", plan);
+                return noStore(Response.ok(out));
+            }
+            Map<String, Object> done = TestAccountDelete.applyAgent(kcCall, g, plan);
+            LOG.infof("[LORE KC] удалена тестовая учётка агента %s: клиент KC %s, акторов %s", clientId,
+                done.get("kc_client_deleted"), done.get("actors_deleted"));
+            out.putAll(done);
+            out.put("plan", plan);
+            return noStore(Response.ok(out));
+        } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
+        catch (Exception e) { return upstream(e); }
+    }
+
+    /** Отказ «только тестовые»: id первым полем — журнал AO-01 пишет, КОГО пытались удалить. */
+    static Response testAccountsOnly(String idKey, String id, String why) {
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put(idKey, id);
+        body.put("error", "TEST_ACCOUNTS_ONLY");
+        body.put("detail", why);
+        return noStore(Response.status(Response.Status.FORBIDDEN).entity(body));
+    }
+
+    /**
      * S7B-03: {@code dry_run} — только дифф (KcDanger.realmRolePlan), ничего не пишет;
      * {@code undo_of} — этот вызов отменяет операцию {@code kr-…}; вне окна — 400.
      */

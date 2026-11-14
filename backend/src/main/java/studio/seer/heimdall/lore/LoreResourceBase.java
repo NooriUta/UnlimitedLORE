@@ -224,6 +224,21 @@ public abstract class LoreResourceBase {
         };
     }
 
+    /** AP-01: граф для {@link TestAccountDelete} — чтение и запись той же БД ресурса. */
+    TestAccountDelete.Graph testAccountGraph() {
+        return new TestAccountDelete.Graph() {
+            @Override
+            public java.util.List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                return ingestService.queryPublic(sql, params);
+            }
+            @Override
+            public void exec(String sql, Map<String, Object> params) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params))
+                    .await().indefinitely();
+            }
+        };
+    }
+
     /** S2-13: исход перехода статуса → HTTP-ответ (409/404/400) или null для Ok. */
     static Response statusOutcomeError(StatusHistoryService.Outcome o) {
         if (o instanceof StatusHistoryService.Outcome.Conflict c) return Scd2Guard.conflict(c.detail(), c.current());
