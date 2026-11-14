@@ -6152,6 +6152,23 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
   height: 100%; border: 1px dashed var(--bd); border-bottom: 0; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--bg3) 3px 5px);
 }
 .sk-news__sbar:focus-visible, .sk-news__sbar:hover { outline: 1px solid var(--t1); outline-offset: 1px; }
+/* S7A-11: «Динамика» — неделя к неделе / месяц к месяцу; ряды и Δ — с сервера */
+.sk-news__dyn .sk-news__ph { justify-content: flex-start; }
+.sk-news__dyn .sk-news__ph > [role=radiogroup] { margin-left: auto; }
+.sk-news__dynsub { color: var(--t3); font-size: var(--fs-2xs); font-family: var(--mono); }
+.sk-news__dyncards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.sk-news__dyncard { gap: 4px; }
+.sk-news__dyncard[data-state='filtered_out'] { opacity: .7; }
+.sk-news__dynrow { display: flex; align-items: baseline; gap: 8px; }
+.sk-news__dynna { color: var(--wrn); font-size: var(--fs-sm); font-weight: 600; }
+.sk-news__dyncard[data-state='filtered_out'] .sk-news__dynna { color: var(--t3); font-weight: 400; }
+.sk-news__dynbars { display: flex; align-items: flex-end; gap: 2px; height: 26px; }
+.sk-news__dynbar {
+  flex: 1 1 0; min-width: 3px; height: var(--h, 1px); min-height: 1px; border-radius: 2px 2px 0 0;
+  background: color-mix(in srgb, var(--acc) 55%, transparent);
+}
+.sk-news__dynbar[data-current='true'] { background: var(--acc); }
+.sk-news__dynbar[data-state='zero'] { height: 1px; background: var(--bd); }
 .sk-news__filters { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .sk-news__frow { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 1px; }
 .sk-news__frow::-webkit-scrollbar { display: none; }
@@ -7164,6 +7181,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* PU-23: дети раскрытой строки — строками той же таблицы; чуть приглушённый фон отделяет их от верхнего уровня. */
 .sk-list__row--child { background: var(--bg2); }
 .sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }
+/* PU-23: дети другого типа — вложенная таблица своего типа, компактно (без полосы управления). */
+.sk-list__nested { min-width: 0; border-left: 2px solid var(--bd); padding-left: var(--pad-x); }
+.sk-list--bare { gap: 0; }
+.sk-list--bare .sk-list__table { background: var(--bg2); }
 
 /* ---------- EmbedChartFrame: встроенный график (SPRINT_VIZ_EMBED/EMB-L2) ---------- */
 /* Фон рамки прозрачный: встройка в теме transparent берёт фон страницы (VE-4). */

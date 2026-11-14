@@ -39,3 +39,18 @@ describe('док на всю ширину: кнопки управления', (
     expect(css).toMatch(/\.sk-dock\[data-placement='full'\]\s*\{\s*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
   });
 });
+
+// Владелица 14.11.2026 (скрин, «98 из 244»): «опять две строки — кнопка с диагональной стрелкой
+// (свернуть/развернуть) и так повторяет „Выйти из полного экрана“; оставь её, а крестик поставь за
+// меню — и строка станет одной». Режим controls="bar": управление несёт строка записи приложения,
+// док своей полосы и своего «×» не рисует ни во весь экран, ни в доке.
+describe('док: управление в строке записи (controls="bar")', () => {
+  for (const placement of ['full', 'right', 'bottom'] as const) {
+    it(`${placement}: ни «Выйти из полного экрана», ни «×» дока — одна строка`, () => {
+      const { container } = render(<RecordDock placement={placement} controls="bar" onClose={() => {}} onExitFull={() => {}}><p>паспорт</p></RecordDock>);
+      expect(screen.queryByRole('button', { name: /полного экрана/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Закрыть паспорт' })).toBeNull();
+      expect(container.querySelector('.sk-dock__ctl')).toBeNull();
+    });
+  }
+});

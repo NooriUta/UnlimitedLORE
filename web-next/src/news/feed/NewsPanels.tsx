@@ -17,7 +17,7 @@ import {
   type NewsTaskAxis, type NewsUnmeasurable,
 } from './types';
 
-export type NewsSection = 'metrics' | 'groups' | 'matrix' | 'burn' | 'knowledge' | 'feed';
+export type NewsSection = 'dynamics' | 'metrics' | 'groups' | 'matrix' | 'burn' | 'knowledge' | 'feed';
 
 interface PanelsProps {
   data: NewsResponse;

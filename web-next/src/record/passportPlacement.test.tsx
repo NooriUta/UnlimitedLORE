@@ -123,3 +123,22 @@ describe('MP2-11 · ⤢ раздвигает сразу, меню мест — �
     expect(onPlace).toHaveBeenCalledWith('left');
   });
 });
+
+// Владелица 14.11.2026 (скрин «98 из 244»): «опять две строки… оставь кнопку свернуть/развернуть, а
+// крестик поставь за меню — и строка станет одной». «×» — в строке записи сразу после ☰.
+describe('строка записи: «×» после ☰, одна строка', () => {
+  it('во весь экран: ⤢, ☰, × — подряд в одной строке, отдельной «Выйти из полного экрана» нет', async () => {
+    const onClose = vi.fn();
+    const { win } = winWith('?place=full');
+    render(<ListPassport type="sprint" id="S_A" placement="full" fetchImpl={fake() as unknown as typeof fetch} win={win} onClose={onClose} />);
+    await screen.findByRole('heading', { level: 1, name: 'Альфа' }, { timeout: 8000 });
+    const menu = screen.getByRole('button', { name: 'Где открыт' });
+    const close = screen.getByRole('button', { name: 'Закрыть паспорт' });
+    expect(close.closest('.sk-rec-reader__tools')).toBe(menu.closest('.sk-rec-reader__tools'));
+    expect(close.closest('.sk-rec-reader__tools')).toBeTruthy();
+    expect(menu.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /полного экрана/ })).toBeNull();
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
