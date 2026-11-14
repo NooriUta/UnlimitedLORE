@@ -42,6 +42,29 @@ describe('щелчок по заголовку — сортировка по к�
     fireEvent.click(btn);
     expect(th.getAttribute('aria-sort')).toBeNull();
   });
+
+  // Приёмка препрода 0dccfe73 (AP-04): после «снять» список шёл «как пришло» (по коду), хотя до
+  // сортировки экран стоял на своём умолчании «Изменено ↓». Снять — значит вернуть умолчание экрана.
+  it('«снять» возвращает сортировку экрана по умолчанию, а не «как пришло»', () => {
+    render(<ListView config={config} data={data} urlState={false} initial={{ sort: { key: 'title', dir: 'asc' } }} />);
+    expect(order()).toEqual(['T2', 'T1', 'T3']);
+    const th = screen.getByRole('columnheader', { name: /Оценка/ });
+    fireEvent.click(th);
+    fireEvent.click(th);
+    fireEvent.click(th);
+    expect(th.getAttribute('aria-sort')).toBeNull();
+    expect(order()).toEqual(['T2', 'T1', 'T3']);
+  });
+
+  it('умолчание на этой же колонке: третий щелчок снимает сортировку совсем, а не зацикливается', () => {
+    render(<ListView config={config} data={data} urlState={false} initial={{ sort: { key: 'effort', dir: 'asc' } }} />);
+    const th = screen.getByRole('columnheader', { name: /Оценка/ });
+    expect(th.getAttribute('aria-sort')).toBe('ascending');
+    fireEvent.click(th);
+    expect(th.getAttribute('aria-sort')).toBe('descending');
+    fireEvent.click(th);
+    expect(th.getAttribute('aria-sort')).toBeNull();
+  });
 });
 
 describe('статус в ячейке списка — иконка, название в подсказке', () => {
