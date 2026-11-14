@@ -119,9 +119,10 @@ final class LoreEntityHistory {
             .append(hist).append("' AS hist_type, ").append(idExpr).append(" AS ref_id, state_uid, ")
             .append("valid_from, valid_to, content_hash, source_commit, status_raw, changed_by, changed_by_kind");
         if (dict) sb.append(", dict_type");
-        // S7B-06: у дока тело версии — сама суть истории (построчный дифф версий
-        // в «Правилах CLAUDE»); без него экран видел только смену хеша.
-        if ("doc".equals(type)) sb.append(", content_md");
+        // S7B-06 → правило (MT-NOTE-APPEND, приёмка 14.11.2026): тело версии — суть истории у КАЖДОГО
+        // типа, а не только у дока; без него дифф видел только смену хеша (заметка задачи — одна строка
+        // content_hash). Поля — те, что хранит Hist-строка этого типа.
+        for (String bf : BODY_FIELDS.getOrDefault(hist, List.of())) sb.append(", ").append(bf);
         String p = projectsExpr(type);
         if (p != null) sb.append(", ").append(p).append(" AS projects");
         String via = projectsViaExpr(type);
@@ -227,6 +228,15 @@ final class LoreEntityHistory {
     static final int PAGE_MAX = 500;
     static final java.util.Set<String> AUTHOR_KINDS = java.util.Set.of("human", "agent", "unknown", "ingest", "unauth");
     /** Поле версии → колонка строки истории, по которой видно изменение. */
+    /** Поля тела версии по классу истории — то, что дифф обязан показать (HistoryBodyFieldsTest). */
+    static final Map<String, List<String>> BODY_FIELDS = Map.of(
+        "KnowTaskHist", List.of("note_md"),
+        "KnowSprintHist", List.of("context_md", "outcome_md"),
+        "KnowADRHist", List.of("context_md", "decision_md", "consequences_md"),
+        "KnowSpecHist", List.of("content_md"),
+        "KnowDocHist", List.of("content_md"),
+        "KnowRunbookHist", List.of("content_md"));
+
     static final Map<String, String> CHANGE_FIELDS = Map.of("status", "status_raw", "content", "content_hash");
 
     /** Причина отказа параметров страницы или null. */

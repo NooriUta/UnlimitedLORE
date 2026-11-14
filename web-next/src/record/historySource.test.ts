@@ -55,7 +55,8 @@ describe('перевод истории с сервера', () => {
   it('changed считается сравнением соседей; у самой старой — все поля', () => {
     const h = historyFromServer(body());
     expect(h.versions[0].changed).toContain('status_raw');
-    expect(h.versions[0].changed).toContain('content_hash');
+    // S9-09 (a0918f86): служебный хеш — не правка.
+    expect(h.versions[0].changed).not.toContain('content_hash');
     expect(h.versions[1].changed.length).toBeGreaterThan(0);
   });
 
@@ -195,5 +196,22 @@ describe('фильтр по автору и свёртка правок аген
   it('пустой автор и слишком длинный — отказ сервера, а не пустая история', async () => {
     const f = vi.fn(async () => json({ error: 'BAD_PARAMS', detail: 'author must not be blank' }, 400));
     await expect(fetchHistory('adr', 'ADR-1', { author: '' }, f as unknown as typeof fetch)).rejects.toThrow(/BAD_PARAMS/);
+  });
+});
+
+// Приёмка препрода 14.11.2026 (MT-NOTE-APPEND, S9-09): дифф правки заметки показывал ОДНУ строку —
+// служебный content_hash, а текста не было. Служебные поля версии отсекаются одним правилом с
+// legacy-путём (history/recordHistory.ts, a0918f86), а текст заметки — поле версии и попадает в дифф.
+describe('S9-09 × MT-NOTE-APPEND · дифф паспорта: без хеша, с текстом', () => {
+  const row = (vf: string, vt: string | null, note: string, hash: string) => ({
+    entity_type: 'task', hist_type: 'KnowTaskHist', ref_id: 'S/T-1', state_uid: vf, valid_from: vf, valid_to: vt,
+    content_hash: hash, source_commit: 'abc', status_raw: '🔄 IN PROGRESS', note_md: note,
+  });
+  it('content_hash и source_commit не поле версии; правка текста — изменение note_md', () => {
+    const h = historyFromServer({ rows: [row('2026-11-08T10:12:00Z', '2026-11-14T08:00:00Z', 'было', 'h1'), row('2026-11-14T08:00:00Z', null, 'было\nстало', 'h2')] });
+    const newest = h.versions[0];
+    expect(Object.keys(newest.fields)).not.toContain('content_hash');
+    expect(Object.keys(newest.fields)).not.toContain('source_commit');
+    expect(newest.changed).toEqual(['note_md']);
   });
 });

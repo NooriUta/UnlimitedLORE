@@ -98,7 +98,19 @@ function fromS2(body: Record<string, unknown>): KitHistory {
   };
 }
 
-const SERVICE = new Set(['valid_from', 'valid_to', 'content_hash', 'source_commit', 'state_uid', '@rid', '@type']);
+/**
+ * Служебные поля строки истории — не правка и не поле версии. ОДИН набор для обоих путей истории
+ * (legacy здесь и сервер S2/S9-09 в record/historySource.ts): разойдясь, они пропустили content_hash
+ * в дифф паспорта (приёмка препрода 14.11.2026).
+ */
+export const HISTORY_SERVICE_FIELDS: ReadonlySet<string> = new Set([
+  'entity_type', 'hist_type', 'ref_id', 'state_uid', 'valid_from', 'valid_to',
+  'content_hash', 'source_commit', '@rid', '@type',
+  'changed_by', 'changed_by_kind', 'author', 'projects', 'projects_via',
+  // Пометка свёрнутой серии (S9-09) — метаданные выдачи, а не поле версии.
+  'collapsed',
+]);
+const SERVICE = HISTORY_SERVICE_FIELDS;
 
 /** Строки SCD2-слайса (старейшая первой) → история kit (новейшая первой), автор unknown. */
 export function fromLegacyRows(rows: readonly Record<string, unknown>[]): KitHistory {
