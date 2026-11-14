@@ -143,6 +143,21 @@ describe('S5-06 · путь записи РАЗДЕЛА берётся из сх
     expect(calls).toHaveLength(0);
   });
 
+  // MC-08 (приёмка v1.17.20): флаг «Не требует релиза» уходил пустой строкой —
+  // путь write превращал любое не-строковое значение в ''. Флаг — boolean как есть.
+  it('флаг (bool) уходит boolean, а не пустой строкой', async () => {
+    for (const v of [true, false]) {
+      await savePassportField(
+        'sprint', { id: 'SP', title: 'Спринт' }, 'no_release', v, net, null,
+        { endpoint: '/lore/sprint/update', field: 'no_release_required' },
+      );
+    }
+    expect(calls.map(c => c.body)).toEqual([
+      { sprint_id: 'SP', no_release_required: true },
+      { sprint_id: 'SP', no_release_required: false },
+    ]);
+  });
+
   it('write не передан — прежний путь по склеенному телу (эмуляция)', async () => {
     await savePassportField('task', { id: 'SP/T1', title: 'Задача' }, 'body_md', 'Заметка', net, null);
     expect(calls[0].url).toContain('/lore/task/edit');
