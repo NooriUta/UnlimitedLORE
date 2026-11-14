@@ -134,6 +134,24 @@ describe('UC-8 · экран', () => {
     expect(screen.queryByTestId('adm-projects')).toBeNull();
   });
 
+  // PU-29 (приёмка 14.11.2026): раскрытый проект внизу списка оставался за краем экрана.
+  it('«Проекты»: раскрытый проект прокручивается в видимую область', async () => {
+    const spy = vi.fn();
+    const orig = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = spy;
+    try {
+      render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={fake()} /></KitLangProvider>);
+      const mini = await screen.findByTestId('adm-project-AIDA/miniLORE') as HTMLDetailsElement;
+      expect(spy).not.toHaveBeenCalled();
+      mini.open = true;
+      fireEvent(mini, new Event('toggle'));
+      await vi.waitFor(() => expect(spy).toHaveBeenCalled());
+      expect(spy.mock.contexts[spy.mock.contexts.length - 1]).toBe(screen.getByTestId('adm-project-AIDA/miniLORE'));
+    } finally {
+      Element.prototype.scrollIntoView = orig;
+    }
+  });
+
   it('«Проекты» — заголовок раздела, проекты, поиск, агенты без владельца; людей списком нет', async () => {
     render(<KitLangProvider lang="ru"><WhoWhereScreen view="projects" fetchImpl={fake()} /></KitLangProvider>);
     expect(await screen.findByTestId('adm-project-AIDA/miniLORE')).toBeTruthy();

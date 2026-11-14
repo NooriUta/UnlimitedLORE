@@ -67,7 +67,7 @@ export function KcDenials({ fetchImpl }: KcDenialsProps) {
                     <td><span className="adm-err adm-mono">{d.status ?? '—'}</span></td>
                     <td><span className="adm-mono">{d.error || '—'}</span></td>
                     <td><span className="adm-mono">{d.role || '—'}</span></td>
-                    <td><MachineCell value={d.machine} testId="adm-denial-machine" /></td>
+                    <td><MachineCell value={d.machine} testId="adm-denial-machine" unidentified={d.status === 401} /></td>
                   </tr>
                 );
               })}

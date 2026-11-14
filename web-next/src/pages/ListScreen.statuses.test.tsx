@@ -69,8 +69,8 @@ describe('K-14 п. 4 · статусы списка из модели', () => {
     const { impl } = net(MODEL);
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     // «В строю» — подпись модели; «В работе» — подпись умолчания приложения.
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В строю'));
-    expect(chip(container)?.textContent).not.toContain('В работе');
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В строю'));
+    expect(chip(container)?.getAttribute('title')).not.toContain('В работе');
   });
 
   it('модель спрашивается ровно за тот тип, который у раздела', async () => {
@@ -82,7 +82,7 @@ describe('K-14 п. 4 · статусы списка из модели', () => {
   it('модель недоступна — умолчание приложения, и это СКАЗАНО словами', async () => {
     const { impl } = net({ error: 'boom' }, 502);
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В работе'));
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
     // `\w` в JS кириллицу не покрывает — отсюда явный класс букв: иначе
     // проверка падает на присутствующем тексте.
     // MP2-08: оговорки модели — под кнопкой тех. сведений; слова на месте, их раскрывают.
@@ -93,7 +93,7 @@ describe('K-14 п. 4 · статусы списка из модели', () => {
   it('в модели нет цикла для типа — тоже названо, а не молчаливый откат', async () => {
     const { impl } = net({ format: 'model/0', version: 'v', statuses: { task: { entries: [] } } });
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В работе'));
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
     // MP2-08: оговорки модели — под кнопкой тех. сведений; слова на месте, их раскрывают.
     fireEvent.click(await screen.findByRole('button', { name: /тех/i }));
     await waitFor(() => expect(document.body.textContent).toMatch(/не описан словарь|нет цикла/i));
@@ -170,7 +170,7 @@ describe('MP2-08 · оговорки модели в списке — под з�
   it('оговорка модели не стоит строкой в полосе предупреждений списка, но её число видно', async () => {
     const { impl } = net({ error: 'boom' }, 502);
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В работе'));
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
     await waitFor(() => expect(container.querySelector('.pp-model-note__tech, [data-testid="model-notes"]')).not.toBeNull());
     const strip = container.querySelector('.list-screen__warn');
     expect(strip?.textContent ?? '').not.toMatch(/умолчани[а-яё]* приложения/i);

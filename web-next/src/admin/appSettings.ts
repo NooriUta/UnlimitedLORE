@@ -112,12 +112,13 @@ export function removeSetting(code: string, fetchImpl?: typeof fetch) {
 
 export type VolvaVerdict =
   | { kind: 'ok'; origin: string; expires: string }
-  | { kind: 'not_configured' | 'unknown_chart' | 'forbidden' | 'error'; detail: string };
+  | { kind: 'not_configured' | 'unknown_chart' | 'forbidden' | 'needs_project' | 'error'; detail: string };
 
-/** Исход проверки Völva — по коду ответа: не настроено ≠ нет графика ≠ нет доступа ≠ сбой. */
+/** Исход проверки Völva — по коду ответа: не настроено ≠ нет графика ≠ нет доступа ≠ нужен проект ≠ сбой. */
 export function volvaVerdict(e: unknown): VolvaVerdict {
   if (e instanceof LoreHttpError) {
     const detail = e.detail || e.code || `HTTP ${e.status}`;
+    if (e.status === 400 && e.code === 'PROJECT_REQUIRED') return { kind: 'needs_project', detail };
     if (e.status === 503) return { kind: 'not_configured', detail };
     if (e.status === 404) return { kind: 'unknown_chart', detail };
     if (e.status === 401 || e.status === 403) return { kind: 'forbidden', detail };
@@ -128,10 +129,13 @@ export function volvaVerdict(e: unknown): VolvaVerdict {
 /**
  * Запросить подписанный адрес пилотного графика velocity — тот же путь, что у
  * слоя Völva. Адрес целиком не возвращаем: в нём JWT; только origin и срок.
+ * График заперт на проект — без проекта бэкенд отвечает PROJECT_REQUIRED, поэтому
+ * проект передаётся явно (выбор — у кнопки проверки).
  */
-export async function checkVolva(fetchImpl: typeof fetch = loreFetch): Promise<VolvaVerdict> {
+export async function checkVolva(project: string, fetchImpl: typeof fetch = loreFetch): Promise<VolvaVerdict> {
   try {
-    const res = await fetchImpl('/lore/embed/volva/velocity', { headers: { Accept: 'application/json' } });
+    const qs = project.trim() ? `?${new URLSearchParams({ project: project.trim() }).toString()}` : '';
+    const res = await fetchImpl(`/lore/embed/volva/velocity${qs}`, { headers: { Accept: 'application/json' } });
     let b: Record<string, unknown> | null = null;
     try { b = (await res.json()) as Record<string, unknown>; } catch { b = null; }
     if (!res.ok || !b) throw new LoreHttpError(res.status, String(b?.error ?? (b ? '' : 'NON_JSON')), String(b?.detail ?? ''));

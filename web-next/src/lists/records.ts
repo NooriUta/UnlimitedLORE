@@ -378,6 +378,9 @@ export function milestoneRecord(row: Row): KitRecord {
     kind: 'milestone',
     title: str(row.label) || id,
     status: '',
+    // PU-27: срез вех отдаёт changed_at (версия цели, иначе правка вершины), а маппер
+    // его не читал — у записи не было времени, и фильтр «Изменены» был недоступен.
+    ...freshness(row),
     fields: {
       week: num(row.week),
       when: str(row.date_display),

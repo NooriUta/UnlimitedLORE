@@ -67,6 +67,28 @@ class SliceCapAndCardParityTest {
     }
 
     /**
+     * Справочник, отсортированный по убыванию счёта, — не лента.
+     *
+     * <p>Приёмка 14.11.2026 (SPRINT_UXR_POLISH_UAT_1113/PU-29): вкладка «Теги»
+     * показывала «показано 500 из 500» при большем корпусе — срез
+     * {@code tags_usage} нёс {@code ORDER BY uses DESC … LIMIT 500}, а сторож выше
+     * принял его за ленту по первому ключу {@code DESC}. Поиск фильтровал только
+     * эти 500: тега за потолком «не было». У справочника потолка быть не должно —
+     * признак сортировки по счёту не делает его «последними N».
+     */
+    @Test
+    void countOrderedDictionariesCarryNoCap() {
+        List<String> capped = new ArrayList<>();
+        for (String id : LoreSlices.ids()) {
+            LoreSlices.SliceDef def = LoreSlices.get(id);
+            String all = (def.baseSql() + " " + def.suffix()).replaceAll("\\s+", " ").toUpperCase();
+            if (all.contains("LIMIT") && all.matches(".*ORDER BY USES DESC.*")) capped.add(id);
+        }
+        assertEquals(List.of(), capped,
+            "справочник по счёту использований обрезан потолком — хвост пропадает молча: " + capped);
+    }
+
+    /**
      * Карточка и список говорят об одном одинаково.
      *
      * <p>Ключи связей — единственный способ прочитать принадлежность записи.

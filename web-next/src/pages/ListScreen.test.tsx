@@ -98,7 +98,7 @@ describe('ListScreen — ADR и честные состояния', () => {
     const { container } = render(<ListScreen screen="adrs" fetchImpl={fetchImpl} urlState={false} />);
     await waitFor(() => expect(rowIds(container)).toHaveLength(2));
     expect(asked(fetchImpl, '/lore/slice/adrs'), 'срез ADR запрошен').toBe(true);
-    expect(container.querySelector('[data-record-id="ADR-1"] [data-status="accepted"]')?.textContent).toContain('Действует');
+    expect(container.querySelector('[data-record-id="ADR-1"] [data-status="accepted"]')?.getAttribute('title')).toContain('Действует');
   });
 
   it('403 — «нет прав», не пустой список', async () => {

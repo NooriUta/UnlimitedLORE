@@ -547,11 +547,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     if (!nested || !ids.length) return;
     const ctl = new AbortController();
     setLate(null);
-    nested.load(client, ids, ctl.signal).then(
+    nested.load(client, ids, ctl.signal, data?.records ?? []).then(
       m => { if (!ctl.signal.aborted) setLate(m); },
       () => { /* отмена: экран ушёл или список перезагрузился */ },
     );
     return () => ctl.abort();
+    // records нужны загрузчику вехи (PU-27); ids — из тех же data, отдельной смены у них нет.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nested, client, ids]);
   const shownData = useMemo(() => {
     if (!data || !nested) return data;

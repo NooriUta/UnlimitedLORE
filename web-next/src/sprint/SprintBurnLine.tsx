@@ -13,9 +13,12 @@
 // вердикт словами — прямо в строке, график со сгоранием, планом, прогнозом и вертикалью
 // срока — по кнопке «Цель к сроку». Прогноз и вердикт считает приложение (targetForecast),
 // kit рисует. Строка цифр S4-36 остаётся как была; шапку графика не дублируем (headless).
+//
+// PU-27: та же строка у ВЕХИ (MilestoneBurnLine). Вид строки — `BurnLineView`,
+// один на оба типа; различаются только охват задач и слова состояний.
 import { useCallback, useState } from 'react';
 import { BurnChart, burnSummary, LoadError, useKitLang } from '@seidr/kit';
-import { useSprintBurn, type BurnSliceLoader } from './useSprintBurn';
+import { useSprintBurn, type BurnSliceLoader, type SprintBurn } from './useSprintBurn';
 import { targetForecast } from '../record/targetForecast';
 import { sliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
@@ -30,35 +33,51 @@ export interface SprintBurnLineProps {
   today?: string;
 }
 
-export function SprintBurnLine({ sprintId, load, deadline, today }: SprintBurnLineProps) {
+/** Слова состояний строки: у спринта и вехи они свои. */
+export interface BurnLineText {
+  loading: string;
+  empty: string;
+  failed: string;
+  noDeadline: string;
+}
+
+export interface BurnLineViewProps {
+  /** Ключ панели графика (id для aria-controls). */
+  panelKey: string;
+  burn: SprintBurn;
+  /** Срок: строка — есть; null — нет, сказать словами; undefined — вида нет. */
+  deadline?: string | null;
+  today?: string;
+  /** Замороженная (историческая) запись: график есть, прогноза и вердикта нет (PU-27). */
+  frozen?: boolean;
+  /** Слова «заморожено — прогноза нет»; нужны вместе с frozen. */
+  frozenText?: string;
+  text: BurnLineText;
+}
+
+export function BurnLineView({ panelKey, burn, deadline, today, frozen, frozenText, text }: BurnLineViewProps) {
   const t = useAppT();
   const lang = useKitLang();
   const [open, setOpen] = useState(false);
-  const fetcher = sliceFetcher();
-  const loader = useCallback<BurnSliceLoader>(
-    (slice, signal) => (load ? load(slice, signal) : fetcher(slice, {}, signal)),
-    // fetcher пересоздаётся каждый рендер, но ходит одним и тем же путём:
-    // в зависимости берём только то, что действительно меняет загрузку.
-    [load], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const burn = useSprintBurn(sprintId, loader);
 
-  if (burn.state === 'loading') return <p className="sprint-burn sprint-burn--loading">{t('sprintBurn.loading')}</p>;
+  if (burn.state === 'loading') return <p className="sprint-burn sprint-burn--loading">{text.loading}</p>;
 
   // Сбой и «нет прав» — не «истории нет»: это разные ответы, и путать их нельзя.
   if (burn.state === 'error' || burn.state === 'forbidden') {
-    return <LoadError compact error={burn.error} onRetry={burn.onRetry} title={t('sprintBurn.failed')} />;
+    return <LoadError compact error={burn.error} onRetry={burn.onRetry} title={text.failed} />;
   }
 
   if (burn.state === 'empty') {
-    return <p className="sprint-burn sprint-burn--empty" data-testid="sprint-burn-empty">{t('sprintBurn.empty')}</p>;
+    return <p className="sprint-burn sprint-burn--empty" data-testid="sprint-burn-empty">{text.empty}</p>;
   }
 
   const sum = burnSummary(burn.points ?? []);
-  const due = deadline ? deadline.slice(0, 10) : deadline;
+  // Замороженная запись — без прогноза: срок прошёл по определению, вердикт «не успеваем» врал бы.
+  const due = frozen ? undefined : deadline ? deadline.slice(0, 10) : deadline;
   const target = due ? targetForecast(burn.points ?? [], due, today ?? new Date().toISOString().slice(0, 10), lang) : null;
-  const panelId = `sprint-burn-target-${sprintId}`;
-  if (!sum) return <p className="sprint-burn sprint-burn--empty" data-testid="sprint-burn-empty">{t('sprintBurn.empty')}</p>;
+  const panelId = `sprint-burn-target-${panelKey}`;
+  const hasTarget = due !== undefined || Boolean(frozen);
+  if (!sum) return <p className="sprint-burn sprint-burn--empty" data-testid="sprint-burn-empty">{text.empty}</p>;
 
   return (
     <div className="sprint-burn">
@@ -76,14 +95,15 @@ export function SprintBurnLine({ sprintId, load, deadline, today }: SprintBurnLi
         <span className="sprint-burn__pair"><span className="sprint-burn__k">{t('sprintBurn.scope')}</span> <b>{sum.scope}</b></span>
         <span className="sprint-burn__pair"><span className="sprint-burn__k">{t('sprintBurn.peak')}</span> <b>{sum.peak}</b></span>
         {target && <span className="sprint-burn__verdict" data-testid="sprint-burn-verdict" data-tone={target.verdict.tone}>{target.verdict.text}</span>}
-        {due === null && <span className="sprint-burn__nodue" data-testid="sprint-burn-no-deadline">{t('sprintBurn.noDeadline')}</span>}
-        {due !== undefined && (
+        {due === null && <span className="sprint-burn__nodue" data-testid="sprint-burn-no-deadline">{text.noDeadline}</span>}
+        {frozen && <span className="sprint-burn__nodue" data-testid="milestone-burn-frozen">{frozenText}</span>}
+        {hasTarget && (
           <button type="button" className="sprint-burn__toggle" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(o => !o)}>
             <span aria-hidden="true">{open ? '▾' : '▸'}</span> {t('sprintBurn.target')}
           </button>
         )}
       </p>
-      {open && due !== undefined && (
+      {open && hasTarget && (
         <div id={panelId}>
           <BurnChart
             headless
@@ -91,12 +111,38 @@ export function SprintBurnLine({ sprintId, load, deadline, today }: SprintBurnLi
             state={burn.state}
             completeness={burn.completeness}
             onRetry={burn.onRetry}
-            deadline={due}
+            {...(due ? { deadline: due } : {})}
             forecast={target?.forecast}
             verdict={target?.verdict}
           />
         </div>
       )}
     </div>
+  );
+}
+
+export function SprintBurnLine({ sprintId, load, deadline, today }: SprintBurnLineProps) {
+  const t = useAppT();
+  const fetcher = sliceFetcher();
+  const loader = useCallback<BurnSliceLoader>(
+    (slice, signal) => (load ? load(slice, signal) : fetcher(slice, {}, signal)),
+    // fetcher пересоздаётся каждый рендер, но ходит одним и тем же путём:
+    // в зависимости берём только то, что действительно меняет загрузку.
+    [load], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const burn = useSprintBurn(sprintId, loader);
+  return (
+    <BurnLineView
+      panelKey={sprintId}
+      burn={burn}
+      deadline={deadline}
+      today={today}
+      text={{
+        loading: t('sprintBurn.loading'),
+        empty: t('sprintBurn.empty'),
+        failed: t('sprintBurn.failed'),
+        noDeadline: t('sprintBurn.noDeadline'),
+      }}
+    />
   );
 }

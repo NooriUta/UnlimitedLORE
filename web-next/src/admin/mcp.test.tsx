@@ -140,3 +140,51 @@ describe('экран MCP', () => {
     expect(within(screen.getByTestId('adm-mcp')).getByTestId('adm-mcp-tester')).toBeTruthy();
   });
 });
+
+// SPRINT_UXR_S7B_ADMIN/S7B-07, приёмка 14.11: на экране MCP был только full, хотя в «Агентах»
+// 7 профилей; «только не видели» = 0. Профиль, который ни разу не звал, — строка «не видели»,
+// а не пропуск. Реестр профилей — agent_role агентов (срез agent_owners), тот же, что в «Агентах».
+describe('S7B-07 · все известные профили, даже без вызовов', () => {
+  const OWNERS = [
+    { actor_id: 'A1', agent_role: 'full' }, { actor_id: 'A2', agent_role: 'analyst' },
+    { actor_id: 'A3', agent_role: 'pm' }, { actor_id: 'A4', agent_role: 'analyst' }, { actor_id: 'A5', agent_role: null },
+  ];
+  function fakeRoster(o: { owners?: unknown; ownersStatus?: number } = {}) {
+    return vi.fn(async (url: string) => {
+      if (url.startsWith('/lore/slice/mcp_connections')) return json({ rows: CONN });
+      if (url.startsWith('/lore/slice/mcp_failures')) return json({ rows: FAIL });
+      if (url.startsWith('/lore/slice/agent_owners')) return json(o.owners ?? { rows: OWNERS }, o.ownersStatus ?? 200);
+      return json({ error: 'NOPE' }, 404);
+    }) as unknown as typeof fetch;
+  }
+
+  it('модель: профиль из реестра без вызовов и сбоев — unseen, calls null, сбоев 0', () => {
+    const rows = mergeMcp(CONN, FAIL, NOW, ['full', 'analyst', 'pm']);
+    const a = rows.find(r => r.caller === 'analyst')!;
+    expect(a).toMatchObject({ health: 'unseen', calls: null, lastSeen: null, failures: 0 });
+    expect(rows.map(r => r.caller).sort()).toEqual(['analyst', 'full', 'pm', 'tester']);
+  });
+
+  it('экран: analyst без вызовов — строка «не видели», и он в счёте «только не видели»', async () => {
+    mount(fakeRoster());
+    const table = await screen.findByTestId('adm-mcp');
+    const a = await within(table).findByTestId('adm-mcp-analyst');
+    expect(a.getAttribute('data-health')).toBe('unseen');
+    expect(a.textContent).toMatch(/не видели/i);
+    // pm (stale), tester (unseen), analyst (unseen) — трое.
+    expect(screen.getByTestId('adm-mcp-only-silent').textContent).toContain('3');
+  });
+
+  it('реестр профилей не прочитался — профили по вызовам видны, про остальные сказано «не смогли»', async () => {
+    mount(fakeRoster({ owners: { error: 'DOWN' }, ownersStatus: 502 }));
+    await screen.findByTestId('adm-mcp');
+    expect(screen.getByTestId('adm-mcp-roster-error').textContent).toMatch(/не смогли/i);
+    expect(within(screen.getByTestId('adm-mcp')).queryByTestId('adm-mcp-analyst')).toBeNull();
+  });
+
+  it('экран называет источник «последнего вызова» и отличает его от отметки сессий в «Агентах»', async () => {
+    mount(fakeRoster());
+    await screen.findByTestId('adm-mcp');
+    expect(screen.getByTestId('adm-mcp-source-note').textContent).toMatch(/сесси/i);
+  });
+});

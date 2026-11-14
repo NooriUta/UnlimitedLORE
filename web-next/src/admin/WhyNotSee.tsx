@@ -102,10 +102,14 @@ export function WhyNotSee({ projects, fetchImpl }: { projects: readonly string[]
         {agents.data === undefined && agents.state === 'loading' ? <Skeleton lines={1} label={t('admin.access.loading')} /> : agentField}
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.access.project')}</span>
-          <input className="adm-input" list="adm-why-projects" value={project ?? ''} data-testid="adm-why-project"
-            placeholder={t('admin.access.pickProject')} spellCheck={false}
-            onChange={e => setProject(e.target.value.trim() || null, { replace: true })} />
-          <datalist id="adm-why-projects">{projects.map(p => <option key={p} value={p} />)}</datalist>
+          {/* Приёмка 14.11.2026: выбор из списка, а не свободный ввод — опечатка в slug давала
+              ложный вердикт. Проект из адреса, которого нет в списке, виден и разбирается честно. */}
+          <select className="adm-select" value={project ?? ''} data-testid="adm-why-project"
+            onChange={e => setProject(e.target.value || null, { replace: true })}>
+            <option value="">{t('admin.access.pickProject')}</option>
+            {project && !projects.includes(project) && <option value={project}>{project}</option>}
+            {projects.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
         </label>
         {mode === 'tool' && (
           <label className="adm-field">
@@ -117,15 +121,15 @@ export function WhyNotSee({ projects, fetchImpl }: { projects: readonly string[]
         )}
       </div>
       {ready
-        ? <WhyAnswer agent={agent!} project={project!} tool={mode === 'tool' ? (tool ?? '').trim() : null} fetchImpl={fetchImpl} />
+        ? <WhyAnswer agent={agent!} project={project!} projects={projects} tool={mode === 'tool' ? (tool ?? '').trim() : null} fetchImpl={fetchImpl} />
         : <p className="adm-dim">{t(mode === 'tool' ? 'admin.why.pickTool' : 'admin.why.pick')}</p>}
       {mode === 'tool' && <Recent403 fetchImpl={fetchImpl} onPick={fam => setTool(fam)} />}
     </section>
   );
 }
 
-function WhyAnswer({ agent, project, tool, fetchImpl }: {
-  agent: AgentRow; project: string; tool: string | null; fetchImpl?: typeof fetch;
+function WhyAnswer({ agent, project, projects, tool, fetchImpl }: {
+  agent: AgentRow; project: string; projects: readonly string[]; tool: string | null; fetchImpl?: typeof fetch;
 }) {
   const t = useAppT();
   const tr = useTr();
@@ -141,8 +145,11 @@ function WhyAnswer({ agent, project, tool, fetchImpl }: {
       : agent.agent_role
         ? await got(fetchToolExplain({ agent_scope: agent.agent_role, ...toolQuery(tool) }, { signal, fetchImpl }))
         : { ok: false as const, forbidden: false, reason: tr('admin.why.noProfile') };
-    return agentChain({ agent, project, tool, access, owner, toolExplain }, tr);
-  }, [agent.actor_id, agent.client_id, agent.agent_role, project, tool, fetchImpl, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+    return agentChain({
+      agent: { ...agent, owner_name: agent.owner_display_name }, project, tool, access, owner, toolExplain,
+      knownProjects: projects.length ? projects : undefined,
+    }, tr);
+  }, [agent.actor_id, agent.client_id, agent.agent_role, project, projects.join(','), tool, fetchImpl, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const r = res.data;
   if (!r) {

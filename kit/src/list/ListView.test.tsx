@@ -224,3 +224,25 @@ describe('оба пилот-конфига без правки kit + axe', () =>
     expect(await axeViolations(container)).toEqual([]);
   });
 });
+
+// PU-29: строка открывается кликом по пустому месту — только когда экран это включил.
+describe('openOnRowClick', () => {
+  const plain: KitConfig = { ...cfg, list: { ...cfg.list!, columns: ['title', 'status'] } };
+  it('клик по ячейке открывает запись; без флага — нет', () => {
+    const onOpen = vi.fn();
+    const { container, unmount } = render(<ListView config={plain} data={data([rec('A', 'todo')])} urlState={false} onOpen={onOpen} />);
+    const cell = () => container.querySelector('tr[data-record-id="A"] td:last-child') as HTMLElement;
+    fireEvent.click(cell());
+    expect(onOpen).not.toHaveBeenCalled();
+    unmount();
+    const r2 = render(<ListView config={plain} data={data([rec('A', 'todo')])} urlState={false} onOpen={onOpen} openOnRowClick />);
+    fireEvent.click(r2.container.querySelector('tr[data-record-id="A"] td:last-child') as HTMLElement);
+    expect(onOpen).toHaveBeenCalledWith('A');
+  });
+  it('кнопка заголовка — своё действие, открытие не двоится', () => {
+    const onOpen = vi.fn();
+    render(<ListView config={plain} data={data([rec('A', 'todo')])} urlState={false} onOpen={onOpen} openOnRowClick />);
+    fireEvent.click(screen.getByRole('button', { name: 'Запись A' }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+});

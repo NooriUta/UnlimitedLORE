@@ -710,8 +710,32 @@ code, pre, kbd, samp { font-family: var(--mono); }
 }
 .sk-pop[data-align='start'] { top: calc(100% + 4px); right: auto; left: 0; }
 .sk-pop[data-align='end'] { top: calc(100% + 4px); right: 0; left: auto; }
-/* «Вправо от рейки»: внутри колонки шириной в иконку меню было бы обрезано. */
-.sk-pop[data-align='side'] { top: 0; right: auto; left: calc(100% + 4px); }
+/* «Вправо от рейки» (PU-26): слой ФИКСИРОВАН по координатам значка, которые
+   считает компонент (--pop-x/--pop-y: справа от значка, не влез — слева,
+   прижим к краям окна). Абсолютным он жил внутри колонки меню с overflow:auto
+   и уходил в её прокрутку: обрезался, а фокус на первой ссылке прокручивал
+   колонку вбок — список уезжал на рейку и за левый край окна. */
+.sk-pop[data-align='side'] {
+  position: fixed;
+  top: var(--pop-y, 0px);
+  right: auto;
+  left: var(--pop-x, 0px);
+  max-width: calc(100vw - 8px);
+  transform: none;
+}
+/* Телефон: слой рейки — нижний лист во всю ширину (S4-MOBILE-EDGE). */
+.sk-pop[data-sheet='bottom'] {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-width: none;
+  max-height: 70dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  transform: none;
+}
 /* «На своём месте в потоке, прижат вправо»: `top` не задан нарочно — у
    абсолютного элемента без top сохраняется статическое положение, то есть
    ровно под тем, за чем он стоит в разметке. Так всплывашка свёртки вкладок
@@ -720,7 +744,6 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-pop[data-align='under'] { right: 0; left: auto; margin-top: 4px; }
 /* Не хватило места внизу — раскрываемся вверх. */
 .sk-pop[data-side='up'] { top: auto; bottom: calc(100% + 4px); }
-.sk-pop[data-side='up'][data-align='side'] { top: auto; bottom: 0; }
 
 /* Мини-окно ссылки на запись в MD (SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW, ADR-LORE-050).
    Положение даёт .sk-pop; здесь — рамка, плотные IDE-размеры и честные состояния.
@@ -3632,7 +3655,19 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
    режется: код читают целиком (S4-30, PR #941). */
 .sk-list__c-status, .sk-list__c-kind, .sk-list__c-id, .sk-list__c-title { min-width: 0; }
 .sk-list__c-id { overflow-wrap: anywhere; }
+/* Владелица 14.11.2026: щелчок по заголовку — сортировка по колонке; заголовок остаётся заголовком по виду. */
+/* S4-12: заголовок с сортировкой и ссылка-код — цели касания, на сенсоре не меньше --tap. */
+.sk-list__th--sort { cursor: pointer; min-height: var(--tap); }
+/* Код строки — ссылка на паспорт, как название (14.11.2026). */
+.sk-list__idlink { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0; border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none; }
+.sk-list__idlink:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-list__th--sort:hover { color: var(--t1); }
+.sk-list__th--sort:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-list__sortmark { color: var(--acc); font-size: var(--fs-2xs); }
 .sk-list__row:hover { background: var(--bg2); }
+/* PU-29: строка открывается кликом целиком (openOnRowClick) — курсор говорит об этом. */
+.sk-list[data-open-row='true'] .sk-list__row,
+.sk-list[data-open-row='true'] .sk-cards__card { cursor: pointer; }
 .sk-list__row.is-selected { background: color-mix(in srgb, var(--acc) 10%, transparent); }
 /* S4-11: курсор строки — видимый фокус, клавиатурный слой поверх щелчка. */
 .sk-list__row:focus-visible,
@@ -7189,7 +7224,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-list__row--child { background: var(--bg2); }
 .sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }
 /* PU-23: дети другого типа — вложенная таблица своего типа, компактно (без полосы управления). */
-.sk-list__nested { min-width: 0; border-left: 2px solid var(--bd); padding-left: var(--pad-x); }
+/* Владелица 14.11.2026: «либо size под длину, либо если не помещается — scroll». width: 0 + min-width:
+   100% — контейнер берёт ширину ячейки и не распирает внешнюю таблицу; лишнее — горизонтальной прокруткой. */
+.sk-list__nested {
+  box-sizing: border-box;
+  width: 0;
+  min-width: 100%;
+  overflow-x: auto;
+  border-left: 2px solid var(--bd);
+  padding-left: var(--pad-x);
+}
+/* «Слишком высокие строки»: у вложенной таблицы строка компактная, название в одну строку. */
+.sk-list__nested .sk-list--bare {
+  --list-row-h: max(var(--tap), 28px);
+  --list-title-lines: 1;
+  --pad-y: 2px;
+}
 .sk-list--bare { gap: 0; }
 .sk-list--bare .sk-list__table { background: var(--bg2); }
 

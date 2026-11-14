@@ -63,6 +63,11 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
             {t('admin.mcp.failError', { reason: data.failError })}
           </p>
         )}
+        {data.rosterError != null && (
+          <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-mcp-roster-error">
+            {t('admin.mcp.rosterError', { reason: data.rosterError })}
+          </p>
+        )}
         {data.truncated && <p className="adm-note" data-tone="wrn" role="status">{t('admin.mcp.truncated')}</p>}
         <div className="adm-chips" role="group" aria-label={t('admin.mcp.title')}>
           <button type="button" className="adm-chip" aria-pressed={onlySilent} data-testid="adm-mcp-only-silent"
@@ -120,6 +125,8 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       <h2 id="adm-mcp-h" className="adm-h">{t('admin.mcp.title')}</h2>
       <p className="adm-lead">{t('admin.mcp.lead')}</p>
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-profiles-note">{t('admin.mcp.profilesNote')}</p>
+      {/* S7B-07: «последний вызов» здесь — счётчик запросов профиля; «Агенты» показывают ещё и отметку сессий. */}
+      <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-source-note">{t('admin.mcp.sourceNote')}</p>
       {body}
       {data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
       {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}

@@ -68,6 +68,17 @@ describe('экран «Люди и их проекты»', () => {
     expect(new URL(window.location.href).searchParams.get('adm-open')).toBe('u-01');
   });
 
+  // PU-29 (приёмка 14.11.2026): строка открывалась только кликом по имени.
+  it('клик по пустому месту строки тоже открывает паспорт человека', async () => {
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake(3)} /></KitLangProvider>);
+    await settle();
+    await screen.findByRole('button', { name: 'Человек 01' });
+    const row = document.querySelector<HTMLElement>('tr[data-record-id="u-01"]')!;
+    const cells = row.querySelectorAll('td');
+    fireEvent.click(cells[cells.length - 1]);
+    expect(await screen.findByRole('dialog', { name: 'Человек 01' })).toBeTruthy();
+  });
+
   it('«+ Человек» открывает мастер подключения боковым листом на месте', async () => {
     render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={fake(3)} /></KitLangProvider>);
     await settle();

@@ -92,12 +92,22 @@ describe('K2-DATE-RANGE · диапазон уходит в срез', () => {
 });
 
 describe('K2-DATE-RANGE · раздел без времени — фильтр недоступен с причиной', () => {
-  it('вехи: срез времени не отдаёт — кнопка выключена, причина словами', async () => {
-    const impl = vi.fn(async () => json({ rows: [{ milestone_id: 'M1', title: 'Веха', status_raw: 'planned' }] })) as unknown as typeof fetch;
-    render(<ListScreen screen="milestones" fetchImpl={impl} />);
+  // Раньше пример здесь был «вехи». Это и был дефект PU-27: срез вех changed_at отдаёт,
+  // а маппер его не читал — «ИЗМЕНЕНЫ недоступно». Раздел без времени — компоненты.
+  it('компоненты: срез времени не отдаёт — кнопка выключена, причина словами', async () => {
+    const impl = vi.fn(async () => json({ rows: [{ component_id: 'C1', full_name: 'Компонент' }] })) as unknown as typeof fetch;
+    render(<ListScreen screen="components" fetchImpl={impl} />);
     const box = await screen.findByTestId('kit-daterange', {}, { timeout: 8000 });
     const btn = within(box).getByRole('button') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
     expect(btn.getAttribute('title')).toMatch(/недоступен/);
+  }, 15000);
+
+  it('PU-27 · вехи: срез отдаёт changed_at — «Изменены» доступно', async () => {
+    const impl = vi.fn(async () => json({ rows: [{ milestone_id: 'M1', label: 'Веха', changed_at: '2026-11-13T15:30:50Z', direct_sprint_ids: [] }] })) as unknown as typeof fetch;
+    render(<ListScreen screen="milestones" fetchImpl={impl} />);
+    const box = await screen.findByTestId('kit-daterange', {}, { timeout: 8000 });
+    const btn = within(box).getByRole('button') as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
   }, 15000);
 });

@@ -12,6 +12,8 @@ const PORT = 4419;
 
 export default defineConfig({
   testDir: 'e2e',
+  // Смоук живого стенда (E2E-STAND) — свой конфиг playwright.stand.config.ts, здесь не бежит.
+  testIgnore: ['**/stand/**'],
   outputDir: 'e2e/.results',
   reporter: [['list']],
   fullyParallel: true,

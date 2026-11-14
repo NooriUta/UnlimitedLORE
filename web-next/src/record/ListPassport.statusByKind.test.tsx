@@ -57,7 +57,7 @@ describe('паспорт компонента: статус строки зад�
     await waitFor(() => {
       const st = document.querySelector('[data-status="review"]');
       expect(st?.querySelector('[data-missing]')?.getAttribute('data-missing')).toBe('magnifying-glass');
-      expect(st?.textContent).toContain('На проверке');
+      expect(st?.getAttribute('title')).toContain('На проверке');
     }, { timeout: 8000 });
   }, 15000);
 });

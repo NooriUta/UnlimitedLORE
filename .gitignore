@@ -35,3 +35,6 @@ Thumbs.db
 /CLAUDE.md
 web-next/e2e/.results/
 .mcp.json
+# Отчёт смоука стенда (E2E-STAND): скрины и сводки, плюс сохранённый вход, если его положили рядом
+web-next/e2e/.stand-report/
+web-next/e2e/stand/.auth/

@@ -103,6 +103,37 @@ describe('sortRecords — порядок', () => {
   });
 });
 
+// SPRINT_LORE_ADMIN_POLISH/AP-04: колонки `progress:` и `sum:` не сортировались —
+// sortRecords искал fields["progress:tasks"] (префикс не отрезан) и сравнивал
+// объект как текст. Правило: progress — по доле done/total, при равной доле — по
+// числу оставшихся; 0/0 и «не посчитано» — в конце в обе стороны. sum — по value;
+// ошибка и «нет значения» — в конце.
+describe('sortRecords — progress: и sum: (AP-04)', () => {
+  const rs = [
+    rec('empty', 'todo', { tasks: { done: 0, total: 0 }, eff: { known: 0, of: 3 } }),
+    rec('q3', 'todo', { tasks: { done: 3, total: 4 }, eff: { value: 7.5, known: 2, of: 3 } }),
+    rec('err', 'todo', { tasks: { error: 'timeout' }, eff: { error: 'timeout' } }),
+    rec('q1', 'todo', { tasks: { done: 1, total: 4 }, eff: { value: 12, known: 3, of: 3 } }),
+    rec('h1', 'todo', { tasks: { done: 1, total: 2 }, eff: { value: 2, known: 1, of: 3 } }),
+    rec('h5', 'todo', { tasks: { done: 5, total: 10 } }),
+  ];
+  const ids = (key: string, dir: 'asc' | 'desc') => sortRecords(rs, { key, dir }, config).map(r => r.id);
+  it('progress: asc — по доле, при равной — по оставшимся; пустой и ошибка в конце', () => {
+    expect(ids('progress:tasks', 'asc')).toEqual(['q1', 'h1', 'h5', 'q3', 'empty', 'err']);
+  });
+  it('progress: desc — обратный порядок, пустой и ошибка всё равно в конце', () => {
+    expect(ids('progress:tasks', 'desc')).toEqual(['q3', 'h5', 'h1', 'q1', 'empty', 'err']);
+  });
+  it('sum: — по value в обе стороны; пусто/ошибка/нет поля в конце', () => {
+    expect(ids('sum:eff', 'asc')).toEqual(['h1', 'q3', 'q1', 'empty', 'err', 'h5']);
+    expect(ids('sum:eff', 'desc')).toEqual(['q1', 'q3', 'h1', 'empty', 'err', 'h5']);
+  });
+  it('fresh: — префикс отрезается, сортировка по самому полю', () => {
+    const fr = [rec('b', 'todo', { at: '2026-11-02T00:00:00Z' }), rec('a', 'todo', { at: '2026-11-01T00:00:00Z' })];
+    expect(sortRecords(fr, { key: 'fresh:at', dir: 'asc' }, config).map(r => r.id)).toEqual(['a', 'b']);
+  });
+});
+
 describe('shownOf — «Показано N из M» из meta (формат K-01)', () => {
   it('полная выдача: M = total', () => {
     expect(shownOf({ generated_at: '', total: 10, returned: 10, truncated: false }, 10, 4))
