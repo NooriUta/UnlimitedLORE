@@ -33,8 +33,11 @@ final class LoreRecordPerms {
     /** Жизненный цикл статусов типа: план — для спринта и задачи, свой — для ADR и спеки. */
     static List<String> lifecycle(String type, List<String> specStatuses) {
         return switch (type) {
+            // PU-29 (приёмка 14.11.2026): статусы ядра WK-05 (waiting, review, failed) — в цикле, иначе модель
+            // отдаёт их «вне цикла — перейти нельзя» и меню статуса их не предлагает. Сторож:
+            // LoreLifecycleCoversStatusesTest (цикл покрывает всё, что принимает /lore/status).
             case "sprint", "task" -> List.of("todo", "planned", "backlog", "design", "active", "partial",
-                "blocked", "ready_for_deploy", "uat", "done", "cancelled");
+                "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled");
             case "adr" -> List.of("draft", "proposed", "accepted", "deferred", "superseded");
             case "spec" -> specStatuses != null && !specStatuses.isEmpty()
                 ? specStatuses : LoreSpecResource.SPEC_STATUSES_FALLBACK;

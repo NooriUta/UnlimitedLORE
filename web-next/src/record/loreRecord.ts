@@ -7,6 +7,7 @@
 import { KNOWN_STATUSES, statusMeta, type KitConfig, type KitData, type KitLang, type KitRecord, type RecordFactsSpec } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { planStatusOf } from '../sprints/taskStatus';
+import { appliedStatusConfirm } from '../settings/applied';
 
 export const SPRINT_KIND = 'Sprint';
 export const TASK_KIND = 'Task';
@@ -68,6 +69,12 @@ export function loreStatuses(lang: KitLang): KitConfig['statuses'] {
       const m = statusMeta(code);
       return { code, title: appT(lang, `record.status.${code}` as AppKey), category: kitCategory(code), icon: m.icon, color: m.color };
     }),
+    // S4-18 (приёмка препрода 14.11.2026): в паспорте — то же поведение смены, что в оболочке и
+    // таблице задач: «Отменить» по умолчанию, подтверждение «A → B?» — личной настройкой,
+    // себе не одобряют (→done через гейт сервера).
+    selfApprove: false,
+    undo: true,
+    confirmChange: appliedStatusConfirm(),
   };
 }
 

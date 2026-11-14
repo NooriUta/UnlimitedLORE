@@ -46,7 +46,7 @@ const TREE_CONTROLS: TreeControls = {
 };
 /** Оси вида «Список» сверх статуса (умолчание NestedList). */
 const LIST_AXES = ['fields.executor', 'fields.phase'] as const;
-const LIST_COLUMNS = ['status', 'fields.code', 'title', 'fields.author', 'fields.executor', 'fields.phase', 'fields.effort'];
+const LIST_COLUMNS = ['status', 'fields.code', 'title', 'fields.author', 'fields.executor', 'fields.reviewer', 'fields.phase', 'fields.effort'];
 
 const numOrNull = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 const strOrNull = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
@@ -59,7 +59,7 @@ export function counterTasksOf(rows: readonly TreeFlatRow[]): TaskRowData[] {
   return rows.filter(r => r.kind === 'task').map((r, i) => ({
     uid: r.key, id: strOrNull(r.code) ?? r.key, title: strOrNull(r.title), status: strOrNull(r.status),
     phase: null, effortDays: numOrNull(r.effort), author: strOrNull(r.author), executor: strOrNull(r.executor),
-    reviewer: null, taskType: strOrNull(r.taskType), workClass: null, order: i,
+    reviewer: strOrNull(r.reviewer), taskType: strOrNull(r.taskType), workClass: null, order: i,
   }));
 }
 
@@ -123,6 +123,8 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
       fld('code', appT(lang, 'sprintTree.field.code')),
       fld('author', appT(lang, 'pp.field.author')),
       fld('executor', appT(lang, 'pp.field.executor')),
+      // PU-16 (приёмка 14.11): «автор/ревьюер как в v1» — принимающий после исполнителя.
+      fld('reviewer', appT(lang, 'pp.field.reviewer')),
       fld('effort', appT(lang, 'pp.field.effort')),
       fld('progress', appT(lang, 'sprintTree.field.progress')),
       fld('phase', appT(lang, 'sprintTree.kind.phase')),

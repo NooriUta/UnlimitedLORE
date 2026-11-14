@@ -785,10 +785,10 @@ public class LoreStatusResource extends LoreResourceBase {
             String current = rawToToken(str(row.get("status_raw")));
             String evType = !blank(req.evidence_type()) ? req.evidence_type() : str(row.get("evidence_type"));
             String evRef = !blank(req.evidence_ref()) ? req.evidence_ref() : str(row.get("evidence_ref"));
-            LoreDoneGate.Verdict v = LoreDoneGate.transition(current, req.status(), req.reason(), req.waiting_for());
+            boolean agent = callerAgentScope() != null
+                || (author != null && ChangeAuthor.KIND_AGENT.equals(author.kind()));
+            LoreDoneGate.Verdict v = LoreDoneGate.transitionFor(agent, current, req.status(), req.reason(), req.waiting_for());
             if (v == null && "done".equals(req.status())) {
-                boolean agent = callerAgentScope() != null
-                    || (author != null && ChangeAuthor.KIND_AGENT.equals(author.kind()));
                 String caller = agent ? null : callerName(author);
                 v = LoreDoneGate.done(new LoreDoneGate.Facts(agent, caller,
                     str(row.get("executor_agent")), str(row.get("reviewer_agent")), current,

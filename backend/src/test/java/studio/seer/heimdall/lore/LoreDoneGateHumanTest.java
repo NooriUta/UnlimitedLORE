@@ -61,4 +61,19 @@ class LoreDoneGateHumanTest {
         assertEquals("DONE_ONLY_FROM_REVIEW",
             LoreDoneGate.done(agent("active", "owner_word", "14.11 08:31 «закрывай»"), wf()).code());
     }
+
+    /**
+     * Приёмка препрода 14.11.2026: «Готово к деплою» → «В работе» из UI — 400 REASON_REQUIRED, а поля для
+     * причины интерфейс не даёт: вернуть задачу назад нельзя. По правилу владелицы человеку переход без
+     * обязательных слов (причину он может дать, но не обязан); агенту — как было.
+     */
+    @Test
+    void humanTransitionsNeedNoWordsAgentStillDoes() {
+        assertNull(LoreDoneGate.transitionFor(false, "ready_for_deploy", "active", null, null), "возврат с приёмки человеком");
+        assertNull(LoreDoneGate.transitionFor(false, "active", "blocked", null, null), "blocked человеком");
+        assertNull(LoreDoneGate.transitionFor(false, "active", "waiting", null, null), "waiting человеком");
+        assertEquals("REASON_REQUIRED", LoreDoneGate.transitionFor(true, "uat", "active", null, null).code());
+        assertEquals("REASON_REQUIRED", LoreDoneGate.transitionFor(true, "active", "blocked", null, null).code());
+        assertEquals("WAITING_FOR_REQUIRED", LoreDoneGate.transitionFor(true, "active", "waiting", null, null).code());
+    }
 }

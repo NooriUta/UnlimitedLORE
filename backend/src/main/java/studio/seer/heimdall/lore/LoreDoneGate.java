@@ -93,6 +93,15 @@ final class LoreDoneGate {
         return null;
     }
 
+    /**
+     * PU-29 (правило владелицы 14.11.2026, «с человека не просить доп. работы»): обязательные слова перехода
+     * (причина blocked и возврата с приёмки, адресат waiting) — только для агента. Человек может их дать,
+     * но интерфейс не обязан спрашивать: иначе вернуть задачу назад из UI было нельзя (приёмка препрода).
+     */
+    static Verdict transitionFor(boolean agent, String currentToken, String target, String reason, String waitingFor) {
+        return agent ? transition(currentToken, target, reason, waitingFor) : null;
+    }
+
     static Verdict transition(String currentToken, String target, String reason, String waitingFor) {
         if ("blocked".equals(target) && blank(reason))
             return new Verdict(400, "REASON_REQUIRED", "у blocked обязательна причина (reason) — без неё блокировку "

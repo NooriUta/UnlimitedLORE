@@ -74,3 +74,52 @@ describe('порядок вкладок паспорта — один во вс�
     expect(labels()[0]).toBe('Контент');
   });
 });
+
+// S4-29 (приёмка 14.11.2026, ADR-HND-020 в «Библиотеке», док справа): открыта вкладка раздела
+// («Решения») — вид «Контент» уже нажат, и нажатие на значок «Контент» не делало НИЧЕГО: к тексту
+// записи было не вернуться (владелица: «к нему не вернуться»). Значок вида ведёт в начало вида всегда.
+import { fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
+describe('S4-29 · значок «Контент» в доке возвращает к тексту', () => {
+  for (const place of ['left', 'right'] as const) {
+    it(`док ${place}: с вкладки раздела значок «Контент» ведёт к тексту записи`, () => {
+      const onTab = vi.fn();
+      render(<RecordView record={host} ctx={ctx} tab="files" onTab={onTab} placement={place} narrow={false} sections={MODEL} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Контент' }));
+      expect(onTab).toHaveBeenCalledWith('overview');
+    });
+  }
+});
+
+// Правило владелицы 14.11.2026 (miniLORE): «по паспортам должна соблюдаться последовательность,
+// вкладки не должны скакать и теряться (не считая уход под more, то есть видимые + more в любой
+// раскладке должен быть один список без изменений)». Замер на препроде: в доке ADR-HND-020 терял
+// «Контент», «Историю», «Связи», «Граф», «Журнал» (15 пунктов против 20 во весь экран).
+import { cleanup, within } from '@testing-library/react';
+const fullList = (): string[] => {
+  const tabs = screen.getAllByRole('tab');
+  const more = tabs.find(t => /Ещё/.test(t.textContent ?? ''));
+  const visible = tabs.filter(t => t !== more)
+    .map(t => t.querySelector('span:not(.sk-tab__count):not(.sk-tab__mark)')?.textContent ?? t.textContent ?? '');
+  if (!more) return visible;
+  fireEvent.click(more);
+  const hidden = within(screen.getByRole('menu', { name: 'Ещё' })).getAllByRole('menuitem')
+    .map(i => (i.textContent ?? '').replace(/\s*[\d?]+\s*$/, '').replace(/^[^\p{L}]+/u, '').trim());
+  return [...visible, ...hidden];
+};
+describe('правило: видимые + «Ещё» — один список во всех местах показа', () => {
+  const places: RecordPlacement[] = ['full', 'bottom', 'left', 'right'];
+  const lists = (tab: string) => places.map(place => {
+    render(<RecordView record={host} ctx={ctx} tab={tab} onTab={() => {}} placement={place} narrow={false} sections={MODEL} />);
+    const l = fullList();
+    cleanup();
+    return { place, l };
+  });
+  for (const tab of ['overview', 'files', 'links']) {
+    it(`открыта вкладка ${tab}: состав и порядок одинаковы при full/bottom/left/right`, () => {
+      const all = lists(tab);
+      for (const x of all) expect({ place: x.place, list: x.l }).toEqual({ place: x.place, list: all[0].l });
+      expect(all[0].l).toEqual(expect.arrayContaining(['Контент', 'Связи', 'Граф', 'Журнал']));
+    });
+  }
+});

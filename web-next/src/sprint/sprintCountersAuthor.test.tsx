@@ -76,3 +76,18 @@ describe('PU-16 · полоска счётчиков и колонка «Авт�
     });
   }
 });
+
+// PU-16 (приёмка препрода 14.11.2026): «автор/ревьюер как в v1» — «Автор» есть, колонки приёмщика нет,
+// хотя сервер отдаёт reviewer в строках задач паспорта спринта.
+describe('PU-16 · колонка «Принимающий» после исполнителя во всех видах', () => {
+  it('в столбцах дерева — после исполнителя', () => {
+    expect(SPRINT_TREE_COLUMNS).toContain('fields.reviewer');
+    expect(SPRINT_TREE_COLUMNS.indexOf('fields.reviewer')).toBeGreaterThan(SPRINT_TREE_COLUMNS.indexOf('fields.executor'));
+  });
+  for (const [view, search] of [['дерево', ''], ['список', '?tview=list']] as const) {
+    it(`${view}: в шапке есть «Принимающий»`, () => {
+      render(<SprintTasksPanel contract={contract()} win={fakeWin(search)} fetchImpl={deadFetch} onStatusSaved={() => {}} />);
+      expect(headers().some(h => h.includes('Принимающий'))).toBe(true);
+    });
+  }
+});

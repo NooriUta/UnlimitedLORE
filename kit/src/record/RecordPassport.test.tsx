@@ -94,20 +94,22 @@ describe('панелью справа — переключатель видов 
     expect(container.querySelector('aside[data-zone="around"]')).toBeNull();
     expect(container.querySelector('aside[data-zone="props"]')).toBeNull();
   });
-  it('«Контент» — один раз: имя сегмента, а не сегмент и такая же вкладка под ним', () => {
+  // Правило владелицы 14.11.2026 («вкладки не должны скакать и теряться… видимые + more в любой
+  // раскладке — один список») отменяет прежнее «Контент один раз»: вкладка «Контент» в ряду дока
+  // есть, как во весь экран, а значок вида — только переход.
+  it('«Контент» — вкладкой в ряду дока, как во весь экран', () => {
     view('right');
-    const labels = [...within(sw()).getAllByRole('button').map(b => b.getAttribute('aria-label')), ...screen.queryAllByRole('tab').map(b => b.textContent)];
-    expect(labels.filter(t => t === 'Контент')).toHaveLength(1);
+    expect(screen.queryAllByRole('tab').map(b => b.textContent)).toContain('Контент');
   });
   it('Свойства: поля записи', () => {
     view('right', 'props');
     expect(pressed()).toEqual(['Свойства']);
     expect(screen.getByTestId('kit-fields').textContent).toContain('1.0');
   });
-  it('Аналитика: вкладки Связи, Граф, Журнал', () => {
+  it('Аналитика: открыта «Связи», а ряд — тот же полный список (правило 14.11)', () => {
     view('right', 'links');
     expect(pressed()).toEqual(['Аналитика']);
-    expect(tabNames()).toEqual(['Связи', 'Граф', 'Журнал']);
+    expect(tabNames()).toEqual(expect.arrayContaining(['Контент', 'Связи', 'Граф', 'Журнал']));
   });
   it('переключение вида ведёт на первую вкладку вида', () => {
     const onTab = vi.fn();
