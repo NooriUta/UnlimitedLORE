@@ -31,6 +31,7 @@ const TEXT = {
     ok: (d: string) => `Успеваем, закончим ${d.slice(8, 10)}.${d.slice(5, 7)}`,
     late: (n: number, perWeek: string, drop: number) => `Не успеваем на ${n} дн.: нужно ${perWeek} в неделю или убрать ${drop}`,
     still: (n: number) => `За ${n} дн. ничего не закрыто — скорости нет, прогноз не построить`,
+    basis: (closed: number, span: number) => ` — сейчас закрыто ${closed} за ${span} дн.`,
     num: (v: number) => v.toFixed(1).replace('.', ','),
   },
   en: {
@@ -38,6 +39,7 @@ const TEXT = {
     ok: (d: string) => `On track, finishing ${d}`,
     late: (n: number, perWeek: string, drop: number) => `${n} days late: need ${perWeek} a week or drop ${drop}`,
     still: (n: number) => `Nothing closed in ${n} days — no velocity, no forecast`,
+    basis: (closed: number, span: number) => ` — now ${closed} closed in ${span} days`,
     num: (v: number) => v.toFixed(1),
   },
 } as const;
@@ -68,7 +70,11 @@ export function targetForecast(points: readonly BurnPoint[], deadline: string | 
   const drop = Math.max(1, last.scope - byDeadline);
   return {
     forecast,
-    verdict: { tone: lateDays <= RISK_DAYS ? 'risk' : 'late', text: t.late(lateDays, t.num(perWeek), drop) },
+    // Опоздание больше недели — с основанием скорости (приёмка 0dccfe73, PU-27): «на 1135 дн.» без
+    // него читалось как сбой расчёта, а это честный темп — 1 задача за 26 дней.
+    verdict: lateDays <= RISK_DAYS
+      ? { tone: 'risk', text: t.late(lateDays, t.num(perWeek), drop) }
+      : { tone: 'late', text: t.late(lateDays, t.num(perWeek), drop) + t.basis(last.done - base.done, span) },
     finish,
     lateDays,
   };
