@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import ForceEngine from './ForceEngine';
 import { GX_DEFAULTS, type GxEdge, type GxNode } from './settings';
+import { LAYOUT_TIMEOUT_MS } from './graphContract';
 import type { GxEngineProps } from './engineTypes';
 
 type DrawFn = (n: { id: string; title?: string; x?: number; y?: number }, ctx: { fillText: (t: string, x: number, y: number) => void }, scale: number) => void;
@@ -44,6 +45,9 @@ vi.mock('force-graph', () => {
     linkDirectionalArrowLength = vi.fn(() => this);
     linkDirectionalArrowRelPos = vi.fn(() => this);
     d3ReheatSimulation = vi.fn(() => this);
+    d3AlphaMin = vi.fn(() => this);
+    d3AlphaDecay = vi.fn(() => this);
+    cooldownTime = vi.fn(() => this);
     _destructor = vi.fn();
     d3Force = vi.fn((_name: string, force?: unknown) => (force === undefined ? undefined : this));
     constructor(el: HTMLElement) { this.el = el; h.instances.push(this); }
@@ -137,5 +141,22 @@ describe('GC-03 · ForceEngine', () => {
     expect(y4 * 4).toBeGreaterThan(rWorld * 4);
     // Прежний фиксированный отступ 14px при зуме 4 уводил подпись внутрь круга.
     expect(14).toBeLessThan(rWorld * 4);
+  });
+  // S9-08, препрод 14.11: у force-graph d3AlphaMin = 0 — движок не останавливается по остыванию,
+  // только по cooldownTime = 15 с, то есть ВСЕГДА позже плашки «не уложилась в 8 с», даже на 4 узлах.
+  it("S9-08: физика остывает раньше срока плашки — порог остывания задан, «конец» приходит вовремя", async () => {
+    render(<ForceEngine {...props()} />);
+    const g = await engine() as unknown as { d3AlphaMin: ReturnType<typeof vi.fn>; d3AlphaDecay: ReturnType<typeof vi.fn>; cooldownTime: ReturnType<typeof vi.fn> };
+    expect(g.d3AlphaMin, "без порога остывания движок ждёт 15 с").toHaveBeenCalled();
+    const alphaMin = g.d3AlphaMin.mock.calls[g.d3AlphaMin.mock.calls.length - 1][0] as number;
+    expect(alphaMin).toBeGreaterThan(0);
+    const decay = (g.d3AlphaDecay.mock.calls[g.d3AlphaDecay.mock.calls.length - 1]?.[0] as number | undefined) ?? 0.0228;
+    // Тиков до остывания при 60 кадрах/с — с запасом в полтора раза на медленный ноутбук.
+    const ticks = Math.log(alphaMin) / Math.log(1 - decay);
+    expect((ticks / 60) * 1000 * 1.5).toBeLessThan(LAYOUT_TIMEOUT_MS);
+    // И потолок времени тоже внутри срока: если кадры совсем редкие, движок всё равно останавливается.
+    const cap = g.cooldownTime.mock.calls[g.cooldownTime.mock.calls.length - 1]?.[0] as number | undefined;
+    expect(cap).toBeDefined();
+    expect(cap!).toBeLessThan(LAYOUT_TIMEOUT_MS);
   });
 });

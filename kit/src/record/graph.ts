@@ -99,6 +99,17 @@ export interface EgoOptions {
   clusterMax?: number;
   /** Типы рёбер, чьи секторы человек раскрыл: они рисуются узлами как прежде. */
   expanded?: ReadonlySet<string>;
+  /**
+   * S9-08 (препрод 14.11): выдача ИСТОЧНИКА неполна (сервер упёрся в потолок, концы не
+   * прочитаны) — тогда число кластера «не меньше». Свой лимит рисования (limit) сюда не
+   * относится: он режет холст, а не знание о соседях.
+   */
+  incomplete?: boolean;
+  /**
+   * S9-08: точное число соседей по типу ребра от счётчика сервера (шаг 1). Есть — кластер
+   * говорит его без оговорки, даже если выдача неполна.
+   */
+  exact?: ReadonlyMap<string, number>;
 }
 
 export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): EgoGraph {
@@ -143,9 +154,6 @@ export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): Ego
   }
 
   const limit = Math.max(0, opts.limit);
-  const shown = all.slice(0, limit);
-  const truncated = all.length > shown.length;
-  const types = [...new Set(shown.map(n => n.sector))].sort(cmp);
 
   // S9-08. Свёртка решается ЗДЕСЬ — до раскладки, — и это главное решение
   // задачи: кластер, посчитанный после, оставил бы хабу его сектор, и три
@@ -156,12 +164,31 @@ export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): Ego
   // первое кольцо. Цена названа: раскрытие показывает всю ветку сектора. Зато
   // нет оборванных узлов — спрятать соседа, оставив его соседа висеть в
   // пустоте, читалось бы как связь, которой нет.
+  //
+  // S9-08, препрод 14.11 (ADR-LORE-045): свёртка считается по ПОЛНОЙ выдаче, а лимит рисования
+  // применяется ПОСЛЕ неё и только к тому, что идёт узлами. Раньше лимит резал выдачу до
+  // свёртки: при порядке «сектор, код» первые 60 узлов уходили секторам по алфавиту, хаб
+  // получал остаток (38 из 163), кластер показывал «не меньше 38», а раскрытие отдавало те же
+  // 38. Раскрытый сектор лимитом не режется: человек сам попросил его узлы.
   const clusterMax = opts.clusterMax ?? GRAPH_CLUSTER_MAX;
   const expanded = opts.expanded;
-  const countOf = (type: string) => shown.filter(n => n.sector === type).length;
+  const fullCount = new Map<string, number>();
+  for (const n of all) fullCount.set(n.sector, (fullCount.get(n.sector) ?? 0) + 1);
   const collapsed = new Set(
-    types.filter(t => !expanded?.has(t) && countOf(t) > clusterMax),
+    [...fullCount].filter(([t, c]) => !expanded?.has(t) && c > clusterMax).map(([t]) => t),
   );
+  const shown: typeof all = [];
+  let budget = limit;
+  let dropped = 0;
+  for (const n of all) {
+    if (collapsed.has(n.sector)) shown.push(n);
+    else if (expanded?.has(n.sector)) shown.push(n);
+    else if (budget > 0) { shown.push(n); budget--; }
+    else dropped++;
+  }
+  const truncated = dropped > 0;
+  const types = [...new Set(shown.map(n => n.sector))].sort(cmp);
+  const countOf = (type: string) => shown.filter(n => n.sector === type).length;
 
   const gap = types.length > 1 ? 0.08 : 0;
   const usable = Math.PI * 2 - gap * types.length;
@@ -184,15 +211,17 @@ export function egoGraph(centerId: string, data: KitData, opts: EgoOptions): Ego
     if (!s.clustered) continue;
     const inSector = shown.filter(n => n.sector === s.type);
     const angle = round((s.start + s.end) / 2);
+    const known = opts.exact?.get(s.type);
+    const exactKnown = known !== undefined && known >= inSector.length;
     clusters.push({
       key: s.type,
       sector: s.type,
       // Направление берём у первого соседа сектора: сектор — это тип ребра
       // первого шага, и направление у него одно на весь сектор.
       dir: inSector[0]?.dir ?? 'out',
-      count: inSector.length,
+      count: exactKnown ? known : inSector.length,
       ids: inSector.map(n => n.id),
-      atLeast: truncated,
+      atLeast: !exactKnown && !!opts.incomplete,
       angle,
       x: round(Math.cos(angle)),
       y: round(Math.sin(angle)),

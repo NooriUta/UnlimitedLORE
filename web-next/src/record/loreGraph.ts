@@ -58,8 +58,29 @@ export function mergeGraph(data: KitData, g: LoreGraphBody): KitData {
     seen.add(k);
     edges.push({ from: e.from, to: e.to, type: e.rel });
   }
-  const meta: KitMeta = { ...data.meta, truncated: !!data.meta.truncated || !g.meta.complete || g.meta.truncated, graphRels: relsOf(g), graphDepth: depthsOf(g) };
+  const meta: KitMeta = { ...data.meta, truncated: !!data.meta.truncated || !g.meta.complete || g.meta.truncated, graphRels: relsOf(g), graphRelsCut: !!g.meta.rels_available_truncated, graphDepth: depthsOf(g) };
   return { ...data, records: [...records.values()], edges, meta };
+}
+
+/**
+ * S9-08 (препрод 14.11): человек раскрыл кластер типа, а выдача упёрлась в потолок сервера —
+ * узлы этого типа догружаются отдельным обходом строго по нему (rels) и сливаются без дублей.
+ * Выдача целая — запроса нет: всё, что есть у типа, уже пришло. Мета остаётся от основного
+ * ответа: неполнота окрестности в целом не пропадает из-за удачной догрузки одного типа.
+ */
+export async function topUpOpen(
+  body: LoreGraphBody, open: readonly string[], q: { type: string; id: string; depth: number; structural?: boolean },
+  fetchFn: FetchFn = loreFetch,
+): Promise<LoreGraphBody> {
+  if (!body.meta.truncated || open.length === 0) return body;
+  const more = await fetchLoreGraph({ ...q, rels: [...open] }, fetchFn);
+  const ids = new Set(body.nodes.map(n => n.id));
+  const keys = new Set(body.edges.map(e => `${e.rel}\u0000${e.from}\u0000${e.to}`));
+  return {
+    nodes: [...body.nodes, ...more.nodes.filter(n => !ids.has(n.id))],
+    edges: [...body.edges, ...more.edges.filter(e => !keys.has(`${e.rel}\u0000${e.from}\u0000${e.to}`))],
+    meta: body.meta,
+  };
 }
 
 /** Типы связей окрестности: rels_available сервера; старый сервер — счёт по рёбрам ответа. */

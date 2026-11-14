@@ -65,7 +65,7 @@ describe('GC-03 · GraphExplorer', () => {
   it('панель как у Обсидиана: четыре раздела, тип снимается чекбоксом — «показано N из M»', async () => {
     render(<GraphExplorer nodes={N} edges={E} types={TYPES} lang="ru" storageKey="t3" />);
     const panel = screen.getByTestId('gx-panel');
-    expect([...panel.querySelectorAll('summary')].map(s => s.textContent)).toEqual(['Фильтры', 'Группы', 'Отображение', 'Силы']);
+    expect([...panel.querySelectorAll('details.sk-gx-panel__sec > summary')].map(s => s.textContent)).toEqual(['Фильтры', 'Группы', 'Отображение', 'Силы']);
     fireEvent.click(screen.getByRole('checkbox', { name: /Компонент/ }));
     await waitFor(() => expect(screen.getByTestId('eng-force').getAttribute('data-nodes')).toBe('4'));
     expect(screen.getByTestId('gx-count').textContent).toBe('показано 4 из 5 · связей 2');

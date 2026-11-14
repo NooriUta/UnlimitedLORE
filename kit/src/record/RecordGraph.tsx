@@ -16,6 +16,8 @@ import { Pill } from '../elements/Pill';
 import { kitT, pluralForm, type KitLang } from '../i18n';
 import { edgeColor, egoGraph, typesAround, verdictTone } from './graph';
 import type { EgoCluster } from './graph';
+import { CheckMenu } from '../elements/CheckMenu';
+import type { GraphDepth } from './graphState';
 import { GRAPH_DEPTHS, allowedEdgeTypes, edgeLabel, isStructural, useGraphState } from './graphState';
 import { blockError } from './RecordLinks';
 import { useNarrow } from '../core/narrow';
@@ -67,8 +69,15 @@ export function RecordGraph(
   const chips = around.filter(t => state.structural || !isStructural(ctx.config, t.type));
   const allowed = allowedEdgeTypes(around.map(t => t.type), ctx.config, state);
   const limit = ctx.config.graph?.limit ?? 60;
+  // S9-08 (препрод 14.11): число кластера — точное из счётчика рёбер сервера, если он есть
+  // (на шаге 1 рёбра типа = соседи типа); «не меньше» — только когда выдача ИСТОЧНИКА неполна
+  // и точного числа нет. Свой лимит рисования неполнотой не считается.
+  const exact = state.depth === 1 && serverRels?.length && !ctx.data.meta.graphRelsCut
+    ? new Map(serverRels.map(r => [r.rel, r.count] as const))
+    : undefined;
   const g = egoGraph(record.id, ctx.data, {
     depth: state.depth, limit, types: allowed, expanded: new Set(state.open),
+    incomplete: !!ctx.data.meta.truncated, exact,
   });
   const off = new Set(state.off);
   // Вид: выбор человека главнее ширины; не выбирал — на телефоне СПИСОК, там
@@ -79,15 +88,14 @@ export function RecordGraph(
 
   const controls = (
     <div className="sk-rec-graph__ctl" role="group" aria-label={kitT(lang, 'kit.record.graph.controls')}>
-      <div className="sk-rec-graph__depth" role="group" aria-label={kitT(lang, 'kit.record.graph.depth')}>
-        <span className="sk-rec-graph__ctl-label" aria-hidden="true">{kitT(lang, 'kit.record.graph.depth')}</span>
-        {GRAPH_DEPTHS.map(d => (
-          <Pill key={d} variant="filter" pressed={state.depth === d} onToggle={() => setDepth(d)}
-            title={kitT(lang, 'kit.record.graph.depthHint', { n: d })}>
-            {String(d)}
-          </Pill>
-        ))}
-      </div>
+      {/* S9-08, владелица 14.11: «сделай выбор, сколько шагов от записи пройти … дропдауном». */}
+      <label className="sk-rec-graph__depth">
+        <span className="sk-rec-graph__ctl-label">{kitT(lang, 'kit.record.graph.steps')}</span>
+        <select className="sk-rec-graph__select" value={state.depth}
+          onChange={e => setDepth(Number(e.target.value) as GraphDepth)}>
+          {GRAPH_DEPTHS.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+      </label>
       <div className="sk-rec-graph__view" role="group" data-testid="kit-graph-view" aria-label={kitT(lang, 'kit.record.graph.view')}>
         <Pill variant="filter" pressed={view === 'graph'} onToggle={() => setView('graph')}
           title={kitT(lang, 'kit.record.graph.viewGraphHint')}>
@@ -123,14 +131,10 @@ export function RecordGraph(
   const notes = ctx.data.meta.graphNotes ?? [];
   const legend = (
     <>
-    <div className="sk-rec-graph__legend" role="group" data-testid="kit-graph-legend" aria-label={kitT(lang, 'kit.record.graph.legend')}>
-      {chips.map(t => (
-        <Pill key={t.type} variant="filter" pressed={!off.has(t.type)} onToggle={() => toggleType(t.type)} title={t.type}>
-          <span className="sk-rec-dot" aria-hidden="true" style={{ '--edge-c': edgeColor(ctx.config, t.type) } as CSSProperties} />
-          <span>{edgeLabel(ctx.config, t.type)}</span>
-          <span className="sk-rec-links__count">{t.count}</span>
-        </Pill>
-      ))}
+    {/* S9-08, владелица 14.11: «выбор типа не полем, а дропдауном» — галочки вместо чипов. */}
+    <div className="sk-rec-graph__legend" data-testid="kit-graph-legend">
+      <CheckMenu lang={lang} label={kitT(lang, 'kit.record.graph.legend')} onToggle={toggleType}
+        items={chips.map(t => ({ key: t.type, label: edgeLabel(ctx.config, t.type), color: edgeColor(ctx.config, t.type), count: t.count, checked: !off.has(t.type) }))} />
     </div>
     {notes.length > 0 && (
       <ul className="sk-rec-graph__notes" data-testid="kit-graph-notes">
@@ -182,6 +186,17 @@ export function RecordGraph(
       const forms = k ? ctx.config.graph?.types?.[k]?.count : undefined;
       return forms ? (forms[pluralForm(lang, n)] ?? forms.many).replace('{n}', String(n)) : null;
     });
+    // Точный счёт сервера больше загруженного — разбивка по видам из загруженного соврала бы;
+    // один вид — его формы слова с точным числом, несколько — подпись типом связи.
+    if (c.count !== c.ids.length) {
+      const only = perKind.size === 1 ? [...perKind.keys()][0] : '';
+      const forms = only ? ctx.config.graph?.types?.[only]?.count : undefined;
+      if (forms) {
+        const what = (forms[pluralForm(lang, c.count)] ?? forms.many).replace('{n}', String(c.count));
+        return `${c.atLeast ? kitT(lang, 'kit.record.graph.clusterAtLeastKind', { what }) : what} ▸`;
+      }
+      parts.length = 0;
+    }
     if (parts.length > 0 && parts.every(p => p !== null)) {
       const what = parts.join(' · ');
       return `${c.atLeast ? kitT(lang, 'kit.record.graph.clusterAtLeastKind', { what }) : what} ▸`;
@@ -282,7 +297,7 @@ export function RecordGraph(
       {legend}
       {g.truncated && (
         <p className="sk-rec-note" role="note">
-          {kitT(lang, 'kit.record.graph.shown', { shown: g.nodes.length, total: g.total, limit })}
+          {kitT(lang, 'kit.record.graph.shown', { shown: g.nodes.length + g.clusters.reduce((n, c) => n + c.ids.length, 0), total: g.total, limit })}
         </p>
       )}
       <svg
@@ -414,7 +429,10 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
   const selected = cluster && (peek || nodes.some(n => cluster.is(n.id)))
     ? (id: string) => (cluster.is(id)
       ? (
-        <div className="sk-gx__sel" role="status" data-testid="gx-cluster">
+        // S9-08 (препрод 14.11): свой класс, а не sk-gx__sel — тот прижат position:absolute к низу
+        // холста, и внутри карточки-peek (тоже absolute, высота по содержимому) карточка
+        // схлопывалась в линию: кнопки «раскрыть» не было видно.
+        <div className="sk-gx__csel" role="status" data-testid="gx-cluster">
           <span className="sk-gx__sel-title">{nodes.find(n => n.id === id)?.title ?? id}</span>
           <button type="button" className="sk-btn" onClick={() => cluster.open(id)}>{kitT(lang, 'kit.record.graph.clusterOpen')}</button>
         </div>
@@ -425,7 +443,8 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
     <div ref={host} className="sk-rec-graph__gx">
       <GraphExplorer nodes={gxNodes} edges={gxEdges} types={types} rels={rels} lang={lang}
         engine={engine} onEngineChange={onEngine} engineSwitch={false}
-        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={selected} />
+        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={selected}
+        clickOpens={cluster?.is} />
     </div>
   );
 }
