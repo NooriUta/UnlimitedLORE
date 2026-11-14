@@ -425,7 +425,10 @@ jobs:
           # miniLORE, все MCP-клиенты (профильные, машинные lore-mcp-full_*, шлюз lore-mcp-mobile_pm).
           # Переменная репозитория перекрывает список без правки workflow. На прод (lore-release)
           # не передаётся — там проверка выключена.
-          LORE_AUTH_ALLOWED_CLIENTS: ${{ vars.LORE_AUTH_ALLOWED_CLIENTS_PREPROD || 'lore-app,mobilepoc-app,minilore-srv,lore-mcp-*' }}
+          # Клиент собственной пробы CD (/lore/version, шаг S0-03) дописывается всегда, именем из
+          # того же секрета: без него проба получала 403 CLIENT_NOT_ALLOWED и выкатка краснела
+          # (промо #1368, 14.11.2026).
+          LORE_AUTH_ALLOWED_CLIENTS: ${{ vars.LORE_AUTH_ALLOWED_CLIENTS_PREPROD || 'lore-app,mobilepoc-app,minilore-srv,lore-mcp-*' }},${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
         run: docker compose up -d --no-deps lore-backend
 
       - name: Deploy frontend
