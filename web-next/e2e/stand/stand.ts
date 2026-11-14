@@ -1,8 +1,10 @@
 // Общие шаги смоука стенда (E2E-STAND): допуск к запуску, открытие страницы с
 // распознаванием протухшего входа, скрин в отчёт.
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { test, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, type Browser, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { preflightFromEnv, readBuild, REPORT_DIR } from './paths.ts';
+import { isForbiddenStandUrl } from '../../src/standSmoke/summary.ts';
 
 /** Нет входа / адреса / адрес ведёт на прод — сценарий «не выполнен», с причиной. */
 export function requireStand(): void {
@@ -12,7 +14,32 @@ export function requireStand(): void {
   test.skip(build?.refused === true, build?.error ?? 'адрес ведёт на прод — смоук на проде запрещён');
 }
 
-const EXPIRED = 'сохранённый вход истёк или отвергнут (страница входа) — обновить LORE_STAND_STORAGE_STATE; смоук не выполнен';
+/**
+ * Допуск для прогонов под несколькими учётками (RBAC): нужен только адрес стенда —
+ * вход у каждой учётки свой (asAccount). Прод отвергается, как и в смоуке.
+ */
+export function requireStandUrl(): void {
+  const url = process.env.LORE_STAND_URL?.trim();
+  test.skip(!url, 'LORE_STAND_URL не задан — прогон не выполнен');
+  test.skip(isForbiddenStandUrl(url!), 'адрес прода — прогон на проде запрещён');
+  const build = readBuild();
+  test.skip(build?.refused === true, build?.error ?? 'адрес ведёт на прод — прогон на проде запрещён');
+}
+
+/**
+ * Новая вкладка с сохранённым входом учётки `account` (файл делает человек, README).
+ * Нет файла — сценарий «не выполнен» с именем учётки; вход истёк — тоже «не выполнен».
+ */
+export async function asAccount(browser: Browser, file: string, account: string): Promise<Page> {
+  test.skip(!existsSync(file), `нет сохранённого входа ${account} (${file}) — сценарий не выполнен`);
+  const baseURL = process.env.LORE_STAND_URL!.trim();
+  const ctx = await browser.newContext({ storageState: file, baseURL, viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  await openStand(page, '/news', page.locator('[data-testid^="news-row-"]'));
+  return page;
+}
+
+const EXPIRED ='сохранённый вход истёк или отвергнут (страница входа) — обновить LORE_STAND_STORAGE_STATE; смоук не выполнен';
 
 /**
  * Открыть страницу стенда и дождаться `target`. Если вместо приложения показали вход
@@ -21,7 +48,7 @@ const EXPIRED = 'сохранённый вход истёк или отверг�
  */
 export async function openStand(page: Page, path: string, target: Locator, timeoutMs = 30_000): Promise<void> {
   await page.goto(path);
-  const base = new URL(test.info().project.use.baseURL ?? page.url()).origin;
+  const base = new URL(test.info().project.use.baseURL ?? process.env.LORE_STAND_URL ?? page.url()).origin;
   const auth = page.locator('.sk-auth__card');
   const deadline = Date.now() + timeoutMs;
   for (;;) {
