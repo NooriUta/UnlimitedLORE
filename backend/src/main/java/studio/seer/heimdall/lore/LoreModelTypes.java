@@ -221,6 +221,8 @@ final class LoreModelTypes {
             boolean multi = Boolean.TRUE.equals(f.get("multi"));
             d = switch (kind) {
                 case "number" -> new Object[]{3, "xs", "none"};
+                // MC-08: флаг — узкая колонка «да/нет».
+                case "bool" -> new Object[]{3, "xs", "none"};
                 case "date" -> new Object[]{3, "s", "none"};
                 case "enum" -> new Object[]{2, "s", "ellipsis"};
                 case "ref" -> multi ? new Object[]{3, "m", "more"} : new Object[]{2, "m", "ellipsis"};

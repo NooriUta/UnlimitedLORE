@@ -5,7 +5,7 @@
 // историю отдавал, а человек её не видел. Здесь проверка сквозная — от ответа
 // /lore/history до вкладки с версиями.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import ListPassport from './ListPassport';
@@ -126,4 +126,19 @@ describe('листание истории', () => {
     await waitFor(() => expect(document.querySelector('.sk-rec-history')).toBeTruthy());
     expect(screen.queryByRole('button', { name: /Показать ещё/ })).toBeNull();
   }, 15000);
+});
+
+describe('S9-09 · фильтры и свёртка истории подключены в паспорте', () => {
+  it('во вкладке есть «Фильтры истории», выбор «кто правил: агент» и свёртка уходят в запрос /lore/history', async () => {
+    const f = fakeFetch();
+    show(f);
+    const tab = await screen.findByRole('tab', { name: /История/ }, { timeout: 8000 });
+    tab.click();
+    const group = await screen.findByRole('group', { name: 'Фильтры истории' }, { timeout: 8000 });
+    expect(group).toBeTruthy();
+    const histUrls = () => (f as unknown as { mock: { calls: [RequestInfo | URL][] } }).mock.calls
+      .map(([u]) => new URL(String(u), 'http://lore.test')).filter(u => u.pathname === '/lore/history');
+    fireEvent.change(screen.getByLabelText('Кто правил'), { target: { value: 'agent' } });
+    await waitFor(() => expect(histUrls().some(u => u.searchParams.get('author_kind') === 'agent')).toBe(true));
+  }, 20000);
 });

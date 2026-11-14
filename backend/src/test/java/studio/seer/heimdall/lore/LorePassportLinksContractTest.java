@@ -179,8 +179,6 @@ class LorePassportLinksContractTest {
         Map.entry("gain", "профиль клиента (VP-канва) — без паспорта v2"),
         Map.entry("job", "профиль клиента (VP-канва) — без паспорта v2"),
         Map.entry("actor", "роль продукта KnowProjectActor — без паспорта v2"),
-        Map.entry("agent", "личность агента KnowActor — без паспорта v2"),
-        Map.entry("user", "личность человека KnowUser — без паспорта v2"),
         Map.entry("pr", "PR — внешняя запись Forgejo, без паспорта"),
         Map.entry("file", "файл репозитория — без паспорта"),
         Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
@@ -606,6 +604,8 @@ class LorePassportLinksContractTest {
      */
     static final Map<String, String> NO_CHIP_FIELD = Map.of(
         "spec|components", "компонент спеки один — поле component (syncSpecComponent ставит одно ребро)",
+        "user|components", "у человека компонентов нет: ни ребра, ни наследования (S9-05)",
+        "agent|components", "у агента компонентов нет: ни ребра, ни наследования (S9-05)",
         "doc|components", "компонент документа один — поле component (одно ребро BELONGS_TO, S5-DOC-PASSPORT)",
         "tech|components", "компонент технологии один — поле component",
         "tech|projects", "у технологии проектов нет: ни ребра в tech_by_id, ни наследования",

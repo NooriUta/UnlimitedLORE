@@ -107,8 +107,10 @@ export const RefPicker = forwardRef<RefPickerHandle, RefPickerProps>(function Re
   );
 });
 
-function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, t }: {
+function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, t, preset }: {
   trigger: RefTrigger;
+  /** поля, заданные ссылкой (тип и ID из текста): подставлены и не правятся — запись заводится под ними */
+  preset?: Record<string, string>;
   typeLabels: Record<string, string>;
   createSpec: (type: string) => RefCreateSpec;
   onCreate?: RefPickerProps['onCreate'];
@@ -123,7 +125,7 @@ function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, 
     const v: Record<string, string> = {};
     for (const x of fs) if (x.value) v[x.key] = x.value;
     if (fs[0] && query) v[fs[0].key] = query;
-    return v;
+    return { ...v, ...(preset ?? {}) };
   };
   const [values, setValues] = useState<Record<string, string>>(() => initial(fields, trigger.query));
   const [more, setMore] = useState(false);
@@ -185,7 +187,7 @@ function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, 
                 <button type="button" className="sk-ref__btn" onClick={() => set(f.self!)}>{t('kit.ref.self')}</button>
               </span>
             ) : (
-              <input value={values[f.key] ?? ''} onChange={e => set(e.target.value)} />
+              <input value={values[f.key] ?? ''} readOnly={preset?.[f.key] !== undefined} onChange={e => set(e.target.value)} />
             )}
           </label>
         );
@@ -203,5 +205,32 @@ function NewCard({ trigger, typeLabels, createSpec, onCreate, onPick, onCancel, 
         <button type="button" className="sk-ref__btn" onClick={onCancel}>{t('kit.ref.cancel')}</button>
       </div>
     </div>
+  );
+}
+
+/**
+ * MD-WINDOW §3a, кадр 20: «Завести» у красной ссылки — та же карточка «Новый», но под ТЕМ ЖЕ ID:
+ * тип и поля из ID (preset) заданы ссылкой и не правятся, остаются обязательные поля записи.
+ */
+export function RefCreateCard({ id, type, typeLabels, createSpec, onCreate, preset, onDone, onClose }: {
+  id: string;
+  type: string;
+  typeLabels: Record<string, string>;
+  createSpec: (type: string) => RefCreateSpec;
+  onCreate: NonNullable<RefPickerProps['onCreate']>;
+  preset?: Record<string, string>;
+  onDone: (item: RefItem) => void;
+  onClose: () => void;
+}) {
+  const lang = useKitLang();
+  const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
+  return (
+    <Popover onClose={onClose} walk="focusable" arrows={false} className="sk-ref">
+      <div data-testid="kit-ref-create">
+        <div className="sk-ref__head"><span className="sk-ref__scope">{t('kit.ref.underId', { id })}</span></div>
+        <NewCard trigger={{ trigger: 'brackets', type, query: '', start: 0 }} typeLabels={typeLabels} createSpec={createSpec}
+          onCreate={onCreate} onPick={onDone} onCancel={onClose} t={t} preset={preset} />
+      </div>
+    </Popover>
   );
 }

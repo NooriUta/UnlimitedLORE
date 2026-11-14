@@ -40,8 +40,8 @@ public class LoreBridgeProbeCheck implements HealthCheck {
 
     private static final Logger LOG = Logger.getLogger(LoreBridgeProbeCheck.class);
     static final Duration TTL = Duration.ofMinutes(5);
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5)).build();
+    private static final LoreHttpClients.Shared HTTP = LoreHttpClients.shared(() -> HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(5)));
 
     @Inject
     KcBridge kc;
@@ -130,7 +130,7 @@ public class LoreBridgeProbeCheck implements HealthCheck {
             .timeout(Duration.ofSeconds(10))
             .header("Authorization", "token " + forgejo.probeToken())
             .header("Accept", "application/json").GET().build();
-        HttpResponse<Void> r = HTTP.send(req, HttpResponse.BodyHandlers.discarding());
+        HttpResponse<Void> r = HTTP.get().send(req, HttpResponse.BodyHandlers.discarding());
         if (r.statusCode() == 200) return null;
         LOG.warnf("[LORE BRIDGES] Forgejo ответил %d на /api/v1/repos/search", r.statusCode());
         return "Forgejo ответил " + r.statusCode() + " на /api/v1/repos/search — токен отозван или без прав";

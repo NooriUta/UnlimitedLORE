@@ -11,12 +11,14 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BurnChart, BurnSpark, burnSum, burnSeries } from '../index';
+/** Принадлежность группе задаёт приложение (K-14); здесь — «спринт S» в формате LORE. */
+const inS = (uid: string) => uid.startsWith('S/');
 
 const C = (task_uid: string, valid_from: string) => ({ task_uid, valid_from });
 const POINTS = burnSeries(
   [C('S/A', '2026-11-01'), C('S/B', '2026-11-01'), C('S/C', '2026-11-02'), C('S/D', '2026-11-02')],
   [C('S/A', '2026-11-03'), C('S/B', '2026-11-05')],
-  'S',
+  inS,
 );
 
 describe('K2-VIEW-TARGET · срок, план, прогноз, вердикт', () => {

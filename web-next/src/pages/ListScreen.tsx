@@ -58,6 +58,8 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task', specs: 'spec',
   // S5-DOC-PASSPORT: документ правится (тело ru/en, вид, файл, родитель) — путь записи /lore/doc.
   docs: 'doc',
+  users: 'user',
+  agents: 'agent',
   // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
   // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
   decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',

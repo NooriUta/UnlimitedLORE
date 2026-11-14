@@ -129,6 +129,9 @@ export function MdInlineEdit({
   const [ownMode, setOwnMode] = useState<MdEditMode>(defaultMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // MD-WINDOW §3a: ненайденные ссылки текста (от TipTapField) и набор, о котором уже предупредили.
+  const [missingRefs, setMissingRefs] = useState<string[]>([]);
+  const [warnedFor, setWarnedFor] = useState<string | null>(null);
   // Спор при сохранении (S5-08): запись изменили, пока её правили, и слить
   // сами не смогли. Показываем дифф ТОЛЬКО спорных блоков; выбор по каждому.
   const [merge, setMerge] = useState<{ chunks: MergeChunk[]; by: string | null; picks: Record<number, 'mine' | 'theirs'> } | null>(null);
@@ -231,6 +234,9 @@ export function MdInlineEdit({
   const save = async () => {
     if (!onSave || saving) return;
     if (!dirty) { close(); return; }
+    // MD-WINDOW §3a: ненайденные ссылки — предупреждение, а не запрет: первое нажатие называет
+    // их, второе («Сохранить всё равно») сохраняет. Новый набор красных — предупредить снова.
+    if (missingRefs.length > 0 && warnedFor !== missingRefs.join('|')) { setWarnedFor(missingRefs.join('|')); return; }
     setSaving(true);
     setError(null);
     setMerge(null);
@@ -382,9 +388,12 @@ export function MdInlineEdit({
             disabled={saving}
             aria-keyshortcuts="Control+Enter"
             aria-busy={saving || undefined}
-          >{saving ? t('kit.mdedit.saving') : t('kit.mdedit.save')}</button>
+          >{saving ? t('kit.mdedit.saving') : warnedFor !== null && warnedFor === missingRefs.join('|') ? t('kit.mdedit.saveAnyway') : t('kit.mdedit.save')}</button>
         </span>
       </div>
+      {warnedFor !== null && warnedFor === missingRefs.join('|') && missingRefs.length > 0 && (
+        <p className="sk-mdedit__note" role="alert" data-testid="kit-mdedit-refwarn">{kitT(lang, 'kit.mdedit.refWarn', { ids: missingRefs.join(', ') })}</p>
+      )}
       {!lossless && <p className="sk-mdedit__note">{t('kit.mdedit.lossy')}</p>}
       {error && <div className="sk-mdedit__err" role="alert">{t('kit.mdedit.saveFailed', { reason: error })}</div>}
       {merge && (
@@ -406,6 +415,7 @@ export function MdInlineEdit({
         onUploadImage={onUploadImage}
         mentionItems={mentionItems}
         refs={refs}
+        onRefsMissing={setMissingRefs}
         minHeight={160}
         mode={mode === 'preview' ? 'wysiwyg' : 'md'}
         onModeChange={m => choose(m === 'wysiwyg' ? 'preview' : 'code')}

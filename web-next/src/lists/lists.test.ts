@@ -83,7 +83,7 @@ describe('конфиги экранов списков', () => {
   it('все одиннадцать разделов на месте; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
     expect(Object.keys(LIST_SCREENS)).toEqual([
       'sprints', 'adrs', 'tasks',
-      'decisions', 'specs', 'docs', 'questions', 'milestones', 'releases', 'components', 'projects', 'tech', 'features',
+      'decisions', 'specs', 'docs', 'users', 'agents', 'questions', 'milestones', 'releases', 'components', 'projects', 'tech', 'features',
       // S4-PRODUCTS-NODE: нода «Продукт».
       'products', 'actors', 'pains', 'gains', 'jobs',
     ]);
@@ -111,7 +111,8 @@ describe('конфиги экранов списков', () => {
     // S4-29 (53а): у проекта статуса нет — справочник git-проектов.
     // S4-PRODUCTS-NODE: продукты и профиль клиента — справочники, статусной оси нет.
     // S5-DOC-PASSPORT: у документа статуса нет вовсе (KnowDoc без статуса и SCD2).
-    const noAxis = ['docs', 'milestones', 'releases', 'components', 'projects', 'tech', 'products', 'actors', 'pains', 'gains', 'jobs'] as const;
+    // S9-05 A: у человека и агента статуса нет.
+    const noAxis = ['docs', 'users', 'agents', 'milestones', 'releases', 'components', 'projects', 'tech', 'products', 'actors', 'pains', 'gains', 'jobs'] as const;
     for (const [id, s] of Object.entries(LIST_SCREENS)) {
       const c = s.config('ru');
       const hasAxis = c.statuses.items.length > 0;

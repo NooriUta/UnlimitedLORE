@@ -73,7 +73,7 @@ const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adr
  */
 const LIST_SECTION: Record<ListScreenId, V2Section> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task',
-  decisions: 'decision', specs: 'spec', docs: 'doc', questions: 'question', milestones: 'milestone',
+  decisions: 'decision', specs: 'spec', docs: 'doc', users: 'user', agents: 'agent', questions: 'question', milestones: 'milestone',
   releases: 'release', components: 'component', tech: 'tech', features: 'feature',
   projects: 'project',
   products: 'product', actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job',

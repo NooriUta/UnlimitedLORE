@@ -57,6 +57,7 @@ const sprintBody = () => ({
       { key: 'title', label: 'Название', label_key: 'f.title', kind: 'text', group: 'head', required: true, editable: true, write: { field: 'name' } },
       { key: 'track', label: 'Дорожка', label_key: 'f.track', kind: 'ref', group: 'props', section: 'Планирование', required: false, editable: true, write: null },
       { key: 'context_md', label: 'Контекст', label_key: 'f.context', kind: 'md', group: 'body', required: false, editable: true, write: { field: 'context_md' } },
+      { key: 'no_release', label: 'Не требует релиза', label_key: 'f.no_release', kind: 'bool', group: 'props', required: false, editable: true, write: { field: 'no_release' } },
     ],
     layout: {},
     relations: [
@@ -84,6 +85,11 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.contract).toBe('lore.record/1');
     expect(c.record).toMatchObject({ type: 'sprint', id: 'SPRINT_A', title: 'Спринт А', status: 'active' });
     expect(c.meta.facade).toBe('server');
+  });
+
+  it('MC-08: вид bool доходит до kit как bool, а не сваливается в text', () => {
+    const c = recordFromServer(sprintBody(), LOADED);
+    expect(c.schema.fields.find(f => f.key === 'no_release')?.kind).toBe('bool');
   });
 
   it('версия — строка сервера, а не число и не null: без неё не работает защита от затирания', () => {
@@ -156,7 +162,7 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     // телом записи (values.body_md), поэтому в списке полей его больше нет:
     // иначе текст задвоился бы разделом поверх самого себя. Разбор этого
     // переноса — в record/bodyEditableAfterFacade.test.ts.
-    expect(labels).toEqual(['Название', 'Дорожка']);
+    expect(labels).toEqual(['Название', 'Дорожка', 'Не требует релиза']);
     expect(JSON.stringify(c.schema.fields)).not.toContain('rec.sprint');
     expect(c.schema.fields.find(f => f.key === 'track')?.section).toBe('Планирование');
   });

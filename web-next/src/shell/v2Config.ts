@@ -26,6 +26,8 @@ export const V2_SECTIONS = [
   'sprint', 'task', 'milestone', 'release',
   'adr', 'decision', 'spec', 'doc', 'question',
   'component', 'tech', 'feature', 'project',
+  // S9-05 A: люди и агенты — паспорта «шапка + таблица детей».
+  'user', 'agent',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
   'product', 'actor', 'pain', 'gain', 'job',
   'news', 'settings',
@@ -82,7 +84,38 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
  * клиента. Рукописный список уже стоил находки аудита 09.11 — четыре кода в
  * него не попали, и у 89 задач корпуса чип выходил пустым.
  */
-export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string): KitConfig {
+/** Группа общего меню из модели (`surfaces.nav` в /lore/model, MC-07). Разделы — только уровня everywhere. */
+export interface ModelNavGroup {
+  id: string;
+  label_key: string;
+  tone: string;
+  pin_top?: boolean;
+  items: { section: string; icon: string; view?: string }[];
+}
+
+/**
+ * SPRINT_LORE_MODEL_AS_CONFIG/MC-07 (D-2026-LORE-MODEL-AUDIENCE-VISIBILITY): общее меню — из модели, а
+ * не из списка в коде. Видимость раздела (everywhere / detail / admin / hidden) решает сервер по
+ * конфигу модели; сюда приходят только пункты уровня everywhere. Раздел, которого клиент не знает
+ * (нет в V2_SECTIONS — нет экрана), отбрасывается, а не рисуется пустым пунктом.
+ */
+export function menuFromModel(lang: KitLang, nav: readonly ModelNavGroup[]): KitConfig['menu']['groups'] {
+  const t = (key: AppKey) => appT(lang, key);
+  const known = new Set<string>(V2_SECTIONS);
+  return nav
+    .map(g => ({
+      id: g.id,
+      title: t(g.label_key as AppKey),
+      tone: g.tone,
+      ...(g.pin_top ? { pinTop: true } : {}),
+      items: g.items.filter(i => known.has(i.section)).map(i => ({
+        id: i.section, title: t(`shell.sec.${i.section}` as AppKey), icon: i.icon, ...(i.view ? { view: i.view } : {}),
+      })),
+    }))
+    .filter(g => g.items.length > 0);
+}
+
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string, navFromModel?: readonly ModelNavGroup[]): KitConfig {
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
@@ -99,7 +132,12 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       ...(module === ADMIN_MODULE ? [{ id: ADMIN_MODULE, title: t('shell.mod.admin'), icon: 'cog', status: 'active' as const }] : []),
     ],
     // S7B-01: у модуля admin своё меню — группы по смыслу и риску (adminMenu).
-    menu: module === ADMIN_MODULE ? adminMenu(lang) : {
+    menu: module === ADMIN_MODULE ? adminMenu(lang) : navFromModel && navFromModel.length ? {
+      myViews: true,
+      recent: true,
+      // MC-07: меню из модели (surfaces.nav); рукописное ниже — только когда модели нет.
+      groups: menuFromModel(lang, navFromModel),
+    } : {
       myViews: true,
       recent: true,
       groups: [
@@ -139,11 +177,13 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
           items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears')],
         },
+        // S9-05 A: «Участники» — кто делает работу: люди и агенты, у каждого паспорт с его задачами.
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
       ],
     },
     kinds: {
-      sprint: { title: t('shell.sec.sprint'), icon: 'sprint' },
+      // inherited — подпись значения, унаследованного от записи вида (K-14: слово LORE, не kit).
+      sprint: { title: t('shell.sec.sprint'), icon: 'sprint', inherited: t('shell.inherited.sprint') },
       task: { title: t('shell.sec.task'), icon: ICON_CANON.sectionTask },
       adr: { title: t('shell.sec.adr'), icon: 'scroll-quill' },
       news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
@@ -157,8 +197,10 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       question: { title: t('shell.sec.question'), icon: 'help' },
       component: { title: t('shell.sec.component'), icon: 'cog' },
       tech: { title: t('shell.sec.tech'), icon: 'gears' },
-      feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge' },
+      feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge', inherited: t('shell.inherited.feature') },
       project: { title: t('shell.sec.project'), icon: 'open-folder' },
+      user: { title: t('shell.sec.user'), icon: 'person' },
+      agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
       product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
       actor: { title: t('shell.sec.actor'), icon: 'hooded-figure' },
       pain: { title: t('shell.sec.pain'), icon: 'thorn-helix' },

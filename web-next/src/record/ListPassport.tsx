@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
-  type KitConfig, type KitCtx, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
+  HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
@@ -41,7 +41,7 @@ import { PassportPlace } from './PassportPlace';
 import { loreQueryRun } from './loreQueryBlock';
 import { loreGraphRun } from './loreGraphBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
-import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory } from './historySource';
+import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, NOT_TRACKED, fetchHistory, historyQueryOpts } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 /** Чтение тела: ссылка ведёт в паспорт (MD-READ-PEEK), наведение/тап — карточка Peek (S9-10). */
@@ -154,11 +154,16 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // а не склеивать куски: сервер отдаёт историю одной выборкой с page, и
   // склейка на клиенте разошлась бы с ней при чужой правке посреди листания.
   const [histLimit, setHistLimit] = useState(HISTORY_PAGE);
+  // Фильтры и свёртка правок агента (S9-09): kit рисует их, только когда экран
+  // их применяет (onQuery). Сужает и сворачивает СЕРВЕР — страница и счёт честны.
+  const [histQuery, setHistQuery] = useState<KitHistoryQuery>(HISTORY_QUERY_ALL);
+  const histOpts = historyQueryOpts(histQuery);
+  const histKey = JSON.stringify(histOpts);
   const hist = useLoadState(
     () => (HISTORY_TRACKED.has(type)
-      ? fetchHistory(type, id, { limit: histLimit }, fetchImpl)
+      ? fetchHistory(type, id, { limit: histLimit, ...histOpts }, fetchImpl)
       : Promise.resolve(NOT_TRACKED)),
-    [type, id, fetchImpl, histLimit],
+    [type, id, fetchImpl, histLimit, histKey],
   );
   // Источник паспорта — боевой фасад /lore/record (S4-MODEL-PASSPORT-LIST).
   // Вместе с ним приходит `record.version` (без неё нет защиты от затирания,
@@ -453,6 +458,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
         // «Показать ещё» есть только пока сервер говорит, что дальше есть.
         onMore: hist.data?.page?.has_more ? () => setHistLimit(n => n + HISTORY_PAGE) : undefined,
         loadingMore: hist.state === 'loading' && histLimit > HISTORY_PAGE,
+        query: histQuery,
+        // Новый запрос — с первой страницы: старый предел относился к другой выборке.
+        onQuery: q => { setHistQuery(q); setHistLimit(HISTORY_PAGE); },
       }}
       placement={placement} loadedAt={contract?.meta.loaded_at} onReload={pp.reload}
       className="list-passport"

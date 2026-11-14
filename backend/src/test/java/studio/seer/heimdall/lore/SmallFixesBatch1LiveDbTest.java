@@ -38,7 +38,7 @@ class SmallFixesBatch1LiveDbTest {
     }
 
     private static List<Map<String, Object>> sql(String query) throws Exception {
-        HttpClient http = LiveDbHttp.CLIENT;
+        HttpClient http = LiveDbHttp.client();
         String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", query).encode();
         HttpRequest req = HttpRequest.newBuilder(
                 URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))

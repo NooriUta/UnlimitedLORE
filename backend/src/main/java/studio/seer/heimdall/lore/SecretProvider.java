@@ -54,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SecretProvider {
 
     private static final Logger LOG = Logger.getLogger(SecretProvider.class);
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final LoreHttpClients.Shared HTTP = LoreHttpClients.shared(HttpClient::newBuilder);
 
     @ConfigProperty(name = "lore.secrets.provider", defaultValue = "env")
     String provider;
@@ -257,7 +257,7 @@ public class SecretProvider {
                     URI.create(vaultUrl.get() + "/v1/" + vaultPath))
                 .header("X-Vault-Token", vaultToken.get())
                 .GET().build();
-            HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> r = HTTP.get().send(req, HttpResponse.BodyHandlers.ofString());
             long ms = System.currentTimeMillis() - t0;
             if (r.statusCode() != 200) {
                 // 403 — policy/протухший токен, 503 — sealed vault: коды в лог,
@@ -311,7 +311,7 @@ public class SecretProvider {
         // почему. Таймстамп до/после и длительность — минимум, без которого
         // следующий провал снова будет чёрным ящиком.
         long t0 = System.currentTimeMillis();
-        HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> r = HTTP.get().send(req, HttpResponse.BodyHandlers.ofString());
         long ms = System.currentTimeMillis() - t0;
         if (r.statusCode() != 200) {
             LOG.warnf("[LORE secrets] Universal Auth login вернул %d за %dмс — проверьте client-id/client-secret "
@@ -346,7 +346,7 @@ public class SecretProvider {
             .header("Authorization", "Bearer " + bearer)
             .GET().build();
         long t0 = System.currentTimeMillis();
-        HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> r = HTTP.get().send(req, HttpResponse.BodyHandlers.ofString());
         long ms = System.currentTimeMillis() - t0;
         if (r.statusCode() != 200) {
             LOG.warnf("[LORE secrets] сервис вернул %d для %s за %dмс", r.statusCode(), key, ms);

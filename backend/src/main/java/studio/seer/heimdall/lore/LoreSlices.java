@@ -691,6 +691,15 @@ public final class LoreSlices {
             + "FROM ROLE_HELD_BY WHERE @out.task_uid = :id",
             List.of("id"), Map.of(), " ORDER BY valid_from DESC");
 
+        // SPRINT_LORE_AGENT_OBSERVABILITY/AO-06: покрытие ролей профилем по ВСЕМУ корпусу.
+        // task_roles отдаёт profile только для одной задачи — «сколько ролей сегодня несут
+        // профиль» было неотвечаемо, и улучшение нечем было измерить ни до, ни после.
+        // Сырые группы (role, profile, n) — свёртку делает читатель; profile = null и есть
+        // непокрытое. Только открытые роли: закрытые описывают прошлое, а не «сегодня».
+        slice("role_profile_coverage",
+            "SELECT role, profile, count(*) AS n FROM ROLE_HELD_BY WHERE valid_to IS NULL",
+            List.of(), Map.of(), " GROUP BY role, profile ORDER BY role");
+
         // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
@@ -2061,6 +2070,40 @@ public final class LoreSlices {
             List.of("project"), Map.of(), " ORDER BY release_date DESC, release_uid DESC");
         // Люди — по назначению роли (HAS_PROJECT_ROLE, AL-82: источник истины о правах — граф),
         // строка на ребро: роль лежит на нём.
+        // ── SPRINT_UXR_S9_SCALE_OPT/S9-05 A: паспорта человека и агента ──────────────────────
+        // Шапка — одна строка; дети — задачи, где у него ОТКРЫТАЯ роль (ребро ROLE_HELD_BY без
+        // valid_to: сменённый исполнитель в детях не числится). Человека задача знает по
+        // display_name, но ключ паспорта — kc_sub (имя меняется, sub нет; так ведёт и проект).
+        slice("user_by_id",
+            "SELECT kc_sub, display_name, out('HAS_PROJECT_ROLE').slug AS projects " +
+            "FROM KnowUser WHERE kc_sub = :kc_sub",
+            List.of("kc_sub"), Map.of(), "");
+        slice("agent_by_id",
+            "SELECT actor_id, name, client_id, agent_role, harness, " +
+            "out('OWNED_BY').kc_sub[0] AS owner, out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowActor WHERE kind = 'agent' AND actor_id = :id",
+            List.of("id"), Map.of(), "");
+        // Списки разделов «Люди» и «Агенты» v2: строка — человек (агент) и его проекты.
+        slice("users",
+            "SELECT kc_sub, display_name, out('HAS_PROJECT_ROLE').slug AS projects FROM KnowUser",
+            List.of(), Map.of(), " ORDER BY display_name");
+        slice("agents",
+            "SELECT actor_id, name, client_id, agent_role, harness, " +
+            "out('OWNED_BY').kc_sub[0] AS owner, out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowActor WHERE kind = 'agent'",
+            List.of(), Map.of(), " ORDER BY actor_id");
+        slice("user_tasks",
+            "SELECT task_uid, task_id, title, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().kc_sub CONTAINS :kc_sub",
+            List.of("kc_sub"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
+        slice("agent_tasks",
+            "SELECT task_uid, task_id, title, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
         slice("project_people",
             "SELECT @out.kc_sub AS kc_sub, @out.display_name AS display_name, role " +
             "FROM HAS_PROJECT_ROLE WHERE @in.slug = :project",
@@ -2949,6 +2992,8 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
+            "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
@@ -2985,6 +3030,8 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
+            "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
             "out('PARENT_PRODUCT').code     AS parent_code, " +
             "in('PARENT_PRODUCT').code      AS sub_products, " +
@@ -3145,6 +3192,9 @@ public final class LoreSlices {
         Map.entry(LoreTaskIdentities.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry(LoreRolesLostOnMove.SLICE, "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_uc", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        // S9-05 A: задачи человека и агента — проект через спринт, как у прочих задач.
+        Map.entry("user_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("agent_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3225,6 +3275,10 @@ public final class LoreSlices {
         Map.entry("user_project_roles", "по нему miniLORE делит выдачу по людям (D-2026-LORE-MINILORE-READER-READS-ALL)"),
         Map.entry("project_users", "то же: участники проекта для разделения по людям"),
         Map.entry("project_people", "паспорт проекта (S4-29): участники — та же выборка, что project_users"),
+        Map.entry("user_by_id", "паспорт человека (S9-05): имя и проекты — те же сведения, что project_people"),
+        Map.entry("users", "раздел «Люди» (S9-05): имена и проекты — те же сведения, что project_people"),
+        Map.entry("agents", "раздел «Агенты» (S9-05): агенты видны всем (AL-106), как actors"),
+        Map.entry("agent_by_id", "паспорт агента (S9-05): агенты видны всем (AL-106), как project_agents"),
         Map.entry("project_agents", "паспорт проекта (S4-29): агенты видны всем (AL-106), как actors"),
         Map.entry("project_actors", "паспорт проекта (11.11): роли продукта видны всем, как actors (AL-106)"),
         Map.entry("project_bound_agents", "паспорт проекта (11.11): агенты видны всем (AL-106), как project_agents"),
@@ -3258,6 +3312,7 @@ public final class LoreSlices {
         Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
         Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем"),
+        Map.entry("role_profile_coverage", "AO-06: агрегат покрытия ролей профилем — числа по корпусу, без записей проектов"),
         Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая")
     );
 
@@ -3267,7 +3322,7 @@ public final class LoreSlices {
      * список, а не умолчание: каждая запись — открытая дыра, видимая в коде.
      */
     static final Map<String, String> SCOPE_PENDING = Map.ofEntries(
-        Map.entry("search", "сложный SQL (подзапрос); вместе с эндпоинтом /lore/search — отдельным шагом"),
+        Map.entry("search", "сложный SQL (подзапрос); эндпоинт /lore/search под скоупом с AL-SCOPE-HOLES A, легаси-срез палитры — ещё нет"),
         Map.entry("product_hygiene", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("strategic_coverage", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("milestones", "вехи M0…M7 не связаны с проектами (MT-GOALS) — решение о модели вех"),
