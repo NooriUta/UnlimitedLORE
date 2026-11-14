@@ -7304,3 +7304,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Поиск: открыть найденную запись во весь экран (владелица 14.11.2026). */
 .sk-palette__full { display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; min-width: 34px; padding: 3px 10px; border-radius: 999px; background: var(--acc); color: var(--bg0); cursor: pointer; flex: 0 0 auto; }
 .sk-palette__full:hover { filter: brightness(1.12); }
+
+@media (pointer: coarse) {
+  /* Ряды пилюль/чипов (приёмка препрода efe20f03): цель 20 px при зазоре рядов 4–10 px — зона 44
+     выступала на 12 px и ложилась на соседний ряд. Замер Chromium (сенсор, 300 px): у крестиков связей
+     в редакторе (.sk-relfield__chips) касание по видимому крестику уходило соседнему ряду в 119 точках
+     из 640, у кодов в свойствах записи (.sk-rec-fields__refs) — в 265 из 2240. Зазор рядов — 44 − 20
+     (зона цели 20 px укладывается целиком), а зона внутри ряда по вертикали не дальше половины
+     зазора: ряды не перекрываются при любой высоте цели. Ряды, где зона обрезана самой пилюлей
+     (overflow: hidden у .sk-pill, .sk-rec-chips__link), не перекрываются и сюда не входят — лишний
+     зазор там ничего не дал бы. Блок — в конце файла: зазор должен перебить gap самих рядов. */
+  .sk-relfield__chips, .sk-rec-fields__refs {
+    --chiprow-gap: calc(var(--hit) - 20px);
+    row-gap: var(--chiprow-gap);
+  }
+  :where(.sk-relfield__chips, .sk-rec-fields__refs)
+    :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class])::after {
+    height: min(max(100%, var(--hit)), calc(100% + var(--chiprow-gap)));
+  }
+}
