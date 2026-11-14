@@ -640,7 +640,9 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
         { value: 'analytics' as const, icon: ICON_CANON.recAnalytics, label: kitT(lang, 'kit.record.view.analytics') },
       ]).map(o => (
         <IconButton key={o.value} icon={o.icon} label={o.label} pressed={mode === o.value}
-          onClick={() => { if (mode !== o.value) goMode(o.value); }} />
+          // S4-29 (приёмка 14.11.2026): нажатый «Контент» на вкладке раздела («Решения») не делал
+          // ничего — к тексту было не вернуться. Значок ведёт в начало вида, если ты не там.
+          onClick={() => { if (mode !== o.value || current !== firstOf[o.value]) goMode(o.value); }} />
       ))}
     </span>
   ) : null;

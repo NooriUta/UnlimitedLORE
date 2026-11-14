@@ -74,3 +74,19 @@ describe('порядок вкладок паспорта — один во вс�
     expect(labels()[0]).toBe('Контент');
   });
 });
+
+// S4-29 (приёмка 14.11.2026, ADR-HND-020 в «Библиотеке», док справа): открыта вкладка раздела
+// («Решения») — вид «Контент» уже нажат, и нажатие на значок «Контент» не делало НИЧЕГО: к тексту
+// записи было не вернуться (владелица: «к нему не вернуться»). Значок вида ведёт в начало вида всегда.
+import { fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
+describe('S4-29 · значок «Контент» в доке возвращает к тексту', () => {
+  for (const place of ['left', 'right'] as const) {
+    it(`док ${place}: с вкладки раздела значок «Контент» ведёт к тексту записи`, () => {
+      const onTab = vi.fn();
+      render(<RecordView record={host} ctx={ctx} tab="files" onTab={onTab} placement={place} narrow={false} sections={MODEL} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Контент' }));
+      expect(onTab).toHaveBeenCalledWith('overview');
+    });
+  }
+});
