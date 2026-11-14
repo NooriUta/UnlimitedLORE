@@ -54,16 +54,17 @@ describe('KitShell — модули нижней панелью на телеф�
     const dock = screen.getByRole('navigation', { name: 'Модули' });
     expect(dock.className).toMatch(/\bsk-shell__dock\b/);
     expect(header.contains(dock)).toBe(false);
+    // Приёмка препрода efe20f03: три из четырёх пунктов бара были «скоро» — бар в зоне большого
+    // пальца только для рабочих модулей, как в v1 (MOB-12: там в баре только рабочие ипостаси).
+    // Заглушки «скоро» остаются в шапке широкого экрана (положительный контроль ниже).
     const items = within(dock).getAllByRole('button');
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(2);
+    expect(within(dock).queryByRole('button', { name: /Bragi/ })).toBeNull();
+    expect(dock.querySelector('[aria-disabled="true"]')).toBeNull();
     // Подпись под иконкой видна, а не только в aria-label.
     expect(within(dock).getByText('Исследования')).toBeTruthy();
     // Текущий модуль отмечен для чтения с экрана.
     expect(within(dock).getByRole('button', { name: 'LORE' }).getAttribute('aria-current')).toBe('page');
-    // «Скоро» — приглушённо и с понятным именем, нажатие ничего не делает.
-    const planned = within(dock).getByRole('button', { name: 'Bragi · скоро' });
-    expect(planned.getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(planned);
     expect(onNavigate).not.toHaveBeenCalled();
     fireEvent.click(within(dock).getByRole('button', { name: 'Исследования' }));
     expect(onNavigate).toHaveBeenCalledWith(expect.objectContaining({ module: 'research' }));
@@ -89,6 +90,8 @@ describe('KitShell — модули нижней панелью на телеф�
     const nav = screen.getByRole('navigation', { name: 'Модули' });
     expect(container.querySelector('header')!.contains(nav)).toBe(true);
     expect(container.querySelector('.sk-shell__dock')).toBeNull();
+    // В шапке широкого экрана «скоро» остаётся: там это анонс, а не навигация в зоне пальца.
+    expect(within(nav).getByRole('button', { name: 'Bragi · скоро' }).getAttribute('aria-disabled')).toBe('true');
   });
 
   it('CSS: панель прибита к низу, содержимое отступает под неё с учётом safe-area', () => {
