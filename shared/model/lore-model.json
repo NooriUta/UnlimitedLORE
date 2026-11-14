@@ -117,7 +117,12 @@
       "label" : "Не требует релиза",
       "labelKey" : "pp.field.noRelease",
       "kind" : "bool",
-      "group" : "props"
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/update",
+        "field" : "no_release_required"
+      }
     }, {
       "key" : "track",
       "label" : "Трек",

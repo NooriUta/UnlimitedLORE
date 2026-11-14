@@ -166,6 +166,17 @@ describe('оболочка v2 (S4-01)', () => {
     expect(container.querySelector('[data-section="sprint"]')).toBeTruthy();
   });
 
+  // S9-05 × MC-07 (приёмка v1.17.20): щелчок по человеку в паспорте проекта вёл на
+  // ?sec=user&open=…, а открывались «Новости»: «Люди» (уровень admin) не в меню, и
+  // оболочка откатывалась к первому пункту. Раздел вне меню открывается по адресу.
+  it('?sec=user&open=… открывает раздел человека, а не «Новости», хотя «Людей» нет в меню', () => {
+    const { container } = render(<App path="/" win={fakeWin('?mod=forseti&sec=user&open=kc-1')} storage={mem()} narrow={false} />);
+    const side = screen.getByRole('navigation', { name: 'Разделы' });
+    expect(within(side).queryByRole('link', { name: 'Люди' })).toBeNull();
+    expect(container.querySelector('[data-section="user"]')).toBeTruthy();
+    expect(container.querySelector('[data-section="news"]')).toBeNull();
+  });
+
   it('раздел из URL открывается сразу: ?sec=settings — личные настройки (переход v2 → v1)', () => {
     const { container } = render(<App path="/" win={fakeWin('?mod=forseti&sec=settings')} storage={mem()} narrow={false} />);
     expect(container.querySelector('[data-nav-switch="v2"]')).toBeTruthy();

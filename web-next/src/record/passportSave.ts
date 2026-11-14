@@ -146,7 +146,8 @@ export async function savePassportField(
   write?: { endpoint: string; field: string } | null,
 ): Promise<void> {
   const { path, body } = write
-    ? { path: write.endpoint, body: { ...idBody(type, rec), [write.field]: typeof to === 'string' ? to : '' } }
+    // MC-08: флаг (поле вида bool) уходит boolean как есть — иначе сервер получил бы пустую строку.
+    ? { path: write.endpoint, body: { ...idBody(type, rec), [write.field]: typeof to === 'string' || typeof to === 'boolean' ? to : '' } }
     : payload(type, rec, field, to);
   const checked = (VERSION_CHECKED as readonly string[]).includes(type);
   const version = typeof expectedVersion === 'string' ? expectedVersion.trim() : '';
