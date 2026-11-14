@@ -34,6 +34,20 @@ describe('машина вызова — отметка словами', () => {
     expect(screen.getAllByTestId('adm-denial-machine')[1].textContent).toMatch(/не применимо/i);
   });
 
+  // PU-29 (приёмка 14.11.2026): у анонимного 401 в «Машине» стояло «не применимо
+  // (человек)» — вызывающий не опознан, назвать его человеком нечем.
+  it('отказ 401 без роли — «вызывающий не опознан», а не «человек»', async () => {
+    const body = { denials: [
+      { ts: '2026-11-14T00:00:02Z', method: 'GET', path: '/lore/z', status: 401, error: 'UNAUTHORIZED', role: '', machine: '(n/a)' },
+      { ts: '2026-11-14T00:00:03Z', method: 'POST', path: '/lore/y', status: 403, error: 'E', role: 'admin', machine: '(n/a)' },
+    ], total: 2 };
+    render(<KitLangProvider lang="ru"><KcDenials fetchImpl={vi.fn(async () => json(body)) as unknown as typeof fetch} /></KitLangProvider>);
+    const cells = await screen.findAllByTestId('adm-denial-machine');
+    expect(cells[0].textContent).toMatch(/не опознан/);
+    expect(cells[0].textContent).not.toMatch(/человек/);
+    expect(cells[1].textContent).toMatch(/человек/);
+  });
+
   it('«Вы: …» у агента — с машиной вызова', async () => {
     render(<KitLangProvider lang="ru"><WhoamiBar fetchImpl={vi.fn(async () => json({
       auth_enabled: true, kind: 'agent', profile: 'full', client_id: 'lore-mcp-full', seer_role: 'viewer',

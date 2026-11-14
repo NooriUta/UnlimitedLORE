@@ -206,8 +206,8 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
                           {r.caller ?? <span className="adm-missing">{t('admin.log.caller.none')}</span>}
                         </td>
                         <td>{label(t, AXIS_LABEL, r.axis)}</td>
-                        <td><MachineCell value={r.client} testId="adm-log-client" /></td>
-                        <td><MachineCell value={r.machine} testId="adm-log-machine" /></td>
+                        <td><MachineCell value={r.client} testId="adm-log-client" unidentified={r.axis === 'unauth'} /></td>
+                        <td><MachineCell value={r.machine} testId="adm-log-machine" unidentified={r.axis === 'unauth'} /></td>
                         <td>
                           <span className="adm-outcome" data-testid="adm-log-outcome" data-outcome={outcome}>
                             {t(OUTCOME_LABEL[outcome])}
@@ -297,7 +297,11 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
           <button type="submit" className="adm-btn" data-testid="adm-log-apply">{t('admin.log.apply')}</button>
           <button type="button" className="adm-btn" data-testid="adm-log-reset" onClick={reset}>{t('admin.log.reset')}</button>
         </div>
-        <p className="adm-hint">{t('admin.log.f.timeHint')}</p>
+        {/* Подсказка — по виду полей: календарь принимает только день (PU-29);
+            момент ISO / epoch вводится лишь когда поле текстовое (пришёл из адреса). */}
+        <p className="adm-hint" data-testid="adm-log-timehint">
+          {dayOrEmpty(draft.from) && dayOrEmpty(draft.to) ? t('admin.log.f.timeHint') : t('admin.log.f.timeHintText')}
+        </p>
       </form>
       {body}
       {/* S7B-31 п.4а: отказы доступа KC (буфер до рестарта) — из старой вкладки «Настройки». */}

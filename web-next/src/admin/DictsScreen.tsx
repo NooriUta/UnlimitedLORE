@@ -393,7 +393,7 @@ function DictForm({ dt, before, draft, usage, onDraft, onCancel, onSaved, fetchI
 
 function TagsPane({ fetchImpl }: DictsScreenProps) {
   const t = useAppT();
-  const res = useLoadState<{ rows: TagRow[]; truncated: boolean }>(s => fetchTags(s, fetchImpl), [fetchImpl], { rows: d => d.rows });
+  const res = useLoadState<{ rows: TagRow[]; truncated: boolean | 'unknown' }>(s => fetchTags(s, fetchImpl), [fetchImpl], { rows: d => d.rows });
   const [q, setQ] = useState('');
   const [sort, setSort] = useUrlParam('adm-tags-sort');
   const alpha = sort === 'alpha';
@@ -408,7 +408,8 @@ function TagsPane({ fetchImpl }: DictsScreenProps) {
   return (
     <>
       <p className="adm-note" data-tone="inf" role="note">{t('admin.tags.note')}</p>
-      {data.truncated && <p className="adm-note" data-tone="wrn" role="status">{t('admin.tags.truncated')}</p>}
+      {data.truncated === true && <p className="adm-note" data-tone="wrn" role="status">{t('admin.tags.truncated')}</p>}
+      {data.truncated === 'unknown' && <p className="adm-note" data-tone="wrn" role="status">{t('admin.tags.truncUnknown')}</p>}
       <div className="adm-filters">
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.tags.search')}</span>
@@ -419,7 +420,9 @@ function TagsPane({ fetchImpl }: DictsScreenProps) {
           <button type="button" className="adm-chip" aria-pressed={!alpha} onClick={() => setSort(null, { replace: true })}>{t('admin.tags.byUses')}</button>
           <button type="button" className="adm-chip" aria-pressed={alpha} onClick={() => setSort('alpha', { replace: true })}>{t('admin.tags.byAlpha')}</button>
         </div>
-        <p className="adm-hint">{t('admin.dicts.shown', { n: shown.length, total: data.rows.length })}</p>
+        <p className="adm-hint">{data.truncated
+          ? t('admin.tags.shownCut', { n: shown.length, loaded: data.rows.length })
+          : t('admin.dicts.shown', { n: shown.length, total: data.rows.length })}</p>
       </div>
       {data.rows.length === 0 ? <EmptyState title={t('admin.tags.empty')} /> : (
         <div className="adm-tablewrap">

@@ -3633,6 +3633,9 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__c-status, .sk-list__c-kind, .sk-list__c-id, .sk-list__c-title { min-width: 0; }
 .sk-list__c-id { overflow-wrap: anywhere; }
 .sk-list__row:hover { background: var(--bg2); }
+/* PU-29: строка открывается кликом целиком (openOnRowClick) — курсор говорит об этом. */
+.sk-list[data-open-row='true'] .sk-list__row,
+.sk-list[data-open-row='true'] .sk-cards__card { cursor: pointer; }
 .sk-list__row.is-selected { background: color-mix(in srgb, var(--acc) 10%, transparent); }
 /* S4-11: курсор строки — видимый фокус, клавиатурный слой поверх щелчка. */
 .sk-list__row:focus-visible,
