@@ -143,7 +143,7 @@ public class UcReadinessCalculator {
             p.put("upd", java.time.Instant.now().toString());
             p.put("s", computed);
             p.put("id", ucId);
-            if (sql.indexOf(":d") >= 0) p.put("d", LocalDate.now().toString());
+            if (sql.indexOf(":d") >= 0) p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             writeClient.command(db, credentials.basicAuth(),
                 new LoreCommandClient.LoreCommand("sql", sql.toString(), p)).await().indefinitely();
             LOG.debugf("[LORE READINESS] %s: %s → %s", ucId, stored, computed);
