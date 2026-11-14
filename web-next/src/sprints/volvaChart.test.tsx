@@ -10,11 +10,11 @@
 // Место — D-2026-LORE-VIZ-EMBED-PLACES: «Спринты», график sprints_timeline
 // (карточка 44), ДОПОЛНИТЕЛЬНЫМ видом рядом с таймлайном, а не вместо него.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { ListScreen } from '../pages/ListScreen';
-import { chartLayerOf, volvaEmbedState, VOLVA_SPRINTS_CHART } from './volvaChart';
+import { chartLayerOf, volvaEmbedState, VolvaChart, VOLVA_SPRINTS_CHART } from './volvaChart';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -156,4 +156,23 @@ describe('«Спринты» v2: вид Völva рядом с таймлайно�
     expect(decodeURIComponent(req)).toContain('project=NooriUta/UnlimitedLORE');
     window.history.replaceState(null, '', '/');
   }, 15000);
+});
+
+// VE-7 (Völva, 14.11.2026): статическая встройка /embed/question родителю НЕ шлёт ничего — ни высоты, ни
+// ошибки (metabase.frame шлёт только интерактивная). Таймаут kit «не ответила» (ждёт первого frame)
+// подменял бы рабочий график отказом через 15 с. Пока Völva не шлёт frame, ожидание ответа выключено.
+describe('встройка Völva без сообщений родителю — рамка остаётся', () => {
+  it('готовая подпись → iframe и через 20 с всё ещё iframe, а не «не ответила»', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const impl = vi.fn(async () => json({ url: 'https://volva.example.org/embed/question/J', expires_at: 'x' })) as unknown as typeof fetch;
+      const { container } = render(<VolvaChart chart={VOLVA_SPRINTS_CHART} title="t" projects={['A/B']} fetchImpl={impl} />);
+      await waitFor(() => expect(container.querySelector('iframe')).not.toBeNull());
+      await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
+      expect(container.querySelector('[data-embed-state="silent"]')).toBeNull();
+      expect(container.querySelector('iframe')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
