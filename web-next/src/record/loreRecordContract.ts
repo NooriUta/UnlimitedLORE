@@ -92,7 +92,9 @@ export interface LoreRelation { key: string; label: string; relation: KitRelatio
   target_type?: string }
 export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string;
   /** Вид концов ребра (сервер: fromKind/toKind) — идёт в KitEdge, чтобы kit не угадывал вид по записям. */
-  fromKind?: string; toKind?: string }
+  fromKind?: string; toKind?: string;
+  /** S9-05 / D14: значения колонок таблицы детей по типу ребёнка (задача: executor/effort/work_class; спринт: progress/planned_start/planned_end). Нет — сервер их не читал. */
+  values?: Record<string, unknown> }
 export interface LoreSource { block: string; state: 'ok' | 'forbidden' | 'error' | 'truncated'; code?: number; reason?: string; shown?: number; total?: number;
   /** Кому строка (S4-TECH-NOTES), если её назвал сервер. Нет — решает приложение (fromLoreRecord). */
   audience?: 'user' | 'tech' }
@@ -220,6 +222,31 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
   };
 }
 
+/** Общие колонки таблицы связей kit (NESTED_COLUMNS): Статус · Вид · Код · Запись. */
+const NESTED_COMMON_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
+
+/**
+ * S9-05 / D14: колонки таблицы детей по типу ребёнка — сверх общих. Ключи значений —
+ * `values` связи с фасада (LoreRecordFrom.CHILD_VALUES).
+ */
+const CHILD_COLUMNS: Record<string, readonly string[]> = {
+  task: ['fields.executor', 'fields.effort', 'fields.work_class'],
+  sprint: ['progress:progress', 'fields.planned_start', 'fields.planned_end'],
+};
+
+function childFieldsOf(kind: string, lang: KitLang): NonNullable<KitConfig['kinds'][string]['fields']> {
+  if (kind === 'task') return [
+    { key: 'executor', title: appT(lang, 'pp.field.executor'), type: 'text' },
+    { key: 'effort', title: appT(lang, 'pp.field.effort'), type: 'number' },
+    { key: 'work_class', title: appT(lang, 'pp.field.workClass'), type: 'text' },
+  ];
+  return [
+    { key: 'progress', title: appT(lang, 'sprintTree.field.progress'), type: 'text' },
+    { key: 'planned_start', title: appT(lang, 'pp.field.plannedStart'), type: 'date' },
+    { key: 'planned_end', title: appT(lang, 'pp.field.plannedEnd'), type: 'date' },
+  ];
+}
+
 /** Объект контракта → входы kit. Kit не знает полей типа — всё отсюда. */
 /** Итоги спринта: поле паспорта ← ключ `computed` сервера, подпись — та же, что у колонки списка. */
 const SPRINT_SUMS = [
@@ -269,7 +296,7 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     ...partEdges,
   ];
   const linkRecords: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)
-    .map(l => ({ id: l.id, kind: l.type, title: l.title, status: l.status, fields: {} }));
+    .map(l => ({ id: l.id, kind: l.type, title: l.title, status: l.status, fields: { ...(l.values ?? {}) } }));
   const others: KitRecord[] = [...linkRecords, ...partRecords]
     .filter((r, i, a) => r.id !== id && a.findIndex(x => x.id === r.id) === i);
   // Часть не прочиталась — это РАЗНЫЕ утверждения: «нет прав» (denied) и «сбой»
@@ -389,8 +416,29 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
   // только там, где kit связь НЕ рисует: части (`place: "part"` — у них в
   // `parts[]` лежат настоящие элементы) и свойства.
   const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key) && !kitRelKeys.has(t.key))];
+  // S9-05 / D14 «колонки по типу ребёнка»: таблица детей связи — сверх общих колонок
+  // колонки вида ребёнка, но ТОЛЬКО если элементы этой связи принесли значения
+  // (`values`): иначе столбец «—» читался бы как «исполнителя нет», а его не читали.
+  const childKinds = new Set<string>();
+  const childColumnsOf = (r: (typeof kitRels)[number]): { columns?: string[] } => {
+    const target = r.target_type;
+    const extra = target ? CHILD_COLUMNS[target] : undefined;
+    if (!target || !extra) return {};
+    const carries = c.links.some(l => l.rel === r.rel && l.dir === r.dir && l.type === target && l.values);
+    if (!carries) return {};
+    childKinds.add(target);
+    return { columns: [...NESTED_COMMON_COLUMNS, ...extra] };
+  };
+  const relDefs = kitRels.map(r => {
+    const { count: _n, place: _p, target_type: t, ...d } = r;
+    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...childColumnsOf(r) };
+  });
+  // Подписи колонок — полями вида ребёнка (свой вид паспорта не трогаем).
+  const childKindDefs: KitConfig['kinds'] = Object.fromEntries([...childKinds].filter(k => k !== type)
+    .map(k => [k, { title: appT(lang, k === 'task' ? 'pp.kind.task' : 'pp.kind.sprint'), icon: k, fields: childFieldsOf(k, lang) }]));
   const config0: KitConfig = baseConfig(lang, {
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: kitRels.map(({ count: _n, place: _p, target_type: t, ...d }) => ({ ...d, ...(t && t !== 'any' ? { targetKind: t } : {}) })), fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),
+    ...childKindDefs,
+    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: relDefs, fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),
       // S4-24: правимо только при ОБОИХ — сервер назвал поле правимым И дал путь записи.
       ...(f.editable && f.write ? { editable: true } : {}),
       ...(f.required ? { required: 'block' as const } : {}),

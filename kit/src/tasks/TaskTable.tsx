@@ -5,6 +5,8 @@
 // (onStatusChange → POST /lore/status, onSave → POST /lore/task/edit), отказ
 // сервера рисуется в строке (role=alert), а не глотается.
 import { kitNumber } from '../core/fmtValue';
+import { IconButton } from '../elements/IconButton';
+import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react';
 import { Popover } from '../shell/Popover';
@@ -786,16 +788,14 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
                 <button type="button" className="sk-btn sk-tasks__btn--ghost" disabled={busy} onClick={cancelEdit}>{t('kit.tasks.cancel')}</button>
               </span>
             ) : (
-              <button
-                type="button"
-                className="sk-btn sk-tasks__btn--ghost"
-                aria-label={t('kit.tasks.edit', { id: task.id })}
-                title={t('kit.tasks.edit', { id: task.id })}
+              // PU-29 п.6: правка — та же иконка, что везде (ICON_CANON.ctlEdit).
+              <IconButton
+                className="sk-tasks__btn--ghost"
+                icon={ICON_CANON.ctlEdit}
+                label={t('kit.tasks.edit', { id: task.id })}
                 disabled={busy}
                 onClick={startEdit}
-              >
-                <span aria-hidden="true">✎</span>
-              </button>
+              />
             )}
           </td>
         )}

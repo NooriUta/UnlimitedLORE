@@ -200,12 +200,13 @@ describe('S5-06 · MdInlineEdit — правка', () => {
 describe('S4-CONTENT-V4 · подсказка правки над текстом', () => {
   it('при onSave — подсказка словами, без второй кнопки правки; без onSave её нет', () => {
     const { container, unmount } = render(<KitLangProvider lang="ru"><MdInlineEdit value="Абзац" label="Описание" onSave={vi.fn()} /></KitLangProvider>);
-    expect(screen.getByText(/правка на месте/)).toBeTruthy();
-    expect(container.querySelectorAll('.sk-mdedit__hint button')).toHaveLength(0);
+    // PU-29 п.6: слова подсказки — в title кнопки правки, строки над текстом нет.
+    expect(container.querySelector('.sk-mdedit__hint')).toBeNull();
+    expect(screen.getByRole('button').getAttribute('title')).toMatch(/Правка на месте/);
     expect(screen.getAllByRole('button')).toHaveLength(1);
     unmount();
     render(<KitLangProvider lang="ru"><MdInlineEdit value="Абзац" label="Описание" /></KitLangProvider>);
-    expect(screen.queryByText(/правка на месте/)).toBeNull();
+    expect(screen.queryByTitle(/Правка на месте/)).toBeNull();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

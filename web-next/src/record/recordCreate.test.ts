@@ -59,7 +59,7 @@ describe('S4-24 · поля черновика — инвентаризация 
     expect(createRequest('sprint', { id: 'S_X', title: ' Икс ', context_md: '' }))
       .toEqual({ url: '/lore/sprint/create', body: { sprint_id: 'S_X', name: 'Икс' } });
     expect(createRequest('adr', { id: 'ADR-X', title: 'A', decision_md: 'd' }))
-      .toEqual({ url: '/lore/adr', body: { adr_id: 'ADR-X', name: 'A', decision_md: 'd' } });
+      .toEqual({ url: '/lore/adr?mode=create', body: { adr_id: 'ADR-X', name: 'A', decision_md: 'd' } });
   });
 });
 
@@ -69,7 +69,7 @@ describe('S4-24 · запись: проверка кода, отказы сло�
     const r = await saveCreate('adr', { id: 'ADR-X', title: 'A' }, { fetchImpl: n.impl, lang: 'ru' });
     expect(r).toEqual({ ok: true, id: 'ADR-X' });
     expect(n.posts()).toHaveLength(1);
-    expect(n.posts()[0].url).toBe('/lore/adr');
+    expect(n.posts()[0].url).toBe('/lore/adr?mode=create');
   });
 
   it('ADR с таким кодом уже есть — НЕ пишем: POST /lore/adr перезаписал бы чужой ADR', async () => {
@@ -200,11 +200,11 @@ describe('S4-24 · решения и спеки — та же форма, кон
   });
   it('пути записи и имена тела — по блоку create', () => {
     expect(createRequest('decision', { id: 'D-1', title: 'Правило', adr: 'ADR-1' }))
-      .toEqual({ url: '/lore/decision', body: { decision_id: 'D-1', title: 'Правило', adr_id: 'ADR-1' } });
+      .toEqual({ url: '/lore/decision?mode=create', body: { decision_id: 'D-1', title: 'Правило', adr_id: 'ADR-1' } });
     expect(createRequest('decision', { id: 'D-1', title: 'Правило', projects: 'P' }))
-      .toEqual({ url: '/lore/decision', body: { decision_id: 'D-1', title: 'Правило', project: 'P' } });
+      .toEqual({ url: '/lore/decision?mode=create', body: { decision_id: 'D-1', title: 'Правило', project: 'P' } });
     expect(createRequest('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P', summary: 'кратко' }))
-      .toEqual({ url: '/lore/spec', body: { spec_id: 'SPEC-X', title: 'Спека', project: 'P', summary: 'кратко' } });
+      .toEqual({ url: '/lore/spec?mode=create', body: { spec_id: 'SPEC-X', title: 'Спека', project: 'P', summary: 'кратко' } });
   });
   it('код уже занят — POST не уходит (сервер пишет upsert, #1332)', async () => {
     const n = net(200, json(200, { ok: true }));
@@ -251,13 +251,13 @@ describe('S4-24 · компонент спеки — привязка после
     const r = await saveCreate('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P', component: 'C1' }, { fetchImpl: n.impl, lang: 'ru' });
     expect(r).toEqual({ ok: true, id: 'SPEC-X' });
     const posts = n.posts();
-    expect(posts.map(p => p.url)).toEqual(['/lore/spec', '/lore/record/spec/SPEC-X/relation']);
+    expect(posts.map(p => p.url)).toEqual(['/lore/spec?mode=create', '/lore/record/spec/SPEC-X/relation']);
     expect(JSON.parse(String(posts[1].init!.body))).toEqual({ rel: 'BELONGS_TO', dir: 'out', target: 'C1', action: 'add' });
   });
   it('без компонента — привязки нет', async () => {
     const n = net(404, () => json(200, { ok: true }));
     await saveCreate('spec', { id: 'SPEC-X', title: 'Спека', projects: 'P' }, { fetchImpl: n.impl, lang: 'ru' });
-    expect(n.posts().map(p => p.url)).toEqual(['/lore/spec']);
+    expect(n.posts().map(p => p.url)).toEqual(['/lore/spec?mode=create']);
   });
   it('привязка отказала — громко: спека заведена, компонент не привязан, причина названа', async () => {
     const impl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

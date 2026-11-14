@@ -3,6 +3,8 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
+import { ModelNotes } from '../record/ModelNotes';
+import { useChildRows } from '../lists/useChildRows';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyChunk } from '../shell/staleChunk';
 import {
@@ -247,9 +249,15 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
+  // PU-23: дети раскрытой строки — строками той же таблицы (если экран их объявил).
+  const childLoad = useMemo(() => (nested?.children ? (id: string, signal: AbortSignal) => nested.children!.load(client, id, signal) : undefined), [nested, client]);
+  const childRows = useChildRows(childLoad);
   const lang = useKitLang();
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
+  // MP2-11: последнее место дока (не «весь экран») — туда возвращает выход из полного экрана.
+  const lastDock = useRef<RecordPlacement>(open.place !== 'full' ? open.place : defaultPlace());
+  if (open.place !== 'full') lastDock.current = open.place;
   // «Библиотека» и «Календарь» (K2-VIEW-LIBRARY, K2-VIEW-CALENDAR): состояние — в адресе.
   const [lib] = useLibraryState(urlWin);
   // MP2-12: `?lib=1` на входе — начальный вид «Библиотека»; дальше видом
@@ -475,9 +483,6 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     ...(def.note ? [def.note] : []),
     ...(def.closedNote && def.closedSlice && !loadClosed ? [def.closedNote] : []),
     ...(body ? sliceWarnings(body) : []),
-    // Оговорки про ось статусов — там же, где прочие: человек должен видеть,
-    // что список статусов взят не из модели, а из умолчания приложения.
-    ...(modelStatuses?.notes ?? []),
     // Цвет продукта не загрузился — список без колонки «Продукт», и это сказано.
     ...(paint && 'error' in paint ? [t('lists.productPaint.failed', { reason: paint.error })] : []),
   ];
@@ -666,7 +671,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
         // в память (приватный режим ширину просто не запомнит).
         widths={{ screen: screen, store: appStorage }}
-        expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
+        expand={nested ? {
+          render: r => nested.render(r.id, client),
+          ...(nested.children ? {
+            rows: childRows,
+            childCell: (col: string, child: KitRecord) => nested.children!.cell?.(col, child, client),
+          } : {}),
+        } : undefined}
         peek={listPeek}
         onOpen={id => {
           setOpen({ ...open, id });
@@ -685,6 +696,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
 
   if (open.id && ready) {
     const place = open.place;
+    // MP2-11: выход из полного экрана — в место, из которого вошли (по ссылке ?place=full — в
+    // место из личной настройки), а не всегда вниз.
+    const backPlace: RecordPlacement = lastDock.current;
     const passportType = PASSPORT_OF[screen];
     content = (
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
@@ -692,7 +706,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       // содержимого, шапка и меню остаются видимыми и рабочими (замечание
       // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
       <RecordDock placement={place} modal={shell == null}
-        onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
+        onExitFull={() => setOpen({ ...open, place: backPlace })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         {open.id === NEW_RECORD_ID && createType ? (
           // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
           // доке открывается сама запись (то, что открывает «Читать целиком»).
@@ -706,7 +720,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             <ListPassport key={open.id} type={passportType} id={open.id} placement={place} fetchImpl={fetchImpl}
               backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}
               ids={ids} onGo={id => setOpen({ ...open, id })}
-              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} />
+              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} backPlace={backPlace}
+              // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
+              onPlace={p => setOpen({ ...open, place: p })} />
           </Suspense>
         ) : (
           // Паспорта у типа нет — это говорится словами и на месте щелчка, а не
@@ -726,6 +742,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           {warnings.map(w => <li key={w}>{w}</li>)}
         </ul>
       )}
+      {/* MP2-08 (владелица 13.11): оговорки модели (статусы взяты из умолчания, у статуса нет цвета)
+          — техническое сообщение, его место под значком тех. сведений, как в паспорте, а не полосой
+          над списком. Полоса выше — про ВЫДАЧУ (обрезано, закрытые скрыты), она остаётся на месте. */}
+      <ModelNotes notes={modelStatuses?.notes ?? []} />
       {content}
     </section>
   );

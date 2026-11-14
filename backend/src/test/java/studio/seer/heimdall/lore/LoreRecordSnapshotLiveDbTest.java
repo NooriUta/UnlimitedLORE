@@ -108,7 +108,8 @@ class LoreRecordSnapshotLiveDbTest {
         List<Map<String, Object>> actualLinks = mapper.convertValue(r.get("links"),
             new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
         for (Map<String, Object> l : actualLinks)
-            for (String k : LoreRecordSnapshotTest.LINK_KEYS_ADDED_AFTER)
+            // values (S9-05 / D14) — только у связей-детей задача/спринт, поэтому обязательны лишь виды концов.
+            for (String k : List.of("fromKind", "toKind"))
                 assertTrue(l.containsKey(k), type + " link без " + k + ": " + l);
         same(links, mapper.valueToTree(LoreRecordSnapshotTest.sansAddedLinkKeys(actualLinks)), type + " links");
 

@@ -16,8 +16,8 @@
 // видна, если под ней есть подходящая задача, иначе скрыта.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  NestedList, pushUrlState, readUrlState, TreeTable, treeRowRecord, useKitLang,
-  type KitConfig, type KitCtx, type KitHooks, type TreeControls, type UrlWindow,
+  NestedList, pushUrlState, readUrlState, TaskCounters, TreeTable, treeRowRecord, useKitLang,
+  type KitConfig, type KitCtx, type KitHooks, type TaskRowData, type TreeControls, type TreeFlatRow, type UrlWindow,
 } from '@seidr/kit';
 import { MartProse } from '@seidr/kit/content';
 import { loreFetch } from '../auth/session';
@@ -30,6 +30,8 @@ import { saveRecordStatus, statusEntity } from '../record/statusSave';
 import { SPRINT_TREE_COLUMNS, SPRINT_TREE_LEVELS, sprintTreeOf } from '../record/sprintTree';
 import { SprintBurnLine } from './SprintBurnLine';
 import { SprintTasksTab } from './SprintTasksTab';
+import { loadTaskDicts, type TaskDicts } from './taskDicts';
+import { sliceFetcher } from '../api/loreSlice';
 
 export const TASK_VIEW_PARAM = 'tview';
 export type TaskView = 'tree' | 'table' | 'list';
@@ -44,7 +46,22 @@ const TREE_CONTROLS: TreeControls = {
 };
 /** Оси вида «Список» сверх статуса (умолчание NestedList). */
 const LIST_AXES = ['fields.executor', 'fields.phase'] as const;
-const LIST_COLUMNS = ['status', 'fields.code', 'title', 'fields.executor', 'fields.phase', 'fields.effort'];
+const LIST_COLUMNS = ['status', 'fields.code', 'title', 'fields.author', 'fields.executor', 'fields.phase', 'fields.effort'];
+
+const numOrNull = (v: unknown): number | null => (typeof v === 'number' ? v : null);
+const strOrNull = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+
+/**
+ * PU-16 (D13 владелицы, «возвращаем всё»): строки задач дерева → вход счётчиков kit.
+ * Те же строки, что рисует дерево и список: шапка и строки не расходятся.
+ */
+export function counterTasksOf(rows: readonly TreeFlatRow[]): TaskRowData[] {
+  return rows.filter(r => r.kind === 'task').map((r, i) => ({
+    uid: r.key, id: strOrNull(r.code) ?? r.key, title: strOrNull(r.title), status: strOrNull(r.status),
+    phase: null, effortDays: numOrNull(r.effort), author: strOrNull(r.author), executor: strOrNull(r.executor),
+    reviewer: null, taskType: strOrNull(r.taskType), workClass: null, order: i,
+  }));
+}
 
 function viewFromUrl(win: UrlWindow | undefined): TaskView {
   const raw = (win ? readUrlState(win) : typeof window === 'undefined' ? new URLSearchParams() : readUrlState()).get(TASK_VIEW_PARAM);
@@ -104,6 +121,7 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
     const fld = (key: string, title: string) => ({ key, title, type: 'text' as const });
     const fields = [
       fld('code', appT(lang, 'sprintTree.field.code')),
+      fld('author', appT(lang, 'pp.field.author')),
       fld('executor', appT(lang, 'pp.field.executor')),
       fld('effort', appT(lang, 'pp.field.effort')),
       fld('progress', appT(lang, 'sprintTree.field.progress')),
@@ -135,6 +153,16 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
     };
   }, [lang, taskStatuses, contract, tree, f, onStatusSaved]);
   const taskRecords = useMemo(() => tree.rows.filter(r => r.kind === 'task').map(treeRowRecord), [tree]);
+  const counterTasks = useMemo(() => counterTasksOf(tree.rows), [tree]);
+  // Словарь типов — украшение подписи счётчика, не его условие: не пришёл — подпись кодом.
+  const [dicts, setDicts] = useState<TaskDicts>({});
+  useEffect(() => {
+    if (view === 'table') return undefined;
+    let live = true;
+    const slice = sliceFetcher();
+    void loadTaskDicts(lang, (s, p) => slice(s, p)).then(d => { if (live) setDicts(d); }, () => { /* подпись кодом */ });
+    return () => { live = false; };
+  }, [lang, view]);
 
   return (
     <>
@@ -152,6 +180,8 @@ export function SprintTasksPanel({ contract, onStatusSaved, fetchImpl, win }: Sp
           </button>
         ))}
       </div>
+      {/* PU-16: полоска счётчиков над деревом и списком; у «Таблицы» своя — по её строкам. */}
+      {view !== 'table' && <TaskCounters tasks={counterTasks} types={dicts.taskType} />}
       {view === 'tree' && (
         <TreeTable levels={SPRINT_TREE_LEVELS} columns={SPRINT_TREE_COLUMNS} rows={tree.rows} levelState={tree.levelState} ctx={ctx} controls={TREE_CONTROLS} />
       )}

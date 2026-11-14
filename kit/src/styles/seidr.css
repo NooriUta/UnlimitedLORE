@@ -5166,6 +5166,11 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-tc__progress,
 .sk-tc__effort { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); }
 .sk-tc__progress { padding-left: 8px; border-left: 1px solid var(--bd); }
+/* PU-16: счётчики по типам задач — отделены чертой от статусов, как в v1. */
+.sk-tc__types { padding-left: 8px; border-left: 1px solid var(--bd); }
+.sk-tc__type { display: inline-flex; align-items: center; gap: 3px; }
+.sk-tc__tname { font-size: var(--fs-xs); color: var(--t2); }
+.sk-tc__type--none .sk-tc__tname { color: var(--t3); font-style: italic; }
 .sk-tasks__gcount { margin-left: 8px; color: var(--t3); font-weight: 400; }
 .sk-tasks__row { border-top: 1px solid var(--bd); }
 .sk-tasks__row:hover { background: var(--bg2); }
@@ -7154,3 +7159,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-gx__rf .sk-gx__rfnode { padding: 6px 10px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); color: var(--t1); font-size: var(--fs-sm); text-align: left; }
 .sk-gx__rf .sk-gx__rfnode.selected { box-shadow: 0 0 0 2px var(--acc); }
 .sk-gx__rf .react-flow__controls-button { background: var(--bg2); color: var(--t1); border-color: var(--bd); fill: var(--t1); }
+
+/* PU-23: дети раскрытой строки — строками той же таблицы; чуть приглушённый фон отделяет их от верхнего уровня. */
+.sk-list__row--child { background: var(--bg2); }
+.sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }

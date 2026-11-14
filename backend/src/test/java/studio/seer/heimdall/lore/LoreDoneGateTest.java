@@ -27,33 +27,8 @@ class LoreDoneGateTest {
         assertTrue(v.detail().contains("review"), "отказ называет путь: перевести в review");
     }
 
-    @Test
-    void doneOnlyFromReviewIncludingOldAcceptanceTokens() {
-        assertEquals("DONE_ONLY_FROM_REVIEW", LoreDoneGate.done(human("Алекса", "agent", null, "active", "dev", "pr", "#1"), wf()).code());
-        assertEquals("DONE_ONLY_FROM_REVIEW", LoreDoneGate.done(human("Алекса", "agent", null, "partial", "dev", "pr", "#1"), wf()).code());
-        assertNull(LoreDoneGate.done(human("Алекса", "agent", null, "uat", "dev", "pr", "#1"), wf()), "uat — стадия review");
-        assertNull(LoreDoneGate.done(human("Алекса", "agent", null, "ready_for_deploy", "dev", "pr", "#1"), wf()));
-    }
-
-    /** A2: закрывающий человек становится приёмщиком; NO_REVIEWER — только если он же исполнитель. */
-    @Test
-    void closingHumanBecomesReviewerUnlessExecutor() {
-        assertNull(LoreDoneGate.done(human("Алекса", "agent", null, "review", "dev", "pr", "#1"), wf()));
-        assertEquals("NO_REVIEWER", LoreDoneGate.done(human("Алекса", "Алекса", null, "review", "dev", "pr", "#1"), wf()).code());
-        assertEquals("REVIEWER_IS_EXECUTOR", LoreDoneGate.done(human("Алекса", "agent", "agent", "review", "dev", "pr", "#1"), wf()).code());
-    }
-
-    @Test
-    void evidenceByKindOfWork() {
-        LoreDoneGate.Verdict none = LoreDoneGate.done(human("Алекса", "agent", "Алекса", "review", "ops", null, null), wf());
-        assertEquals("NO_EVIDENCE", none.code());
-        assertTrue(none.detail().contains("замер"), "отказ перечисляет доказательства вида ops: " + none.detail());
-        LoreDoneGate.Verdict wrong = LoreDoneGate.done(human("Алекса", "agent", "Алекса", "review", "docs", "pr", "#5"), wf());
-        assertEquals("NO_EVIDENCE", wrong.code(), "у документа доказательство — запись LORE, не PR");
-        assertNull(LoreDoneGate.done(human("Алекса", "agent", "Алекса", "review", "docs", "lore", "spec:SPEC-X"), wf()));
-        assertEquals("NO_EVIDENCE", LoreDoneGate.done(human("Алекса", "agent", "Алекса", "review", "dev", "pr", "  "), wf()).code(),
-            "пустая ссылка — не доказательство");
-    }
+    // PU-29 (правило владелицы 14.11.2026): человек закрывает без доказательства, из любого статуса и без
+    // проверок приёмщика — прежние проверки человека сняты, их место — LoreDoneGateHumanTest.
 
     /** A4: тип вне таблицы и пустой — вид dev. */
     @Test

@@ -354,13 +354,12 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'done, which ONLY a human sets. An agent never moves a task from uat to done.\n\n' +
       'WK-05 core (ADR-LORE-014-D5): eight core statuses planned · active · waiting · review · done · failed · blocked · cancelled; ' +
       'old values stay valid synonyms (todo/backlog/design→planned, partial→active, ready_for_deploy/uat→review stages stand_check/uat). ' +
-      'Task gate, refused BEFORE any write: done by an agent → 409 DONE_BY_HUMAN_ONLY (move to review instead) — the ONE exception ' +
-      'is the owner\'s word (decision 14.11.2026, D4): evidence_type=owner_word with a non-empty evidence_ref quoting or linking her ' +
-      'message lets an agent close (empty ref → 409 NO_EVIDENCE); done only from review ' +
-      '(incl. ready_for_deploy/uat) → else 409 DONE_ONLY_FROM_REVIEW; a closing human becomes the reviewer unless they are the ' +
-      'executor → 409 NO_REVIEWER; reviewer = executor → 409 REVIEWER_IS_EXECUTOR; done needs evidence by kind of work (from task_type: ' +
-      'dev → pr|release, docs → lore, ops → probe|pr, research/analytics → lore, legal/sales/hiring/finance/support/procurement → doc, ' +
-      'content → url; see /lore/model workflow.kinds) → else 409 NO_EVIDENCE. Attach evidence already when moving to review — it is ' +
+      'Task gate for done (owner rule 14.11.2026, PU-29): a HUMAN caller closes from any status with no evidence and no reviewer ' +
+      'checks — the button press is the confirmation; the server records evidence_type=human, evidence_ref="who · when". An AGENT ' +
+      'never sets done (409 DONE_BY_HUMAN_ONLY) except by a human\x27s word: evidence_type=owner_word and evidence_ref carrying the ' +
+      'time it was said (08:31 or 14.11.2026) AND a verbatim quote in quotes «…» — else 409 NO_EVIDENCE; the agent path still ' +
+      'needs review (incl. ready_for_deploy/uat, else 409 DONE_ONLY_FROM_REVIEW) and reviewer ≠ executor. Evidence attached when ' +
+      'moving to review is ' +
       'carried to done. blocked and a return from review to active need reason (400 REASON_REQUIRED); waiting needs waiting_for ' +
       '(400 WAITING_FOR_REQUIRED). failed = known negative outcome (lost, refused, overdue), cancelled = decided not to do.',
     schema: {
@@ -370,7 +369,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       reason: z.string().optional().describe('WHY: required for a task going blocked or returned from review to active (WK-05); QG-16: sprint + status=blocked — WHY it is blocked, plain text (stored on the new SCD2 state, gone on unblock). Omitted on a blocked sprint → the answer carries a hint and gate QG-LORE-BLOCKED-REASON lists it unless an open dependency or open question explains it'),
       expected: z.string().optional().describe(EXPECTED_STATUS_DESC),
       evidence_type: z.string().optional().describe('task: proof of done by kind of work — pr | release | lore | probe | doc | url (allowed set per kind: /lore/model workflow.kinds); owner_word — the owner said it is done (any kind; the only evidence that lets an AGENT set done)'),
-      evidence_ref: z.string().optional().describe('task: the proof itself — "PR #1337", "spec:SPEC-X", a URL, a document number, "10/10 CI runs without OOM"; for owner_word — her verbatim quote or a link to her message (required)'),
+      evidence_ref: z.string().optional().describe('task: the proof itself — "PR #1337", "spec:SPEC-X", a URL, a document number, "10/10 CI runs without OOM"; for owner_word — REQUIRED: the time it was said and the verbatim quote in «…», e.g. "14.11.2026 08:31 «закрывай PU-29»"'),
       stage: z.string().optional().describe('task: stage inside the core status, e.g. stand_check | uat in review, implement | test in active'),
       waiting_for: z.string().optional().describe('task + status=waiting: whose answer we wait for (required)'),
     },

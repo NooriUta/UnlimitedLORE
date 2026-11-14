@@ -11,6 +11,8 @@ import { useState, type ReactNode } from 'react';
 import { kitT, useKitLang, type KitKey } from '../i18n';
 import { FieldEditor } from '../fields/FieldEditor';
 import type { FieldEditorDef } from '../fields/fieldKinds';
+import { IconButton } from '../elements/IconButton';
+import { ICON_CANON } from '../elements/iconCanon';
 
 export interface EditableFieldProps {
   def: FieldEditorDef;
@@ -34,9 +36,10 @@ export function EditableField({ def, value, view, onSave }: EditableFieldProps) 
     return (
       <span className="sk-rec-fields__edit">
         {view}
-        <button type="button" className="sk-btn sk-rec-fields__pen"
-          aria-label={t('kit.mdedit.edit', { field: def.label })} title={t('kit.mdedit.edit', { field: def.label })}
-          onClick={() => { setFail(null); setDraft({ v: value }); }}>✎</button>
+        {/* PU-29 п.6: та же иконка правки, что у текста (ICON_CANON.ctlEdit), а не символ ✎. */}
+        <IconButton className="sk-rec-fields__pen" icon={ICON_CANON.ctlEdit}
+          label={t('kit.mdedit.edit', { field: def.label })}
+          onClick={() => { setFail(null); setDraft({ v: value }); }} />
       </span>
     );
   }

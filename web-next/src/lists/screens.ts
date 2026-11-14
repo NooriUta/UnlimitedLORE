@@ -10,6 +10,7 @@ import type { KitConfig, KitLang, KitRecord, ListSort } from '@seidr/kit';
 import type { LoreClient } from '../sprints/loreClient';
 import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
+import { loadSprintChildren, sprintChildCell } from '../sprints/sprintChildren';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -139,6 +140,14 @@ export interface ListNested {
   load: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, Record<string, unknown>>>;
   /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
   render: (id: string, client: LoreClient) => ReactNode;
+  /**
+   * PU-23: дети раскрытой строки — строками той же таблицы (те же колонки). Есть — render
+   * не используется; грузятся лениво, по раскрытию, свои ячейки подменяет cell.
+   */
+  children?: {
+    load: (client: LoreClient, id: string, signal: AbortSignal) => Promise<KitRecord[]>;
+    cell?: (col: string, child: KitRecord, client: LoreClient) => ReactNode | undefined;
+  };
 }
 
 const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'modules' | 'menu'>;
@@ -217,13 +226,25 @@ function sprintsConfig(lang: KitLang): KitConfig {
           { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
         ],
       },
+      // PU-23: задачи раскрытого спринта — строками той же таблицы. Поля задачи объявлены, чтобы
+      // колонки, которых у задачи нет (прогресс задач, проект, релиз…), честно читались «н/п».
+      task: {
+        title: appT(lang, 'sprints.kind.task'), icon: 'checkbox-tree',
+        fields: [
+          { key: 'code', title: appT(lang, 'sprintTree.field.code'), type: 'text' },
+          { key: 'effort_total', title: f(lang, 'effortTotal'), type: 'number' },
+          { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
+        ],
+      },
     },
     // Порядок жизненного цикла (D-2026-UXR-STATUS-AXIS): план → работа → итог.
     statuses: {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
         ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
-        ['done', 'done'], ['cancelled', 'cancelled'],
+        // WK-05 (PU-29 п.8): статусы ядра, которые сервер принимает.
+        ['waiting', 'active'], ['review', 'active'],
+        ['done', 'done'], ['failed', 'cancelled'], ['cancelled', 'cancelled'],
       ]),
     },
     list: {
@@ -317,7 +338,9 @@ function tasksConfig(lang: KitLang): KitConfig {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
         ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
-        ['done', 'done'], ['cancelled', 'cancelled'],
+        // WK-05 (PU-29 п.8): статусы ядра, которые сервер принимает.
+        ['waiting', 'active'], ['review', 'active'],
+        ['done', 'done'], ['failed', 'cancelled'], ['cancelled', 'cancelled'],
       ]),
     },
     list: {
@@ -690,6 +713,7 @@ export const LIST_SCREENS = {
       lateFields: TOTALS_FIELDS,
       load: loadSprintTotals,
       render: (id, client) => createElement(SprintTasks, { sprintId: id, client }),
+      children: { load: loadSprintChildren, cell: sprintChildCell },
     },
   },
   adrs: {

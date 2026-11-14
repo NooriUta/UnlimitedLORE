@@ -60,7 +60,7 @@ import { PeekPanel, type ListPeek } from './PeekPanel';
 
 export type { ListPeek } from './PeekPanel';
 import type { UrlWindow } from '../resilience/urlState';
-import { EmptyState, LoadError } from '../states/StateViews';
+import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
 // тянуть за собой меню ради одного хука).
 import { useNarrow } from '../core/narrow';
@@ -128,10 +128,29 @@ export interface ListBulkAction {
  * содержимое (у спринта — задачи). Рисуется только у раскрытой строки, так что
  * приложение может грузить вложенное лениво, по раскрытию.
  */
+/**
+ * Дети раскрытой строки как строки той же таблицы (PU-23): состояние их загрузки и сами записи.
+ * «Загрузка», «сбой» и «пусто» — разные ответы, и каждый рисуется своим состоянием.
+ */
+export interface ListExpandRows {
+  state: 'loading' | 'ok' | 'error';
+  records: readonly KitRecord[];
+  error?: string;
+  onRetry?: () => void;
+}
+
 export interface ListExpand {
   render: (r: KitRecord) => ReactNode;
   /** Можно ли раскрыть запись; по умолчанию — да. */
   can?: (r: KitRecord) => boolean;
+  /**
+   * PU-23: дети раскрытой строки — строками ТОЙ ЖЕ таблицы, с теми же колонками (владелица
+   * 14.11.2026: «второй уровень должен повторять список верхнего уровня»). Нет — прежнее
+   * раскрытие одной широкой ячейкой через render.
+   */
+  rows?: (r: KitRecord) => ListExpandRows | undefined;
+  /** Подмена ячейки ребёнка (статус со сменой, ссылка на запись); undefined — общая отрисовка. */
+  childCell?: (col: string, child: KitRecord, parent: KitRecord) => ReactNode | undefined;
 }
 
 /** Действие строки (S4-11): кнопка-иконка в строке и, по желанию, клавиша над строкой под курсором. */
@@ -2098,6 +2117,38 @@ export function ListView({
     };
     const expandRow = (r: KitRecord) => {
       if (!expand || !expanded.has(r.id) || (expand.can && !expand.can(r))) return null;
+      const kids = expand.rows?.(r);
+      if (kids) {
+        const stateRow = (node: ReactNode) => (
+          <tr className="sk-list__xrow" data-expand-of={r.id}>
+            <td colSpan={span} id={xid(r.id)} className="sk-list__xbody">{node}</td>
+          </tr>
+        );
+        if (kids.state === 'loading') return stateRow(<Skeleton lines={2} />);
+        if (kids.state === 'error') return stateRow(<LoadError compact error={kids.error} onRetry={kids.onRetry} />);
+        if (kids.records.length === 0) return stateRow(<EmptyState compact title={t('kit.list.childEmpty')} />);
+        return (
+          <>
+            {kids.records.map(child => (
+              <tr key={child.id} className="sk-list__row sk-list__row--child" data-record-id={child.id} data-child-of={r.id}>
+                <td className="sk-list__td sk-list__xcell" />
+                {columns.map(c => {
+                  const a = colAttrs(c);
+                  const own = expand.childCell?.(c, child, r);
+                  // Колонка поля (в т.ч. progress:/sum:/fresh:), которого у вида ребёнка нет, — «н/п»:
+                  // у задачи нет «задач спринта», и прочерк читался бы как «значения нет».
+                  const fieldCol = /^(progress|sum|fresh):/.test(c) ? c.slice(c.indexOf(':') + 1) : null;
+                  const na = fieldCol !== null && notApplicable(child.kind, fieldCol)
+                    ? <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[child.kind]?.title ?? child.kind, field: fieldTitleOf(fieldCol) })}>{t('kit.list.cell.naShort')}</span>
+                    : null;
+                  const node = own !== undefined ? own : c === 'select' || c === 'actions' ? null : na ?? ellip(c, child, cell(c, child));
+                  return <td key={c} className={'sk-list__td ' + a.className} data-w={a['data-w']}>{node}</td>;
+                })}
+              </tr>
+            ))}
+          </>
+        );
+      }
       return (
         <tr className="sk-list__xrow" data-expand-of={r.id}>
           <td colSpan={span} id={xid(r.id)} className="sk-list__xbody">{expand.render(r)}</td>

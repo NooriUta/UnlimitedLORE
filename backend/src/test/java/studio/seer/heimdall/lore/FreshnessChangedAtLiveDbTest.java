@@ -200,7 +200,9 @@ class FreshnessChangedAtLiveDbTest {
 
         tick();
         post("/lore/task/edit", "{\"task_uid\":\"" + uid + "\",\"title\":\"проба правки на месте\",\"note_md\":\"заметка\"}");
-        assertEquals(open0, openFrom("KnowTaskHist", "task_uid", uid), "правка заметки версию не открывает");
+        // MT-NOTE-APPEND п.3 (вариант А): правка заметки ОТКРЫВАЕТ новую версию (откат из истории);
+        // название по-прежнему правится на месте и двигает changed_at через updated_at.
+        assertGrew(open0, openFrom("KnowTaskHist", "task_uid", uid), "правка заметки открывает версию");
         Instant t1 = changedAt("open_tasks", "task_uid", uid, bySprint);
         assertGrew(t0, t1, "задача (заметка)");
 
