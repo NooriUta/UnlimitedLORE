@@ -1645,7 +1645,7 @@ final class LoreSchemaMigrations {
         // lore.agent.sources.enabled, по умолчанию выкл): ребро SOURCED_FROM «опирался на» со свойствами
         // at, via. Аддитивно, major 17: новый тип ребра. Отдельным шагом — V86 уже влит (#1343),
         // его SQL менять нельзя (контрольная сумма). DDL рядом с логикой (AgentSourceTrail).
-        new Step(87, 17, "source_trail_edge", AgentSourceTrail.DDL)
+        new Step(88, 17, "source_trail_edge", AgentSourceTrail.DDL)
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */

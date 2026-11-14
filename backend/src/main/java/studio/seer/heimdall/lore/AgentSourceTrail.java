@@ -29,7 +29,7 @@ final class AgentSourceTrail {
     static final int DEFAULT_MAX = 10;
     static final int HARD_MAX = 50;
 
-    /** Аддитивно, шаг V87 (V86 влит #1343 — его SQL не меняется). */
+    /** Аддитивно, шаг V88 (V86 влит #1343 — его SQL не меняется; V87 занят WK-05 #1349). */
     static final List<String> DDL = List.of(
         "CREATE EDGE TYPE SOURCED_FROM IF NOT EXISTS",
         "CREATE PROPERTY SOURCED_FROM.at IF NOT EXISTS STRING",

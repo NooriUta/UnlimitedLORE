@@ -80,10 +80,10 @@ class AgentActionLogLiveDbTest {
         assertEquals(before, n("SELECT count(*) AS n FROM MetricSnapshot WHERE " + mine), "источник не тронут");
     }
 
-    /** AO-02: ребро следа — тип из V87, повтор не плодит рёбер, нет вершины — отказ (ресурс пишет «пропущено»). */
+    /** AO-02: ребро следа — тип из V88, повтор не плодит рёбер, нет вершины — отказ (ресурс пишет «пропущено»). */
     @Test
     void sourceTrailEdgeIsIdempotentAndNeedsBothEnds() throws Exception {
-        assertEquals(1, sql("SELECT name FROM schema:types WHERE name = 'SOURCED_FROM'").size(), "тип ребра создан V87");
+        assertEquals(1, sql("SELECT name FROM schema:types WHERE name = 'SOURCED_FROM'").size(), "тип ребра создан V88");
         sql("INSERT INTO KnowADR SET adr_id = '" + TAG + "-ADR'");
         sql("INSERT INTO KnowSpec SET spec_id = '" + TAG + "-SPEC'");
         String edge = AgentSourceTrail.edgeSql(LoreModelTypes.GRAPH.get("adr"), LoreModelTypes.GRAPH.get("spec"));

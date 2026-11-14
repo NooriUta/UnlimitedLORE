@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * SPRINT_LORE_AGENT_OBSERVABILITY/AO-02 — след источников «к сущности»: при создании записи агент
  * шлёт, что читал перед этим, бэкенд пишет рёбра SOURCED_FROM (за флагом, по умолчанию ВЫКЛ).
- * Без живой базы: ребро в V87, отбор следа (шум), SQL ребра, флаг.
+ * Без живой базы: ребро в V88, отбор следа (шум), SQL ребра, флаг.
  */
 class AgentSourceTrailTest {
 
@@ -18,11 +18,11 @@ class AgentSourceTrailTest {
     private static AgentSourceTrail.Ref r(String type, String id) { return new AgentSourceTrail.Ref(type, id, "adr"); }
 
     @Test
-    void edgeTypeIsCreatedInV87WithItsProperties() {
-        LoreSchemaMigrations.Step v87 = LoreSchemaMigrations.STEPS.stream()
-            .filter(s -> s.version() == 87).findFirst().orElseThrow();
-        assertEquals(AgentSourceTrail.DDL, v87.sql(), "ребро — своим шагом: V86 влит, его SQL не меняется");
-        assertEquals(17, v87.compatMajor());
+    void edgeTypeIsCreatedInV88WithItsProperties() {
+        LoreSchemaMigrations.Step v88 = LoreSchemaMigrations.STEPS.stream()
+            .filter(s -> s.version() == 88).findFirst().orElseThrow();
+        assertEquals(AgentSourceTrail.DDL, v88.sql(), "ребро — своим шагом: V86 влит, его SQL не меняется");
+        assertEquals(17, v88.compatMajor());
         assertTrue(AgentSourceTrail.DDL.contains("CREATE EDGE TYPE SOURCED_FROM IF NOT EXISTS"));
         assertTrue(AgentSourceTrail.DDL.stream().anyMatch(s -> s.startsWith("CREATE PROPERTY SOURCED_FROM.at IF NOT EXISTS")));
         assertTrue(AgentSourceTrail.DDL.stream().anyMatch(s -> s.startsWith("CREATE PROPERTY SOURCED_FROM.via IF NOT EXISTS")));
