@@ -45,9 +45,24 @@ export const LORE_STATUSES: Record<string, StatusRow> = {
   uat: { icon: 'stamper', color: 'st-uat', category: 'review', label: { ru: 'UAT — приёмка', en: 'UAT Testing' } },
 };
 
+/**
+ * WK-05 (D-2026-LORE-UNIFIED-WORKFLOW-CORE): статусы ядра. «Ждём ответа» и «На приёмке» встают после
+ * «частично» (до «к выкатке»: стадии приёмки идут подряд к «готово»), «Неуспех» — после «готово».
+ */
+export const LORE_CORE_STATUSES: Record<string, StatusRow> = {
+  // WK-05 (D-2026-LORE-UNIFIED-WORKFLOW-CORE): значки и цвета — как в словаре task_status модели
+  // (миграция WK-05) и в одобренном прототипе wk-05-workflow. PU-29 п.8: без этой записи
+  // меню таблицы задач их не предлагало, а чип рисовался заглушкой.
+  waiting: { icon: 'hourglass', color: 'inf', category: 'active', label: { ru: 'Ждём ответа', en: 'Waiting' } },
+  review: { icon: 'magnifying-glass', color: 'wrn', category: 'review', label: { ru: 'На приёмке', en: 'Review' } },
+  failed: { icon: 'cancel', color: 'dng', category: 'closed', label: { ru: 'Неуспех', en: 'Failed' } },
+};
+
 /** Статусы, которые таблица задач даёт сменить (что принимает POST /lore/status). */
 export const LORE_TASK_STATUSES = [
-  'todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'uat', 'done', 'blocked', 'cancelled',
+  'todo', 'planned', 'active', 'partial', 'waiting', 'review', 'ready_for_deploy', 'uat', 'done', 'blocked', 'failed', 'cancelled',
+  // Сервер принимает и эти; сторож taskStatusListsCover.test.ts держит полноту списка.
+  'backlog', 'design',
 ] as const;
 
 /** Схема ссылок редактора LORE: [@имя](lore:actor/id), [спринт](lore:sprint/ID). */
@@ -57,6 +72,9 @@ export function installKitVocabulary(): void {
   setKitStrings('ru', LORE_KIT_STRINGS.ru);
   setKitStrings('en', LORE_KIT_STRINGS.en);
   registerStatuses(LORE_STATUSES, { after: 'partial' });
+  const { failed, ...beforeReady } = LORE_CORE_STATUSES;
+  registerStatuses(beforeReady, { after: 'partial' });
+  registerStatuses({ failed }, { after: 'done' });
   setTaskStatuses(LORE_TASK_STATUSES);
   // Ссылки на записи и упоминания в телах — схемой lore: (так они уже лежат в данных).
   setLinkScheme(LORE_LINK_SCHEME);

@@ -84,6 +84,20 @@ describe('D-04 · путь смены статуса', () => {
     expect(e.current).toBe('blocked');
   });
 
+  // PU-29 (владелица 14.11.2026, прод): «Не сохранено, статус возвращён: NO_EVIDENCE: статус успели
+  // изменить — перечитайте запись и повторите». Любой 409 выдавался за конфликт версии, а это был
+  // гейт WK-05 со своей причиной. Конфликт версии — только CONFLICT; остальное — слова сервера.
+  it('409 гейта (NO_EVIDENCE и др.) — слова сервера, а не «успели изменить»', async () => {
+    for (const code of ['NO_EVIDENCE', 'DONE_ONLY_FROM_REVIEW', 'NO_REVIEWER', 'SPRINT_HAS_OPEN_TASKS']) {
+      const detail = `для вида «Разработка» done требует доказательства: pr — PR (${code})`;
+      const e = (await saveRecordStatus({ type: 'task', id: 'S/T-1', to: 'done', was: 'uat' },
+        reply({ error: code, detail }, 409)).catch(x => x)) as StatusRefused;
+      expect(e).toBeInstanceOf(StatusRefused);
+      expect(e.message).not.toMatch(/успели изменить/);
+      expect(e.message).toContain(detail);
+    }
+  });
+
   it('прочие отказы остаются LoreHttpError — поведение не изобретаем', async () => {
     const e = (await saveRecordStatus({ type: 'sprint', id: 'S', to: 'done', was: null },
       reply({ error: 'BAD_PARAMS', detail: 'status unknown' }, 400)).catch(x => x)) as LoreHttpError;

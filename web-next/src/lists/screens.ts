@@ -242,7 +242,9 @@ function sprintsConfig(lang: KitLang): KitConfig {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
         ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
-        ['done', 'done'], ['cancelled', 'cancelled'],
+        // WK-05 (PU-29 п.8): статусы ядра, которые сервер принимает.
+        ['waiting', 'active'], ['review', 'active'],
+        ['done', 'done'], ['failed', 'cancelled'], ['cancelled', 'cancelled'],
       ]),
     },
     list: {
@@ -336,7 +338,9 @@ function tasksConfig(lang: KitLang): KitConfig {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
         ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
-        ['done', 'done'], ['cancelled', 'cancelled'],
+        // WK-05 (PU-29 п.8): статусы ядра, которые сервер принимает.
+        ['waiting', 'active'], ['review', 'active'],
+        ['done', 'done'], ['failed', 'cancelled'], ['cancelled', 'cancelled'],
       ]),
     },
     list: {

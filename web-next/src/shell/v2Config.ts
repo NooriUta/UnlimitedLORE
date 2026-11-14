@@ -62,6 +62,10 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
   ['ready_for_deploy', 'active', ['uat', 'done', 'blocked']],
   // 13.11.2026: агент проверил на стенде → приёмка человеком; done ставит только человек.
   ['uat', 'active', ['done', 'in_progress', 'blocked']],
+  // WK-05 (PU-29 п.8): статусы ядра; без них запасной словарь не предлагал их в меню.
+  ['waiting', 'active', ['in_progress', 'review', 'blocked', 'failed']],
+  ['review', 'active', ['done', 'in_progress', 'failed']],
+  ['failed', 'cancelled', ['todo', 'in_progress']],
   ['design', 'todo', ['todo', 'planned', 'cancelled']],
   ['deferred', 'todo', ['todo', 'cancelled']],
   ['done', 'done', ['in_progress']],
