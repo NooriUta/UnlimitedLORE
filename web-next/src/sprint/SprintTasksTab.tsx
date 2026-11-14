@@ -135,7 +135,7 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
           <>
             {/* S4-36: счётчики по тем же строкам, что и таблица — иначе шапка
                 и таблица могут показать разное. */}
-            <TaskCounters tasks={data.rows.map(r => (patches[r.uid] ? { ...r, ...patches[r.uid] } : r))} />
+            <TaskCounters tasks={data.rows.map(r => (patches[r.uid] ? { ...r, ...patches[r.uid] } : r))} types={dicts.taskType} />
             <TaskTable
             tasks={data.rows.map(r => (patches[r.uid] ? { ...r, ...patches[r.uid] } : r))}
             phases={data.phases}

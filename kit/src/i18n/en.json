@@ -795,6 +795,7 @@
   "kit.tech.hide": "Hide technical details",
   "kit.tasks.counters.progress": "Closed out of total",
   "kit.tasks.counters.effort": "Total estimate, d",
+  "kit.tasks.counters.untyped": "No type",
   "kit.list.cols.title": "Columns",
   "kit.list.cols.hint": "«Record» cannot be turned off. Order — arrows, width — the header edge.",
   "kit.list.cols.up": "{title}: up",
