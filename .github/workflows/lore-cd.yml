@@ -165,12 +165,19 @@ jobs:
       #
       # Issuer — ПУБЛИЧНЫЙ адрес KC: на него редиректит браузер, и по нему же
       # бэкенд забирает JWKS (проверено из контейнера: 200).
+      #
+      # D-2026-KC-PREPROD-REALM-DUPLICATES (14.11.2026): препрод — на СВОИХ realm'ах-
+      # дублях в том же KC (omilorePreprod, брокер AIDA → seerPreprod). Клиенты и
+      # секреты те же, ключи подписи свои: токен прода сюда не проходит, и наоборот.
+      # Прод (lore-release.yml) остаётся на omilore. Проба /lore/version берёт этот
+      # же issuer, KC-мост — KC_ADMIN_REALM ниже.
       LORE_AUTH_ENABLED: "true"
-      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilorePreprod
+      KC_ADMIN_REALM: omilorePreprod
       # SE-10: коммит выкатки — бэкенд отдаёт его в /lore/version, MCP сверяет со своим.
       LORE_BUILD_COMMIT: ${{ github.sha }}
       VITE_LORE_AUTH_ENABLED: "true"
-      VITE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      VITE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilorePreprod
       VITE_OIDC_CLIENT_ID: lore-app
       # ── Адреса ЭТОЙ установки ────────────────────────────────────────────
       # Оба значения раньше были вшиты литералами в nginx.conf и потому ехали
