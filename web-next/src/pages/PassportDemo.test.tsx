@@ -78,7 +78,7 @@ describe('страница', () => {
     fireEvent.click(within(screen.getByRole('group', { name: 'Где открыт' })).getByRole('button', { name: 'панелью справа' }));
     await waitFor(() => expect(container.querySelector('aside[data-zone="props"]')).toBeNull());
     const modes = screen.getByRole('group', { name: 'Вид паспорта' });
-    expect(within(modes).getAllByRole('button').map(b => b.textContent)).toEqual(['Контент', 'Свойства', 'Аналитика']);
+    expect(within(modes).getAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual(['Контент', 'Свойства', 'Аналитика']);
     expect(new URLSearchParams(window.location.search).get('place')).toBe('right');
   });
   it('паспорт рисуется из объекта lore.record/1, сам объект виден на странице', async () => {
