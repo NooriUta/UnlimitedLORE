@@ -127,8 +127,11 @@ const PLAN: Record<string, StatusCategory> = {
   blocked: 'in_progress',
   ready_for_deploy: 'in_progress',
   uat: 'in_progress',
+  waiting: 'in_progress',
+  review: 'in_progress',
   done: 'finished',
   cancelled: 'withdrawn',
+  failed: 'withdrawn',
 };
 
 // accepted = «действует», а не «закрыто»: при наивной связке 180 принятых ADR
