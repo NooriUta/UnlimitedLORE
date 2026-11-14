@@ -1755,5 +1755,11 @@
   "pp.field.agentRole": "Profile",
   "pp.field.harness": "Harness",
   "pp.field.owner": "Owner",
-  "lists.quick.noProjects": "No projects"
+  "lists.quick.noProjects": "No projects",
+  "volva.view": "Völva",
+  "volva.sprintsTitle": "Sprint timeline — embedded Völva chart",
+  "volva.notConfigured.hint": "The LORE backend needs the signing key LORE_VOLVA_EMBED_SECRET (Infisical — the same as embedding-secret-key in Völva) and the address LORE_VOLVA_EMBED_SITE_URL. Check it in Flags → Check the Völva integration.",
+  "volva.unknownChart.hint": "Chart \"{chart}\" is not in the lore.volva.embed.charts allow-list on the LORE backend.",
+  "volva.needsProject.title": "Pick a project",
+  "volva.needsProject.hint": "The Völva chart is locked to projects: pick one or more projects in the header."
 }

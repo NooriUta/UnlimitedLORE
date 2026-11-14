@@ -290,6 +290,8 @@ export interface ListViewProps {
    * заголовком, а виды переезжают в её строку. Нет — виды остаются в полосе фильтров.
    */
   head?: ListHead;
+  /** Виды приложения — после видов конфига (SPRINT_VIZ_EMBED/EMB-L2). */
+  appViews?: readonly ListAppView[];
   /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
   viewIcons?: Partial<Record<ListViewKind, string>>;
   /**
@@ -368,12 +370,29 @@ function browserZone(): string {
 }
 
 /** Шапка экрана списка: заголовок, его id и иконка, первичное действие. */
+/**
+ * Вид приложения (SPRINT_VIZ_EMBED/EMB-L2): свой вид раздела со своей
+ * отрисовкой рядом с видами list.views — например, встроенный график. Kit
+ * только ставит кнопку в переключатель и держит выбор в адресе (lav); что
+ * рисовать, решает приложение (K-14).
+ */
+export interface ListAppView {
+  id: string;
+  label: string;
+  /** Слаг иконки (как у viewIcons). */
+  icon?: string;
+  render: () => ReactNode;
+}
+
 export interface ListHead {
   title: ReactNode;
   titleId?: string;
   icon?: string;
   actions?: ReactNode;
 }
+
+/** Ключ вида приложения в меню видов (телефон): не пересекается с ListViewKind. */
+const APP_VIEW_PREFIX = 'app:';
 
 /** Колонка, которую нельзя снять: список без названия записи нечитаем (S4-35). */
 const COLS_LOCKED = 'title+id';
@@ -516,7 +535,7 @@ const CELL_VALUES_INLINE = 1;
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -656,6 +675,8 @@ export function ListView({
   // Явный выбор и управляемое состояние — закон.
   const phoneCards = narrow && !viewPicked && !stateProp && views.includes('cards');
   const view: ListViewKind = phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  // Вид приложения главнее вида конфига, пока он есть; пропал (выключен) — действует view.
+  const activeApp = appViews?.find(a => a.id === state.appView) ?? null;
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
@@ -1259,7 +1280,8 @@ export function ListView({
   };
   // «Вид ⌄» (S4-27): режим закрытых — часть состояния списка и сохранённого вида.
   // Телефон: виды — внутри «Вид ▾», а не строкой над списком (владелица 11.11).
-  const viewsInMenu = narrow && views.length > 1;
+  const appCount = appViews?.length ?? 0;
+  const viewsInMenu = narrow && views.length + appCount > 1;
   const viewMenu = (
     <ViewMenu
       closed={closedMode}
@@ -1277,15 +1299,20 @@ export function ListView({
       }}
       onColumns={setColumns}
       kinds={viewsInMenu ? {
-        all: views.map(v => ({ key: v, title: t(`kit.list.view.${v}` as KitKey) })),
-        current: view,
-        onPick: k => update({ view: k as ListViewKind }),
+        all: [
+          ...views.map(v => ({ key: v, title: t(`kit.list.view.${v}` as KitKey) })),
+          ...(appViews ?? []).map(a => ({ key: APP_VIEW_PREFIX + a.id, title: a.label })),
+        ],
+        current: activeApp ? APP_VIEW_PREFIX + activeApp.id : view,
+        onPick: k => (k.startsWith(APP_VIEW_PREFIX)
+          ? update({ appView: k.slice(APP_VIEW_PREFIX.length) })
+          : update({ view: k as ListViewKind, appView: null })),
       } : undefined}
       narrow={narrow}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
-  const viewsSwitch = views.length > 1 && !viewsInMenu ? (
+  const viewsSwitch = views.length + appCount > 1 && !viewsInMenu ? (
     <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
       {views.map(v => {
         const icon = viewIcons?.[v];
@@ -1294,15 +1321,29 @@ export function ListView({
             key={v}
             type="button"
             role="radio"
-            aria-checked={view === v}
-            className={`sk-list__view${view === v ? ' is-on' : ''}`}
-            onClick={() => update({ view: v })}
+            aria-checked={!activeApp && view === v}
+            className={`sk-list__view${!activeApp && view === v ? ' is-on' : ''}`}
+            onClick={() => update({ view: v, appView: null })}
           >
             {icon && <GameIcon slug={icon} size={14} />}
             <span>{t(`kit.list.view.${v}` as KitKey)}</span>
           </button>
         );
       })}
+      {(appViews ?? []).map(a => (
+        <button
+          key={APP_VIEW_PREFIX + a.id}
+          type="button"
+          role="radio"
+          aria-checked={activeApp?.id === a.id}
+          className={`sk-list__view${activeApp?.id === a.id ? ' is-on' : ''}`}
+          data-app-view={a.id}
+          onClick={() => update({ appView: a.id })}
+        >
+          {a.icon && <GameIcon slug={a.icon} size={14} />}
+          <span>{a.label}</span>
+        </button>
+      ))}
     </div>
   ) : null;
   const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0) + (dateOn ? 1 : 0);
@@ -1922,7 +1963,10 @@ export function ListView({
   );
 
   let body: ReactNode;
-  if (feedGroupsList) {
+  if (activeApp) {
+    // Вид приложения (SPRINT_VIZ_EMBED/EMB-L2): отрисовка — его, kit даёт место.
+    body = <div className="sk-list__appview" data-app-view={activeApp.id}>{activeApp.render()}</div>;
+  } else if (feedGroupsList) {
     /*
       Лента (K2-FEED-VIEW). Честные состояния здесь — не украшение, а часть
       вида: лента выглядит потоком событий, и пропуск в ней читается как

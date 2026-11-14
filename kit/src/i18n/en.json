@@ -1159,5 +1159,12 @@
   "kit.list.library.noConfig": "No document groups are set for the library in this section",
   "kit.graph.colorBy": "Node colour",
   "kit.graph.colorByType": "by type",
-  "kit.graph.colorByDepth": "by level"
+  "kit.graph.colorByDepth": "by level",
+  "kit.embed.loading": "Loading {source} chart…",
+  "kit.embed.notConfigured": "{source} embedding is not configured",
+  "kit.embed.notConfiguredHint": "No embed address issued: the integration is not configured in the app.",
+  "kit.embed.unavailable": "{source} is unavailable",
+  "kit.embed.unavailableHint": "The chart address was not received — this is not \"empty\". Retry or check the connection.",
+  "kit.embed.forbidden": "No access to this chart",
+  "kit.embed.badUrl": "The embed address is not http(s) — the frame was not opened."
 }
