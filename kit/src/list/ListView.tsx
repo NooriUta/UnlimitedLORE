@@ -286,6 +286,17 @@ export interface ListViewProps {
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
+   * PU-23: компактная вложенная таблица (дети ДРУГОГО типа под раскрытой строкой) — только
+   * таблица: без шапки, поиска, фильтров, «Быстро», выбора и клавиш списка; вид всегда «Список».
+   * Обычно не задаётся напрямую — см. ListNestedTable.
+   */
+  bare?: boolean;
+  /**
+   * Подмена ячейки записи (смена статуса, своя ссылка): undefined — общая отрисовка.
+   * Действует в любом виде, где рисуется ячейка.
+   */
+  cellOf?: (col: string, r: KitRecord) => ReactNode | undefined;
+  /**
    * Шапка экрана (S4-22, S4-23): задана — список сам рисует ScreenHead с
    * заголовком, а виды переезжают в её строку. Нет — виды остаются в полосе фильтров.
    */
@@ -535,7 +546,7 @@ const CELL_VALUES_INLINE = 1;
 
 export function ListView({
   config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -554,6 +565,8 @@ export function ListView({
   // Панель «Горячие клавиши» показывает клавиши ЭТОГО списка — из тех же действий.
   const lang0 = useKitLang();
   useEffect(() => {
+    // Вложенная таблица клавиш списка не держит — иначе панель «Горячие клавиши» двоится.
+    if (bare) return undefined;
     const t0 = (k: KitKey) => kitT(lang0, k);
     const groups: KeymapGroup[] = [];
     if (rowActionsProp?.length) groups.push({ id: 'row', title: t0('kit.keymap.group.row'), actions: rowActionsProp });
@@ -561,7 +574,7 @@ export function ListView({
     const builtin = [...LIST_BUILTIN_KEYS, ...(peek ? [{ hotkey: 'Space', title: 'kit.keymap.list.peek' as KitKey }] : [])];
     groups.push({ id: 'list', title: t0('kit.keymap.group.list'), builtin: true, actions: builtin.map(k => ({ id: 'list:' + k.hotkey, title: t0(k.title), hotkey: k.hotkey })) });
     return registerKeymap({ owner: keymapOwner.current, groups });
-  }, [rowActionsProp, bulkActionsProp, lang0, peek]);
+  }, [rowActionsProp, bulkActionsProp, lang0, peek, bare]);
   const mac = isMacPlatform();
   const rootRef = useRef<HTMLDivElement>(null);
   const keymapOwner = useRef(Symbol('list-keymap'));
@@ -674,7 +687,7 @@ export function ListView({
   // экрана, а карточек помещается 9 против 2 строк (замер 11.11, как в v1).
   // Явный выбор и управляемое состояние — закон.
   const phoneCards = narrow && !viewPicked && !stateProp && views.includes('cards');
-  const view: ListViewKind = phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  const view: ListViewKind = bare ? 'list' : phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
   // Вид приложения главнее вида конфига, пока он есть; пропал (выключен) — действует view.
   const activeApp = appViews?.find(a => a.id === state.appView) ?? null;
   const quick = listCfg?.quick ?? [];
@@ -1530,6 +1543,8 @@ export function ListView({
   // карточки держат один признак, а не две копии условия.
   const statusVisible = (r: KitRecord): boolean => r.status !== '' && config.statuses.items.length > 0;
   const cell = (col: string, r: KitRecord): ReactNode => {
+    const own = cellOf?.(col, r);
+    if (own !== undefined) return own;
     switch (col) {
       case 'select': return checkbox(r);
       case 'title+id': return <><Title r={r} href={href} onOpen={onOpen} /> <Pill variant="id">{r.id}</Pill></>;
@@ -2352,6 +2367,17 @@ export function ListView({
     );
   }
 
+  if (bare) {
+    // Клавиши вложенной таблицы не уходят в список-родитель: J/K родителя не должны листать
+    // его строки, пока фокус во вложенной таблице.
+    return (
+      <div ref={rootRef} className={['sk-list', 'sk-list--bare', className].filter(Boolean).join(' ')} data-view="list"
+        onKeyDown={e => e.stopPropagation()}>
+        {body}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={rootRef}
@@ -2646,4 +2672,40 @@ export function ListView({
       {peek && peekOpen && cursorId && <PeekPanel id={cursorId} peek={peek} onClose={() => setPeekOpen(false)} />}
     </div>
   );
+}
+
+export interface ListNestedTableProps {
+  /** Конфиг экрана ДОЧЕРНЕГО типа — его колонки, подписи, статусы, отображение. */
+  config: KitConfig;
+  /** Дети и состояние их загрузки (то же, что у ListExpand.rows). */
+  rows: ListExpandRows;
+  /** Подпись таблицы для скринридера («Задачи спринта S1»). */
+  label?: string;
+  href?: (id: string) => string;
+  onOpen?: (id: string) => void;
+  cellOf?: (col: string, r: KitRecord) => ReactNode | undefined;
+}
+
+/**
+ * PU-23 (правило владелицы 14.11.2026): дети ДРУГОГО типа под раскрытой строкой — вложенная
+ * таблица своего типа, «со своими полями, маппингами и отображениями». Тот же движок списка, что
+ * у экрана ребёнка, но компактно: только таблица. Все дети видны — режим «закрытые скрыты»
+ * раздела здесь не действует: под спринтом ждут ВСЕ его задачи. «Загрузка», «сбой» и «нет
+ * вложенных» — разные ответы, и каждый рисуется своим состоянием.
+ */
+export function ListNestedTable({ config, rows, label, href, onOpen, cellOf }: ListNestedTableProps) {
+  const lang = useKitLang();
+  const data = useMemo<KitData>(() => ({
+    records: [...rows.records], edges: [], journal: [],
+    meta: { generated_at: '', total: rows.records.length },
+  }), [rows.records]);
+  const listCfg = useMemo<KitConfig>(() => (config.list
+    ? { ...config, list: { ...config.list, showClosed: 'all' } }
+    : config), [config]);
+  let node: ReactNode;
+  if (rows.state === 'loading') node = <Skeleton lines={2} />;
+  else if (rows.state === 'error') node = <LoadError compact error={rows.error} onRetry={rows.onRetry} />;
+  else if (rows.records.length === 0) node = <EmptyState compact title={kitT(lang, 'kit.list.childEmpty')} />;
+  else node = <ListView bare config={listCfg} data={data} urlState={false} href={href} onOpen={onOpen} cellOf={cellOf} />;
+  return <div className="sk-list__nested" data-nested="" role="group" aria-label={label}>{node}</div>;
 }

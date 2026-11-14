@@ -7164,6 +7164,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* PU-23: дети раскрытой строки — строками той же таблицы; чуть приглушённый фон отделяет их от верхнего уровня. */
 .sk-list__row--child { background: var(--bg2); }
 .sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }
+/* PU-23: дети другого типа — вложенная таблица своего типа, компактно (без полосы управления). */
+.sk-list__nested { min-width: 0; border-left: 2px solid var(--bd); padding-left: var(--pad-x); }
+.sk-list--bare { gap: 0; }
+.sk-list--bare .sk-list__table { background: var(--bg2); }
 
 /* ---------- EmbedChartFrame: встроенный график (SPRINT_VIZ_EMBED/EMB-L2) ---------- */
 /* Фон рамки прозрачный: встройка в теме transparent берёт фон страницы (VE-4). */
