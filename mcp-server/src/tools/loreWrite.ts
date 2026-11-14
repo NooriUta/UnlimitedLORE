@@ -360,8 +360,8 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'time it was said (08:31 or 14.11.2026) AND a verbatim quote in quotes «…» — else 409 NO_EVIDENCE; the agent path still ' +
       'needs review (incl. ready_for_deploy/uat, else 409 DONE_ONLY_FROM_REVIEW) and reviewer ≠ executor. Evidence attached when ' +
       'moving to review is ' +
-      'carried to done. blocked and a return from review to active need reason (400 REASON_REQUIRED); waiting needs waiting_for ' +
-      '(400 WAITING_FOR_REQUIRED). failed = known negative outcome (lost, refused, overdue), cancelled = decided not to do.',
+      'carried to done. For an AGENT, blocked and a return from review to active need reason (400 REASON_REQUIRED); waiting needs waiting_for ' +
+      '(400 WAITING_FOR_REQUIRED) — a human caller is not asked for these words (owner rule 14.11.2026). failed = known negative outcome (lost, refused, overdue), cancelled = decided not to do.',
     schema: {
       entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),

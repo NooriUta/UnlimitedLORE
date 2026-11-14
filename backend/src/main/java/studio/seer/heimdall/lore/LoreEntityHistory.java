@@ -228,6 +228,34 @@ final class LoreEntityHistory {
     static final int PAGE_MAX = 500;
     static final java.util.Set<String> AUTHOR_KINDS = java.util.Set.of("human", "agent", "unknown", "ingest", "unauth");
     /** Поле версии → колонка строки истории, по которой видно изменение. */
+    /** kc_sub авторов-людей в строках (PU-29: имя человека вместо сырого kc_sub). */
+    static Set<String> humanSubs(List<Map<String, Object>> rows) {
+        Set<String> out = new java.util.TreeSet<>();
+        for (Map<String, Object> r : rows)
+            if (r.get("author") instanceof Map<?, ?> a && ChangeAuthor.KIND_HUMAN.equals(a.get("kind")) && a.get("kc_sub") != null)
+                out.add(a.get("kc_sub").toString());
+        return out;
+    }
+
+    /**
+     * Автору-человеку — display_name из KnowUser (приёмка 14.11.2026: в истории был сырой kc_sub).
+     * Имени нет — поле не ставится: «имя неизвестно» не подменяется выдумкой. Входные карты не меняются.
+     */
+    static List<Map<String, Object>> withHumanNames(List<Map<String, Object>> rows, Map<String, String> names) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (Map<String, Object> r : rows) {
+            if (r.get("author") instanceof Map<?, ?> a && ChangeAuthor.KIND_HUMAN.equals(a.get("kind"))
+                    && a.get("kc_sub") != null && names.get(a.get("kc_sub").toString()) != null) {
+                Map<String, Object> row = new LinkedHashMap<>(r);
+                @SuppressWarnings("unchecked") Map<String, Object> au = new LinkedHashMap<>((Map<String, Object>) a);
+                au.put("display_name", names.get(a.get("kc_sub").toString()));
+                row.put("author", au);
+                out.add(row);
+            } else out.add(r);
+        }
+        return out;
+    }
+
     /** Поля тела версии по классу истории — то, что дифф обязан показать (HistoryBodyFieldsTest). */
     static final Map<String, List<String>> BODY_FIELDS = Map.of(
         "KnowTaskHist", List.of("note_md"),
