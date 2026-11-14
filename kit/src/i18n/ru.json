@@ -303,6 +303,7 @@
   "kit.palette.placeholderAll": "Запись или команда…",
   "kit.palette.placeholderRecords": "Название или код записи…",
   "kit.palette.recent": "Недавние",
+  "kit.palette.exact": "Точное совпадение",
   "kit.palette.records": "Записи",
   "kit.palette.commands": "Команды",
   "kit.palette.command": "команда",

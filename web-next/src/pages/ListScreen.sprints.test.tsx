@@ -87,13 +87,17 @@ describe('«Спринты» на ListScreen: паритет с SprintsPage', ()
     expect(container.querySelector('tr[data-child-of]')).toBeNull();
     const heads = within(nested).getAllByRole('columnheader').map(h => h.textContent);
     // Колонки экрана «Задачи» (спринт задачи, компоненты), а не спринта (задачи x/y, проект).
-    expect(heads).toEqual(expect.arrayContaining(['Спринт', 'Компоненты']));
+    expect(heads).toEqual(expect.arrayContaining(['Компоненты']));
+    // Колонка, указывающая на сам раскрытый спринт, — повтор родителя (приёмка 14.11.2026).
+    expect(heads).not.toContain('Спринт');
     expect(heads).not.toContain('Задачи');
     expect(heads).not.toContain('Проект');
     const kids = [...nested.querySelectorAll('tr[data-record-id]')] as HTMLElement[];
     // Закрытая задача тоже видна: под спринтом нужны все его задачи.
     expect(kids.map(k => k.getAttribute('data-record-id'))).toEqual(['SP/T1', 'SP/T2']);
-    expect(within(kids[0]).getByText('SP')).toBeTruthy();
+    // Код — коротким (T1), спринт не повторяется в строке (приёмка 14.11.2026).
+    expect(within(kids[0]).getByText('T1')).toBeTruthy();
+    expect(within(kids[0]).queryByText('SP')).toBeNull();
     // Название — ссылка на паспорт задачи.
     expect(within(kids[0]).getByRole('link', { name: 'Задача T1' }).getAttribute('href')).toMatch(/sec=task.*open=SP%2FT1|open=SP%2FT1.*sec=task/);
     fireEvent.click(within(kids[1]).getByRole('button', { name: /^Статус: / }));

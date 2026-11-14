@@ -64,7 +64,7 @@ describe('PU-23 · правило раскрытия: другой тип — в
       list: { views: ['list'], columns: ['id', 'title', 'progress:tasks'] },
     };
     const parent: KitRecord = { id: 'SP', kind: 'sprint', title: 'Спринт SP', status: '', fields: { tasks: { done: 0, total: 1 } } };
-    const kids: KitRecord[] = [{ id: 'SP/T1', kind: 'task', title: 'Задача T1', status: 'planned', fields: { sprint: 'SP', effort: 2 } }];
+    const kids: KitRecord[] = [{ id: 'SP/T1', kind: 'task', title: 'Задача T1', status: 'planned', fields: { code: 'T1', sprint: 'SP', effort: 2 } }];
     const expand = buildExpand({ nested: nestedOf('task'), client, childRows: ok(kids), childConfigOf: k => childConfig(k), lang: 'ru' });
     render(<ListView config={sprintCfg} data={data(parent)} urlState={false} expand={expand} />);
     fireEvent.click(screen.getByRole('button', { name: /Раскрыть/ }));
@@ -72,7 +72,13 @@ describe('PU-23 · правило раскрытия: другой тип — в
     const nested = document.querySelector('tr[data-expand-of="SP"] [data-nested]') as HTMLElement;
     expect(nested).not.toBeNull();
     const heads = within(nested).getAllByRole('columnheader').map(h => h.textContent);
-    expect(heads).toEqual(expect.arrayContaining(['Спринт', 'Оценка']));
+    expect(heads).toEqual(expect.arrayContaining(['Оценка']));
+    // Приёмка препрода 14.11.2026: колонка, указывающая на саму родительскую строку («Спринт» внутри
+    // спринта), — повтор; код — коротким (T1), а не полным uid SP/T1.
+    expect(heads).not.toContain('Спринт');
+    const row = nested.querySelector('tr[data-record-id="SP/T1"]') as HTMLElement;
+    expect(row.textContent).toContain('T1');
+    expect(row.textContent).not.toContain('SP/T1');
     expect(heads).not.toContain('Задачи');
     expect(within(nested).getByRole('link', { name: 'Задача T1' }).getAttribute('href')).toMatch(/open=SP%2FT1/);
   });

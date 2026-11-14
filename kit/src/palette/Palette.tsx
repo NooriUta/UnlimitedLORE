@@ -198,14 +198,22 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
     const recs = result.items.filter(i => i.type === 'record' && pass(i));
     // Фильтр по типам скрывает команды: выбран тип — человек ищет записи.
     const cmds = kindsOn.size ? [] : result.items.filter(i => i.type === 'command');
-    const server: PaletteItem[] = remoteItems.filter(pass);
+    const server0: PaletteItem[] = remoteItems.filter(pass);
+    // Приёмка препрода 14.11.2026: запись, чей код РАВЕН запросу (без регистра и пробелов), — первой во
+    // всей выдаче, откуда бы ни пришла: иначе спеки с похожими словами вставали выше самой записи.
+    const want = query.trim().toLowerCase();
+    const isExact = (i: PaletteItem) => i.type === 'record' && want !== '' && i.id.toLowerCase() === want;
+    const exact = [...recs, ...server0].find(isExact);
+    const records = exact ? recs.filter(i => !isExact(i)) : recs;
+    const server = exact ? server0.filter(i => !isExact(i)) : server0;
     return [
       actionsGroup,
-      { id: 'records', label: kitT(lang, 'kit.palette.records'), items: recs },
+      ...(exact ? [{ id: 'exact', label: kitT(lang, 'kit.palette.exact'), items: [exact] }] : []),
+      { id: 'records', label: kitT(lang, 'kit.palette.records'), items: records },
       { id: 'server', label: kitT(lang, 'kit.palette.server'), items: server },
       { id: 'commands', label: kitT(lang, 'kit.palette.commands'), items: cmds },
     ].filter(g => g.items.length > 0);
-  }, [result, lang, actionsLabel, remoteItems, kindsOn]);
+  }, [result, lang, actionsLabel, remoteItems, kindsOn, query]);
   // Пилюли считаются по всей выдаче, а не по отфильтрованной: иначе выбранный
   // тип стирал бы остальные пилюли, и снять фильтр «соседом» было бы нельзя.
   const facets = useMemo(

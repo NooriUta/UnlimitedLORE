@@ -303,6 +303,7 @@
   "kit.palette.placeholderAll": "Record or command…",
   "kit.palette.placeholderRecords": "Record title or code…",
   "kit.palette.recent": "Recent",
+  "kit.palette.exact": "Exact match",
   "kit.palette.records": "Records",
   "kit.palette.commands": "Commands",
   "kit.palette.command": "command",
