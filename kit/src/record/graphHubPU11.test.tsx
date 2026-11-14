@@ -16,7 +16,7 @@ import { RecordView } from './index';
 
 const stub = (name: string) => function Stub(p: GxEngineProps) {
   return (
-    <div data-testid={`eng-${name}`} data-ids={p.nodes.map(n => n.id).join(',')}>
+    <div data-testid={`eng-${name}`} data-ids={p.nodes.map(n => n.id).join(',')} data-titles={p.nodes.map(n => n.title ?? '').join('|')}>
       {p.nodes.map(n => <button key={n.id} type="button" onClick={() => p.onSelect(n.id)}>{`узел ${n.id}`}</button>)}
     </div>
   );
@@ -80,6 +80,37 @@ describe('PU-11 · хаб графа', () => {
   it('все соседи свёрнуты — граф не «пустой», кластер на месте', () => {
     const { container } = show(cfg(), dataOf(false));
     expect(container.querySelector('[data-cluster]')).toBeTruthy();
+  });
+  // Приёмка preprod 14.11 (v1.17.21): OMILORE — 48 соседей по DOCUMENTED_IN, из них 25 спек и
+  // 23 технологии (вид tech). Видов два — и подпись падала на код связи «DOCUMENTED_IN: 48»,
+  // хотя формы слова есть у обоих. Правило: у смешанного хаба — счёт по каждому виду.
+  const mixedCfg = (techForms = true): KitConfig => {
+    const c = cfg();
+    return { ...c, graph: { ...c.graph!, types: { ...c.graph!.types,
+      tech: { label: 'Технология', color: '--wrn', ...(techForms ? { count: { one: '{n} технология', few: '{n} технологии', many: '{n} технологий' } } : {}) } } } } as KitConfig;
+  };
+  const mixedData = (): KitData => {
+    const specs = Array.from({ length: 25 }, (_, i) => rec(`SPEC-${i}`, 'spec'));
+    const techs = Array.from({ length: 23 }, (_, i) => rec(`SPEC-TECH-${i}`, 'tech'));
+    return {
+      records: [CENTER, ...specs, ...techs],
+      edges: [...specs, ...techs].map(s => ({ from: 'FORSETI', to: s.id, type: 'DOCUMENTED_IN' }) as KitEdge),
+      journal: [], meta: { generated_at: '2026-11-14T12:00:00Z' },
+    };
+  };
+  it('смешанный хаб (спеки + технологии) — счёт по видам, а не код связи', () => {
+    const { container } = show(mixedCfg(), mixedData());
+    expect(container.querySelector('[data-cluster] .sk-rec-graph__cbtn')!.textContent).toBe('25 спек · 23 технологии ▸');
+  });
+  it('смешанный хаб, у одного вида нет форм — подпись типом связи (положительный контроль)', () => {
+    const { container } = show(mixedCfg(false), mixedData());
+    expect(container.querySelector('[data-cluster] .sk-rec-graph__cbtn')!.textContent).toContain('DOCUMENTED_IN');
+  });
+  it('Force: подпись узла-кластера смешанного хаба — тоже по видам', async () => {
+    window.history.replaceState(null, '', '/r?gview=force');
+    show(mixedCfg(), mixedData());
+    const eng = await screen.findByTestId('eng-force');
+    expect(eng.getAttribute('data-titles')!.split('|')).toContain('25 спек · 23 технологии ▸');
   });
   it('Force: хаб — один узел-кластер, а не 27 узлов; выбор кластера раскрывает его', async () => {
     window.history.replaceState(null, '', '/r?gview=force');
