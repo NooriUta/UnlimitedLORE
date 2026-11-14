@@ -100,6 +100,12 @@ jobs:
       - name: Самопроверка живой проверки миграций
         run: bash -n scripts/migrate-live-check.sh && bash scripts/migrate-live-check.sh --selftest && python3 scripts/migrate-live-check/inventory.py --selftest && bash .github/scripts/migcheck-needed.sh --selftest && bash .github/scripts/ci-teardown.sh --selftest && bash scripts/deploy-empty-db.sh --selftest
 
+      # SELF-PROVISION-STANDALONE: инсталлятор для Linux (deploy/install) —
+      # разбор аргументов, план dry-run (без docker), «секрет не печатается»,
+      # «удаление без --purge не стирает данные», профиль без LORE_BOOTSTRAP.
+      - name: Самопроверка инсталлятора LORE
+        run: bash -n deploy/install/install.sh && bash deploy/install/install.sh --selftest
+
       # См. подробный комментарий в frontend-ci.yml — там же зафиксировано, что
       # прокси на ci-server НУЖЕН (прямой выход деградирован: минуты вместо
       # секунд, apk add curl отваливается по таймауту) и что проверка сделана
