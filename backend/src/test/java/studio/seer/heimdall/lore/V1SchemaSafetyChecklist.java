@@ -104,7 +104,13 @@ final class V1SchemaSafetyChecklist {
         // status_raw пишется лишь там, где он пуст (UPDATE … AND status_raw IS NULL), формой канона SCD2,
         // которую v1 читает (taskTick). Прогон — V89LegacyStatusRetireLiveDbTest и «LORE migrate live check».
         "java__retire_legacy_status_types",
-        "снятие легаси-словарей Status*/TrackType, которых v1 не знает; status_raw пишется только в пустое поле");
+        "снятие легаси-словарей Status*/TrackType, которых v1 не знает; status_raw пишется только в пустое поле",
+        // SELF-PROVISION-STANDALONE, V90. Доказательство — StatusDictCoreSeedTest
+        // (planInsertsOnlyMissingAndNeverTouchesExisting, insertIsPlainInsertWithParamsNotUpsert):
+        // только INSERT строки справочника KnowDictEntry, которой нет (посев НОВОЙ строки —
+        // разрешённая форма); существующие строки не читаются на запись, схема не меняется.
+        "java__status_dict_core_seed",
+        "посев недостающих строк task_status/sprint_status/adr_status; существующие не переписываются");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

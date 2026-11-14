@@ -1700,7 +1700,14 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='phase_status', code='done', label_ru='Реализована', label_en='Done', icon='divided-spiral', color='var(--suc)', sort_order=60, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='done'",
             "UPDATE KnowDictEntry SET dict_type='phase_status', code='moved', label_ru='Вынесена', label_en='Moved out', icon='pause-button', color='var(--t3)', sort_order=80, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='moved'",
             "UPDATE KnowDictEntry SET dict_type='area', code='research', label_ru='Исследования', label_en='Research', color='color-mix(in srgb,var(--inf) 55%,var(--acc))', sort_order=160, is_active=true, is_extensible=true UPSERT WHERE dict_type='area' AND code='research'",
-            "UPDATE KnowDictEntry SET dict_type='area', code='business', label_ru='Бизнес', label_en='Business', color='color-mix(in srgb,var(--wrn) 55%,var(--acc))', sort_order=170, is_active=true, is_extensible=true UPSERT WHERE dict_type='area' AND code='business'"))
+            "UPDATE KnowDictEntry SET dict_type='area', code='business', label_ru='Бизнес', label_en='Business', color='color-mix(in srgb,var(--wrn) 55%,var(--acc))', sort_order=170, is_active=true, is_extensible=true UPSERT WHERE dict_type='area' AND code='business'")),
+
+        // SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE (находка CT-KIT-FIXTURES 14.11): десять
+        // базовых кодов task_status/sprint_status (todo…cancelled) не заводил ни один шаг — на проде их
+        // внесли руками, база с нуля жила без статусов. Java-шаг: вставляет ТОЛЬКО недостающее, прод-строки
+        // не переписывает (UPSERT, как в V85/V87, перекрасил бы их). Аддитивно, major 17. Номер V90 сверен
+        // с сессией «Обновление проекта» 14.11: V89 — снятие легаси-статусов (#1401), этот шаг после него.
+        new Step(90, 17, "java__status_dict_core_seed", List.of())
     );
 
     /** V89: имя шага (сторож RetiredLegacyStatusTypesTest и JAVA_STEPS_REVIEWED держатся за него). */

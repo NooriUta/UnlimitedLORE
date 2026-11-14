@@ -497,6 +497,31 @@ public class LoreSchemaMigrationRunner {
         if (version == 82) mergeMachineCase();
         if (version == 86) copyLegacyActions();
         if (version == 89) retireLegacyStatusTypes();
+        if (version == 90) seedCoreStatuses();
+    }
+
+    /**
+     * V90: базовые коды task_status/sprint_status, которых нет в справочнике.
+     * Существующие строки не переписываются — на проде шаг ничего не меняет.
+     * Возвращает число вставленных строк.
+     */
+    int seedCoreStatuses() {
+        Map<String, java.util.Set<String>> existing = new java.util.LinkedHashMap<>();
+        for (String dict : StatusDictCoreSeed.SEEDS.keySet()) existing.put(dict, codesOf(dict));
+        List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(existing);
+        for (StatusDictCoreSeed.Insert i : plan)
+            sqlRows(StatusDictCoreSeed.INSERT_SQL, i.params());
+        StringBuilder before = new StringBuilder();
+        existing.forEach((d, c) -> before.append(before.length() == 0 ? "" : ", ").append(d).append('=').append(c.size()));
+        LOG.infof("[V90] базовые статусы: вставлено %d строк (было: %s)", plan.size(), before);
+        return plan.size();
+    }
+
+    private java.util.Set<String> codesOf(String dictType) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (Map<String, Object> r : sqlRows(StatusDictCoreSeed.EXISTING_SQL, Map.of("dict_type", dictType)))
+            if (r.get("code") != null) out.add(String.valueOf(r.get("code")));
+        return out;
     }
 
     /**
