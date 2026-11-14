@@ -35,7 +35,8 @@ final class SprintCloseGuard {
 
     /** Закрывающие переходы спринта. */
     static boolean closing(String status) {
-        return "done".equals(status) || "cancelled".equals(status);
+        // WK-05: failed — закрытие отрицательным исходом, тот же сторож открытых задач.
+        return "done".equals(status) || "cancelled".equals(status) || "failed".equals(status);
     }
 
     /** Открытые задачи из строк {@link #TASKS_SQL}: {task_uid, title, status}. */

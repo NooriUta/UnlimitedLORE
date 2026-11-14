@@ -23,11 +23,16 @@ export const STATUS_MATCH: Record<string, { marker: string; words: string[] }> =
   planned: { marker: '📋', words: ['PLANNED', 'ЗАПЛАН', 'ПЛАН'] },
   deferred: { marker: '⏸', words: ['DEFER', 'ОТЛОЖ', 'HOLD', 'PAUSE', 'CONDITION', 'УСЛОВН', 'ПАУ'] },
   todo: { marker: '⬜', words: ['TODO', 'TO DO', 'НЕ НАЧАТ'] },
+  // WK-05: статусы ядра, которых не было (shared/lore-statuses.json core).
+  waiting: { marker: '⏳', words: ['WAITING', 'ЖДЁМ', 'ЖДЕМ', 'ОЖИДА'] },
+  review: { marker: '🔍', words: ['REVIEW', 'РЕВЬЮ'] },
+  failed: { marker: '❌', words: ['FAILED', 'FAIL', 'ПРОВАЛ'] },
 };
 
 /** Статусы, которые принимает POST /lore/status (planStatuses в shared). */
 export const PLAN_STATUSES = [
   'todo', 'active', 'partial', 'done', 'blocked', 'cancelled', 'planned', 'backlog', 'design', 'ready_for_deploy', 'uat',
+  'waiting', 'review', 'failed',
 ] as const;
 export type PlanStatus = (typeof PLAN_STATUSES)[number];
 /** Прочитанный статус: пишемый, отложенный (читается, но не пишется) или нераспознанный. */
@@ -58,12 +63,13 @@ export const isWithdrawn = (s: ReadStatus) => s === 'cancelled';
 
 /** Порядок жизненного цикла для палитры статусов. */
 const LIFECYCLE: ReadStatus[] = [
-  'backlog', 'todo', 'planned', 'design', 'active', 'partial', 'blocked', 'ready_for_deploy', 'uat', 'done', 'cancelled', 'deferred',
+  'backlog', 'todo', 'planned', 'design', 'active', 'partial', 'waiting', 'blocked', 'review', 'ready_for_deploy', 'uat', 'done', 'failed', 'cancelled', 'deferred',
 ];
 const CATEGORY: Record<string, 'todo' | 'active' | 'done' | 'cancelled'> = {
   backlog: 'todo', todo: 'todo', planned: 'todo', design: 'todo', deferred: 'todo',
   active: 'active', partial: 'active', blocked: 'active', ready_for_deploy: 'active', uat: 'active',
-  done: 'done', cancelled: 'cancelled',
+  waiting: 'active', review: 'active',
+  done: 'done', cancelled: 'cancelled', failed: 'cancelled',
 };
 
 /**

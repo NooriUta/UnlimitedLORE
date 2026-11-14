@@ -49,8 +49,11 @@ class LoreShippedDynamicsLiveDbTest {
         // lead time) → done (вычислитель D17 переводит UC в shipped и ставит штамп).
         post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"SPRINT_SHIP_TEST/SHIP-1\","
             + "\"status\":\"active\"}");
+        // WK-05 (ADR-LORE-014-D5): done — только из review и с доказательством по виду работы.
         post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"SPRINT_SHIP_TEST/SHIP-1\","
-            + "\"status\":\"done\"}");
+            + "\"status\":\"review\"}");
+        post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"SPRINT_SHIP_TEST/SHIP-1\","
+            + "\"status\":\"done\",\"evidence_type\":\"pr\",\"evidence_ref\":\"PR #1\"}");
 
         given().when().get("/lore/slice/shipped_dynamics")
         .then().statusCode(200)
