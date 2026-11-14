@@ -119,7 +119,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
-  return {
+  const cfg: KitConfig = {
     modules: [
       { id: 'forseti', title: 'Forseti', icon: 'compass', status: 'active' },
       // S4-23: порядок как в прототипе v4 и в v1 (shellNav): Forseti · BRAGI · MUNINN · TYR.
@@ -220,4 +220,12 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       undo: true,
     },
   };
+  if (module === ADMIN_MODULE) return cfg;
+  // S9-05 × MC-07 (приёмка v1.17.20): разделы, которых нет в меню (люди и агенты — уровень
+  // admin), открываются по ссылке ?sec=…&open=… своим паспортом; без этого оболочка
+  // откатывалась к первому пункту меню, и вместо паспорта человека открывались «Новости».
+  // Права решает сервер: нет доступа — экран раздела говорит об этом сам.
+  const inMenu = new Set(cfg.menu.groups.flatMap(g => g.items.map(i => i.id)));
+  const offMenu = V2_SECTIONS.filter(s => !inMenu.has(s));
+  return offMenu.length ? { ...cfg, menu: { ...cfg.menu, offMenu } } : cfg;
 }

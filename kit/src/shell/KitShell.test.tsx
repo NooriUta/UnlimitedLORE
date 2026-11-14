@@ -131,6 +131,21 @@ describe('KitShell — меню групп по смыслу', () => {
     expect(screen.getByTestId('nav').textContent).toBe('lore/sprints/list');
   });
 
+  // S9-05 × MC-07 (приёмка v1.17.20): раздел, которого нет в меню (люди — уровень admin),
+  // открывался по ссылке ?sec=user&open=… — и оболочка падала в первый пункт меню
+  // («Новости»). Раздел вне меню, названный приложением (menu.offMenu), открывается
+  // по адресу; пункт меню при этом не подсвечен. Неназванный — прежний откат.
+  it('раздел вне меню (offMenu) открывается по адресу, а не откатывается к первому пункту', () => {
+    const cfg: KitConfig = { ...CONFIG, menu: { ...CONFIG.menu, offMenu: ['people'] } };
+    const { unmount } = render(<KitShell config={cfg} win={fakeWin('?mod=lore&sec=people&open=u1')} storage={createSafeStorage(memStorage)} narrow={false}><Opener /></KitShell>);
+    expect(screen.getByTestId('nav').textContent).toBe('lore/people/null');
+    expect(screen.getByRole('link', { name: 'Спринты' }).getAttribute('aria-current')).toBeNull();
+    unmount();
+    // положительный контроль: без offMenu тот же адрес — откат к умолчанию
+    render(<KitShell config={CONFIG} win={fakeWin('?mod=lore&sec=people&open=u1')} storage={createSafeStorage(memStorage)} narrow={false}><Opener /></KitShell>);
+    expect(screen.getByTestId('nav').textContent).toBe('lore/sprints/list');
+  });
+
   it('пустое меню в конфиге — честная подпись, а не пустая колонка', () => {
     render(<KitShell config={{ ...CONFIG, menu: { groups: [] } }} win={fakeWin()} storage={createSafeStorage(memStorage)} narrow={false} />);
     expect(screen.getByRole('navigation', { name: 'Разделы' }).textContent).toContain('В конфиге нет групп меню');
