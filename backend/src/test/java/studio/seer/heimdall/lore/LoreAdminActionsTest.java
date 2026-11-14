@@ -21,7 +21,7 @@ class LoreAdminActionsTest {
     @Test
     void readsOnlyAdminFamiliesOfTheActionSeriesNewestFirst() {
         LoreAdminActions.Query q = LoreAdminActions.build(null, null, null, null, null, 50);
-        assertTrue(q.sql().contains("metric = 'lore.action'"), q.sql());
+        assertTrue(q.sql().contains("FROM AgentActionLog"), q.sql());
         for (String f : LoreSlices.ADMIN_FAMILIES)
             assertTrue(q.sql().contains("'" + f + "'"), "семейство " + f + ": " + q.sql());
         assertTrue(q.sql().contains("ORDER BY ts DESC"), q.sql());

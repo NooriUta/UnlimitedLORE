@@ -104,7 +104,7 @@ export const MCP_ONLY_FAILURES = 'failures';
 
 /**
  * Отказ записи агента — ОДНО событие из тех, что считает mcp_failures (S7B-30):
- * срез mcp_failure_rows, то же условие (lore.action, ось agent, код ≥ 400), построчно.
+ * срез mcp_failure_rows, то же условие (AgentActionLog, ось agent, код ≥ 400), построчно.
  */
 export interface McpFailureRow {
   /** epoch millis или null — отметки нет. */
@@ -113,6 +113,9 @@ export interface McpFailureRow {
   entity_id: string | null;
   caller: string | null;
   status: number | null;
+  /** V86: клиент и машина вызова (отметки — machineMark); null — сервер старше V86. */
+  client: string | null;
+  machine: string | null;
 }
 
 export interface McpFailureRowsData {
@@ -131,6 +134,8 @@ export function parseFailureRows(rows: readonly Row[]): McpFailureRow[] {
     entity_id: str(r.entity_id),
     caller: str(r.caller),
     status: num(r.status),
+    client: str(r.client),
+    machine: str(r.machine),
   }));
 }
 

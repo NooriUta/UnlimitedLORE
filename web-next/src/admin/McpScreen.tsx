@@ -16,6 +16,7 @@ import {
   fetchMcp, fetchMcpFailureRows, isSilent, MCP_ONLY_FAILURES, type McpData, type McpFailureRowsData, type McpHealth,
 } from './mcp';
 import { mcpFailureTotal } from './home';
+import { MachineCell } from './machineMark';
 import './Admin.css';
 
 export interface McpScreenProps {
@@ -187,6 +188,8 @@ function FailureRows({ fetchImpl, total }: { fetchImpl?: typeof fetch; total: nu
                 <th scope="col">{t('admin.mcp.fails.col.family')}</th>
                 <th scope="col">{t('admin.mcp.fails.col.entity')}</th>
                 <th scope="col">{t('admin.mcp.fails.col.code')}</th>
+                <th scope="col">{t('admin.log.col.client')}</th>
+                <th scope="col">{t('admin.log.col.machine')}</th>
               </tr>
             </thead>
             <tbody>
@@ -197,6 +200,8 @@ function FailureRows({ fetchImpl, total }: { fetchImpl?: typeof fetch; total: nu
                   <td>{r.family === null ? <span className="adm-dim">{t('admin.mcp.none')}</span> : <span className="adm-mono">{r.family}</span>}</td>
                   <td>{r.entity_id === null ? <span className="adm-dim">{t('admin.mcp.none')}</span> : <span className="adm-mono">{r.entity_id}</span>}</td>
                   <td><span className="adm-outcome adm-mono" data-outcome="refused">{r.status ?? t('admin.mcp.none')}</span></td>
+                  <td><MachineCell value={r.client} testId="adm-mcp-fail-client" /></td>
+                  <td><MachineCell value={r.machine} testId="adm-mcp-fail-machine" /></td>
                 </tr>
               ))}
             </tbody>

@@ -1,6 +1,6 @@
 // Журнал действий админки v2 (SPRINT_UXR_S7B_ADMIN/S7B-02, пачка — S7B-13).
 //
-// Источник один: GET /lore/admin/actions — тот же ряд AO-01 (metric='lore.action'),
+// Источник один: GET /lore/admin/actions — тот же ряд AO-01 (AgentActionLog, V86 — с клиентом и машиной),
 // что у среза admin_actions, только админские семейства. Второго журнала нет,
 // поэтому и клиент читает ровно этот эндпоинт: срез периодом не фильтруется
 // (ts — LONG, параметры среза строковые) и о полноте выдачи не рассказывает.
@@ -43,6 +43,10 @@ export interface ActionRow {
   status: number | null;
   /** id пачки массовых правок или null — одиночное действие. */
   batch_id: string | null;
+  /** V86: клиент KC вызова — client_id | "(unknown)" | "(n/a)"; null — сервер старше V86. */
+  client: string | null;
+  /** V86: машина вызова — имя | "(unknown)" | "(n/a)"; null — сервер старше V86 (machineMark). */
+  machine: string | null;
 }
 
 export type TotalState = 'exact' | 'unknown';
@@ -126,6 +130,8 @@ export function parseActions(body: unknown): ActionsData {
       // Поля нет (сборка сервера старше S7B-13) — null; угадывать пачку по
       // entity_id здесь нельзя: это решение сервера, и он его уже принял.
       batch_id: isBatchId(batch) ? batch : null,
+      client: str(o.client),
+      machine: str(o.machine),
     };
   });
   // Точным счёт считается, только если сервер САМ назвал его точным И прислал

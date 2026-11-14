@@ -152,18 +152,23 @@ public class LoreRequestStats {
      * AO-01: одна точка журнала, асинхронно — запись журнала не задерживает
      * сам вызов и не имеет права его уронить. Сбой точки — строка в логе.
      */
-    void journalAction(String caller, String axis, String family, String entityOrPath, int status) {
+    /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4: журнал пишет только в AgentActionLog — с клиентом и машиной. */
+    static final String ACTION_INSERT_SQL = "INSERT INTO AgentActionLog SET ts=:ts, object_type=:fam, object_id=:oid, "
+        + "source=:src, segment=:seg, client=:client, machine=:machine, value=:v";
+
+    void journalAction(String caller, String axis, String family, String entityOrPath, int status,
+                       String client, String machine) {
         if (!statsEnabled || !loreEnabled) return;
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "INSERT INTO MetricSnapshot SET ts=:ts, object_type=:fam, object_id=:oid, "
-                + "metric=:metric, source=:src, segment=:seg, value=:v",
+                ACTION_INSERT_SQL,
                 Map.of("ts", System.currentTimeMillis(),
                     "fam", family == null ? "" : family,
                     "oid", trim256(entityOrPath),
-                    "metric", M_ACTION,
                     "src", trim256(caller),
                     "seg", axis == null ? "" : axis,
+                    "client", trim256(client),
+                    "machine", trim256(machine),
                     "v", (double) status)))
                 .subscribe().with(ok -> { }, e ->
                     LOG.warnf("[LORE ACTION] точка %s %s не записана: %s", family, entityOrPath, LoreUpstream.detail(e)));

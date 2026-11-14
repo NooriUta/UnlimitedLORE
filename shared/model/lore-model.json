@@ -4623,5 +4623,39 @@
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"
+  },
+  "create" : {
+    "decision" : {
+      "endpoint" : "/lore/decision",
+      "id_field" : "decision_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      }, {
+        "key" : "projects",
+        "body" : "project"
+      }, {
+        "key" : "adr",
+        "body" : "adr_id"
+      } ],
+      "require_one_of" : [ "projects", "adr" ]
+    },
+    "spec" : {
+      "endpoint" : "/lore/spec",
+      "id_field" : "spec_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      }, {
+        "key" : "projects",
+        "body" : "project"
+      }, {
+        "key" : "summary",
+        "body" : "summary"
+      }, {
+        "key" : "component"
+      } ],
+      "require_one_of" : [ "projects" ]
+    }
   }
 }
