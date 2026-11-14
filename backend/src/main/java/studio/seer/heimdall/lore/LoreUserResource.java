@@ -585,6 +585,80 @@ public class LoreUserResource extends LoreResourceBase {
         }
     }
 
+    /** AP-01: логин человека — из Keycloak (только чтение), LORE логинов не хранит. */
+    @jakarta.inject.Inject
+    KcBridge kcBridge;
+
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-01: удалить ТЕСТОВОГО человека из LORE — его
+     * агентов (тем же путём, что {@code /lore/kc/agent-client/{id}/delete}), проектные
+     * роли и вершину KnowUser. Только superadmin; логин проверяется по Keycloak и
+     * обязан быть {@code TEST*} (D-2026-ONLY-TEST-PREFIXED-ACCOUNTS), иначе 403.
+     * Пользователя Keycloak LORE НЕ удаляет — это сказано в плане; его удаляет
+     * инфраструктурная сессия. Помехи (реальный агент за человеком, последний owner
+     * проекта) — 409 с причиной, видны уже в {@code dry_run}.
+     */
+    @POST
+    @Path("user/{kcSub}/delete")
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteTestPerson(@jakarta.ws.rs.PathParam("kcSub") String kcSub, LoreKcResource.TestDeleteRequest req,
+                                     @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireSuperAdmin(role);
+        // Без '/' и '.': id уходит в путь Admin API KC.
+        if (kcSub == null || !kcSub.matches("[A-Za-z0-9-]{1,64}"))
+            return badParams("kc_sub: только id учётки Keycloak (латиница, цифры, -)");
+        if (!kcBridge.configured())
+            return noStore(Response.status(503).entity(new LoreError("KC_NOT_CONFIGURED",
+                "kc integration not configured (" + KcBridge.KC_SECRET_KEY + " unset) — логин человека не проверить")));
+        try {
+            String token = kcBridge.adminToken();
+            KcOps.KcCall kc = (method, path, json) -> {
+                java.net.http.HttpResponse<String> r = kcBridge.kc(method, path, json, token);
+                return new KcOps.Resp(r.statusCode(), r.body());
+            };
+            KcOps.Resp u = kc.call("GET", "/users/" + kcSub, null);
+            if (u.status() == 404)
+                return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("KC_USER_MISSING",
+                    "учётки " + kcSub + " в Keycloak нет — логин не проверить, а удаляются только учётки с проверенным логином TEST…")));
+            if (u.status() != 200) throw new KcOps.KcFailed(u.status(), "GET /users");
+            String username = new io.vertx.core.json.JsonObject(u.body()).getString("username");
+            if (!TestAccountDelete.isTestPersonLogin(username))
+                return LoreKcResource.testAccountsOnly("kc_sub", kcSub,
+                    TestAccountDelete.REAL_PERSON_REFUSAL + " (логин " + username + ")");
+            TestAccountDelete.Graph g = testAccountGraph();
+            Map<String, Object> plan = TestAccountDelete.personPlan(kc, g, kcSub, username);
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("kc_sub", kcSub);
+            out.put("ok", true);
+            out.put("username", username);
+            if (req != null && Boolean.TRUE.equals(req.dry_run())) {
+                out.put("dry_run", true);
+                out.put("plan", plan);
+                return noStore(Response.ok(out));
+            }
+            String why = TestAccountDelete.refusal(plan);
+            if (why != null)
+                return noStore(Response.status(Response.Status.CONFLICT).entity(new LoreError("TEST_PERSON_DELETE_BLOCKED", why)));
+            if (TestAccountDelete.isEmptyPerson(plan))
+                return noStore(Response.status(404).entity(new LoreError("NOT_FOUND",
+                    "человека " + username + " в LORE нет — удалять нечего (пользователя KC LORE не удаляет)")));
+            Map<String, Object> done = TestAccountDelete.applyPerson(kc, g, plan);
+            LOG.infof("[LORE USER] удалён тестовый человек %s (%s) из LORE; пользователь KC оставлен", kcSub, username);
+            out.putAll(done);
+            out.put("plan", plan);
+            return noStore(Response.ok(out));
+        } catch (KcOps.KcFailed e) {
+            String hint = LoreKcAgentClient.forbiddenHint(e.status);
+            return noStore(Response.status(e.status >= 400 ? e.status : 502)
+                .entity(new LoreError(hint != null ? "KC_FORBIDDEN" : "KC_UPSTREAM", hint != null ? hint : e.getMessage())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE USER DELETE] %s: %s", kcSub, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
     @POST
     @Path("user/role")
     @Consumes(MediaType.APPLICATION_JSON)
