@@ -182,6 +182,18 @@ describe('S7B-31 · блок «Параметры приложения»', () =>
     expect((await screen.findByTestId('adm-volva-verdict')).getAttribute('data-kind')).toBe('ok');
   });
 
+  // Приёмка препрода 0dccfe73: «действует до 14:21» без пояса, а строка состояния рядом — местное
+  // время (15:1x). Срок приходит от сервера в UTC (expires_at …Z) — так и подписан.
+  it('проверка Völva: срок адреса подписан как UTC', async () => {
+    const f = fake({ projects: 502 });
+    mount(f);
+    await screen.findByText(/Список проектов не прочитан/);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Проект для проверки' }), { target: { value: 'NooriUta/volva' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить интеграцию Völva' }));
+    const verdict = await screen.findByTestId('adm-volva-verdict');
+    expect(verdict.textContent).toContain('2026-11-11 12:00 UTC');
+  });
+
   it('словарь не прочитан — сбой, а не «всё не задано»', async () => {
     mount(fake({ dict: 502 }));
     expect(await screen.findByRole('button', { name: 'Повторить' })).toBeTruthy();
