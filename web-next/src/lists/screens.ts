@@ -123,6 +123,13 @@ export interface ListScreenDef {
    * Нет — у записи раздела нет даты, календаря нет: пустой хуже отсутствия.
    */
   calendarDates?: readonly CalendarDate[];
+  /**
+   * Встроенный график Völva видом раздела (SPRINT_VIZ_EMBED/EMB-L2,
+   * D-2026-LORE-VIZ-EMBED-PLACES): имя графика в белом списке бэкенда
+   * (lore.volva.embed.charts). Вид появляется только при charts.layer=volva —
+   * РЯДОМ с видами list.views, а не вместо них. Нет — встройки в разделе нет.
+   */
+  volvaChart?: string;
 }
 
 export interface ListNested {
@@ -704,7 +711,9 @@ export const LIST_SCREENS = {
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     defaultSort: FRESH_FIRST,
     map: sprintRecord, config: lang => withCalendar(withFeed(lang, sprintsConfig(lang), FEEDS.sprints), SPRINT_DATES), feed: FEEDS.sprints,
-    calendarDates: SPRINT_DATES, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
+    calendarDates: SPRINT_DATES,
+    // Völva вместо нечитаемого Ганта — видом рядом с таймлайном, пока встройку не приняли.
+    volvaChart: 'sprints_timeline', // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
     // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест

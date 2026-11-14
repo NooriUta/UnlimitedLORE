@@ -29,6 +29,11 @@ export interface DataState {
   forbidden: FailedBlock[];
   /** Блоки, выдача которых обрезана. */
   truncatedBlocks: string[];
+  /**
+   * Полное число у обрезанных блоков — только если источник его назвал (MC-07):
+   * счётчик вкладки показывает «230», а не первую страницу «100» и не «?».
+   */
+  truncatedTotals: Record<string, number>;
   /** Обрезана выдача целиком: сколько показано и, если известно, из скольких. */
   truncated?: { returned?: number; total?: number };
   /** Есть ли что сказать вообще. Нет — блок не показываем. */
@@ -87,6 +92,7 @@ export function dataStateOf(meta: KitMeta, audience?: Audience): DataState {
   const failed: FailedBlock[] = [];
   const forbidden: FailedBlock[] = [];
   const truncatedBlocks: string[] = [];
+  const truncatedTotals: Record<string, number> = {};
   const seen = new Set<string>();
 
   // «Уже сказано» считается по ВСЕМ строкам, а не по строкам адресата: иначе
@@ -99,7 +105,16 @@ export function dataStateOf(meta: KitMeta, audience?: Audience): DataState {
     const state = typeof r.state === 'string' ? r.state : '';
     const reason = typeof r.reason === 'string' ? r.reason : '';
     if (state === 'ok') { if (take) checked.push(block); continue; }
-    if (state === 'truncated') { if (take) truncatedBlocks.push(block); continue; }
+    // Обрезка — уже сказанное состояние (MC-07): повтор того же блока в errors
+    // не делает её сбоем, иначе счётчик вкладки становился «?» при прочитанных данных.
+    if (state === 'truncated') {
+      if (take) {
+        truncatedBlocks.push(block);
+        if (typeof r.total === 'number' && Number.isFinite(r.total) && r.total >= 0) truncatedTotals[block] = r.total;
+      }
+      seen.add(block);
+      continue;
+    }
     // «Нет прав» — не ошибка чтения: ждать нечего, надо просить доступ.
     if (state === 'forbidden') {
       if (take) forbidden.push({ block, reason: reason || 'нет прав' });
@@ -135,6 +150,7 @@ export function dataStateOf(meta: KitMeta, audience?: Audience): DataState {
     failed,
     forbidden,
     truncatedBlocks,
+    truncatedTotals,
     truncated,
     hasAnything: failed.length > 0 || forbidden.length > 0 || truncatedBlocks.length > 0 || truncated !== undefined,
   };

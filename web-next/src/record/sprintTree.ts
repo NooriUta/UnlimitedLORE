@@ -27,7 +27,7 @@ export const SPRINT_TREE_LEVELS: readonly TreeLevel[] = [
 
 /** Столбцы — одни на все уровни. PU-16 (D13): «Автор» перед исполнителем, как в v1. */
 export const SPRINT_TREE_COLUMNS: readonly string[] = [
-  'status', 'fields.code', 'title', 'fields.author', 'fields.executor', 'fields.effort', 'fields.progress',
+  'status', 'fields.code', 'title', 'fields.author', 'fields.executor', 'fields.reviewer', 'fields.effort', 'fields.progress',
 ];
 
 export interface SprintTree {
@@ -87,7 +87,7 @@ export function sprintTreeOf(c: LoreRecord1): SprintTree {
     const ph = str(v.phase_uid);
     rows.push({
       key: tk.id, kind: 'task', parent: ph ?? sid, title: tk.title || tk.id, status: tk.status ?? '',
-      code: str(v.code) ?? tk.id, author: str(v.author), executor: str(v.executor),
+      code: str(v.code) ?? tk.id, author: str(v.author), executor: str(v.executor), reviewer: str(v.reviewer),
       // PU-16: тип — для счётчиков по типам над задачами (как в v1).
       taskType: str(v.task_type), effort: typeof v.effort === 'number' ? v.effort : null,
       // Поле для фасета «Фаза» (S4-SPRINT-TASKS-CONTROLS): подписью, а фазы нет

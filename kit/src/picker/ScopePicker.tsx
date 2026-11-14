@@ -195,7 +195,7 @@ function ScopePickerInner({
       >
         <GameIcon slug={icon} size={14} />
         <span className="sk-scope__name">{name}</span>
-        <span className="sk-scope__value" data-kind={summary.kind}>{sumText}</span>
+        <span className="sk-scope__value" data-kind={summary.kind} title={sumText}>{sumText}</span>
         <span className="sk-scope__chev" aria-hidden="true">▾</span>
       </button>
       {open && narrow && (
@@ -447,8 +447,8 @@ function ScopeRow({ lang, option, checked, missing, showMine, onToggle, onOnly }
     <li className={['sk-scope__row', missing ? 'sk-scope__row--missing' : ''].filter(Boolean).join(' ')} data-scope-id={option.id}>
       <label className="sk-scope__check">
         <input type="checkbox" checked={checked} onChange={onToggle} />
-        <span className="sk-scope__title">{title}</span>
-        {title !== option.id && <span className="sk-scope__id">{option.id}</span>}
+        <span className="sk-scope__title" title={title}>{title}</span>
+        {title !== option.id && <span className="sk-scope__id" title={option.id}>{option.id}</span>}
         {showMine && option.mine && <span className="sk-scope__tag">{kitT(lang, 'kit.scope.mineTag')}</span>}
         {missing && <span className="sk-scope__tag sk-scope__tag--wrn">{kitT(lang, 'kit.scope.missing')}</span>}
       </label>

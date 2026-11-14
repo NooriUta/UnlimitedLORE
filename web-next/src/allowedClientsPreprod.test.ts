@@ -25,6 +25,16 @@ describe('MINI-01 · список клиентов: препрод — да, п�
     for (const c of ['lore-app', 'mobilepoc-app', 'minilore-srv', 'lore-mcp-*']) expect(line, c).toContain(c);
   });
 
+  // 14.11.2026, промо #1368: LORE CD препрода красный — собственная проба /lore/version ходит сервисным
+  // клиентом из секрета LORE_CD_PROBE_CLIENT_ID, его в списке не было → 403 CLIENT_NOT_ALLOWED.
+  // Правило: клиент пробы CD всегда в списке (имя — из того же секрета, без копии значения в коде).
+  it('в список препрода всегда входит клиент собственной пробы CD', () => {
+    const cd = read('.github/workflows/lore-cd.yml');
+    const line = cd.split('\n').find(l => l.includes('LORE_AUTH_ALLOWED_CLIENTS:')) ?? '';
+    expect(cd).toContain('PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}');
+    expect(line).toContain('secrets.LORE_CD_PROBE_CLIENT_ID');
+  });
+
   it('выкатка прода список не задаёт — проверка там выключена', () => {
     for (const wf of ['.github/workflows/lore-release.yml', '.github/workflows/lore-host-swap-image.yml']) {
       expect(read(wf), wf).not.toContain('LORE_AUTH_ALLOWED_CLIENTS');

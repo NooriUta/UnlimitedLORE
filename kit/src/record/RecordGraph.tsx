@@ -170,11 +170,20 @@ export function RecordGraph(
   const clusterText = (c: EgoCluster) => {
     // PU-11: все свёрнутые одного вида и приложение дало формы слова — «27 спек ▸»: человек
     // ищет, ЧЕГО там 27, а не как называется связь. Иначе — прежняя подпись типом связи.
-    const kinds = new Set(c.ids.map(id => byId.get(id)?.kind ?? ''));
-    const forms = kinds.size === 1 ? ctx.config.graph?.types?.[[...kinds][0]]?.count : undefined;
-    if (forms) {
-      const tpl = forms[pluralForm(lang, c.count)] ?? forms.many;
-      const what = tpl.replace('{n}', String(c.count));
+    // Приёмка 14.11: под одним типом связи бывают узлы РАЗНЫХ видов (у компонента DOCUMENTED_IN —
+    // спеки и технологии), тогда — счёт по каждому виду: «25 спек · 23 технологии ▸». Код связи —
+    // только если у какого-то вида нет форм слова (или вид узла неизвестен).
+    const perKind = new Map<string, number>();
+    for (const id of c.ids) {
+      const k = byId.get(id)?.kind ?? '';
+      perKind.set(k, (perKind.get(k) ?? 0) + 1);
+    }
+    const parts = [...perKind].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k, n]) => {
+      const forms = k ? ctx.config.graph?.types?.[k]?.count : undefined;
+      return forms ? (forms[pluralForm(lang, n)] ?? forms.many).replace('{n}', String(n)) : null;
+    });
+    if (parts.length > 0 && parts.every(p => p !== null)) {
+      const what = parts.join(' · ');
       return `${c.atLeast ? kitT(lang, 'kit.record.graph.clusterAtLeastKind', { what }) : what} ▸`;
     }
     return kitT(lang, c.atLeast ? 'kit.record.graph.clusterAtLeast' : 'kit.record.graph.cluster',

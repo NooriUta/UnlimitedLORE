@@ -1755,5 +1755,11 @@
   "pp.field.agentRole": "Профиль",
   "pp.field.harness": "Оболочка",
   "pp.field.owner": "Владелец",
-  "lists.quick.noProjects": "Без проектов"
+  "lists.quick.noProjects": "Без проектов",
+  "volva.view": "Völva",
+  "volva.sprintsTitle": "Таймлайн спринтов — встроенный график Völva",
+  "volva.notConfigured.hint": "Бэкенду LORE нужны ключ подписи LORE_VOLVA_EMBED_SECRET (Infisical — тот же, что embedding-secret-key у Völva) и адрес LORE_VOLVA_EMBED_SITE_URL. Проверка — «Флаги» → «Проверить интеграцию Völva».",
+  "volva.unknownChart.hint": "Графика «{chart}» нет в белом списке lore.volva.embed.charts на бэкенде LORE.",
+  "volva.needsProject.title": "Выберите проект",
+  "volva.needsProject.hint": "График Völva запирается по проекту: выберите один или несколько проектов в шапке."
 }

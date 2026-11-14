@@ -489,6 +489,25 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
   );
 }
 
+const ROLE_FIELDS = ['author', 'executor', 'reviewer'] as const;
+
+/**
+ * PU-25 (приёмка v1.17.21): держатель роли в строке — так, как его отдал список (у агента —
+ * имя), а кандидат — кодом (у агента actor_id, имя — подпись). Роль, равная коду кандидата,
+ * остаётся как есть; равная подписи РОВНО ОДНОГО кандидата — становится его кодом. Подпись
+ * совпала у нескольких — не угадываем: значение остаётся своим пунктом списка.
+ */
+function withRoleCodes(task: TaskRowData, items: readonly KitDictItem[]): TaskRowData {
+  const out: TaskRowData = { ...task };
+  for (const k of ROLE_FIELDS) {
+    const v = task[k];
+    if (!v || items.some(o => o.code === v)) continue;
+    const byTitle = items.filter(o => o.title === v);
+    if (byTitle.length === 1) out[k] = byTitle[0].code;
+  }
+  return out;
+}
+
 interface RowProps {
   task: TaskRowData;
   lang: KitLang;
@@ -520,6 +539,8 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   const [people, setPeople] = useState<{ items: readonly KitDictItem[] } | { error: string } | null>(null);
   const firstInput = useRef<HTMLInputElement>(null);
   const menuId = `${useId()}-status`;
+  // Исходная строка для правки: роли — кодами кандидатов, когда они загружены (PU-25).
+  const base = useMemo(() => (people && 'items' in people ? withRoleCodes(task, people.items) : task), [task, people]);
 
   const statusName = taskStatusName(lang, task.status);
   const current = statusMeta(task.status).code;
@@ -584,7 +605,12 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     setPeople(null);
     if (assigneeOptions) {
       assigneeOptions(task).then(
-        items => setPeople({ items }),
+        items => {
+          setPeople({ items });
+          // PU-25: держатель пришёл именем — черновик стоит на коде его кандидата, если правку ещё не трогали.
+          const known = withRoleCodes(task, items);
+          setDraft(d => (d ? { ...d, ...Object.fromEntries(ROLE_FIELDS.filter(k => d[k] === (task[k] ?? '')).map(k => [k, known[k] ?? ''])) } : d));
+        },
         e => {
           const detail = errorDetail(e) || String(e);
           setPeople({ error: detail });
@@ -603,7 +629,8 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
 
   async function save() {
     if (!draft || busy) return;
-    const res = validateTaskDraft(task, draft);
+    // Сравниваем с исходным, где роли — кодами кандидатов: нетронутая роль, пришедшая именем, не «изменилась».
+    const res = validateTaskDraft(base, draft);
     if (!res.ok) {
       setInvalid(res.field);
       setError(t(`kit.tasks.invalid.${res.field}` as KitKey));
@@ -650,7 +677,7 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
   // переписало бы роль. Пустое текущее — пункт «—»: «не трогать».
   const pickSel = (field: TaskPickField, colLabel: KitKey, items: readonly KitDictItem[]) => {
     const cur = draft?.[field] ?? '';
-    const orig = (task[field] ?? '') as string;
+    const orig = (base[field] ?? '') as string;
     const extra = [orig, cur].filter((v, i, a) => v !== '' && a.indexOf(v) === i && !items.some(o => o.code === v));
     return (
       <select

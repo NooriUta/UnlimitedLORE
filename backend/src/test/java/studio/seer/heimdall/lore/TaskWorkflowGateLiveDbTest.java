@@ -55,11 +55,10 @@ class TaskWorkflowGateLiveDbTest {
         assertEquals(200, status(uid, "\"status\":\"active\"").statusCode());
 
 
-        Response blocked = status(uid, "\"status\":\"blocked\"");
-        assertEquals(400, blocked.statusCode());
-        assertEquals("REASON_REQUIRED", blocked.jsonPath().getString("error"));
-        Response waiting = status(uid, "\"status\":\"waiting\"");
-        assertEquals("WAITING_FOR_REQUIRED", waiting.jsonPath().getString("error"));
+        // PU-29 (правило владелицы 14.11.2026): человеку обязательных слов перехода нет — blocked и waiting
+        // без причины/адресата проходят (агенту — по-прежнему 400, LoreDoneGateHumanTest).
+        assertEquals(200, status(uid, "\"status\":\"blocked\"").statusCode());
+        assertEquals(200, status(uid, "\"status\":\"waiting\"").statusCode());
 
         // доказательство прикладывается при переходе в review…
         assertEquals(200, status(uid, "\"status\":\"review\",\"stage\":\"stand_check\","
