@@ -7,7 +7,7 @@
 // засоряет историю «назад»). Запись подтверждённая: строка меняется после
 // ответа сервера, отказ рисуется в строке (это делает TaskTable).
 import { appliedStatusConfirm } from '../settings/applied';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { loreFetch } from '../auth/session';
 import {
   errorDetail, LoadStateView, pushUrlState, readUrlState, TaskCounters, TaskTable, TASK_COLUMN_KEYS, TASK_GROUP_BYS,
@@ -65,10 +65,11 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
   const [dicts, setDicts] = useState<TaskDicts>({});
   useEffect(() => {
     let live = true;
-    const slice = sliceFetcher();
+    // Тот же fetch, что у задач и записи (PU-25): справочники и строки читаются одним путём.
+    const slice = sliceFetcher({ fetchImpl: f });
     void loadTaskDicts(lang, (s, p) => slice(s, p)).then(d => { if (live) setDicts(d); });
     return () => { live = false; };
-  }, [lang]);
+  }, [lang, f]);
 
   // Набор колонок живёт в адресе: им делятся ссылкой, как видом списка.
   // Чужой или устаревший ключ отбрасывает сам kit — пустой столбец хуже
@@ -122,11 +123,22 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
     // PU-25: выбранное в строке — сразу в строке, без перезагрузки вкладки.
     if (p.taskType !== undefined) next.taskType = p.taskType;
     if (p.workClass !== undefined) next.workClass = p.workClass;
-    if (p.author !== undefined) next.author = p.author;
-    if (p.executor !== undefined) next.executor = p.executor;
-    if (p.reviewer !== undefined) next.reviewer = p.reviewer;
+    // Роль уходит кодом кандидата (у агента — actor_id), а строка, как и список с сервера,
+    // показывает его имя: иначе после записи в ячейке стоял бы служебный код.
+    const nameOf = (code: string) => roleTitles.current.get(task.uid)?.get(code) ?? code;
+    if (p.author !== undefined) next.author = nameOf(p.author);
+    if (p.executor !== undefined) next.executor = nameOf(p.executor);
+    if (p.reviewer !== undefined) next.reviewer = nameOf(p.reviewer);
     patch(task.uid, next);
   }
+
+  // PU-25: подписи кандидатов последней загрузки по задаче — для строки после записи.
+  const roleTitles = useRef(new Map<string, Map<string, string>>());
+  const assigneeOptions = useCallback(async (task: TaskRowData) => {
+    const items = await loadTaskAssignees(task.uid, f);
+    roleTitles.current.set(task.uid, new Map(items.map(o => [o.code, o.title || o.code])));
+    return items;
+  }, [f]);
 
   return (
     <section className="sprint-tasks" aria-label={t('sprintTasks.title')}>
@@ -147,7 +159,7 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             onBulkStatusChange={onBulkStatusChange}
             onSave={onSave}
             // PU-25: роли в правке строки — выбором из кандидатов задачи (срез task_identities).
-            assigneeOptions={task => loadTaskAssignees(task.uid, f)}
+            assigneeOptions={assigneeOptions}
             dict={dicts}
             columns={cols}
             onColumnsChange={onColumnsChange}

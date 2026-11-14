@@ -301,3 +301,21 @@ describe('S4-03 · «Все мои (N своих)» — число своих о
     expect(note().textContent).toMatch(/4/);
   });
 });
+
+// SPRINT_UXR_POLISH_UAT_1113/PU-06 (приёмка v1.17.21): имя и slug в строке могут
+// упереться в ширину и получить многоточие — полный текст обязан быть в подсказке.
+describe('PU-06 · полные имя и slug проекта — в подсказке строки', () => {
+  it('имя и slug несут title с полным текстом', () => {
+    const long = 'Freyja — платформа агентов и долгое описание проекта';
+    render(<Harness options={[{ id: 'AIDA/freyja', title: long }]} />);
+    const dlg = open();
+    const row = dlg.querySelector('[data-scope-id="AIDA/freyja"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    const title = row.querySelector('.sk-scope__title') as HTMLElement;
+    const id = row.querySelector('.sk-scope__id') as HTMLElement;
+    expect(title.textContent).toBe(long);
+    expect(title.getAttribute('title')).toBe(long);
+    expect(id.textContent).toBe('AIDA/freyja');
+    expect(id.getAttribute('title')).toBe('AIDA/freyja');
+  });
+});

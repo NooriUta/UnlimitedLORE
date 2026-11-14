@@ -307,8 +307,12 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     state: p.state === 'denied' ? ('forbidden' as const) : ('error' as const),
     reason: p.error ?? p.state,
   }));
+  // В errors — только сбой и отказ. «Обрезано» (truncated) — не ошибка: оно уже
+  // сказано строкой data_state, а в errors kit читал его как «не прочиталось», и
+  // счётчик вкладки «Задачи» человека (первые 100 из 230) становился «?»
+  // (SPRINT_LORE_MODEL_AS_CONFIG/MC-07, приёмка v1.17.21).
   const errors = [
-    ...c.meta.sources.filter(s => s.state !== 'ok').map(s => ({ block: s.block, reason: s.reason ?? s.state })),
+    ...c.meta.sources.filter(s => s.state === 'error' || s.state === 'forbidden').map(s => ({ block: s.block, reason: s.reason ?? s.state })),
     ...partErrors.map(e => ({ block: e.block, reason: e.reason })),
   ];
   const props = c.schema.fields.filter(f => f.group === 'props');
