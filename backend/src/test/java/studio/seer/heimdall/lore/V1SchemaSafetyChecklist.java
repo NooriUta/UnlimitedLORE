@@ -96,7 +96,15 @@ final class V1SchemaSafetyChecklist {
         // Только INSERT в НОВЫЙ ряд AgentActionLog (тип создан SQL того же шага); MetricSnapshot
         // лишь читается — v1 читает и пишет его по-прежнему.
         "java__agent_action_log",
-        "копия точек lore.action в новый ряд V86 AgentActionLog; MetricSnapshot только читается");
+        "копия точек lore.action в новый ряд V86 AgentActionLog; MetricSnapshot только читается",
+        // SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE, V89 (решение владелицы 14.11 «да, а+б+в»).
+        // Не аддитивен намеренно: снимает Status* ×6, TrackType, HAS_STATUS, OF_TYPE. v1 их не знает —
+        // доказательство RetiredLegacyStatusTypesTest.v1FolderDoesNotReferenceRetiredTypes (папка src/ без
+        // единого упоминания); срез plan_tracks v1 не вызывает. Поля v1 меняются только значением:
+        // status_raw пишется лишь там, где он пуст (UPDATE … AND status_raw IS NULL), формой канона SCD2,
+        // которую v1 читает (taskTick). Прогон — V89LegacyStatusRetireLiveDbTest и «LORE migrate live check».
+        "java__retire_legacy_status_types",
+        "снятие легаси-словарей Status*/TrackType, которых v1 не знает; status_raw пишется только в пустое поле");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

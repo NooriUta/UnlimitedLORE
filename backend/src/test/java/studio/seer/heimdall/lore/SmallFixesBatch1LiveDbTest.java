@@ -47,6 +47,8 @@ class SmallFixesBatch1LiveDbTest {
                 ("root:" + LoreArcadeDbTestResource.ROOT_PASSWORD).getBytes(StandardCharsets.UTF_8)))
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
         HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
+        // Посев обязан падать громко: проглоченный 4xx/5xx превращался в «положительный контроль не сработал» без причины (#1401).
+        if (r.statusCode() / 100 != 2) throw new AssertionError("SQL " + r.statusCode() + ": " + query + " → " + r.body());
         io.vertx.core.json.JsonObject j = new io.vertx.core.json.JsonObject(r.body());
         java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
         io.vertx.core.json.JsonArray arr = j.getJsonArray("result", new io.vertx.core.json.JsonArray());
@@ -93,8 +95,11 @@ class SmallFixesBatch1LiveDbTest {
     /** LH-44 п.3: V51 снимает HAS_STATUS у KnowADRHist и только их. */
     @Test
     void v51DropsLegacyAdrHasStatusOnly() throws Exception {
+        // V89 снял StatusAdr и HAS_STATUS из схемы: легаси-форму, которую чинит V51, заводим здесь сами.
+        sql("CREATE VERTEX TYPE StatusAdr IF NOT EXISTS");
+        sql("CREATE EDGE TYPE HAS_STATUS IF NOT EXISTS");
         sql("CREATE VERTEX KnowADRHist SET state_uid='lh44-probe-hist'");
-        sql("UPDATE StatusAdr SET status_id='LH44_PROBE' UPSERT WHERE status_id='LH44_PROBE'");
+        sql("CREATE VERTEX StatusAdr SET status_id='LH44_PROBE'");
         sql("CREATE EDGE HAS_STATUS FROM (SELECT FROM KnowADRHist WHERE state_uid='lh44-probe-hist') "
             + "TO (SELECT FROM StatusAdr WHERE status_id='LH44_PROBE')");
         assertEquals(1, sql("SELECT FROM (SELECT expand(outE('HAS_STATUS')) FROM KnowADRHist "

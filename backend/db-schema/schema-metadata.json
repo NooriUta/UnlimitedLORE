@@ -1059,82 +1059,6 @@
       ]
     },
     {
-      "name": "StatusAdr",
-      "records": 5,
-      "properties": [
-        {
-          "name": "status_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
-      "name": "StatusDecision",
-      "records": 3,
-      "properties": [
-        {
-          "name": "status_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
-      "name": "StatusMilestone",
-      "records": 4,
-      "properties": [
-        {
-          "name": "status_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
-      "name": "StatusPhase",
-      "records": 5,
-      "properties": [
-        {
-          "name": "status_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
       "name": "StatusPlanItem",
       "records": 354,
       "properties": [
@@ -1147,63 +1071,6 @@
         {
           "properties": [
             "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
-      "name": "StatusSprint",
-      "records": 12,
-      "properties": [
-        {
-          "name": "status_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
-      "name": "StatusTask",
-      "records": 5,
-      "properties": [
-        {
-          "name": "status_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "status_id"
-          ],
-          "unique": true,
-          "type": "LSM_TREE"
-        }
-      ]
-    },
-    {
-      "name": "TrackType",
-      "records": 6,
-      "properties": [
-        {
-          "name": "type_id",
-          "type": "STRING"
-        }
-      ],
-      "indexes": [
-        {
-          "properties": [
-            "type_id"
           ],
           "unique": true,
           "type": "LSM_TREE"
@@ -1297,12 +1164,6 @@
       "indexes": []
     },
     {
-      "name": "HAS_STATUS",
-      "records": 2135,
-      "properties": [],
-      "indexes": []
-    },
-    {
       "name": "IMPLEMENTED_IN",
       "records": 34,
       "properties": [],
@@ -1329,12 +1190,6 @@
     {
       "name": "MEASURED_BY",
       "records": 0,
-      "properties": [],
-      "indexes": []
-    },
-    {
-      "name": "OF_TYPE",
-      "records": 18,
       "properties": [],
       "indexes": []
     },

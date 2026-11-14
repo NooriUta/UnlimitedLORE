@@ -496,6 +496,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 77) splitSharedStates();
         if (version == 82) mergeMachineCase();
         if (version == 86) copyLegacyActions();
+        if (version == 89) retireLegacyStatusTypes();
     }
 
     /**
@@ -1377,7 +1378,7 @@ public class LoreSchemaMigrationRunner {
                     ends.append(' ').append(edge).append("{концы неизвестны: ").append(q.getMessage()).append('}');
                 }
             }
-            LOG.warnf("[LORE MIGRATE] %s ПРОПУЩЕН: типы PlanItem используются, ничего не удалено. Счётчики %s;%s",
+            LOG.warnf("[LORE MIGRATE] %s ПРОПУЩЕН: типы используются, ничего не удалено. Счётчики %s;%s",
                 step, counts, ends);
             return List.of();
         }
@@ -1392,8 +1393,161 @@ public class LoreSchemaMigrationRunner {
             if (typeExists(t)) LOG.warnf("[LORE MIGRATE] %s DROP TYPE %s ответил успехом, а тип остался", step, t);
             else dropped.add(t);
         }
-        LOG.infof("[LORE MIGRATE] %s сняты пустые типы PlanItem: %s (были %s)", step, dropped, counts.keySet());
+        LOG.infof("[LORE MIGRATE] %s сняты пустые типы: %s (были %s)", step, dropped, counts.keySet());
         return dropped;
+    }
+
+    // ── V89 (SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE) ─────────
+
+    /** Итог V89 — числами, чтобы тест и лог сверяли факт, а не ok:true. */
+    record LegacyStatusRetireOutcome(int transferred, int noValue, int orphanHistsDeleted, int hasStatusDeleted,
+                                     int tracksMoved, int ofTypeDeleted, int dictVerticesDeleted, List<String> dropped) {}
+
+    /** Строки истории, у которых статус мог жить в ребре HAS_STATUS (прод 14.11 — все пять). */
+    static final java.util.Set<String> LEGACY_STATUS_HIST_TYPES = java.util.Set.of(
+        "KnowTaskHist", "KnowSprintHist", "KnowPhaseHist", "KnowMilestoneHist", "KnowDecisionHist", "KnowADRHist");
+
+    /** Перенос одной строки: куда (rid, тип) и что (status_raw); raw == null — переносить нечего. */
+    record LegacyStatusTransfer(String rid, String histType, String code, String raw) {}
+
+    /** План V89 по строкам рёбер HAS_STATUS. Чистая функция: незнакомый код бросает ДО любой записи. */
+    record LegacyStatusPlan(List<LegacyStatusTransfer> transfers, List<String> orphanHists) {}
+
+    static LegacyStatusPlan planLegacyStatus(List<Map<String, Object>> edges) {
+        Map<String, LegacyStatusTransfer> byHist = new LinkedHashMap<>();
+        java.util.Set<String> orphans = new java.util.LinkedHashSet<>();
+        for (Map<String, Object> e : edges) {
+            String hist = str(e.get("hist"));
+            String type = str(e.get("hist_type"));
+            if (hist == null || !RID.matcher(hist).matches())
+                throw new IllegalStateException("V89: у ребра HAS_STATUS " + e.get("rid") + " нет строки истории: " + hist);
+            if (!LEGACY_STATUS_HIST_TYPES.contains(type))
+                throw new IllegalStateException("V89: HAS_STATUS из неожиданного типа " + type + " (" + hist + ")");
+            long owners = e.get("owners") instanceof Number n ? n.longValue() : 0;
+            // Сирота-решение: строки истории без владельца (нет входящего HAS_STATE) — мусор
+            // Python-ingest; статус переносить некуда, строка снимается вместе с ребром.
+            if ("KnowDecisionHist".equals(type) && owners == 0) { orphans.add(hist); continue; }
+            // У ADR статус живёт в KnowADR.status, не в строке истории — как и в V51, ребро только снимается.
+            if ("KnowADRHist".equals(type)) continue;
+            String raw = str(e.get("raw"));
+            if (raw != null && !raw.isBlank()) continue;
+            String code = str(e.get("code"));
+            LegacyStatusTransfer t = new LegacyStatusTransfer(hist, type, code,
+                LoreSchemaMigrations.legacyStatusRaw(type, code));
+            LegacyStatusTransfer was = byHist.putIfAbsent(hist, t);
+            if (was != null && !java.util.Objects.equals(was.raw(), t.raw()))
+                throw new IllegalStateException("V89: у строки " + hist + " два разных легаси-статуса: "
+                    + was.code() + " и " + t.code() + " — перенос решается явно");
+        }
+        return new LegacyStatusPlan(List.copyOf(byHist.values()), List.copyOf(orphans));
+    }
+
+    private static final String LEGACY_STATUS_EDGES_SQL =
+        "SELECT @rid AS rid, @out AS hist, @out.@type AS hist_type, @out.status_raw AS raw, "
+        + "@out.in('HAS_STATE').size() AS owners, @in.status_id AS code FROM HAS_STATUS";
+
+    /**
+     * V89: снять легаси-словари статусов (Status* ×6, TrackType) и рёбра к ним, перенеся то, что
+     * жило только в них. Порядок — перенос раньше удаления, и каждый перенос сверяется фактом:
+     * <ol>
+     *   <li>(а, б) status_raw из ребра у строк истории без статуса ({@link #planLegacyStatus});
+     *       повторный план обязан быть пустым — иначе шаг падает, ничего не удалено;</li>
+     *   <li>сироты KnowDecisionHist с HAS_STATUS — удаляются (владельца нет);</li>
+     *   <li>рёбра HAS_STATUS — по @rid (DELETE EDGE в грамматике нет), остаток = 0, иначе падение;</li>
+     *   <li>(в) PlanTrack.area из OF_TYPE → TrackType.type_id, сверка, рёбра OF_TYPE по @rid;</li>
+     *   <li>вершины Status* и TrackType (значения — в лог) и DROP TYPE пустых.</li>
+     * </ol>
+     * Идемпотентен: на базе без этих типов каждый пункт — no-op.
+     */
+    LegacyStatusRetireOutcome retireLegacyStatusTypes() {
+        int transferred = 0, noValue = 0, orphansDeleted = 0, edgesDeleted = 0, tracks = 0, ofType = 0, dictDeleted = 0;
+
+        if (typeExists("HAS_STATUS")) {
+            LegacyStatusPlan plan = planLegacyStatus(ingest.queryPublic(LEGACY_STATUS_EDGES_SQL, Map.of()));
+            for (LegacyStatusTransfer t : plan.transfers()) {
+                if (t.raw() == null) {
+                    noValue++;
+                    LOG.infof("[LORE MIGRATE] V89 статус '%s' у %s %s не переносится (не статус) — поле остаётся пустым",
+                        t.code(), t.histType(), t.rid());
+                    continue;
+                }
+                LOG.infof("[LORE MIGRATE] V89 перенос %s %s: HAS_STATUS '%s' → status_raw '%s'",
+                    t.histType(), t.rid(), t.code(), t.raw());
+                command("UPDATE " + t.histType() + " SET status_raw = :raw WHERE @rid = " + t.rid()
+                    + " AND (status_raw IS NULL OR status_raw = '')", Map.of("raw", t.raw()));
+                transferred++;
+            }
+            LegacyStatusPlan again = planLegacyStatus(ingest.queryPublic(LEGACY_STATUS_EDGES_SQL, Map.of()));
+            long left = again.transfers().stream().filter(t -> t.raw() != null).count();
+            if (left > 0)
+                throw new IllegalStateException("V89: после переноса у " + left
+                    + " строк истории статус всё ещё только в HAS_STATUS — ничего не удалено");
+
+            for (String hist : plan.orphanHists()) {
+                LOG.infof("[LORE MIGRATE] V89 снимаю историю-сироту KnowDecisionHist %s (нет владельца)", hist);
+                command("DELETE FROM KnowDecisionHist WHERE @rid = " + hist + " AND in('HAS_STATE').size() = 0", Map.of());
+                orphansDeleted++;
+            }
+
+            Map<String, Integer> byCode = new java.util.TreeMap<>();
+            for (Map<String, Object> e : ingest.queryPublic(
+                    "SELECT @rid AS rid, @out.@type AS hist_type, @in.status_id AS code FROM HAS_STATUS", Map.of())) {
+                String rid = str(e.get("rid"));
+                if (rid == null || !RID.matcher(rid).matches()) throw new IllegalStateException("V89: странный @rid ребра " + rid);
+                command("DELETE FROM HAS_STATUS WHERE @rid = " + rid, Map.of());
+                byCode.merge(e.get("hist_type") + "→" + e.get("code"), 1, Integer::sum);
+                edgesDeleted++;
+            }
+            long rest = countOf("SELECT count(*) AS n FROM HAS_STATUS", Map.of());
+            if (rest > 0) throw new IllegalStateException("V89: после удаления осталось " + rest + " рёбер HAS_STATUS");
+            LOG.infof("[LORE MIGRATE] V89 снято рёбер HAS_STATUS: %d %s", edgesDeleted, byCode);
+        }
+
+        if (typeExists("OF_TYPE") && typeExists("PlanTrack")) {
+            for (Map<String, Object> r : ingest.queryPublic(
+                    "SELECT @rid AS rid, track_id, area, out('OF_TYPE').type_id AS types FROM PlanTrack", Map.of())) {
+                String rid = str(r.get("rid"));
+                Object types = r.get("types");
+                String type = types instanceof List<?> l && !l.isEmpty() ? str(l.get(0)) : null;
+                if (type == null || (r.get("area") != null && !str(r.get("area")).isBlank())) continue;
+                if (rid == null || !RID.matcher(rid).matches()) throw new IllegalStateException("V89: странный @rid трека " + rid);
+                LOG.infof("[LORE MIGRATE] V89 трек %s: OF_TYPE '%s' → area", r.get("track_id"), type);
+                command("UPDATE PlanTrack SET area = :a WHERE @rid = " + rid + " AND (area IS NULL OR area = '')",
+                    Map.of("a", type));
+                tracks++;
+            }
+            long notMoved = countOf("SELECT count(*) AS n FROM PlanTrack WHERE (area IS NULL OR area = '') "
+                + "AND out('OF_TYPE').size() > 0", Map.of());
+            if (notMoved > 0)
+                throw new IllegalStateException("V89: у " + notMoved + " треков тип остался только в OF_TYPE — ничего не удалено");
+            for (Map<String, Object> e : ingest.queryPublic("SELECT @rid AS rid FROM OF_TYPE", Map.of())) {
+                String rid = str(e.get("rid"));
+                if (rid == null || !RID.matcher(rid).matches()) throw new IllegalStateException("V89: странный @rid ребра " + rid);
+                command("DELETE FROM OF_TYPE WHERE @rid = " + rid, Map.of());
+                ofType++;
+            }
+            long rest = countOf("SELECT count(*) AS n FROM OF_TYPE", Map.of());
+            if (rest > 0) throw new IllegalStateException("V89: после удаления осталось " + rest + " рёбер OF_TYPE");
+        }
+
+        for (String t : LoreSchemaMigrations.RETIRED_LEGACY_STATUS_TYPES) {
+            if (t.equals("HAS_STATUS") || t.equals("OF_TYPE") || !typeExists(t)) continue;
+            List<Map<String, Object>> rows = ingest.queryPublic("SELECT * FROM `" + t + "`", Map.of());
+            if (rows.isEmpty()) continue;
+            List<String> values = new ArrayList<>();
+            for (Map<String, Object> r : rows)
+                values.add(str(r.get("status_id") != null ? r.get("status_id") : r.get("type_id")) + "=" + r.get("label"));
+            LOG.infof("[LORE MIGRATE] V89 снимаю словарь %s: %s", t, values);
+            command("DELETE FROM `" + t + "`", Map.of());
+            dictDeleted += rows.size();
+        }
+
+        List<String> dropped = dropTypesIfUnused("V89", LoreSchemaMigrations.RETIRED_LEGACY_STATUS_TYPES,
+            List.of("HAS_STATUS", "OF_TYPE"));
+        LegacyStatusRetireOutcome out = new LegacyStatusRetireOutcome(transferred, noValue, orphansDeleted,
+            edgesDeleted, tracks, ofType, dictDeleted, dropped);
+        LOG.infof("[LORE MIGRATE] V89 итог: %s", out);
+        return out;
     }
 
     /**
@@ -1406,6 +1560,12 @@ public class LoreSchemaMigrationRunner {
      * Идемпотентен: повторный проход не находит рёбер.
      */
     void dropLegacyAdrHasStatus() {
+        // V89 снял тип HAS_STATUS, чистая установка его больше не создаёт: обход outE('HAS_STATUS')
+        // по несуществующему типу — ошибка схемы, а снимать тут нечего.
+        if (!typeExists("HAS_STATUS")) {
+            LOG.infof("[LORE MIGRATE] V51 типа HAS_STATUS нет — снимать нечего");
+            return;
+        }
         // Та же форма выборки рёбер, что у DELETE в ресурсах (expand(outE(...))) —
         // проверенная на этой грамматике, без фильтра по типу конца.
         List<Map<String, Object>> edges = ingest.queryPublic(

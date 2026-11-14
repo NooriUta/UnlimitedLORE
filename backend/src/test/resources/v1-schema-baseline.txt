@@ -2,6 +2,8 @@
 # Снят с живой базы CI (PR #861, прогон 3811, sha da4eb392) после накатки шагов 1..62,
 # до первой миграции S2. Формат: Type | Type.prop:TYPE. Перезапись — только решением,
 # через LORE_V1_SCHEMA_WRITE (см. V1WorksOnNewSchemaLiveDbTest).
+# 14.11.2026 (решение владелицы, SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE): строки Status* ×6,
+# TrackType, HAS_STATUS, OF_TYPE убраны — их снял V89; v1 их не читает (RetiredLegacyStatusTypesTest).
 ADDRESSES
 ANSWERS
 ATTACHED_TO
@@ -147,7 +149,6 @@ HAS_ASSET
 HAS_PROJECT_ROLE
 HAS_PROJECT_ROLE.role:STRING
 HAS_STATE
-HAS_STATUS
 HAS_VARIANT
 HELPS_WITH
 IMPLEMENTED_IN
@@ -410,7 +411,6 @@ MetricSnapshot.segment:STRING
 MetricSnapshot.source:STRING
 MetricSnapshot.ts:LONG
 MetricSnapshot.value:DOUBLE
-OF_TYPE
 ON_MILESTONE
 OWNED_BY
 PARENT_OF
@@ -463,26 +463,12 @@ SERVES.kind:STRING
 SHIPPED_IN
 SUCCESS_OF
 SUPERSEDES
-StatusAdr
-StatusAdr.status_id:STRING
-StatusDecision
-StatusDecision.status_id:STRING
-StatusMilestone
-StatusMilestone.status_id:STRING
-StatusPhase
-StatusPhase.status_id:STRING
-StatusSprint
-StatusSprint.status_id:STRING
-StatusTask
-StatusTask.status_id:STRING
 TAGGED_WITH
 TARGETS_KEY
 TARGETS_MILESTONE
 TARGETS_PAGE
 TARGETS_PRODUCT
 TRACED_TO
-TrackType
-TrackType.type_id:STRING
 UC_EXTENDS
 UC_INCLUDES
 USES
