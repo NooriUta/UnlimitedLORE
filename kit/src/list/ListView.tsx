@@ -437,7 +437,7 @@ function initialExpanded(win: UrlWindow | null): Set<string> {
   return new Set(raw ? raw.split(',').filter(Boolean) : []);
 }
 
-function initialState(win: UrlWindow | null, initial: Partial<ListState> | undefined): ListState {
+export function initialState(win: UrlWindow | null, initial: Partial<ListState> | undefined): ListState {
   const s: ListState = { ...DEFAULT_LIST_STATE, ...initial };
   if (!win) return s;
   const params = readUrlState(win);
@@ -451,6 +451,13 @@ function initialState(win: UrlWindow | null, initial: Partial<ListState> | undef
   if (params.has('lt')) s.text = parsed.text;
   if (params.has('lc')) s.closed = parsed.closed;
   if (params.has('lg2')) s.group2 = parsed.group2;
+  // Приёмка препрода 14.11.2026: lav (вид приложения), lm (месяц календаря), lcd (день календаря)
+  // и llf (фильтр библиотеки) пишутся в адрес, но при загрузке не восстанавливались — после
+  // перезагрузки «Völva» сбрасывалась на «Список». Каждое поле адреса восстанавливается.
+  if (params.has('lav')) s.appView = parsed.appView;
+  if (params.has('lm')) s.month = parsed.month;
+  if (params.has('lcd')) s.calDate = parsed.calDate;
+  if (params.has('llf')) s.libFilter = parsed.libFilter;
   return s;
 }
 
