@@ -19,7 +19,7 @@ describe('CT-KIT-FIXTURES: модель с живого сервера', () => {
 
   it.each(['task', 'sprint', 'adr'])('у типа %s есть статусы с категорией', async kind => {
     const res = await loadModel(async () => raw());
-    if (res.state !== 'ok') throw new Error('модель не разобрана');
+    if (res.state !== 'ok' || !res.model) throw new Error('модель не разобрана');
     // Ключ блока статусов в документе — ТИП записи (statuses.task), имя словаря лежит внутри.
     const cfg = configFromModel(res.model, { statusDict: kind });
     const items = cfg.statuses;
@@ -33,7 +33,7 @@ describe('CT-KIT-FIXTURES: модель с живого сервера', () => {
 
   it('словарь задач на базе с нуля полон: оговорки «нет в справочнике» нет (V90)', async () => {
     const res = await loadModel(async () => raw());
-    if (res.state !== 'ok') throw new Error('модель не разобрана');
+    if (res.state !== 'ok' || !res.model) throw new Error('модель не разобрана');
     const warnings = (raw() as { warnings?: string[] }).warnings ?? [];
     expect(warnings.filter(w => /^(task|sprint)_status: .*нет в справочнике/.test(w))).toEqual([]);
   });
