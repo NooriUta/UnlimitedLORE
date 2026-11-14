@@ -7,6 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
+import type { RecordPlacement } from './RecordDock';
 import { RecordSection } from './RecordSection';
 import { EditableField } from './EditableField';
 import { SumCell, sumText } from '../list/sum';
@@ -117,7 +118,7 @@ export interface RecordViewProps {
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
   /** «слева» раскладывается как «справа» — узкая боковая панель (MP2-14). */
-  placement?: 'left' | 'right' | 'bottom' | 'full';
+  placement?: RecordPlacement;
   /**
    * S4-30: «Свойства» в режиме «на весь экран» — открыты или свёрнуты.
    *

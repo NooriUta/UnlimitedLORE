@@ -19,6 +19,7 @@ import { onScreenItems, selectAllShown, toggleId, visibleSelection } from '../li
 import { useLongPress } from '../list/useLongPress';
 import type { KitConfig, KitDictItem, KitRecord } from '../core/contract';
 import { StatusStar } from '../elements/StatusStar';
+import { STATUS_UNDO_MS, StatusConfirm, useUndoWindow } from '../core/statusGuard';
 import { statusLabel, statusMeta } from '../elements/statusMeta';
 import { hasKitString, kitT, useKitLang, type KitKey, type KitLang } from '../i18n';
 import { errorDetail } from '../states/loadState';
@@ -64,6 +65,11 @@ export interface TaskTableProps {
    * бы молча.
    */
   statuses?: KitConfig['statuses']['items'];
+  /**
+   * S4-18: защита от случайной смены статуса в строке. По умолчанию — смена сразу и «Вернуть»
+   * с остатком (undoMs, 8 с); confirm — личная настройка «подтверждать»: сначала вопрос.
+   */
+  statusGuard?: { confirm?: boolean; undoMs?: number };
   /**
    * Набор колонок в порядке показа (S4-35, «наши любимые общие колонки»).
    * Не задан — прежний полный набор v1. Незнакомые ключи отбрасываются.
@@ -228,7 +234,7 @@ function taskRecord(tk: TaskRowData): KitRecord {
   };
 }
 
-export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, assigneeOptions, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, controls, className }: TaskTableProps) {
+export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusChange, onSave, assigneeOptions, hrefFor, label, dict, statuses, columns, onColumnsChange, onBulkStatusChange, controls, className, statusGuard }: TaskTableProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [colsOpen, setColsOpen] = useState(false);
@@ -453,6 +459,7 @@ export function TaskTable({ tasks, phases, groupBy, onGroupByChange, onStatusCha
                   colKeys={cols.map(c => c.key)}
                   dict={dict}
                   statuses={statuses}
+                  statusGuard={statusGuard}
                   onStatusChange={onStatusChange}
                   onSave={onSave}
                   assigneeOptions={assigneeOptions}
@@ -492,6 +499,7 @@ interface RowProps {
   dict?: TaskTableProps['dict'];
   statuses?: TaskTableProps['statuses'];
   onStatusChange?: TaskTableProps['onStatusChange'];
+  statusGuard?: TaskTableProps['statusGuard'];
   onSave?: TaskTableProps['onSave'];
   assigneeOptions?: TaskTableProps['assigneeOptions'];
   href?: string;
@@ -499,7 +507,7 @@ interface RowProps {
   sel?: { checked: boolean; onToggle: () => void };
 }
 
-function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, onStatusChange, onSave, assigneeOptions, href, sel }: RowProps) {
+function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, statuses, statusGuard, onStatusChange, onSave, assigneeOptions, href, sel }: RowProps) {
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -526,18 +534,30 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
     setMenuOpen(false);
   }
 
-  async function pick(status: TaskStatus) {
-    if (status === current) { closeMenu(); return; }
-    setMenuOpen(false);
+  // S4-18: вопрос до записи (настройка) и окно «Вернуть» с остатком после.
+  const [ask, setAsk] = useState<TaskStatus | null>(null);
+  const [undoTo, setUndoTo] = useState<TaskStatus | null>(null);
+  const win = useUndoWindow(statusGuard?.undoMs ?? STATUS_UNDO_MS);
+
+  async function apply(status: TaskStatus, isUndo: boolean) {
+    const from = current;
     setBusy(true);
     setError(null);
     try {
       await onStatusChange?.(task, status);
+      if (isUndo) { setUndoTo(null); win.clear(); } else { setUndoTo(from); win.start(); }
     } catch (e) {
       setError(t('kit.tasks.statusFailed', { detail: errorDetail(e) || String(e) }));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function pick(status: TaskStatus) {
+    if (status === current) { closeMenu(); return; }
+    setMenuOpen(false);
+    if (statusGuard?.confirm) { setAsk(status); return; }
+    await apply(status, false);
   }
 
   /**
@@ -780,6 +800,23 @@ function TaskRow({ task, lang, phaseText, effortText, colCount, colKeys, dict, s
           </td>
         )}
       </tr>
+      {ask !== null && (
+        <tr>
+          <td colSpan={colCount} className="sk-tasks__ask">
+            <StatusConfirm from={taskStatusName(lang, current)} to={taskStatusName(lang, ask)}
+              onCancel={() => setAsk(null)} onConfirm={() => { const to = ask; setAsk(null); void apply(to, false); }} />
+          </td>
+        </tr>
+      )}
+      {undoTo !== null && win.left > 0 && !busy && (
+        <tr>
+          <td colSpan={colCount} className="sk-tasks__undo">
+            <button type="button" className="sk-btn" onClick={() => void apply(undoTo, true)}>
+              {t('kit.status.undoLeft', { title: taskStatusName(lang, undoTo), s: win.left })}
+            </button>
+          </td>
+        </tr>
+      )}
       {error && (
         <tr>
           <td colSpan={colCount} className="sk-tasks__err"><div id={errId} role="alert">{error}</div></td>

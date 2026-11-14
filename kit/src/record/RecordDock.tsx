@@ -55,7 +55,18 @@ function useWindowSize(): { w: number; h: number } {
 }
 
 /** MP2-14-PLACE-LEFT: «слева» — зеркало «справа» (владелица 13.11: «если задано… влево — значит он открывается именно там»). */
-export type RecordPlacement = 'left' | 'right' | 'bottom' | 'full';
+/**
+ * Места показа записи — ДАННЫМИ, одним списком (S4-17, решение владелицы 14.11.2026: «пока не делать
+ * модалку, но заложить возможность»). Тип, проверка, меню kit, личная настройка и адрес приложения
+ * читают этот список; новое место (modal) — строка здесь и его отрисовка в доке, без правки экранов.
+ * Сторож — record/placements.test.ts.
+ */
+export const RECORD_PLACEMENTS = ['left', 'right', 'bottom', 'full'] as const;
+export type RecordPlacement = (typeof RECORD_PLACEMENTS)[number];
+/** Значение из адреса, настройки или сервера — место записи? Незнакомое — нет (экран берёт умолчание). */
+export function isRecordPlacement(v: unknown): v is RecordPlacement {
+  return typeof v === 'string' && (RECORD_PLACEMENTS as readonly string[]).includes(v);
+}
 
 export interface RecordDockProps {
   placement: RecordPlacement;

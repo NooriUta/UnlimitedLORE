@@ -13,7 +13,7 @@
 //
 // Компонент обязан рисоваться ВНУТРИ <KitShell> (слот topEnd подходит):
 // useKitShell вне оболочки честно падает, а не возвращает пустую навигацию.
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { pushUrlState, urlStateHref, useKitLang, useKitShell, type KitConfig, type KitRecord, type SafeStorage } from '@seidr/kit';
 import { appT } from '../i18n';
 import { v2Config } from '../shell/v2Config';
@@ -21,6 +21,7 @@ import { LorePalette } from './LorePalette';
 import { shellRecentList } from './shellRecent';
 import { usePaletteTarget } from './paletteTarget';
 import { sectionOfType } from '../nav/loreRoutes';
+import { CREATE_TYPES, NEW_RECORD_ID, fetchCanCreate, type CreateType } from '../record/recordCreate';
 import './SectionPalette.css';
 
 /**
@@ -47,15 +48,41 @@ export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
   const { navigate } = api;
   const config = useMemo(() => v2Config(lang), [lang]);
 
+  // S4-24 (14.11): «Новая запись в «…»» — тот же вход в одобренную форму, что кнопка «Новая» списка.
+  // Права те же: команда только у типов, где сервер разрешил создавать (perms.can_create паспорта _new);
+  // не смогли спросить — команды нет: форма, которая откажет после заполнения, хуже её отсутствия.
+  const [creatable, setCreatable] = useState<readonly CreateType[]>([]);
+  useEffect(() => {
+    let live = true;
+    void Promise.all(CREATE_TYPES.map(async t => ((await fetchCanCreate(t, fetchImpl)).can ? t : null)))
+      .then(list => { if (live) setCreatable(list.filter((t): t is CreateType => t !== null)); });
+    return () => { live = false; };
+  }, [fetchImpl]);
+
   const ctx = useMemo(() => {
     const commands = config.menu.groups.flatMap(g => g.items.map(i => ({
       id: `go:${i.id}`,
       title: appT(lang, 'palette.goSection', { section: i.title }),
       run: () => navigate({ item: i.id, view: i.view ?? null }),
     })));
-    const withCommands: KitConfig = { ...config, palette: { commands } };
+    const newCommands = creatable.flatMap(type => {
+      const section = sectionOfType(type);
+      if (!section) return [];
+      const title = config.menu.groups.flatMap(g => g.items).find(i => i.id === section)?.title ?? config.kinds[type]?.title ?? type;
+      return [{
+        id: `new:${type}`,
+        title: appT(lang, 'palette.newIn', { section: title }),
+        run: () => {
+          // Сначала раздел (оболочка снимает параметры прежнего), потом open=_new — как openRecord.
+          navigate({ item: section, view: null });
+          const win = api.win;
+          if (win) pushUrlState({ open: NEW_RECORD_ID, place: null }, { replace: true, win, anchor: null });
+        },
+      }];
+    });
+    const withCommands: KitConfig = { ...config, palette: { commands: [...newCommands, ...commands] } };
     return { config: withCommands };
-  }, [config, lang, navigate]);
+  }, [config, lang, navigate, creatable, api]);
 
   // «Недавнее» палитры — список оболочки: открытое из списка видно и там, и
   // тут. Аудит 08.11 нашёл обе половины по отдельности; это вторая.

@@ -6,6 +6,7 @@
 // Состояние группировки — в URL (?group=phase|status|none, replace: не
 // засоряет историю «назад»). Запись подтверждённая: строка меняется после
 // ответа сервера, отказ рисуется в строке (это делает TaskTable).
+import { appliedStatusConfirm } from '../settings/applied';
 import { useCallback, useEffect, useState } from 'react';
 import { loreFetch } from '../auth/session';
 import {
@@ -141,6 +142,8 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             groupBy={groupBy}
             onGroupByChange={onGroupByChange}
             onStatusChange={onStatusChange}
+            // S4-18: «подтверждать смену статуса» — личная настройка; по умолчанию смена сразу и 8 с «Вернуть».
+            statusGuard={{ confirm: appliedStatusConfirm() }}
             onBulkStatusChange={onBulkStatusChange}
             onSave={onSave}
             // PU-25: роли в правке строки — выбором из кандидатов задачи (срез task_identities).
