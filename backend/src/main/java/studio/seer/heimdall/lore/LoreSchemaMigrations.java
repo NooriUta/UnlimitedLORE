@@ -1639,7 +1639,13 @@ final class LoreSchemaMigrations {
         // теги не добавить). SQL — новый тип (IF NOT EXISTS); java — однократная копия прежних
         // точек lore.action с отметкой «неизвестно», без догадки. Прежние точки остаются.
         // V85 — PU-24 (#1342), выше.
-        new Step(86, 17, "java__agent_action_log", List.of(AgentActionLog.DDL))
+        new Step(86, 17, "java__agent_action_log", List.of(AgentActionLog.DDL)),
+
+        // SPRINT_LORE_AGENT_OBSERVABILITY/AO-02 (след источников «к сущности», механизм за флагом
+        // lore.agent.sources.enabled, по умолчанию выкл): ребро SOURCED_FROM «опирался на» со свойствами
+        // at, via. Аддитивно, major 17: новый тип ребра. Отдельным шагом — V86 уже влит (#1343),
+        // его SQL менять нельзя (контрольная сумма). DDL рядом с логикой (AgentSourceTrail).
+        new Step(87, 17, "source_trail_edge", AgentSourceTrail.DDL)
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */
