@@ -2,6 +2,7 @@
 // (владелица: «левое меню с настройками возьми у обсидиан», «бери пока из
 // обсидиан»): Фильтры, Группы, Отображение, Силы. Каждый раздел сворачивается.
 import { useId, type CSSProperties } from 'react';
+import { CheckMenu } from '../elements/CheckMenu';
 import { kitT, type KitLang } from '../i18n';
 import {
   GX_DEFAULTS, GX_GROUP_COLORS, GX_RANGES, type GxSettings, type GxStyle,
@@ -50,18 +51,10 @@ export function GraphSettingsPanel({ lang, settings: s, onChange, types }: Props
             placeholder={kitT(lang, 'kit.graph.searchHint')}
             onChange={e => onChange({ ...s, search: e.target.value })} />
         </div>
-        <ul className="sk-gx-panel__types">
-          {types.map(t => (
-            <li key={t.key}>
-              <label className="sk-gx-panel__check">
-                <input type="checkbox" checked={!hidden.has(t.key)} onChange={() => toggleType(t.key)} />
-                <span className="sk-gx-dot" aria-hidden="true" style={{ '--gx-c': toCssColor(t.style.color) } as CSSProperties} />
-                <span>{t.style.label}</span>
-                <span className="sk-gx-panel__count">{t.count}</span>
-              </label>
-            </li>
-          ))}
-        </ul>
+        {/* S9-08, владелица 14.11: «выбор типа не полем, а дропдауном» — типы узлов галочками в списке. */}
+        <CheckMenu lang={lang} testId="gx-types" className="sk-gx-panel__types" label={kitT(lang, 'kit.graph.nodeTypes')}
+          onToggle={toggleType}
+          items={types.map(t => ({ key: t.key, label: t.style.label, color: toCssColor(t.style.color), count: t.count, checked: !hidden.has(t.key) }))} />
         <label className="sk-gx-panel__check">
           <input type="checkbox" checked={s.orphans} onChange={() => onChange({ ...s, orphans: !s.orphans })} />
           <span>{kitT(lang, 'kit.graph.orphans')}</span>

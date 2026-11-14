@@ -16,6 +16,8 @@ import { Pill } from '../elements/Pill';
 import { kitT, pluralForm, type KitLang } from '../i18n';
 import { edgeColor, egoGraph, typesAround, verdictTone } from './graph';
 import type { EgoCluster } from './graph';
+import { CheckMenu } from '../elements/CheckMenu';
+import type { GraphDepth } from './graphState';
 import { GRAPH_DEPTHS, allowedEdgeTypes, edgeLabel, isStructural, useGraphState } from './graphState';
 import { blockError } from './RecordLinks';
 import { useNarrow } from '../core/narrow';
@@ -86,15 +88,14 @@ export function RecordGraph(
 
   const controls = (
     <div className="sk-rec-graph__ctl" role="group" aria-label={kitT(lang, 'kit.record.graph.controls')}>
-      <div className="sk-rec-graph__depth" role="group" aria-label={kitT(lang, 'kit.record.graph.depth')}>
-        <span className="sk-rec-graph__ctl-label" aria-hidden="true">{kitT(lang, 'kit.record.graph.depth')}</span>
-        {GRAPH_DEPTHS.map(d => (
-          <Pill key={d} variant="filter" pressed={state.depth === d} onToggle={() => setDepth(d)}
-            title={kitT(lang, 'kit.record.graph.depthHint', { n: d })}>
-            {String(d)}
-          </Pill>
-        ))}
-      </div>
+      {/* S9-08, владелица 14.11: «сделай выбор, сколько шагов от записи пройти … дропдауном». */}
+      <label className="sk-rec-graph__depth">
+        <span className="sk-rec-graph__ctl-label">{kitT(lang, 'kit.record.graph.steps')}</span>
+        <select className="sk-rec-graph__select" value={state.depth}
+          onChange={e => setDepth(Number(e.target.value) as GraphDepth)}>
+          {GRAPH_DEPTHS.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+      </label>
       <div className="sk-rec-graph__view" role="group" data-testid="kit-graph-view" aria-label={kitT(lang, 'kit.record.graph.view')}>
         <Pill variant="filter" pressed={view === 'graph'} onToggle={() => setView('graph')}
           title={kitT(lang, 'kit.record.graph.viewGraphHint')}>
@@ -130,14 +131,10 @@ export function RecordGraph(
   const notes = ctx.data.meta.graphNotes ?? [];
   const legend = (
     <>
-    <div className="sk-rec-graph__legend" role="group" data-testid="kit-graph-legend" aria-label={kitT(lang, 'kit.record.graph.legend')}>
-      {chips.map(t => (
-        <Pill key={t.type} variant="filter" pressed={!off.has(t.type)} onToggle={() => toggleType(t.type)} title={t.type}>
-          <span className="sk-rec-dot" aria-hidden="true" style={{ '--edge-c': edgeColor(ctx.config, t.type) } as CSSProperties} />
-          <span>{edgeLabel(ctx.config, t.type)}</span>
-          <span className="sk-rec-links__count">{t.count}</span>
-        </Pill>
-      ))}
+    {/* S9-08, владелица 14.11: «выбор типа не полем, а дропдауном» — галочки вместо чипов. */}
+    <div className="sk-rec-graph__legend" data-testid="kit-graph-legend">
+      <CheckMenu lang={lang} label={kitT(lang, 'kit.record.graph.legend')} onToggle={toggleType}
+        items={chips.map(t => ({ key: t.type, label: edgeLabel(ctx.config, t.type), color: edgeColor(ctx.config, t.type), count: t.count, checked: !off.has(t.type) }))} />
     </div>
     {notes.length > 0 && (
       <ul className="sk-rec-graph__notes" data-testid="kit-graph-notes">

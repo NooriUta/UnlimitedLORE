@@ -62,16 +62,15 @@ describe('S5-10 · глубина 1–3', () => {
   it('по умолчанию — глубина из конфига; структурный слой скрыт', () => {
     show();
     expect(nodeIds()).toEqual(['D-1', 'T-1']);
-    const depth = screen.getByRole('group', { name: 'Глубина' });
-    const buttons = within(depth).getAllByRole('button');
-    // Владелица 11.11: «связи 2, 3, 4 уровней» — глубина до 4 (было до 3).
-    expect(buttons.map(b => b.textContent)).toEqual(['1', '2', '3', '4']);
-    expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+    // Владелица 11.11: «связи 2, 3, 4 уровней» — глубина до 4; с 14.11 — выпадающим списком (S9-08).
+    const depth = screen.getByRole('combobox', { name: /Шагов от записи/ }) as HTMLSelectElement;
+    expect([...depth.options].map(o => o.textContent)).toEqual(['1', '2', '3', '4']);
+    expect(depth.value).toBe('1');
   });
 
   it('глубина 2 — сосед соседа появляется, глубина пишется в URL', () => {
     show();
-    act(() => { fireEvent.click(within(screen.getByRole('group', { name: 'Глубина' })).getByRole('button', { name: '2' })); });
+    act(() => { fireEvent.change(screen.getByRole('combobox', { name: /Шагов от записи/ }), { target: { value: '2' } }); });
     expect(nodeIds()).toEqual(['D-1', 'T-1', 'T-2']);
     expect(param('gdepth')).toBe('2');
   });
@@ -98,11 +97,11 @@ describe('S5-10 · фильтры типов', () => {
   it('выключенный тип прячет свои узлы, кнопка отжата, тип — в URL', () => {
     show();
     const filters = screen.getByRole('group', { name: 'Типы рёбер' });
-    const chip = within(filters).getByRole('button', { name: /упоминает/ });
-    expect(chip.getAttribute('aria-pressed')).toBe('true');
+    const chip = within(filters).getByRole('checkbox', { name: /упоминает/ }) as HTMLInputElement;
+    expect(chip.checked).toBe(true);
     act(() => { fireEvent.click(chip); });
     expect(nodeIds()).toEqual(['D-1']);
-    expect(within(screen.getByRole('group', { name: 'Типы рёбер' })).getByRole('button', { name: /упоминает/ }).getAttribute('aria-pressed')).toBe('false');
+    expect((within(screen.getByRole('group', { name: 'Типы рёбер' })).getByRole('checkbox', { name: /упоминает/ }) as HTMLInputElement).checked).toBe(false);
     expect(param('goff')).toBe('REFERENCES');
   });
 
@@ -120,13 +119,13 @@ describe('S5-10 · фильтры типов', () => {
 describe('S5-10 · слой структурных связей', () => {
   it('включение слоя показывает структурные рёбра и их фильтр; слой — в URL', () => {
     show();
-    expect(within(screen.getByRole('group', { name: 'Типы рёбер' })).queryByRole('button', { name: /входит в/ })).toBeNull();
+    expect(within(screen.getByRole('group', { name: 'Типы рёбер' })).queryByRole('checkbox', { name: /входит в/ })).toBeNull();
     const toggle = screen.getByRole('button', { name: /Структурные связи/ });
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
     act(() => { fireEvent.click(toggle); });
     expect(nodeIds()).toEqual(['D-1', 'S-1', 'T-1']);
     expect(param('glayer')).toBe('struct');
-    expect(within(screen.getByRole('group', { name: 'Типы рёбер' })).getByRole('button', { name: /входит в/ })).toBeTruthy();
+    expect(within(screen.getByRole('group', { name: 'Типы рёбер' })).getByRole('checkbox', { name: /входит в/ })).toBeTruthy();
   });
 
   it('есть только структурные связи — подсказка включить слой, сброс включает его', () => {
