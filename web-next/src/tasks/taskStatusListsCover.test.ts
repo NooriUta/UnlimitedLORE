@@ -53,6 +53,6 @@ describe('PU-29 п.8 · каждый список статусов задачи 
     installKitVocabulary();
     expect(statusMeta('waiting').icon).toBe('hourglass');
     expect(statusMeta('review').icon).toBe('magnifying-glass');
-    expect(statusMeta('failed').icon).toBe('cancel');
+    expect(statusMeta('failed').icon).toBe('lucide:circle-x');
   });
 });

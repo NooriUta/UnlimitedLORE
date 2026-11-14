@@ -55,7 +55,7 @@ export const LORE_CORE_STATUSES: Record<string, StatusRow> = {
   // меню таблицы задач их не предлагало, а чип рисовался заглушкой.
   waiting: { icon: 'hourglass', color: 'inf', category: 'active', label: { ru: 'Ждём ответа', en: 'Waiting' } },
   review: { icon: 'magnifying-glass', color: 'wrn', category: 'review', label: { ru: 'На приёмке', en: 'Review' } },
-  failed: { icon: 'cancel', color: 'dng', category: 'closed', label: { ru: 'Неуспех', en: 'Failed' } },
+  failed: { icon: 'lucide:circle-x', color: 'dng', category: 'closed', label: { ru: 'Неуспех', en: 'Failed' } },
 };
 
 /** Статусы, которые таблица задач даёт сменить (что принимает POST /lore/status). */
