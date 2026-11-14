@@ -19,7 +19,7 @@ import { useAppT } from '../i18n';
 import { sliceFetcher } from '../api/loreSlice';
 import { loadTaskDicts, type TaskDicts } from './taskDicts';
 import { recordHref } from '../nav/loreRoutes';
-import { editTask, loadSprintTasks, setTaskStatus, type SprintTasksData } from './sprintTasksApi';
+import { editTask, loadSprintTasks, loadTaskAssignees, setTaskStatus, type SprintTasksData } from './sprintTasksApi';
 
 export const GROUP_PARAM = 'group';
 /** Набор колонок задач — в адресе, как у списков (S4-35): ссылкой делятся. */
@@ -119,6 +119,12 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
     const next: Partial<TaskRowData> = {};
     if (p.title !== undefined) next.title = p.title;
     if (p.effortDays !== undefined) next.effortDays = p.effortDays;
+    // PU-25: выбранное в строке — сразу в строке, без перезагрузки вкладки.
+    if (p.taskType !== undefined) next.taskType = p.taskType;
+    if (p.workClass !== undefined) next.workClass = p.workClass;
+    if (p.author !== undefined) next.author = p.author;
+    if (p.executor !== undefined) next.executor = p.executor;
+    if (p.reviewer !== undefined) next.reviewer = p.reviewer;
     patch(task.uid, next);
   }
 
@@ -140,6 +146,8 @@ export function SprintTasksTab({ sprintId, fetchImpl, win }: SprintTasksTabProps
             statusGuard={{ confirm: appliedStatusConfirm() }}
             onBulkStatusChange={onBulkStatusChange}
             onSave={onSave}
+            // PU-25: роли в правке строки — выбором из кандидатов задачи (срез task_identities).
+            assigneeOptions={task => loadTaskAssignees(task.uid, f)}
             dict={dicts}
             columns={cols}
             onColumnsChange={onColumnsChange}

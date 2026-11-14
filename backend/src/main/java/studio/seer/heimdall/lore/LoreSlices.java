@@ -986,7 +986,10 @@ public final class LoreSlices {
         slice("phases_of_sprint",
             "SELECT phase_uid, phase_id, order_index, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0]  AS valid_from, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]  AS title, " +
+            // PU-22: название фазы — из вершины (title, у записанных phase_new — name); статус своим
+            // полем. Раньше здесь стояло status_raw AS title, и любое название подменялось «📋 PLANNED».
+            "coalesce(title, name) AS title, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]  AS status_raw, " +
             "out('HAS_STATE')[summary_md IS NOT NULL].summary_md[0]  AS summary_md " +
             "FROM KnowPhase WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",

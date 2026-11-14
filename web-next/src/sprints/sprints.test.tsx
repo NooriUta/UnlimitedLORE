@@ -238,6 +238,24 @@ describe('раскрытая строка: задачи спринта и ста
     expect(JSON.parse(String(post.init?.body))).toEqual({ entity_type: 'task', id: 'SP/T1', status: 'active' });
   });
 
+  // PU-23 (владелица 13.11: «выровнять названия задач»): код задачи переменной ширины (FIT-04,
+  // AL-108, QUAL-1) шёл потоком, и название начиналось с разного x. Код — колонка одной ширины на
+  // весь список, по самому длинному коду (моноширинный шрифт → ширина в ch точная); название —
+  // своей колонкой, поэтому с одной вертикали. jsdom не меряет раскладку — проверяем устройство:
+  // ширину колонки на списке и то, что код и название — отдельные ячейки строки.
+  it('PU-23: код — колонка ширины самого длинного кода, название — своя колонка', async () => {
+    const f = fakeFetch(() => jsonRes({ rows: [task('SP', 'FIT-04', '📋 PLANNED'), task('SP', 'AL-108', '✅ DONE'), task('SP', 'QUAL-1', '✅ DONE')], page: { has_more: false, fields_checked: true } }));
+    render(<SprintTasks sprintId="SP" client={client(f)} />);
+    const list = await screen.findByRole('list', { name: 'Задачи спринта SP' });
+    expect(list.style.getPropertyValue('--sprint-code-w')).toBe('6ch');
+    for (const li of within(list).getAllByRole('listitem')) {
+      const code = li.querySelector('.sprint-tasks__code');
+      const title = li.querySelector('.sprint-tasks__title');
+      expect(code, 'код — своя ячейка').not.toBeNull();
+      expect(title?.previousElementSibling, 'название сразу за колонкой кода').toBe(code);
+    }
+  });
+
   // Владелица 08.11: «в шевронах дерева, если есть статус, не надо к иконке ещё и слова
   // приписывать — только подсказку». Вложенная строка под ▸ — иконка статуса, имя — в подсказке.
   it('во вложенных строках статус — только иконка, слово — в подсказке и для чтения', async () => {

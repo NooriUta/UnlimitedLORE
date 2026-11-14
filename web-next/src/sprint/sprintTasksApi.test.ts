@@ -3,8 +3,8 @@
 // задачи (POST /lore/status, POST /lore/task/edit). Ошибки не глотаются:
 // статус HTTP доезжает до экрана (403 → «нет прав», остальное → «ошибка»).
 import { describe, expect, it, vi } from 'vitest';
-import { classifyError, errorDetail } from '@seidr/kit';
-import { editTask, loadSprintTasks, LoreHttpError, setTaskStatus, toTaskRow } from './sprintTasksApi';
+import { classifyError, errorDetail, statusMeta } from '@seidr/kit';
+import { editTask, loadSprintTasks, loadTaskAssignees, LoreHttpError, setTaskStatus, toTaskRow } from './sprintTasksApi';
 
 type Call = { url: string; init?: RequestInit };
 
@@ -30,7 +30,7 @@ describe('toTaskRow', () => {
   it('переводит строку слайса в строку таблицы', () => {
     expect(toTaskRow(apiTask)).toEqual({
       uid: 'u1', id: 'S5-02', title: 'Вкладка задач', status: 'todo', phase: 'ph-1',
-      effortDays: 1.5, executor: 'claude', reviewer: null, taskType: 'feature', workClass: 'enb', order: 2,
+      effortDays: 1.5, author: null, executor: 'claude', reviewer: null, taskType: 'feature', workClass: 'enb', order: 2,
     });
   });
 
@@ -43,6 +43,25 @@ describe('toTaskRow', () => {
 
   it('класс работы не теряется и не переименовывается', () => {
     expect(toTaskRow({ ...apiTask, work_class: 'uc' }).workClass).toBe('uc');
+  });
+
+  // PU-25: срез tasks_of_sprint отдаёт status_raw как в базе — «✅ DONE», «🔄 IN PROGRESS»…
+  // Строка таблицы обязана нести код статуса: kit знает статус только по коду, иначе
+  // значок «?» в таблице и в полоске счётчиков, а «готово 0/68» при 50 закрытых.
+  it('живой status_raw с эмодзи → код статуса, который kit знает', () => {
+    const live: Record<string, string> = {
+      '✅ DONE': 'done', '🔄 IN PROGRESS': 'in_progress', '🟡 PARTIAL': 'partial', '📋 PLANNED': 'planned',
+      '🚀 READY FOR DEPLOY': 'ready_for_deploy', '🧪 UAT TESTING': 'uat', '🔴 BLOCKED': 'blocked', '🚫 CANCELLED': 'cancelled',
+    };
+    for (const [raw, code] of Object.entries(live)) {
+      const row = toTaskRow({ ...apiTask, status_raw: raw });
+      expect(row.status, raw).toBe(code);
+    }
+  });
+
+  it('живой status_raw: kit опознаёт статус, а закрытые считаются закрытыми', () => {
+    const rows = ['✅ DONE', '✅ DONE', '🔄 IN PROGRESS'].map((s, i) => toTaskRow({ ...apiTask, task_uid: `u${i}`, status_raw: s }));
+    expect(rows.map(r => statusMeta(r.status).category)).toEqual(['done', 'done', 'active']);
   });
 });
 
@@ -128,5 +147,36 @@ describe('editTask', () => {
     expect(body.title).toBe('Новое');
     expect('reviewer_agent' in body).toBe(false);
     expect('executor_agent' in body).toBe(false);
+  });
+
+  // PU-25: выбор в строке — тип, класс и роли уходят кодами; роли — только выбранные из
+  // кандидатов (сервер пишет их рёбрами и отказывает незаявленным). Невыбранное в тело не идёт.
+  it('PU-25: выбранные тип, класс и роли уходят своими полями, остальное не трогается', async () => {
+    const { impl, calls } = fakeFetch({ '/lore/task/edit': { body: { ok: true } } });
+    await editTask(row, { taskType: 'docs', workClass: 'uc', executor: 'codex', author: 'owner' }, impl);
+    const body = JSON.parse(String(calls[0].init?.body));
+    expect(body).toMatchObject({ task_type: 'docs', work_class: 'uc', executor_agent: 'codex', author_agent: 'owner' });
+    expect('reviewer_agent' in body).toBe(false);
+  });
+});
+
+describe('PU-25 · автор и кандидаты на роли', () => {
+  it('автор задачи приезжает в строку таблицы', () => {
+    expect(toTaskRow({ ...apiTask, author_agent: 'owner' }).author).toBe('owner');
+  });
+
+  it('кандидаты — срез task_identities по задаче: код и подпись', async () => {
+    const { impl, calls } = fakeFetch({ '/lore/slice/task_identities': { body: { rows: [
+      { code: 'owner', title: 'Владелица', kind: 'person' }, { code: 'claude', title: 'Claude Code', kind: 'agent' }, { code: '', title: 'пусто' },
+    ] } } });
+    expect(await loadTaskAssignees('S/T-1', impl)).toEqual([
+      { code: 'owner', title: 'Владелица' }, { code: 'claude', title: 'Claude Code' },
+    ]);
+    expect(calls[0].url).toBe('/lore/slice/task_identities?id=S%2FT-1');
+  });
+
+  it('срез отказал — ошибка наверх, а не пустой список («кандидатов нет» ≠ «не прочитали»)', async () => {
+    const { impl } = fakeFetch({ '/lore/slice/task_identities': { status: 503, body: { error: 'DOWN' } } });
+    await expect(loadTaskAssignees('S/T-1', impl)).rejects.toBeInstanceOf(LoreHttpError);
   });
 });

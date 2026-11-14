@@ -278,7 +278,7 @@ export interface ListViewProps {
    * строит приложение (кто владелец, какие виды, что значит «устарел» — K-14). Нет —
    * вид, выбранный адресом, говорит словами, что не задан.
    */
-  library?: { groups: (records: readonly KitRecord[]) => LibraryGroup[]; renderBody?: (doc: LibraryDoc) => ReactNode; selected?: string; onSelect?: (id: string) => void };
+  library?: { groups: (records: readonly KitRecord[]) => LibraryGroup[]; renderBody?: (doc: LibraryDoc) => ReactNode; selected?: string; onSelect?: (id: string) => void; reader?: boolean };
   /**
    * Личная ширина колонок (S4-35, «ширина личная, набор командный»). Задано —
    * у заголовков появляются ручки, ширина живёт в личном хранилище и НЕ идёт в
@@ -1993,7 +1993,7 @@ export function ListView({
   } else if (view === 'library') {
     // Библиотека — те же отфильтрованные записи; поиск — текст списка (lt), фильтр — llf.
     body = library
-      ? <LibraryView groups={library.groups(filtered)} href={href} renderBody={library.renderBody} selected={library.selected} onSelect={library.onSelect}
+      ? <LibraryView groups={library.groups(filtered)} href={href} renderBody={library.renderBody} reader={library.reader} selected={library.selected} onSelect={library.onSelect}
           query={state.text} onQuery={q => update({ text: q })} filter={state.libFilter ?? 'all'} onFilter={f => update({ libFilter: f })} narrow={narrow} />
       : <EmptyState title={t('kit.list.library.noConfig')} />;
   } else if (view === 'tree') {

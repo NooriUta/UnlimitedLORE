@@ -107,3 +107,25 @@ describe('библиотека: поиск и фильтр управляемы�
     expect(onFilter).toHaveBeenLastCalledWith('all');
   });
 });
+
+// K2-LIBRARY-DUP-PASSPORT, решение владелицы 14.11: «в библиотеке оставь только левую часть
+// меню, не дублируй второй раз компонент паспорта». reader={false} — только дерево: выбор уходит
+// приложению (оно откроет обычный паспорт), своей читалки и автовыбора первого документа нет.
+describe('вид «Библиотека» без читалки (reader={false})', () => {
+  it('на широком экране — только дерево; первый документ сам не выбирается', () => {
+    const { container } = render(<LibraryView groups={groups} narrow={false} reader={false} />);
+    expect(container.querySelector('.sk-lib__reader')).toBeNull();
+    expect(container.querySelector('.sk-lib__doc[aria-current="true"]')).toBeNull();
+  });
+
+  it('выбор — приложению; выбранный отмечен; ни читалки, ни нижнего листа', () => {
+    const onSelect = vi.fn();
+    const { container, rerender } = render(<LibraryView groups={groups} narrow reader={false} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole('button', { name: /ADR-2/ }));
+    expect(onSelect).toHaveBeenCalledWith('ADR-2');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    rerender(<LibraryView groups={groups} narrow={false} reader={false} selected="ADR-2" onSelect={onSelect} />);
+    expect(container.querySelector('.sk-lib__doc[aria-current="true"]')?.getAttribute('data-doc-id')).toBe('ADR-2');
+    expect(container.querySelector('.sk-lib__reader')).toBeNull();
+  });
+});

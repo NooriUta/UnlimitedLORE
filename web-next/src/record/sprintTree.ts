@@ -73,7 +73,8 @@ export function sprintTreeOf(c: LoreRecord1): SprintTree {
     const v = ph.values ?? {};
     rows.push({
       key: ph.id, kind: 'phase', parent: sid, title: ph.title || ph.id, status: '',
-      code: ph.id, progress: str(v.progress),
+      // PU-22: в «Код» — короткий код фазы с фасада; нет его — uid (не выдумываем).
+      code: str(v.code) ?? ph.id, progress: str(v.progress),
     });
   }
   const phaseTitle = new Map(phases.map(ph => [ph.id, ph.title || ph.id]));
