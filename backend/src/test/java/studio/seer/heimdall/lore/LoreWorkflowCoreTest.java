@@ -72,6 +72,22 @@ class LoreWorkflowCoreTest {
         assertEquals("in_progress", LoreStatusCategory.of("task", "⏳ WAITING"));
     }
 
+    /**
+     * Урок PU-24 (V85), обобщённый: статус в жизненном цикле без строки словаря модель отдаёт без цвета и
+     * значка. Каждый новый статус ядра обязан быть засеян миграцией в task_status И sprint_status.
+     */
+    @Test
+    void newCoreStatusesAreSeededInBothDictionaries() {
+        List<String> missing = new ArrayList<>();
+        for (String code : List.of("waiting", "review", "failed"))
+            for (String dict : List.of("task_status", "sprint_status")) {
+                boolean seeded = LoreSchemaMigrations.STEPS.stream().flatMap(s -> s.sql().stream())
+                    .anyMatch(sql -> sql.contains("UPSERT") && sql.contains("dict_type='" + dict + "'") && sql.contains("code='" + code + "'"));
+                if (!seeded) missing.add(dict + "/" + code);
+            }
+        assertEquals(List.of(), missing, "статус ядра без строки словаря — kit покажет его без цвета и значка");
+    }
+
     @Test
     void failedTaskClosesLikeCancelledForTheSprint() {
         assertNull(LoreStatusResource.deriveSprintTarget("active", List.of("done", "failed", "active")));

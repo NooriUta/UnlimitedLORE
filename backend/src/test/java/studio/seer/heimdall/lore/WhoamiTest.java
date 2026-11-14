@@ -9,6 +9,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -90,6 +91,38 @@ class WhoamiTest {
         Map<String, Object> b = Whoami.body(agent(AgentScopeFilter.AMBIGUOUS_SCOPE), Whoami.Graph.EMPTY);
         assertEquals("ambiguous", b.get("profile"));
         assertEquals(List.of(), b.get("write_families"));
+    }
+
+    /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина вызова — агенту из заголовка, человеку «не применимо». */
+    @Test
+    void machineOfTheCall_agentFromHeader_humanNotApplicable() {
+        assertEquals("lorcetus", Whoami.machineOf(agent("full"), "LORCETUS"));
+        assertEquals(AgentMachine.UNKNOWN, Whoami.machineOf(agent("full"), null));
+        assertEquals(AgentMachine.NOT_APPLICABLE, Whoami.machineOf(human(), "lorcetus"));
+    }
+
+    /**
+     * Приёмка 14.11: whoami отдавал identity.self.machine_id = null (объявленное поле KnowActor,
+     * у общего клиента lore-mcp-full пустое), а status_set той же сессии писал машину lorcetus
+     * из заголовка. Источник один — машина вызова, как у записи действий; объявленное поле
+     * остаётся рядом под своим именем.
+     */
+    @Test
+    void selfMachineIsTheCallMachine_sameSourceAsTheActionJournal() {
+        Map<String, Object> self = new java.util.HashMap<>(Map.of("actor_id", "A-1", "name", "Claude Code (full)"));
+        self.put("machine_id", null);
+        Whoami.Graph g = Whoami.withCallMachine(new Whoami.Graph(self, List.of(), List.of()), "lorcetus");
+        assertEquals("lorcetus", g.self().get("machine_id"));
+        assertNull(g.self().get("machine_id_declared"));
+        assertTrue(g.self().containsKey("machine_id_declared"), "объявленное поле не пропадает");
+        assertNull(self.get("machine_id"), "исходная строка не меняется");
+
+        Map<String, Object> declared = new java.util.HashMap<>(Map.of("actor_id", "A-2", "machine_id", "lorcetus"));
+        Whoami.Graph g2 = Whoami.withCallMachine(new Whoami.Graph(declared, List.of(), List.of()), AgentMachine.UNKNOWN);
+        assertEquals(AgentMachine.UNKNOWN, g2.self().get("machine_id"), "без заголовка — «неизвестно», не догадка по полю");
+        assertEquals("lorcetus", g2.self().get("machine_id_declared"));
+
+        assertSame(Whoami.Graph.EMPTY, Whoami.withCallMachine(Whoami.Graph.EMPTY, "lorcetus"));
     }
 
     @Test

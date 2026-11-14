@@ -52,6 +52,25 @@ final class Whoami {
         static final Graph EMPTY = new Graph(null, List.of(), List.of());
     }
 
+    /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина ЭТОГО вызова (агент — X-Lore-Machine, человек — «(n/a)»). */
+    static String machineOf(Token t, String rawHeader) {
+        return AgentMachine.mark(t.agentScope() != null, rawHeader);
+    }
+
+    /**
+     * Машина агента в {@code identity.self} — та же, что пишет журнал действий (заголовок этого
+     * вызова, {@link #machineOf}); объявленное поле KnowActor.machine_id — рядом,
+     * {@code machine_id_declared}. Приёмка 14.11: у общего клиента поле пустое, и whoami
+     * говорил null, хотя status_set той же сессии писал машину. Строка графа не меняется.
+     */
+    static Graph withCallMachine(Graph g, String callMachine) {
+        if (g == null || g.self() == null) return g;
+        Map<String, Object> self = new java.util.LinkedHashMap<>(g.self());
+        self.put("machine_id_declared", g.self().get("machine_id"));
+        self.put("machine_id", callMachine);
+        return new Graph(self, g.owners(), g.projectRoles());
+    }
+
     /** Роль первой оси — то же правило, что {@code SeerRoleFromTokenFilter}. */
     static String seerRole(Set<String> realmRoles) {
         if (realmRoles.contains("super-admin")) return "superadmin";
