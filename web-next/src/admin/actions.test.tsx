@@ -350,6 +350,26 @@ describe('экран журнала · честные состояния', () =>
     await waitFor(() => expect(new URLSearchParams(window.location.search).get('adm-from')).toBe('2026-11-10'));
   });
 
+  // PU-29 (приёмка 14.11.2026): подсказка обещала ввод «момент ISO или epoch
+  // millis», а поля «С/По» — нативный выбор даты, ввести их некуда.
+  it('подсказка периода не обещает ввод, которого поле-календарь не примет', async () => {
+    const { f } = fake();
+    mount(f);
+    const from = (await screen.findByLabelText('С')) as HTMLInputElement;
+    expect(from.type).toBe('date');
+    const hint = screen.getByTestId('adm-log-timehint').textContent ?? '';
+    expect(hint).not.toMatch(/epoch|ISO/);
+    expect(hint).toMatch(/весь день/);
+  });
+
+  it('поле текстовое (в адресе момент ISO) — подсказка называет формат момента', async () => {
+    window.history.replaceState(null, '', '/?adm-from=2026-11-10T12:00:00Z');
+    const { f } = fake();
+    mount(f);
+    await screen.findByLabelText('С');
+    expect(screen.getByTestId('adm-log-timehint').textContent).toMatch(/ISO/);
+  });
+
   it('в адресе момент ISO, не дата — поле остаётся текстовым и значение не теряется (S7B-25)', async () => {
     window.history.replaceState(null, '', '/?adm-from=2026-11-10T12:00:00Z');
     const { f } = fake();
