@@ -686,6 +686,10 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-size: var(--fs-xs);
   cursor: pointer;
 }
+/* S4-18: вопрос «A → B?» до записи смены статуса (настройка «подтверждать»); строка отмены и вопроса в таблице задач. */
+.sk-statusask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: 6px; font-size: var(--fs-sm); color: var(--t1); }
+.sk-statusask__q { color: var(--t2); }
+.sk-tasks__ask, .sk-tasks__undo { padding: 4px 8px; font-size: var(--fs-sm); }
 .sk-schip__undo:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 /* ---------- Общий всплывающий слой (S4-MENU-STATES) ----------
    Один элемент Popover на три меню kit: меню статуса, «Ещё» у вкладок и
