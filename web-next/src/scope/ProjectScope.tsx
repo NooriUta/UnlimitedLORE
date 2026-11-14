@@ -2,8 +2,8 @@
 // Вид и действия — kit ScopePicker (поповер / лист на телефоне); здесь только
 // проводка: список из слайсов LORE (loadProjectScope.ts), честное состояние
 // (useLoadState), выбор — в URL (?proj=a,b), чтобы ссылка открывала тот же срез.
-import { useMemo, useState } from 'react';
-import { ScopePicker, createSafeStorage, formatScopeParam, parseScopeParam, useLoadState, useUrlParam, type SafeStorage } from '@seidr/kit';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { ScopePicker, createSafeStorage, formatScopeSelection, parseScopeSelection, resolveScopeSelection, useLoadState, useUrlParam, type SafeStorage } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import type { SliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
@@ -46,10 +46,32 @@ export interface ProjectScopeProps {
   storage?: SafeStorage;
 }
 
-/** Выбранные проекты из URL — для экранов, которые фильтруют по ним. */
+/**
+ * S9-04 (второй шаг): полный список проектов для раскрытия «все, кроме…». Его знает выбор в
+ * шапке (он загружает список); экраны читают через useProjectScope. Общий на окно, как и адрес.
+ */
+let universe: readonly string[] | null = null;
+const universeSubs = new Set<() => void>();
+function setUniverse(ids: readonly string[] | null) {
+  universe = ids;
+  universeSubs.forEach(f => f());
+}
+const subscribeUniverse = (f: () => void) => { universeSubs.add(f); return () => { universeSubs.delete(f); }; };
+const readUniverse = () => universe;
+
+/**
+ * Выбранные проекты из URL — для экранов, которые фильтруют по ним. Пусто — фильтра нет.
+ * Режим «все, кроме…» (?proj=!a,!b) раскрывается здесь по полному списку проектов, так что
+ * экраны получают обычный список и о режиме не знают. Пока список не загружен — пусто
+ * (все проекты): исключение раскрыть не по чему, загрузка списка в шапке — доли секунды.
+ */
 export function useProjectScope(): string[] {
   const [raw] = useUrlParam(PROJECT_SCOPE_PARAM);
-  return useMemo(() => parseScopeParam(raw), [raw]);
+  const all = useSyncExternalStore(subscribeUniverse, readUniverse, readUniverse);
+  return useMemo(() => {
+    const sel = parseScopeSelection(raw);
+    return sel.except && !all ? [] : resolveScopeSelection(sel, all ?? []);
+  }, [raw, all]);
 }
 
 export function ProjectScope({ fetch, sub, me, narrow, onChange, storage: storageProp }: ProjectScopeProps) {
@@ -67,17 +89,24 @@ export function ProjectScope({ fetch, sub, me, narrow, onChange, storage: storag
     [doFetch, sub, me],
   );
   const [raw, setRaw] = useUrlParam(PROJECT_SCOPE_PARAM);
-  const value = useMemo(() => parseScopeParam(raw), [raw]);
+  const sel = useMemo(() => parseScopeSelection(raw), [raw]);
+  const value = sel.ids;
   const data = result.data;
+  // S9-04: полный список — для раскрытия «все, кроме…» у экранов.
+  const rows = data?.rows;
+  useEffect(() => { if (rows) setUniverse(rows.map(r => r.id)); }, [rows]);
 
   return (
     <ScopePicker
       options={data?.rows ?? []}
       value={value}
-      onChange={next => {
-        setRaw(formatScopeParam(next));
+      except={sel.except}
+      exceptable
+      onChange={(next, o) => {
+        const except = o?.except ?? false;
+        setRaw(formatScopeSelection({ except, ids: next }));
         // S9-04: только что добавленные — в начало «Недавних» (без повторов, не больше пяти).
-        const added = next.filter(id => !value.includes(id));
+        const added = except ? [] : next.filter(id => !value.includes(id));
         if (added.length) {
           const list = [...added.reverse(), ...recent.filter(id => !added.includes(id))].slice(0, RECENT_MAX);
           setRecent(list);
