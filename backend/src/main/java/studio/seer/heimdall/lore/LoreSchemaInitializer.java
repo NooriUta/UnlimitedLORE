@@ -57,6 +57,10 @@ public class LoreSchemaInitializer {
      */
     static final List<String> CORE_TYPES = List.of("KnowTask", "KnowSprint", "KnowADR");
 
+    /** Попыток пробы ядровых типов и пауза между ними (поля, а не конфиг: тесты ставят 0 мс). */
+    int probeAttempts = 10;
+    long probeDelayMs = 1000;
+
     /** Итог решения на этом старте. Читать ТОЛЬКО геттером: поле через CDI-прокси — null/false. */
     private volatile boolean bootstrapped;
 
