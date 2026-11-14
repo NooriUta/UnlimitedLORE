@@ -225,6 +225,15 @@ public final class LoreSlices {
             + String.join(", ", fallbacks) + ") AS changed_at, updated_at AS " + LoreChangedAt.TOUCHED;
     }
 
+    /**
+     * MT-NOTE-APPEND п.3: момент ТЕКУЩЕГО СТАТУСА задачи/спринта. Правка текста открывает
+     * новую версию SCD2 без смены статуса, поэтому valid_from открытой версии — уже не
+     * «с какого момента в этом статусе». status_known_from ставит только смена статуса,
+     * правки его переносят; у легаси-версий без поля — прежнее valid_from.
+     */
+    static final String STATUS_SINCE_SQL = "ifnull(out('HAS_STATE')[valid_to IS NULL].status_known_from[0], "
+        + "out('HAS_STATE')[valid_to IS NULL].valid_from[0])";
+
     /** Дата заведения у типов без своего поля: первая версия истории (порядок рёбер — порядок вставки). */
     private static final String FIRST_STATE_FROM_SQL = "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0]";
 
@@ -1430,7 +1439,7 @@ public final class LoreSlices {
             "out('REALIZES').shipped_at[0] AS shipped_at, " +
             "out('HAS_STATE').valid_from   AS state_dates, " +
             "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
-            "out('HAS_STATE')[valid_to IS NULL].valid_from[0] AS status_since " +
+            STATUS_SINCE_SQL + " AS status_since " +
             "FROM KnowTask WHERE out('REALIZES')[shipped_at IS NOT NULL].size() > 0",
             List.of(), Map.of(), " ORDER BY task_uid");
 
@@ -2247,7 +2256,7 @@ public final class LoreSlices {
         slice("history_sprint",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
-            "context_md, outcome_md " +
+            "context_md, outcome_md, version_kind " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -2258,7 +2267,8 @@ public final class LoreSlices {
         // B9: CONTAINS, не [0] = — см. adr_history.
         slice("history_task",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
-            "effort_days, note_md " +
+            // MT-NOTE-APPEND п.3: version_kind = 'text' — версия открыта правкой текста, статус тот же.
+            "effort_days, note_md, version_kind " +
             "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -2315,8 +2325,12 @@ public final class LoreSlices {
         // key; task_uid (sprint_id + "/" + task_id) is unique, same field every
         // other task-facing slice (all_tasks, tasks_of_sprint) already carries.
         slice("task_done_dates",
-            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
-            "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
+            // MT-NOTE-APPEND п.3: дата закрытия — момент статуса (status_known_from), а не начало
+            // открытой версии: правка заметки закрытой задачи открывает версию и сдвинула бы дату.
+            // states (> 1 — реальная прогрессия) считает смены статуса, правки текста — нет.
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, " +
+            "ifnull(status_known_from, valid_from) AS valid_from, " +
+            "in('HAS_STATE').out('HAS_STATE')[version_kind IS NULL].size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days, " +
             "in('HAS_STATE').bookkeeping[0] AS bookkeeping, " +
             // B9: state_owners — см. adr_history_all (> 1 — общая версия). Сравнение «.size() > 1» в проекции ArcadeDB не разбирает.
@@ -2624,6 +2638,33 @@ public final class LoreSlices {
                 "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
                 "work_class", " WHERE work_class = :work_class")),
             " ORDER BY sprint_id, task_uid");
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-START (решение D6 14.11: «пока никаких правил, давай
+        // соберём статистику прыжков»): путь закрытия задачи одним вызовом. Строка на задачу,
+        // чья ОТКРЫТАЯ версия — done. work_versions = 0 — прыжок planned/todo → done без
+        // рабочего статуса; status_versions = 1 — задача заведена сразу закрытой. done_at и
+        // changed_at — момент статуса (правка текста его не двигает), поэтому
+        // changed_from/changed_to режут по ДНЮ ЗАКРЫТИЯ. Пакет (много закрытий за секунды
+        // одним актором) отделяет потребитель — по done_at и closed_by.
+        slice("task_close_path",
+            "SELECT task_uid, out('PART_OF').sprint_id[0] AS sprint_id, " +
+            STATUS_SINCE_SQL + " AS done_at, " +
+            STATUS_SINCE_SQL + " AS changed_at, " +
+            "out('HAS_STATE')[valid_to IS NULL].changed_by[0] AS closed_by, " +
+            "out('HAS_STATE')[valid_to IS NULL].changed_by_kind[0] AS closed_by_kind, " +
+            "out('HAS_STATE')[version_kind IS NULL].size() AS status_versions, " +
+            // review — отдельно: с v1.17.21 (WK-05) done возможен только из review, и «прыжок»
+            // planned → review → done иначе стал бы неотличим от работы по построению.
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw",
+                "in_progress", "partial", "uat", "ready_for_deploy") + "].size() AS work_versions, " +
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "review") + "].size() AS review_versions, " +
+            "bookkeeping " +
+            "FROM KnowTask WHERE out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL + "].size() > 0",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint")),
+            " ORDER BY task_uid");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
@@ -3213,6 +3254,7 @@ public final class LoreSlices {
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_close_path", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("component_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
         Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
