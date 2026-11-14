@@ -2975,7 +2975,7 @@ public final class LoreSlices {
             // (defaults are set in a second, IS NULL-gated statement) — readers
             // always see the effective defaults, never NULL.
             "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, " +
-            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible FROM KnowDictEntry",
+            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible, kind FROM KnowDictEntry",
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "dict_type", " WHERE dict_type = :dict_type")),
