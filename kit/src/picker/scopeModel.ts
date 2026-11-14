@@ -96,3 +96,39 @@ export function parseScopeParam(raw: string | null | undefined): string[] {
 export function formatScopeParam(value: readonly string[]): string | null {
   return value.length ? value.join(',') : null;
 }
+
+/**
+ * S9-04 (второй шаг): выбор с режимом «все, кроме…». `except: false` — показаны `ids`
+ * (пусто — все); `except: true` — показаны все, КРОМЕ `ids`.
+ */
+export interface ScopeSelection { except: boolean; ids: string[] }
+
+/** `a,b` — выбор; `!a,!b` — все, кроме a и b; `!` — режим исключения без исключённых. */
+export function parseScopeSelection(raw: string | null | undefined): ScopeSelection {
+  if (!raw) return { except: false, ids: [] };
+  const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
+  if (!parts.some(p => p.startsWith('!'))) return { except: false, ids: parseScopeParam(raw) };
+  const ids: string[] = [];
+  for (const p of parts) {
+    const id = p.replace(/^!+/, '').trim();
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  return { except: true, ids };
+}
+
+/** Обратное к parseScopeSelection; обычный пустой выбор — параметра нет. */
+export function formatScopeSelection(s: ScopeSelection): string | null {
+  if (!s.except) return formatScopeParam(s.ids);
+  return s.ids.length ? s.ids.map(id => `!${id}`).join(',') : '!';
+}
+
+/**
+ * Выбор → список показываемых проектов для экранов. «Кроме» раскрывается по ПОЛНОМУ
+ * списку `all`; никого не исключили — пусто (фильтра нет = все).
+ */
+export function resolveScopeSelection(s: ScopeSelection, all: readonly string[]): string[] {
+  if (!s.except) return [...s.ids];
+  if (s.ids.length === 0) return [];
+  const out = new Set(s.ids);
+  return all.filter(id => !out.has(id));
+}

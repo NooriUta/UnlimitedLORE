@@ -537,6 +537,27 @@ describe('S7A-12 v2 · мини-график, быстрые фильтры, д�
     expect(screen.getByTestId('news-facet-who').textContent).toContain('volva');
   });
 
+  // PU-29 (приёмка 14.11.2026): автор-человек показывался сырым kc_sub. Сервер шлёт
+  // who_names — подпись; значение фильтра и ссылки остаётся kc_sub.
+  it('«Кто» — человек подписан именем из who_names, в строке и в фильтре; параметр who — kc_sub', async () => {
+    const data = clone();
+    const sub = '6f1c2a90-aaaa-bbbb-cccc-000000000001';
+    data.events[0].author = 'human';
+    data.events[0].who = sub;
+    data.metrics.counts.by_who = { [sub]: { events: 2, elements: 1 } };
+    data.who_names = { [sub]: 'Ольга' };
+    const s = src({}, data);
+    await mount(s);
+    const who = screen.getAllByTestId('news-who')[0];
+    expect(who.textContent).toContain('Ольга');
+    expect(who.textContent).not.toContain(sub);
+    fireEvent.click(screen.getByTestId('news-facet-who'));
+    const opt = within(screen.getByTestId('news-facet-opts-who')).getByRole('button', { name: /Ольга/ });
+    expect(opt.textContent).not.toContain(sub);
+    fireEvent.click(opt);
+    await waitFor(() => expect(last(s).get('who')).toBe(sub));
+  });
+
   it('«Кто» без by_who (старый сервер) — имена из строк ленты, без чисел; Esc закрывает', async () => {
     await mount(src());
     fireEvent.click(screen.getByTestId('news-facet-who'));

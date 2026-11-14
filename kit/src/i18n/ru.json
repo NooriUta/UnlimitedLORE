@@ -419,6 +419,9 @@
   "kit.scope.mineNone": "У вас нет роли ни в одном проекте — «Все мои» выбрать нечего",
   "kit.scope.count": "Выбрано: {n}",
   "kit.scope.countAll": "Фильтра нет — показаны все проекты",
+  "kit.scope.except": "Все, кроме выбранных",
+  "kit.scope.summary.except": "Все, кроме {n}",
+  "kit.scope.countExcept": "Исключено: {n}",
   "kit.list.text": "Текст в ID или названии",
   "kit.list.textPlaceholder": "Найти в списке…",
   "kit.list.desc.text": "Текст",
@@ -1168,5 +1171,7 @@
   "kit.embed.unavailable": "{source} недоступна",
   "kit.embed.unavailableHint": "Адрес графика не получен — это не «пусто». Повторите или проверьте связь.",
   "kit.embed.forbidden": "Нет прав на этот график",
-  "kit.embed.badUrl": "Адрес встройки не http(s) — рамка не открыта."
+  "kit.embed.badUrl": "Адрес встройки не http(s) — рамка не открыта.",
+  "kit.embed.silent": "{source} не ответила",
+  "kit.embed.silentHint": "Рамка открыта, но {source} не прислала ни одного сообщения за {s} с: сервер недоступен из этой сети или страница не загрузилась. Это не «пусто»."
 }

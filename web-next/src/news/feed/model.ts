@@ -227,6 +227,14 @@ const NONE: Record<string, NewsKey> = {
   '(no-sprint)': 'none.sprint', '(unknown)': 'none.who', '(no-milestone)': 'none.milestone',
 };
 
+/**
+ * PU-29 (приёмка 14.11.2026): подписи «Кто» с сервера (who_names: kc_sub → имя из KnowUser).
+ * Значение фильтра остаётся ключом; имя — только подпись. Ставит лента при каждом ответе;
+ * старый сервер карты не шлёт — показывается ключ, как раньше.
+ */
+let whoNames: Record<string, string> = {};
+export function setNewsWhoNames(names: Record<string, string> | undefined): void { whoNames = names ?? {}; }
+
 /** Подпись значения оси: заглушки сервера — словами, проекты — коротко. */
 export function newsGroupLabel(axis: string, key: string, lang: KitLang): string {
   if (key in NONE) return newsT(lang, NONE[key]);
@@ -238,6 +246,7 @@ export function newsGroupLabel(axis: string, key: string, lang: KitLang): string
     case 'kind': return kindLabel(key, lang);
     // S9-11: «вид · код» — запись узнаётся по коду, сырой ключ «тип:код» не показываем.
     case 'record': { const i = key.indexOf(':'); return i > 0 ? `${typeLabel(key.slice(0, i), lang)} · ${key.slice(i + 1)}` : key; }
+    case 'who': return whoNames[key] ?? key;
     case 'author': return key === 'agent' || key === 'human' || key === 'unknown' ? newsT(lang, `author.${key}` as NewsKey) : key;
     default: return key;
   }

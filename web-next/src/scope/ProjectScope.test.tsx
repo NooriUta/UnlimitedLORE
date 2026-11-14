@@ -7,7 +7,13 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { LoreHttpError } from '../api/loreSlice';
 import type { SliceFetcher } from '../api/loreSlice';
-import { ProjectScope } from './ProjectScope';
+import { ProjectScope, useProjectScope } from './ProjectScope';
+
+/** Что видят экраны: раскрытый список проектов из useProjectScope. */
+function Seen() {
+  const scope = useProjectScope();
+  return <output data-testid="seen">{scope.join(',')}</output>;
+}
 
 beforeAll(() => {
   registerGameIcons(gameIcons);
@@ -65,6 +71,26 @@ describe('S4-03 · выбор проектов в шапке v2', () => {
     fireEvent.click(trigger());
     const recent = within(screen.getByRole('dialog', { name: 'Проекты' })).getByRole('list', { name: 'Недавние' });
     expect(within(recent).getByRole('checkbox', { name: /TYR/ })).toBeTruthy();
+  });
+
+  // S9-04, второй шаг (владелица 14.11.2026): «все, кроме…». В адресе — !a; экраны получают
+  // раскрытый список (все проекты минус исключённые), их код не меняется.
+  it('S9-04: «все, кроме» — в адресе !slug, экраны видят всех, кроме исключённого; ссылка восстанавливает', async () => {
+    const { unmount } = render(<><ProjectScope fetch={fetcher()} sub="u1" narrow={false} /><Seen /></>);
+    await flush();
+    fireEvent.click(trigger());
+    const dlg = screen.getByRole('dialog', { name: 'Проекты' });
+    fireEvent.click(within(dlg).getByRole('switch', { name: /Все, кроме выбранных/ }));
+    fireEvent.click(within(dlg).getByRole('checkbox', { name: /TYR/ }));
+    expect(new URLSearchParams(window.location.search).get('proj')).toBe('!tyr');
+    expect(screen.getByTestId('seen').textContent).toBe('unlimitedlore');
+    expect(trigger().textContent).toMatch(/Все, кроме 1/);
+    unmount();
+    window.history.replaceState(null, '', '/?proj=!unlimitedlore');
+    render(<><ProjectScope fetch={fetcher()} sub="u1" narrow={false} /><Seen /></>);
+    await flush();
+    expect(screen.getByTestId('seen').textContent).toBe('tyr');
+    expect(trigger().textContent).toMatch(/Все, кроме 1/);
   });
 
   it('открытие по ссылке с ?proj= — кнопка сразу подписана выбором', async () => {

@@ -41,7 +41,15 @@ export interface ScopePickerProps {
   options: readonly ScopeOption[];
   /** Выбранные коды; пустой — «все». */
   value: readonly string[];
-  onChange: (next: string[]) => void;
+  /**
+   * Новый выбор. С `exceptable` вторым аргументом приходит режим: `except: true` — `next`
+   * это ИСКЛЮЧЁННЫЕ (S9-04, «все, кроме…»). Без `exceptable` второго аргумента нет.
+   */
+  onChange: (next: string[], opts?: { except: boolean }) => void;
+  /** S9-04: режим «все, кроме…» включён — `value` это исключённые. */
+  except?: boolean;
+  /** S9-04: показать переключатель «Все, кроме выбранных» (приложение умеет раскрыть исключение). */
+  exceptable?: boolean;
   /** Состояние загрузки списка (useLoadState). */
   state?: LoadState;
   error?: unknown;
@@ -137,6 +145,7 @@ export function ScopePicker(props: ScopePickerProps) {
 function ScopePickerInner({
   label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
   forbiddenReason, mine = 'known', mineHint, mineCount, groups, labels, recent, narrow: narrowProp, lang = 'ru', className,
+  except = false, exceptable = false,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
   const name = label ?? kitT(lang, 'kit.scope.label');
@@ -144,7 +153,10 @@ function ScopePickerInner({
   const trigger = useRef<HTMLButtonElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const summary = summarizeScope(value, options, mine === 'known');
-  const sumText = summaryText(lang, summary, options.length, mineCount, labels);
+  const excepting = exceptable && except;
+  const sumText = excepting && value.length > 0
+    ? kitT(lang, 'kit.scope.summary.except', { n: value.length })
+    : summaryText(lang, excepting ? { kind: 'all' } : summary, options.length, mineCount, labels);
 
   const close = (refocus = true) => {
     setOpen(false);
@@ -179,6 +191,8 @@ function ScopePickerInner({
       labels={labels}
       recent={recent}
       narrow={narrow}
+      except={excepting}
+      exceptable={exceptable}
     />
   );
 
@@ -195,7 +209,7 @@ function ScopePickerInner({
       >
         <GameIcon slug={icon} size={14} />
         <span className="sk-scope__name">{name}</span>
-        <span className="sk-scope__value" data-kind={summary.kind} title={sumText}>{sumText}</span>
+        <span className="sk-scope__value" data-kind={excepting ? 'except' : summary.kind} title={sumText}>{sumText}</span>
         <span className="sk-scope__chev" aria-hidden="true">▾</span>
       </button>
       {open && narrow && (
@@ -233,7 +247,9 @@ interface BodyProps {
   narrow?: boolean;
   options: readonly ScopeOption[];
   value: readonly string[];
-  onChange: (next: string[]) => void;
+  onChange: (next: string[], opts?: { except: boolean }) => void;
+  except: boolean;
+  exceptable: boolean;
   state: LoadState;
   error?: unknown;
   onRetry?: () => void;
@@ -247,8 +263,11 @@ interface BodyProps {
 }
 
 function ScopeBody({
-  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups, labels, recent, narrow,
+  lang, options, value, onChange: onChangeRaw, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups, labels, recent, narrow,
+  except, exceptable,
 }: BodyProps) {
+  // S9-04: режим уходит вторым аргументом, только если приложение его поддерживает.
+  const onChange = (next: string[], ex: boolean = except) => (exceptable ? onChangeRaw(next, { except: ex }) : onChangeRaw(next));
   const searchText = labels?.search || kitT(lang, 'kit.scope.search');
   const allText = labels?.all || kitT(lang, 'kit.scope.all');
   const [query, setQuery] = useState('');
@@ -397,7 +416,7 @@ function ScopeBody({
           type="button"
           className="sk-scope__act"
           aria-disabled={mineDisabled ? true : undefined}
-          onClick={() => { if (!mineDisabled) onChange(mineIds); }}
+          onClick={() => { if (!mineDisabled) onChange(mineIds, false); }}
         >
           <GameIcon slug="person" size={13} />
           {own !== null && own > 0 ? kitT(lang, 'kit.scope.summary.mine', { n: own }) : kitT(lang, 'kit.scope.mine')}
@@ -405,13 +424,19 @@ function ScopeBody({
         <button
           type="button"
           className="sk-scope__act"
-          aria-pressed={value.length === 0}
-          onClick={() => onChange([])}
+          aria-pressed={value.length === 0 && !except}
+          onClick={() => onChange([], false)}
         >
           <GameIcon slug={ICON_CANON.scopeAll} size={13} />
           {allText}
         </button>
       </div>
+      {exceptable && (
+        <label className="sk-scope__check sk-scope__except">
+          <input type="checkbox" role="switch" checked={except} disabled={!hasData} onChange={() => onChange([], !except)} />
+          <span className="sk-scope__title">{kitT(lang, 'kit.scope.except')}</span>
+        </label>
+      )}
       {mineNote && <p className="sk-scope__note sk-scope__note--wrn" data-testid="kit-scope-minenote">{mineNote}</p>}
       {recentRows.length > 0 && (
         <div className="sk-scope__grp">
@@ -424,7 +449,7 @@ function ScopeBody({
         <p className="sk-scope__count" aria-live="polite">
           {value.length === 0
             ? kitT(lang, 'kit.scope.countAll')
-            : kitT(lang, 'kit.scope.count', { n: value.length })}
+            : kitT(lang, except ? 'kit.scope.countExcept' : 'kit.scope.count', { n: value.length })}
         </p>
       )}
     </div>

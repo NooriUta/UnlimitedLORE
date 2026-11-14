@@ -5,7 +5,7 @@
 // «нужен выбор» от приложения. Рамка — sandbox, без referrer; высота — по
 // сообщению metabase.frame только с origin подписанного адреса и только от
 // своего фрейма.
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { EmbedChartFrame, KitLangProvider } from '../index';
 
@@ -110,5 +110,39 @@ describe('EmbedChartFrame: рамка', () => {
     expect(f.style.height).toBe('640px');
     fire('https://volva.example.org', f.contentWindow, 50);  // меньше минимума — минимум
     expect(f.style.height).toBe('200px');
+  });
+
+  // Приёмка препрода 14.11.2026 (f6d60691): хост Völva не отвечает — в рамке висела страница
+  // браузера «недоступна», своего состояния у LORE не было и через 20 с. Живая встройка шлёт
+  // metabase.frame каждые 100 мс (VE-5); нет ни одного сообщения за срок — «не ответила».
+  describe('встройка не ответила', () => {
+    afterEach(() => { vi.useRealTimers(); });
+    const frameMsg = (f: HTMLIFrameElement) => act(() => {
+      window.dispatchEvent(new MessageEvent('message', { origin: 'https://volva.example.org', source: f.contentWindow, data: { metabase: { type: 'frame', frame: { height: 300 } } } }));
+    });
+
+    it('нет metabase.frame за срок — «Völva не ответила» с «Повторить», рамки нет', () => {
+      vi.useFakeTimers();
+      let retried = 0;
+      const { container } = ru(<EmbedChartFrame source="Völva" title="t" answerTimeoutMs={5000}
+        state={{ kind: 'ready', signedUrl: SIGNED }} onRetry={() => { retried++; }} />);
+      expect(container.querySelector('iframe')).not.toBeNull();
+      act(() => { vi.advanceTimersByTime(5001); });
+      const box = container.querySelector('[data-embed-state="silent"]')!;
+      expect(box).not.toBeNull();
+      expect(box.textContent).toMatch(/Völva не ответила/);
+      expect(container.querySelector('iframe')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: /Повторить/ }));
+      expect(retried).toBe(1);
+      expect(container.querySelector('iframe')).not.toBeNull();
+    });
+
+    it('сообщение пришло вовремя — рамка остаётся и после срока', () => {
+      vi.useFakeTimers();
+      const { container } = ru(<EmbedChartFrame source="Völva" title="t" answerTimeoutMs={5000} state={{ kind: 'ready', signedUrl: SIGNED }} />);
+      frameMsg(container.querySelector('iframe')!);
+      act(() => { vi.advanceTimersByTime(10000); });
+      expect(container.querySelector('[data-embed-state="ready"] iframe')).not.toBeNull();
+    });
   });
 });
