@@ -8,7 +8,8 @@ import java.util.List;
  *
  * <p>Переход в done:
  * <ol>
- *   <li>агент не ставит done никогда — 409 DONE_BY_HUMAN_ONLY;</li>
+ *   <li>агент не ставит done — 409 DONE_BY_HUMAN_ONLY; исключение — слово владелицы
+ *       ({@link #OWNER_WORD} с непустым evidence_ref, решение 14.11.2026 D4);</li>
  *   <li>только из review (ready_for_deploy и uat — его стадии) — 409 DONE_ONLY_FROM_REVIEW;</li>
  *   <li>приёмщика нет — закрывающий человек становится им сам (подставляет fillReviewer), но не если он
  *       исполнитель — 409 NO_REVIEWER; приёмщик = исполнитель — 409 REVIEWER_IS_EXECUTOR;</li>
@@ -34,6 +35,14 @@ final class LoreDoneGate {
 
     static final String DEFAULT_KIND = "dev";
 
+    /**
+     * Вид доказательства «слово владелицы» — решение 14.11.2026 (D4, «вариант б»): с ним done может
+     * поставить и агент; evidence_ref обязателен (дословная цитата или ссылка на её сообщение).
+     * Годится для любого вида работы — приёмку делает сама владелица. Прочие проверки (только из
+     * review, приёмщик ≠ исполнитель) остаются.
+     */
+    static final String OWNER_WORD = "owner_word";
+
     /** Вид работы по типу задачи; тип пуст или вне таблицы — dev (допущение A4). */
     static String kindOf(String taskType, LoreModelWorkflow.Workflow w) {
         String k = w.kindOf(taskType);
@@ -41,9 +50,16 @@ final class LoreDoneGate {
     }
 
     static Verdict done(Facts f, LoreModelWorkflow.Workflow w) {
-        if (f.agent())
+        boolean ownerWord = OWNER_WORD.equals(f.evidenceType());
+        // D4 «вариант б» (14.11.2026): слово владелицы — единственный путь агента к done, и только с цитатой.
+        if (ownerWord && blank(f.evidenceRef()))
+            return new Verdict(409, "NO_EVIDENCE", "done по слову владелицы (owner_word) требует evidence_ref — "
+                + "дословную цитату или ссылку на её сообщение; запись не сделана");
+        if (f.agent() && !ownerWord)
             return new Verdict(409, "DONE_BY_HUMAN_ONLY", "агент не ставит done — переведите задачу в review "
-                + "(стадия stand_check или uat), done ставит человек-приёмщик (ADR-LORE-014-D5, правило 13.11.2026)");
+                + "(стадия stand_check или uat), done ставит человек-приёмщик (ADR-LORE-014-D5, правило 13.11.2026). "
+                + "Исключение — слово владелицы: evidence_type=owner_word и evidence_ref с её цитатой или ссылкой "
+                + "на сообщение (решение 14.11.2026, D4)");
         if (!"review".equals(LoreWorkflowCore.core(f.currentToken())))
             return new Verdict(409, "DONE_ONLY_FROM_REVIEW", "done ставится только из review (приёмки); сейчас «"
                 + f.currentToken() + "» — сначала переведите в review, приложив доказательство");
@@ -53,6 +69,7 @@ final class LoreDoneGate {
                 + "назначьте приёмщика (reviewer_agent), отличного от исполнителя");
         if (!noReviewer && f.reviewer().equals(f.executor()))
             return new Verdict(409, "REVIEWER_IS_EXECUTOR", "приёмщик совпадает с исполнителем (" + f.executor() + ")");
+        if (ownerWord) return null;   // приёмка самой владелицей годится для любого вида работы
         String kind = kindOf(f.taskType(), w);
         LoreModelWorkflow.Kind k = w.kinds().get(kind);
         List<String> allowed = k.evidence().stream().map(LoreModelWorkflow.Evidence::type).toList();
