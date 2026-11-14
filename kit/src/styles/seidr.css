@@ -1867,6 +1867,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-shell__viewsmore:hover { color: var(--t1); }
 .sk-shell__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-shell__id { color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* Приёмка препрода efe20f03: длинный код в «Недавних» (☰ на телефоне) не сжимался и вытеснял название
+   в ноль. Код рядом с названием вторичен: не шире 45% строки, режется многоточием (полный — в подсказке). */
+.sk-shell__item > .sk-shell__id { flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-shell__tag {
   flex-shrink: 0;
   padding: 1px 5px;
