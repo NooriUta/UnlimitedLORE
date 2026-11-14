@@ -634,14 +634,19 @@ export function KitShell({
         )}
         {/* Модули на телефоне — нижняя панель в зоне большого пальца, как в v1
             (SPRINT_LORE_MOBILE_UX/MOB-12; решение D-2026-UXR-MOBILE-FOLLOWS-V1).
-            Иконка и короткая подпись под ней; текущий — aria-current. */}
+            Иконка и короткая подпись под ней; текущий — aria-current.
+            Только рабочие модули (приёмка efe20f03): заглушки «скоро» занимали три из четырёх мест
+            в зоне пальца; в v1 в баре тоже только рабочие ипостаси. В шапке широкого экрана «скоро» остаётся. */}
         {narrow && (
           <nav className="sk-shell__dock" aria-label={kitT(lang, 'kit.shell.modules')}>
-            {config.modules.map(m => moduleButton(m, 'dock'))}
+            {config.modules.filter(m => m.status !== 'planned').map(m => moduleButton(m, 'dock'))}
           </nav>
         )}
         {narrow && (
-          <Sheet open={drawer} onClose={() => setDrawer(false)} title={activeModule?.title ?? kitT(lang, 'kit.shell.menu')} side="left">
+          <Sheet open={drawer} onClose={() => setDrawer(false)} side="left"
+            // K4-SHELL-PHONE-BARS, вариант 2 владелицы: модули — только в нижнем баре, в ☰ — разделы
+            // текущего модуля; заголовок листа говорит это словами: «Forseti · разделы».
+            title={activeModule?.title ? kitT(lang, 'kit.shell.menuOf', { module: activeModule.title }) : kitT(lang, 'kit.shell.menu')}>
             {menu(() => setDrawer(false))}
           </Sheet>
         )}
@@ -856,7 +861,7 @@ function ShellMenu({
                           {title ?? <span className="sk-shell__id">{id}</span>}
                         </span>
                         {title
-                          ? <span className="sk-shell__id">{id}</span>
+                          ? <span className="sk-shell__id" title={id}>{id}</span>
                           : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
                       </a>
                     )
@@ -867,7 +872,7 @@ function ShellMenu({
                           {title ?? <span className="sk-shell__id">{id}</span>}
                         </span>
                         {title
-                          ? <span className="sk-shell__id">{id}</span>
+                          ? <span className="sk-shell__id" title={id}>{id}</span>
                           : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
                       </button>
                     )}

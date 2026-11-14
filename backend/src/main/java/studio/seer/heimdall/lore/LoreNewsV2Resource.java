@@ -14,8 +14,10 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import org.jboss.logging.Logger;
 import studio.seer.heimdall.lore.news.NewsAtomWriter;
+import studio.seer.heimdall.lore.news.NewsDynamics;
 import studio.seer.heimdall.lore.news.NewsV2;
 import studio.seer.heimdall.lore.news.NewsV2Engine;
+import studio.seer.heimdall.lore.news.NewsWhoNames;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -33,6 +35,7 @@ import java.util.*;
  * <ul>
  *   <li>GET  /lore/news/v2            — лента, группы, метрики с дельтой, meta с валидацией (S7A-01/02/03/07/09)</li>
  *   <li>GET  /lore/news/v2/atom       — Atom на тот же фильтр (S7A-05)</li>
+ *   <li>GET  /lore/news/v2/dynamics   — динамика «неделя к неделе» / «месяц к месяцу» (S7A-11)</li>
  *   <li>GET  /lore/news/v2/read-mark  — черта «прочитано» (S7A-04)</li>
  *   <li>PUT  /lore/news/v2/read-mark  — сдвиг черты действием пользователя (S7A-04)</li>
  * </ul>
@@ -118,6 +121,59 @@ public class LoreNewsV2Resource extends LoreResourceBase {
         Built b = build(null, null, days, tz, null, slug, null, null, null, null, null, null, null, null, null, null, null, role);
         if (b.error != null) return b.error;
         return noStore(Response.ok(NewsV2Engine.summary(b.response, name)));
+    }
+
+    /**
+     * SPRINT_UXR_S7A_NEWS/S7A-11: блок «Динамика» — объёмные метрики «неделя к неделе» /
+     * «месяц к месяцу» (закрыто и заведено задач, закрыто спринтов, релизы, принято ADR и
+     * решений): ряды 12 ISO-недель или 6 месяцев UTC, у каждой — значение, прошлое, Δ и %.
+     *
+     * <p>Отдельный путь, а не раздел ответа /lore/news/v2: у ленты окно — дни в местном поясе
+     * (день/неделя/месяц назад от «сейчас»), у динамики — свои 12 недель или 6 месяцев по
+     * UTC; вшитая в ленту, она тянула бы полгода истории на каждый запрос ленты (а их много:
+     * фильтры, сдвиг черты). Фильтры — те же параметры записи ({@code type, project,
+     * component, sprint, milestone}) и тот же скоуп; фильтры события ({@code author, who,
+     * kind, els}) к объёму не применимы и называются в {@code meta.ignored_filters}.
+     * Права — как у v2 (GET открыт агентам).
+     */
+    @GET
+    @Path("news/v2/dynamics")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response newsDynamics(@QueryParam("period") String period,
+                                 @QueryParam("type") String type, @QueryParam("project") String project,
+                                 @QueryParam("component") String component, @QueryParam("sprint") String sprint,
+                                 @QueryParam("milestone") String milestone, @QueryParam("author") String author,
+                                 @QueryParam("who") String who, @QueryParam("kind") String kind,
+                                 @QueryParam("els") String els, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        NewsDynamics.Period p = NewsDynamics.Period.parse(period);
+        if (p == null) return badParams("period: ожидается week или month");
+        Set<String> scope = lore.allowedProjectsOrNull(role);
+        if (scope != null && scope.isEmpty())
+            return noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
+                    + "проекта — динамика не отдаётся пустой")));
+        try {
+            NewsDynamics.Input in = new LoreNewsDynamicsCollector(
+                (sql, params) -> LoreTimeFormat.isoUtcRows(ingestService.queryPublic(sql, params))).collect(scope);
+            Map<String, Object> out = NewsDynamics.compute(in,
+                new NewsDynamics.Filter(csv(type), csv(project), csv(component), csv(sprint), csv(milestone)),
+                p, Instant.now());
+            @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
+            meta.put("ignored_filters", dynamicsIgnoredFilters(author, who, kind, els));
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE NEWS dynamics] %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
+    /** S7A-11: заданные фильтры события — к объёмным метрикам не применяются, называются. */
+    static List<String> dynamicsIgnoredFilters(String author, String who, String kind, String els) {
+        List<String> out = new ArrayList<>();
+        String[][] all = {{"author", author}, {"who", who}, {"kind", kind}, {"els", els}};
+        for (String[] f : all) if (csv(f[1]) != null) out.add(f[0]);
+        return out;
     }
 
     /** PL-4: period сводки → окно {@code days} v2; {@code null} — неизвестный period (400). */
@@ -223,6 +279,21 @@ public class LoreNewsV2Resource extends LoreResourceBase {
                 .compute(q);
             @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
             meta.put("read_mark", mark.toMap());
+            // PU-29 (приёмка 14.11.2026): автор-человек — с именем из KnowUser, а не сырым kc_sub.
+            // Не прочиталось — who_names нет, клиент показывает ключи как раньше; причина в лог.
+            java.util.Set<String> whos = NewsWhoNames.whos(out);
+            if (!whos.isEmpty()) {
+                try {
+                    Map<String, String> names = new java.util.HashMap<>();
+                    for (Map<String, Object> u : ingestService.queryPublic(
+                            "SELECT kc_sub, display_name FROM KnowUser WHERE kc_sub IN :subs", Map.of("subs", List.copyOf(whos))))
+                        if (u.get("kc_sub") != null && u.get("display_name") != null && !u.get("display_name").toString().isBlank())
+                            names.put(u.get("kc_sub").toString(), u.get("display_name").toString());
+                    NewsWhoNames.attach(out, names);
+                } catch (RuntimeException e) {
+                    LOG.warnf("[LORE NEWS v2] имена людей: %s", e.getMessage());
+                }
+            } else NewsWhoNames.attach(out, Map.of());
             return new Built(out, null);
         } catch (Exception e) {
             LOG.warnf("[LORE NEWS v2] %s", e.getMessage());

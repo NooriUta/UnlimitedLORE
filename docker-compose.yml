@@ -228,14 +228,15 @@ services:
       # AL-91: проектный скоуп чтения. По умолчанию выключен; включение — решение
       # владелицы и только когда служебный читатель miniLORE заведён в граф ролей.
       - lore.scope.enforce=${LORE_SCOPE_ENFORCE:-false}
-      # SELF-PROVISION: на ЧИСТОЙ/внешней БД одного lore.migrate МАЛО. Ядро
-      # (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт ТОЛЬКО инициализатор
-      # под lore.bootstrap — миграции его не заводят, они добирают продуктовый
-      # слой поверх. Дефолт false: наш общий стенд ходит в уже поднятую БД, там
-      # повторный DDL не нужен. Для отдельной установки на пустую БД ставить
-      # LORE_BOOTSTRAP=true ВМЕСТЕ с LORE_MIGRATE=true. Порядок, проверка и
-      # признак успеха — ранбук в LORE: doc runbook_lore_self_provision
-      # (раздел «Доки»; прежняя ссылка RUNBOOK-LORE-SELF-PROVISION никуда не вела).
+      # MINI-01: явный список клиентов токена (claim azp), через запятую, «*» на конце — префикс.
+      # Пусто — проверка выключена. Включено только на препроде (lore-cd.yml), прод — решение владелицы.
+      - lore.auth.allowed-clients=${LORE_AUTH_ALLOWED_CLIENTS:-}
+      # SELF-PROVISION: ядро (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт
+      # инициализатор, миграции добирают продуктовый слой поверх. На ПУСТОЙ базе
+      # (нет ни одного ядрового типа) ядро поднимается само, без флага
+      # (D-2026-LORE-AUTO-BOOTSTRAP-CORE); на базе с ядром — ни одного DDL.
+      # LORE_BOOTSTRAP=true — только явное принуждение. Установка с нуля —
+      # deploy/install (профиль + install.sh); ранбук в LORE: doc runbook_lore_self_provision.
       - lore.bootstrap=${LORE_BOOTSTRAP:-false}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs

@@ -54,16 +54,17 @@ describe('KitShell — модули нижней панелью на телеф�
     const dock = screen.getByRole('navigation', { name: 'Модули' });
     expect(dock.className).toMatch(/\bsk-shell__dock\b/);
     expect(header.contains(dock)).toBe(false);
+    // Приёмка препрода efe20f03: три из четырёх пунктов бара были «скоро» — бар в зоне большого
+    // пальца только для рабочих модулей, как в v1 (MOB-12: там в баре только рабочие ипостаси).
+    // Заглушки «скоро» остаются в шапке широкого экрана (положительный контроль ниже).
     const items = within(dock).getAllByRole('button');
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(2);
+    expect(within(dock).queryByRole('button', { name: /Bragi/ })).toBeNull();
+    expect(dock.querySelector('[aria-disabled="true"]')).toBeNull();
     // Подпись под иконкой видна, а не только в aria-label.
     expect(within(dock).getByText('Исследования')).toBeTruthy();
     // Текущий модуль отмечен для чтения с экрана.
     expect(within(dock).getByRole('button', { name: 'LORE' }).getAttribute('aria-current')).toBe('page');
-    // «Скоро» — приглушённо и с понятным именем, нажатие ничего не делает.
-    const planned = within(dock).getByRole('button', { name: 'Bragi · скоро' });
-    expect(planned.getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(planned);
     expect(onNavigate).not.toHaveBeenCalled();
     fireEvent.click(within(dock).getByRole('button', { name: 'Исследования' }));
     expect(onNavigate).toHaveBeenCalledWith(expect.objectContaining({ module: 'research' }));
@@ -71,11 +72,26 @@ describe('KitShell — модули нижней панелью на телеф�
     expect(await axeViolations(container)).toEqual([]);
   });
 
+  // K4-SHELL-PHONE-BARS, выбор владелицы 14.11.2026 из прототипа k4-phone-bars: «Вариант 2 — бар, ☰ без
+  // модулей. Модули — только в нижнем баре (переключение одним касанием). В ☰ — только разделы текущего
+  // модуля». Заголовок листа — «<модуль> · разделы», как в прототипе.
+  it('узко, вариант 2: в ☰ только разделы текущего модуля и заголовок «<модуль> · разделы», модулей в ☰ нет', () => {
+    render(<KitShell config={CONFIG} win={fakeWin()} storage={mem()} narrow />);
+    fireEvent.click(screen.getByRole('button', { name: 'Меню' }));
+    const sheet = screen.getByRole('dialog');
+    expect(sheet.textContent).toContain('LORE · разделы');
+    expect(within(sheet).queryByRole('button', { name: 'Исследования' })).toBeNull();
+    expect(within(sheet).queryByRole('navigation', { name: 'Модули' })).toBeNull();
+    expect(sheet.textContent).toContain('Спринты');
+  });
+
   it('широко (положительный контроль): модули в шапке, нижней панели нет', () => {
     const { container } = render(<KitShell config={CONFIG} win={fakeWin()} storage={mem()} narrow={false} />);
     const nav = screen.getByRole('navigation', { name: 'Модули' });
     expect(container.querySelector('header')!.contains(nav)).toBe(true);
     expect(container.querySelector('.sk-shell__dock')).toBeNull();
+    // В шапке широкого экрана «скоро» остаётся: там это анонс, а не навигация в зоне пальца.
+    expect(within(nav).getByRole('button', { name: 'Bragi · скоро' }).getAttribute('aria-disabled')).toBe('true');
   });
 
   it('CSS: панель прибита к низу, содержимое отступает под неё с учётом safe-area', () => {

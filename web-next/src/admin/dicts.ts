@@ -210,12 +210,18 @@ export async function fetchDicts(signal?: AbortSignal, fetchImpl?: typeof fetch)
   return { rows: parseDictRows(dict.rows), truncated: dict.truncated === true, usage };
 }
 
-export async function fetchTags(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<{ rows: TagRow[]; truncated: boolean }> {
+/**
+ * Теги. `truncated`: true — сервер обрезал выдачу; 'unknown' — полноту проверить
+ * нечем (версия базы об усечении не сообщает). В обоих случаях загруженное —
+ * не «всего» (PU-29: «показано 500 из 500» при большем корпусе).
+ */
+export async function fetchTags(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<{ rows: TagRow[]; truncated: boolean | 'unknown' }> {
   const b = await fetchSlice<unknown>('tags_usage', {}, { signal, fetchImpl });
   const rows = b.rows.map(obj)
     .filter(r => typeof r.tag_id === 'string')
     .map(r => ({ tag_id: r.tag_id as string, uses: numOrNull(r.uses) ?? 0 }));
-  return { rows, truncated: b.truncated === true };
+  const tr: unknown = b.truncated;
+  return { rows, truncated: tr === true ? true : tr === 'unknown' ? 'unknown' : false };
 }
 
 /** Запись значения. Ответ сервера — исход (updated/created/unchanged), если назван. */

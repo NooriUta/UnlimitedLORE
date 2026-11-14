@@ -7,6 +7,8 @@
 import { asChip, chipId } from '../core/chipValue';
 import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed } from '../core/contract';
 import { isClosedCategory, normalizeAxisCategory } from '../core/statusAxis';
+import { progressOf } from './progress';
+import { colKey, sumOf } from './sum';
 
 export const LIST_BUDGET = { perGroup: 50, maxGroups: 20, topGroups: 10 } as const;
 
@@ -198,10 +200,36 @@ export function sortRecords(records: readonly KitRecord[], sort: ListSort | null
   if (!sort) return out;
   const order = statusOrder(config);
   const sign = sort.dir === 'desc' ? -1 : 1;
+  // Колонки `progress:`/`sum:`/`fresh:` (AP-04): поле — то же, что рисует ячейка
+  // (`colKey`, одна функция на оба места), а сравнивается число, а не JSON
+  // объекта. Без числа (0/0, ошибка, «нет значения») — в конце в обе стороны.
+  const composite = sort.key.startsWith('progress:') ? 'progress' : sort.key.startsWith('sum:') ? 'sum' : null;
+  const field = colKey(sort.key);
+  if (composite) {
+    const num = (r: KitRecord): number[] | null => {
+      const v = fieldValue(r, field);
+      if (composite === 'progress') {
+        const p = progressOf(v);
+        if (p.kind === 'error' || p.kind === 'loading' || p.kind === 'none' || p.kind === 'empty') return null;
+        return [p.done / p.total, p.total - p.done];
+      }
+      const s = sumOf(v);
+      return s.kind === 'full' || s.kind === 'partial' ? [s.value] : null;
+    };
+    const keyed = out.map((r, i) => ({ r, i, k: num(r) }));
+    const cmpNum = (a: number[], b: number[]): number => {
+      for (let j = 0; j < a.length; j++) if (a[j] !== b[j]) return a[j] - b[j];
+      return 0;
+    };
+    return keyed.sort((a, b) => {
+      if (!a.k || !b.k) return (a.k ? 0 : 1) - (b.k ? 0 : 1) || a.i - b.i;
+      return sign * cmpNum(a.k, b.k) || a.i - b.i;
+    }).map(x => x.r);
+  }
   const cmp = (a: KitRecord, b: KitRecord): number => {
     if (sort.key === 'status') return (order.get(a.status) ?? Infinity) - (order.get(b.status) ?? Infinity);
-    const va = fieldValue(a, sort.key);
-    const vb = fieldValue(b, sort.key);
+    const va = fieldValue(a, field);
+    const vb = fieldValue(b, field);
     if (typeof va === 'number' && typeof vb === 'number') return va - vb;
     return valueKey(va).localeCompare(valueKey(vb), 'ru', { numeric: true });
   };
@@ -256,6 +284,12 @@ export interface ListState {
   calDate?: string | null;
   /** Фильтр «Библиотеки»: все / актуальные / устарели (K2-VIEW-LIBRARY); нет — «все». */
   libFilter?: 'all' | 'fresh' | 'stale' | null;
+  /**
+   * Вид приложения (проп appViews у ListView, SPRINT_VIZ_EMBED/EMB-L2): id
+   * выбранного вида со своей отрисовкой. Задан и такой вид есть — он главнее
+   * view; вида нет (выключен настройкой) — действует view.
+   */
+  appView?: string | null;
 }
 
 export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
@@ -263,9 +297,10 @@ export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group:
 /**
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
  * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
- * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря), llf (фильтр библиотеки).
+ * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря), llf (фильтр библиотеки),
+ * lav (вид приложения).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf', 'lav'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -284,6 +319,7 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lm: s.month ?? null,
     lcd: s.calDate ?? null,
     llf: s.libFilter && s.libFilter !== 'all' ? s.libFilter : null,
+    lav: s.appView || null,
   };
 }
 
@@ -330,6 +366,7 @@ export function readListState(p: URLSearchParams): ListState {
     month: /^\d{4}-(0[1-9]|1[0-2])$/.test(p.get('lm') ?? '') ? p.get('lm')! : undefined,
     calDate: p.get('lcd') ?? undefined,
     libFilter: p.get('llf') === 'fresh' || p.get('llf') === 'stale' ? (p.get('llf') as 'fresh' | 'stale') : undefined,
+    appView: p.get('lav') || undefined,
   };
 }
 

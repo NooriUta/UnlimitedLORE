@@ -60,7 +60,7 @@ import { PeekPanel, type ListPeek } from './PeekPanel';
 
 export type { ListPeek } from './PeekPanel';
 import type { UrlWindow } from '../resilience/urlState';
-import { EmptyState, LoadError } from '../states/StateViews';
+import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 // Узкий экран — один порог на весь kit (core, а не оболочка: список не должен
 // тянуть за собой меню ради одного хука).
 import { useNarrow } from '../core/narrow';
@@ -74,6 +74,7 @@ import {
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
+import { hierarchyRows, type HierarchyRow } from './hierarchy';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
 import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
 import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf, keyTitleMissing } from './groupLabel';
@@ -128,10 +129,29 @@ export interface ListBulkAction {
  * содержимое (у спринта — задачи). Рисуется только у раскрытой строки, так что
  * приложение может грузить вложенное лениво, по раскрытию.
  */
+/**
+ * Дети раскрытой строки как строки той же таблицы (PU-23): состояние их загрузки и сами записи.
+ * «Загрузка», «сбой» и «пусто» — разные ответы, и каждый рисуется своим состоянием.
+ */
+export interface ListExpandRows {
+  state: 'loading' | 'ok' | 'error';
+  records: readonly KitRecord[];
+  error?: string;
+  onRetry?: () => void;
+}
+
 export interface ListExpand {
   render: (r: KitRecord) => ReactNode;
   /** Можно ли раскрыть запись; по умолчанию — да. */
   can?: (r: KitRecord) => boolean;
+  /**
+   * PU-23: дети раскрытой строки — строками ТОЙ ЖЕ таблицы, с теми же колонками (владелица
+   * 14.11.2026: «второй уровень должен повторять список верхнего уровня»). Нет — прежнее
+   * раскрытие одной широкой ячейкой через render.
+   */
+  rows?: (r: KitRecord) => ListExpandRows | undefined;
+  /** Подмена ячейки ребёнка (статус со сменой, ссылка на запись); undefined — общая отрисовка. */
+  childCell?: (col: string, child: KitRecord, parent: KitRecord) => ReactNode | undefined;
 }
 
 /** Действие строки (S4-11): кнопка-иконка в строке и, по желанию, клавиша над строкой под курсором. */
@@ -163,6 +183,13 @@ export interface ListViewProps {
    * Enter на строке под курсором (S4-11) — тоже onOpen, без него — ссылка заголовка.
    */
   onOpen?: (id: string) => void;
+  /**
+   * Клик по пустому месту строки/карточки тоже открывает запись (onOpen). Кнопки,
+   * ссылки, поля и выделенный текст внутри строки — своё действие. Включается
+   * экраном, где у строки нет другого действия на клик (PU-29: «Люди» открывались
+   * только по имени). В режиме выбора клик по-прежнему выбирает.
+   */
+  openOnRowClick?: boolean;
   /**
    * Где открывается паспорт записи (владелица 08.11): настройка использования, живёт в «Вид»
    * списка, а не полосой над паспортом. Без неё раздела в «Вид» нет — место задаёт приложение.
@@ -267,10 +294,23 @@ export interface ListViewProps {
   /** Раскрытие строки с вложенным содержимым (только вид «Список»). */
   expand?: ListExpand;
   /**
+   * PU-23: компактная вложенная таблица (дети ДРУГОГО типа под раскрытой строкой) — только
+   * таблица: без шапки, поиска, фильтров, «Быстро», выбора и клавиш списка; вид всегда «Список».
+   * Обычно не задаётся напрямую — см. ListNestedTable.
+   */
+  bare?: boolean;
+  /**
+   * Подмена ячейки записи (смена статуса, своя ссылка): undefined — общая отрисовка.
+   * Действует в любом виде, где рисуется ячейка.
+   */
+  cellOf?: (col: string, r: KitRecord) => ReactNode | undefined;
+  /**
    * Шапка экрана (S4-22, S4-23): задана — список сам рисует ScreenHead с
    * заголовком, а виды переезжают в её строку. Нет — виды остаются в полосе фильтров.
    */
   head?: ListHead;
+  /** Виды приложения — после видов конфига (SPRINT_VIZ_EMBED/EMB-L2). */
+  appViews?: readonly ListAppView[];
   /** Иконки видов (вид → слаг game-icons). Задаёт приложение: иконки — из канона LORE v1 (S4-25). */
   viewIcons?: Partial<Record<ListViewKind, string>>;
   /**
@@ -349,12 +389,29 @@ function browserZone(): string {
 }
 
 /** Шапка экрана списка: заголовок, его id и иконка, первичное действие. */
+/**
+ * Вид приложения (SPRINT_VIZ_EMBED/EMB-L2): свой вид раздела со своей
+ * отрисовкой рядом с видами list.views — например, встроенный график. Kit
+ * только ставит кнопку в переключатель и держит выбор в адресе (lav); что
+ * рисовать, решает приложение (K-14).
+ */
+export interface ListAppView {
+  id: string;
+  label: string;
+  /** Слаг иконки (как у viewIcons). */
+  icon?: string;
+  render: () => ReactNode;
+}
+
 export interface ListHead {
   title: ReactNode;
   titleId?: string;
   icon?: string;
   actions?: ReactNode;
 }
+
+/** Ключ вида приложения в меню видов (телефон): не пересекается с ListViewKind. */
+const APP_VIEW_PREFIX = 'app:';
 
 /** Колонка, которую нельзя снять: список без названия записи нечитаем (S4-35). */
 const COLS_LOCKED = 'title+id';
@@ -382,13 +439,18 @@ function resolveWin(urlState: ListViewProps['urlState']): UrlWindow | null {
 
 /** Раскрытые строки в URL: lx=id1,id2 (id кодирует URLSearchParams). */
 const EXPAND_PARAM = 'lx';
-function initialExpanded(win: UrlWindow | null): Set<string> {
+/**
+ * Раскрытые строки ИЕРАРХИИ одного типа (PU-23): lh=id1,id2. Отдельно от lx: раскрыть вложенное
+ * (задачи спринта) и показать подкомпоненты — разные действия с разными кнопками.
+ */
+const TREE_PARAM = 'lh';
+function initialExpanded(win: UrlWindow | null, param: string = EXPAND_PARAM): Set<string> {
   if (!win) return new Set();
-  const raw = readUrlState(win).get(EXPAND_PARAM);
+  const raw = readUrlState(win).get(param);
   return new Set(raw ? raw.split(',').filter(Boolean) : []);
 }
 
-function initialState(win: UrlWindow | null, initial: Partial<ListState> | undefined): ListState {
+export function initialState(win: UrlWindow | null, initial: Partial<ListState> | undefined): ListState {
   const s: ListState = { ...DEFAULT_LIST_STATE, ...initial };
   if (!win) return s;
   const params = readUrlState(win);
@@ -402,6 +464,13 @@ function initialState(win: UrlWindow | null, initial: Partial<ListState> | undef
   if (params.has('lt')) s.text = parsed.text;
   if (params.has('lc')) s.closed = parsed.closed;
   if (params.has('lg2')) s.group2 = parsed.group2;
+  // Приёмка препрода 14.11.2026: lav (вид приложения), lm (месяц календаря), lcd (день календаря)
+  // и llf (фильтр библиотеки) пишутся в адрес, но при загрузке не восстанавливались — после
+  // перезагрузки «Völva» сбрасывалась на «Список». Каждое поле адреса восстанавливается.
+  if (params.has('lav')) s.appView = parsed.appView;
+  if (params.has('lm')) s.month = parsed.month;
+  if (params.has('lcd')) s.calDate = parsed.calDate;
+  if (params.has('llf')) s.libFilter = parsed.libFilter;
   return s;
 }
 
@@ -424,9 +493,10 @@ function StatusCell({ code, kind, labels }: { code: string; kind?: string; label
   const s = labels.statusOf(code, kind);
   const style = { '--st-c': s?.color ?? 'var(--t3)' } as CSSProperties;
   return (
-    <span className={`sk-list__status${s ? '' : ' is-unknown'}`} style={style} data-status={code}>
+    // Владелица 14.11.2026: «статус везде иконкой, без подписи — название во всплывающей подсказке».
+    <span className={`sk-list__status${s ? '' : ' is-unknown'}`} style={style} data-status={code}
+      title={s?.title ?? labels.valueTitle('status', code)} aria-label={s?.title ?? labels.valueTitle('status', code)} role="img">
       <GameIcon slug={s?.icon ?? 'help'} size={14} />
-      <span>{s?.title ?? labels.valueTitle('status', code)}</span>
     </span>
   );
 }
@@ -496,8 +566,8 @@ const DATE_SLOT = '@kit:date';
 const CELL_VALUES_INLINE = 1;
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, head, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
@@ -516,6 +586,8 @@ export function ListView({
   // Панель «Горячие клавиши» показывает клавиши ЭТОГО списка — из тех же действий.
   const lang0 = useKitLang();
   useEffect(() => {
+    // Вложенная таблица клавиш списка не держит — иначе панель «Горячие клавиши» двоится.
+    if (bare) return undefined;
     const t0 = (k: KitKey) => kitT(lang0, k);
     const groups: KeymapGroup[] = [];
     if (rowActionsProp?.length) groups.push({ id: 'row', title: t0('kit.keymap.group.row'), actions: rowActionsProp });
@@ -523,7 +595,7 @@ export function ListView({
     const builtin = [...LIST_BUILTIN_KEYS, ...(peek ? [{ hotkey: 'Space', title: 'kit.keymap.list.peek' as KitKey }] : [])];
     groups.push({ id: 'list', title: t0('kit.keymap.group.list'), builtin: true, actions: builtin.map(k => ({ id: 'list:' + k.hotkey, title: t0(k.title), hotkey: k.hotkey })) });
     return registerKeymap({ owner: keymapOwner.current, groups });
-  }, [rowActionsProp, bulkActionsProp, lang0, peek]);
+  }, [rowActionsProp, bulkActionsProp, lang0, peek, bare]);
   const mac = isMacPlatform();
   const rootRef = useRef<HTMLDivElement>(null);
   const keymapOwner = useRef(Symbol('list-keymap'));
@@ -611,6 +683,15 @@ export function ListView({
     if (win) pushUrlState({ [EXPAND_PARAM]: n.size ? [...n].join(',') : null }, { win, replace: true });
     return n;
   });
+  // PU-23: раскрытие иерархии одного типа (list.tree) — в адресе, как lx: ссылка воспроизводит вид.
+  const [treeOpen, setTreeOpen] = useState<Set<string>>(() => initialExpanded(win, TREE_PARAM));
+  const setTree = (id: string, open: boolean) => setTreeOpen(prev => {
+    if (prev.has(id) === open) return prev;
+    const n = new Set(prev);
+    if (open) n.add(id); else n.delete(id);
+    if (win) pushUrlState({ [TREE_PARAM]: n.size ? [...n].join(',') : null }, { win, replace: true });
+    return n;
+  });
   // Режим выбора (S4-10): включается долгим нажатием или кнопкой «Выбрать».
   const [mode, setMode] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -636,7 +717,9 @@ export function ListView({
   // экрана, а карточек помещается 9 против 2 строк (замер 11.11, как в v1).
   // Явный выбор и управляемое состояние — закон.
   const phoneCards = narrow && !viewPicked && !stateProp && views.includes('cards');
-  const view: ListViewKind = phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  const view: ListViewKind = bare ? 'list' : phoneCards ? 'cards' : views.includes(state.view) ? state.view : (views[0] ?? 'list');
+  // Вид приложения главнее вида конфига, пока он есть; пропал (выключен) — действует view.
+  const activeApp = appViews?.find(a => a.id === state.appView) ?? null;
   const quick = listCfg?.quick ?? [];
   const filterKeys = listCfg?.filters ?? [];
   const groupOpts = useMemo(() => groupingOptions(config), [config]);
@@ -673,6 +756,7 @@ export function ListView({
   // реестра в тысячу строк.
   const freshNow = useMinuteNow(columns.some(c0 => c0.startsWith('fresh:')));
 
+  const headSortKeys = sortKeysOf(config);
   const update = (patch: Partial<ListState>) => {
     if (patch.view !== undefined) setViewPicked(true);
     if (stateProp) {
@@ -1023,7 +1107,14 @@ export function ListView({
   });
   // В режиме выбора касание строки переключает её, а ссылка заголовка не уводит.
   const onRecordClick = (e: ReactMouseEvent, id: string) => {
-    if (!selecting) return;
+    if (!selecting) {
+      if (!openOnRowClick || !onOpen) return;
+      if ((e.target as Element).closest('a, input, label, button, select, textarea, summary, [role="menu"], [role="dialog"]')) return;
+      // Выделял текст мышью — это не «открыть».
+      if (typeof window !== 'undefined' && (window.getSelection?.()?.toString() ?? '') !== '') return;
+      onOpen(id);
+      return;
+    }
     if ((e.target as Element).closest('input, label, button, select, textarea')) return;
     e.preventDefault();
     toggleSel(id);
@@ -1240,7 +1331,8 @@ export function ListView({
   };
   // «Вид ⌄» (S4-27): режим закрытых — часть состояния списка и сохранённого вида.
   // Телефон: виды — внутри «Вид ▾», а не строкой над списком (владелица 11.11).
-  const viewsInMenu = narrow && views.length > 1;
+  const appCount = appViews?.length ?? 0;
+  const viewsInMenu = narrow && views.length + appCount > 1;
   const viewMenu = (
     <ViewMenu
       closed={closedMode}
@@ -1258,15 +1350,20 @@ export function ListView({
       }}
       onColumns={setColumns}
       kinds={viewsInMenu ? {
-        all: views.map(v => ({ key: v, title: t(`kit.list.view.${v}` as KitKey) })),
-        current: view,
-        onPick: k => update({ view: k as ListViewKind }),
+        all: [
+          ...views.map(v => ({ key: v, title: t(`kit.list.view.${v}` as KitKey) })),
+          ...(appViews ?? []).map(a => ({ key: APP_VIEW_PREFIX + a.id, title: a.label })),
+        ],
+        current: activeApp ? APP_VIEW_PREFIX + activeApp.id : view,
+        onPick: k => (k.startsWith(APP_VIEW_PREFIX)
+          ? update({ appView: k.slice(APP_VIEW_PREFIX.length) })
+          : update({ view: k as ListViewKind, appView: null })),
       } : undefined}
       narrow={narrow}
     />
   );
   // Виды (S4-22/S4-23): в строке заголовка, если есть шапка, иначе — первыми в полосе фильтров.
-  const viewsSwitch = views.length > 1 && !viewsInMenu ? (
+  const viewsSwitch = views.length + appCount > 1 && !viewsInMenu ? (
     <div role="radiogroup" aria-label={t('kit.list.views')} className="sk-list__views">
       {views.map(v => {
         const icon = viewIcons?.[v];
@@ -1275,15 +1372,29 @@ export function ListView({
             key={v}
             type="button"
             role="radio"
-            aria-checked={view === v}
-            className={`sk-list__view${view === v ? ' is-on' : ''}`}
-            onClick={() => update({ view: v })}
+            aria-checked={!activeApp && view === v}
+            className={`sk-list__view${!activeApp && view === v ? ' is-on' : ''}`}
+            onClick={() => update({ view: v, appView: null })}
           >
             {icon && <GameIcon slug={icon} size={14} />}
             <span>{t(`kit.list.view.${v}` as KitKey)}</span>
           </button>
         );
       })}
+      {(appViews ?? []).map(a => (
+        <button
+          key={APP_VIEW_PREFIX + a.id}
+          type="button"
+          role="radio"
+          aria-checked={activeApp?.id === a.id}
+          className={`sk-list__view${activeApp?.id === a.id ? ' is-on' : ''}`}
+          data-app-view={a.id}
+          onClick={() => update({ appView: a.id })}
+        >
+          {a.icon && <GameIcon slug={a.icon} size={14} />}
+          <span>{a.label}</span>
+        </button>
+      ))}
     </div>
   ) : null;
   const filterCount = Object.keys(filterSet.fields).length + (filterSet.text ? 1 : 0) + (dateOn ? 1 : 0);
@@ -1470,11 +1581,18 @@ export function ListView({
   // карточки держат один признак, а не две копии условия.
   const statusVisible = (r: KitRecord): boolean => r.status !== '' && config.statuses.items.length > 0;
   const cell = (col: string, r: KitRecord): ReactNode => {
+    const own = cellOf?.(col, r);
+    if (own !== undefined) return own;
     switch (col) {
       case 'select': return checkbox(r);
       case 'title+id': return <><Title r={r} href={href} onOpen={onOpen} /> <Pill variant="id">{r.id}</Pill></>;
       case 'title': return <Title r={r} href={href} onOpen={onOpen} />;
-      case 'id': return <Pill variant="id">{r.id}</Pill>;
+      // Владелица 14.11.2026: «щелчок по коду тоже открывает паспорт» — код ведёт туда же, куда название.
+      case 'id': return href
+        ? <a className="sk-list__idlink" href={href(r.id)} onClick={onOpen ? () => onOpen(r.id) : undefined}><Pill variant="id">{r.id}</Pill></a>
+        : onOpen
+          ? <button type="button" className="sk-list__idlink" onClick={() => onOpen(r.id)}><Pill variant="id">{r.id}</Pill></button>
+          : <Pill variant="id">{r.id}</Pill>;
       case 'status': return <StatusCell code={r.status} kind={r.kind} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
@@ -1903,7 +2021,10 @@ export function ListView({
   );
 
   let body: ReactNode;
-  if (feedGroupsList) {
+  if (activeApp) {
+    // Вид приложения (SPRINT_VIZ_EMBED/EMB-L2): отрисовка — его, kit даёт место.
+    body = <div className="sk-list__appview" data-app-view={activeApp.id}>{activeApp.render()}</div>;
+  } else if (feedGroupsList) {
     /*
       Лента (K2-FEED-VIEW). Честные состояния здесь — не украшение, а часть
       вида: лента выглядит потоком событий, и пропуск в ней читается как
@@ -2098,27 +2219,132 @@ export function ListView({
     };
     const expandRow = (r: KitRecord) => {
       if (!expand || !expanded.has(r.id) || (expand.can && !expand.can(r))) return null;
+      const kids = expand.rows?.(r);
+      if (kids) {
+        const stateRow = (node: ReactNode) => (
+          <tr className="sk-list__xrow" data-expand-of={r.id}>
+            <td colSpan={span} id={xid(r.id)} className="sk-list__xbody">{node}</td>
+          </tr>
+        );
+        if (kids.state === 'loading') return stateRow(<Skeleton lines={2} />);
+        if (kids.state === 'error') return stateRow(<LoadError compact error={kids.error} onRetry={kids.onRetry} />);
+        if (kids.records.length === 0) return stateRow(<EmptyState compact title={t('kit.list.childEmpty')} />);
+        return (
+          <>
+            {kids.records.map(child => (
+              <tr key={child.id} className="sk-list__row sk-list__row--child" data-record-id={child.id} data-child-of={r.id}>
+                <td className="sk-list__td sk-list__xcell" />
+                {columns.map(c => {
+                  const a = colAttrs(c);
+                  const own = expand.childCell?.(c, child, r);
+                  // Колонка поля (в т.ч. progress:/sum:/fresh:), которого у вида ребёнка нет, — «н/п»:
+                  // у задачи нет «задач спринта», и прочерк читался бы как «значения нет».
+                  const fieldCol = /^(progress|sum|fresh):/.test(c) ? c.slice(c.indexOf(':') + 1) : null;
+                  const na = fieldCol !== null && notApplicable(child.kind, fieldCol)
+                    ? <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[child.kind]?.title ?? child.kind, field: fieldTitleOf(fieldCol) })}>{t('kit.list.cell.naShort')}</span>
+                    : null;
+                  const node = own !== undefined ? own : c === 'select' || c === 'actions' ? null : na ?? ellip(c, child, cell(c, child));
+                  return <td key={c} className={'sk-list__td ' + a.className} data-w={a['data-w']}>{node}</td>;
+                })}
+              </tr>
+            ))}
+          </>
+        );
+      }
       return (
         <tr className="sk-list__xrow" data-expand-of={r.id}>
           <td colSpan={span} id={xid(r.id)} className="sk-list__xbody">{expand.render(r)}</td>
         </tr>
       );
     };
-    const rowsOf = (rs: KitRecord[]) => rs.map(r => (
+    /*
+      PU-23, вторая ветка правила владелицы 14.11.2026: иерархия ОДНОГО типа (компонент →
+      подкомпоненты) — строками той же таблицы, с отступом по глубине и кнопкой раскрытия у
+      родителя. Родитель — list.tree.parent, та же настройка, что у вида «Дерево». При группировке
+      иерархии нет: группа режет дерево поперёк, и родитель с детьми оказались бы в разных группах.
+    */
+    const treeSpec = listCfg?.tree && !grouped && !subKey ? listCfg.tree : null;
+    const treeCol = treeSpec
+      ? columns.find(c => c === 'title+id' || c === 'title') ?? columns.find(c => c !== 'select' && c !== 'actions' && c !== 'status') ?? null
+      : null;
+    const treeToggle = (r: KitRecord, h: HierarchyRow) => {
+      if (h.kids === 0) return <span className="sk-list__tspc" aria-hidden="true" />;
+      return (
+        <button
+          type="button"
+          className="sk-list__tbtn"
+          aria-expanded={h.open}
+          aria-label={t(h.open ? 'kit.list.tree.collapse' : 'kit.list.tree.expand', { title: r.title })}
+          onClick={e => { e.stopPropagation(); setTree(r.id, !h.open); }}
+          onKeyDown={e => {
+            // Стрелки — как в дереве: вправо раскрыть, влево свернуть. Enter/пробел — родной клик
+            // кнопки; до клавиш списка (открыть запись) они не доходят.
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+              e.preventDefault();
+              setTree(r.id, e.key === 'ArrowRight');
+            }
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+          }}
+        >
+          <span aria-hidden="true">{h.open ? '▾' : '▸'}</span>
+        </button>
+      );
+    };
+    const rowOf = (r: KitRecord, h?: HierarchyRow) => (
       <Fragment key={r.id}>
                     <tr
-                      className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
+                      className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}${h?.path ? ' sk-list__row--path' : ''}`}
                       data-record-id={r.id}
+                      data-depth={h ? h.depth : undefined}
+                      data-tree-path={h?.path ? 'true' : undefined}
                       aria-selected={selectable ? selected.has(r.id) : undefined}
                       {...rowProps(r)}
                       onClick={e => onRecordClick(e, r.id)}
                     >
                       {expandCell(r)}
-                      {columns.map(c => { const a = colAttrs(c); return <td key={c} className={`sk-list__td ${a.className}`} data-w={a['data-w']}>{ellip(c, r, cell(c, r))}</td>; })}
+                      {columns.map(c => {
+                        const a = colAttrs(c);
+                        const node = ellip(c, r, cell(c, r));
+                        return (
+                          <td key={c} className={`sk-list__td ${a.className}`} data-w={a['data-w']}>
+                            {h && c === treeCol
+                              ? (
+                                <span className="sk-list__tree" style={{ '--tree-lvl': String(h.depth) } as CSSProperties}>
+                                  {treeToggle(r, h)}
+                                  <span className="sk-list__tbody">{node}</span>
+                                </span>
+                              )
+                              : node}
+                          </td>
+                        );
+                      })}
                     </tr>
                     {expandRow(r)}
                   </Fragment>
-    ));
+    );
+    const rowsOf = (rs: KitRecord[]) => rs.map(r => rowOf(r));
+    /** Строки группы: иерархией (list.tree) или плоско; предел «ещё N» — по видимым строкам. */
+    const groupRows = (g: ListGroup, limit: number, key: string = g.key) => {
+      if (!treeSpec) {
+        return (
+          <>
+            {rowsOf(g.records.slice(0, limit))}
+            {g.records.length > limit && (
+              <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit, key)}</td></tr>
+            )}
+          </>
+        );
+      }
+      const hrows = hierarchyRows(g.records, records, treeSpec.parent, treeOpen, hasFilter);
+      return (
+        <>
+          {hrows.slice(0, limit).map(h => rowOf(h.record, h))}
+          {hrows.length > limit && (
+            <tr className="sk-list__morerow"><td colSpan={span}>{moreButton({ ...g, records: hrows.map(h => h.record) }, limit, key)}</td></tr>
+          )}
+        </>
+      );
+    };
     body = (
       <div className="sk-list__scroll">
         <table className="sk-list__table">
@@ -2127,15 +2353,33 @@ export function ListView({
               {expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}
               {columns.map(c => {
                 const head = colTitle(c);
+                // Владелица 14.11.2026: «щелчок на колонке — переключение сортировки по этой колонке»:
+                // по возрастанию → по убыванию → без сортировки. Только у колонок, по которым сортируют.
+                const sortable = headSortKeys.includes(c);
+                const dir = state.sort?.key === c ? state.sort.dir : null;
+                // «Без сортировки» = умолчание экрана (initial.sort), а не «как пришло» (AP-04,
+                // приёмка 0dccfe73): до щелчка список стоял на «Изменено ↓» — туда и возвращается.
+                // Умолчание на этой же колонке — снимается совсем, иначе цикл не вышел бы из неё.
+                const off = initial?.sort && initial.sort.key !== c ? initial.sort : null;
+                const cycle = () => update({ sort: dir === null ? { key: c, dir: 'asc' } : dir === 'asc' ? { key: c, dir: 'desc' } : off });
                 return (
                 <th
                   key={c}
                   scope="col"
-                  className={`sk-list__th ${colAttrs(c).className}`}
+                  aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : undefined}
+                  className={`sk-list__th ${colAttrs(c).className}${sortable ? ' sk-list__th--sort' : ''}`}
+                  {...(sortable ? {
+                    tabIndex: 0,
+                    title: t(dir === 'asc' ? 'kit.list.sortHeadDesc' : dir === 'desc' ? 'kit.list.sortHeadOff' : 'kit.list.sortHeadAsc'),
+                    // Ручка ширины внутри заголовка сортировку не переключает.
+                    onClick: (e: ReactMouseEvent) => { if (!(e.target as HTMLElement).closest('.sk-list__grip')) cycle(); },
+                    onKeyDown: (e: ReactKeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycle(); } },
+                  } : {})}
                   data-w={colAttrs(c)['data-w']}
                   style={appliedW[c] === undefined ? undefined : { width: `${appliedW[c]}px` }}
                 >
                   {head}
+                  {dir && <span className="sk-list__sortmark" aria-hidden="true">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
                   {widths && !widths.narrow && (
                     // Ручка — только когда ширинами управляют: иначе это
                     // украшение, которое ничего не делает.
@@ -2217,14 +2461,7 @@ export function ListView({
                       </Fragment>
                     );
                   })
-                  : (
-                    <>
-                      {rowsOf(g.records.slice(0, limit))}
-                      {g.records.length > limit && (
-                        <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
-                      )}
-                    </>
-                  ))}
+                  : groupRows(g, limit))}
               </tbody>
             );
           })}
@@ -2257,12 +2494,24 @@ export function ListView({
     );
   }
 
+  if (bare) {
+    // Клавиши вложенной таблицы не уходят в список-родитель: J/K родителя не должны листать
+    // его строки, пока фокус во вложенной таблице.
+    return (
+      <div ref={rootRef} className={['sk-list', 'sk-list--bare', className].filter(Boolean).join(' ')} data-view="list"
+        onKeyDown={e => e.stopPropagation()}>
+        {body}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={rootRef}
       className={['sk-list', className].filter(Boolean).join(' ')}
       data-view={view}
       data-selecting={selecting ? 'true' : undefined}
+      data-open-row={openOnRowClick && onOpen ? 'true' : undefined}
       onKeyDown={onListKeyDown}
       {...longPress}
     >
@@ -2551,4 +2800,40 @@ export function ListView({
       {peek && peekOpen && cursorId && <PeekPanel id={cursorId} peek={peek} onClose={() => setPeekOpen(false)} />}
     </div>
   );
+}
+
+export interface ListNestedTableProps {
+  /** Конфиг экрана ДОЧЕРНЕГО типа — его колонки, подписи, статусы, отображение. */
+  config: KitConfig;
+  /** Дети и состояние их загрузки (то же, что у ListExpand.rows). */
+  rows: ListExpandRows;
+  /** Подпись таблицы для скринридера («Задачи спринта S1»). */
+  label?: string;
+  href?: (id: string) => string;
+  onOpen?: (id: string) => void;
+  cellOf?: (col: string, r: KitRecord) => ReactNode | undefined;
+}
+
+/**
+ * PU-23 (правило владелицы 14.11.2026): дети ДРУГОГО типа под раскрытой строкой — вложенная
+ * таблица своего типа, «со своими полями, маппингами и отображениями». Тот же движок списка, что
+ * у экрана ребёнка, но компактно: только таблица. Все дети видны — режим «закрытые скрыты»
+ * раздела здесь не действует: под спринтом ждут ВСЕ его задачи. «Загрузка», «сбой» и «нет
+ * вложенных» — разные ответы, и каждый рисуется своим состоянием.
+ */
+export function ListNestedTable({ config, rows, label, href, onOpen, cellOf }: ListNestedTableProps) {
+  const lang = useKitLang();
+  const data = useMemo<KitData>(() => ({
+    records: [...rows.records], edges: [], journal: [],
+    meta: { generated_at: '', total: rows.records.length },
+  }), [rows.records]);
+  const listCfg = useMemo<KitConfig>(() => (config.list
+    ? { ...config, list: { ...config.list, showClosed: 'all' } }
+    : config), [config]);
+  let node: ReactNode;
+  if (rows.state === 'loading') node = <Skeleton lines={2} />;
+  else if (rows.state === 'error') node = <LoadError compact error={rows.error} onRetry={rows.onRetry} />;
+  else if (rows.records.length === 0) node = <EmptyState compact title={kitT(lang, 'kit.list.childEmpty')} />;
+  else node = <ListView bare config={listCfg} data={data} urlState={false} href={href} onOpen={onOpen} cellOf={cellOf} />;
+  return <div className="sk-list__nested" data-nested="" role="group" aria-label={label}>{node}</div>;
 }

@@ -52,6 +52,8 @@ export const ICON_CANON = {
   ctlTreeToggle: 'lucide:chevron-right',
   ctlEdit: 'lucide:pencil',
   ctlReading: 'lucide:book-open',
+  /** Поиск: открыть найденную запись во весь экран (владелица 14.11.2026: «толстая кнопка → в цвета палитры»). */
+  ctlOpenFull: 'lucide:arrow-right',
   /**
    * Мини-версия зоны «только иконками» (S4-30). Выбор владелицы 09.11.2026:
    * на предложение «Свойства — sliders-horizontal, Граф — share-2,

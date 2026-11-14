@@ -341,20 +341,16 @@ export function MdInlineEdit({
     return (
       <section className={['sk-mdedit', className].filter(Boolean).join(' ')} data-state="read">
         {draftBar}
-        {/* S4-CONTENT-V4 (прототип v4): как править — строкой над текстом.
-            Кнопки в ней больше нет (владелица 10.11.2026: «не надо две кнопки
-            редактирования») — только слова о том, где искать исходник. */}
-        {onSave && hint && (
-          <div className="sk-mdedit__hint">
-            <span className="sk-mdedit__hint-text">{t('kit.mdedit.hint')}</span>
-          </div>
-        )}
+        {/* PU-29 п.6 (владелица 14.11.2026): строка «как править» над каждым
+            текстом замусоривала паспорт — её слова теперь в подсказке самой ✎. */}
         {onSave && (
           <IconButton
             ref={penRef}
             className="sk-mdedit__pen"
             icon={ICON_CANON.ctlEdit}
             label={t('kit.mdedit.edit', { field: label })}
+            title={hint ? `${t('kit.mdedit.edit', { field: label })}
+${t('kit.mdedit.hint')}` : undefined}
             onClick={open}
           />
         )}

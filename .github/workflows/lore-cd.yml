@@ -419,6 +419,16 @@ jobs:
           LORE_MART_AUTH: basic
           # AL-91: проектный скоуп чтения — переменная репозитория, по умолчанию выключен.
           LORE_SCOPE_ENFORCE: ${{ vars.LORE_SCOPE_ENFORCE || 'false' }}
+          # MINI-01 (владелица 14.11.2026: «включи разрешённых клиентов только на препроде»):
+          # токены только от этих клиентов, прочие — 403 CLIENT_NOT_ALLOWED. Список — те, кто
+          # реально ходит в LORE: веб (v1 и v2 — клиент lore-app), мобильный miniLORE, сервер
+          # miniLORE, все MCP-клиенты (профильные, машинные lore-mcp-full_*, шлюз lore-mcp-mobile_pm).
+          # Переменная репозитория перекрывает список без правки workflow. На прод (lore-release)
+          # не передаётся — там проверка выключена.
+          # Клиент собственной пробы CD (/lore/version, шаг S0-03) дописывается всегда, именем из
+          # того же секрета: без него проба получала 403 CLIENT_NOT_ALLOWED и выкатка краснела
+          # (промо #1368, 14.11.2026).
+          LORE_AUTH_ALLOWED_CLIENTS: ${{ vars.LORE_AUTH_ALLOWED_CLIENTS_PREPROD || 'lore-app,mobilepoc-app,minilore-srv,lore-mcp-*' }},${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
         run: docker compose up -d --no-deps lore-backend
 
       - name: Deploy frontend

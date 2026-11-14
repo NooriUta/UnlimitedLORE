@@ -17,6 +17,10 @@ export const LUCIDE_ICONS: IconifyJSON = {
     // S4-30: мини-версия зоны «только иконками» (выбор владелицы 09.11.2026 —
     // «три», на предложенные slider-horizontal / share-2 / bar-chart-3; в
     // lucide 1.70 последняя называется chart-column).
+    // Поиск: открыть найденное во весь экран — стрелка lucide, а не game-icons (владелица 14.11.2026).
+    "arrow-right": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5l7 7l-7 7\"/></g>"
+    },
     "sliders-horizontal": {
       "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 5H3\"/><path d=\"M12 19H3\"/><path d=\"M14 3v4\"/><path d=\"M16 17v4\"/><path d=\"M21 12h-9\"/><path d=\"M21 19h-5\"/><path d=\"M21 5h-7\"/><path d=\"M8 10v4\"/><path d=\"M8 12H3\"/></g>"
     },

@@ -449,7 +449,20 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     const names = [...s.failed, ...s.forbidden].map(f => f.block);
     return new Set(names.flatMap(n => [n, ...n.split(' · ')]));
   }, [ctx.data.meta]);
-  const tabCount = (id: string, defs: KitRelationDef[]): number | null => (failed.has(id) ? null : relCount(defs));
+  // MC-07: раздел обрезан, а источник назвал полное число — счётчик говорит его
+  // («230»), а не размер первой страницы. Имя блока — «источник · часть», как у failed.
+  const truncTotals = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const [block, n] of Object.entries(dataStateOf(ctx.data.meta).truncatedTotals))
+      for (const k of [block, ...block.split(' · ')]) m.set(k, n);
+    return m;
+  }, [ctx.data.meta]);
+  const tabCount = (id: string, defs: KitRelationDef[]): number | null => {
+    if (failed.has(id)) return null;
+    const loaded = relCount(defs);
+    const total = truncTotals.get(id);
+    return total !== undefined && total > loaded ? total : loaded;
+  };
   const zoned = placement !== undefined;
   const hasProps = zoned && (kind?.fields?.length ?? 0) > 0;
   // Снизу и на весь экран свойства — колонкой справа рядом с контентом (владелица 08.11):
@@ -507,9 +520,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // раздел занимал в ряду два места (B13).
   const modes = (placement === 'right' || placement === 'left') && !narrow;
   const recordItems: TabItem[] = mergeTabs([
-    // В правом доке сегмент видов уже означает «Контент» — вкладка-дубль в ряд не идёт.
-    ...(modes ? [] : [{ id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' as const : undefined }]),
-    ...(hasProps && !propsSide && !propsRow ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
+    // Правило владелицы 14.11.2026: видимые + «Ещё» — один список в любом месте показа, поэтому
+    // «Контент» есть в ряду и в доке (раньше значок вида его заменял, и вкладка терялась).
+    ...([{ id: RECORD_TABS.overview, label: kitT(lang, zoned ? 'kit.record.tab.text' : 'kit.record.tab.overview'), zone: zoned ? 'record' as const : undefined }]),
+    // «Свойства» — зона, а не раздел паспорта: в доке до неё ведёт значок вида, в ряд она не идёт
+    // (иначе ряд дока разошёлся бы с рядом во весь экран, где свойства — боковая зона).
+    ...(hasProps && !propsSide && !propsRow && !modes ? [{ id: RECORD_TABS.props, label: kitT(lang, 'kit.record.tab.props'), zone: 'record' as const }] : []),
     // Счётчик у вкладки приложения — по тому же правилу, что у вкладок связей
     // (B13): вкладка без числа рядом с вкладками с числом читается как «тут
     // считать нечего», а у частей считать есть что.
@@ -604,7 +620,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // первыми задачи, D-2026-UXR-MOBILE-FOLLOWS-V1). Выбор человека главнее:
   // явный «Контент» остаётся контентом.
   const fallbackTab = narrow && items.length > 0 ? items[0].id : RECORD_TABS.overview;
-  const current = items.some(i => i.id === asked) ? asked : fallbackTab;
+  // Свойства в доке — не вкладка ряда, а вид (значок); выбор свойств остаётся выбором.
+  const current = items.some(i => i.id === asked) || (modes && hasProps && !propsSide && !propsRow && asked === RECORD_TABS.props) ? asked : fallbackTab;
   // Панелью справа (узко) — переключатель видов над шапкой, как «таблица / доска» (владелица 08.11):
   // Контент (текст и вкладки типа) · Свойства · Аналитика (связи, граф, журнал, история).
   //
@@ -618,9 +635,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // Ряд «Контент» в доке — тот же упорядоченный ряд, что во весь экран, без служебного и свойств.
   // Прежде он собирался из recordItems ДО applySections, и в доке порядок модели не применялся
   // вовсе (приёмка 14.11.2026: у 8 типов из 11 порядок в доке и во весь экран расходился).
-  const aroundIds = new Set(aroundItems.map(i => i.id));
-  const contentItems = items.filter(i => i.id !== RECORD_TABS.props && !aroundIds.has(i.id));
-  const shown: TabItem[] = !modes ? items : mode === 'analytics' ? aroundItems : mode === 'content' ? contentItems : [];
+  // Правило владелицы 14.11.2026 («вкладки не должны скакать и теряться… видимые + more в любой
+  // раскладке — один список»): ряд один и тот же везде; значки вида только ведут к своему разделу,
+  // а не прячут чужие. Не влезающее уходит под «Ещё» (решает ряд по ширине).
+  const shown: TabItem[] = mode === 'props' && modes ? [] : items;
   const firstOf: Record<Mode, string> = { content: RECORD_TABS.overview, props: RECORD_TABS.props, analytics: aroundItems[0].id };
   // S4-29 (владелица 14.11.2026): «Контент · Свойства · Аналитика» — тремя значками в строке
   // статуса, один переключатель в одном месте во всех местах показа (слева, справа, снизу, во весь
@@ -640,7 +658,9 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
         { value: 'analytics' as const, icon: ICON_CANON.recAnalytics, label: kitT(lang, 'kit.record.view.analytics') },
       ]).map(o => (
         <IconButton key={o.value} icon={o.icon} label={o.label} pressed={mode === o.value}
-          onClick={() => { if (mode !== o.value) goMode(o.value); }} />
+          // S4-29 (приёмка 14.11.2026): нажатый «Контент» на вкладке раздела («Решения») не делал
+          // ничего — к тексту было не вернуться. Значок ведёт в начало вида, если ты не там.
+          onClick={() => { if (mode !== o.value || current !== firstOf[o.value]) goMode(o.value); }} />
       ))}
     </span>
   ) : null;

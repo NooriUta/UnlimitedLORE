@@ -243,7 +243,7 @@ describe('S4-36 · набор колонок задач', () => {
     const heads = within(table).getAllByRole('columnheader').map(th => th.textContent?.trim());
     expect(heads).toContain('Статус');
     expect(heads).toContain('Класс');
-    expect(heads).toContain('Ревьюер');
+    expect(heads).toContain('Принимающий');
   });
 
   it('выбор колонки пишется в адрес, а не только в память вкладки', async () => {

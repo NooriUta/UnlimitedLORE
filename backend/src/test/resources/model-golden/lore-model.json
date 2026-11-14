@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "3afe182ca79dd9a5",
+  "version" : "5e3eb67fad8ba596",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -17,7 +17,7 @@
         "color" : "var(--t3)",
         "order" : 10,
         "category" : "not_started",
-        "allow" : [ "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -29,7 +29,7 @@
         "color" : "var(--wrn)",
         "order" : 20,
         "category" : "not_started",
-        "allow" : [ "todo", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -41,7 +41,7 @@
         "color" : "var(--t3)",
         "order" : 15,
         "category" : "not_started",
-        "allow" : [ "todo", "planned", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -53,7 +53,7 @@
         "color" : "var(--wrn)",
         "order" : 25,
         "category" : "not_started",
-        "allow" : [ "todo", "planned", "backlog", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -65,7 +65,7 @@
         "color" : "var(--inf)",
         "order" : 30,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -77,7 +77,19 @@
         "color" : "var(--wrn)",
         "order" : 40,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
+      }, {
+        "code" : "waiting",
+        "title" : "Ждём ответа",
+        "title_en" : "Waiting",
+        "icon" : "hourglass",
+        "color" : "var(--inf)",
+        "order" : 35,
+        "category" : "in_progress",
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -89,7 +101,19 @@
         "color" : "var(--dng)",
         "order" : 70,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
+      }, {
+        "code" : "review",
+        "title" : "На приёмке",
+        "title_en" : "Review",
+        "icon" : "magnifying-glass",
+        "color" : "var(--wrn)",
+        "order" : 45,
+        "category" : "in_progress",
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -101,7 +125,7 @@
         "color" : "var(--inf)",
         "order" : 50,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -113,7 +137,7 @@
         "color" : "var(--st-uat)",
         "order" : 55,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -125,7 +149,19 @@
         "color" : "var(--suc)",
         "order" : 60,
         "category" : "finished",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "failed", "cancelled" ],
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
+      }, {
+        "code" : "failed",
+        "title" : "Неуспех",
+        "title_en" : "Failed",
+        "icon" : "cancel",
+        "color" : "var(--dng)",
+        "order" : 65,
+        "category" : "withdrawn",
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -137,7 +173,7 @@
         "color" : "var(--t3)",
         "order" : 80,
         "category" : "withdrawn",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -155,7 +191,7 @@
         "color" : "var(--t3)",
         "order" : 10,
         "category" : "not_started",
-        "allow" : [ "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -167,7 +203,7 @@
         "color" : "var(--wrn)",
         "order" : 20,
         "category" : "not_started",
-        "allow" : [ "todo", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -179,7 +215,7 @@
         "color" : "var(--t3)",
         "order" : 15,
         "category" : "not_started",
-        "allow" : [ "todo", "planned", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -191,7 +227,7 @@
         "color" : "var(--wrn)",
         "order" : 25,
         "category" : "not_started",
-        "allow" : [ "todo", "planned", "backlog", "active", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -203,7 +239,7 @@
         "color" : "var(--inf)",
         "order" : 30,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "partial", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -215,7 +251,19 @@
         "color" : "var(--wrn)",
         "order" : 40,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "blocked", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
+      }, {
+        "code" : "waiting",
+        "title" : "Ждём ответа",
+        "title_en" : "Waiting",
+        "icon" : "hourglass",
+        "color" : "var(--inf)",
+        "order" : 35,
+        "category" : "in_progress",
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -227,7 +275,19 @@
         "color" : "var(--dng)",
         "order" : 70,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "ready_for_deploy", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
+      }, {
+        "code" : "review",
+        "title" : "На приёмке",
+        "title_en" : "Review",
+        "icon" : "magnifying-glass",
+        "color" : "var(--wrn)",
+        "order" : 45,
+        "category" : "in_progress",
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -239,7 +299,7 @@
         "color" : "var(--inf)",
         "order" : 50,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "uat", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "uat", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -251,7 +311,7 @@
         "color" : "var(--st-uat)",
         "order" : 55,
         "category" : "in_progress",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "done", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "done", "failed", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -263,7 +323,19 @@
         "color" : "var(--suc)",
         "order" : 60,
         "category" : "finished",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "cancelled" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "failed", "cancelled" ],
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
+      }, {
+        "code" : "failed",
+        "title" : "Неуспех",
+        "title_en" : "Failed",
+        "icon" : "cancel",
+        "color" : "var(--dng)",
+        "order" : 65,
+        "category" : "withdrawn",
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "cancelled" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -275,7 +347,7 @@
         "color" : "var(--t3)",
         "order" : 80,
         "category" : "withdrawn",
-        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "ready_for_deploy", "uat", "done" ],
+        "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "failed" ],
         "in_dictionary" : true,
         "in_lifecycle" : true,
         "active" : true
@@ -8848,12 +8920,28 @@
       "order" : 30,
       "active" : true
     }, {
+      "code" : "waiting",
+      "title" : "Ждём ответа",
+      "title_en" : "Waiting",
+      "icon" : "hourglass",
+      "color" : "var(--inf)",
+      "order" : 35,
+      "active" : true
+    }, {
       "code" : "partial",
       "title" : "Частично",
       "title_en" : "Partial",
       "icon" : "battery-50",
       "color" : "var(--wrn)",
       "order" : 40,
+      "active" : true
+    }, {
+      "code" : "review",
+      "title" : "На приёмке",
+      "title_en" : "Review",
+      "icon" : "magnifying-glass",
+      "color" : "var(--wrn)",
+      "order" : 45,
       "active" : true
     }, {
       "code" : "ready_for_deploy",
@@ -8878,6 +8966,14 @@
       "icon" : "divided-spiral",
       "color" : "var(--suc)",
       "order" : 60,
+      "active" : true
+    }, {
+      "code" : "failed",
+      "title" : "Неуспех",
+      "title_en" : "Failed",
+      "icon" : "cancel",
+      "color" : "var(--dng)",
+      "order" : 65,
       "active" : true
     }, {
       "code" : "blocked",
@@ -8937,12 +9033,28 @@
       "order" : 30,
       "active" : true
     }, {
+      "code" : "waiting",
+      "title" : "Ждём ответа",
+      "title_en" : "Waiting",
+      "icon" : "hourglass",
+      "color" : "var(--inf)",
+      "order" : 35,
+      "active" : true
+    }, {
       "code" : "partial",
       "title" : "Частично",
       "title_en" : "Partial",
       "icon" : "battery-50",
       "color" : "var(--wrn)",
       "order" : 40,
+      "active" : true
+    }, {
+      "code" : "review",
+      "title" : "На приёмке",
+      "title_en" : "Review",
+      "icon" : "magnifying-glass",
+      "color" : "var(--wrn)",
+      "order" : 45,
       "active" : true
     }, {
       "code" : "ready_for_deploy",
@@ -8967,6 +9079,14 @@
       "icon" : "divided-spiral",
       "color" : "var(--suc)",
       "order" : 60,
+      "active" : true
+    }, {
+      "code" : "failed",
+      "title" : "Неуспех",
+      "title_en" : "Failed",
+      "icon" : "cancel",
+      "color" : "var(--dng)",
+      "order" : 65,
       "active" : true
     }, {
       "code" : "blocked",

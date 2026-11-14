@@ -219,6 +219,31 @@ describe('S7B-31 · вкладка «Теги» (только чтение)', ()
     expect(within(screen.getByTestId('adm-tags')).getAllByRole('row')).toHaveLength(2);
   });
 
+  // PU-29 (приёмка 14.11.2026): «показано 500 из 500» при обрезанной выдаче —
+  // итог врал. Обрезку называем, а загруженное за «всего» не выдаём.
+  it('выдача обрезана сервером — итог не выдаётся за «всего», обрезка названа', async () => {
+    window.history.replaceState(null, '', '/?adm-dicts-tab=tags');
+    const f = vi.fn(async (url: string) => url.startsWith('/lore/slice/tags_usage')
+      ? json({ rows: [{ tag_id: 'Alpha', uses: 3 }, { tag_id: 'zeta', uses: 0 }], truncated: true, limit: 2 })
+      : json({ rows: [] })) as unknown as typeof fetch;
+    mount(f);
+    await screen.findByTestId('adm-tags');
+    expect(screen.getByText(/обрезана/)).toBeTruthy();
+    expect(screen.queryByText('показано 2 из 2')).toBeNull();
+    expect(screen.getByText(/показано 2 из 2 загруженных — не всех/)).toBeTruthy();
+  });
+
+  it('полнота не проверяема (truncated: "unknown") — сказано, а не молчим', async () => {
+    window.history.replaceState(null, '', '/?adm-dicts-tab=tags');
+    const f = vi.fn(async (url: string) => url.startsWith('/lore/slice/tags_usage')
+      ? json({ rows: [{ tag_id: 'Alpha', uses: 3 }], truncated: 'unknown' })
+      : json({ rows: [] })) as unknown as typeof fetch;
+    mount(f);
+    await screen.findByTestId('adm-tags');
+    expect(screen.getByText(/полна ли выдача тегов, проверить нечем/)).toBeTruthy();
+    expect(screen.queryByText('показано 1 из 1')).toBeNull();
+  });
+
   it('теги не прочитаны — сбой, а не «тегов нет»', async () => {
     window.history.replaceState(null, '', '/?adm-dicts-tab=tags');
     mount(fake({ tags: 502 }));

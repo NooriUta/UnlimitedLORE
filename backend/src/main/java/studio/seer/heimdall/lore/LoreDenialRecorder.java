@@ -43,8 +43,10 @@ public class LoreDenialRecorder implements ContainerResponseFilter {
         if (!path.startsWith("lore") && !path.startsWith("/lore")) return;
         String error = resp.getEntity() instanceof LoreResourceBase.LoreError le ? le.error() : "";
         boolean agent = identity != null && !identity.isAnonymous() && AgentScopeFilter.agentScopeOf(identity) != null;
+        // Нет заголовка — роли нет (null). String.valueOf(null) давал строку "null", и журнал
+        // отказов показывал её словом (приёмка 0dccfe73, сторож LoreDenialRecorderRoleTest).
         Denial d = new Denial(Instant.now().toString(), req.getMethod(), path, s, error,
-            String.valueOf(req.getHeaderString("X-Seer-Role")),
+            req.getHeaderString("X-Seer-Role"),
             AgentMachine.mark(agent, req.getHeaderString(AgentMachine.HEADER)));
         synchronized (ring) {
             if (ring.size() >= CAPACITY) ring.removeLast();

@@ -58,8 +58,29 @@ export function mergeGraph(data: KitData, g: LoreGraphBody): KitData {
     seen.add(k);
     edges.push({ from: e.from, to: e.to, type: e.rel });
   }
-  const meta: KitMeta = { ...data.meta, truncated: !!data.meta.truncated || !g.meta.complete || g.meta.truncated, graphRels: relsOf(g), graphDepth: depthsOf(g) };
+  const meta: KitMeta = { ...data.meta, truncated: !!data.meta.truncated || !g.meta.complete || g.meta.truncated, graphRels: relsOf(g), graphRelsCut: !!g.meta.rels_available_truncated, graphDepth: depthsOf(g) };
   return { ...data, records: [...records.values()], edges, meta };
+}
+
+/**
+ * S9-08 (препрод 14.11): человек раскрыл кластер типа, а выдача упёрлась в потолок сервера —
+ * узлы этого типа догружаются отдельным обходом строго по нему (rels) и сливаются без дублей.
+ * Выдача целая — запроса нет: всё, что есть у типа, уже пришло. Мета остаётся от основного
+ * ответа: неполнота окрестности в целом не пропадает из-за удачной догрузки одного типа.
+ */
+export async function topUpOpen(
+  body: LoreGraphBody, open: readonly string[], q: { type: string; id: string; depth: number; structural?: boolean },
+  fetchFn: FetchFn = loreFetch,
+): Promise<LoreGraphBody> {
+  if (!body.meta.truncated || open.length === 0) return body;
+  const more = await fetchLoreGraph({ ...q, rels: [...open] }, fetchFn);
+  const ids = new Set(body.nodes.map(n => n.id));
+  const keys = new Set(body.edges.map(e => `${e.rel}\u0000${e.from}\u0000${e.to}`));
+  return {
+    nodes: [...body.nodes, ...more.nodes.filter(n => !ids.has(n.id))],
+    edges: [...body.edges, ...more.edges.filter(e => !keys.has(`${e.rel}\u0000${e.from}\u0000${e.to}`))],
+    meta: body.meta,
+  };
 }
 
 /** Типы связей окрестности: rels_available сервера; старый сервер — счёт по рёбрам ответа. */
@@ -121,16 +142,18 @@ export function graphNotes(m: LoreGraphMeta, lang: KitLang): string[] {
 const TONE: Record<string, string> = {
   sprint: '--inf', task: '--t2', adr: '--suc', spec: '--wrn', decision: '--acc', question: '--wrn',
   release: '--dng', milestone: '--acc', component: '--acc', project: '--t1', use_case: '--inf', feature: '--suc', doc: '--t2', runbook: '--t3',
+  // PU-11 (приёмка 14.11): остальные виды модели сервера — у OMILORE хаб DOCUMENTED_IN из спек И технологий.
+  tech: '--wrn', product: '--acc', user: '--t1', agent: '--inf',
 };
 const LABEL: Record<'ru' | 'en', Record<string, string>> = {
-  ru: { sprint: 'Спринт', task: 'Задача', adr: 'ADR', spec: 'Спека', decision: 'Решение', question: 'Вопрос', release: 'Релиз', milestone: 'Веха', component: 'Компонент', project: 'Проект', use_case: 'Сценарий', feature: 'Фича', doc: 'Документ', runbook: 'Ранбук' },
-  en: { sprint: 'Sprint', task: 'Task', adr: 'ADR', spec: 'Spec', decision: 'Decision', question: 'Question', release: 'Release', milestone: 'Milestone', component: 'Component', project: 'Project', use_case: 'Use case', feature: 'Feature', doc: 'Doc', runbook: 'Runbook' },
+  ru: { sprint: 'Спринт', task: 'Задача', adr: 'ADR', spec: 'Спека', decision: 'Решение', question: 'Вопрос', release: 'Релиз', milestone: 'Веха', component: 'Компонент', project: 'Проект', use_case: 'Сценарий', feature: 'Фича', doc: 'Документ', runbook: 'Ранбук', tech: 'Технология', product: 'Продукт', user: 'Человек', agent: 'Агент' },
+  en: { sprint: 'Sprint', task: 'Task', adr: 'ADR', spec: 'Spec', decision: 'Decision', question: 'Question', release: 'Release', milestone: 'Milestone', component: 'Component', project: 'Project', use_case: 'Use case', feature: 'Feature', doc: 'Doc', runbook: 'Runbook', tech: 'Technology', product: 'Product', user: 'Person', agent: 'Agent' },
 };
 /** PU-11: формы слова «N чего» — подпись кластера-хаба в графе («27 спек ▸»). */
 type CountForms = { one: string; few?: string; many: string };
 const COUNT: Record<'ru' | 'en', Record<string, CountForms>> = {
-  ru: {sprint: {one: "{n} спринт", few: "{n} спринта", many: "{n} спринтов"}, task: {one: "{n} задача", few: "{n} задачи", many: "{n} задач"}, adr: {one: "{n} ADR", few: "{n} ADR", many: "{n} ADR"}, spec: {one: "{n} спека", few: "{n} спеки", many: "{n} спек"}, decision: {one: "{n} решение", few: "{n} решения", many: "{n} решений"}, question: {one: "{n} вопрос", few: "{n} вопроса", many: "{n} вопросов"}, release: {one: "{n} релиз", few: "{n} релиза", many: "{n} релизов"}, milestone: {one: "{n} веха", few: "{n} вехи", many: "{n} вех"}, component: {one: "{n} компонент", few: "{n} компонента", many: "{n} компонентов"}, project: {one: "{n} проект", few: "{n} проекта", many: "{n} проектов"}, use_case: {one: "{n} сценарий", few: "{n} сценария", many: "{n} сценариев"}, feature: {one: "{n} фича", few: "{n} фичи", many: "{n} фич"}, doc: {one: "{n} документ", few: "{n} документа", many: "{n} документов"}, runbook: {one: "{n} ранбук", few: "{n} ранбука", many: "{n} ранбуков"}},
-  en: {sprint: {one: "{n} sprint", many: "{n} sprints"}, task: {one: "{n} task", many: "{n} tasks"}, adr: {one: "{n} ADR", many: "{n} ADRs"}, spec: {one: "{n} spec", many: "{n} specs"}, decision: {one: "{n} decision", many: "{n} decisions"}, question: {one: "{n} question", many: "{n} questions"}, release: {one: "{n} release", many: "{n} releases"}, milestone: {one: "{n} milestone", many: "{n} milestones"}, component: {one: "{n} component", many: "{n} components"}, project: {one: "{n} project", many: "{n} projects"}, use_case: {one: "{n} use case", many: "{n} use cases"}, feature: {one: "{n} feature", many: "{n} features"}, doc: {one: "{n} doc", many: "{n} docs"}, runbook: {one: "{n} runbook", many: "{n} runbooks"}},
+  ru: {sprint: {one: "{n} спринт", few: "{n} спринта", many: "{n} спринтов"}, task: {one: "{n} задача", few: "{n} задачи", many: "{n} задач"}, adr: {one: "{n} ADR", few: "{n} ADR", many: "{n} ADR"}, spec: {one: "{n} спека", few: "{n} спеки", many: "{n} спек"}, decision: {one: "{n} решение", few: "{n} решения", many: "{n} решений"}, question: {one: "{n} вопрос", few: "{n} вопроса", many: "{n} вопросов"}, release: {one: "{n} релиз", few: "{n} релиза", many: "{n} релизов"}, milestone: {one: "{n} веха", few: "{n} вехи", many: "{n} вех"}, component: {one: "{n} компонент", few: "{n} компонента", many: "{n} компонентов"}, project: {one: "{n} проект", few: "{n} проекта", many: "{n} проектов"}, use_case: {one: "{n} сценарий", few: "{n} сценария", many: "{n} сценариев"}, feature: {one: "{n} фича", few: "{n} фичи", many: "{n} фич"}, doc: {one: "{n} документ", few: "{n} документа", many: "{n} документов"}, runbook: {one: "{n} ранбук", few: "{n} ранбука", many: "{n} ранбуков"}, tech: {one: "{n} технология", few: "{n} технологии", many: "{n} технологий"}, product: {one: "{n} продукт", few: "{n} продукта", many: "{n} продуктов"}, user: {one: "{n} человек", few: "{n} человека", many: "{n} человек"}, agent: {one: "{n} агент", few: "{n} агента", many: "{n} агентов"}},
+  en: {sprint: {one: "{n} sprint", many: "{n} sprints"}, task: {one: "{n} task", many: "{n} tasks"}, adr: {one: "{n} ADR", many: "{n} ADRs"}, spec: {one: "{n} spec", many: "{n} specs"}, decision: {one: "{n} decision", many: "{n} decisions"}, question: {one: "{n} question", many: "{n} questions"}, release: {one: "{n} release", many: "{n} releases"}, milestone: {one: "{n} milestone", many: "{n} milestones"}, component: {one: "{n} component", many: "{n} components"}, project: {one: "{n} project", many: "{n} projects"}, use_case: {one: "{n} use case", many: "{n} use cases"}, feature: {one: "{n} feature", many: "{n} features"}, doc: {one: "{n} doc", many: "{n} docs"}, runbook: {one: "{n} runbook", many: "{n} runbooks"}, tech: {one: "{n} technology", many: "{n} technologies"}, product: {one: "{n} product", many: "{n} products"}, user: {one: "{n} person", many: "{n} people"}, agent: {one: "{n} agent", many: "{n} agents"}},
 };
 
 export function LORE_GRAPH_TYPES(lang: KitLang): Record<string, { label: string; color: string; count?: CountForms }> {

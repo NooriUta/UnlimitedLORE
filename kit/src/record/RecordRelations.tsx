@@ -136,6 +136,7 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
         ids={ids}
         onUnlink={manage ? (target: string) => void call(target, 'remove') : undefined}
         testId={single ? 'kit-relation-list' : undefined}
+        columns={def.columns}
       />
     );
   // S4-24: приложение дало варианты — выбор с поиском, свободного ввода кода нет.

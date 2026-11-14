@@ -37,6 +37,11 @@ export interface McpData {
   profiles: McpProfile[];
   /** Срез сбоев не прочитался — текст причины; подключения при этом видны. */
   failError: string | null;
+  /**
+   * S7B-07: реестр профилей (agent_role агентов, срез agent_owners) не прочитался — текст
+   * причины. Тогда видны только профили, которые звали или падали; про остальные «не смогли».
+   */
+  rosterError?: string | null;
   truncated: boolean;
 }
 
@@ -49,7 +54,12 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 
 type Row = Record<string, unknown>;
 
-export function mergeMcp(conn: readonly Row[], fail: readonly Row[] | null, now: number): McpProfile[] {
+/**
+ * known — реестр профилей (S7B-07): профиль, который ни разу не звал и не падал, всё равно
+ * строка — «вызовов не видели» (unseen, calls null), а не пропуск. Без реестра его не было
+ * вовсе, и «только не видели» показывало 0 при шести молчащих профилях (приёмка 14.11).
+ */
+export function mergeMcp(conn: readonly Row[], fail: readonly Row[] | null, now: number, known: readonly string[] = []): McpProfile[] {
   const m = new Map<string, McpProfile>();
   for (const r of conn) {
     const caller = str(r.caller);
@@ -74,6 +84,13 @@ export function mergeMcp(conn: readonly Row[], fail: readonly Row[] | null, now:
     p.lastFailure = momentMs(r.last_failure);
     m.set(caller, p);
   }
+  for (const k of known) {
+    const caller = str(k);
+    if (!caller || m.has(caller)) continue;
+    m.set(caller, {
+      caller, calls: null, lastSeen: null, failures: fail === null ? null : 0, lastFailure: null, health: 'unseen',
+    });
+  }
   return [...m.values()].sort((a, b) =>
     (b.lastSeen ?? -1) - (a.lastSeen ?? -1)
     || (b.lastFailure ?? -1) - (a.lastFailure ?? -1)
@@ -84,19 +101,46 @@ export function mergeMcp(conn: readonly Row[], fail: readonly Row[] | null, now:
 export const isSilent = (p: McpProfile): boolean => p.health !== 'live';
 
 export async function fetchMcp(now: number, signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<McpData> {
-  // Сбои читаются рядом и НЕ роняют экран: без них подключения видны.
-  const [conn, fail] = await Promise.all([
+  // Сбои и реестр профилей читаются рядом и НЕ роняют экран: без них подключения видны.
+  const soft = <T,>(p: Promise<T>) => p.then(
+    b => ({ ok: true as const, body: b }),
+    (e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }),
+  );
+  const [conn, fail, roster] = await Promise.all([
     fetchSlice<Row>('mcp_connections', {}, { signal, fetchImpl }),
-    fetchSlice<Row>('mcp_failures', {}, { signal, fetchImpl }).then(
-      b => ({ ok: true as const, body: b }),
-      (e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }),
-    ),
+    soft(fetchSlice<Row>('mcp_failures', {}, { signal, fetchImpl })),
+    soft(fetchMcpRoster(signal, fetchImpl)),
   ]);
   return {
-    profiles: mergeMcp(conn.rows, fail.ok ? fail.body.rows : null, now),
+    profiles: mergeMcp(conn.rows, fail.ok ? fail.body.rows : null, now, roster.ok ? roster.body : []),
     failError: fail.ok ? null : fail.reason,
+    rosterError: roster.ok ? null : roster.reason,
     truncated: conn.truncated === true || (fail.ok && fail.body.truncated === true),
   };
+}
+
+/**
+ * Реестр профилей MCP (S7B-07) — профили агентов из того же среза, что экран «Агенты»
+ * (agent_owners.agent_role): один список на оба экрана, своей копии нет.
+ */
+export async function fetchMcpRoster(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<string[]> {
+  const b = await fetchSlice<Row>('agent_owners', { limit: '1000' }, { signal, fetchImpl });
+  return [...new Set(b.rows.map(r => str(r.agent_role)).filter((x): x is string => x !== null))];
+}
+
+/**
+ * Последний вызов профиля по счётчику запросов (mcp_connections) — для «Агентов» (S7B-07):
+ * профиль → ISO-момент. null — срез не прочитался (не «не звал»).
+ */
+export async function fetchProfileLastCalls(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<Record<string, number>> {
+  const b = await fetchSlice<Row>('mcp_connections', {}, { signal, fetchImpl });
+  const out: Record<string, number> = {};
+  for (const r of b.rows) {
+    const caller = str(r.caller);
+    const ms = momentMs(r.last_seen);
+    if (caller && ms !== null) out[caller] = ms;
+  }
+  return out;
 }
 
 /** Отбор «только с отказами» (?adm-mcp-f=failures) — с ним Главная ведёт сюда из карточки отказов. */

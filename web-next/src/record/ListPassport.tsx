@@ -5,21 +5,23 @@
 // листалка по списку и «⤢». Свой ушко «Свойства» RecordReader НЕ включаем (aside нет):
 // свойства во весь экран — рейка и свёртка самого RecordView (сессия kit, #914).
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
+import { RecordNotFound } from '../api/liveRecord';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
+  EmptyState, LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
   HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
 import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
-import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
+import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, topUpOpen, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
+import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
@@ -91,6 +93,13 @@ export interface ListPassportProps {
   onGo?: (id: string) => void;
   /** «⤢» — развернуть на весь экран; нет — кнопки нет (уже во весь экран). */
   onFull?: () => void;
+  /** MP2-11: куда ⤢ возвращает из полного экрана — место, из которого вошли. */
+  backPlace?: RecordPlacement;
+  /**
+   * Закрыть паспорт — «×» в строке записи сразу после ☰ (владелица 14.11.2026: «крестик поставь за меню —
+   * строка станет одной»). Док тогда своей полосы не рисует (RecordDock controls="bar").
+   */
+  onClose?: () => void;
   /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
@@ -107,7 +116,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -226,6 +235,20 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
     return () => { alive = false; };
   }, [graphKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // S9-08 (препрод 14.11): раскрытый кластер (gopen) при выдаче, упёршейся в потолок сервера, —
+  // его тип догружается обходом строго по нему, а не остаётся обрезком.
+  const [gopenRaw] = useUrlParam('gopen');
+  const gopen = (gopenRaw ?? '').split(',').filter(Boolean).sort().join(',');
+  const [topUp, setTopUp] = useState<{ key: string; body: LoreGraphBody } | null>(null);
+  const graphBody = graph && graph.key === graphKey ? graph.body : undefined;
+  const topUpKey = graphKey && graphBody?.meta.truncated && gopen ? `${graphKey}|${gopen}` : null;
+  useEffect(() => {
+    if (!topUpKey || !graphBody || !view) return;
+    let alive = true;
+    topUpOpen(graphBody, gopen.split(','), { type, id: view.record.id, depth: gdepth }, fetchImpl)
+      .then(body => { if (alive) setTopUp({ key: topUpKey, body }); }, () => { /* догрузка не вышла — кластер остаётся «не меньше» */ });
+    return () => { alive = false; };
+  }, [topUpKey, graphBody]); // eslint-disable-line react-hooks/exhaustive-deps
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -284,7 +307,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // высотой и шириной между состояниями; теперь бар один и тот же.
   const barCrumbs = backLabel ? <RecordCrumbs back={{ label: backLabel, href: backHref, onClick: onBack }} current={view?.record.id ?? id} /> : undefined;
   const barPager = onGo && ids.length > 0 ? <RecordPager ids={ids} current={view?.record.id ?? id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined;
-  const barTools = <PassportPlace value={placement} onPlace={setPlace} />;
+  const barTools = (
+    <>
+      <PassportPlace value={placement} onPlace={setPlace} back={backPlace} />
+      {onClose && (
+        <button type="button" className="sk-iconbtn sk-place__btn" onClick={onClose}
+          aria-label={t('pp.close')} title={`${t('pp.close')} (Esc)`}>×</button>
+      )}
+    </>
+  );
   // Дерево состояний ОДИНАКОВОЕ сверху: сборщик → оговорки → бар → тело.
   // Бар стоит на одном и том же месте во всех трёх ветках, поэтому React
   // сохраняет его узлы (и фокус, и раскрытое меню) при переходе
@@ -294,7 +325,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       <WarningsProvider>
         <ModelNotes notes={[...order.notes, ...statuses.notes]} />
         <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
-        <LoadError error={pp.error} onRetry={pp.reload} />
+        {/* «Записи нет» (404) — ответ, а не сбой: данные получены, и запись отсутствует (находка preprod 14.11). */}
+        {pp.error instanceof RecordNotFound
+          ? <EmptyState title={t('pp.notFound', { id })} hint={t('pp.notFoundHint', { id })} />
+          : <LoadError error={pp.error} onRetry={pp.reload} />}
       </WarningsProvider>
     );
   }
@@ -396,7 +430,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;
   const graphData = g?.body
-    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
+    ? (() => { const d = mergeGraph(view.data, topUp && topUp.key === topUpKey ? topUp.body : g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
     : g?.error
       ? { ...view.data, meta: { ...view.data.meta, graphNotes: [`${appT(lang, 'pp.graphFailed')}: ${g.error}`] } }
       : view.data;
@@ -434,6 +468,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           загрузки и сбоя (MP2-09/10). RecordReader свою строку не рисует,
           когда крошки/листалка/инструменты не переданы. */}
       <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
+      {/* PU-27: у вехи — сгорание по задачам её спринтов (строка BURN-DOWN и
+          «Цель к сроку»), той же строкой, что у спринта; срок — «Когда» вехи. */}
+      {type === 'milestone' && (
+        <MilestoneBurnLine
+          milestoneId={view.record.id}
+          fetchImpl={fetchImpl}
+          {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
+        />
+      )}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».

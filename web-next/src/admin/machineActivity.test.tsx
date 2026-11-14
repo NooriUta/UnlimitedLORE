@@ -160,3 +160,45 @@ describe('S7B-ACT-1 · «Агенты»', () => {
     expect(screen.getByTestId('adm-agent-AG-N').querySelector('.sk-fresh')?.getAttribute('data-tone')).toBe('none');
   });
 });
+
+// SPRINT_UXR_S7B_ADMIN/S7B-07, приёмка 14.11: «Агенты» писали у Claude Code (full) «на связи
+// 2026-11-08 УСТАРЕЛО», а экран MCP — что full звал сегодня. Это два РАЗНЫХ источника:
+// отметка сессий агента (agent_session_log) и последний вызов профиля (счётчик lore.requests).
+// Склеивать их нельзя — профиль общий у нескольких агентов; поэтому в клетке оба, каждый назван.
+describe('S7B-07 · «на связи» в «Агентах»: источник назван, вызов профиля MCP рядом', () => {
+  const ROWS = [
+    { ...AGENTS[1], agent_role: 'full', session_activity: [ago(3 * 24 * 60)] },
+    { ...AGENTS[3], agent_role: 'pm' },
+  ];
+  function fakeConn(conn: { status?: number; rows?: unknown[] } = {}) {
+    return vi.fn(async (url: string) => {
+      if (url.startsWith('/lore/slice/agent_owners')) return json({ rows: ROWS });
+      if (url.startsWith('/lore/slice/mcp_connections')) {
+        return conn.status ? json({ error: 'DOWN' }, conn.status) : json({ rows: conn.rows ?? [{ caller: 'full', calls: 10, last_seen: ago(5) }] });
+      }
+      if (url.startsWith('/lore/slice/dictionary')) return json({ rows: [{ code: 'claude-code', label_ru: 'Claude Code' }] });
+      return json({ rows: [] });
+    }) as unknown as typeof fetch;
+  }
+
+  it('у агента — отметка сессий (устарела) и последний вызов его профиля через MCP, оба подписаны', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW);
+    wrap(<AgentsScreen fetchImpl={fakeConn()} />);
+    const seen = await screen.findByTestId('adm-agent-seen-AG-C');
+    expect(seen.querySelector('.sk-fresh')?.getAttribute('data-tone')).toBe('stale');
+    const mcp = await within(seen).findByTestId('adm-agent-mcp-seen-AG-C');
+    expect(mcp.textContent).toMatch(/full/);
+    expect(mcp.textContent).toMatch(/MCP/);
+    expect(mcp.getAttribute('data-state')).toBe('seen');
+    // Профиль pm не звал — так и сказано, а не пусто.
+    expect(screen.getByTestId('adm-agent-mcp-seen-AG-N').getAttribute('data-state')).toBe('never');
+    expect(screen.getByTestId('adm-agents-seen-note').textContent).toMatch(/сесси/i);
+  });
+
+  it('срез вызовов не прочитался — «не смогли», а не «не звал»', async () => {
+    wrap(<AgentsScreen fetchImpl={fakeConn({ status: 502 })} />);
+    const mcp = await screen.findByTestId('adm-agent-mcp-seen-AG-C');
+    expect(mcp.getAttribute('data-state')).toBe('unknown');
+  });
+});

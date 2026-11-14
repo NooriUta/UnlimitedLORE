@@ -4,7 +4,7 @@
 // Air-gap: CSP в документе запрещает внешние загрузки; sandbox="allow-scripts"
 // без allow-same-origin — нет навигации, всплывающих окон, отправки форм и
 // доступа к хосту. Высота подстраивается по postMessage изнутри (resize-шим).
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { kitT } from '../i18n';
 import { useKitLang } from '../i18n/lang';
 import { frameThemeCss, hostFrameTheme, type FrameTheme } from './sandboxFrameTheme';
@@ -46,13 +46,25 @@ export function SandboxedHtmlFrame({ html, title = '', minHeight = 120 }: Sandbo
   const lang = useKitLang();
   const [height, setHeight] = useState(minHeight);
   const frameRef = useRef<HTMLIFrameElement>(null);
-  // Тема хоста; перечитывается при смене режима/палитры (атрибуты на <html>).
+  // Тема хоста В МЕСТЕ РАМКИ (K4-SANDBOX-DARK-CONTRAST): токены и color-scheme
+  // читаются у самого iframe — тема поддерева ([data-mode] на обёртке) тоже доходит.
+  // Перечитывается при смене режима/палитры на любом предке (subtree).
   const [theme, setTheme] = useState<FrameTheme>(hostFrameTheme);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const read = () => {
+      const next = hostFrameTheme(frameRef.current);
+      setTheme(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
+    read();
     if (typeof MutationObserver === 'undefined') return;
-    const mo = new MutationObserver(() => setTheme(hostFrameTheme()));
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode', 'data-theme', 'class', 'style'] });
-    return () => mo.disconnect();
+    // Корень — как раньше (режим, палитра, класс, инлайн-токены); поддерево — только
+    // режим и палитра: class/style по всему документу меняются на каждый чих.
+    // Два наблюдателя: повторный observe того же узла заменил бы параметры первого.
+    const root = new MutationObserver(read);
+    root.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode', 'data-theme', 'class', 'style'] });
+    const tree = new MutationObserver(read);
+    tree.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['data-mode', 'data-theme'] });
+    return () => { root.disconnect(); tree.disconnect(); };
   }, []);
 
   useEffect(() => {

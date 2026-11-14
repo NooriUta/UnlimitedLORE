@@ -148,3 +148,17 @@ describe('S4-14 · экран списка отдаёт палитре откр�
     await waitFor(() => expect(getPaletteTarget()).toBeNull());
   });
 });
+
+describe('MP2-11 · выход из полного экрана — в место входа', () => {
+  it('справа → во весь экран → ⤢ «Вернуть на место» = справа, а не снизу (отдельной «Выйти из полного экрана» нет, 14.11)', async () => {
+    const win = fakeWin('?open=SP&place=right');
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={fakeFetch()} urlState={win} />);
+    await waitFor(() => expect(dock(container)?.getAttribute('data-placement')).toBe('right'));
+    // Бар есть и при загрузке, но это другой узел: ждём саму запись, иначе клик уйдёт в отсоединённую кнопку.
+    await screen.findByRole('heading', { level: 1, name: 'Спринт SP' }, { timeout: 8000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Во весь экран' }));
+    await waitFor(() => expect(dock(container)?.getAttribute('data-placement')).toBe('full'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Вернуть на место' }));
+    await waitFor(() => expect(dock(container)?.getAttribute('data-placement')).toBe('right'));
+  });
+});

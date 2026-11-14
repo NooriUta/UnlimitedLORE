@@ -21,17 +21,11 @@
 import { HISTORY_TYPES, changedFields } from '../api/contracts/s2';
 import type { KitHistory, KitHistoryAuthor, KitHistoryQuery, KitHistoryRun, KitHistoryVersion } from '@seidr/kit';
 import { loreAuthor } from '../history/loreAuthor';
+import { HISTORY_SERVICE_FIELDS } from '../history/recordHistory';
 import { loreFetch } from '../auth/session';
 
-/** Служебные поля строки: в снимок полей версии не идут. */
-const SERVICE = new Set([
-  'entity_type', 'hist_type', 'ref_id', 'state_uid', 'valid_from', 'valid_to',
-  'changed_by', 'changed_by_kind', 'author', 'projects', 'projects_via',
-  // Пометка свёрнутой серии (S9-09) — метаданные выдачи, а не поле версии:
-  // попади она в снимок, сравнение версий показывало бы правку поля
-  // «collapsed», которой не было.
-  'collapsed',
-]);
+/** Служебные поля строки: в снимок полей версии не идут — общий набор обоих путей истории. */
+const SERVICE = HISTORY_SERVICE_FIELDS;
 
 export interface HistoryQueryOpts {
   /** Постранично (S9-09); сервер старее — вернёт всё и без page. */

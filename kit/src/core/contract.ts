@@ -38,7 +38,9 @@ export type KitRelation = 'composition'|'aggregation'|'association'|'attribute'|
  */
 export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean;
   /** Вид записи на другом конце (kind; не путать с `target` у onRelation — там id). Одно ребро бывает в нескольких связях вида (у компонента BELONGS_TO:in — ADR, спринты, решения…): без цели вкладка «ADR» показала бы и спринты. Не задан — любые записи. */
-  targetKind?:string }
+  targetKind?:string;
+  /** S9-05 / D14: колонки таблицы этой связи (ключи колонок списка: 'status', 'id', 'fields.<поле>', 'progress:<поле>'…) — их называет приложение по виду ребёнка. Нет — общие колонки (Статус · Вид · Код · Запись). */
+  columns?:string[] }
 export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
   /** K-14: подпись значения, унаследованного от записи ЭТОГО вида, словом приложения («от спринта»). Нет — kit говорит нейтрально «унаследовано (вид)». */
   inherited?:string;
@@ -58,7 +60,7 @@ export interface KitEdge { from:string; to:string; type:string;
   /** Вид записи на концах (kind), если его знает источник ребра. Нужен, когда записи конца нет среди загруженных: без него связь с `targetKind` не на что отобрать. */
   fromKind?:string; toKind?:string }
 export interface KitJournalEntry { at:string; who:string; is_agent?:boolean; record_id:string; field:string; from:unknown; to:unknown; approved_by?:string }
-export interface KitMeta { /** GC-04: что граф НЕ показывает — фразами приложения (края не прочитаны, скрыто правами…). */ graphNotes?:string[]; /** Типы связей окрестности со счётом — от сервера, без учёта выбранного фильтра (легенда показывает и снятые). */ graphRels?:{rel:string; count:number}[]; /** Глубина узла от записи (0 — сама запись) — для подсветки уровней. */ graphDepth?:Record<string,number>; generated_at:string; scope?:string; total?:number; returned?:number; truncated?:boolean; errors?:{block:string; reason:string;
+export interface KitMeta { /** GC-04: что граф НЕ показывает — фразами приложения (края не прочитаны, скрыто правами…). */ graphNotes?:string[]; /** Типы связей окрестности со счётом — от сервера, без учёта выбранного фильтра (легенда показывает и снятые). */ graphRels?:{rel:string; count:number}[]; /** S9-08: счёт graphRels посчитан по обрезанной окрестности — точным его не считать. */ graphRelsCut?:boolean; /** Глубина узла от записи (0 — сама запись) — для подсветки уровней. */ graphDepth?:Record<string,number>; generated_at:string; scope?:string; total?:number; returned?:number; truncated?:boolean; errors?:{block:string; reason:string;
   /** Отказ по ПРАВАМ, а не сбой (K2-FEED-VIEW §6): «нет прав» ≠ «не смогли проверить», и по тексту причины это не угадывается — признак называет приложение. */
   forbidden?:boolean;
   /** Когда пропуск случился — чтобы в ленте он стоял на своём месте по времени, а не притворялся свежим. Не названо — строка идёт в «без времени». */

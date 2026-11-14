@@ -129,6 +129,29 @@ export async function fetchAgentProjects(
   return parseAgentProjects(await getJson(`/lore/admin/access/agents?${qs({ client_id: clientId, agent_scope: agentScope })}`, opts));
 }
 
+/**
+ * SPRINT_LORE_ADMIN_POLISH/AP-03: делегирование профиля ДО выдачи агента — ответ сервера
+ * (GET /lore/admin/access/agents?kc_sub=&agent_scope= → delegation). По проекту владельца:
+ * его роль, делегирует ли она выбранный профиль и какие профили вообще (матрица D4 сервера,
+ * своей копии в UI нет). Поля delegation нет (сервер старше AP-03) — сбой, а не «пишет везде».
+ */
+export interface DelegationRow { project: string; role: string | null; delegates: boolean; profiles: string[] }
+
+export function parseDelegation(raw: unknown): DelegationRow[] {
+  const b = obj(raw);
+  if (!Array.isArray(b.delegation)) malformed('delegation');
+  return b.delegation.map(obj).map(r => ({
+    project: str(r.project) ?? '',
+    role: str(r.role),
+    delegates: r.delegates === true,
+    profiles: Array.isArray(r.profiles) ? r.profiles.filter((p): p is string => typeof p === 'string') : [],
+  })).filter(r => r.project !== '');
+}
+
+export async function fetchOwnerDelegation(kcSub: string, agentScope: string | null, opts: FetchOptions = {}): Promise<DelegationRow[]> {
+  return parseDelegation(await getJson(`/lore/admin/access/agents?${qs({ kc_sub: kcSub, agent_scope: agentScope })}`, opts));
+}
+
 export async function fetchPersonAgents(kcSub: string, opts: FetchOptions = {}): Promise<PersonAgents> {
   return parsePersonAgents(await getJson(`/lore/admin/access/agents?${qs({ kc_sub: kcSub })}`, opts));
 }

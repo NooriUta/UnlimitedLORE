@@ -322,6 +322,38 @@ describe('PL-04: снимок прода → база препрода (толь
   });
 });
 
+// PL-03: пустая база версии N выкладывается артефактом CI — не руками на ci-server.
+describe('PL-03: шаблон пустой базы lore-schema-vN.zip — артефакт CI', () => {
+  const W = '.github/workflows/lore-empty-db-template.yml';
+  const w = () => (has(W) ? code(read(W)) : '');
+  const st = () => steps(job(W, 'template'));
+
+  it('запуск: push в develop при правке схемы и вручную; не на каждый PR', () => {
+    expect(w()).toMatch(/^on:\n {2}push:\n {4}branches: \[ "develop" \]/m);
+    expect(w()).toMatch(/LoreSchemaMigrations\.java/);
+    expect(w()).toMatch(/LoreSchemaInitializer\.java/);
+    expect(w()).toMatch(/^ {2}workflow_dispatch:/m);
+    expect(w()).not.toMatch(/^ {2}pull_request:/m);
+  });
+
+  it('собирает, ПРОВЕРЯЕТ развёртыванием и только потом выкладывает', () => {
+    const names = st().map((s) => s.body);
+    const iBuild = names.findIndex((b) => /deploy-empty-db\.sh build/.test(b));
+    const iVerify = names.findIndex((b) => /deploy-empty-db\.sh verify/.test(b));
+    const iUp = names.findIndex((b) => /upload-artifact@v3/.test(b));
+    expect(iBuild).toBeGreaterThan(-1);
+    expect(iVerify).toBeGreaterThan(iBuild);
+    expect(iUp).toBeGreaterThan(iVerify);
+    // выкладка — без if: always(): непроверенный архив артефактом не уезжает
+    expect(names[iUp]).not.toMatch(/if: always\(\)/);
+  });
+
+  it('контейнеры своего прогона убираются всегда (OH-17)', () => {
+    const t = st().find((s) => /ci-teardown\.sh/.test(s.body));
+    expect(t?.body).toMatch(/if: always\(\)/);
+  });
+});
+
 // ── поведение скриптов ───────────────────────────────────────────────────────
 // PL-11: потолок для тестов с реальными git/bash (см. охранный тест в конце файла).
 const SPAWN_TIMEOUT = 30_000;

@@ -81,4 +81,12 @@ describe('S4-30 · метка версии в правом нижнем углу
     // Размеры и цвета — токенами (STYLE-01): сырой px в шрифте валит гейт.
     expect(css).toMatch(/\.v2-version__btn\s*\{[^}]*var\(--fs-2xs\)/);
   });
+
+  // Приёмка на телефоне 14.11.2026: «наезд версии продукта» — плавающая метка лежала поверх карточек.
+  it('на узком экране метка в потоке страницы, а не поверх содержимого', () => {
+    const css = readFileSync(`${process.cwd()}/src/App.css`, 'utf8');
+    const i = css.indexOf('@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {\n  /* Приёмка на телефоне');
+    expect(i, 'узкого правила метки нет').toBeGreaterThan(-1);
+    expect(css.slice(i, css.indexOf('\n}', i))).toMatch(/\.v2-version\s*\{[^}]*position:\s*static/);
+  });
 });

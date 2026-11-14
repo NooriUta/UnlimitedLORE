@@ -11,8 +11,8 @@
 // файл» считает только MCP claude_rules_diff и серверу его не присылает.
 //
 // Поэтому вид диффа выбирается ПО ДАННЫМ, без выдумок на клиенте:
-//   • тела у всех версий есть → построчный дифф соседних версий (kit wordDiff
-//     + DiffPreview) — включится сам, когда сервер начнёт отдавать content_md;
+//   • тела у всех версий есть → построчный дифф соседних версий (lineDiff
+//     + kit DiffPreview; S7B-06 — раньше kit wordDiff, грубый на длинных телах);
 //   • есть только хеши → версии списком, смена тела видна по content_hash;
 //   • версий меньше двух → «сравнивать нечего», словами.
 import { wordDiff, type DiffRow } from '@seidr/kit';
@@ -116,19 +116,95 @@ export function versionChange(rows: readonly DocVersion[], i: number): VersionCh
   return a === b ? 'same' : 'changed';
 }
 
-/** Дифф двух тел строками DiffPreview (дифф — kit wordDiff; пробельные «то же» опущены). */
-export function versionDiff(from: string, to: string): { rows: DiffRow[]; exact: boolean } {
-  const d = wordDiff(from, to);
-  const rows = d.chunks
-    .filter(c => c.kind !== 'same' || c.text.trim() !== '')
-    .map((c, i): DiffRow => ({
-      id: `c${i}`,
-      kind: c.kind === 'del' ? 'remove' : c.kind,
-      text: c.text,
-      check: { state: 'checked' },
-    }));
-  // exact=false — текст длиннее порога kit, дифф грубый: экран говорит об этом словами.
-  return { rows, exact: d.exact };
+/** Строк контекста вокруг изменения; остальные неизменённые строки сворачиваются в одну. */
+export const DIFF_CONTEXT = 2;
+/** Предел построчного сравнения (строк в изменённой середине с каждой стороны). */
+export const LINE_DIFF_LIMIT = 3000;
+
+type LineOp = { kind: 'same' | 'remove' | 'add'; text: string };
+
+/**
+ * Построчный дифф (LCS по строкам после отсечения общего начала и конца) — S7B-06.
+ * null — изменённая середина длиннее предела: точного диффа нет.
+ */
+export function lineDiff(from: string, to: string, limit = LINE_DIFF_LIMIT): LineOp[] | null {
+  const a = from.replace(/\r\n/g, '\n').split('\n');
+  const b = to.replace(/\r\n/g, '\n').split('\n');
+  let pre = 0;
+  while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++;
+  let suf = 0;
+  while (suf < a.length - pre && suf < b.length - pre && a[a.length - 1 - suf] === b[b.length - 1 - suf]) suf++;
+  const am = a.slice(pre, a.length - suf);
+  const bm = b.slice(pre, b.length - suf);
+  if (am.length > limit || bm.length > limit) return null;
+  const n = am.length;
+  const m = bm.length;
+  const w = m + 1;
+  const dp = new Uint32Array((n + 1) * w);
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i * w + j] = am[i] === bm[j] ? dp[(i + 1) * w + j + 1] + 1 : Math.max(dp[(i + 1) * w + j], dp[i * w + j + 1]);
+    }
+  }
+  const ops: LineOp[] = a.slice(0, pre).map(text => ({ kind: 'same' as const, text }));
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (am[i] === bm[j]) { ops.push({ kind: 'same', text: am[i] }); i++; j++; continue; }
+    // При равенстве — сначала удаление: порядок детерминирован (как у kit wordDiff).
+    if (dp[(i + 1) * w + j] >= dp[i * w + j + 1]) { ops.push({ kind: 'remove', text: am[i] }); i++; }
+    else { ops.push({ kind: 'add', text: bm[j] }); j++; }
+  }
+  while (i < n) ops.push({ kind: 'remove', text: am[i++] });
+  while (j < m) ops.push({ kind: 'add', text: bm[j++] });
+  for (const text of a.slice(a.length - suf)) ops.push({ kind: 'same', text });
+  return ops;
+}
+
+/**
+ * Дифф двух тел строками DiffPreview — S7B-06: ПОСТРОЧНО. Раньше здесь был kit wordDiff,
+ * а он на 400+ словах сдаётся и отдаёт «снимется всё / добавится всё»: док правил (~13 КБ)
+ * сравнить глазом было нельзя. Неизменённые строки дальше DIFF_CONTEXT от правки
+ * сворачиваются в одну строку «same» (id skip*, текст — skipped(n)); пустые строки опущены.
+ * exact=false — середина длиннее LINE_DIFF_LIMIT: тогда прежний грубый дифф kit, и экран
+ * говорит об этом словами.
+ */
+export function versionDiff(
+  from: string, to: string, skipped: (n: number) => string = n => `… ${n}`,
+): { rows: DiffRow[]; exact: boolean } {
+  const ops = lineDiff(from, to);
+  if (ops === null) {
+    const d = wordDiff(from, to);
+    const rows = d.chunks
+      .filter(c => c.kind !== 'same' || c.text.trim() !== '')
+      .map((c, i): DiffRow => ({
+        id: `c${i}`, kind: c.kind === 'del' ? 'remove' : c.kind, text: c.text, check: { state: 'checked' },
+      }));
+    return { rows, exact: false };
+  }
+  // Какие неизменённые строки остаются контекстом.
+  const keep = ops.map(o => o.kind !== 'same');
+  ops.forEach((o, k) => {
+    if (o.kind === 'same') return;
+    for (let d = 1; d <= DIFF_CONTEXT; d++) {
+      if (k - d >= 0) keep[k - d] = true;
+      if (k + d < ops.length) keep[k + d] = true;
+    }
+  });
+  const rows: DiffRow[] = [];
+  let skip = 0;
+  const flush = () => {
+    if (skip > 0) rows.push({ id: `skip${rows.length}`, kind: 'same', text: skipped(skip), check: { state: 'checked' } });
+    skip = 0;
+  };
+  ops.forEach((o, k) => {
+    if (!keep[k]) { if (o.text.trim() !== '') skip++; return; }
+    if (o.text.trim() === '') return;
+    flush();
+    rows.push({ id: `l${k}`, kind: o.kind, text: o.text, check: { state: 'checked' } });
+  });
+  flush();
+  return { rows, exact: true };
 }
 
 export function versionDiffRows(from: string, to: string): DiffRow[] {

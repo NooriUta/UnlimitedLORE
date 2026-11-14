@@ -29,10 +29,11 @@ import { EmptyState, Forbidden, LoadError, Skeleton } from '@seidr/kit';
 import { newsT, type NewsKey } from './i18n';
 import {
   DEFAULT_NEWS_QUERY, NEWS_KIND_META, NEWS_TYPE_META, axisLabel, buildNewsParams, drillLabel, eventAxisValues, kindLabel,
-  newsGroupLabel, pairText, parseNewsResponse, readNewsQuery, shortDay, shortProject, signTone, signed, typeLabel,
+  newsGroupLabel, setNewsWhoNames, pairText, parseNewsResponse, readNewsQuery, shortDay, shortProject, signTone, signed, typeLabel,
   utcClock, writeNewsQuery, type NewsPeriod, type NewsQuery, type NewsScope, type NewsZone,
 } from './model';
 import { Delta, NewsPanels, type NewsSection } from './NewsPanels';
+import { NewsDynamicsPanel } from './NewsDynamics';
 import { figuresOf } from './bucketFigures';
 import { useRefPeek } from '@seidr/kit/content';
 import { loreRefPeek } from '../../record/lorePeek';
@@ -91,7 +92,8 @@ export function defaultNewsStatusOf(raw: string | null | undefined): string {
 
 const StatusOfCtx = createContext<(raw: string | null | undefined) => string>(defaultNewsStatusOf);
 
-export const NEWS_SECTIONS_ALL: readonly NewsSection[] = ['metrics', 'groups', 'matrix', 'burn', 'knowledge', 'feed'];
+// S7A-11: «Динамика» — первым блоком под «все метрики» (неделя к неделе / месяц к месяцу).
+export const NEWS_SECTIONS_ALL: readonly NewsSection[] = ['dynamics', 'metrics', 'groups', 'matrix', 'burn', 'knowledge', 'feed'];
 
 type T = (k: NewsKey, vars?: Record<string, string | number>) => string;
 
@@ -161,6 +163,8 @@ export function NewsFeed({
   };
 
   const data = res.error ? undefined : res.data;
+  // PU-29: подписи «Кто» до отрисовки — newsGroupLabel и строки читают их синхронно.
+  if (data) setNewsWhoNames(data.who_names);
   const fixedAxes = new Set<string>(Object.keys(scope ?? {}).filter(k => k !== 'release'));
 
   const markRead = async () => {
@@ -199,6 +203,10 @@ export function NewsFeed({
           // Свёрнутые метрики остаются в документе (hidden): числа не пропадают,
           // их просто не показывают до нажатия «все метрики».
           <div className="sk-news__more" data-testid="news-more" hidden={!metricsOpen}>
+            {/* Динамика — свой запрос (/news/v2/dynamics): грузится, только когда блок открыт. */}
+            {panels.includes('dynamics') && metricsOpen && (
+              <NewsDynamicsPanel source={source} query={q} scope={scope} urlPrefix={urlPrefix} />
+            )}
             <NewsPanels data={data} query={q} update={update} sections={panels} fixed={fixedAxes} />
           </div>
         )}
@@ -887,7 +895,8 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
         {e.type === 'decision' && e.parent && <RowRef type="adr" id={e.parent} testId="news-ref-adr" title={t('ref.adr')} />}
         {e.who && (
           <RowRef type={e.author === 'agent' ? 'agent' : 'person'} id={e.who} testId="news-who"
-            title={t(e.author === 'agent' ? 'ref.agent' : 'ref.person')} icon={e.author === 'agent' ? 'robot-golem' : 'person'} />
+            title={t(e.author === 'agent' ? 'ref.agent' : 'ref.person')} icon={e.author === 'agent' ? 'robot-golem' : 'person'}
+            label={newsGroupLabel('who', e.who, lang)} />
         )}
         {(e.from || e.to) && e.type === 'task' && (
           // Переход статусов — значками со своим цветом (владелица 09.11: «невыделенным
@@ -978,12 +987,12 @@ export function NewsStatusMark({ code }: { code: string | null }) {
  * Связанное в строке ленты (П24): автор, спринт задачи, ADR решения. Адрес даёт
  * приложение (`refHrefOf`); нет адреса — текст той же формы, а не ссылка в никуда.
  */
-function RowRef({ type, id, testId, title, icon }: { type: string; id: string; testId: string; title: string; icon?: string }) {
+function RowRef({ type, id, testId, title, icon, label }: { type: string; id: string; testId: string; title: string; icon?: string; label?: string }) {
   const href = useContext(RefHrefCtx)(type, id);
   const body = (
     <>
       {icon && <GameIcon slug={icon} size={11} />}
-      {id}
+      {label ?? id}
     </>
   );
   return href

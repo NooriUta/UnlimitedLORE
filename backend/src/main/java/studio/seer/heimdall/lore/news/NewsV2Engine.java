@@ -757,7 +757,7 @@ public final class NewsV2Engine {
 
     private static final Pattern PROP = Pattern.compile("^(PROPOSED|proposed|DRAFT|draft)$");
     private static final Pattern REJ  = Pattern.compile("^(rejected|REJECTED)$");
-    private static final Pattern ACC  = Pattern.compile("^(ACCEPTED|accepted|fixed|done)$");
+    static final Pattern ACC  = Pattern.compile("^(ACCEPTED|accepted|fixed|done)$");
     private static final Pattern SUP  = Pattern.compile("^(SUPERSEDED|superseded|DEPRECATED|deprecated)$");
 
     static boolean m(Pattern p, String s) { return s != null && p.matcher(s.trim()).matches(); }

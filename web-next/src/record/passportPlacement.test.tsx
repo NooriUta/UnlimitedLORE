@@ -99,3 +99,46 @@ describe('MP2-14 · место «слева»', () => {
     expect(String(calls[calls.length - 1][2])).toContain('place=left');
   });
 });
+
+// MP2-11, доработки владелицы 13.11: «кнопка раздвинуть должна раздвигать, а не показывать меню;
+// нужно меню — делай ещё одну кнопку» и «если в полный экран выходили справа, то и возвращаться
+// должно справа, а не вниз».
+describe('MP2-11 · ⤢ раздвигает сразу, меню мест — отдельной кнопкой', () => {
+  it('⤢ одним нажатием — на весь экран, меню не открывается', async () => {
+    const onPlace = vi.fn();
+    const { win } = winWith('?open=S_A');
+    render(<ListPassport type="sprint" id="S_A" placement="right" fetchImpl={fake() as unknown as typeof fetch} win={win} onPlace={onPlace} />);
+    await screen.findByRole('heading', { level: 1, name: 'Альфа' }, { timeout: 8000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Во весь экран' }));
+    expect(onPlace).toHaveBeenCalledWith('full');
+    expect(screen.queryByRole('menu', { name: 'Где открыт' })).toBeNull();
+  });
+
+  it('во весь экран ⤢ возвращает туда, откуда вошли', async () => {
+    const onPlace = vi.fn();
+    const { win } = winWith('?open=S_A&place=full');
+    render(<ListPassport type="sprint" id="S_A" placement="full" backPlace="left" fetchImpl={fake() as unknown as typeof fetch} win={win} onPlace={onPlace} />);
+    await screen.findByRole('heading', { level: 1, name: 'Альфа' }, { timeout: 8000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Вернуть на место' }));
+    expect(onPlace).toHaveBeenCalledWith('left');
+  });
+});
+
+// Владелица 14.11.2026 (скрин «98 из 244»): «опять две строки… оставь кнопку свернуть/развернуть, а
+// крестик поставь за меню — и строка станет одной». «×» — в строке записи сразу после ☰.
+describe('строка записи: «×» после ☰, одна строка', () => {
+  it('во весь экран: ⤢, ☰, × — подряд в одной строке, отдельной «Выйти из полного экрана» нет', async () => {
+    const onClose = vi.fn();
+    const { win } = winWith('?place=full');
+    render(<ListPassport type="sprint" id="S_A" placement="full" fetchImpl={fake() as unknown as typeof fetch} win={win} onClose={onClose} />);
+    await screen.findByRole('heading', { level: 1, name: 'Альфа' }, { timeout: 8000 });
+    const menu = screen.getByRole('button', { name: 'Где открыт' });
+    const close = screen.getByRole('button', { name: 'Закрыть паспорт' });
+    expect(close.closest('.sk-rec-reader__tools')).toBe(menu.closest('.sk-rec-reader__tools'));
+    expect(close.closest('.sk-rec-reader__tools')).toBeTruthy();
+    expect(menu.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /полного экрана/ })).toBeNull();
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

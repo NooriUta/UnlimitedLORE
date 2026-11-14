@@ -134,6 +134,27 @@ public final class LoreSlices {
     private static final String ROLE_HOLDERS =
         roleHolder("author") + ", " + roleHolder("executor") + ", " + roleHolder("reviewer");
 
+    /**
+     * SPRINT_UXR_S9_SCALE_OPT/S9-05, решение владелицы D14 «колонки по типу ребёнка»: строка
+     * задачи-ребёнка в паспорте родителя (компонент, человек, агент) несёт исполнителя, оценку и
+     * класс работы — фасад кладёт их в {@code values} связи ({@link LoreRecordFrom#CHILD_VALUES}).
+     */
+    static final String CHILD_TASK_COLS =
+        roleHolder("executor") + ", work_class, " +
+        "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days";
+
+    /**
+     * S9-05 / D14: строка спринта-ребёнка (веха, компонент, релиз, проект) несёт прогресс x/y и
+     * даты плана. Задачи — дети PART_OF типа KnowTask (фазы тоже PART_OF — отсеиваются);
+     * «готово» считает фасад по статусам открытых строк истории тем же словарём (planToken),
+     * что и факт «готово x/y» паспорта спринта, — иначе таблица и паспорт разошлись бы.
+     */
+    static final String CHILD_SPRINT_COLS =
+        "in('PART_OF')[@type = 'KnowTask'].size() AS tasks_total, " +
+        "in('PART_OF')[@type = 'KnowTask'].out('HAS_STATE')[valid_to IS NULL].status_raw AS task_statuses, " +
+        "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0] AS planned_start_date, " +
+        "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0] AS planned_end_date";
+
     private static void slice(String id, String baseSql) {
         slice(id, baseSql, List.of(), Map.of(), "");
     }
@@ -225,6 +246,15 @@ public final class LoreSlices {
             + String.join(", ", fallbacks) + ") AS changed_at, updated_at AS " + LoreChangedAt.TOUCHED;
     }
 
+    /**
+     * MT-NOTE-APPEND п.3: момент ТЕКУЩЕГО СТАТУСА задачи/спринта. Правка текста открывает
+     * новую версию SCD2 без смены статуса, поэтому valid_from открытой версии — уже не
+     * «с какого момента в этом статусе». status_known_from ставит только смена статуса,
+     * правки его переносят; у легаси-версий без поля — прежнее valid_from.
+     */
+    static final String STATUS_SINCE_SQL = "ifnull(out('HAS_STATE')[valid_to IS NULL].status_known_from[0], "
+        + "out('HAS_STATE')[valid_to IS NULL].valid_from[0])";
+
     /** Дата заведения у типов без своего поля: первая версия истории (порядок рёбер — порядок вставки). */
     private static final String FIRST_STATE_FROM_SQL = "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0]";
 
@@ -239,11 +269,16 @@ public final class LoreSlices {
      * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
      */
     private static final String OPEN_TASK_STATUS_EXPR =
-        "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])";
 
-    /** S9-02: релизы спринта задачи — одна проекция у open_tasks и closed_tasks. */
+    /**
+     * Релиз ЗАДАЧИ — релиз, в который уехал её PR (CLOSED_BY → SHIPPED_IN); одна проекция у
+     * open_tasks и closed_tasks. Раньше (S9-02) брались релизы спринта, и запланированная задача
+     * из спринта, где другие уже уехали, показывала «v1.17.20 +2» (владелица 14.11.2026;
+     * правило PU-07: у задачи — тот релиз, в котором уехал её PR). Нет PR в релизе — пусто.
+     */
     private static final String TASK_RELEASES_SQL =
-        "out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids";
+        "out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids";
 
     /**
      * RM-P17: как зовётся родитель строки истории — одна пара на цепочку SCD2.
@@ -846,7 +881,7 @@ public final class LoreSlices {
 
         slice("tasks_of_adr",
             "SELECT task_uid, task_id, title, out('PART_OF').sprint_id[0] AS sprint_id, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, task_type, work_class " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, task_type, work_class " +
             "FROM KnowTask WHERE out('JUSTIFIED_BY').adr_id CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY task_uid");
 
@@ -902,7 +937,7 @@ public final class LoreSlices {
             changedAtSql("created_date") + ", " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0] AS valid_from, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
@@ -929,13 +964,13 @@ public final class LoreSlices {
             // первого условия, AND для последующих). status и project можно
             // передавать вместе — до этого такая пара давала 500.
             new LinkedHashMap<>(Map.of(
-                "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status",
+                "status", " WHERE COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) LIKE :status",
                 "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
             "SELECT sprint_id, name, context_md, outcome_md, created_date, no_release_required, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
@@ -989,7 +1024,7 @@ public final class LoreSlices {
             // PU-22: название фазы — из вершины (title, у записанных phase_new — name); статус своим
             // полем. Раньше здесь стояло status_raw AS title, и любое название подменялось «📋 PLANNED».
             "coalesce(title, name) AS title, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]  AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])  AS status_raw, " +
             "out('HAS_STATE')[summary_md IS NOT NULL].summary_md[0]  AS summary_md " +
             "FROM KnowPhase WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
@@ -1022,7 +1057,7 @@ public final class LoreSlices {
         slice("tasks_of_sprint",
             "SELECT task_uid, task_id, title, order_index, " +
             "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
@@ -1031,7 +1066,13 @@ public final class LoreSlices {
             ROLE_HOLDERS + ", task_type, " +
             // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
             "actual_days, bookkeeping, " +
-            "work_class, out('REALIZES').uc_id AS realizes_uc " +
+            "work_class, out('REALIZES').uc_id AS realizes_uc, " +
+            // PU-07 (приёмка 0dccfe73): релиз задачи — релиз её PR, а не спринта; вложенная
+            // таблица под строкой спринта брала релиз родителя (сторож TaskReleaseColumnTest).
+            TASK_RELEASES_SQL + ", " +
+            // PU-23 (14.11.2026): колонка «Изменено» во вложенной таблице задач спринта —
+            // свежесть та же, что у open_tasks/closed_tasks (S4-04).
+            changedAtSql(FIRST_STATE_FROM_SQL) + " " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
@@ -1237,9 +1278,9 @@ public final class LoreSlices {
         // спринт ещё нет (или наоборот — отменён), было нельзя.
         slice("tasks_of_uc",
             "SELECT task_uid, task_id, title, task_type, work_class, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
-            "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status_raw, " +
+            "COALESCE(out('PART_OF').out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS sprint_status_raw, " +
             // Обоснование enb-задачи (JUSTIFIED_BY) — ребро было мёртвым до PL-14.
             "out('JUSTIFIED_BY').adr_id AS justified_by_adr_ids " +
             "FROM KnowTask WHERE out('REALIZES').uc_id CONTAINS :id ORDER BY task_uid",
@@ -1430,14 +1471,14 @@ public final class LoreSlices {
             "out('REALIZES').shipped_at[0] AS shipped_at, " +
             "out('HAS_STATE').valid_from   AS state_dates, " +
             "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
-            "out('HAS_STATE')[valid_to IS NULL].valid_from[0] AS status_since " +
+            STATUS_SINCE_SQL + " AS status_since " +
             "FROM KnowTask WHERE out('REALIZES')[shipped_at IS NOT NULL].size() > 0",
             List.of(), Map.of(), " ORDER BY task_uid");
 
         slice("invest_profile",
             "SELECT task_uid, work_class, task_type, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id  AS release_ids, bookkeeping " +
             "FROM KnowTask ORDER BY task_uid",
@@ -1685,7 +1726,7 @@ public final class LoreSlices {
             "SELECT task_uid, task_id, title, order_index, " +
             "out('PART_OF').sprint_id[0]                              AS sprint_id, " +
             "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
@@ -1694,7 +1735,11 @@ public final class LoreSlices {
             ROLE_HOLDERS + ", task_type, actual_days, bookkeeping, " +
             // 08.11.2026: паритет с tasks_of_sprint (TasksBatchSliceParityTest) — ЗАЧЕМ-ось
             // и UC (ADR-LORE-022) нужны строке задачи в списке/на доске v2.
-            "work_class, out('REALIZES').uc_id AS realizes_uc " +
+            "work_class, out('REALIZES').uc_id AS realizes_uc, " +
+            // PU-07: релиз задачи — её PR (паритет с tasks_of_sprint).
+            TASK_RELEASES_SQL + ", " +
+            // PU-23: та же свежесть, что у tasks_of_sprint (сторож TasksBatchSliceParityTest).
+            changedAtSql(FIRST_STATE_FROM_SQL) + " " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
@@ -1705,7 +1750,7 @@ public final class LoreSlices {
         // функцией LoreSprintTotals — той же, что кормит паспорт.
         slice("sprint_totals",
             "SELECT out('PART_OF').sprint_id[0] AS sprint_id, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "actual_days " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids",
@@ -1719,7 +1764,7 @@ public final class LoreSlices {
         slice("tasks_by_uids",
             "SELECT task_uid, task_id, title, " +
             "out('PART_OF').sprint_id[0]                              AS sprint_id, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
@@ -1740,7 +1785,7 @@ public final class LoreSlices {
         // so the sidebar payload stays small even at 400+ sprints.
         slice("task_status_by_sprint",
             "SELECT out('PART_OF').sprint_id[0]                            AS sprint_id, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]        AS status_raw " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])        AS status_raw " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IS NOT NULL",
             List.of(), Map.of(), " ORDER BY out('PART_OF').sprint_id[0]");
 
@@ -1820,7 +1865,7 @@ public final class LoreSlices {
         // себе неотличимо от «продукта не существует» — а список отличим.
         slice("roadmap_unplanned",
             "SELECT sprint_id, name, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components " +
             "FROM KnowSprint " +
             "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
@@ -2021,11 +2066,19 @@ public final class LoreSlices {
         // ребра) — 30 читалось как «все», а чужой спринт с похожим именем — как свой.
         // Потолка нет: страница — общими limit/offset (SE-01, page.total/has_more).
         // ORDER BY — в хвосте: скоуп вставляется перед ним.
+        // SPRINT_UXR_S9_SCALE_OPT/S9-05 (часть B): «таблица детей» вехи — её спринты с названием и
+        // статусом. Раньше вкладка шла сырыми id из milestone_by_id (название = id, статус пуст).
+        slice("milestone_sprints",
+            "SELECT sprint_id, name, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " + CHILD_SPRINT_COLS + " " +
+            "FROM KnowSprint WHERE out('TARGETS_MILESTONE').milestone_id CONTAINS :mid",
+            List.of("mid"), Map.of(), " ORDER BY sprint_id DESC");
+
         slice("component_sprints",
             "SELECT sprint_id, name, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components, " +
-            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('BELONGS_TO').component_id CONTAINS :cid",
             // pattern — принимается и НИЧЕГО не фильтрует: v1 (src/, выкатывается вручную) ещё
             // шлёт его, и отказ «unknown param» уронил бы вкладку спринтов в v1.
@@ -2034,10 +2087,9 @@ public final class LoreSlices {
         // S4-29: задачи компонента (ребро TAGGED_WITH задача → компонент) — вкладка «Задачи»
         // паспорта компонента. Та же облегчённая проекция, что open_tasks; потолка нет.
         slice("component_tasks",
-            "SELECT task_uid, task_id, title, task_type, work_class, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id, " +
-            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
+            "SELECT task_uid, task_id, title, task_type, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
             "FROM KnowTask WHERE out('TAGGED_WITH').component_id CONTAINS :cid",
             List.of("cid"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
 
@@ -2051,7 +2103,7 @@ public final class LoreSlices {
             List.of("project"), Map.of(), "");
         slice("project_sprints",
             "SELECT sprint_id, name, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
             List.of("project"), Map.of(), " ORDER BY sprint_id DESC");
         // Компонент достигает проекта только через свои спринты — тем же путём, что колонка
@@ -2097,14 +2149,14 @@ public final class LoreSlices {
             List.of(), Map.of(), " ORDER BY actor_id");
         slice("user_tasks",
             "SELECT task_uid, task_id, title, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
             "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().kc_sub CONTAINS :kc_sub",
             List.of("kc_sub"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
         slice("agent_tasks",
             "SELECT task_uid, task_id, title, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
             "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
         slice("project_people",
@@ -2239,7 +2291,7 @@ public final class LoreSlices {
         slice("history_sprint",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
-            "context_md, outcome_md " +
+            "context_md, outcome_md, version_kind " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -2250,7 +2302,8 @@ public final class LoreSlices {
         // B9: CONTAINS, не [0] = — см. adr_history.
         slice("history_task",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
-            "effort_days, note_md " +
+            // MT-NOTE-APPEND п.3: version_kind = 'text' — версия открыта правкой текста, статус тот же.
+            "effort_days, note_md, version_kind " +
             "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -2307,8 +2360,12 @@ public final class LoreSlices {
         // key; task_uid (sprint_id + "/" + task_id) is unique, same field every
         // other task-facing slice (all_tasks, tasks_of_sprint) already carries.
         slice("task_done_dates",
-            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
-            "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
+            // MT-NOTE-APPEND п.3: дата закрытия — момент статуса (status_known_from), а не начало
+            // открытой версии: правка заметки закрытой задачи открывает версию и сдвинула бы дату.
+            // states (> 1 — реальная прогрессия) считает смены статуса, правки текста — нет.
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, " +
+            "ifnull(status_known_from, valid_from) AS valid_from, " +
+            "in('HAS_STATE').out('HAS_STATE')[version_kind IS NULL].size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days, " +
             "in('HAS_STATE').bookkeeping[0] AS bookkeeping, " +
             // B9: state_owners — см. adr_history_all (> 1 — общая версия). Сравнение «.size() > 1» в проекции ArcadeDB не разбирает.
@@ -2544,7 +2601,7 @@ public final class LoreSlices {
             // строка истории. Чтение с вершины даёт правдоподобную неправду.
             "SELECT task_uid, task_id, title, priority, out('BELONGS_TO').component_id[0] AS component_id, task_type, " +
             ROLE_HOLDERS + ", " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
@@ -2571,7 +2628,7 @@ public final class LoreSlices {
         slice("open_tasks",
             "SELECT task_uid, task_id, title, work_class, " +
             changedAtSql(FIRST_STATE_FROM_SQL) + ", " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
             // S9-02: релиз задачи — релиз её спринта (как у tasks_of_sprint); спринт
@@ -2602,7 +2659,7 @@ public final class LoreSlices {
         slice("closed_tasks",
             "SELECT task_uid, task_id, title, work_class, " +
             changedAtSql(FIRST_STATE_FROM_SQL) + ", " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
             TASK_RELEASES_SQL + ", " +
@@ -2616,6 +2673,33 @@ public final class LoreSlices {
                 "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
                 "work_class", " WHERE work_class = :work_class")),
             " ORDER BY sprint_id, task_uid");
+
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-START (решение D6 14.11: «пока никаких правил, давай
+        // соберём статистику прыжков»): путь закрытия задачи одним вызовом. Строка на задачу,
+        // чья ОТКРЫТАЯ версия — done. work_versions = 0 — прыжок planned/todo → done без
+        // рабочего статуса; status_versions = 1 — задача заведена сразу закрытой. done_at и
+        // changed_at — момент статуса (правка текста его не двигает), поэтому
+        // changed_from/changed_to режут по ДНЮ ЗАКРЫТИЯ. Пакет (много закрытий за секунды
+        // одним актором) отделяет потребитель — по done_at и closed_by.
+        slice("task_close_path",
+            "SELECT task_uid, out('PART_OF').sprint_id[0] AS sprint_id, " +
+            STATUS_SINCE_SQL + " AS done_at, " +
+            STATUS_SINCE_SQL + " AS changed_at, " +
+            "out('HAS_STATE')[valid_to IS NULL].changed_by[0] AS closed_by, " +
+            "out('HAS_STATE')[valid_to IS NULL].changed_by_kind[0] AS closed_by_kind, " +
+            "out('HAS_STATE')[version_kind IS NULL].size() AS status_versions, " +
+            // review — отдельно: с v1.17.21 (WK-05) done возможен только из review, и «прыжок»
+            // planned → review → done иначе стал бы неотличим от работы по построению.
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw",
+                "in_progress", "partial", "uat", "ready_for_deploy") + "].size() AS work_versions, " +
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "review") + "].size() AS review_versions, " +
+            "bookkeeping " +
+            "FROM KnowTask WHERE out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL + "].size() > 0",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint")),
+            " ORDER BY task_uid");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
@@ -2687,13 +2771,13 @@ public final class LoreSlices {
         // Потолка нет, порядок детерминирован; страница — общими limit/offset (SE-01).
         slice("release_sprints",
             "SELECT sprint_id, name, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_uid CONTAINS :ruid",
             List.of("ruid"), Map.of(), " ORDER BY sprint_id");
 
         slice("release_sprints_by_tag",
             "SELECT sprint_id, name, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_id CONTAINS :tag",
             // REL-UID-01: номер версии общий у разных проектов — project сужает до своего.
             List.of("tag"), Map.of("project", " WHERE out('IMPLEMENTED_IN_RELEASE').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY sprint_id");
@@ -2709,7 +2793,7 @@ public final class LoreSlices {
         // их закрыл (CLOSED_BY), и релиз этого PR (SHIPPED_IN). Не разбор note_md.
         slice("release_tasks_by_tag",
             "SELECT task_uid, title, out('PART_OF').sprint_id[0] AS sprint_id, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('CLOSED_BY').pr_uid AS closed_by_prs " +
             "FROM KnowTask WHERE out('CLOSED_BY').out('SHIPPED_IN').release_id CONTAINS :tag",
             List.of("tag"), Map.of("project", " WHERE out('CLOSED_BY').out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY task_uid");
@@ -2967,9 +3051,12 @@ public final class LoreSlices {
         // Without dict_type — весь справочник; с dict_type — один домен.
         // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
         // Admin LORE (ADR-LORE-025): tag usage counts for the read-only «Теги» tab.
+        // Без потолка (PU-29, 14.11.2026): LIMIT 500 давал «показано 500 из 500»
+        // при большем корпусе, а поиск вкладки искал только в этих 500. Справочник
+        // — не лента; серверный потолок HTTP-API назван флагом truncated.
         slice("tags_usage",
             "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
-            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id");
         // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
         // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 
@@ -3018,7 +3105,7 @@ public final class LoreSlices {
         // иначе появится третья копия той же связи.
         slice("product_sprints",
             "SELECT sprint_id, name, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components " +
             "FROM KnowSprint " +
             // CONTAINS, а не [0] = : у спринта несколько компонентов и у
@@ -3205,6 +3292,7 @@ public final class LoreSlices {
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_close_path", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("component_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
         Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3227,6 +3315,8 @@ public final class LoreSlices {
         Map.entry("sprint_deps_of", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("sprint_done_dates", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("component_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        // S9-05 B: спринты вехи — строки-спринты, скоуп по проекту спринта, как у компонента.
+        Map.entry("milestone_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("product_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_sprints_by_tag", "out('BELONGS_TO_PROJECT').slug"),

@@ -85,6 +85,11 @@ function refusalText(status: number, code: string, detail: string, current: stri
     return 'агенту не разрешена смена статуса: его профиль вне семейства «status»';
   if (status === 403)
     return 'нужна роль администратора — смена статуса доступна admin или superadmin';
+  // PU-29 (прод, 14.11.2026): 409 — это не только конфликт версии. Гейт WK-05 (NO_EVIDENCE,
+  // DONE_ONLY_FROM_REVIEW, NO_REVIEWER…) и SPRINT_HAS_OPEN_TASKS отвечают тем же кодом со своей
+  // причиной — её и показываем; «успели изменить» — только у CONFLICT (или 409 без кода).
+  if (status === 409 && code && code !== 'CONFLICT')
+    return detail || `сервер отказал: ${code}`;
   if (status === 409)
     return current
       ? `статус успели изменить: сейчас «${current}» — перечитайте запись и повторите`

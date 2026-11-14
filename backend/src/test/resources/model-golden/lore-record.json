@@ -7324,25 +7324,7 @@
         "of" : 2
       }
     },
-    "row_links" : [ {
-      "rel" : "TARGETS_MILESTONE",
-      "dir" : "in",
-      "id" : "SPRINT_SNAP",
-      "type" : "sprint",
-      "title" : "SPRINT_SNAP",
-      "status" : "",
-      "fromKind" : "sprint",
-      "toKind" : "milestone"
-    }, {
-      "rel" : "TARGETS_MILESTONE",
-      "dir" : "in",
-      "id" : "SPRINT_A",
-      "type" : "sprint",
-      "title" : "SPRINT_A",
-      "status" : "",
-      "fromKind" : "sprint",
-      "toKind" : "milestone"
-    } ],
+    "row_links" : [ ],
     "values_empty_row" : {
       "title" : null,
       "code" : null,
@@ -7355,7 +7337,7 @@
       "status" : null
     },
     "parts" : [ ],
-    "slice_links" : [ ],
+    "slice_links" : [ "SliceLink[key=sprints, slice=milestone_sprints, param=mid, rel=TARGETS_MILESTONE, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[name, sprint_id], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
     "unread" : [ ],
     "edge_links" : { },
     "defaults" : {

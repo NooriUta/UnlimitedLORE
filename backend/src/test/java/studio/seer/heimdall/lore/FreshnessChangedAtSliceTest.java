@@ -17,7 +17,8 @@ class FreshnessChangedAtSliceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "open_tasks", "closed_tasks", "specs", "adrs", "decisions", "use_cases", "sprints", "questions", "releases", "components"})
+        // PU-23 (14.11.2026): вложенная таблица задач в списке спринтов — колонка «Изменено».
+        "open_tasks", "closed_tasks", "tasks_of_sprint", "specs", "adrs", "decisions", "use_cases", "sprints", "questions", "releases", "components"})
     void sectionSliceCarriesChangedAt(String id) {
         LoreSlices.SliceDef def = LoreSlices.get(id);
         assertNotNull(def, id);

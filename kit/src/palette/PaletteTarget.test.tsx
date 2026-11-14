@@ -108,7 +108,7 @@ describe('S4-14 · поиск через сервер', () => {
     const ids = Array.from(group.querySelectorAll('[role="option"]')).map(o => o.getAttribute('data-id'));
     expect(ids).toEqual(['record:ADR-77']);
     fireEvent.click(screen.getByRole('option', { name: /Решение с сервера/ }));
-    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'ADR-77' }));
+    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'ADR-77' }), { full: false });
   });
 
   it('сервер не ответил — причина словами, загруженное остаётся', async () => {
@@ -158,5 +158,25 @@ describe('S4-14 · поиск через сервер', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'реш' } });
     await screen.findByRole('group', { name: 'На сервере' });
     expect(await axeViolations(screen.getByRole('dialog'))).toEqual([]);
+  });
+});
+
+// Приёмка препрода 14.11.2026: Ctrl+K по точному коду SPRINT_UXR_S9_SCALE_OPT показывал спринт 4-м,
+// впереди спеки с похожими словами; Shift+Enter открыл не то. Правило: запись, чей код РАВЕН запросу
+// (без регистра и пробелов по краям), — первая во всей выдаче, откуда бы ни пришла (загруженное/сервер).
+describe('поиск: точный код — первым', () => {
+  const rec = (id: string, title: string, kind = 'adr'): KitRecord => ({ id, kind, title, status: '', fields: {} });
+  it('серверная запись с точным кодом — первая, раньше загруженных и прочих серверных', async () => {
+    const remote: PaletteRemoteSearch = vi.fn(async () => ({
+      records: [rec('SPEC-X-SCALE', 'Критика масштаба', 'spec'), rec('SPRINT_S9_SCALE', 'Спринт масштаба', 'sprint')],
+    }));
+    const { onOpenRecord } = show({ mode: 'records', remote, remoteDelayMs: 0 });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: ' sprint_s9_scale ' } });
+    await screen.findByRole('option', { name: /Спринт масштаба/ });
+    const first = screen.getAllByRole('option')[0];
+    expect(first.getAttribute('data-id')).toBe('record:SPRINT_S9_SCALE');
+    expect(screen.getAllByRole('option').filter(o => o.getAttribute('data-id') === 'record:SPRINT_S9_SCALE')).toHaveLength(1);
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Enter', shiftKey: true });
+    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'SPRINT_S9_SCALE' }), { full: true });
   });
 });

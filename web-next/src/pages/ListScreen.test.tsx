@@ -98,7 +98,7 @@ describe('ListScreen — ADR и честные состояния', () => {
     const { container } = render(<ListScreen screen="adrs" fetchImpl={fetchImpl} urlState={false} />);
     await waitFor(() => expect(rowIds(container)).toHaveLength(2));
     expect(asked(fetchImpl, '/lore/slice/adrs'), 'срез ADR запрошен').toBe(true);
-    expect(container.querySelector('[data-record-id="ADR-1"] [data-status="accepted"]')?.textContent).toContain('Действует');
+    expect(container.querySelector('[data-record-id="ADR-1"] [data-status="accepted"]')?.getAttribute('title')).toContain('Действует');
   });
 
   it('403 — «нет прав», не пустой список', async () => {
@@ -116,6 +116,8 @@ describe('ListScreen — ADR и честные состояния', () => {
       if (u.includes('/lore/model')) return json(200, { format: 'model/0', version: 'v1' });
       // S4-PRODUCT-HILITE: срез продуктов (цвет продукта) грузится сам по себе — не «срез экрана».
       if (u.includes('/lore/slice/products')) return json(200, { rows: [] });
+      // SPRINT_VIZ_EMBED/EMB-L2: слой графиков (app_setting charts.layer) — тоже не «срез экрана».
+      if (u.includes('/lore/slice/dictionary')) return json(200, { rows: [] });
       sliceTries += 1;
       return sliceTries === 1
         ? json(500, { error: 'LORE_UPSTREAM_X', detail: 'boom' })

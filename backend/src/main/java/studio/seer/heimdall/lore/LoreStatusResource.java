@@ -569,7 +569,7 @@ public class LoreStatusResource extends LoreResourceBase {
     Uni<Void> autoDeriveSprintStatus(String taskUid, ChangeAuthor author) {
         MartQuery ctxQ = new MartQuery("sql",
             "SELECT out('PART_OF').sprint_id[0] AS sid, " +
-            "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status " +
+            "COALESCE(out('PART_OF').out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS sprint_status " +
             "FROM KnowTask WHERE task_uid = :uid LIMIT 1",
             Map.of("uid", taskUid), -1);
         return client.query(db, basicAuth(), ctxQ).chain(ctxRes -> {
@@ -579,7 +579,7 @@ public class LoreStatusResource extends LoreResourceBase {
             final String curToken = rawToToken((String) ctx.get(0).get("sprint_status"));
 
             MartQuery tasksQ = new MartQuery("sql",
-                "SELECT out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+                "SELECT COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw " +
                 "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sid",
                 Map.of("sid", sid), -1);
             return client.query(db, basicAuth(), tasksQ).chain(tRes -> {
@@ -785,13 +785,20 @@ public class LoreStatusResource extends LoreResourceBase {
             String current = rawToToken(str(row.get("status_raw")));
             String evType = !blank(req.evidence_type()) ? req.evidence_type() : str(row.get("evidence_type"));
             String evRef = !blank(req.evidence_ref()) ? req.evidence_ref() : str(row.get("evidence_ref"));
-            LoreDoneGate.Verdict v = LoreDoneGate.transition(current, req.status(), req.reason(), req.waiting_for());
+            boolean agent = callerAgentScope() != null
+                || (author != null && ChangeAuthor.KIND_AGENT.equals(author.kind()));
+            LoreDoneGate.Verdict v = LoreDoneGate.transitionFor(agent, current, req.status(), req.reason(), req.waiting_for());
             if (v == null && "done".equals(req.status())) {
-                boolean agent = callerAgentScope() != null
-                    || (author != null && ChangeAuthor.KIND_AGENT.equals(author.kind()));
-                v = LoreDoneGate.done(new LoreDoneGate.Facts(agent, agent ? null : callerName(author),
+                String caller = agent ? null : callerName(author);
+                v = LoreDoneGate.done(new LoreDoneGate.Facts(agent, caller,
                     str(row.get("executor_agent")), str(row.get("reviewer_agent")), current,
                     str(row.get("task_type")), evType, evRef), LoreModelFile.content().workflow());
+                // PU-29 (правило владелицы 14.11.2026): нажатие человека — само подтверждение; доказательство
+                // «кто · когда» пишет сервер, если человек своего не прислал (прежнее остаётся в строке review).
+                if (v == null && !agent && blank(req.evidence_type())) {
+                    evType = LoreDoneGate.HUMAN;
+                    evRef = LoreDoneGate.humanEvidenceRef(caller, java.time.Instant.now().toString());
+                }
             }
             Response refusal = v == null ? null : noStore(Response.status(v.status()).entity(new LoreError(v.code(), v.detail())));
             return new TaskGate(refusal, evType, evRef);

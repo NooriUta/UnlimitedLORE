@@ -210,7 +210,7 @@ describe('KitShell — телефон: меню в drawer', () => {
     expect(burger.getAttribute('aria-expanded')).toBe('false');
     burger.focus();
     fireEvent.click(burger);
-    const dlg = screen.getByRole('dialog', { name: 'LORE' });
+    const dlg = screen.getByRole('dialog', { name: 'LORE · разделы' });
     expect(burger.getAttribute('aria-expanded')).toBe('true');
     expect(within(dlg).getByRole('navigation', { name: 'Разделы' })).toBeTruthy();
     expect(await axeViolations(document.body)).toEqual([]);

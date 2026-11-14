@@ -33,12 +33,14 @@ export interface RelationTableProps {
   onUnlink?: (target: string) => void;
   /** Метка для теста единственной связи на вкладке. */
   testId?: string;
+  /** S9-05 / D14: колонки, названные приложением для этой связи; нет — общие. */
+  columns?: readonly string[];
 }
 
 /** Иконка «отвязать» — из вшитого набора lucide (как прочие управляющие иконки). */
 const UNLINK_ICON = 'lucide:circle-x';
 
-export function RelationTable({ ctx, lang, ids, onUnlink, testId }: RelationTableProps) {
+export function RelationTable({ ctx, lang, ids, onUnlink, testId, columns }: RelationTableProps) {
   const { found, missing } = useMemo(() => {
     const f: KitRecord[] = [];
     const m: string[] = [];
@@ -57,5 +59,6 @@ export function RelationTable({ ctx, lang, ids, onUnlink, testId }: RelationTabl
       run: ([id]) => { if (id) onUnlink(id); },
     }]
     : undefined;
-  return <NestedList ctx={ctx} records={found} missing={missing} rowActions={rowActions} testId={testId} className="sk-rel__table" />;
+  return <NestedList ctx={ctx} records={found} missing={missing} rowActions={rowActions} testId={testId} className="sk-rel__table"
+    columns={columns ? [...columns] : undefined} />;
 }

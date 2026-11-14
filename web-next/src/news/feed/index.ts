@@ -7,6 +7,8 @@
 export * from './types';
 export * from './model';
 export * from './source';
+export * from './dynamics';
+export { NewsDynamicsPanel, type NewsDynamicsPanelProps } from './NewsDynamics';
 export * from './i18n';
 export { NewsFeed, NewsActivity, NEWS_SECTIONS_ALL, type NewsFeedProps } from './NewsFeed';
 export type { NewsSection } from './NewsPanels';

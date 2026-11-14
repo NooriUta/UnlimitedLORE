@@ -3,6 +3,9 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
+import { ModelNotes } from '../record/ModelNotes';
+import { useChildRows } from '../lists/useChildRows';
+import { buildExpand, childScreenOf } from '../lists/nestedExpand';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyChunk } from '../shell/staleChunk';
 import {
@@ -11,7 +14,7 @@ import {
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { DateFilterScope, DateRangeValue, KitConfig, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { isRecordPlacement } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
 import { useFeed } from '../lists/useFeed';
@@ -35,6 +38,7 @@ import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import { loreListPeek } from '../record/lorePeek';
+import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -242,14 +246,51 @@ export interface ListScreenProps {
   titleId?: string;
 }
 
+/** Статусы и показ колонок типа из модели (K-14 п. 4); нет типа — null. */
+function useModelStatuses(modelType: string | undefined, fetchImpl: typeof fetch | undefined): TypeStatuses | null {
+  const [modelStatuses, setModelStatuses] = useState<TypeStatuses | null>(null);
+  useEffect(() => {
+    if (!modelType) { setModelStatuses(null); return; }
+    let live = true;
+    setModelStatuses(null);
+    fetchTypeStatuses(modelType, fetchImpl ? { fetchImpl } : {}).then(
+      r => { if (live) setModelStatuses(r); },
+      // Ожидаемые отказы `fetchTypeStatuses` возвращает оговорками; сюда
+      // попадаем, только если упал сам загрузчик — и это тоже надо сказать.
+      e => { if (live) setModelStatuses({ items: [], notes: [`статусы — умолчание приложения: ${e instanceof Error ? e.message : String(e)}`] }); },
+    );
+    return () => { live = false; };
+  }, [modelType, fetchImpl]);
+  return modelStatuses;
+}
+
+/** Конфиг экрана поверх модели: ось статусов и показ колонок — из неё, если пришли. */
+function withModelStatuses(baseConfig: KitConfig, modelStatuses: TypeStatuses | null): KitConfig {
+  const items = modelStatuses?.items ?? [];
+  // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
+  // из той же модели, что статусы. Нет в модели — колонки как раньше.
+  const display = modelStatuses?.display;
+  const withDisplay = display && baseConfig.list
+    ? { ...baseConfig, list: { ...baseConfig.list, columnDisplay: display as NonNullable<NonNullable<typeof baseConfig.list>['columnDisplay']> } }
+    : baseConfig;
+  if (!items.length) return withDisplay;
+  return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
+}
+
 export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId }: ListScreenProps) {
   const def: ListScreenDef = LIST_SCREENS[screen];
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
+  // PU-23: дети раскрытой строки (если экран их объявил); как рисовать — правило lists/nestedExpand.
+  const childLoad = useMemo(() => (nested?.children ? (parent: KitRecord, signal: AbortSignal) => nested.children!.load(client, parent, signal) : undefined), [nested, client]);
+  const childRows = useChildRows(childLoad);
   const lang = useKitLang();
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
+  // MP2-11: последнее место дока (не «весь экран») — туда возвращает выход из полного экрана.
+  const lastDock = useRef<RecordPlacement>(open.place !== 'full' ? open.place : defaultPlace());
+  if (open.place !== 'full') lastDock.current = open.place;
   // «Библиотека» и «Календарь» (K2-VIEW-LIBRARY, K2-VIEW-CALENDAR): состояние — в адресе.
   const [lib] = useLibraryState(urlWin);
   // MP2-12: `?lib=1` на входе — начальный вид «Библиотека»; дальше видом
@@ -302,21 +343,22 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // об этом. Молчаливое умолчание — это ровно тот дефект, из-за которого в
   // меню статуса задачи были чужие статусы и два «В работе»: клиент показывал
   // свой список, уверенно и неправильно.
-  const [modelStatuses, setModelStatuses] = useState<TypeStatuses | null>(null);
-  const modelType = def.modelType;
-  useEffect(() => {
-    if (!modelType) { setModelStatuses(null); return; }
-    let live = true;
-    setModelStatuses(null);
-    fetchTypeStatuses(modelType, fetchImpl ? { fetchImpl } : {}).then(
-      r => { if (live) setModelStatuses(r); },
-      // Ожидаемые отказы `fetchTypeStatuses` возвращает оговорками; сюда
-      // попадаем, только если упал сам загрузчик — и это тоже надо сказать.
-      e => { if (live) setModelStatuses({ items: [], notes: [`статусы — умолчание приложения: ${e instanceof Error ? e.message : String(e)}`] }); },
-    );
-    return () => { live = false; };
-  }, [modelType, fetchImpl]);
+  const modelStatuses = useModelStatuses(def.modelType, fetchImpl);
   const modelCodes = useMemo(() => (modelStatuses?.items ?? []).map(s => s.code), [modelStatuses]);
+  // PU-23: экран дочернего типа (спринт → «Задачи») — его конфиг и статусы модели, как у его
+  // собственного списка: вложенная таблица детей рисуется ими.
+  const childScreen = childScreenOf(nested?.children?.kind);
+  const childModel = useModelStatuses(childScreen ? (LIST_SCREENS[childScreen] as ListScreenDef).modelType : undefined, fetchImpl);
+  const childConfig = useMemo(
+    () => (childScreen ? withModelStatuses(LIST_SCREENS[childScreen].config(lang), childModel) : undefined),
+    [childScreen, childModel, lang],
+  );
+  const expand = useMemo(() => (nested ? buildExpand({
+    nested, client, childRows, lang,
+    childConfigOf: kind => (kind === nested.children?.kind && childConfig
+      ? childConfig
+      : (() => { const id = childScreenOf(kind); return id ? LIST_SCREENS[id].config(lang) : undefined; })()),
+  }) : undefined), [nested, client, childRows, lang, childConfig]);
   // Цвет продукта (S4-PRODUCT-HILITE): одно правило на все разделы — продукты
   // записи и её компонентов из среза products, цвет из данных продукта. Не
   // загрузился срез — список работает без колонки, а причина сказана словами.
@@ -330,17 +372,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     return () => { live = false; };
   }, [fetchImpl]);
   const paintIdx = paint && 'idx' in paint ? paint.idx : null;
-  const ownConfig = useMemo(() => {
-    const items = modelStatuses?.items ?? [];
-    // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
-    // из той же модели, что статусы. Нет в модели — колонки как раньше.
-    const display = modelStatuses?.display;
-    const withDisplay = display && baseConfig.list
-      ? { ...baseConfig, list: { ...baseConfig.list, columnDisplay: display as NonNullable<NonNullable<typeof baseConfig.list>['columnDisplay']> } }
-      : baseConfig;
-    if (!items.length) return withDisplay;
-    return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
-  }, [baseConfig, modelStatuses]);
+  const ownConfig = useMemo(() => withModelStatuses(baseConfig, modelStatuses), [baseConfig, modelStatuses]);
   const config = useMemo(() => {
     const own = ownConfig;
     return paintIdx ? withProductColumn(own, t('lists.field.product')) : own;
@@ -366,6 +398,17 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
     [scope],
   );
+  // Встроенный график Völva (SPRINT_VIZ_EMBED/EMB-L2, D-2026-LORE-VIZ-EMBED-PLACES):
+  // вид РЯДОМ с видами раздела, только при charts.layer=volva; иначе ничего не
+  // меняется. Проект — из скоупа шапки; подпись — бэкенд LORE.
+  const volvaLayer = useChartLayer(fetchImpl, !!def.volvaChart, def.volvaChart);
+  const volvaLabels = useVolvaSprintsLabels();
+  const appViews = useMemo(() => (def.volvaChart && volvaLayer === 'volva' ? [{
+    id: 'volva',
+    label: volvaLabels.view,
+    icon: VOLVA_VIEW_ICON,
+    render: () => <VolvaChart chart={def.volvaChart!} title={volvaLabels.title} projects={scope} fetchImpl={fetchImpl} />,
+  }] : undefined), [def.volvaChart, volvaLayer, volvaLabels.view, volvaLabels.title, scope, fetchImpl]);
   // Фильтр «Изменены» (K2-DATE-RANGE): только у разделов, где у записи есть
   // время (у кого есть лента — FEEDS); у прочих он недоступен с причиной.
   const hasTime = !!def.feed;
@@ -475,9 +518,6 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     ...(def.note ? [def.note] : []),
     ...(def.closedNote && def.closedSlice && !loadClosed ? [def.closedNote] : []),
     ...(body ? sliceWarnings(body) : []),
-    // Оговорки про ось статусов — там же, где прочие: человек должен видеть,
-    // что список статусов взят не из модели, а из умолчания приложения.
-    ...(modelStatuses?.notes ?? []),
     // Цвет продукта не загрузился — список без колонки «Продукт», и это сказано.
     ...(paint && 'error' in paint ? [t('lists.productPaint.failed', { reason: paint.error })] : []),
   ];
@@ -507,11 +547,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     if (!nested || !ids.length) return;
     const ctl = new AbortController();
     setLate(null);
-    nested.load(client, ids, ctl.signal).then(
+    nested.load(client, ids, ctl.signal, data?.records ?? []).then(
       m => { if (!ctl.signal.aborted) setLate(m); },
       () => { /* отмена: экран ушёл или список перезагрузился */ },
     );
     return () => ctl.abort();
+    // records нужны загрузчику вехи (PU-27); ids — из тех же data, отдельной смены у них нет.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nested, client, ids]);
   const shownData = useMemo(() => {
     if (!data || !nested) return data;
@@ -662,11 +704,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
+        appViews={appViews}
         // Личная ширина колонок (S4-35, «ширина личная, набор командный»):
         // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
         // в память (приватный режим ширину просто не запомнит).
         widths={{ screen: screen, store: appStorage }}
-        expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
+        // PU-23: дети другого типа — вложенная таблица своего экрана, того же — строки этой таблицы.
+        expand={expand}
         peek={listPeek}
         onOpen={id => {
           setOpen({ ...open, id });
@@ -685,14 +729,17 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
 
   if (open.id && ready) {
     const place = open.place;
+    // MP2-11: выход из полного экрана — в место, из которого вошли (по ссылке ?place=full — в
+    // место из личной настройки), а не всегда вниз.
+    const backPlace: RecordPlacement = lastDock.current;
     const passportType = PASSPORT_OF[screen];
     content = (
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
       // modal={false} внутри оболочки: «во весь экран» накрывает область
       // содержимого, шапка и меню остаются видимыми и рабочими (замечание
       // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
-      <RecordDock placement={place} modal={shell == null}
-        onExitFull={() => setOpen({ ...open, place: 'bottom' })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
+      <RecordDock placement={place} modal={shell == null} controls="bar"
+        onExitFull={() => setOpen({ ...open, place: backPlace })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         {open.id === NEW_RECORD_ID && createType ? (
           // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
           // доке открывается сама запись (то, что открывает «Читать целиком»).
@@ -706,7 +753,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             <ListPassport key={open.id} type={passportType} id={open.id} placement={place} fetchImpl={fetchImpl}
               backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}
               ids={ids} onGo={id => setOpen({ ...open, id })}
-              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} />
+              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} backPlace={backPlace}
+              // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
+              onPlace={p => setOpen({ ...open, place: p })}
+              onClose={() => setOpen({ ...open, id: null })} />
           </Suspense>
         ) : (
           // Паспорта у типа нет — это говорится словами и на месте щелчка, а не
@@ -726,6 +776,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           {warnings.map(w => <li key={w}>{w}</li>)}
         </ul>
       )}
+      {/* MP2-08 (владелица 13.11): оговорки модели (статусы взяты из умолчания, у статуса нет цвета)
+          — техническое сообщение, его место под значком тех. сведений, как в паспорте, а не полосой
+          над списком. Полоса выше — про ВЫДАЧУ (обрезано, закрытые скрыты), она остаётся на месте. */}
+      <ModelNotes notes={modelStatuses?.notes ?? []} />
       {content}
     </section>
   );

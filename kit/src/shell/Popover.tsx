@@ -27,6 +27,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { focusables, useFocusTrap } from '../keyboard/focusTrap';
+import { NARROW_QUERY } from '../core/narrow';
 
 /**
  * Куда растёт поповер.
@@ -47,6 +48,26 @@ export type PopoverWalk = 'menuitem' | 'focusable';
 const MENUITEMS = '[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"]';
 /** Зазор до края экрана, px: геометрия замера, не размер оформления. */
 const GAP = 4;
+
+/**
+ * Где встать слою рейки (PU-26), в координатах окна: справа от якоря; не
+ * влез — слева от него; дальше прижим к краям окна с зазором. По вертикали —
+ * от верха якоря, не влез вниз — поднимается. Чистая функция: её и проверяем.
+ */
+export function sidePlace(
+  a: { left: number; right: number; top: number },
+  size: { width: number; height: number },
+  vw: number,
+  vh: number,
+): { x: number; y: number } {
+  let x = a.right + GAP;
+  if (x + size.width > vw - GAP) x = a.left - GAP - size.width;
+  x = Math.max(GAP, Math.min(x, vw - GAP - size.width));
+  let y = a.top;
+  if (y + size.height > vh - GAP) y = vh - GAP - size.height;
+  y = Math.max(GAP, y);
+  return { x: Math.round(x), y: Math.round(y) };
+}
 
 export interface PopoverProps {
   /** Закрыть: Esc и щелчок вне. Вызывающий сам решает, возвращать ли фокус. */
@@ -90,6 +111,8 @@ export function Popover({
 
   const [dx, setDx] = useState(0);
   const [up, setUp] = useState(false);
+  const [xy, setXY] = useState<{ x: number; y: number } | null>(null);
+  const [sheet, setSheet] = useState(false);
 
   // Открывателя запоминаем ДО ловушки фокуса (она сейчас же уведёт фокус
   // внутрь), поэтому этот эффект объявлен раньше useFocusTrap.
@@ -143,11 +166,50 @@ export function Popover({
     return () => document.removeEventListener('mousedown', onDown);
   }, [closeOnOutside]);
 
+  // Слой рейки (`side`) — position:fixed по координатам якоря (PU-26). Был
+  // абсолютным ВНУТРИ колонки меню, а у неё overflow:auto: слой справа от
+  // колонки в 56px уходил в её прокрутку — обрезался, а фокус на первой ссылке
+  // прокручивал колонку вбок, и список уезжал влево, на рейку и за край окна.
+  // Замер окна (--pop-dx) это не лечил: резало не окно, а колонка. Поэтому
+  // координаты считаются от якоря и окна: справа от значка; не влез — влево
+  // от значка; дальше прижим к краям. На телефоне — нижний лист.
+  const placeSide = useCallback(() => {
+    const panel = root.current;
+    const anchor = panel?.parentElement;
+    if (!panel || !anchor || typeof window === 'undefined') return;
+    if (typeof window.matchMedia === 'function' && window.matchMedia(NARROW_QUERY).matches) {
+      setSheet(true);
+      setXY(null);
+      return;
+    }
+    setSheet(false);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const a = anchor.getBoundingClientRect();
+    const r = panel.getBoundingClientRect();
+    if (!vw || !vh || !r.width) return;
+    setXY(sidePlace(a, { width: r.width, height: r.height }, vw, vh));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (align !== 'side' || typeof window === 'undefined') return;
+    placeSide();
+    // Колонка меню или окно сдвинулись — слой идёт за значком, а не висит там,
+    // где его открыли.
+    const on = () => placeSide();
+    window.addEventListener('resize', on);
+    window.addEventListener('scroll', on, true);
+    return () => {
+      window.removeEventListener('resize', on);
+      window.removeEventListener('scroll', on, true);
+    };
+  }, [align, placeSide]);
+
   // Край экрана. Замер один раз при открытии: сдвиг меняет сам прямоугольник,
   // поэтому повторный замер по его же результату зацикливался бы.
   useLayoutEffect(() => {
     const panel = root.current;
-    if (!panel || typeof window === 'undefined') return;
+    if (align === 'side' || !panel || typeof window === 'undefined') return;
     const r = panel.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -194,7 +256,10 @@ export function Popover({
       className={['sk-pop', className].filter(Boolean).join(' ')}
       data-align={align}
       data-side={up ? 'up' : undefined}
-      style={dx ? ({ '--pop-dx': `${dx}px` } as CSSProperties) : undefined}
+      data-sheet={sheet ? 'bottom' : undefined}
+      style={xy
+        ? ({ '--pop-x': `${xy.x}px`, '--pop-y': `${xy.y}px` } as CSSProperties)
+        : dx ? ({ '--pop-dx': `${dx}px` } as CSSProperties) : undefined}
       onKeyDown={handleKeyDown}
     >
       {children}

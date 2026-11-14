@@ -54,45 +54,37 @@ class TaskWorkflowGateLiveDbTest {
         String uid = SPRINT + "/G-1";
         assertEquals(200, status(uid, "\"status\":\"active\"").statusCode());
 
-        Response notFromReview = status(uid, "\"status\":\"done\",\"evidence_type\":\"probe\",\"evidence_ref\":\"10/10\"");
-        assertEquals(409, notFromReview.statusCode(), notFromReview.asString());
-        assertEquals("DONE_ONLY_FROM_REVIEW", notFromReview.jsonPath().getString("error"));
-        assertEquals("🔄 IN PROGRESS", openRow(uid).get("status_raw"), "отказ — до записи: статус прежний");
 
-        Response blocked = status(uid, "\"status\":\"blocked\"");
-        assertEquals(400, blocked.statusCode());
-        assertEquals("REASON_REQUIRED", blocked.jsonPath().getString("error"));
-        Response waiting = status(uid, "\"status\":\"waiting\"");
-        assertEquals("WAITING_FOR_REQUIRED", waiting.jsonPath().getString("error"));
+        // PU-29 (правило владелицы 14.11.2026): человеку обязательных слов перехода нет — blocked и waiting
+        // без причины/адресата проходят (агенту — по-прежнему 400, LoreDoneGateHumanTest).
+        assertEquals(200, status(uid, "\"status\":\"blocked\"").statusCode());
+        assertEquals(200, status(uid, "\"status\":\"waiting\"").statusCode());
 
         // доказательство прикладывается при переходе в review…
         assertEquals(200, status(uid, "\"status\":\"review\",\"stage\":\"stand_check\","
             + "\"evidence_type\":\"probe\",\"evidence_ref\":\"10 из 10 прогонов без OOM\"").statusCode());
         assertEquals("probe", openRow(uid).get("evidence_type"));
 
-        // …у ops чужой тип доказательства не принимается — даже если прислан при done
-        Response wrong = status(uid, "\"status\":\"done\",\"evidence_type\":\"url\",\"evidence_ref\":\"https://x\"");
-        assertEquals("NO_EVIDENCE", wrong.jsonPath().getString("error"), wrong.asString());
-
-        // …и переносится до done: done без повторной ссылки проходит, строка done несёт доказательство
+        // PU-29 (правило владелицы 14.11.2026): done человека — само подтверждение; строка done несёт
+        // доказательство «человек · когда», записанное сервером.
         Response done = status(uid, "\"status\":\"done\"");
         assertEquals(200, done.statusCode(), done.asString());
         Map<String, Object> row = openRow(uid);
         assertEquals("✅ DONE", row.get("status_raw"));
-        assertEquals("probe", row.get("evidence_type"));
-        assertEquals("10 из 10 прогонов без OOM", row.get("evidence_ref"));
+        assertEquals("human", row.get("evidence_type"));
+        assertTrue(String.valueOf(row.get("evidence_ref")).contains(" · "), String.valueOf(row.get("evidence_ref")));
     }
 
     @Test
-    void doneWithoutEvidenceIsRefused() {
+    void humanDoneWithoutEvidencePasses() {
         post("/lore/sprint/create", "{\"sprint_id\":\"" + SPRINT + "_2\",\"name\":\"Гейт WK-05, без доказательства\"}");
         post("/lore/task", "{\"sprint_id\":\"" + SPRINT + "_2\",\"task_id\":\"G-2\",\"title\":\"Без доказательства\"}");
         String uid = SPRINT + "_2/G-2";
         assertEquals(200, status(uid, "\"status\":\"ready_for_deploy\"").statusCode(), "старый токен — стадия review");
+        // Ровно случай с прода 14.11.2026: человек жмёт DONE на «к выкатке» — проходит без доказательства.
         Response r = status(uid, "\"status\":\"done\"");
-        assertEquals(409, r.statusCode());
-        assertEquals("NO_EVIDENCE", r.jsonPath().getString("error"));
-        assertTrue(r.jsonPath().getString("detail").contains("pr"), "отказ перечисляет доказательства вида dev");
-        assertEquals("🚀 READY FOR DEPLOY", openRow(uid).get("status_raw"));
+        assertEquals(200, r.statusCode(), r.asString());
+        assertEquals("✅ DONE", openRow(uid).get("status_raw"));
+        assertEquals("human", openRow(uid).get("evidence_type"));
     }
 }

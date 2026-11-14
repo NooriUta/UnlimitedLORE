@@ -250,9 +250,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // с «current thread cannot be blocked». Реактивная цепочка ниже от этого не
     // меняется — меняется поток, на котором она собирается.
     @io.smallrye.common.annotation.Blocking
-    public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role,
+                                    @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return Uni.createFrom().item(disabled());
         requireAdmin(role);
+        // MT-MCP-TRUTH п.1: задача создаётся INSERT-ом, и занятый код и так даёт 409 TASK_ID_TAKEN
+        // со свободным кодом; здесь режим только проверяется на допустимость (create|upsert), чтобы
+        // клиент слал одинаковый ?mode=create на все четыре пути создания.
+        Response badMode = modeError(mode);
+        if (badMode != null) return Uni.createFrom().item(badMode);
         if (req == null || req.sprint_id() == null || req.task_id() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, task_id, title required"));
@@ -386,6 +392,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             body.put("task_id", tid);
                             body.put("order_index", order);
                             body.put("quality", WorkQuality.compact(taskQuality(uid)));
+                            // MT-CAL-CLASS-REQUIRED (D5): класс не задан — явная подсказка, не отказ.
+                            Map<String, Object> wcWarn = workClassWarning(workClass);
+                            if (wcWarn != null) body.put("warning", wcWarn);
                             Map<String, Object> roles = applyRoles(uid,
                                 req.author_agent(), req.executor_agent(), req.reviewer_agent());
                             if (!roles.isEmpty()) body.put("roles", roles);
@@ -431,6 +440,26 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex))));
             });
+    }
+
+    /** Канон класса работы ADR-LORE-022 — порядок как в подсказке. */
+    static final List<String> WORK_CLASSES = List.of("uc", "jtd", "enb");
+
+    /**
+     * MT-CAL-CLASS-REQUIRED, решение владелицы 14.11.2026 (D5 «подсказка»): задача без work_class
+     * создаётся (отказа нет), но ответ несёт отдельное поле {@code warning} — заметнее строки в
+     * quality.missing: что не задано, какие значения допустимы и чем дописать. Класс задан — null.
+     */
+    static Map<String, Object> workClassWarning(String workClass) {
+        if (workClass != null && !workClass.isBlank()) return null;
+        Map<String, Object> w = new LinkedHashMap<>();
+        w.put("code", "WORK_CLASS_MISSING");
+        w.put("field", "work_class");
+        w.put("allowed", WORK_CLASSES);
+        w.put("detail", "задача создана без класса работы — без него не работают калибровка и правила вех. "
+            + "Допустимо: uc — реализует сценарий, jtd — вспомогательная работа, enb — обеспечивающая (enabler); "
+            + "допишите task_set work_class=uc|jtd|enb");
+        return w;
     }
 
     private Response taskIdTaken(String sid, String tid, String suggested) {
@@ -831,6 +860,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         int updated = 0;
         List<String> errors = new java.util.ArrayList<>();
         Map<String, Object> mentions = new LinkedHashMap<>();
+        final ChangeAuthor batchAuthor = changeAuthor();
         for (TaskEditRequest req : reqs) {
             if (req == null || req.task_uid() == null || req.title() == null || req.title().isBlank()) {
                 errors.add("skipped (missing task_uid or title): " + req); continue;
@@ -869,7 +899,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     taskVertexUpdate(req.task_uid(), req.title(), note, req.effort_days(), req.actual_days(), req.bookkeeping(),
                         req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
                     .await().indefinitely();
-                mirrorTaskHist(req.task_uid(), note, req.effort_days()).await().indefinitely();
+                writeTaskHist(req.task_uid(), note, req.effort_days(), batchAuthor);
                 if (note != null)
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.task_uid());
                 relinkRealizes(req.task_uid(), req.uc_id());
@@ -1009,6 +1039,26 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             " WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL", p));
     }
 
+    /**
+     * MT-NOTE-APPEND п.3 (вариант А, D-2026-NOTE-APPEND-IS-WORTH-FIXING): заметка в историю.
+     * Изменилась — НОВАЯ версия SCD2 (копия открытой строки с новым текстом, статус тот же),
+     * чтобы прежний текст остался в истории и правку можно было откатить. Тот же текст или нет
+     * открытой версии — прежнее зеркало на месте (оно же пишет effort_days без заметки).
+     * Блокирующий — только с рабочего пула. Соседняя запись закрыла версию — 409.
+     */
+    private void writeTaskHist(String uid, String note, Double effortDays, ChangeAuthor author) {
+        if (note != null) {
+            Map<String, Object> texts = new LinkedHashMap<>();
+            texts.put("note_md", note);
+            if (effortDays != null) texts.put("effort_days", effortDays);
+            StatusHistoryService.Outcome o = StatusHistoryService.textVersion(statusDb(), "task", uid, texts, author);
+            if (o instanceof StatusHistoryService.Outcome.Conflict c)
+                throw new Scd2Guard.ConflictException(c.detail(), c.current());
+            if (o instanceof StatusHistoryService.Outcome.Ok) return;
+        }
+        mirrorTaskHist(uid, note, effortDays).await().indefinitely();
+    }
+
     @POST
     @Path("task/edit")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -1027,6 +1077,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             return Uni.createFrom().item(badParams("actual_days must be a non-negative number of person-days"));
         }
         final String uid = req.task_uid();
+        // S2-12: автор версии (правка текста открывает версию) — из токена, до асинхронной цепочки.
+        final ChangeAuthor author = changeAuthor();
         String appendRefusal = appendConflict("note_md", req.note_md(), "note_append", req.note_append());
         if (appendRefusal != null) return Uni.createFrom().item(badParams(appendRefusal));
         // MT-NOTE-APPEND: текущая заметка читается, если её трогают — и для дописки,
@@ -1066,7 +1118,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
             // were actually supplied, so a title-only edit never wipes note/effort.
-            .chain(__ -> mirrorTaskHist(uid, note[0], req.effort_days()))
+            // MT-NOTE-APPEND п.3: изменённая заметка — новая версия SCD2 (writeTaskHist).
+            .chain(__ -> Uni.createFrom().item(() -> { writeTaskHist(uid, note[0], req.effort_days(), author); return Boolean.TRUE; })
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             // Переподвес REALIZES идёт ЦЕПОЧКОЙ, а не блокирующим вызовом внутри
             // map: этот путь реактивный, и await на IO-потоке даёт 502.
             .chain(__ -> relinkRealizesUni(uid, req.uc_id()))
@@ -1103,6 +1157,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
+                if (ex instanceof Scd2Guard.ConflictException ce) return ce.response();
+                if (Scd2Guard.isConcurrentModification(ex))
+                    return Scd2Guard.conflict("task '" + uid + "': concurrent write to the same version — re-read and retry", Map.of());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex)));
             });
@@ -1367,9 +1424,20 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // MT-NOTE-APPEND п.4 (+ основа п.3): тела — и на открытую строку истории, затем хэш.
             // Без этого content_hash спринта считался по пустым полям строки (одинаков при любом
             // тексте), а смена статуса переносила на новую версию null вместо текста.
+            // MT-NOTE-APPEND п.3 (вариант А): изменённый текст — НОВАЯ версия SCD2 (копия открытой
+            // строки, статус тот же), прежний текст остаётся в истории. Тот же текст или нет
+            // открытой версии — прежнее зеркало на месте.
             if (finalTexts != null) {
-                writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
-                    .await().indefinitely();
+                Map<String, Object> texts = new LinkedHashMap<>();
+                texts.put("context_md", finalTexts[0]);
+                texts.put("outcome_md", finalTexts[1]);
+                StatusHistoryService.Outcome tv = StatusHistoryService.textVersion(statusDb(), "sprint", req.sprint_id(),
+                    texts, changeAuthor());
+                if (tv instanceof StatusHistoryService.Outcome.Conflict c)
+                    return Scd2Guard.conflict(c.detail() + " (sprint vertex already updated; repeat the call)", c.current());
+                if (!(tv instanceof StatusHistoryService.Outcome.Ok))
+                    writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
+                        .await().indefinitely();
                 hashStamper.stampOpenHist("KnowSprintHist", "KnowSprint", "sprint_id", req.sprint_id());
             }
             Map<String, Object> out = new LinkedHashMap<>();

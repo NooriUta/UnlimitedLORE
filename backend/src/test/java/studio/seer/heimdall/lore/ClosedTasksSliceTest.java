@@ -17,7 +17,8 @@ class ClosedTasksSliceTest {
     void closedTasksAreDoneOrCancelledFromTheOpenHistoryRow() {
         String sql = LoreSlices.compose("closed_tasks", Map.of()).sql();
         assertTrue(sql.contains("FROM KnowTask"), sql);
-        assertTrue(sql.contains("out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE"), "статус — из истории: " + sql);
+        // Сверка 14.11.2026: статус — из ОТКРЫТОЙ версии истории (StatusFromOpenVersionGuardTest).
+        assertTrue(sql.contains("COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) LIKE"), "статус — из открытой версии истории: " + sql);
         assertFalse(sql.contains("note_md"), "облегчённая проекция, как open_tasks: " + sql);
         assertFalse(sql.toUpperCase().contains(" LIMIT "), "без потолка — страница через limit/offset: " + sql);
     }

@@ -7,11 +7,13 @@
 // ASSUMED до переноса в модель сервера (рядом с required): список живёт в приложении, сервер не трогали
 // — любой ./gradlew test мигрирует прод-схему.
 import { useCallback, useEffect, useState } from 'react';
-import { Pill, PeekCard, type KitLang, type ListPeek, type PeekCardData, type PeekState } from '@seidr/kit';
+import { PeekCard, StatusStar, ValueChips, type KitLang, type ListPeek, type PeekCardData, type PeekState } from '@seidr/kit';
+import type { ReactNode } from 'react';
+import { passportHref } from './passportHref';
 import type { MartPeekRef, MartRefPeek } from '@seidr/kit/content';
 import { RecordForbidden, RecordNotFound, fetchLoreRecord } from '../api/liveRecord';
 import { recordHref } from '../nav/loreRoutes';
-import { appT } from '../i18n';
+import { appT, type AppKey } from '../i18n';
 import { typeByForm } from './loreRefForms';
 import type { LoreRecord1 } from './loreRecordContract';
 
@@ -34,7 +36,22 @@ const MAX_PROPS = 3;
 const MAX_COUNTERS = 3;
 
 const empty = (v: unknown) => v == null || v === '' || (Array.isArray(v) && v.length === 0);
-const show = (v: unknown): string => (Array.isArray(v) ? v.map(String).join(' · ') : typeof v === 'boolean' ? (v ? '✓' : '✗') : String(v));
+// Значение свойства в пике — тем же правилом, что в паспорте: список чипов {id, label} (форма с #1128)
+// рисуется подписями со ссылками (ValueChips), а не String(объект) = «[object Object]» (скрин владелицы
+// 14.11.2026, пик ADR-LORE-048). Чип без подписи — код; строки и числа — как были.
+/** Код статуса из записи фасада: «🚀 READY FOR DEPLOY» → ready_for_deploy, «ACCEPTED» → accepted. */
+const statusCode = (raw: string): string => raw.replace(/^[^\p{L}]+/u, '').trim().toLowerCase().replace(/\s+/g, '_');
+/** Слово статуса из словаря приложения; слова нет — то, что прислал сервер (не выдумываем). */
+const statusWord = (lang: KitLang, code: string, raw: string): string => {
+  const w = appT(lang, `status.${code}` as AppKey) as string | undefined;
+  return w && w !== `status.${code}` ? w : raw;
+};
+const isChip = (x: unknown): x is { id: string } => !!x && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string';
+const show = (v: unknown, href: (id: string) => string): ReactNode => {
+  if (Array.isArray(v) && v.some(isChip)) return <ValueChips value={v} href={href} />;
+  if (isChip(v)) return <ValueChips value={[v]} href={href} />;
+  return Array.isArray(v) ? v.map(String).join(' · ') : typeof v === 'boolean' ? (v ? '✓' : '✗') : String(v);
+};
 
 export function toPeekCard(r: LoreRecord1, lang: KitLang): PeekCardData {
   const fields = r.schema.fields;
@@ -43,7 +60,8 @@ export function toPeekCard(r: LoreRecord1, lang: KitLang): PeekCardData {
   const keys = wanted.length > 0
     ? wanted
     : fields.filter(f => f.group === 'props' && !empty(r.values[f.key])).map(f => f.key).slice(0, 2);
-  const props = keys.slice(0, MAX_PROPS).map(k => ({ label: byKey.get(k)!.label, value: empty(r.values[k]) ? null : show(r.values[k]) }));
+  const chipHref = passportHref([], r.values, id => `#${encodeURIComponent(id)}`);
+  const props = keys.slice(0, MAX_PROPS).map(k => ({ label: byKey.get(k)!.label, value: empty(r.values[k]) ? null : show(r.values[k], chipHref) }));
 
   const body = fields.find(f => f.group === 'body' && typeof r.values[f.key] === 'string' && (r.values[f.key] as string).trim() !== '');
   const section = body
@@ -59,7 +77,8 @@ export function toPeekCard(r: LoreRecord1, lang: KitLang): PeekCardData {
     kind: r.schema.label || appT(lang, 'peek.kind.unknown'),
     id: r.record.id,
     title: r.record.title,
-    status: r.record.status ? <Pill>{r.record.status}</Pill> : undefined,
+    // Статус — значком и словом языка, код — в подсказке (как в паспорте), а не сырым кодом.
+    status: r.record.status ? <StatusStar status={statusCode(r.record.status)} showLabel titleOf={c => statusWord(lang, c, r.record.status!)} /> : undefined,
     props,
     section,
     counters,

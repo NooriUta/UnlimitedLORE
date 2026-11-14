@@ -17,7 +17,7 @@
 // Молчаливый откат к своему списку — ровно тот дефект, из-за которого в меню
 // статуса задачи были чужие статусы и два «В работе».
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { ListScreen } from './ListScreen';
@@ -69,8 +69,8 @@ describe('K-14 п. 4 · статусы списка из модели', () => {
     const { impl } = net(MODEL);
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     // «В строю» — подпись модели; «В работе» — подпись умолчания приложения.
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В строю'));
-    expect(chip(container)?.textContent).not.toContain('В работе');
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В строю'));
+    expect(chip(container)?.getAttribute('title')).not.toContain('В работе');
   });
 
   it('модель спрашивается ровно за тот тип, который у раздела', async () => {
@@ -82,16 +82,20 @@ describe('K-14 п. 4 · статусы списка из модели', () => {
   it('модель недоступна — умолчание приложения, и это СКАЗАНО словами', async () => {
     const { impl } = net({ error: 'boom' }, 502);
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В работе'));
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
     // `\w` в JS кириллицу не покрывает — отсюда явный класс букв: иначе
     // проверка падает на присутствующем тексте.
+    // MP2-08: оговорки модели — под кнопкой тех. сведений; слова на месте, их раскрывают.
+    fireEvent.click(await screen.findByRole('button', { name: /тех/i }));
     await waitFor(() => expect(document.body.textContent).toMatch(/умолчани[а-яё]* приложения/i));
   });
 
   it('в модели нет цикла для типа — тоже названо, а не молчаливый откат', async () => {
     const { impl } = net({ format: 'model/0', version: 'v', statuses: { task: { entries: [] } } });
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
-    await waitFor(() => expect(chip(container)?.textContent).toContain('В работе'));
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
+    // MP2-08: оговорки модели — под кнопкой тех. сведений; слова на месте, их раскрывают.
+    fireEvent.click(await screen.findByRole('button', { name: /тех/i }));
     await waitFor(() => expect(document.body.textContent).toMatch(/не описан словарь|нет цикла/i));
   });
 
@@ -155,5 +159,20 @@ describe('S4-STATUS-AXIS-CONFIG · статус строки читается п
   it('положительный контроль: модели нет — перечень в коде, и `parked` в нём «вне словаря»', async () => {
     const { container } = render(<ListScreen screen="decisions" fetchImpl={netD({ error: 'boom' }, 502)} urlState={false} />);
     await waitFor(() => expect(row(container)?.querySelector('[data-status="unknown"]')).toBeTruthy());
+  });
+});
+
+// MP2-08, доработка владелицы 13.11: «все технические несоответствия модели — как договаривались —
+// убирать вниз и открывать по значку warnings». На preprod 14.11 над списком ADR висела полоса
+// «у статуса «draft» не задан цвет / значок». Оговорки модели — под тех. значок, а не полосой;
+// предупреждения про ВЫДАЧУ (обрезано, «закрытые скрыты») остаются на месте — они про данные.
+describe('MP2-08 · оговорки модели в списке — под значком, не полосой', () => {
+  it('оговорка модели не стоит строкой в полосе предупреждений списка, но её число видно', async () => {
+    const { impl } = net({ error: 'boom' }, 502);
+    const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
+    await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
+    await waitFor(() => expect(container.querySelector('.pp-model-note__tech, [data-testid="model-notes"]')).not.toBeNull());
+    const strip = container.querySelector('.list-screen__warn');
+    expect(strip?.textContent ?? '').not.toMatch(/умолчани[а-яё]* приложения/i);
   });
 });

@@ -8,7 +8,9 @@
 // BACKLINK_EXCLUDED_EDGE_TYPES контракта S2.
 //
 // Подписи — в TS, а не в web-next/src/i18n: это справочник схемы с парой ru/en
-// на тип, парность проверяет тест. Неизвестный тип показывается кодом.
+// на тип. Полноту и парность проверяет loreEdges.test.ts — по реестрам сервера
+// (модель + CREATE EDGE TYPE схемы), а не по списку, подобранному руками.
+// Неизвестный тип показывается кодом (запасной путь, тест его не допускает).
 import type { KitConfig, KitLang } from '@seidr/kit';
 
 export interface LoreEdgeType {
@@ -56,8 +58,59 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   PERFORMED_BY: { ru: 'выполняется', en: 'performed by', color: '--t2' },
   SUCCESS_OF: { ru: 'успех работы', en: 'success of', color: '--suc' },
   DESIRED_BY: { ru: 'желанно для', en: 'desired by', color: '--t2' },
+  // S5-10 (приёмка 14.11): все остальные типы рёбер сервера — модель и схема. Раньше их не
+  // было, и легенда графа показывала код (DOCUMENTED_IN, PARENT_OF). Полноту держит
+  // loreEdges.test.ts по реестрам сервера; код остаётся подсказкой (title) чипа легенды.
+  // Документирование, иерархия, состав
+  DOCUMENTED_IN: { ru: 'описан в', en: 'documented in', color: '--wrn' },
+  PARENT_OF: { ru: 'родитель для', en: 'parent of', color: '--inf' },
+  PARENT_PRODUCT: { ru: 'входит в продукт', en: 'parent product', color: '--inf' },
+  DECOMPOSES_INTO: { ru: 'раскладывается на', en: 'decomposes into', color: '--inf' },
+  INCLUDES: { ru: 'включает', en: 'includes', color: '--inf' },
+  IN_PRODUCT: { ru: 'в продукте', en: 'in product', color: '--inf' },
+  IN_AREA: { ru: 'в области', en: 'in area', color: '--inf' },
+  SERVES: { ru: 'обслуживает', en: 'serves', color: '--inf' },
+  USES: { ru: 'использует', en: 'uses', color: '--inf' },
+  OF_TYPE: { ru: 'вида', en: 'of type', color: '--t2' },
+  FORMALIZED_AS: { ru: 'оформлено как', en: 'formalized as', color: '--acc' },
+  // Планирование и поставка
+  TARGETS_MILESTONE: { ru: 'к вехе', en: 'targets milestone', color: '--acc' },
+  TARGETS_PRODUCT: { ru: 'для продукта', en: 'targets product', color: '--acc' },
+  ON_MILESTONE: { ru: 'на вехе', en: 'on milestone', color: '--acc' },
+  SHIPPED_IN: { ru: 'вошло в релиз', en: 'shipped in', color: '--suc' },
+  RELEASED_IN: { ru: 'выпущено в', en: 'released in', color: '--suc' },
+  CLOSED_BY: { ru: 'закрыто PR', en: 'closed by', color: '--suc' },
+  CHANGED_IN: { ru: 'изменено в', en: 'changed in', color: '--t2' },
+  EDITED_IN: { ru: 'правилось в', en: 'edited in', color: '--t2' },
+  PRODUCED: { ru: 'произвело', en: 'produced', color: '--suc' },
+  PRODUCED_BY: { ru: 'подготовлено в', en: 'produced by', color: '--suc' },
+  YIELDED: { ru: 'дало', en: 'yielded', color: '--suc' },
+  // Качество
+  VALIDATES: { ru: 'проверяет', en: 'validates', color: '--wrn' },
+  MEASURED_BY: { ru: 'измеряется', en: 'measured by', color: '--wrn' },
+  PROMOTED_TO: { ru: 'переведено в', en: 'promoted to', color: '--wrn' },
+  LED_TO: { ru: 'привело к', en: 'led to', color: '--wrn' },
+  // Люди, агенты, роли, машины
+  OWNED_BY: { ru: 'владелец', en: 'owned by', color: '--t2' },
+  HAS_PROJECT_ROLE: { ru: 'роль в проекте', en: 'has project role', color: '--t2' },
+  ROLE_HELD_BY: { ru: 'роль у', en: 'role held by', color: '--t2' },
+  FILLS_ROLE: { ru: 'исполняет роль', en: 'fills role', color: '--t2' },
+  LOGGED_BY: { ru: 'записано агентом', en: 'logged by', color: '--t2' },
+  USES_MACHINE: { ru: 'работает на машине', en: 'uses machine', color: '--t2' },
+  MACHINE_ACCESS: { ru: 'доступ к машине', en: 'machine access', color: '--t2' },
+  // Файлы и публикации BRAGI
+  ATTACHED_TO: { ru: 'с вложением', en: 'attached to', color: '--t2' },
+  HAS_ASSET: { ru: 'с файлом', en: 'has asset', color: '--t2' },
+  SOURCED_FROM: { ru: 'взято из', en: 'sourced from', color: '--t2' },
+  HAS_VARIANT: { ru: 'с вариацией', en: 'has variant', color: '--inf' },
+  FOR_VARIANT: { ru: 'для вариации', en: 'for variant', color: '--inf' },
+  IN_CHANNEL: { ru: 'в канале', en: 'in channel', color: '--inf' },
+  IN_RUBRIC: { ru: 'в рубрике', en: 'in rubric', color: '--inf' },
+  TARGETS_KEY: { ru: 'на ключевое слово', en: 'targets keyword', color: '--inf' },
+  TARGETS_PAGE: { ru: 'на страницу', en: 'targets page', color: '--inf' },
   // Структурные: принадлежность и иерархия
   HAS_STATE: { ru: 'версия записи', en: 'has state', color: '--t3', layer: S },
+  HAS_STATUS: { ru: 'статус', en: 'has status', color: '--t3', layer: S },
   BELONGS_TO_PROJECT: { ru: 'в проекте', en: 'in project', color: '--t3', layer: S },
   BELONGS_TO: { ru: 'принадлежит', en: 'belongs to', color: '--t3', layer: S },
   PART_OF: { ru: 'входит в', en: 'part of', color: '--t3', layer: S },

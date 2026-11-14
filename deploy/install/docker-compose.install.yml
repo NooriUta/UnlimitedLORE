@@ -1,0 +1,108 @@
+# Профиль установки LORE с нуля (SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE).
+#
+# Самодостаточный стек для чужой/чистой машины: своя ArcadeDB, бэкенд, фронт v2,
+# MinIO для вложений. Ничего не знает о нашей инфраструктуре (Keycloak,
+# Infisical, Forgejo, Traefik) — в отличие от корневого docker-compose.yml.
+#
+# Ставится инсталлятором deploy/install/install.sh — он пишет .env из
+# .env.example (пароли генерирует сам), создаёт базу и проверяет результат.
+# Руками: см. deploy/install/README.md.
+#
+# Схема: LORE_BOOTSTRAP здесь не нужен. На пустой базе ядро поднимается само
+# (decision D-2026-LORE-AUTO-BOOTSTRAP-CORE, LoreSchemaInitializer), продуктовый
+# слой и справочники добирают шаги миграций (lore.migrate=true на каждом старте —
+# повторный запуск инсталлятора = обновление).
+#
+# Вход: аутентификации нет (LORE_AUTH_ENABLED=false) — поэтому порт фронта по
+# умолчанию слушает только 127.0.0.1. Наружу — через свой reverse proxy с TLS
+# и авторизацией, либо LORE_BIND=0.0.0.0 осознанно.
+name: ${COMPOSE_PROJECT_NAME:-lore}
+
+services:
+  arcadedb:
+    image: arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
+    restart: unless-stopped
+    environment:
+      # Пароль root приходит из .env и в файлы не пишется.
+      - JAVA_OPTS=-Darcadedb.server.rootPassword=${ARCADEDB_ROOT_PASSWORD:?ARCADEDB_ROOT_PASSWORD не задан}
+    volumes:
+      - lore-db:/home/arcadedb/databases
+      - lore-db-backups:/home/arcadedb/backups
+    # Порт наружу не публикуется: бэкенд ходит по сети compose, инсталлятор —
+    # одноразовым curl-контейнером в той же сети.
+
+  minio:
+    image: minio/minio:${MINIO_VERSION:-latest}
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      - MINIO_ROOT_USER=${MINIO_USER:-lore}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD:?MINIO_PASSWORD не задан}
+    volumes:
+      - lore-minio-data:/data
+
+  lore-backend:
+    # Образ: свой реестр (LORE_BACKEND_IMAGE) или сборка из исходников на теге.
+    image: ${LORE_BACKEND_IMAGE:-lore-install-backend:${LORE_VERSION:-local}}
+    build:
+      context: ${LORE_SRC:-../..}/backend
+      dockerfile: Dockerfile.local
+      args:
+        LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    restart: unless-stopped
+    depends_on:
+      - arcadedb
+      - minio
+    environment:
+      - MART_ARCADE_URL=http://arcadedb:2480
+      - ARCADEDB_USER=root
+      - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD}
+      - LORE_DB=${LORE_DB:-system_aida_lore}
+      - LORE_RELEASE_TAG=${LORE_VERSION:-}
+      - LORE_AUTH_ENABLED=false
+      - lore.secrets.provider=env
+      # Схема накатывается на каждом старте под root; бэкап перед накаткой
+      # пишется в том lore-db-backups (на пустой базе пропускается сам).
+      - lore.migrate=true
+      - lore.mart.auth=basic
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET=${S3_BUCKET:-bragi-assets}
+      - S3_ACCESS_KEY=${MINIO_USER:-lore}
+      - S3_SECRET_KEY=${MINIO_PASSWORD}
+      - S3_REGION=us-east-1
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9100/q/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      # Первый старт на пустой базе катит ядро и все шаги схемы — это минуты.
+      start_period: 300s
+
+  lore-app-next:
+    image: ${LORE_WEB_IMAGE:-lore-install-web:${LORE_VERSION:-local}}
+    build:
+      context: ${LORE_SRC:-../..}
+      dockerfile: web-next/Dockerfile
+      args:
+        VITE_LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
+    restart: unless-stopped
+    environment:
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
+      LORE_OIDC_ORIGIN: ""
+      LORE_VOLVA_ORIGIN: ""
+      LORE_BACKEND_URL: ""
+      LORE_BACKEND_HOST: ""
+      LORE_FRONT: v2
+    ports:
+      - "${LORE_BIND:-127.0.0.1}:${LORE_HTTP_PORT:-4400}:80"
+    depends_on:
+      lore-backend:
+        condition: service_healthy
+
+volumes:
+  lore-db:
+  lore-db-backups:
+  lore-minio-data:

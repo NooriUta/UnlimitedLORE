@@ -205,7 +205,7 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
       };
     case 'adr':
       return {
-        url: '/lore/adr',
+        url: '/lore/adr?mode=create',
         body: strip({
           adr_id: text(values.id), name: text(values.title), status: opt(values.status),
           date_created: opt(values.date), context_md: opt(values.context_md),
@@ -222,9 +222,9 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
       };
     // Имена тела — из блока create: title→title, projects→project, adr→adr_id, summary→summary.
     case 'decision':
-      return { url: '/lore/decision', body: strip({ decision_id: text(values.id), title: text(values.title), project: opt(values.projects), adr_id: opt(values.adr) }) };
+      return { url: '/lore/decision?mode=create', body: strip({ decision_id: text(values.id), title: text(values.title), project: opt(values.projects), adr_id: opt(values.adr) }) };
     case 'spec':
-      return { url: '/lore/spec', body: strip({ spec_id: text(values.id), title: text(values.title), project: opt(values.projects), summary: opt(values.summary) }) };
+      return { url: '/lore/spec?mode=create', body: strip({ spec_id: text(values.id), title: text(values.title), project: opt(values.projects), summary: opt(values.summary) }) };
   }
 }
 

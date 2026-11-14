@@ -122,23 +122,35 @@ function VersionsBlock({ hist }: { hist: DocHistory }) {
 
   if (view === 'bodies') {
     // Сравнивается выбранная версия с предыдущей; выбор — в адресе (?adm-ver=state_uid).
+    // S7B-06: в выборе ВСЕ версии, и первая тоже — раньше чипы шли с rows.slice(1), и версии 1
+    // на экране не было вовсе. У первой предыдущей нет — это сказано словами.
     const found = rows.findIndex(r => r.state_uid === ver);
-    const to = found >= 1 ? found : rows.length - 1;
-    const d = versionDiff(rows[to - 1].content_md ?? '', rows[to].content_md ?? '');
+    const to = found >= 0 ? found : rows.length - 1;
+    const d = to >= 1
+      ? versionDiff(rows[to - 1].content_md ?? '', rows[to].content_md ?? '', n => t('admin.rules.skipped', { n }))
+      : null;
     return (
       <div data-testid="adm-rule-diff" data-view="bodies">
         {notes}
         <div className="adm-chips" role="radiogroup" aria-label={t('admin.rules.pickVersion')}>
-          {rows.slice(1).map((r, i) => (
-            <button key={r.state_uid} type="button" role="radio" className="adm-chip" aria-checked={i + 1 === to}
-              aria-pressed={i + 1 === to} onClick={() => setVer(i + 1 === rows.length - 1 ? null : r.state_uid)}>
-              {t('admin.rules.versionN', { n: i + 2 })}
+          {rows.map((r, i) => (
+            <button key={r.state_uid} type="button" role="radio" className="adm-chip" aria-checked={i === to}
+              aria-pressed={i === to} onClick={() => setVer(i === rows.length - 1 ? null : r.state_uid)}>
+              {t('admin.rules.versionN', { n: i + 1 })}
             </button>
           ))}
         </div>
-        <p className="adm-dim">{t('admin.rules.comparing', { from: to, to: to + 1 })} {when(rows[to].valid_from)}</p>
-        {!d.exact && <p className="adm-note" role="status">{t('admin.rules.coarse')}</p>}
-        <DiffPreview rows={d.rows} lang={lang} label={t('admin.rules.diffLabel')} />
+        {d === null ? (
+          <p className="adm-note" data-tone="inf" role="status" data-testid="adm-rule-first">
+            {t('admin.rules.firstVersion')} {when(rows[0].valid_from)}
+          </p>
+        ) : (
+          <>
+            <p className="adm-dim">{t('admin.rules.comparing', { from: to, to: to + 1 })} {when(rows[to].valid_from)}</p>
+            {!d.exact && <p className="adm-note" role="status">{t('admin.rules.coarse')}</p>}
+            <DiffPreview rows={d.rows} lang={lang} label={t('admin.rules.diffLabel')} />
+          </>
+        )}
       </div>
     );
   }

@@ -56,7 +56,7 @@ public class LoreHistoryResource extends LoreResourceBase {
         if (!LoreEntityHistory.types().contains(type))
             return badParams("unknown history type: " + type + " (known: " + LoreEntityHistory.types() + ")");
         if (id == null || id.isBlank()) return badParams("id required");
-        if (!SAFE_ID.matcher(id).matches()) return badParams("id contains illegal characters");
+        if (!SAFE_READ_ID.matcher(id).matches()) return badParams("id contains illegal characters");
 
         Set<String> allowed = LoreEntityHistory.isGlobal(type) ? null : slices.allowedProjectsOrNull(role);
         if (allowed != null && allowed.isEmpty()) {
@@ -93,7 +93,24 @@ public class LoreHistoryResource extends LoreResourceBase {
         }
         List<Map<String, Object>> out = LoreEntityHistory.attribute(rows, journal);
         Map<String, Object> paged = LoreEntityHistory.page(out, authorKind, author, field, collapse, order, offset, limit);
-        @SuppressWarnings("unchecked") List<Map<String, Object>> pageRows = (List<Map<String, Object>>) paged.get("rows");
+        @SuppressWarnings("unchecked") List<Map<String, Object>> pageRows0 = (List<Map<String, Object>>) paged.get("rows");
+        // PU-29 (приёмка 14.11.2026): автор-человек — с именем из KnowUser, а не сырым kc_sub.
+        // Не прочиталось — строки как были (kc_sub остаётся, имя «неизвестно»), с предупреждением в лог.
+        List<Map<String, Object>> pageRows = pageRows0;
+        java.util.Set<String> subs = LoreEntityHistory.humanSubs(pageRows0);
+        if (!subs.isEmpty()) {
+            try {
+                Map<String, String> names = new java.util.HashMap<>();
+                for (Map<String, Object> u : ingestService.queryPublic(
+                        "SELECT kc_sub, display_name FROM KnowUser WHERE kc_sub IN :subs", Map.of("subs", List.copyOf(subs))))
+                    if (u.get("kc_sub") != null && u.get("display_name") != null)
+                        names.put(u.get("kc_sub").toString(), u.get("display_name").toString());
+                pageRows = LoreEntityHistory.withHumanNames(pageRows0, names);
+                paged.put("rows", pageRows);
+            } catch (RuntimeException e) {
+                LOG.warnf("[LORE HISTORY] имена людей %s/%s: %s", type, id, e.getMessage());
+            }
+        }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", type);

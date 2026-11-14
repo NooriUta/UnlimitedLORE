@@ -10,6 +10,9 @@ import type { KitConfig, KitLang, KitRecord, ListSort } from '@seidr/kit';
 import type { LoreClient } from '../sprints/loreClient';
 import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
+import { loadSprintChildren } from '../sprints/sprintChildren';
+import { MILESTONE_TOTALS_FIELDS, loadMilestoneTotals } from '../milestone/milestoneTotals';
+import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -122,6 +125,13 @@ export interface ListScreenDef {
    * Нет — у записи раздела нет даты, календаря нет: пустой хуже отсутствия.
    */
   calendarDates?: readonly CalendarDate[];
+  /**
+   * Встроенный график Völva видом раздела (SPRINT_VIZ_EMBED/EMB-L2,
+   * D-2026-LORE-VIZ-EMBED-PLACES): имя графика в белом списке бэкенда
+   * (lore.volva.embed.charts). Вид появляется только при charts.layer=volva —
+   * РЯДОМ с видами list.views, а не вместо них. Нет — встройки в разделе нет.
+   */
+  volvaChart?: string;
 }
 
 export interface ListNested {
@@ -135,10 +145,26 @@ export interface ListNested {
    * нет, в каждом из этих полей стоит «…», то есть «считаем» вместо пустоты.
    */
   lateFields: readonly string[];
-  /** Заплатки полей по id записи: имя поля → значение. */
-  load: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, Record<string, unknown>>>;
+  /**
+   * Заплатки полей по id записи: имя поля → значение. `records` — загруженные
+   * записи списка (PU-27: вехе нужны её спринты из строки, чтобы сложить их итоги).
+   */
+  load: (client: LoreClient, ids: readonly string[], signal: AbortSignal, records?: readonly KitRecord[]) => Promise<Map<string, Record<string, unknown>>>;
   /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
   render: (id: string, client: LoreClient) => ReactNode;
+  /**
+   * PU-23: дети раскрытой строки, грузятся лениво — по раскрытию. Как их рисовать, решает одно
+   * правило (lists/nestedExpand.tsx, владелица 14.11.2026): тип ребёнка ≠ тип строки — вложенная
+   * таблица дочернего типа с конфигом ЕГО экрана; тот же тип (иерархия) — строки той же таблицы,
+   * свои ячейки которых может подменить cell.
+   */
+  children?: {
+    /** Тип ребёнка (modelType его экрана). Не задан — берётся из kind загруженных записей. */
+    kind?: string;
+    /** Дети строки `parent` — записями дочернего типа, тем же маппингом, что у его экрана. */
+    load: (client: LoreClient, parent: KitRecord, signal: AbortSignal) => Promise<KitRecord[]>;
+    cell?: (col: string, child: KitRecord, client: LoreClient) => ReactNode | undefined;
+  };
 }
 
 const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'modules' | 'menu'>;
@@ -146,7 +172,7 @@ const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'mo
 /**
  * Лента разделов (K2-FEED-VIEW): поле сути, повод и нижний уровень — по
  * разделу. Ключ — раздел, у которого у записи ЕСТЬ время (`updated_at` из
- * `changed_at`); вехам и компонентам времени срез не даёт — ленты у них нет, и
+ * `changed_at`); компонентам времени срез не даёт — ленты у них нет, и
  * поле не выдумывается.
  *
  * Имена md-полей — те же, что в строке среза и в `values` паспорта
@@ -181,6 +207,9 @@ export const FEEDS = {
   },
   releases: { lead: ['description_md'], inRow: true },
   tech: { lead: ['content_md'], titles: ['lists.feed.sec.info'], inRow: true },
+  // PU-27: у вехи появилось время (changed_at) — значит и лента, как у прочих разделов со
+  // временем. Цель и решения вехи срез уже везёт строкой (goal_md, decisions_md).
+  milestones: { lead: ['goal_md', 'decisions_md'], titles: ['lists.feed.sec.goal', 'pp.tab.decisions'], inRow: true },
   // «Контекст» первым — как у сервера (LoreBodyHead.SOURCES), владелица 11.11.2026.
   features: { lead: ['context_md', 'body_md'], titles: ['pp.adr.context', 'lists.feed.sec.description'], headInRow: true },
 } as const satisfies Partial<Record<string, FeedSpec>>;
@@ -223,7 +252,9 @@ function sprintsConfig(lang: KitLang): KitConfig {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
         ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
-        ['done', 'done'], ['cancelled', 'cancelled'],
+        // WK-05 (PU-29 п.8): статусы ядра, которые сервер принимает.
+        ['waiting', 'active'], ['review', 'active'],
+        ['done', 'done'], ['failed', 'cancelled'], ['cancelled', 'cancelled'],
       ]),
     },
     list: {
@@ -317,7 +348,9 @@ function tasksConfig(lang: KitLang): KitConfig {
       items: statusItems(lang, [
         ['backlog', 'todo'], ['planned', 'todo'], ['design', 'todo'], ['todo', 'todo'],
         ['active', 'active'], ['partial', 'active'], ['blocked', 'active'], ['ready_for_deploy', 'active'], ['uat', 'active'],
-        ['done', 'done'], ['cancelled', 'cancelled'],
+        // WK-05 (PU-29 п.8): статусы ядра, которые сервер принимает.
+        ['waiting', 'active'], ['review', 'active'],
+        ['done', 'done'], ['failed', 'cancelled'], ['cancelled', 'cancelled'],
       ]),
     },
     list: {
@@ -361,6 +394,12 @@ interface SectionSpec {
   groupings: string[];
   collapsedGroupings?: string[];
   columns: string[];
+  /**
+   * PU-23: родитель того же типа (иерархия, ссылка на себя). Таблица показывает детей строками под
+   * родителем с отступом — list.tree, та же настройка, что у вида «Дерево». Нет — список плоский.
+   * order нужен виду «Дерево»; в таблице соседи одного уровня идут порядком сортировки списка.
+   */
+  tree?: NonNullable<KitConfig['list']>['tree'];
 }
 
 function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
@@ -381,6 +420,7 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
       groupings: spec.groupings,
       ...(spec.collapsedGroupings ? { collapsedGroupings: spec.collapsedGroupings } : {}),
       columns: spec.columns,
+      ...(spec.tree ? { tree: spec.tree } : {}),
     },
   };
 }
@@ -437,6 +477,7 @@ const docsSpec: SectionSpec = {
   filters: [LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
   groupings: [LORE_FILTER_FIELDS.component, 'fields.docKind'],
   columns: ['id', 'title', 'docKind', 'component', 'parent'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /** S9-05 A: люди — статуса нет, разрез по проектам. */
@@ -483,15 +524,22 @@ const questionsSpec: SectionSpec = {
   columns: ['id', 'title', 'status', 'component', 'owner', 'due'],
 };
 
-/** Вехи: СТАТУСА НЕТ — ни колонки, ни фасета статуса (K-14). */
+/**
+ * Вехи: СТАТУСА НЕТ — ни колонки, ни фасета статуса (K-14).
+ *
+ * PU-27: «задачи x/y» по задачам спринтов вехи (как у спринтов, S4-09) и время
+ * правки (`updated_at` из changed_at среза). Своё поле «Продукты» остаётся —
+ * на случай, когда краска продукта не загрузилась; при краске его вытесняет
+ * общая колонка «Продукт» (withProductColumn), иначе выходил дубль.
+ */
 const milestonesSpec: SectionSpec = {
   kind: 'milestone', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
-  fields: [['week', 'number'], ['when', 'text'], ['priority', 'text'], ['products', 'ref'], ['sprints', 'ref']],
+  fields: [['week', 'number'], ['when', 'text'], ['priority', 'text'], ['products', 'ref'], ['sprints', 'ref'], ['tasks', 'number']],
   views: ['list', 'cards'],
   quick: [['critical', 'lists.quick.critical', { priority: 'critical' }], ['no-sprints', 'lists.quick.noSprints', { sprints: '' }]],
   filters: [LORE_FILTER_FIELDS.priority, 'fields.products'],
   groupings: ['fields.products', LORE_FILTER_FIELDS.priority],
-  columns: ['id', 'title', 'when', 'priority', 'products', 'sprints'],
+  columns: ['id', 'title', 'progress:tasks', 'when', 'priority', 'products', 'sprints', 'updated_at'],
 };
 
 /** Релизы: СТАТУСА НЕТ; есть вид (релиз/хотфикс) и признак текущего. */
@@ -520,6 +568,7 @@ const componentsSpec: SectionSpec = {
   filters: ['fields.area', LORE_FILTER_FIELDS.project, 'fields.owner'],
   groupings: ['fields.area', 'fields.owner'],
   columns: ['id', 'title', 'area', 'owner', 'adrs', 'specs'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /** Проекты (S4-29, 53а): СТАТУСА НЕТ — справочник git-проектов; щелчок — паспорт проекта. */
@@ -578,6 +627,7 @@ const featuresSpec: SectionSpec = {
   filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, 'fields.level'],
   groupings: ['status', 'fields.level', LORE_FILTER_FIELDS.component],
   columns: ['id', 'title', 'status', 'level', 'ucs', 'tasks', 'components'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /**
@@ -629,6 +679,7 @@ const productsSpec: SectionSpec = {
   filters: [LORE_FILTER_FIELDS.project, 'fields.parent'],
   groupings: ['fields.parent'],
   columns: ['id', 'title', 'parent', 'children', 'components', 'project'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /** Боли: «заявлено» (ADDRESSES) и «снимает» (RELIEVES) — два разных утверждения (ADR-LORE-032 D5). */
@@ -681,7 +732,9 @@ export const LIST_SCREENS = {
     slice: 'sprints', titleKey: 'lists.sprints.title', icon: 'sprint',
     defaultSort: FRESH_FIRST,
     map: sprintRecord, config: lang => withCalendar(withFeed(lang, sprintsConfig(lang), FEEDS.sprints), SPRINT_DATES), feed: FEEDS.sprints,
-    calendarDates: SPRINT_DATES, // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
+    calendarDates: SPRINT_DATES,
+    // Völva вместо нечитаемого Ганта — видом рядом с таймлайном, пока встройку не приняли.
+    volvaChart: 'sprints_timeline', // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
     quickIcons: {},
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
     // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест
@@ -690,6 +743,8 @@ export const LIST_SCREENS = {
       lateFields: TOTALS_FIELDS,
       load: loadSprintTotals,
       render: (id, client) => createElement(SprintTasks, { sprintId: id, client }),
+      // PU-23: задачи — другой тип, под спринтом встаёт вложенная таблица экрана «Задачи».
+      children: { kind: 'task', load: loadSprintChildren },
     },
   },
   adrs: {
@@ -745,7 +800,15 @@ export const LIST_SCREENS = {
   },
   milestones: {
     slice: 'milestones', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
-    map: milestoneRecord, config: lang => sectionConfig(lang, milestonesSpec), quickIcons: {},
+    defaultSort: FRESH_FIRST,
+    map: milestoneRecord, config: lang => withFeed(lang, sectionConfig(lang, milestonesSpec), FEEDS.milestones), feed: FEEDS.milestones, quickIcons: {},
+    // PU-27: «задачи x/y» вехи — сумма итогов её спринтов (sprint_totals считает сервер);
+    // в раскрытой строке — сгорание вехи (BURN-DOWN и «Цель к сроку»), тем же кодом, что у спринта.
+    nested: {
+      lateFields: MILESTONE_TOTALS_FIELDS,
+      load: loadMilestoneTotals,
+      render: id => createElement(MilestoneBurnLine, { milestoneId: id }),
+    },
   },
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',

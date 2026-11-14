@@ -112,20 +112,25 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
      */
     static String entityIdOf(Object entity) {
         if (entity instanceof Map<?, ?> m) {
-            for (Map.Entry<?, ?> e : m.entrySet()) {
-                if (!(e.getKey() instanceof String k)) continue;
-                if (isIdKey(k) && e.getValue() != null) return String.valueOf(e.getValue());
+            // S7B-02: два прохода — snake_case-ключ важнее camelCase, в каком бы порядке ни шли поля.
+            for (boolean camel : new boolean[] {false, true}) {
+                for (Map.Entry<?, ?> e : m.entrySet()) {
+                    if (!(e.getKey() instanceof String k)) continue;
+                    if ((camel ? isCamelIdKey(k) : isIdKey(k)) && e.getValue() != null) return String.valueOf(e.getValue());
+                }
             }
             return naturalKeyOf(m);
         }
         if (entity != null && entity.getClass().isRecord()) {
-            for (var c : entity.getClass().getRecordComponents()) {
-                if (!isIdKey(c.getName())) continue;
-                try {
-                    Object v = c.getAccessor().invoke(entity);
-                    if (v != null) return String.valueOf(v);
-                } catch (ReflectiveOperationException | RuntimeException ignored) {
-                    // разбор best-effort: не смогли прочитать поле — пробуем следующее
+            for (boolean camel : new boolean[] {false, true}) {
+                for (var c : entity.getClass().getRecordComponents()) {
+                    if (!(camel ? isCamelIdKey(c.getName()) : isIdKey(c.getName()))) continue;
+                    try {
+                        Object v = c.getAccessor().invoke(entity);
+                        if (v != null) return String.valueOf(v);
+                    } catch (ReflectiveOperationException | RuntimeException ignored) {
+                        // разбор best-effort: не смогли прочитать поле — пробуем следующее
+                    }
                 }
             }
         }
@@ -144,7 +149,9 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
         List.of("kc_sub", "project"),
         List.of("kc_sub"),
         List.of("slug"),
-        List.of("code"));
+        List.of("code"),
+        // S7B-02: POST /lore/kc/user отвечает {ok, username, note} — объект правки — учётка по логину.
+        List.of("username"));
 
     private static String naturalKeyOf(Map<?, ?> m) {
         for (List<String> keys : NATURAL_KEYS) {
@@ -161,5 +168,19 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
 
     private static boolean isIdKey(String k) {
         return k.equals("id") || k.endsWith("_id") || k.endsWith("_uid");
+    }
+
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-02: id-ключ в camelCase — {@code clientId} (ответ POST
+     * /lore/kc/agent-client, как в API Keycloak), {@code requestUid}. Перед «Id»/«Uid» — строчная
+     * буква, иначе «valid»/«paid» сошли бы за ключ. Без этого журнал писал путь эндпоинта:
+     * 6 строк Keycloak 14.11 11:09–11:11 «объект не записан».
+     */
+    static boolean isCamelIdKey(String k) {
+        for (String suf : new String[] {"Id", "Uid"}) {
+            int at = k.length() - suf.length();
+            if (at > 0 && k.endsWith(suf) && Character.isLowerCase(k.charAt(at - 1))) return true;
+        }
+        return false;
     }
 }

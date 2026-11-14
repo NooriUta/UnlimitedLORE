@@ -38,7 +38,8 @@ describe('карточки: чип статуса', () => {
     const chip = headChip(container, 'c');
     expect(chip).not.toBeNull();
     expect(chip!.classList.contains('is-unknown')).toBe(true);
-    expect(chip!.textContent).toContain('вне словаря: weird');
+    // 14.11.2026: статус — иконкой, название в подсказке.
+    expect(chip!.getAttribute('title')).toContain('вне словаря: weird');
   });
 
   it('известный статус чип сохраняет', () => {
@@ -47,7 +48,7 @@ describe('карточки: чип статуса', () => {
     const chip = headChip(container, 'a');
     expect(chip).not.toBeNull();
     expect(chip!.classList.contains('is-unknown')).toBe(false);
-    expect(chip!.textContent).toContain('к работе');
+    expect(chip!.getAttribute('title')).toContain('к работе');
   });
 
   it('оси статуса нет вовсе — чипов нет ни у кого', () => {

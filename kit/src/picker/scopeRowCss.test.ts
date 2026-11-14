@@ -25,12 +25,23 @@ describe('PU-06 — строка проекта: имя | slug | мой | тол
     expect(rule('.sk-scope__title')).toMatch(/text-overflow: ellipsis/);
   });
 
-  it('slug сжимается с многоточием и раньше имени', () => {
+  // Приёмка v1.17.21 (14.11): короткий slug «AIDA/freyja» срезался. Корень — правило
+  // v1.17.20 «slug: flex 1 10 0»: база 0, slug получал только остаток строки, и рядом
+  // с длинным именем от него не оставалось ничего. Короткий slug — опознавательный код
+  // проекта, он виден целиком; сжимается длинное имя. Slug длиннее своей доли строки
+  // (max-width) режется с многоточием, полный текст — во всплывающей подсказке.
+  it('slug не сжимается: короткий код проекта виден целиком', () => {
     const id = rule('.sk-scope__id');
+    expect(shrink(id)).toBe(0);
+    expect(id).not.toMatch(/flex: 1 \d+ 0/);
+  });
+
+  it('длинный slug упирается в свою долю строки и режется с многоточием', () => {
+    const id = rule('.sk-scope__id');
+    expect(id).toMatch(/max-width: \d+%/);
     expect(id).toMatch(/min-width: 0/);
     expect(id).toMatch(/overflow: hidden/);
     expect(id).toMatch(/text-overflow: ellipsis/);
-    expect(shrink(id)).toBeGreaterThan(shrink(rule('.sk-scope__title')));
   });
 
   // Приёмка на проде v1.17.20: при правиле v1.17.18 (имя flex-shrink 0 + max-width 100%)
@@ -45,9 +56,6 @@ describe('PU-06 — строка проекта: имя | slug | мой | тол
     expect(title).not.toMatch(/max-width: 100%/);
   });
 
-  it('slug берёт только свободное место: база 0 — короткое имя он не срезает', () => {
-    expect(rule('.sk-scope__id')).toMatch(/flex: 1 \d+ 0/);
-  });
 
   it('«только этот» не переносится и не сжимается', () => {
     expect(rule('.sk-scope__only')).toMatch(/white-space: nowrap/);

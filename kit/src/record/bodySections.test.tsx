@@ -228,7 +228,9 @@ describe('S5-06 · подсказка «как править» — ОДНА н�
   // разделы стали править по отдельности, строка-подсказка и кнопка «Режим
   // исходника» размножились по числу разделов, и запись из документа
   // превратилась в форму. Подсказка — свойство записи, не поля.
-  const hints = () => document.querySelectorAll('.sk-mdedit__hint');
+  // PU-29 п.6 (14.11.2026): подсказка переехала из строки над текстом в title ✎ —
+  // правило «одна на запись» то же: слова «как править» несёт одна кнопка.
+  const hints = () => [...document.querySelectorAll('.sk-mdedit__pen')].filter(b => /исходник|source/.test(b.getAttribute('title') ?? ''));
   const pens = () => document.querySelectorAll('.sk-mdedit__pen');
 
   it('два раздела, тела нет — подсказка одна, а ✎ у каждого раздела', () => {
@@ -254,7 +256,7 @@ describe('S5-06 · подсказка «как править» — ОДНА н�
     expect(hints()).toHaveLength(1);
     // Именно у первого блока — то есть у тела, до разделов.
     const first = container.querySelector('.sk-rec-sections > *');
-    expect(first?.querySelector('.sk-mdedit__hint')).toBeTruthy();
+    expect(first?.querySelector('.sk-mdedit__pen')?.getAttribute('title')).toMatch(/исходник|source/);
   });
 
   it('первый раздел только для чтения — подсказка у первого ПРАВИМОГО', () => {

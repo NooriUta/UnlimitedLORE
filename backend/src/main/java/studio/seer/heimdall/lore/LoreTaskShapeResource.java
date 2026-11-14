@@ -50,10 +50,10 @@ public class LoreTaskShapeResource extends LoreResourceBase {
         "SELECT task_uid, title, task_type, work_class, "
         + "out('PART_OF').sprint_id[0]                              AS sprint_id, "
         + "out('PART_OF').out('BELONGS_TO_PROJECT').slug            AS projects, "
-        + "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, "
+        + "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])   AS status_raw, "
         + "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, "
         + "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, "
-        + "out('HAS_STATE')[valid_to IS NULL].valid_from[0]         AS state_since, "
+        + LoreSlices.STATUS_SINCE_SQL + " AS state_since, "
         // Все даты строк истории: минимум = «заведена». min() по строке-дате в
         // ArcadeDB падает (ClassCastException) — свёртка в Java.
         + "out('HAS_STATE').valid_from                              AS state_dates "

@@ -34,10 +34,10 @@ describe('PU-25 · правка в строке — выбором', () => {
     render(<TaskTable tasks={[TASK]} phases={PHASES} groupBy="none" dict={DICT} onSave={onSave} assigneeOptions={assigneeOptions} label="Задачи" />);
     const row = await openEdit();
     expect(assigneeOptions).toHaveBeenCalledWith(TASK);
-    for (const name of ['Тип', 'Класс', 'Автор', 'Исполнитель', 'Ревьюер'])
+    for (const name of ['Тип', 'Класс', 'Автор', 'Исполнитель', 'Принимающий'])
       expect(within(row).getByRole('combobox', { name }), name).toBeTruthy();
     // PU-17: свободного текста для ролей по-прежнему нет.
-    for (const name of ['Автор', 'Исполнитель', 'Ревьюер'])
+    for (const name of ['Автор', 'Исполнитель', 'Принимающий'])
       expect(within(row).queryByRole('textbox', { name })).toBeNull();
     const cls = within(row).getByRole('combobox', { name: 'Класс' }) as HTMLSelectElement;
     expect([...cls.options].map(o => o.value)).toEqual(['enb', 'uc', 'jtd']);
@@ -52,7 +52,7 @@ describe('PU-25 · правка в строке — выбором', () => {
     render(<TaskTable tasks={[{ ...TASK, reviewer: 'legacy-name' }]} phases={PHASES} groupBy="none" dict={DICT} onSave={onSave}
       assigneeOptions={async () => PEOPLE} label="Задачи" />);
     const row = await openEdit();
-    const rev = within(row).getByRole('combobox', { name: 'Ревьюер' }) as HTMLSelectElement;
+    const rev = within(row).getByRole('combobox', { name: 'Принимающий' }) as HTMLSelectElement;
     expect(rev.value).toBe('legacy-name');
     await act(async () => { fireEvent.click(within(row).getByRole('button', { name: 'Сохранить' })); });
     expect(onSave).not.toHaveBeenCalled();
@@ -74,6 +74,48 @@ describe('PU-25 · правка в строке — выбором', () => {
     const row = await openEdit();
     expect(within(row).queryByRole('combobox', { name: 'Класс' })).toBeNull();
     expect(within(row).queryByRole('combobox', { name: 'Тип' })).toBeNull();
+  });
+
+  // PU-25, приёмка v1.17.21: список задач спринта отдаёт держателя роли ИМЕНЕМ (у агента — name,
+  // срез tasks_of_sprint: COALESCE(name, display_name, actor_id)), а кандидаты task_identities —
+  // КОДОМ (у агента actor_id, имя — подпись). Без сопоставления текущий исполнитель вставал лишним
+  // пунктом «Claude Code» рядом с настоящим кандидатом «Claude Code», и выбранным был не кандидат.
+  const AGENTS: KitDictItem[] = [{ code: 'owner', title: 'owner' }, { code: 'AGENT-FULL-x1', title: 'Claude Code' }, { code: 'AGENT-CODEX-y2', title: 'Codex' }];
+  const BY_NAME: TaskRowData = { ...TASK, author: 'owner', executor: 'Claude Code', reviewer: 'owner' };
+
+  it('держатель роли именем — выбран его кандидат (код), лишнего пункта нет', async () => {
+    render(<TaskTable tasks={[BY_NAME]} phases={PHASES} groupBy="none" dict={DICT} onSave={vi.fn(async () => {})}
+      assigneeOptions={async () => AGENTS} label="Задачи" />);
+    const row = await openEdit();
+    const ex = within(row).getByRole('combobox', { name: 'Исполнитель' }) as HTMLSelectElement;
+    expect(ex.value).toBe('AGENT-FULL-x1');
+    expect([...ex.options].map(o => o.value)).toEqual(['owner', 'AGENT-FULL-x1', 'AGENT-CODEX-y2']);
+    expect((within(row).getByRole('combobox', { name: 'Автор' }) as HTMLSelectElement).value).toBe('owner');
+    expect((within(row).getByRole('combobox', { name: 'Класс' }) as HTMLSelectElement).value).toBe('enb');
+    expect((within(row).getByRole('combobox', { name: 'Тип' }) as HTMLSelectElement).value).toBe('dev');
+  });
+
+  it('держатель именем не тронут — роль в запрос не уходит; сменили — уходит код кандидата', async () => {
+    const onSave = vi.fn(async () => {});
+    render(<TaskTable tasks={[BY_NAME]} phases={PHASES} groupBy="none" dict={DICT} onSave={onSave}
+      assigneeOptions={async () => AGENTS} label="Задачи" />);
+    let row = await openEdit();
+    fireEvent.change(within(row).getByRole('combobox', { name: 'Класс' }), { target: { value: 'jtd' } });
+    await act(async () => { fireEvent.click(within(row).getByRole('button', { name: 'Сохранить' })); });
+    expect(onSave).toHaveBeenLastCalledWith(BY_NAME, { workClass: 'jtd' });
+    row = await openEdit();
+    fireEvent.change(within(row).getByRole('combobox', { name: 'Исполнитель' }), { target: { value: 'AGENT-CODEX-y2' } });
+    await act(async () => { fireEvent.click(within(row).getByRole('button', { name: 'Сохранить' })); });
+    expect(onSave).toHaveBeenLastCalledWith(BY_NAME, { executor: 'AGENT-CODEX-y2' });
+  });
+
+  it('имя совпало у двух кандидатов — не угадываем: текущее остаётся своим пунктом', async () => {
+    const twins: KitDictItem[] = [{ code: 'A-1', title: 'Claude Code' }, { code: 'A-2', title: 'Claude Code' }];
+    render(<TaskTable tasks={[BY_NAME]} phases={PHASES} groupBy="none" dict={DICT} onSave={vi.fn(async () => {})}
+      assigneeOptions={async () => twins} label="Задачи" />);
+    const row = await openEdit();
+    const ex = within(row).getByRole('combobox', { name: 'Исполнитель' }) as HTMLSelectElement;
+    expect(ex.value).toBe('Claude Code');
   });
 
   it('колонка «Автор» есть в таблице и показывает автора', () => {

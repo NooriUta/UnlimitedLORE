@@ -1,0 +1,76 @@
+name: LORE empty DB template (lore-schema-vN.zip)
+
+# SPRINT_LORE_PIPELINE_HOST/PL-03, решение D-2026-LORE-SCHEMA-TEMPLATE-VN.
+#
+# Пустая база текущей версии схемы — артефактом прогона, а не руками на ci-server.
+# Из неё разворачивается чистая установка LORE распаковкой (restore по file://
+# сервер запрещает), без накатки всех шагов с нуля.
+#
+# Когда: push в develop с правкой схемы (версия N сменилась) и вручную. На PR не
+# гоняется — шаблон нужен от влитого кода, а сборка образа занимает минуты.
+#
+# Порядок: сборка → ПРОВЕРКА развёртыванием (версия, типы, индексы = эталону) →
+# выкладка. Непроверенный архив артефактом не уезжает: выкладка без always().
+on:
+  push:
+    branches: [ "develop" ]
+    paths:
+      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java'
+      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrationRunner.java'
+      - 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaInitializer.java'
+      - 'backend/db-schema/**'
+      - 'scripts/deploy-empty-db.sh'
+      - '.github/workflows/lore-empty-db-template.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: lore-empty-db-template
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  template:
+    runs-on: ubuntu-latest
+    env:
+      OUT_DIR: ${{ github.workspace }}/empty-db
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      - name: Use Nexus mirror (сборка образа)
+        run: bash .github/scripts/use-nexus.sh
+
+      - name: Сборка пустой базы (ядро + все шаги схемы)
+        run: bash scripts/deploy-empty-db.sh build
+
+      - name: Проверка развёртыванием (распаковка, сверка с эталоном)
+        run: |
+          set -eu
+          zip="$(ls "$OUT_DIR"/lore-schema-v*.zip | head -1)"
+          [ -n "$zip" ] || { echo "::error::архива lore-schema-v*.zip нет — сборка не дала результата"; exit 1; }
+          bash scripts/deploy-empty-db.sh verify "$zip"
+          {
+            echo "### Шаблон пустой базы"
+            echo '```'
+            cat "${zip}.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # upload-artifact@v4 на Forgejo не работает (db-regression.yml); v3 — работает
+      # (живая проверка миграций выкладывает отчёт так же).
+      - name: Выложить архив и эталон
+        uses: actions/upload-artifact@v3
+        with:
+          name: lore-schema-template
+          path: |
+            empty-db/lore-schema-v*.zip
+            empty-db/lore-schema-v*.zip.json
+
+      # OH-17: контейнеры СВОЕГО прогона снимаются, даже если джоб упал или отменён.
+      - name: Уборка контейнеров прогона
+        if: always()
+        run: bash .github/scripts/ci-teardown.sh "${{ github.run_id }}"

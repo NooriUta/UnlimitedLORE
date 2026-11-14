@@ -22,6 +22,8 @@ import java.util.function.BiFunction;
  */
 final class LoreNewsReadMarkStore {
 
+    private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(LoreNewsReadMarkStore.class);
+
     static final String TYPE = "LoreNewsReadMark";
     static final String SHARED = "shared";
 
@@ -62,19 +64,30 @@ final class LoreNewsReadMarkStore {
             return at == null ? new State("unavailable", null, "mark_at не разобран: " + rows.get(0).get("mark_at"))
                 : new State("ok", at, null);
         } catch (Exception e) {
-            return new State("unavailable", null, String.valueOf(e.getMessage()));
+            // Владелица 14.11.2026: «Received: Bad Request, status code 400» без ответа базы — корень не
+            // установить. Причина с телом ответа БД — и в ответ, и в лог (заголовки не читаются).
+            String why = LoreUpstream.detail(e);
+            LOG.warnf("[LORE NEWS] черта «прочитано»: %s", why);
+            return new State("unavailable", null, why);
         }
     }
 
     /** Сдвиг черты действием пользователя. Черту назад не двигаем молча — это тоже действие, но явное. */
+    // Владелица 14.11.2026 «Черта «прочитано» недоступна … 400». Ответ ArcadeDB (live-тест CI): «SQL syntax error …
+    // mismatched input ','» на запятой перед «updated_by = :by» — BY ключевое слово SQL, параметр :by не
+    // разбирается (:now в других запросах работает — первая гипотеза про него была неверной). Имена без ключевых слов.
     State set(Instant at, String by) {
         try {
-            command.accept("UPDATE " + TYPE + " SET mark_id = :id, mark_at = :at, updated_at = :now, updated_by = :by "
-                    + "UPSERT WHERE mark_id = :id",
-                Map.of("id", SHARED, "at", at.toString(), "now", Instant.now().toString(), "by", by == null ? "unknown" : by));
+            command.accept("UPDATE " + TYPE + " SET mark_id = :markId, mark_at = :markAt, updated_at = :touchedAt, updated_by = :touchedBy "
+                    + "UPSERT WHERE mark_id = :markId",
+                Map.of("markId", SHARED, "markAt", at.toString(), "touchedAt", Instant.now().toString(), "touchedBy", by == null ? "unknown" : by));
             return get();
         } catch (Exception e) {
-            return new State("unavailable", null, String.valueOf(e.getMessage()));
+            // Владелица 14.11.2026: «Received: Bad Request, status code 400» без ответа базы — корень не
+            // установить. Причина с телом ответа БД — и в ответ, и в лог (заголовки не читаются).
+            String why = LoreUpstream.detail(e);
+            LOG.warnf("[LORE NEWS] черта «прочитано»: %s", why);
+            return new State("unavailable", null, why);
         }
     }
 }

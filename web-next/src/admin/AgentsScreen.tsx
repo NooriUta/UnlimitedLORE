@@ -9,8 +9,10 @@
 // Правка harness — выбором из реестра сервера, только если сервер его прислал.
 import { Fragment, useMemo, useState } from 'react';
 import { DiffPreview, Forbidden, FreshCell, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useMinuteNow, useUrlParam, type DiffRow } from '@seidr/kit';
+import { kitMinute } from '@seidr/kit/core';
 import { AgentProjectsPanel } from './AccessBlocks';
 import { RotatePanel } from './KcDanger';
+import { AgentTestDelete } from './TestAccountDelete';
 import { bindKcClient, fetchKcClients, orphanBindOptions } from './wizards';
 import { fetchRoleMatrix } from './roles';
 import { useAppT } from '../i18n';
@@ -78,6 +80,8 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
           </button>
         </div>
         {data.truncated && <p className="adm-note" data-tone="wrn" role="status">{t('admin.agents.truncated')}</p>}
+        {/* S7B-07: у «на связи» два источника — назвать оба, а не выдать один за другой. */}
+        <p className="adm-note" data-tone="inf" role="note" data-testid="adm-agents-seen-note">{t('admin.agents.seenNote')}</p>
         {data.registryProblem && (
           <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-no-registry" data-kind={data.registryProblem.kind}>
             {data.registryProblem.kind === 'empty'
@@ -102,7 +106,7 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
               {rows.map(r => (
                 <Fragment key={r.actor_id}>
                   <AgentLine row={r} registry={data.registry} labels={data.labels} fetchImpl={fetchImpl} onSaved={res.reload}
-                    expanded={openAgent === r.actor_id} now={now} window={agentWindow(r, data.rows)}
+                    expanded={openAgent === r.actor_id} now={now} window={agentWindow(r, data.rows)} profileCalls={data.profileCalls}
                     onToggle={() => setOpenAgent(openAgent === r.actor_id ? null : r.actor_id)} />
                   {openAgent === r.actor_id && (
                     <tr data-testid={`adm-agent-row-${r.actor_id}`}>
@@ -118,6 +122,8 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                         </section>
                         <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
                           ownerName={r.owner_display_name} fetchImpl={fetchImpl} />
+                        {/* AP-01: «Удалить» — только у тестовых учёток; у реальных кнопки нет. */}
+                        <AgentTestDelete clientId={r.client_id} fetchImpl={fetchImpl} onDeleted={res.reload} />
                       </td>
                     </tr>
                   )}
@@ -399,11 +405,13 @@ function MachineEditor({ row, all, fetchImpl, onSaved }: { row: AgentRow; all: r
   );
 }
 
-function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onToggle, now, window: win }: {
+function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onToggle, now, window: win, profileCalls }: {
   row: AgentRow; registry: string[] | null; labels: Record<string, string>; fetchImpl?: typeof fetch; onSaved: () => void;
   expanded: boolean; onToggle: () => void;
   /** S7B-ACT-1: общие часы экрана (тик раз в минуту) и окно активности машины агента. */
   now: number; window: ReturnType<typeof agentWindow>;
+  /** S7B-07: последний MCP-вызов профиля (null — не прочитали; undefined — не запрашивали). */
+  profileCalls?: Record<string, number> | null;
 }) {
   const off = offRegistry(row.harness, registry);
   const t = useAppT();
@@ -500,9 +508,29 @@ function AgentLine({ row, registry, labels, fetchImpl, onSaved, expanded, onTogg
         title={win.basis === 'harness' ? t('admin.act.basis.harness', { n: win.hours, machine: win.machine ?? '—' })
           : win.basis === 'machine' ? t('admin.act.basis.machine', { n: win.hours, machine: win.machine ?? '—' })
             : t('admin.act.basis.default', { n: win.hours, machine: win.machine ?? '—' })}>
+        <span className="adm-dim" data-testid={`adm-agent-session-src-${row.actor_id}`}>{t('admin.agents.seen.session')} </span>
         <FreshCell value={row.last_seen_at} now={now} thresholds={{ staleAfter: win.hours * 60 }} />
+        {profileCalls !== undefined && row.agent_role && <ProfileCall role={row.agent_role} calls={profileCalls} actorId={row.actor_id} />}
       </td>
     </tr>
+  );
+}
+
+/**
+ * S7B-07: последний MCP-вызов ПРОФИЛЯ агента — источник экрана MCP (счётчик запросов). Профиль
+ * общий у нескольких агентов, поэтому это не «агент на связи», а «его профиль звал» — так и подписано.
+ */
+function ProfileCall({ role, calls, actorId }: { role: string; calls: Record<string, number> | null; actorId: string }) {
+  const t = useAppT();
+  const ms = calls === null ? undefined : calls[role];
+  const state = calls === null ? 'unknown' : ms === undefined ? 'never' : 'seen';
+  const iso = ms === undefined ? null : new Date(ms).toISOString();
+  return (
+    <div className="adm-dim" data-testid={`adm-agent-mcp-seen-${actorId}`} data-state={state} title={iso ?? undefined}>
+      {state === 'unknown' ? t('admin.agents.seen.mcpUnknown', { profile: role })
+        : state === 'never' ? t('admin.agents.seen.mcpNever', { profile: role })
+          : t('admin.agents.seen.mcp', { profile: role, when: kitMinute(iso!)?.text ?? iso! })}
+    </div>
   );
 }
 
