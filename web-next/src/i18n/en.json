@@ -153,6 +153,7 @@
   "views.team.sprintsByStatus": "All by status",
   "views.team.sprintsActive": "In progress",
   "views.team.adrsByStatus": "All by status",
+  "views.team.specsByStatus": "All by status",
   "views.team.adrsProposed": "Under review",
   "sprints.title": "Sprints",
   "sprints.col.tasks": "Tasks",
