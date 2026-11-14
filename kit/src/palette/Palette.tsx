@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { GameIcon, SECTION_ICONS } from '../elements/GameIcon';
 import { Kbd } from '../elements/Kbd';
+import { ICON_CANON } from '../elements/iconCanon';
 import { kitT, useKitLang } from '../i18n';
 import { matchHotkey } from '../resilience/hotkeys';
 import { isEditableTarget } from '../resilience/editable';
@@ -75,7 +76,11 @@ export interface CommandPaletteProps {
   ctx: KitCtx;
   recent: RecentList;
   /** Открыть запись; по умолчанию — переход по ctx.href(id). */
-  onOpenRecord?: (r: KitRecord) => void;
+  /**
+   * Открыть найденную запись. `full` — во весь экран (кнопка ⤢ у записи и Shift+Enter; владелица
+   * 14.11.2026: «посмотреть один объект, а не искать его среди других»).
+   */
+  onOpenRecord?: (r: KitRecord, opts: { full: boolean }) => void;
   /** Сколько строк выдачи показывать (по умолчанию 30). */
   limit?: number;
   /** S4-14: над чем Ctrl+K — открытая запись или выделение списка (S4-10). */
@@ -250,7 +255,7 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
     onClose();
   }
 
-  function activate(item: PaletteItem) {
+  function activate(item: PaletteItem, full = false) {
     if (item.type === 'action') {
       // Действие зависит от цели — в «недавние» не пишется.
       void runAction(item.id);
@@ -274,7 +279,7 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
     if (!rec) return;
     recent.push(item);
     onClose();
-    if (onOpenRecord) onOpenRecord(rec);
+    if (onOpenRecord) onOpenRecord(rec, { full });
     else window.location.href = ctx.href(rec.id);
   }
 
@@ -296,7 +301,7 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
         break;
       case 'Enter':
         e.preventDefault();
-        if (flat[current]) activate(flat[current]);
+        if (flat[current]) activate(flat[current], e.shiftKey);
         break;
       case 'Escape':
         e.preventDefault();
@@ -420,7 +425,15 @@ function PaletteDialog({ mode, onClose, ctx, recent, onOpenRecord, limit = 30, t
                     >
                       <GameIcon slug={item.type === 'record' ? item.icon : SECTION_ICONS.commands} size={15} />
                       <span className="sk-palette__title">{item.title}</span>
-                      {item.type === 'record' && <><span className="sk-palette__kind">{item.kindTitle}</span><span className="sk-palette__id">{item.id}</span></>}
+                      {item.type === 'record' && <><span className="sk-palette__kind">{item.kindTitle}</span><span className="sk-palette__id">{item.id}</span>
+                        {/* Своей роли у кнопки нет: интерактив внутри option запрещён (axe nested-interactive);
+                            с клавиатуры то же делает Shift+Enter (подсказка внизу). */}
+                        <span className="sk-palette__full" aria-hidden="true" data-testid="kit-palette-full"
+                          title={kitT(lang, 'kit.palette.openFull', { title: item.title })}
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={e => { e.stopPropagation(); activate(item, true); }}>
+                          <GameIcon slug={ICON_CANON.ctlOpenFull} size={14} />
+                        </span></>}
                       {item.type === 'command' && <span className="sk-palette__kind">{kitT(lang, 'kit.palette.command')}</span>}
                       {item.type === 'action' && <>
                         <span className="sk-palette__kind">{kitT(lang, 'kit.palette.action')}</span>

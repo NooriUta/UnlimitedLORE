@@ -68,7 +68,7 @@ describe('S4-14 · «/» — поиск через слайс search', () => {
     expect(group.textContent).toMatch(/ADR-LORE-038/);
     expect(group.textContent).toMatch(/Спринт/);
     fireEvent.click(screen.getByRole('option', { name: /Оболочка и списки/ }));
-    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'SPRINT_UXR_S4', kind: 'sprint' }));
+    expect(onOpenRecord).toHaveBeenCalledWith(expect.objectContaining({ id: 'SPRINT_UXR_S4', kind: 'sprint' }), { full: false });
   });
 
   it('сервер ответил 403 — палитра называет причину', async () => {

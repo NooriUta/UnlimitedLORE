@@ -27,7 +27,7 @@ const CHOICE: Record<keyof typeof ICON_CANON, string | null> = {
   newsReady: 'wave-crest', newsCancelled: 'lucide:circle-x', newsVersion: 'upgrade', newsReactivated: 'lucide:undo-2',
   prioP0: 'lucide:flame', prioP1: 'lucide:chevron-up', prioP2: 'lucide:equal', prioP3: 'lucide:chevron-down',
   fieldProject: 'castle',
-  ctlMenu: 'lucide:menu', ctlDelete: 'lucide:trash-2', ctlTreeToggle: 'lucide:chevron-right', ctlEdit: 'lucide:pencil', ctlReading: 'lucide:book-open',
+  ctlMenu: 'lucide:menu', ctlDelete: 'lucide:trash-2', ctlTreeToggle: 'lucide:chevron-right', ctlEdit: 'lucide:pencil', ctlReading: 'lucide:book-open', ctlOpenFull: 'fast-arrow',
   // Выбор владелицы 09.11.2026 (S4-30, мини-версия зоны «только иконками»): на
   // предложение «Свойства — sliders-horizontal, Граф — share-2, Аналитика —
   // bar-chart-3» ответила «три». Третья в lucide 1.70 называется chart-column —

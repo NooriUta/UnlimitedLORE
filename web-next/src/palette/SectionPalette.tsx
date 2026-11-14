@@ -108,7 +108,7 @@ export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
    *   3. второй записью истории не пушим, а ЗАМЕНЯЕМ: иначе «назад» пришлось
    *      бы жать дважды, чтобы вернуться к тому, откуда искали.
    */
-  const openRecord = useCallback((r: KitRecord) => {
+  const openRecord = useCallback((r: KitRecord, opts?: { full: boolean }) => {
     const section = sectionOfType(r.kind);
     if (!section) {
       // Разделов в v2 пока пять. Молча никуда не уводим и в «Новости» тем
@@ -121,7 +121,8 @@ export function SectionPalette({ storage, fetchImpl }: SectionPaletteProps) {
     // Окно берём у ОБОЛОЧКИ, а не глобальное: она держит состояние в своём, и
     // запись в глобальное просто не доходит (поймано тестом).
     const win = api.win;
-    if (win) pushUrlState({ open: r.id, place: null }, { replace: true, win, anchor: null });
+    // Владелица 14.11.2026: «→» у найденного — паспорт сразу во весь экран (посмотреть один объект).
+    if (win) pushUrlState({ open: r.id, place: opts?.full ? 'full' : null }, { replace: true, win, anchor: null });
     // «Недавнее» ведёт оболочка — пусть узнает и об открытом из поиска.
     api.openRecord(r.id, { title: r.title, ...(win ? { href: urlStateHref(win, { open: r.id }, { anchor: null }) } : {}) });
   }, [api, lang, navigate]);
