@@ -6,7 +6,7 @@
 // возвращается на кнопку. Выбор — radiogroup, применяется сразу.
 import { useId, useRef, useState } from 'react';
 import type { KitShowClosed } from '../core/contract';
-import type { RecordPlacement } from '../record/RecordDock';
+import { RECORD_PLACEMENTS, type RecordPlacement } from '../record/RecordDock';
 import { ColumnsChoice, type ColumnChoice } from './ColumnsChoice';
 import { MenuPanel } from './MenuPanel';
 import { kitT, useKitLang } from '../i18n';
@@ -46,7 +46,7 @@ export interface ViewMenuProps {
   narrow?: boolean;
 }
 
-const PLACES: readonly RecordPlacement[] = ['left', 'right', 'bottom', 'full'];
+const PLACES = RECORD_PLACEMENTS;
 
 export function ViewMenu({ closed, modes, onClosed, place, onPlace, columns, onColumns, kinds, narrow = false }: ViewMenuProps) {
   const lang = useKitLang();

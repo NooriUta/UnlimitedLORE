@@ -77,6 +77,11 @@ export interface ScopePickerProps {
   labels?: ScopeLabels;
   /** Телефон — лист снизу; иначе поповер. Не задан — по ширине экрана (useNarrow). */
   narrow?: boolean;
+  /**
+   * Недавно выбранные (S9-04): коды проектов, свежие первыми — их помнит приложение. Показываются
+   * группой «Недавние» сверху, пока нет поиска; неизвестные списку коды пропускаются.
+   */
+  recent?: readonly string[];
   /** Язык поверх KitLangProvider. */
   lang?: KitLang;
   className?: string;
@@ -131,7 +136,7 @@ export function ScopePicker(props: ScopePickerProps) {
 
 function ScopePickerInner({
   label, icon = ICON_CANON.scopeAll, options, value, onChange, state = 'ok', error, onRetry, completeness,
-  forbiddenReason, mine = 'known', mineHint, mineCount, groups, labels, narrow: narrowProp, lang = 'ru', className,
+  forbiddenReason, mine = 'known', mineHint, mineCount, groups, labels, recent, narrow: narrowProp, lang = 'ru', className,
 }: ScopePickerProps) {
   const narrow = useNarrow(narrowProp);
   const name = label ?? kitT(lang, 'kit.scope.label');
@@ -172,6 +177,8 @@ function ScopePickerInner({
       mineCount={mineCount}
       groups={groups}
       labels={labels}
+      recent={recent}
+      narrow={narrow}
     />
   );
 
@@ -222,6 +229,8 @@ function ScopePopover({ name, onClose, children }: { name: string; onClose: (ref
 
 interface BodyProps {
   lang: KitLang;
+  recent?: readonly string[];
+  narrow?: boolean;
   options: readonly ScopeOption[];
   value: readonly string[];
   onChange: (next: string[]) => void;
@@ -238,7 +247,7 @@ interface BodyProps {
 }
 
 function ScopeBody({
-  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups, labels,
+  lang, options, value, onChange, state, error, onRetry, completeness, forbiddenReason, mine, mineHint, mineCount, groups, labels, recent, narrow,
 }: BodyProps) {
   const searchText = labels?.search || kitT(lang, 'kit.scope.search');
   const allText = labels?.all || kitT(lang, 'kit.scope.all');
@@ -266,6 +275,22 @@ function ScopeBody({
 
   const mineDisabled = !hasData || !mineKnown || mineIds.length === 0;
   const own = knownCount(mineCount);
+  // S9-04: «Недавние» — сверху, пока нет поиска; в общем списке те же строки не повторяются.
+  const recentRows = query.trim() === '' && hasData
+    ? (recent ?? []).map(id => options.find(o => o.id === id)).filter((o): o is ScopeOption => !!o).slice(0, 5)
+    : [];
+  const recentSet = new Set(recentRows.map(o => o.id));
+  // S9-04: группы по владельцу — только на телефоне и когда нет подписанных групп «свои/остальные».
+  const byOwner = !!narrow && !grouped;
+  const ownerGroups = byOwner ? (() => {
+    const m = new Map<string, ScopeOption[]>();
+    for (const o of shown) {
+      if (recentSet.has(o.id)) continue;
+      const owner = o.id.includes('/') ? o.id.slice(0, o.id.indexOf('/')) : o.id;
+      m.set(owner, [...(m.get(owner) ?? []), o]);
+    }
+    return [...m].map(([owner, list]) => ({ owner, list }));
+  })() : [];
 
   // Четыре РАЗНЫХ утверждения, и каждое своё:
   //   роли не проверены · своих ноль (проверено) · своих в списке нет, а
@@ -341,9 +366,16 @@ function ScopeBody({
                 onOnly={() => onChange(onlyScope(id))}
               />
             ))}
-            {shown.map(renderRow)}
+            {!byOwner && shown.filter(o => !recentSet.has(o.id)).map(renderRow)}
           </ul>
           )}
+          {/* S9-04: на телефоне — группы по владельцу репозитория (часть кода до «/»). */}
+          {!grouped && byOwner && ownerGroups.map(g => (
+            <div key={g.owner} className="sk-scope__grp">
+              <h4 className="sk-scope__grph" id={`${searchId}-own-${g.owner}`}>{g.owner}</h4>
+              <ul className="sk-scope__list" aria-labelledby={`${searchId}-own-${g.owner}`}>{g.list.map(renderRow)}</ul>
+            </div>
+          ))}
         </>
       );
   }
@@ -368,7 +400,7 @@ function ScopeBody({
           onClick={() => { if (!mineDisabled) onChange(mineIds); }}
         >
           <GameIcon slug="person" size={13} />
-          {kitT(lang, 'kit.scope.mine')}
+          {own !== null && own > 0 ? kitT(lang, 'kit.scope.summary.mine', { n: own }) : kitT(lang, 'kit.scope.mine')}
         </button>
         <button
           type="button"
@@ -381,6 +413,12 @@ function ScopeBody({
         </button>
       </div>
       {mineNote && <p className="sk-scope__note sk-scope__note--wrn" data-testid="kit-scope-minenote">{mineNote}</p>}
+      {recentRows.length > 0 && (
+        <div className="sk-scope__grp">
+          <h4 className="sk-scope__grph" id={`${searchId}-recent`}>{kitT(lang, 'kit.scope.recent')}</h4>
+          <ul className="sk-scope__list" aria-labelledby={`${searchId}-recent`}>{recentRows.map(renderRow)}</ul>
+        </div>
+      )}
       {content}
       {hasData && (
         <p className="sk-scope__count" aria-live="polite">

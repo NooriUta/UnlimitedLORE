@@ -13,6 +13,8 @@ export interface Denial {
   status: number | null;
   error: string;
   role: string;
+  /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: имя | "(unknown)" | "(n/a)"; нет поля — null. */
+  machine: string | null;
 }
 
 export interface DenialsData {
@@ -37,6 +39,7 @@ export function parseDenials(raw: unknown): DenialsData {
       ts: s(o.ts), method: s(o.method), path: s(o.path),
       status: typeof o.status === 'number' ? o.status : null,
       error: s(o.error), role: s(o.role),
+      machine: typeof o.machine === 'string' && o.machine.trim() ? o.machine : null,
     };
   });
   return { rows, source: typeof b.source === 'string' && b.source.trim() ? b.source : null };

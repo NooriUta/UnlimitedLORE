@@ -7,6 +7,7 @@
 // Вкладка — управляемая (tab/onTab): состояние живёт в URL у экрана
 // (useRecordTab), а не внутри компонента. Исключение в overview/render
 // вкладки/вердикте конфига ломает только свой блок (BlockBoundary).
+import type { RecordPlacement } from './RecordDock';
 import { RecordSection } from './RecordSection';
 import { EditableField } from './EditableField';
 import { SumCell, sumText } from '../list/sum';
@@ -23,7 +24,6 @@ import { applySections, gluedSections, sectionGroups, type PassportOrder } from 
 import { asChip, isChipList } from '../core/chipValue';
 import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
-import { Segmented } from '../elements/Segmented';
 import { IconButton } from '../elements/IconButton';
 import { ICON_CANON } from '../elements/iconCanon';
 import { EmptyState } from '../states/StateViews';
@@ -117,7 +117,7 @@ export interface RecordViewProps {
    * слева, при right (узко) — вкладками после вкладок записи. Не задан — прежний вид.
    */
   /** «слева» раскладывается как «справа» — узкая боковая панель (MP2-14). */
-  placement?: 'left' | 'right' | 'bottom' | 'full';
+  placement?: RecordPlacement;
   /**
    * S4-30: «Свойства» в режиме «на весь экран» — открыты или свёрнуты.
    *
@@ -531,8 +531,11 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // своя вкладка вида), раздел остаётся вкладкой: показать его не там, где
   // просили, — полбеды, а не показать вовсе — потеря данных с экрана.
   const glueable = new Set(relTabs.map(rt => rt.id));
+  // Тело в модели — раздел с source `body` (ключ у сервера `content`), а вкладка тела в kit —
+  // RECORD_TABS.overview. Без сопоставления «Контент» считался не названным моделью и уезжал в
+  // хвост ряда, хотя модель ставит его первым (приёмка 14.11.2026).
   const order: PassportOrder | null | undefined = sections?.decided
-    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
+    ? { decided: true, notes: sections.notes, sections: sections.sections.map(s => (s.source === 'body' ? { ...s, key: RECORD_TABS.overview } : s)).map(s => (s.slot === 'content' && !glueable.has(s.key) ? { ...s, slot: 'own' as const } : s)) }
     : sections;
   const glued = gluedSections(order)
     .map(s => relTabs.find(rt => rt.id === s.key))
@@ -612,19 +615,36 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // не пропадает.
   type Mode = 'content' | 'props' | 'analytics';
   const mode: Mode = current === RECORD_TABS.props ? 'props' : aroundItems.some(i => i.id === current) ? 'analytics' : 'content';
-  const contentItems = foldGroups(recordItems.filter(i => i.id !== RECORD_TABS.props));
+  // Ряд «Контент» в доке — тот же упорядоченный ряд, что во весь экран, без служебного и свойств.
+  // Прежде он собирался из recordItems ДО applySections, и в доке порядок модели не применялся
+  // вовсе (приёмка 14.11.2026: у 8 типов из 11 порядок в доке и во весь экран расходился).
+  const aroundIds = new Set(aroundItems.map(i => i.id));
+  const contentItems = items.filter(i => i.id !== RECORD_TABS.props && !aroundIds.has(i.id));
   const shown: TabItem[] = !modes ? items : mode === 'analytics' ? aroundItems : mode === 'content' ? contentItems : [];
   const firstOf: Record<Mode, string> = { content: RECORD_TABS.overview, props: RECORD_TABS.props, analytics: aroundItems[0].id };
-  const switcher = modes ? (
-    <div className="sk-rec__modes sk-rec__modes--mini">
-      <Segmented<Mode> label={kitT(lang, 'kit.record.view')} value={mode} onChange={m => onTab(firstOf[m])}
-        options={[
-          { value: 'content', label: kitT(lang, 'kit.record.view.content') },
-          ...(hasProps ? [{ value: 'props' as const, label: kitT(lang, 'kit.record.view.props') }] : []),
-          { value: 'analytics', label: kitT(lang, 'kit.record.view.analytics') },
-        ]} />
-    </div>
+  // S4-29 (владелица 14.11.2026): «Контент · Свойства · Аналитика» — тремя значками в строке
+  // статуса, один переключатель в одном месте во всех местах показа (слева, справа, снизу, во весь
+  // экран). Отдельного ряда пилюль над вкладками и отдельной рейки во весь экран больше нет. В доке
+  // значок меняет ВИД ряда вкладок; во весь экран и снизу ряд один, и значок ведёт в нужный раздел
+  // (свойства — раскрыть зону, аналитика — служебные разделы). На телефоне значков нет: один ряд
+  // вкладок, как в v1 (S4-MOBILE-COMPARE).
+  const goMode = (m: Mode): void => {
+    if (m === 'props' && !modes) { openProps(); return; }
+    onTab(firstOf[m]);
+  };
+  const modeIcons = !narrow ? (
+    <span className="sk-rec__modes sk-rec__modes--mini sk-rec__modes--icons" role="group" aria-label={kitT(lang, 'kit.record.view')}>
+      {([
+        { value: 'content' as const, icon: ICON_CANON.ctlReading, label: kitT(lang, 'kit.record.view.content') },
+        ...(hasProps ? [{ value: 'props' as const, icon: ICON_CANON.recProps, label: kitT(lang, 'kit.record.view.props') }] : []),
+        { value: 'analytics' as const, icon: ICON_CANON.recAnalytics, label: kitT(lang, 'kit.record.view.analytics') },
+      ]).map(o => (
+        <IconButton key={o.value} icon={o.icon} label={o.label} pressed={mode === o.value}
+          onClick={() => { if (mode !== o.value) goMode(o.value); }} />
+      ))}
+    </span>
   ) : null;
+  const headTail = loaded || modeIcons ? <>{loaded}{modeIcons}</> : null;
   const reset = `${record.id}:${current}`;
   const custom = kindTabs.find(t => t.key === current);
   const groupTab = groupTabs.find(g => g.key === current);
@@ -772,7 +792,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
             </div>
           </div>
         )}
-        <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : loaded} />
+        <RecordHead record={record} ctx={ctx} lang={lang} titleId={titleId} withStatus={!facts} tail={facts ? undefined : headTail} />
         {/* Виды записи — под заголовком мини-кнопками (владелица 13.11.2026: «вынеси в лево мини
             кнопками или под Заголовок»): над шапкой рейка стояла первой строкой паспорта и
             спорила с заголовком. */}
@@ -782,13 +802,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
         {editAll ? (
           <RecordEditAll record={record} ctx={ctx} lang={lang} fields={editAllDefs} save={fieldSave} onDone={() => setEditAll(false)} />
         ) : (<>
-        {switcher}
         <RelationLines record={record} ctx={ctx} defs={rels} />
         {facts && (
           <BlockBoundary block="facts" label={kitT(lang, 'kit.record.facts')} lang={lang} resetKey={record.id}>
             <RecordFacts record={record} ctx={ctx} spec={facts} lang={lang}
               onTasks={facts.tasksTab && kindTabs.some(t => t.key === facts.tasksTab) ? () => onTab(facts.tasksTab!) : undefined}
-              tail={loaded} />
+              tail={headTail} />
           </BlockBoundary>
         )}
         <BlockBoundary block="verdict" label={kitT(lang, 'kit.record.verdict')} lang={lang} resetKey={record.id}>
@@ -851,19 +870,6 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
             {propsAside}
           </div>
         ) : tabsBlock}
-        {/* Рейка во весь экран — та же мини-версия зоны, что и у узкой колонки:
-            только иконками (владелица 09.11, «три»). Подписи вертикальным
-            текстом ушли: в одной оболочке два вида одной рейки человек читает
-            как два разных элемента. */}
-        {placement === 'full' && (
-          <nav className="sk-rec-rail" aria-label={kitT(lang, 'kit.record.rail')}>
-            {hasProps && (
-              <IconButton icon={ICON_CANON.recProps} label={kitT(lang, 'kit.record.tab.props')} onClick={() => setPropsOpen(true)} />
-            )}
-            <IconButton icon={ICON_CANON.recGraph} label={kitT(lang, 'kit.record.tab.graph')} onClick={() => onTab(RECORD_TABS.graph)} />
-            <IconButton icon={ICON_CANON.recAnalytics} label={kitT(lang, 'kit.record.rail.analytics')} onClick={() => onTab(RECORD_TABS.links)} />
-          </nav>
-        )}
         </>)}
     </>
   );

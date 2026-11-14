@@ -283,7 +283,11 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
   const usable = config.modules.filter(m => m.status !== 'planned');
   const module = (usable.find(m => m.id === params.get('mod')) ?? usable[0] ?? config.modules[0])?.id ?? '';
   const items = config.menu.groups.flatMap(g => g.items);
-  const fromUrl = items.find(i => i.id === params.get('sec'));
+  const sec = params.get('sec');
+  const fromUrl = items.find(i => i.id === sec);
+  // S9-05 × MC-07: раздел вне меню, названный приложением, открывается по адресу
+  // (паспорт человека по ссылке) — а не откатывается молча к первому пункту («Новости»).
+  if (!fromUrl && sec && config.menu.offMenu?.includes(sec)) return { module, item: sec, view: params.get('view') || null };
   const item = fromUrl ?? items[0];
   const view = (fromUrl && params.get('view')) || item?.view || null;
   return { module, item: item?.id ?? null, view };

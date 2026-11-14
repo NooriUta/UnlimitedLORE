@@ -48,8 +48,8 @@ final class LoreEntityHistory {
 
     /** Источник атрибуции — называется в ответе, чтобы «unknown» было объяснимо. */
     static final String JOURNAL_SQL =
-        "SELECT ts, source, segment, value FROM MetricSnapshot "
-        + "WHERE metric = 'lore.action' AND object_id = :id ORDER BY ts";
+        "SELECT ts, source, segment, client, machine, value FROM AgentActionLog "
+        + "WHERE object_id = :id ORDER BY ts";
 
     private static final String DIRECT  = "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug";
     private static final String VIA_SPRINT = "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug";
@@ -83,6 +83,21 @@ final class LoreEntityHistory {
     }
 
     static Set<String> types() { return HIST_OF_TYPE.keySet(); }
+
+    /**
+     * MINI-06: заголовок записи для ответа истории — с вершины-владельца цепочки (класс цепочки без «Hist»),
+     * по тому же полю id. Поле имени у типов разное (title у задачи, name у спринта, label у вехи) —
+     * берётся первое непустое. У строки справочника вершины-владельца нет — {@code null}.
+     */
+    static String titleSql(String type) {
+        String hist = type == null ? null : HIST_OF_TYPE.get(type);
+        if (hist == null) throw new IllegalArgumentException("unknown history type: " + type + " (known: " + types() + ")");
+        if ("dict_entry".equals(type)) return null;
+        LoreSlices.HistParent parent = LoreSlices.HIST_PARENT.get(hist);
+        String vertex = hist.substring(0, hist.length() - "Hist".length());
+        return "SELECT coalesce(title, name, label) AS title FROM " + vertex
+            + " WHERE " + parent.idField() + " = :id LIMIT 1";
+    }
 
     /**
      * SQL цепочки одной сущности. Поля, которых у цепочки нет (status_raw у спеки,
@@ -173,11 +188,19 @@ final class LoreEntityHistory {
                 author.put("source", "hist");
                 // Форма контракта S2 HistoryAuthor: человек — kc_sub, агент — client_id.
                 author.put(ChangeAuthor.KIND_HUMAN.equals(rowKind) ? "kc_sub" : "client_id", rowBy.toString());
+                // D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машину версия не хранит — берётся из точки
+                // журнала той же правки; нет точки — «неизвестно», у человека — «не применимо».
+                author.put("machine", ChangeAuthor.KIND_HUMAN.equals(rowKind) ? AgentMachine.NOT_APPLICABLE
+                    : best != null && best.get("machine") != null && !best.get("machine").toString().isBlank()
+                        ? best.get("machine").toString() : AgentMachine.UNKNOWN);
             } else if (best != null) {
                 Object axis = best.get("segment");
                 author.put("kind", axis == null || axis.toString().isBlank() ? "unknown" : axis.toString());
                 author.put("caller", best.get("source"));
                 author.put("source", "journal");
+                // Точки до V86 несут «(unknown)», новые — машину или «(n/a)» у не-агента.
+                author.put("client", best.get("client"));
+                author.put("machine", best.get("machine"));
             } else if (commit != null && !commit.toString().isBlank()) {
                 author.put("kind", "ingest");
                 author.put("caller", null);

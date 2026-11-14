@@ -249,7 +249,8 @@ class LoreRecordSnapshotTest {
     void snapshotAnchors() {
         Map<String, Object> s = Legacy.values("sprint", ROWS.get("sprint"));
         assertEquals("2026-10-30", s.get("created"));
-        assertEquals("Да", s.get("no_release"));
+        // MC-08 (приёмка v1.17.20): флаг вида bool — Boolean, а не «Да»/null.
+        assertEquals(Boolean.TRUE, s.get("no_release"));
         assertEquals("done", s.get("status"));
         assertEquals("ctx", s.get("body_md"));
         Map<String, Object> a = Legacy.values("adr", ROWS.get("adr"));
@@ -346,7 +347,9 @@ class LoreRecordSnapshotTest {
             v.put("planned_end_date", str(r.get("planned_end_date")));
             String created = str(r.get("created_date"));
             v.put("created", created == null ? null : created.substring(0, Math.min(10, created.length())));
-            v.put("no_release", Boolean.TRUE.equals(r.get("no_release_required")) ? "Да" : null);
+            // MC-08: сознательная смена контракта — флаг Boolean (null — не задан), было «Да»/null.
+            Object nrr = r.get("no_release_required");
+            v.put("no_release", nrr instanceof Boolean b ? b : "true".equals(nrr) ? Boolean.TRUE : "false".equals(nrr) ? Boolean.FALSE : null);
             v.put("track", str(r.get("track_id")));
             return v;
         }

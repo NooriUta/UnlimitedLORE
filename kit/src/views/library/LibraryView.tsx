@@ -38,6 +38,12 @@ export interface LibraryViewProps {
   onFilter?: (filter: LibraryFilter) => void;
   /** Ссылка «Открыть паспорт». */
   href?: (id: string) => string;
+  /**
+   * Своя читалка справа (по умолчанию да). false — только дерево (K2-LIBRARY-DUP-PASSPORT, решение
+   * владелицы 14.11): выбор уходит в onSelect, приложение открывает обычный паспорт своим
+   * механизмом; своей читалки, нижнего листа и автовыбора первого документа нет.
+   */
+  reader?: boolean;
   /** Своё тело читалки; нет — MartProse по `doc.body`. */
   renderBody?: (doc: LibraryDoc) => ReactNode;
   /** Сколько документов видно в группе. По умолчанию 5 (прототип). */
@@ -46,7 +52,7 @@ export interface LibraryViewProps {
   className?: string;
 }
 
-export function LibraryView({ groups, status, selected: selectedProp, onSelect, query: queryProp, onQuery, filter: filterProp, onFilter, href, renderBody, perGroup = 5, narrow: narrowProp, className }: LibraryViewProps) {
+export function LibraryView({ groups, status, selected: selectedProp, onSelect, query: queryProp, onQuery, filter: filterProp, onFilter, href, renderBody, reader: withReader = true, perGroup = 5, narrow: narrowProp, className }: LibraryViewProps) {
   const lang = useKitLang();
   const t = (k: KitKey, v?: Record<string, string | number>) => kitT(lang, k, v);
   const narrow = useNarrow(narrowProp);
@@ -62,16 +68,16 @@ export function LibraryView({ groups, status, selected: selectedProp, onSelect, 
   const model = useMemo(() => libraryModel(groups, { query, filter }), [groups, query, filter]);
 
   const visible = model.groups.flatMap(g => g.docs);
-  const selectedId = selectedProp ?? own ?? (narrow ? undefined : visible[0]?.id);
+  const selectedId = selectedProp ?? own ?? (narrow || !withReader ? undefined : visible[0]?.id);
   const current = visible.find(d => d.id === selectedId) ?? groups.flatMap(g => g.docs).find(d => d.id === selectedId);
 
   const pick = (id: string) => {
     if (selectedProp === undefined) setOwn(id);
     onSelect?.(id);
-    if (narrow) setSheetOpen(true);
+    if (narrow && withReader) setSheetOpen(true);
   };
 
-  const cls = ['sk-lib', narrow ? 'sk-lib--narrow' : '', className].filter(Boolean).join(' ');
+  const cls = ['sk-lib', narrow ? 'sk-lib--narrow' : '', withReader ? '' : 'sk-lib--tree', className].filter(Boolean).join(' ');
   const kind = status?.kind ?? 'ready';
   if (kind === 'loading') return <div className={cls}><Skeleton lines={6} /></div>;
   if (status?.kind === 'forbidden') return <div className={cls}><Forbidden reason={status.reason} /></div>;
@@ -132,6 +138,8 @@ export function LibraryView({ groups, status, selected: selectedProp, onSelect, 
       })}
     </div>
   );
+
+  if (!withReader) return <div className={cls}>{side}</div>;
 
   if (narrow) {
     return (

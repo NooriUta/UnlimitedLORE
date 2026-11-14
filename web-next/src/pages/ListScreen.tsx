@@ -12,6 +12,7 @@ import {
   useKitLang, useLoadState,
 } from '@seidr/kit';
 import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
+import { isRecordPlacement } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
@@ -73,7 +74,6 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // без паспорта v2: щелчок отвечает словами (NoPassport).
   products: 'product',
 };
-const PLACES: readonly RecordPlacement[] = ['left', 'right', 'bottom', 'full'];
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
 type OpenRecord = { id: string | null; place: RecordPlacement };
@@ -122,7 +122,7 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     const id = p.get('open');
     const raw = p.get('place') ?? '';
     // Места в адресе нет — личная настройка «Где открывать запись» (S4-24), иначе справа.
-    const place = (PLACES as readonly string[]).includes(raw) ? (raw as RecordPlacement) : defaultPlace();
+    const place = isRecordPlacement(raw) ? raw : defaultPlace();
     return { id: id || null, place };
   };
   const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: defaultPlace() }));
@@ -214,11 +214,7 @@ function useLibraryState(win: UrlWindow | undefined) {
     setLib({ on, doc: null });
     if (win) pushUrlState({ [LIBRARY_PARAM]: on ? '1' : null, [LIBRARY_OPEN_PARAM]: null }, { win });
   };
-  const setDoc = (doc: string) => {
-    setLib(l => ({ ...l, doc }));
-    if (win) pushUrlState({ [LIBRARY_OPEN_PARAM]: doc }, { win, replace: true });
-  };
-  return [lib, setOn, setDoc] as const;
+  return [lib, setOn] as const;
 }
 
 /** Поле даты календаря в адресе (`?lcd=`, K2-VIEW-CALENDAR) — когда у раздела дат несколько. */
@@ -255,7 +251,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
   // «Библиотека» и «Календарь» (K2-VIEW-LIBRARY, K2-VIEW-CALENDAR): состояние — в адресе.
-  const [lib, , setLibDoc] = useLibraryState(urlWin);
+  const [lib] = useLibraryState(urlWin);
   // MP2-12: `?lib=1` на входе — начальный вид «Библиотека»; дальше видом
   // управляет движок списка (меню видов), а не отдельная кнопка.
   const libInitial = useRef(lib.on).current;
@@ -570,17 +566,24 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (recs: readonly KitRecord[]) => (libSpec ? libraryGroups(recs, libSpec, config, noGroupTitle) : []),
     [libSpec, config, noGroupTitle],
   );
-  const libType = PASSPORT_OF[screen];
+  // K2-LIBRARY-DUP-PASSPORT, решение владелицы 14.11: «в библиотеке оставь только левую часть
+  // меню, не дублируй второй раз компонент паспорта, а паспорт открывается обычно как для
+  // таблицы». Своей читалки у вида нет: выбор в дереве — ?open= (то же, что щелчок по строке
+  // списка), паспорт встаёт на своё место (?place=). На экране не больше одного паспорта.
   const libraryProp = libSpec ? {
     groups: libGroupsOf,
-    selected: lib.doc ?? undefined,
-    onSelect: setLibDoc,
-    renderBody: libType ? (doc: { id: string }) => (
-      <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
-        <ListPassport key={doc.id} type={libType} id={doc.id} placement="right" fetchImpl={fetchImpl} win={urlWin} />
-      </Suspense>
-    ) : undefined,
+    selected: open.id ?? undefined,
+    onSelect: (id: string) => setOpen({ ...open, id }),
+    reader: false,
   } : undefined;
+  // Старые ссылки ?libo=<id> (читалка до 14.11) открывают тот же паспорт через ?open=.
+  const legacyLibDoc = useRef(lib.doc).current;
+  useEffect(() => {
+    if (!legacyLibDoc || !urlWin) return;
+    pushUrlState({ [LIBRARY_OPEN_PARAM]: null }, { win: urlWin, replace: true });
+    if (!open.id) setOpen({ ...open, id: legacyLibDoc });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyLibDoc, urlWin]);
   // Дата календаря названа словами раздела; где их несколько — выбор (K2-VIEW-CALENDAR).
   const calendarPicker = calDates && listView === 'calendar' ? (
     <div className="list-screen__caldate" role="group" aria-label={t('lists.calendar.dateGroup')}>

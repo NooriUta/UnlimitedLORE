@@ -117,7 +117,12 @@
       "label" : "Не требует релиза",
       "labelKey" : "pp.field.noRelease",
       "kind" : "bool",
-      "group" : "props"
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/sprint/update",
+        "field" : "no_release_required"
+      }
     }, {
       "key" : "track",
       "label" : "Трек",
@@ -4623,5 +4628,153 @@
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"
+  },
+  "create" : {
+    "decision" : {
+      "endpoint" : "/lore/decision",
+      "id_field" : "decision_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      }, {
+        "key" : "projects",
+        "body" : "project"
+      }, {
+        "key" : "adr",
+        "body" : "adr_id"
+      } ],
+      "require_one_of" : [ "projects", "adr" ]
+    },
+    "spec" : {
+      "endpoint" : "/lore/spec",
+      "id_field" : "spec_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      }, {
+        "key" : "projects",
+        "body" : "project"
+      }, {
+        "key" : "summary",
+        "body" : "summary"
+      }, {
+        "key" : "component"
+      } ],
+      "require_one_of" : [ "projects" ]
+    }
+  },
+  "workflow" : {
+    "moves" : {
+      "planned" : [ "active", "cancelled" ],
+      "active" : [ "waiting", "review", "blocked", "failed", "cancelled" ],
+      "waiting" : [ "active", "review", "failed" ],
+      "review" : [ "done", "active" ],
+      "done" : [ ],
+      "failed" : [ ],
+      "blocked" : [ "active" ],
+      "cancelled" : [ ]
+    },
+    "kinds" : {
+      "dev" : {
+        "label" : "разработка",
+        "types" : [ "dev", "test", "design" ],
+        "stages" : [ "design", "implement", "test" ],
+        "review_stages" : [ "stand_check", "uat" ],
+        "evidence" : [ {
+          "type" : "pr",
+          "label" : "PR (влит)"
+        }, {
+          "type" : "release",
+          "label" : "релиз"
+        } ]
+      },
+      "doc" : {
+        "label" : "документ",
+        "types" : [ "docs" ],
+        "stages" : [ "draft", "review_text" ],
+        "review_stages" : [ "owner_read" ],
+        "evidence" : [ {
+          "type" : "lore",
+          "label" : "запись LORE: спека, док, runbook, ADR"
+        } ]
+      },
+      "ops" : {
+        "label" : "ops / инфраструктура",
+        "types" : [ "ops" ],
+        "stages" : [ "diagnose", "fix", "measure" ],
+        "review_stages" : [ "stand_check" ],
+        "evidence" : [ {
+          "type" : "probe",
+          "label" : "замер после правки: прогоны, лог, проба"
+        }, {
+          "type" : "pr",
+          "label" : "PR, если менялся код"
+        } ]
+      },
+      "research" : {
+        "label" : "исследование",
+        "types" : [ "research", "analytics" ],
+        "stages" : [ "collect", "analyse", "write" ],
+        "review_stages" : [ "owner_read" ],
+        "evidence" : [ {
+          "type" : "lore",
+          "label" : "запись LORE с выводом: док, спека или решение"
+        } ]
+      },
+      "external" : {
+        "label" : "внешнее решение",
+        "types" : [ "legal" ],
+        "stages" : [ "preparing", "submitted", "under_review" ],
+        "review_stages" : [ "decision_in" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "документ, номер заявки или решения"
+        } ],
+        "failed" : "отказ"
+      },
+      "funnel" : {
+        "label" : "воронка",
+        "types" : [ "sales", "hiring", "cfp" ],
+        "stages" : [ "lead", "contacted", "meeting", "pilot" ],
+        "review_stages" : [ "answer_in" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "LOI, договор, оффер принят, доклад принят"
+        } ],
+        "failed" : "проиграли, отказ"
+      },
+      "routine" : {
+        "label" : "регламент",
+        "types" : [ "finance", "support" ],
+        "stages" : [ "period_open", "reconciling" ],
+        "review_stages" : [ "report" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "закрытый период + отчёт"
+        } ],
+        "failed" : "просрочен"
+      },
+      "content" : {
+        "label" : "контент",
+        "types" : [ "content" ],
+        "stages" : [ "draft", "ready", "scheduled" ],
+        "review_stages" : [ "scheduled" ],
+        "evidence" : [ {
+          "type" : "url",
+          "label" : "URL публикации"
+        } ]
+      },
+      "hardware" : {
+        "label" : "железо",
+        "types" : [ "procurement" ],
+        "stages" : [ "prototype", "testing", "waiting_supplier" ],
+        "review_stages" : [ "protocol" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "протокол испытаний, сертификат"
+        } ],
+        "failed" : "не прошло испытания"
+      }
+    }
   }
 }

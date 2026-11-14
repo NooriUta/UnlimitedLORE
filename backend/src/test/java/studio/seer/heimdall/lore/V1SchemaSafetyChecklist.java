@@ -90,12 +90,21 @@ final class V1SchemaSafetyChecklist {
         // KnowActor.machine_id меняется только значение (регистр, адресная опечатка) — тип и
         // форма поля те же, v1 читает его как строку по-прежнему.
         "java__machine_id_canon",
-        "слияние вершин V79 KnowMachine по регистру; значение KnowActor.machine_id → канон, схема не меняется");
+        "слияние вершин V79 KnowMachine по регистру; значение KnowActor.machine_id → канон, схема не меняется",
+        // D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4, V86. Доказательство — AgentActionLogTest
+        // (план копирования, отметки) и AgentActionLogLiveDbTest (копия + повтор без дублей).
+        // Только INSERT в НОВЫЙ ряд AgentActionLog (тип создан SQL того же шага); MetricSnapshot
+        // лишь читается — v1 читает и пишет его по-прежнему.
+        "java__agent_action_log",
+        "копия точек lore.action в новый ряд V86 AgentActionLog; MetricSnapshot только читается");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");
+    /** Новый временной ряд (V86): IF NOT EXISTS и не тип v1 — аддитивно, v1 о нём не знает. */
+    private static final Pattern CREATE_TIMESERIES = Pattern.compile(
+        "(?is)^\\s*CREATE\\s+TIMESERIES\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS\\s+TIMESTAMP\\s+.*$");
     private static final Pattern CREATE_TYPE_ANY = Pattern.compile(
-        "(?i)CREATE\\s+(?:VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`?(\\w+)`?");
+        "(?i)CREATE\\s+(?:VERTEX|EDGE|DOCUMENT|TIMESERIES)\\s+TYPE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`?(\\w+)`?");
 
     /** CREATE PROPERTY T.p IF NOT EXISTS TYPE [OF X] [(constraints)] */
     private static final Pattern CREATE_PROPERTY = Pattern.compile(
@@ -186,6 +195,13 @@ final class V1SchemaSafetyChecklist {
         String q = "«" + sql.strip() + "»";
 
         if (CREATE_TYPE.matcher(sql).matches()) return out;
+
+        Matcher ts = CREATE_TIMESERIES.matcher(sql);
+        if (ts.matches()) {
+            if (v1.types().contains(ts.group(1)))
+                out.add(at + "временной ряд " + ts.group(1) + " уже есть в v1 — пересоздание не аддитивно: " + q);
+            return out;
+        }
 
         Matcher p = CREATE_PROPERTY.matcher(sql);
         if (p.matches()) {

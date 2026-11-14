@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "e88d6ec84d658a18",
+  "version" : "3afe182ca79dd9a5",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -772,8 +772,11 @@
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
-        "editable" : false,
-        "write" : null,
+        "editable" : true,
+        "write" : {
+          "endpoint" : "/lore/sprint/update",
+          "field" : "no_release_required"
+        },
         "required_level" : null,
         "required_rules" : [ ],
         "visibility" : "visible",
@@ -8378,6 +8381,232 @@
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"
+  },
+  "create" : {
+    "decision" : {
+      "endpoint" : "/lore/decision",
+      "id_field" : "decision_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "title",
+        "after_write" : null,
+        "required" : true
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "kind" : "ref",
+        "ref_type" : "project",
+        "multi" : true,
+        "body" : "project",
+        "after_write" : null,
+        "required" : false
+      }, {
+        "key" : "adr",
+        "label" : "ADR",
+        "kind" : "ref",
+        "ref_type" : "adr",
+        "multi" : false,
+        "body" : "adr_id",
+        "after_write" : null,
+        "required" : false
+      } ],
+      "require_one_of" : [ "projects", "adr" ],
+      "absent_check" : "/lore/record/decision/{id}",
+      "audience" : "everywhere"
+    },
+    "spec" : {
+      "endpoint" : "/lore/spec",
+      "id_field" : "spec_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "title",
+        "after_write" : null,
+        "required" : true
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "kind" : "ref",
+        "ref_type" : "project",
+        "multi" : true,
+        "body" : "project",
+        "after_write" : null,
+        "required" : true
+      }, {
+        "key" : "summary",
+        "label" : "Кратко",
+        "kind" : "md",
+        "multi" : false,
+        "body" : "summary",
+        "after_write" : null,
+        "required" : false
+      }, {
+        "key" : "component",
+        "label" : "Компонент",
+        "kind" : "ref",
+        "ref_type" : "component",
+        "multi" : false,
+        "body" : null,
+        "after_write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO"
+        },
+        "required" : false
+      } ],
+      "require_one_of" : [ "projects" ],
+      "absent_check" : "/lore/record/spec/{id}",
+      "audience" : "everywhere"
+    }
+  },
+  "workflow" : {
+    "core" : [ "planned", "active", "waiting", "review", "done", "failed", "blocked", "cancelled" ],
+    "synonyms" : {
+      "backlog" : {
+        "core" : "planned",
+        "stage" : null
+      },
+      "deferred" : {
+        "core" : "planned",
+        "stage" : null
+      },
+      "design" : {
+        "core" : "planned",
+        "stage" : null
+      },
+      "partial" : {
+        "core" : "active",
+        "stage" : null
+      },
+      "ready_for_deploy" : {
+        "core" : "review",
+        "stage" : "stand_check"
+      },
+      "todo" : {
+        "core" : "planned",
+        "stage" : null
+      },
+      "uat" : {
+        "core" : "review",
+        "stage" : "uat"
+      }
+    },
+    "moves" : {
+      "planned" : [ "active", "cancelled" ],
+      "active" : [ "waiting", "review", "blocked", "failed", "cancelled" ],
+      "waiting" : [ "active", "review", "failed" ],
+      "review" : [ "done", "active" ],
+      "done" : [ ],
+      "failed" : [ ],
+      "blocked" : [ "active" ],
+      "cancelled" : [ ]
+    },
+    "kinds" : {
+      "dev" : {
+        "label" : "разработка",
+        "types" : [ "dev", "test", "design" ],
+        "stages" : [ "design", "implement", "test" ],
+        "review_stages" : [ "stand_check", "uat" ],
+        "evidence" : [ {
+          "type" : "pr",
+          "label" : "PR (влит)"
+        }, {
+          "type" : "release",
+          "label" : "релиз"
+        } ]
+      },
+      "doc" : {
+        "label" : "документ",
+        "types" : [ "docs" ],
+        "stages" : [ "draft", "review_text" ],
+        "review_stages" : [ "owner_read" ],
+        "evidence" : [ {
+          "type" : "lore",
+          "label" : "запись LORE: спека, док, runbook, ADR"
+        } ]
+      },
+      "ops" : {
+        "label" : "ops / инфраструктура",
+        "types" : [ "ops" ],
+        "stages" : [ "diagnose", "fix", "measure" ],
+        "review_stages" : [ "stand_check" ],
+        "evidence" : [ {
+          "type" : "probe",
+          "label" : "замер после правки: прогоны, лог, проба"
+        }, {
+          "type" : "pr",
+          "label" : "PR, если менялся код"
+        } ]
+      },
+      "research" : {
+        "label" : "исследование",
+        "types" : [ "research", "analytics" ],
+        "stages" : [ "collect", "analyse", "write" ],
+        "review_stages" : [ "owner_read" ],
+        "evidence" : [ {
+          "type" : "lore",
+          "label" : "запись LORE с выводом: док, спека или решение"
+        } ]
+      },
+      "external" : {
+        "label" : "внешнее решение",
+        "types" : [ "legal" ],
+        "stages" : [ "preparing", "submitted", "under_review" ],
+        "review_stages" : [ "decision_in" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "документ, номер заявки или решения"
+        } ],
+        "failed" : "отказ"
+      },
+      "funnel" : {
+        "label" : "воронка",
+        "types" : [ "sales", "hiring", "cfp" ],
+        "stages" : [ "lead", "contacted", "meeting", "pilot" ],
+        "review_stages" : [ "answer_in" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "LOI, договор, оффер принят, доклад принят"
+        } ],
+        "failed" : "проиграли, отказ"
+      },
+      "routine" : {
+        "label" : "регламент",
+        "types" : [ "finance", "support" ],
+        "stages" : [ "period_open", "reconciling" ],
+        "review_stages" : [ "report" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "закрытый период + отчёт"
+        } ],
+        "failed" : "просрочен"
+      },
+      "content" : {
+        "label" : "контент",
+        "types" : [ "content" ],
+        "stages" : [ "draft", "ready", "scheduled" ],
+        "review_stages" : [ "scheduled" ],
+        "evidence" : [ {
+          "type" : "url",
+          "label" : "URL публикации"
+        } ]
+      },
+      "hardware" : {
+        "label" : "железо",
+        "types" : [ "procurement" ],
+        "stages" : [ "prototype", "testing", "waiting_supplier" ],
+        "review_stages" : [ "protocol" ],
+        "evidence" : [ {
+          "type" : "doc",
+          "label" : "протокол испытаний, сертификат"
+        } ],
+        "failed" : "не прошло испытания"
+      }
+    }
   },
   "palettes" : {
     "source" : "settings:palette",

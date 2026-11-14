@@ -35,7 +35,8 @@ const view = (extra: Partial<Parameters<typeof RecordView>[0]> = {}) =>
   render(<RecordView record={record} ctx={ctx} tab="overview" onTab={() => {}} placement="bottom" {...extra} />);
 
 const aside = () => document.querySelector('[data-zone="props"]');
-const fold = () => screen.getByRole('button', { name: /Свойства/ });
+// S4-29: «Свойства» есть и у значка вида в строке статуса — свёртка зоны отличается тем, что не в группе вида.
+const fold = () => screen.getAllByRole('button', { name: /Свойства/ }).find(b => !b.closest('[role="group"]'))!;
 
 describe('свойства сворачиваются и в доке', () => {
   it('положительный контроль: в доке свойства раскрыты и значение видно', () => {

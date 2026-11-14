@@ -7,7 +7,7 @@
 // Режим чтения kit (S5-05: размер текста, «сворачивать меню при чтении» —
 // D-2026-UXR-READ-COLLAPSE) — блоком ReadingSettings: его читает ReadingView.
 // Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
-import { ICON_CANON } from '@seidr/kit';
+import { ICON_CANON, RECORD_PLACEMENTS } from '@seidr/kit';
 import { GameIcon, LoadError, Skeleton, SettingRow, Segmented, TextScaleSlider, errorDetail } from '@seidr/kit';
 import { paletteFallback, type PalettesView } from './palettesSource';
 import type { UserSettings } from '../api/contracts/s2';
@@ -137,6 +137,8 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ stripes: v === 'on' }), 'settings.stripes.hint')}
       {row('peek_hover', 'settings.peekHover.label', onOff(s.peek_hover), onOffOpts,
         v => onChange({ peek_hover: v === 'on' }), 'settings.peekHover.hint')}
+      {row('status_confirm', 'settings.statusConfirm.label', onOff(s.status_confirm), onOffOpts,
+        v => onChange({ status_confirm: v === 'on' }), 'settings.statusConfirm.hint')}
       {row('graph_view', 'settings.graphView.label', s.graph_view,
         opts(lang, [
           ['auto', 'settings.graphView.auto'], ['sectors', 'settings.graphView.sectors'], ['list', 'settings.graphView.list'],
@@ -144,10 +146,8 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         ] as const),
         v => onChange({ graph_view: v }), 'settings.graphView.hint')}
       {row('passport_place', 'settings.passportPlace.label', s.passport_place,
-        opts(lang, [
-          ['auto', 'settings.passportPlace.auto'], ['left', 'settings.passportPlace.left'], ['right', 'settings.passportPlace.right'],
-          ['bottom', 'settings.passportPlace.bottom'], ['full', 'settings.passportPlace.full'],
-        ] as const),
+        // Варианты — из набора мест kit (S4-17): новое место появляется здесь само; подпись — settings.passportPlace.<место>.
+        opts(lang, [['auto', 'settings.passportPlace.auto'] as const, ...RECORD_PLACEMENTS.map(p => [p, `settings.passportPlace.${p}` as const] as const)]),
         v => onChange({ passport_place: v }), 'settings.passportPlace.hint')}
       {row('show_tech', 'settings.showTech.label', onOff(s.show_tech), onOffOpts,
         v => onChange({ show_tech: v === 'on' }), 'settings.showTech.hint')}
