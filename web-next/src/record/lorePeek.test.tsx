@@ -4,6 +4,7 @@
 // раздел тела (первый непустой), до трёх счётчиков связей, адрес паспорта; «записи нет» и «нет прав»
 // — свои состояния, а не общий сбой.
 import { describe, expect, it, vi } from 'vitest';
+import { render } from '@testing-library/react';
 import { toPeekCard, loadPeek } from './lorePeek';
 import type { LoreRecord1 } from './loreRecordContract';
 
@@ -93,5 +94,25 @@ describe('loadPeek — состояния', () => {
     const st = await loadPeek({ id: 'UTF-8', type: null }, 'ru', { fetchImpl: f as unknown as typeof fetch });
     expect(st.state).toBe('error');
     expect(f).not.toHaveBeenCalled();
+  });
+});
+
+// Владелица 14.11.2026, скрин карточки ADR-LORE-048 в пике: «в пике выбор множественных связанных
+// объектов ни статуса ни правильного отображения» — «Компоненты [object Object] · [object Object]»
+// и статус сырым кодом «proposed». Значения-чипы (форма {id, label} с #1128) — подписями, как в
+// паспорте; статус — значком и словом языка, код — в подсказке.
+describe('пик: чипы и статус — как в паспорте', () => {
+  it('список чипов {id,label} — подписи, а не [object Object]', () => {
+    const c = toPeekCard(rec({ values: { ...rec().values, components: [{ id: 'OMILORE', label: 'OMILORE платформа', inherited_from: null }, { id: 'FORSETI', label: 'Forseti', inherited_from: null }] } }), 'ru');
+    const { container } = render(<>{c.props[0].value}</>);
+    expect(container.textContent).toContain('OMILORE платформа');
+    expect(container.textContent).toContain('Forseti');
+    expect(container.textContent).not.toContain('[object Object]');
+  });
+
+  it('статус — словом языка, не кодом', () => {
+    const c = toPeekCard(rec({ record: { ...rec().record, status: 'proposed' } }), 'ru');
+    const { container } = render(<>{c.status}</>);
+    expect(container.textContent).toContain('Предложено');
   });
 });

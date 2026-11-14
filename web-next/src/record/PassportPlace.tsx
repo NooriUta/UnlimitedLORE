@@ -54,7 +54,8 @@ export function PassportPlace({ value, onPlace, back }: PassportPlaceProps) {
         title={t('pp.place')}
         onClick={() => setOpen(v => !v)}
       >
-        ▾
+        {/* Владелица 14.11: «сделай кнопку три черты, переведи на неё меню». */}
+        ☰
       </button>
       {open && (
         <Popover id={id} role="menu" label={t('pp.place')} align="end" onClose={() => setOpen(false)} className="sk-place__pop">
