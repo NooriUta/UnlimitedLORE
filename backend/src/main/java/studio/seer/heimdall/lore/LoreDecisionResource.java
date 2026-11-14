@@ -144,7 +144,7 @@ public class LoreDecisionResource extends LoreResourceBase {
             // Default date_created=today only where missing (fresh insert without explicit date).
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowDecision SET date_created=:d WHERE decision_id=:did AND date_created IS NULL",
-                Map.of("d", java.time.LocalDate.now().toString(), "did", req.decision_id())))
+                Map.of("d", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "did", req.decision_id())))
                 .await().indefinitely();
             // ADR-019: parent link (DECIDED_IN) + tags (TAGGED_WITH → KnowTag),
             // both idempotent (IF NOT EXISTS). No-op if the target ADR is absent.
