@@ -2639,6 +2639,33 @@ public final class LoreSlices {
                 "work_class", " WHERE work_class = :work_class")),
             " ORDER BY sprint_id, task_uid");
 
+        // SPRINT_LORE_MEASURE_TRUTH/MT-CAL-START (решение D6 14.11: «пока никаких правил, давай
+        // соберём статистику прыжков»): путь закрытия задачи одним вызовом. Строка на задачу,
+        // чья ОТКРЫТАЯ версия — done. work_versions = 0 — прыжок planned/todo → done без
+        // рабочего статуса; status_versions = 1 — задача заведена сразу закрытой. done_at и
+        // changed_at — момент статуса (правка текста его не двигает), поэтому
+        // changed_from/changed_to режут по ДНЮ ЗАКРЫТИЯ. Пакет (много закрытий за секунды
+        // одним актором) отделяет потребитель — по done_at и closed_by.
+        slice("task_close_path",
+            "SELECT task_uid, out('PART_OF').sprint_id[0] AS sprint_id, " +
+            STATUS_SINCE_SQL + " AS done_at, " +
+            STATUS_SINCE_SQL + " AS changed_at, " +
+            "out('HAS_STATE')[valid_to IS NULL].changed_by[0] AS closed_by, " +
+            "out('HAS_STATE')[valid_to IS NULL].changed_by_kind[0] AS closed_by_kind, " +
+            "out('HAS_STATE')[version_kind IS NULL].size() AS status_versions, " +
+            // review — отдельно: с v1.17.21 (WK-05) done возможен только из review, и «прыжок»
+            // planned → review → done иначе стал бы неотличим от работы по построению.
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw",
+                "in_progress", "partial", "uat", "ready_for_deploy") + "].size() AS work_versions, " +
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "review") + "].size() AS review_versions, " +
+            "bookkeeping " +
+            "FROM KnowTask WHERE out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL + "].size() > 0",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint")),
+            " ORDER BY task_uid");
+
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
             "SELECT finding_id, type, verified, source_sprint " +
@@ -3227,6 +3254,7 @@ public final class LoreSlices {
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("open_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("closed_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_close_path", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("component_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задача релиза — проект через её спринт.
         Map.entry("release_tasks_by_tag", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
