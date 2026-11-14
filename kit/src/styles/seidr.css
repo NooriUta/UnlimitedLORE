@@ -3655,6 +3655,15 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
    режется: код читают целиком (S4-30, PR #941). */
 .sk-list__c-status, .sk-list__c-kind, .sk-list__c-id, .sk-list__c-title { min-width: 0; }
 .sk-list__c-id { overflow-wrap: anywhere; }
+/* Владелица 14.11.2026: щелчок по заголовку — сортировка по колонке; заголовок остаётся заголовком по виду. */
+/* S4-12: заголовок с сортировкой и ссылка-код — цели касания, на сенсоре не меньше --tap. */
+.sk-list__th--sort { cursor: pointer; min-height: var(--tap); }
+/* Код строки — ссылка на паспорт, как название (14.11.2026). */
+.sk-list__idlink { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0; border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none; }
+.sk-list__idlink:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-list__th--sort:hover { color: var(--t1); }
+.sk-list__th--sort:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-list__sortmark { color: var(--acc); font-size: var(--fs-2xs); }
 .sk-list__row:hover { background: var(--bg2); }
 /* PU-29: строка открывается кликом целиком (openOnRowClick) — курсор говорит об этом. */
 .sk-list[data-open-row='true'] .sk-list__row,
@@ -7215,7 +7224,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-list__row--child { background: var(--bg2); }
 .sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }
 /* PU-23: дети другого типа — вложенная таблица своего типа, компактно (без полосы управления). */
-.sk-list__nested { min-width: 0; border-left: 2px solid var(--bd); padding-left: var(--pad-x); }
+/* Владелица 14.11.2026: «либо size под длину, либо если не помещается — scroll». width: 0 + min-width:
+   100% — контейнер берёт ширину ячейки и не распирает внешнюю таблицу; лишнее — горизонтальной прокруткой. */
+.sk-list__nested {
+  box-sizing: border-box;
+  width: 0;
+  min-width: 100%;
+  overflow-x: auto;
+  border-left: 2px solid var(--bd);
+  padding-left: var(--pad-x);
+}
+/* «Слишком высокие строки»: у вложенной таблицы строка компактная, название в одну строку. */
+.sk-list__nested .sk-list--bare {
+  --list-row-h: max(var(--tap), 28px);
+  --list-title-lines: 1;
+  --pad-y: 2px;
+}
 .sk-list--bare { gap: 0; }
 .sk-list--bare .sk-list__table { background: var(--bg2); }
 

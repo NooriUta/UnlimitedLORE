@@ -80,6 +80,8 @@ describe('PU-23 · правило раскрытия: другой тип — в
     expect(row.textContent).toContain('T1');
     expect(row.textContent).not.toContain('SP/T1');
     expect(heads).not.toContain('Задачи');
+    // Владелица 14.11.2026 (скрин вложенной таблицы): «статус можно было бы в начало передвинуть».
+    expect(heads[0]).toBe('Статус');
     expect(within(nested).getByRole('link', { name: 'Задача T1' }).getAttribute('href')).toMatch(/open=SP%2FT1/);
   });
 

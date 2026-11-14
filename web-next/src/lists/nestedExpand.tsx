@@ -39,8 +39,10 @@ function NestedChildren({ parent, kind, rows, config, client, lang }: {
   const href = recordHref(kind, '_') ? (id: string) => recordHref(kind, id) ?? '' : undefined;
   // Приёмка препрода 14.11.2026: колонка, указывающая на саму раскрытую строку («Спринт» внутри
   // спринта), — повтор родителя; во вложенной таблице её нет.
+  // Владелица 14.11.2026: «статус можно было бы в начало передвинуть» — статус первой колонкой.
+  const statusFirst = (cols: readonly string[]) => (cols.includes('status') ? ['status', ...cols.filter(c => c !== 'status')] : [...cols]);
   const own: KitConfig = config.list?.columns
-    ? { ...config, list: { ...config.list, columns: config.list.columns.filter(c => c !== parent.kind && c !== `fields.${parent.kind}`) } }
+    ? { ...config, list: { ...config.list, columns: statusFirst(config.list.columns.filter(c => c !== parent.kind && c !== `fields.${parent.kind}`)) } }
     : config;
   const cellOf = (col: string, r: KitRecord): ReactNode | undefined => {
     if (col === 'status' && STATUS_KINDS.has(kind)) {
@@ -48,7 +50,8 @@ function NestedChildren({ parent, kind, rows, config, client, lang }: {
     }
     // Код — коротким (S5-01), а не полным uid «СПРИНТ/S5-01»: спринт и так виден строкой выше.
     if (col === 'id' && typeof r.fields.code === 'string' && r.fields.code) {
-      return <Pill variant="id">{r.fields.code}</Pill>;
+      // Щелчок по коду открывает паспорт, как по названию (владелица 14.11.2026).
+      return href ? <a className="sk-list__idlink" href={href(r.id)}><Pill variant="id">{r.fields.code}</Pill></a> : <Pill variant="id">{r.fields.code}</Pill>;
     }
     return undefined;
   };

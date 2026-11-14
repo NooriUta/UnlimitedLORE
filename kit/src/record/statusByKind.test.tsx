@@ -58,14 +58,15 @@ describe('статус дочерней строки — по циклу её в
     show(config({ task: TASK_CYCLE, sprint: SPRINT_CYCLE }));
     const c = cell('T-1');
     expect(iconOf(c)).toBe('quill-ink');
-    expect(c.textContent).toContain('В работе');
+    // 14.11.2026: статус в ячейке — иконкой, название во всплывающей подсказке.
+    expect(c.getAttribute('title')).toBe('В работе');
   });
 
   it('код, которого у спринта нет (review), — оформление задачи, а не «неизвестно»', () => {
     show(config({ task: TASK_CYCLE }));
     const c = cell('T-2');
     expect(iconOf(c)).toBe('magnifying-glass');
-    expect(c.textContent).toContain('На проверке');
+    expect(c.getAttribute('title')).toBe('На проверке');
   });
 
   it('приложение циклов по видам не дало — как раньше, общий словарь', () => {
