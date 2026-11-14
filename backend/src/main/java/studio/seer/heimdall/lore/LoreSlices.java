@@ -1061,7 +1061,10 @@ public final class LoreSlices {
             ROLE_HOLDERS + ", task_type, " +
             // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
             "actual_days, bookkeeping, " +
-            "work_class, out('REALIZES').uc_id AS realizes_uc " +
+            "work_class, out('REALIZES').uc_id AS realizes_uc, " +
+            // PU-23 (14.11.2026): колонка «Изменено» во вложенной таблице задач спринта —
+            // свежесть та же, что у open_tasks/closed_tasks (S4-04).
+            changedAtSql(FIRST_STATE_FROM_SQL) + " " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
