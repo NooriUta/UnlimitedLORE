@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WK-05 · единый workflow и «сделано» с доказательством — прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<style>
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bd:#42382a;--bdh:#5a4c38;--t1:#ede5d0;--t2:#a6997f;--t3:#7a6f5c;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--dng:#cf6c5e;--inf:#88b8a8;
+--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--fs-2xl:24px;--r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px;
+--font:Manrope,system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--display:Unbounded,var(--font)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--font);font-size:var(--fs-base);line-height:1.45}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 16px 60px}
+h1{font-family:var(--display);font-weight:800;font-size:var(--fs-xl);margin:0 0 4px}
+h2{font-family:var(--display);font-weight:800;font-size:var(--fs-lg);margin:28px 0 6px;text-transform:uppercase;letter-spacing:.02em}
+h3{font-size:var(--fs-md);margin:14px 0 6px}
+p{margin:6px 0}
+.note{color:var(--t2);font-size:var(--fs-sm)}
+code,.mono{font-family:var(--mono)}
+a{color:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border:1px solid var(--bd);border-radius:var(--r-pill);font-size:var(--fs-sm);color:var(--t2);background:var(--bg1)}
+.chip.dash{border-style:dashed}
+.box{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);padding:10px 12px}
+.ask{border-left:2px solid var(--acc);padding:6px 10px;margin:10px 0;background:var(--bg1);border-radius:0 var(--r-sm) var(--r-sm) 0}
+.warnbox{border-left:2px solid var(--wrn)}
+.dngbox{border-left:2px solid var(--dng)}
+/* статусы */
+.st{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border:1px solid currentColor;border-radius:var(--r-pill);font:600 var(--fs-xs)/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;background:transparent}
+.st iconify-icon{font-size:var(--fs-md)}
+.st.planned{color:var(--t2)}.st.active{color:var(--acc)}.st.waiting{color:var(--inf)}.st.review{color:var(--wrn)}
+.st.done{color:var(--suc)}.st.failed{color:var(--dng)}.st.blocked{color:var(--dng);border-style:dashed}.st.cancelled{color:var(--t3);text-decoration:line-through}
+.stage{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:var(--r-pill);background:var(--bg2);color:var(--t2);font:var(--fs-2xs)/1 var(--mono);letter-spacing:.04em}
+.grid8{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
+.card8{border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg1);padding:8px 10px}
+.card8 .what{margin-top:6px;color:var(--t1)}
+.card8 .was{margin-top:4px;color:var(--t3);font:var(--fs-2xs)/1.4 var(--mono)}
+.card8.new{border-color:var(--inf)}
+.badge-new{color:var(--inf);font:700 var(--fs-2xs)/1 var(--mono);margin-left:4px}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left;vertical-align:top}
+th{color:var(--t2);text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.06em;font-weight:700}
+.tbl{overflow-x:auto}
+.mmd{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg2);padding:8px;margin-top:8px}
+/* примеры */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.tab{cursor:pointer;border:1px solid var(--bd);background:var(--bg1);color:var(--t2);border-radius:var(--r-pill);padding:4px 10px;font:600 var(--fs-sm)/1.2 var(--font);display:inline-flex;gap:6px;align-items:center}
+.tab[aria-selected="true"]{border-color:var(--acc);color:var(--t1);background:var(--bg2)}
+.tab .k{font:var(--fs-2xs)/1 var(--mono);color:var(--t3);text-transform:uppercase}
+.pp{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px}
+.pp-head{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);padding:12px}
+.pp-code{font:600 var(--fs-sm)/1 var(--mono);color:var(--acc)}
+.pp-title{font-size:var(--fs-lg);font-weight:700;margin:6px 0 8px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:var(--fs-sm);margin-top:8px}
+.facts dt{color:var(--t3);text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.06em;padding-top:2px}
+.facts dd{margin:0}
+.sec{margin-top:12px;border-top:1px solid var(--bd);padding-top:10px}
+.sec-t{color:var(--t2);text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.08em;font-weight:700;margin-bottom:6px;display:flex;gap:6px;align-items:center}
+.ev{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg2);margin-bottom:6px}
+.ev iconify-icon{font-size:var(--fs-lg);color:var(--suc);flex:0 0 auto;margin-top:1px}
+.ev .k{font:var(--fs-2xs)/1 var(--mono);color:var(--t3);text-transform:uppercase}
+.ev.missing{border-style:dashed}
+.ev.missing iconify-icon{color:var(--wrn)}
+.ev.bad iconify-icon{color:var(--dng)}
+.flag{display:flex;gap:6px;align-items:flex-start;padding:6px 8px;border-radius:var(--r-md);background:var(--bg2);border-left:2px solid var(--wrn);margin-bottom:6px;font-size:var(--fs-sm)}
+.flag.dng{border-left-color:var(--dng)}
+.moves{display:flex;flex-wrap:wrap;gap:6px}
+.mv{cursor:pointer;border-radius:var(--r-pill);background:var(--bg2)}
+.mv:hover{background:var(--bg0)}
+.mv[disabled]{opacity:.35;cursor:not-allowed}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:4px 0;border-bottom:1px dashed var(--bd);font-size:var(--fs-sm)}
+.hist .d{font:var(--fs-2xs)/1.6 var(--mono);color:var(--t3)}
+/* окно смены статуса */
+.dlg{border:1px solid var(--bdh);border-radius:var(--r-lg);background:var(--bg1);padding:12px;position:sticky;top:10px}
+.dlg h4{margin:0 0 6px;font-size:var(--fs-md);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dlg label{display:block;color:var(--t2);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;margin:8px 0 3px}
+.dlg select,.dlg input,.dlg textarea{width:100%;background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:var(--r-md);padding:6px 8px;font:var(--fs-base)/1.4 var(--font)}
+.dlg textarea{min-height:56px;resize:vertical}
+.role{display:flex;gap:6px;margin-top:4px}
+.role button{flex:1}
+.btn{cursor:pointer;border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:var(--r-md);padding:6px 10px;font:600 var(--fs-sm)/1.2 var(--font)}
+.btn.pri{border-color:var(--acc);color:var(--acc)}
+.btn.on{border-color:var(--acc);background:var(--bg0)}
+.resp{margin-top:10px;font:var(--fs-sm)/1.5 var(--mono);padding:8px;border-radius:var(--r-md);background:var(--bg0);border:1px solid var(--bd);white-space:pre-wrap;word-break:break-word}
+.resp.ok{border-color:var(--suc);color:var(--suc)}
+.resp.no{border-color:var(--dng);color:var(--dng)}
+.empty{color:var(--t3);font-size:var(--fs-sm)}
+@media (max-width:760px){.grid8{grid-template-columns:repeat(2,minmax(0,1fr))}.pp{grid-template-columns:1fr}.dlg{position:static}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Единый workflow для любой работы</h1>
+<p class="note">SPRINT_LORE_WORK_ANY_KIND/WK-05 · правила decision:D-2026-LORE-UNIFIED-WORKFLOW-CORE и decision:D-2026-LORE-DONE-NEEDS-EVIDENCE · спека spec:SPEC-LORE-WORK-ANY-KIND · ADR-LORE-044</p>
+<div class="chips">
+  <span class="chip dash">□ только прототип — в приложении ничего не меняется</span>
+  <span class="chip">примеры — живые задачи LORE на 14.11.2026</span>
+  <span class="chip">тёмная amber Seiðr · токены</span>
+</div>
+
+<div class="ask"><b>Что на утверждение.</b> Восемь статусов ядра и переходы между ними; доказательство «сделано» для каждого вида работы; как статус, стадия и доказательство выглядят в паспорте задачи и в окне смены статуса. Отдельно — четыре развилки в конце страницы: спека их не решает.</div>
+
+<h2>1 · Восемь статусов ядра</h2>
+<p class="note">Один словарь для спринтов и задач всех продуктов. Старые значения остаются синонимами, поэтому мигрировать данные не нужно (строка «было» на карточке).</p>
+<div class="grid8" id="core"></div>
+
+<div class="ask warnbox"><b>waiting ≠ blocked.</b> При waiting своя часть сделана, ход за внешней стороной. При blocked двигаться не можем мы сами.<br><b>failed ≠ cancelled.</b> failed — известный отрицательный исход (отказали, проиграли, просрочили), он нужен в воронке. cancelled — решили не делать.</div>
+
+<h3>Переходы</h3>
+<div class="mmd"><pre class="mermaid">
+---
+config:
+  layout: elk
+---
+flowchart TB
+  P(["planned · решено делать"]) --> A["active · идёт работа"]
+  A -- "своя часть сделана" --> W["waiting · ждём ответа"]
+  W -- "пришёл ответ" --> A
+  A -- "на приёмку" --> R["review · на приёмке"]
+  W -- "ответ = результат" --> R
+  R -- "доказательство + приёмщик ≠ исполнитель" --> D(["done · положительный исход"])
+  R -- "вернули" --> A
+  W -- "отказ / проигрыш" --> F(["failed · отрицательный исход"])
+  A -- "просрочен регламент" --> F
+  A <-- "причина у нас" --> B["blocked · не можем двигаться"]
+  P --> C(["cancelled · решили не делать"])
+  A --> C
+  classDef ok fill:#1f2a1c,stroke:#7dbf78,color:#ede5d0
+  classDef bad fill:#2d1a17,stroke:#cf6c5e,color:#ede5d0
+  classDef wait fill:#17242a,stroke:#88b8a8,color:#ede5d0
+  classDef rev fill:#2b2112,stroke:#d4922a,color:#ede5d0
+  class D ok
+  class F,B bad
+  class W wait
+  class R rev
+</pre></div>
+<p class="note">done ставится только из review. Прямого перехода active → done нет: «сделано» без приёмки и есть то, что 4–5 ноября дало 45 закрытий за два дня.</p>
+
+<h2>2 · Что считается доказательством</h2>
+<p class="note">Вид работы берётся из типа задачи и типа продукта; поле <code>workflow</code> спринта его переопределяет. Вид задаёт стадии внутри active/waiting и тип доказательства done.</p>
+<div class="tbl"><table>
+<thead><tr><th>вид работы</th><th>типы задач</th><th>стадии (<code>stage</code>)</th><th>доказательство done (<code>evidence</code>)</th><th>failed</th></tr></thead>
+<tbody id="kinds"></tbody>
+</table></div>
+<p class="note">Строки с пометкой <span class="badge-new">ПРЕДЛОЖЕНИЕ</span> в спеке отсутствуют — см. развилку Б.</p>
+
+<h2>3 · Паспорт задачи и смена статуса</h2>
+<p class="note">Выберите пример. Слева — паспорт, справа — окно смены статуса: нажмите статус в блоке «Можно перевести в». Роль «агент / человек» переключает, кто нажимает. Агент не ставит done никогда (правило владелицы 13.11.2026).</p>
+<div class="tabs" id="tabs" role="tablist"></div>
+<div class="pp">
+  <div class="pp-head" id="pp"></div>
+  <div class="dlg" id="dlg"></div>
+</div>
+
+<h2>4 · Развилки — нужен ответ владелицы</h2>
+<div class="ask"><b>А. Где живёт UAT.</b> Спека знает восемь статусов; правило 13.11 добавило путь ready_for_deploy → агент проверяет на стенде → uat → done только человеком. Предложение: uat — <i>стадия</i> внутри review (<span class="stage">stand_check</span> → <span class="stage">uat</span>), а не девятый статус. Ядро остаётся восьмёркой, а приёмка человеком видна стадией.</div>
+<div class="ask"><b>Б. Два вида работы, которых нет в спеке.</b> В LORE есть задачи <code>ops</code> и <code>research/analytics</code> (PL-14, RM-A4). Предложение: <b>ops</b> — доказательство «замер после правки» (прогоны, лог, проба) плюс PR, если менялся код; <b>исследование</b> — запись LORE с выводом (док, спека или решение), а не файл в рабочем дереве.</div>
+<div class="ask"><b>В. Доказательство на уровне задачи или спринта.</b> Спека вешает <code>evidence</code> на оба. Предложение: у задачи — обязательно; у спринта — производное: сколько done задач его подтверждено (как «готово x/y»), своего поля нет.</div>
+<div class="ask"><b>Г. Старые done без доказательства.</b> Таких done в корпусе сотни, RM-A4 из примеров — один из них. Предложение: задним числом не перекрашивать; в аналитике скорости и портфеля помечать «без доказательства» и считать отдельно. Разметку решаете вы (как MT-02).</div>
+
+</div>
+
+<script>
+const CORE = [
+  {k:'planned', ic:'game-icons:notebook', what:'Решено делать, не начато', was:'todo · backlog · planned · design'},
+  {k:'active', ic:'game-icons:gears', what:'Идёт работа', was:'in_progress · partial'},
+  {k:'waiting', ic:'game-icons:hourglass', what:'Своё сделали, ход за внешней стороной', was:'— новое', nw:1},
+  {k:'review', ic:'game-icons:magnifying-glass', what:'Исполнитель считает сделанным, идёт приёмка', was:'ready_for_deploy · uat'},
+  {k:'done', ic:'game-icons:check-mark', what:'Положительный исход: доказательство + приёмщик ≠ исполнитель', was:'done'},
+  {k:'failed', ic:'game-icons:cancel', what:'Отрицательный исход: отказали, проиграли, просрочили', was:'— новое', nw:1},
+  {k:'blocked', ic:'game-icons:stop-sign', what:'Не можем двигаться: причина у нас или в зависимости', was:'blocked'},
+  {k:'cancelled', ic:'game-icons:trash-can', what:'Решили не делать', was:'cancelled'},
+];
+const ICON = Object.fromEntries(CORE.map(c => [c.k, c.ic]));
+const st = k => `<span class="st ${k}"><iconify-icon icon="${ICON[k]}"></iconify-icon>${k}</span>`;
+document.getElementById('core').innerHTML = CORE.map(c =>
+  `<div class="card8${c.nw ? ' new' : ''}">${st(c.k)}${c.nw ? '<span class="badge-new">НОВОЕ</span>' : ''}<div class="what">${c.what}</div><div class="was">было: ${c.was}</div></div>`).join('');
+
+const KINDS = {
+  dev:      {name:'разработка', types:'dev · test · design', stages:['design','implement','test'], review:['stand_check','uat'], ev:[['pr','PR (влит)'],['release','релиз']], failed:'—', ic:'game-icons:anvil'},
+  doc:      {name:'документ', types:'docs', stages:['draft','review_text'], review:['owner_read'], ev:[['lore','запись LORE: спека, док, runbook, ADR']], failed:'—', ic:'game-icons:scroll-unfurled', proposal:1},
+  ops:      {name:'ops / инфраструктура', types:'ops', stages:['diagnose','fix','measure'], review:['stand_check'], ev:[['probe','замер после правки: прогоны, лог, проба'],['pr','PR, если менялся код']], failed:'—', ic:'game-icons:spanner', proposal:1},
+  research: {name:'исследование', types:'research · analytics', stages:['collect','analyse','write'], review:['owner_read'], ev:[['lore','запись LORE с выводом: док, спека или решение']], failed:'—', ic:'game-icons:spell-book', proposal:1},
+  external: {name:'внешнее решение', types:'legal', stages:['preparing','submitted','under_review'], review:['decision_in'], ev:[['doc','документ, номер заявки или решения']], failed:'отказ', ic:'game-icons:stamper'},
+  funnel:   {name:'воронка', types:'sales · hiring · CFP', stages:['lead','contacted','meeting','pilot'], review:['answer_in'], ev:[['doc','LOI, договор, оффер принят, доклад принят']], failed:'проиграли, отказ', ic:'game-icons:funnel'},
+  routine:  {name:'регламент', types:'finance · support', stages:['period_open','reconciling'], review:['report'], ev:[['doc','закрытый период + отчёт']], failed:'просрочен', ic:'game-icons:calendar'},
+  content:  {name:'контент', types:'content', stages:['draft','ready','scheduled'], review:['scheduled'], ev:[['url','URL публикации']], failed:'—', ic:'game-icons:quill-ink'},
+  hardware: {name:'железо', types:'procurement', stages:['prototype','testing','waiting_supplier'], review:['protocol'], ev:[['doc','протокол испытаний, сертификат']], failed:'не прошло испытания', ic:'game-icons:circuitry'},
+};
+document.getElementById('kinds').innerHTML = Object.values(KINDS).map(k =>
+  `<tr><td><b>${k.name}</b>${k.proposal ? ' <span class="badge-new">ПРЕДЛОЖЕНИЕ</span>' : ''}</td><td class="mono">${k.types}</td><td>${k.stages.map(s => `<span class="stage">${s}</span>`).join(' ')}</td><td>${k.ev.map(e => e[1]).join('; ')}</td><td>${k.failed}</td></tr>`).join('');
+
+const EV_ICON = {pr:'game-icons:split-arrows', release:'game-icons:rocket', lore:'game-icons:spell-book', probe:'game-icons:histogram', doc:'game-icons:stamper', url:'game-icons:world'};
+const EV_NAME = {pr:'PR', release:'релиз', lore:'запись LORE', probe:'замер', doc:'документ', url:'URL'};
+
+// Живые задачи LORE на 14.11.2026. «В LORE сейчас» — status_raw как есть; «в ядре» — по таблице синонимов.
+const EX = [
+  {id:'s905', tab:'код', uid:'SPRINT_UXR_S9_SCALE_OPT/S9-05', title:'Паспорта родителей по шаблону «шапка + таблица детей»: веха, компонент, человек, агент',
+   kind:'dev', raw:'🟡 PARTIAL', core:'active', stage:'implement', exec:'Claude Code (full)', rev:'omiloreadmin',
+   evidence:[{t:'pr', v:'PR #1337 · merge 09bea73a', note:'часть A: паспорта человека и агента'}],
+   flags:[{c:'', t:'Доказательство есть только у части A. Часть B (веха, компонент) не начата, поэтому задача в active, а не в review: PR ≠ «вся задача сделана».'}],
+   hist:[['13.11','active · implement','часть A сделана, ветка без PR (запрет CI)'],['13.11','active · implement','PR #1337 влит, CI зелёный после правки стыков']]},
+  {id:'pl14', tab:'ops', uid:'SPRINT_LORE_PIPELINE_HOST/PL-14', title:'Бэкенд-CI: Java OOM в тестовой JVM — джобы висят 30–60 мин и падают',
+   kind:'ops', raw:'🚀 READY FOR DEPLOY', core:'review', stage:'stand_check', exec:'Claude Code (full)', rev:'omiloreadmin',
+   evidence:[{t:'pr', v:'PR #1333 · fix/pl-14-httpclient-close', note:'закрытие HTTP-клиентов на остановке Quarkus'},{t:'probe', v:'10 из 10 полных прогонов бэкенд-CI без OOM', note:'коммиты «ci: прогон N/10» в ветке PR'}],
+   flags:[],
+   hist:[['12.11','active · diagnose','heap тестов не задан + HttpClient на каждый вызов'],['13.11','active · measure','счёт прогонов «без OOM» 1/10 … 10/10'],['13.11','review · stand_check','READY FOR DEPLOY']]},
+  {id:'rmd1', tab:'документ', uid:'SPRINT_LORE_ROADMAP_PER_PROJECT/RM-D1', title:'Документация: спека модели плана + runbook «как завести карту продукта»',
+   kind:'doc', raw:'✅ DONE', core:'done', stage:null, exec:'Claude Code (full)', rev:'omiloreadmin',
+   evidence:[{t:'lore', v:'spec:SPEC-LORE-PLAN-MODEL', note:'спека модели плана'},{t:'lore', v:'runbook «завести дорожную карту продукта»', note:'runbook в LORE'}],
+   flags:[],
+   hist:[['06.11','active','спека через spec_set, runbook'],['06.11','done','приёмщик omiloreadmin ≠ исполнитель']]},
+  {id:'rma4', tab:'исследование', uid:'SPRINT_LORE_ROADMAP_PER_PROJECT/RM-A4', title:'Аналитика: многофакторный разбор вех, продуктов и связей компонентов (06.11.2026) + предложение переразбиения',
+   kind:'research', raw:'✅ DONE', core:'done', stage:null, exec:'Claude Code (analyst)', rev:null,
+   evidence:[{t:'lore', v:'не привязано', note:'отчёт лежит файлом в рабочем дереве (docs/reports/lore-milestones-analysis-2026-11-06*.html), записи LORE нет', missing:1}],
+   flags:[{c:'dng', t:'По новым правилам этот done не прошёл бы гейт: приёмщика нет (reviewer_agent пуст) и доказательство не привязано. Сейчас он считается в скорости наравне с остальными.'}],
+   hist:[['06.11','active · analyse','разбор вех и продуктов'],['06.11','done','без приёмщика']]},
+  {id:'cfp', tab:'вне ИТ', uid:'SPRINT_CFP_SUB', title:'Подача на CFP (спринт; задач в нём нет)', sprint:1,
+   kind:'funnel', raw:'📋 PLANNED · «deadline 29.05 ПРОШЁЛ»', core:'planned', stage:null, exec:'—', rev:'omiloreadmin',
+   evidence:[],
+   flags:[{c:'', t:'Дедлайн прошёл полгода назад, а статус — planned: в нынешнем словаре нет ни «ждём ответа», ни «отказали». Исход (подавались ли, приняли ли) знает только владелица — прототип его не выдумывает.'}],
+   hist:[['—','planned','статус не менялся с заведения']]},
+];
+
+const MOVES = {planned:['active','cancelled'], active:['waiting','review','blocked','failed','cancelled'], waiting:['active','review','failed'], review:['done','active'], blocked:['active'], done:[], failed:[], cancelled:[]};
+
+let cur = EX[0], role = 'agent', target = null;
+const tabs = document.getElementById('tabs');
+tabs.innerHTML = EX.map(e => `<button class="tab" role="tab" data-id="${e.id}"><iconify-icon icon="${KINDS[e.kind].ic}"></iconify-icon>${e.tab}<span class="k">${KINDS[e.kind].name}</span></button>`).join('');
+tabs.addEventListener('click', ev => { const b = ev.target.closest('.tab'); if (!b) return; pick(b.dataset.id); });
+
+function pick(id){
+  cur = EX.find(e => e.id === id); target = null;
+  history.replaceState(null, '', '#' + id);
+  [...tabs.children].forEach(b => b.setAttribute('aria-selected', String(b.dataset.id === id)));
+  renderPassport(); renderDialog();
+}
+
+function renderPassport(){
+  const k = KINDS[cur.kind], e = cur;
+  const evHtml = e.evidence.length ? e.evidence.map(x =>
+    `<div class="ev${x.missing ? ' missing' : ''}"><iconify-icon icon="${x.missing ? 'game-icons:help' : EV_ICON[x.t]}"></iconify-icon><div><div class="k">${EV_NAME[x.t]}</div><div>${x.v}</div><div class="note">${x.note}</div></div></div>`).join('')
+    : `<div class="empty">Доказательств нет. Для done нужно: ${k.ev.map(x => x[1]).join('; ')}.</div>`;
+  const moves = MOVES[e.core];
+  document.getElementById('pp').innerHTML = `
+    <div class="pp-code">${e.uid}</div>
+    <div class="pp-title">${e.title}</div>
+    <div class="chips">${st(e.core)}${e.stage ? `<span class="stage">${e.stage}</span>` : ''}<span class="chip"><iconify-icon icon="${k.ic}"></iconify-icon>${k.name}</span></div>
+    <dl class="facts">
+      <dt>в LORE сейчас</dt><dd class="mono">${e.raw}</dd>
+      <dt>исполнитель</dt><dd>${e.exec}</dd>
+      <dt>приёмщик</dt><dd>${e.rev ?? '<span style="color:var(--dng)">не задан</span>'}</dd>
+      <dt>done требует</dt><dd>${k.ev.map(x => x[1]).join('; ')}</dd>
+    </dl>
+    ${e.flags.map(f => `<div class="flag ${f.c}" style="margin-top:8px"><iconify-icon icon="game-icons:${f.c ? 'hazard-sign' : 'info'}"></iconify-icon><span>${f.t}</span></div>`).join('')}
+    <div class="sec"><div class="sec-t"><iconify-icon icon="game-icons:checklist"></iconify-icon>Доказательство</div>${evHtml}</div>
+    <div class="sec"><div class="sec-t">Можно перевести в</div>
+      <div class="moves">${moves.length ? moves.map(m => `<button class="st ${m} mv" data-to="${m}"><iconify-icon icon="${ICON[m]}"></iconify-icon>${m}</button>`).join('') : '<span class="empty">Конечный статус: переходов нет. Вернуть — только через «вернуть в работу» у человека с правом приёмки.</span>'}</div>
+      ${e.core === 'done' ? '<div style="margin-top:8px"><button class="btn" id="regate">Проверить этот done новым гейтом</button></div>' : ''}</div>
+    <div class="sec"><div class="sec-t">История</div><ul class="hist">${e.hist.map(h => `<li><span class="d">${h[0]}</span><span><b>${h[1]}</b> — ${h[2]}</span></li>`).join('')}</ul></div>`;
+  document.querySelectorAll('#pp .mv').forEach(b => b.addEventListener('click', () => { target = b.dataset.to; renderDialog(); }));
+  // Старый done прогоняется через гейт так, будто его ставят сейчас: человеком, с тем, что привязано.
+  document.getElementById('regate')?.addEventListener('click', () => { target = 'done'; role = 'human'; renderDialog(); submit(); });
+}
+
+function renderDialog(){
+  const d = document.getElementById('dlg'), k = KINDS[cur.kind];
+  const roleBar = `<label>Кто нажимает</label><div class="role"><button class="btn ${role === 'agent' ? 'on' : ''}" data-r="agent">агент</button><button class="btn ${role === 'human' ? 'on' : ''}" data-r="human">человек (${cur.rev ?? 'приёмщик'})</button></div>`;
+  if (!target){
+    d.innerHTML = `<h4>Смена статуса</h4><div class="empty">Нажмите статус в блоке «Можно перевести в» слева.</div>${roleBar}`;
+  } else {
+    let form = '';
+    if (target === 'done'){
+      form = `<label>Тип доказательства (по виду «${k.name}»)</label>
+        <select id="evt">${k.ev.map(x => `<option value="${x[0]}">${x[1]}</option>`).join('')}</select>
+        <label>Ссылка или номер</label><input id="evv" placeholder="PR #…, spec:…, URL, номер решения" value="${cur.evidence.filter(x => !x.missing).map(x => x.v)[0] ?? ''}">`;
+    } else if (target === 'waiting'){
+      form = `<label>Кого ждём</label><input id="who" placeholder="организатор CFP, поставщик, ФНС…">
+        <label>Ждём до</label><input id="until" type="date">
+        <div class="note" style="margin-top:6px">Через 30 дней без ответа задача попадёт в ежемесячную проверку «waiting 30+».</div>`;
+    } else if (target === 'failed'){
+      form = `<label>Что произошло</label><select id="why"><option>отказали</option><option>проиграли</option><option>просрочен регламент</option><option>не прошло испытания</option></select>
+        <label>Подтверждение (письмо, решение, ссылка)</label><input id="evv" placeholder="необязательно, но лучше есть">`;
+    } else if (target === 'blocked'){
+      form = `<label>Почему (обязательно)</label><textarea id="why" placeholder="зависимость, решение, доступ…"></textarea>`;
+    } else if (target === 'review'){
+      form = `<label>Стадия приёмки</label><select id="stg">${k.review.map(s => `<option>${s}</option>`).join('')}</select>
+        <div class="note" style="margin-top:6px">Доказательство можно приложить уже здесь — приёмщику не придётся его искать.</div>`;
+    } else if (target === 'active' && cur.core === 'review'){
+      form = `<label>Что вернуть (обязательно)</label><textarea id="why" placeholder="что не так при приёмке"></textarea>`;
+    } else if (target === 'active' || target === 'cancelled'){
+      form = `<label>Комментарий</label><input id="why" placeholder="необязательно">`;
+    }
+    const head = cur.core === 'done' ? `Гейт ${st('done')} задним числом` : `${st(cur.core)} → ${st(target)}`;
+    d.innerHTML = `<h4>${head}</h4>${roleBar}${form}
+      <div style="margin-top:10px"><button class="btn pri" id="go">Перевести</button></div><div id="resp"></div>`;
+    d.querySelector('#go').addEventListener('click', submit);
+  }
+  d.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => { role = b.dataset.r; renderDialog(); }));
+}
+
+// Ответ сервера — как его предлагается формулировать: отказ называет причину и путь, а не молчит.
+function submit(){
+  const r = document.getElementById('resp'), val = id => (document.getElementById(id)?.value ?? '').trim();
+  const no = t => { r.className = 'resp no'; r.textContent = t; };
+  const ok = t => { r.className = 'resp ok'; r.textContent = t; };
+  if (target === 'done'){
+    if (role === 'agent') return no('409 DONE_BY_HUMAN_ONLY\nАгент не ставит done. Переведите в review со стадией приёмки — done ставит человек-приёмщик (правило 13.11.2026).');
+    if (!cur.rev) return no('409 NO_REVIEWER\nУ задачи нет приёмщика. done требует приёмщика, отличного от исполнителя (ADR-LORE-014 §4). Назначьте reviewer_agent.');
+    if (cur.rev === cur.exec) return no('409 REVIEWER_IS_EXECUTOR\nПриёмщик совпадает с исполнителем.');
+    if (!val('evv')) return no(`409 NO_EVIDENCE\nДля вида «${KINDS[cur.kind].name}» done требует: ${KINDS[cur.kind].ev.map(x => x[1]).join('; ')}.\nПриложите ссылку — запись не сделана.`);
+    return ok(`200 · done\nдоказательство: ${EV_NAME[val('evt')] ?? val('evt')} — ${val('evv')}\nприёмщик: ${cur.rev}\nзадача войдёт в скорость и портфель.`);
+  }
+  if (target === 'blocked' && !val('why')) return no('400 REASON_REQUIRED\nУ blocked обязательна причина: без неё блокировку не отличить от забытой задачи.');
+  if (target === 'active' && cur.core === 'review' && !val('why')) return no('400 REASON_REQUIRED\nВозврат с приёмки — с причиной: исполнитель должен знать, что переделать.');
+  if (target === 'waiting' && !val('who')) return no('400 WAITING_FOR_REQUIRED\nУкажите, чьего ответа ждём: waiting без адресата не отличить от blocked.');
+  return ok(`200 · ${target}${val('stg') ? ' · ' + val('stg') : ''}${val('why') ? '\n' + val('why') : ''}`);
+}
+
+pick((location.hash.slice(1) && EX.some(e => e.id === location.hash.slice(1))) ? location.hash.slice(1) : EX[0].id);
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.7/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+mermaid.initialize({ startOnLoad: false, theme: 'dark', flowchart: { useMaxWidth: false },
+  themeVariables: { fontFamily: 'Manrope, sans-serif', fontSize: '13px' } });
+await mermaid.run({ querySelector: '.mermaid' });
+document.body.dataset.mermaid = 'done';
+</script>
+</body>
+</html>
