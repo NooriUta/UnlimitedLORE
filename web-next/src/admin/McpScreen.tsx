@@ -63,7 +63,7 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
             {t('admin.mcp.failError', { reason: data.failError })}
           </p>
         )}
-        {data.rosterError !== null && (
+        {data.rosterError != null && (
           <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-mcp-roster-error">
             {t('admin.mcp.rosterError', { reason: data.rosterError })}
           </p>

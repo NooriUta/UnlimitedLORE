@@ -41,7 +41,7 @@ export interface McpData {
    * S7B-07: реестр профилей (agent_role агентов, срез agent_owners) не прочитался — текст
    * причины. Тогда видны только профили, которые звали или падали; про остальные «не смогли».
    */
-  rosterError: string | null;
+  rosterError?: string | null;
   truncated: boolean;
 }
 
