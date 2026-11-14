@@ -487,9 +487,10 @@ function StatusCell({ code, kind, labels }: { code: string; kind?: string; label
   const s = labels.statusOf(code, kind);
   const style = { '--st-c': s?.color ?? 'var(--t3)' } as CSSProperties;
   return (
-    <span className={`sk-list__status${s ? '' : ' is-unknown'}`} style={style} data-status={code}>
+    // Владелица 14.11.2026: «статус везде иконкой, без подписи — название во всплывающей подсказке».
+    <span className={`sk-list__status${s ? '' : ' is-unknown'}`} style={style} data-status={code}
+      title={s?.title ?? labels.valueTitle('status', code)} aria-label={s?.title ?? labels.valueTitle('status', code)} role="img">
       <GameIcon slug={s?.icon ?? 'help'} size={14} />
-      <span>{s?.title ?? labels.valueTitle('status', code)}</span>
     </span>
   );
 }
@@ -740,6 +741,7 @@ export function ListView({
   // реестра в тысячу строк.
   const freshNow = useMinuteNow(columns.some(c0 => c0.startsWith('fresh:')));
 
+  const headSortKeys = sortKeysOf(config);
   const update = (patch: Partial<ListState>) => {
     if (patch.view !== undefined) setViewPicked(true);
     if (stateProp) {
@@ -1570,7 +1572,12 @@ export function ListView({
       case 'select': return checkbox(r);
       case 'title+id': return <><Title r={r} href={href} onOpen={onOpen} /> <Pill variant="id">{r.id}</Pill></>;
       case 'title': return <Title r={r} href={href} onOpen={onOpen} />;
-      case 'id': return <Pill variant="id">{r.id}</Pill>;
+      // Владелица 14.11.2026: «щелчок по коду тоже открывает паспорт» — код ведёт туда же, куда название.
+      case 'id': return href
+        ? <a className="sk-list__idlink" href={href(r.id)} onClick={onOpen ? () => onOpen(r.id) : undefined}><Pill variant="id">{r.id}</Pill></a>
+        : onOpen
+          ? <button type="button" className="sk-list__idlink" onClick={() => onOpen(r.id)}><Pill variant="id">{r.id}</Pill></button>
+          : <Pill variant="id">{r.id}</Pill>;
       case 'status': return <StatusCell code={r.status} kind={r.kind} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;
@@ -2258,15 +2265,29 @@ export function ListView({
               {expand && <th scope="col" className="sk-list__th sk-list__xcell"><span className="sk-sr">{t('kit.list.col.expand')}</span></th>}
               {columns.map(c => {
                 const head = colTitle(c);
+                // Владелица 14.11.2026: «щелчок на колонке — переключение сортировки по этой колонке»:
+                // по возрастанию → по убыванию → без сортировки. Только у колонок, по которым сортируют.
+                const sortable = headSortKeys.includes(c);
+                const dir = state.sort?.key === c ? state.sort.dir : null;
+                const cycle = () => update({ sort: dir === null ? { key: c, dir: 'asc' } : dir === 'asc' ? { key: c, dir: 'desc' } : null });
                 return (
                 <th
                   key={c}
                   scope="col"
-                  className={`sk-list__th ${colAttrs(c).className}`}
+                  aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : undefined}
+                  className={`sk-list__th ${colAttrs(c).className}${sortable ? ' sk-list__th--sort' : ''}`}
+                  {...(sortable ? {
+                    tabIndex: 0,
+                    title: t(dir === 'asc' ? 'kit.list.sortHeadDesc' : dir === 'desc' ? 'kit.list.sortHeadOff' : 'kit.list.sortHeadAsc'),
+                    // Ручка ширины внутри заголовка сортировку не переключает.
+                    onClick: (e: ReactMouseEvent) => { if (!(e.target as HTMLElement).closest('.sk-list__grip')) cycle(); },
+                    onKeyDown: (e: ReactKeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycle(); } },
+                  } : {})}
                   data-w={colAttrs(c)['data-w']}
                   style={appliedW[c] === undefined ? undefined : { width: `${appliedW[c]}px` }}
                 >
                   {head}
+                  {dir && <span className="sk-list__sortmark" aria-hidden="true">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
                   {widths && !widths.narrow && (
                     // Ручка — только когда ширинами управляют: иначе это
                     // украшение, которое ничего не делает.
