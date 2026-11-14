@@ -2,6 +2,7 @@ package studio.seer.heimdall.lore;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
@@ -20,6 +21,22 @@ import static org.hamcrest.Matchers.startsWith;
 @QuarkusTestResource(value = LoreArcadeDbTestResource.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class NewsReadMarkLiveDbTest {
+
+    /** Встроенная тест-база шаги миграций не накатывает — тип заводится тем же DDL, что у шага V70. */
+    @BeforeEach
+    void schema() throws Exception {
+        for (String ddl : LoreNewsReadMarkStore.SCHEMA_SQL) {
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(
+                    LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))
+                .header("Content-Type", "application/json; charset=utf-8")
+                .header("Authorization", "Basic " + java.util.Base64.getEncoder().encodeToString(
+                    ("root:" + LoreArcadeDbTestResource.ROOT_PASSWORD).getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(
+                    io.vertx.core.json.JsonObject.of("language", "sql", "command", ddl).encode(), java.nio.charset.StandardCharsets.UTF_8))
+                .build();
+            LiveDbHttp.client().send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+        }
+    }
 
     private static void put(String at) {
         given().header("X-Seer-Role", "superadmin").contentType("application/json")
