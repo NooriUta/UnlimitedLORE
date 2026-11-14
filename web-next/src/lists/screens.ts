@@ -11,6 +11,8 @@ import type { LoreClient } from '../sprints/loreClient';
 import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
 import { loadSprintChildren } from '../sprints/sprintChildren';
+import { MILESTONE_TOTALS_FIELDS, loadMilestoneTotals } from '../milestone/milestoneTotals';
+import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -143,8 +145,11 @@ export interface ListNested {
    * нет, в каждом из этих полей стоит «…», то есть «считаем» вместо пустоты.
    */
   lateFields: readonly string[];
-  /** Заплатки полей по id записи: имя поля → значение. */
-  load: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, Record<string, unknown>>>;
+  /**
+   * Заплатки полей по id записи: имя поля → значение. `records` — загруженные
+   * записи списка (PU-27: вехе нужны её спринты из строки, чтобы сложить их итоги).
+   */
+  load: (client: LoreClient, ids: readonly string[], signal: AbortSignal, records?: readonly KitRecord[]) => Promise<Map<string, Record<string, unknown>>>;
   /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
   render: (id: string, client: LoreClient) => ReactNode;
   /**
@@ -167,7 +172,7 @@ const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'mo
 /**
  * Лента разделов (K2-FEED-VIEW): поле сути, повод и нижний уровень — по
  * разделу. Ключ — раздел, у которого у записи ЕСТЬ время (`updated_at` из
- * `changed_at`); вехам и компонентам времени срез не даёт — ленты у них нет, и
+ * `changed_at`); компонентам времени срез не даёт — ленты у них нет, и
  * поле не выдумывается.
  *
  * Имена md-полей — те же, что в строке среза и в `values` паспорта
@@ -202,6 +207,9 @@ export const FEEDS = {
   },
   releases: { lead: ['description_md'], inRow: true },
   tech: { lead: ['content_md'], titles: ['lists.feed.sec.info'], inRow: true },
+  // PU-27: у вехи появилось время (changed_at) — значит и лента, как у прочих разделов со
+  // временем. Цель и решения вехи срез уже везёт строкой (goal_md, decisions_md).
+  milestones: { lead: ['goal_md', 'decisions_md'], titles: ['lists.feed.sec.goal', 'pp.tab.decisions'], inRow: true },
   // «Контекст» первым — как у сервера (LoreBodyHead.SOURCES), владелица 11.11.2026.
   features: { lead: ['context_md', 'body_md'], titles: ['pp.adr.context', 'lists.feed.sec.description'], headInRow: true },
 } as const satisfies Partial<Record<string, FeedSpec>>;
@@ -508,15 +516,22 @@ const questionsSpec: SectionSpec = {
   columns: ['id', 'title', 'status', 'component', 'owner', 'due'],
 };
 
-/** Вехи: СТАТУСА НЕТ — ни колонки, ни фасета статуса (K-14). */
+/**
+ * Вехи: СТАТУСА НЕТ — ни колонки, ни фасета статуса (K-14).
+ *
+ * PU-27: «задачи x/y» по задачам спринтов вехи (как у спринтов, S4-09) и время
+ * правки (`updated_at` из changed_at среза). Своё поле «Продукты» остаётся —
+ * на случай, когда краска продукта не загрузилась; при краске его вытесняет
+ * общая колонка «Продукт» (withProductColumn), иначе выходил дубль.
+ */
 const milestonesSpec: SectionSpec = {
   kind: 'milestone', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
-  fields: [['week', 'number'], ['when', 'text'], ['priority', 'text'], ['products', 'ref'], ['sprints', 'ref']],
+  fields: [['week', 'number'], ['when', 'text'], ['priority', 'text'], ['products', 'ref'], ['sprints', 'ref'], ['tasks', 'number']],
   views: ['list', 'cards'],
   quick: [['critical', 'lists.quick.critical', { priority: 'critical' }], ['no-sprints', 'lists.quick.noSprints', { sprints: '' }]],
   filters: [LORE_FILTER_FIELDS.priority, 'fields.products'],
   groupings: ['fields.products', LORE_FILTER_FIELDS.priority],
-  columns: ['id', 'title', 'when', 'priority', 'products', 'sprints'],
+  columns: ['id', 'title', 'progress:tasks', 'when', 'priority', 'products', 'sprints', 'updated_at'],
 };
 
 /** Релизы: СТАТУСА НЕТ; есть вид (релиз/хотфикс) и признак текущего. */
@@ -774,7 +789,15 @@ export const LIST_SCREENS = {
   },
   milestones: {
     slice: 'milestones', titleKey: 'lists.milestones.title', icon: 'crossed-axes',
-    map: milestoneRecord, config: lang => sectionConfig(lang, milestonesSpec), quickIcons: {},
+    defaultSort: FRESH_FIRST,
+    map: milestoneRecord, config: lang => withFeed(lang, sectionConfig(lang, milestonesSpec), FEEDS.milestones), feed: FEEDS.milestones, quickIcons: {},
+    // PU-27: «задачи x/y» вехи — сумма итогов её спринтов (sprint_totals считает сервер);
+    // в раскрытой строке — сгорание вехи (BURN-DOWN и «Цель к сроку»), тем же кодом, что у спринта.
+    nested: {
+      lateFields: MILESTONE_TOTALS_FIELDS,
+      load: loadMilestoneTotals,
+      render: id => createElement(MilestoneBurnLine, { milestoneId: id }),
+    },
   },
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',
