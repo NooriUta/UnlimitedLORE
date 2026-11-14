@@ -2,8 +2,8 @@
 // Вид и действия — kit ScopePicker (поповер / лист на телефоне); здесь только
 // проводка: список из слайсов LORE (loadProjectScope.ts), честное состояние
 // (useLoadState), выбор — в URL (?proj=a,b), чтобы ссылка открывала тот же срез.
-import { useMemo } from 'react';
-import { ScopePicker, formatScopeParam, parseScopeParam, useLoadState, useUrlParam } from '@seidr/kit';
+import { useMemo, useState } from 'react';
+import { ScopePicker, createSafeStorage, formatScopeParam, parseScopeParam, useLoadState, useUrlParam, type SafeStorage } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import type { SliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
@@ -14,6 +14,13 @@ import type { MineReason, ProjectScopeData } from './loadProjectScope';
 
 /** Параметр URL с выбранными проектами — общий для экранов списков S4. */
 export const PROJECT_SCOPE_PARAM = 'proj';
+
+/** S9-04: недавно выбранные проекты — личное, в хранилище браузера (не в адресе). */
+const RECENT_KEY = 'lore.v2.scope.recent';
+const RECENT_MAX = 5;
+function readRecent(st: SafeStorage): string[] {
+  try { const v = JSON.parse(st.get(RECENT_KEY) ?? '[]') as unknown; return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []; } catch { return []; }
+}
 
 const MINE_HINT: Record<MineReason, AppKey> = {
   'no-user': 'scope.mine.noUser',
@@ -35,6 +42,8 @@ export interface ProjectScopeProps {
   /** Телефон/широкий принудительно; не задан — по ширине экрана. */
   narrow?: boolean;
   onChange?: (projects: string[]) => void;
+  /** Хранилище «Недавних» (тесты); по умолчанию — localStorage с откатом в память. */
+  storage?: SafeStorage;
 }
 
 /** Выбранные проекты из URL — для экранов, которые фильтруют по ним. */
@@ -43,7 +52,9 @@ export function useProjectScope(): string[] {
   return useMemo(() => parseScopeParam(raw), [raw]);
 }
 
-export function ProjectScope({ fetch, sub, me, narrow, onChange }: ProjectScopeProps) {
+export function ProjectScope({ fetch, sub, me, narrow, onChange, storage: storageProp }: ProjectScopeProps) {
+  const storage = useMemo(() => storageProp ?? createSafeStorage(), [storageProp]);
+  const [recent, setRecent] = useState<string[]>(() => readRecent(storage));
   const t = useAppT();
   const doFetch = useMemo(() => fetch ?? sliceFetcher(), [fetch]);
   const result = useLoadState<ProjectScopeData>(
@@ -65,6 +76,13 @@ export function ProjectScope({ fetch, sub, me, narrow, onChange }: ProjectScopeP
       value={value}
       onChange={next => {
         setRaw(formatScopeParam(next));
+        // S9-04: только что добавленные — в начало «Недавних» (без повторов, не больше пяти).
+        const added = next.filter(id => !value.includes(id));
+        if (added.length) {
+          const list = [...added.reverse(), ...recent.filter(id => !added.includes(id))].slice(0, RECENT_MAX);
+          setRecent(list);
+          storage.set(RECENT_KEY, JSON.stringify(list));
+        }
         onChange?.(next);
       }}
       state={result.state}
@@ -78,6 +96,7 @@ export function ProjectScope({ fetch, sub, me, narrow, onChange }: ProjectScopeP
       // список бывает обрезан, и своё могло в него не попасть.
       mineCount={data?.mineCount}
       narrow={narrow}
+      recent={recent}
     />
   );
 }

@@ -402,6 +402,7 @@
   "kit.scope.allN": "Все проекты · {n}",
   "kit.palette.trigger.search": "Поиск…",
   "kit.palette.trigger.commands": "Команды",
+  "kit.scope.recent": "Недавние",
   "kit.scope.mine": "Все мои",
   "kit.scope.mineTag": "мой",
   "kit.scope.summary.mine": "Все мои ({n} своих)",
