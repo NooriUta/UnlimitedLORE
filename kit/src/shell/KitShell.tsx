@@ -859,7 +859,7 @@ function ShellMenu({
                           {title ?? <span className="sk-shell__id">{id}</span>}
                         </span>
                         {title
-                          ? <span className="sk-shell__id">{id}</span>
+                          ? <span className="sk-shell__id" title={id}>{id}</span>
                           : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
                       </a>
                     )
@@ -870,7 +870,7 @@ function ShellMenu({
                           {title ?? <span className="sk-shell__id">{id}</span>}
                         </span>
                         {title
-                          ? <span className="sk-shell__id">{id}</span>
+                          ? <span className="sk-shell__id" title={id}>{id}</span>
                           : <span className="sk-shell__tag">{kitT(lang, 'kit.shell.recentMissing')}</span>}
                       </button>
                     )}
