@@ -228,6 +228,9 @@ services:
       # AL-91: проектный скоуп чтения. По умолчанию выключен; включение — решение
       # владелицы и только когда служебный читатель miniLORE заведён в граф ролей.
       - lore.scope.enforce=${LORE_SCOPE_ENFORCE:-false}
+      # MINI-01: явный список клиентов токена (claim azp), через запятую, «*» на конце — префикс.
+      # Пусто — проверка выключена. Включено только на препроде (lore-cd.yml), прод — решение владелицы.
+      - lore.auth.allowed-clients=${LORE_AUTH_ALLOWED_CLIENTS:-}
       # SELF-PROVISION: на ЧИСТОЙ/внешней БД одного lore.migrate МАЛО. Ядро
       # (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт ТОЛЬКО инициализатор
       # под lore.bootstrap — миграции его не заводят, они добирают продуктовый
