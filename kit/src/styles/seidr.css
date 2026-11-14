@@ -195,16 +195,19 @@
    узкое окно с мышью пальцем не трогают.
    Зона — ::after по центру, max(100%, 44px): крупный элемент не теряет своего,
    мелкий получает 44. :where() — нулевая специфичность, поэтому элемент со
-   своим position (absolute/sticky) его сохраняет. Ссылки — только kit-классов:
-   ссылка в прозе с зоной 44 px ловила бы касания соседних строк текста. */
+   своим position (absolute/sticky) его сохраняет. Ссылки — только с классом
+   (ссылка-элемент: навигация, «вернуться», код записи — kit или приложения;
+   K4-PHONE-TAP-TARGETS: раньше только sk-*, и ссылки приложения оставались
+   по 11–24 px). Голая ссылка в тексте и любая ссылка в MD (.sk-prose,
+   .sk-md__doc, ниже) зоны не получает: она ловила бы касания соседних строк. */
 @media (pointer: coarse) {
   :root {
     --hit: 44px;
   }
-  :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class*='sk-']) {
+  :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class]) {
     position: relative;
   }
-  :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class*='sk-'])::after {
+  :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class])::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -1999,6 +2002,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   .sk-md__live { border-left: none; border-top: 1px solid var(--bd); }
 }
 .sk-md .ProseMirror img { display: block; max-width: 100%; height: auto; margin: 8px 0; border-radius: var(--r-md); }
+/* K4-PHONE-PAGE-OVERFLOW: таблица шире колонки (много столбцов, минимум ширины
+   столбца TipTap) листается в своей обёртке, а не срезается рамкой редактора. */
+.sk-md .ProseMirror .tableWrapper { max-width: 100%; overflow-x: auto; }
 .sk-md .ProseMirror table { width: 100%; margin: 8px 0; border-collapse: collapse; table-layout: fixed; }
 .sk-md .ProseMirror th,
 .sk-md .ProseMirror td { padding: 4px 7px; border: 1px solid var(--bd); vertical-align: top; text-align: left; }
@@ -2120,13 +2126,16 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 /* Ссылка внутри текста на сенсоре — без невидимой зоны 44 px: строка текста сама цель касания,
    а зона ловила бы нажатия соседних строк (#1179 даёт её всем ссылкам с kit-классом, a.sk-wref в их числе). */
 @media (pointer: coarse) {
-  .sk-prose a[href]::after { content: none; }
+  .sk-prose a[href]::after,
+  .sk-md__doc a[href]::after { content: none; }
 }
 .sk-prose blockquote { margin: 0 0 .7em; padding: 2px 10px; border-left: 3px solid var(--acc); background: var(--bg1); }
 .sk-prose code { padding: 0 4px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 3px; font-family: var(--mono); font-size: var(--fs-sm); }
 .sk-prose pre { margin: 0 0 .8em; padding: 10px 12px; overflow-x: auto; background: var(--bg0); border: 1px solid var(--bd); border-radius: var(--r-md); }
 .sk-prose pre code { padding: 0; background: none; border: none; }
-.sk-prose table { margin: 0 0 .8em; border-collapse: collapse; font-size: var(--fs-base); }
+/* K4-PHONE-PAGE-OVERFLOW: широкая таблица листается в своей рамке (как pre выше),
+   а не раздвигает страницу; в полноэкранном чтении — снова table (.sk-read__full-body). */
+.sk-prose table { display: block; max-width: 100%; overflow-x: auto; margin: 0 0 .8em; border-collapse: collapse; font-size: var(--fs-base); }
 .sk-prose th { padding: 4px 10px; background: var(--bg2); border: 1px solid var(--bd); color: var(--t1); font-weight: 600; text-align: left; }
 .sk-prose td { padding: 4px 10px; border: 1px solid var(--bd); font-variant-numeric: tabular-nums; }
 .sk-prose hr { margin: 1em 0; border: none; border-top: 1px solid var(--bd); }
@@ -3857,7 +3866,7 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-sum[data-sum='empty'] { color: var(--t3); font-size: var(--fs-2xs); font-style: italic; }
 
 /* Карточки и лента (S4-22): те же записи, другой вид. */
-.sk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.sk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
 .sk-cards__card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-cards__card.is-selected { border-color: var(--acc); }
 .sk-cards__head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
@@ -5305,7 +5314,8 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-burn { display: flex; flex-direction: column; min-width: 0; border-top: 1px solid var(--bd); color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
 .sk-burn__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
 .sk-burn__toggle {
-  display: inline-flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0;
+  /* flex-wrap (K4-PHONE-PAGE-OVERFLOW): на телефоне вердикт уходит на свою строку, а не за край. */
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; flex: 1 1 auto; min-width: 0;
   min-height: max(var(--tap), 28px); padding: 0 var(--pad-x);
   border: 0; background: transparent; color: var(--t2); cursor: pointer; text-align: left;
   font-family: var(--mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em;
@@ -5348,7 +5358,10 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-burn__key--plan { color: var(--inf); }
 .sk-burn__key--forecast { color: var(--wrn); }
 .sk-burn__key--deadline { color: var(--dng); }
-.sk-burn__verdict { padding: 0 8px; border-radius: var(--r-pill); border: 1px solid var(--bd); text-transform: none; letter-spacing: 0; white-space: nowrap; font-size: var(--fs-xs); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* Вердикт — фраза («Не успеваем на 3 дня: нужно 7 задач в неделю…»): многоточие съедало
+   её смысл (K4-PHONE-PAGE-OVERFLOW), поэтому она переносится целиком; скругление —
+   плашкой, а не пилюлей: в две строки пилюля 999 стала бы овалом. */
+.sk-burn__verdict { padding: 0 8px; border-radius: var(--r-md); border: 1px solid var(--bd); text-transform: none; letter-spacing: 0; white-space: normal; overflow-wrap: anywhere; font-size: var(--fs-xs); max-width: 100%; }
 .sk-burn__verdict[data-tone='ok'] { color: var(--suc); border-color: var(--suc); }
 .sk-burn__verdict[data-tone='risk'] { color: var(--wrn); border-color: var(--wrn); }
 .sk-burn__verdict[data-tone='late'] { color: var(--dng); border-color: var(--dng); }
@@ -5927,7 +5940,7 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
   letter-spacing: .06em;
   text-transform: uppercase;
 }
-.sk-news__kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.sk-news__kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 6px; }
 .sk-news__kpi {
   display: flex;
   flex-direction: column;
@@ -6206,7 +6219,7 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
 .sk-news__dyn .sk-news__ph { justify-content: flex-start; }
 .sk-news__dyn .sk-news__ph > [role=radiogroup] { margin-left: auto; }
 .sk-news__dynsub { color: var(--t3); font-size: var(--fs-2xs); font-family: var(--mono); }
-.sk-news__dyncards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.sk-news__dyncards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); gap: 6px; }
 .sk-news__dyncard { gap: 4px; }
 .sk-news__dyncard[data-state='filtered_out'] { opacity: .7; }
 .sk-news__dynrow { display: flex; align-items: baseline; gap: 8px; }
@@ -6858,13 +6871,14 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 
 /* S4-FIELD-EDITORS: редактор поля по виду — плотная строка формы. Поле ввода
    на сенсорном вводе не мельче --fs-touch-input (иначе iOS зумит страницу). */
-.sk-field { display: grid; gap: 3px; margin: 0 0 8px; }
+.sk-field { display: grid; gap: 3px; min-width: 0; margin: 0 0 8px; }
 .sk-field__label { font-size: var(--fs-xs); color: var(--t2); font-weight: 600; }
 .sk-field__req { color: var(--dng); }
 .sk-field__input { font: inherit; font-size: var(--fs-base); color: var(--t1); background: var(--bg1); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; min-height: max(var(--tap), 26px); }
 .sk-field__input[aria-invalid='true'] { border-color: var(--dng); }
 .sk-field__input--num { font-family: var(--mono); }
-.sk-field__row { display: flex; gap: 6px; align-items: center; }
+/* Перенос (K4-PHONE-PAGE-OVERFLOW): на телефоне подпись пояса уходит под поле, а не за колонку. */
+.sk-field__row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
 .sk-field__zone { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t3); }
 .sk-field__seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); width: max-content; }
 .sk-field__opt { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: var(--fs-sm); color: var(--t2); min-height: max(var(--tap), 22px); cursor: pointer; }
