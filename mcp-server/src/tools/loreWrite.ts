@@ -407,7 +407,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
       task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
-      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case, jtd=helper job, enb=enabler; omit when unclassified — legal'),
+      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case, jtd=helper job, enb=enabler; omitted — the task is still created, but the answer carries warning {code: WORK_CLASS_MISSING, allowed: [uc, jtd, enb]} (MT-CAL-CLASS-REQUIRED, D5) — set it via task_set'),
       uc_id: z.string().optional().describe('D16: the use case this task realizes. Creates the REALIZES edge ATOMICALLY with the task — no second call, no window where the task exists unlinked. A non-existent uc_id is a 400, not a silent no-op.'),
     },
     path: '/lore/task',

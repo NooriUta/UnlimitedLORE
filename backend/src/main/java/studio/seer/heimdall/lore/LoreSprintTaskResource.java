@@ -392,6 +392,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             body.put("task_id", tid);
                             body.put("order_index", order);
                             body.put("quality", WorkQuality.compact(taskQuality(uid)));
+                            // MT-CAL-CLASS-REQUIRED (D5): класс не задан — явная подсказка, не отказ.
+                            Map<String, Object> wcWarn = workClassWarning(workClass);
+                            if (wcWarn != null) body.put("warning", wcWarn);
                             Map<String, Object> roles = applyRoles(uid,
                                 req.author_agent(), req.executor_agent(), req.reviewer_agent());
                             if (!roles.isEmpty()) body.put("roles", roles);
@@ -437,6 +440,26 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex))));
             });
+    }
+
+    /** Канон класса работы ADR-LORE-022 — порядок как в подсказке. */
+    static final List<String> WORK_CLASSES = List.of("uc", "jtd", "enb");
+
+    /**
+     * MT-CAL-CLASS-REQUIRED, решение владелицы 14.11.2026 (D5 «подсказка»): задача без work_class
+     * создаётся (отказа нет), но ответ несёт отдельное поле {@code warning} — заметнее строки в
+     * quality.missing: что не задано, какие значения допустимы и чем дописать. Класс задан — null.
+     */
+    static Map<String, Object> workClassWarning(String workClass) {
+        if (workClass != null && !workClass.isBlank()) return null;
+        Map<String, Object> w = new LinkedHashMap<>();
+        w.put("code", "WORK_CLASS_MISSING");
+        w.put("field", "work_class");
+        w.put("allowed", WORK_CLASSES);
+        w.put("detail", "задача создана без класса работы — без него не работают калибровка и правила вех. "
+            + "Допустимо: uc — реализует сценарий, jtd — вспомогательная работа, enb — обеспечивающая (enabler); "
+            + "допишите task_set work_class=uc|jtd|enb");
+        return w;
     }
 
     private Response taskIdTaken(String sid, String tid, String suggested) {
