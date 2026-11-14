@@ -183,6 +183,13 @@ export interface ListViewProps {
    */
   onOpen?: (id: string) => void;
   /**
+   * Клик по пустому месту строки/карточки тоже открывает запись (onOpen). Кнопки,
+   * ссылки, поля и выделенный текст внутри строки — своё действие. Включается
+   * экраном, где у строки нет другого действия на клик (PU-29: «Люди» открывались
+   * только по имени). В режиме выбора клик по-прежнему выбирает.
+   */
+  openOnRowClick?: boolean;
+  /**
    * Где открывается паспорт записи (владелица 08.11): настройка использования, живёт в «Вид»
    * списка, а не полосой над паспортом. Без неё раздела в «Вид» нет — место задаёт приложение.
    */
@@ -552,7 +559,7 @@ const DATE_SLOT = '@kit:date';
 const CELL_VALUES_INLINE = 1;
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
@@ -1083,7 +1090,14 @@ export function ListView({
   });
   // В режиме выбора касание строки переключает её, а ссылка заголовка не уводит.
   const onRecordClick = (e: ReactMouseEvent, id: string) => {
-    if (!selecting) return;
+    if (!selecting) {
+      if (!openOnRowClick || !onOpen) return;
+      if ((e.target as Element).closest('a, input, label, button, select, textarea, summary, [role="menu"], [role="dialog"]')) return;
+      // Выделял текст мышью — это не «открыть».
+      if (typeof window !== 'undefined' && (window.getSelection?.()?.toString() ?? '') !== '') return;
+      onOpen(id);
+      return;
+    }
     if ((e.target as Element).closest('input, label, button, select, textarea')) return;
     e.preventDefault();
     toggleSel(id);
@@ -2391,6 +2405,7 @@ export function ListView({
       className={['sk-list', className].filter(Boolean).join(' ')}
       data-view={view}
       data-selecting={selecting ? 'true' : undefined}
+      data-open-row={openOnRowClick && onOpen ? 'true' : undefined}
       onKeyDown={onListKeyDown}
       {...longPress}
     >

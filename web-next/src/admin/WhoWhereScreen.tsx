@@ -71,7 +71,11 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
   const body = useMemo(() => {
     if (!data) return null;
     const toggle = (key: string) => (e: SyntheticEvent<HTMLDetailsElement>) => {
-      const isOpen = e.currentTarget.open;
+      const el = e.currentTarget;
+      const isOpen = el.open;
+      // PU-29: раскрытый внизу списка проект уходил за край — показать его
+      // после отрисовки содержимого (nearest: видимый не дёргается).
+      if (isOpen) setTimeout(() => el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 0);
       if (isOpen && open !== key) setOpen(key);
       else if (!isOpen && open === key) setOpen(null);
     };
@@ -209,7 +213,7 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
         <button type="button" className="sk-btn" onClick={() => setAdding(true)}>{t('admin.people.add')}</button>
       </div>
       {/* Старые ссылки ?adm-q=… (S7B-25) открывают ту же выборку — текстом поиска списка. */}
-      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} initial={q ? { text: q } : undefined} />
+      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} openOnRowClick initial={q ? { text: q } : undefined} />
       {person && (
         <Drawer open onClose={() => setOpen(null)} title={person.name}>
           <PersonPassport person={person} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
