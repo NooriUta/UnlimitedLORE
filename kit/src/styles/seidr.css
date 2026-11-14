@@ -5539,6 +5539,12 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
    обрезано, а подписи записей — то, ради чего оно и открывается. */
 .sk-shell__railmenu { position: relative; display: flex; justify-content: center; }
 .sk-shell__railmenu-btn { justify-content: center; padding-inline: 0; min-height: max(var(--tap), 28px); }
+/* PU-26 (приёмка 0dccfe73): колонка меню — position:sticky, то есть свой контекст наложения с
+   z-index:auto. Попап рейки (fixed, z 65) заперт внутри неё, а .sk-shell__main идёт в DOM позже
+   и рисуется ПОВЕРХ: строки списка читались сквозь пункты «Недавних». Пока попап открыт, колонка
+   стоит над слоями в потоке main (фасеты, колонки — 20), но под всплывающими (60+) и модальными
+   (листы 70, палитра 80). Сторож — shell/railmenuLayer.test.ts. */
+.sk-shell__side:has(.sk-shell__railmenu-pop) { z-index: 30; }
 /* Положение (вправо от рейки) — у общего слоя .sk-pop[data-align='side']. */
 .sk-shell__railmenu-pop {
   min-width: 240px;

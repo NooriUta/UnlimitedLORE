@@ -1290,7 +1290,7 @@
   "admin.set.removeDetail": "is_active=false — запись остаётся в истории",
   "admin.set.volva.btn": "Проверить интеграцию Völva",
   "admin.set.volva.note": "Запрашивает подписанный адрес пилотного графика velocity — тот же путь, что у слоя Völva.",
-  "admin.set.volva.ok": "Готово: адрес выдан, ведёт на {origin}, действует до {expires}.",
+  "admin.set.volva.ok": "Готово: адрес выдан, ведёт на {origin}, действует до {expires} UTC.",
   "admin.set.volva.notConfigured": "Не настроено: на бэкенде нет секрета LORE_VOLVA_EMBED_SECRET или адреса lore.volva.embed.site-url. ({d})",
   "admin.set.volva.unknownChart": "Графика velocity нет в белом списке lore.volva.embed.charts. ({d})",
   "admin.set.volva.forbidden": "Нет доступа к подписи встройки. ({d})",
