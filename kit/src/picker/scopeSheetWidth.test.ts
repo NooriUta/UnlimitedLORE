@@ -23,3 +23,22 @@ describe('лист «Проекты» на телефоне не шире экр
     expect(rule('.sk-scope__sheet .sk-scope__id')).toMatch(/max-width:\s*34%/);
   });
 });
+
+// Приёмка препрода efe20f03: после «slug ≤34%» имя проекта на телефоне резалось до ~9 букв, а
+// slug занимал больше места, чем имя. Правило листа: имя главное — оно занимает свободную ширину и
+// переносится (до двух строк) только при нехватке; slug вторичен — мельче и сжимается ПЕРВЫМ.
+describe('лист «Проекты» на телефоне: имя главнее slug', () => {
+  const flexShrink = (r: string) => Number(/flex:\s*\S+\s+(\d+)/.exec(r)?.[1] ?? NaN);
+  it('slug сжимается первым: его flex-shrink много больше, чем у имени, и он может сжаться до нуля', () => {
+    const id = rule('.sk-scope__sheet .sk-scope__id');
+    const title = rule('.sk-scope__sheet .sk-scope__title');
+    expect(flexShrink(id)).toBeGreaterThanOrEqual(100 * flexShrink(title));
+    expect(id).toMatch(/min-width:\s*0/);
+  });
+  it('имя растёт на свободное место и переносится до двух строк, а не режется в одну', () => {
+    const title = rule('.sk-scope__sheet .sk-scope__title');
+    expect(title).toMatch(/flex:\s*1\s+1/);
+    expect(title).toMatch(/white-space:\s*normal/);
+    expect(title).toMatch(/-webkit-line-clamp:\s*2/);
+  });
+});

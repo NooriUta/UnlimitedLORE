@@ -513,6 +513,8 @@
   "kit.list.childEmpty": "Вложенных записей нет",
   "kit.list.expand": "Раскрыть: {title}",
   "kit.list.collapse": "Свернуть: {title}",
+  "kit.list.tree.expand": "Показать вложенные: {title}",
+  "kit.list.tree.collapse": "Скрыть вложенные: {title}",
   "kit.list.col.expand": "Раскрыть",
   "kit.progress.label": "Готово {done} из {total}",
   "kit.progress.partial": "Готово {done} из {total} — посчитано не всё",

@@ -7,6 +7,7 @@ import { kitPlural, kitT } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import { parseGroupKey } from './grouping';
 import type { ListGroup } from './listModel';
+import { colKey } from './sum';
 
 // Тип держит этот словарь и перечень валидатора одним списком: новый
 // встроенный ключ без подписи здесь не соберётся.
@@ -37,7 +38,7 @@ function appFieldTitle(config: KitConfig, key: string): string | undefined {
 export function keyTitleMissing(config: KitConfig, key: string): boolean {
   if (parseGroupKey(key).type !== 'field') return false;
   if (key in BUILTIN_KEY_TITLES) return false;
-  return !appFieldTitle(config, key);
+  return !appFieldTitle(config, key) && !appFieldTitle(config, colKey(key));
 }
 
 /** Подпись ключа: встроенное поле, поле вида или list.fieldLabels из конфига, пресет разреза. */
@@ -49,8 +50,12 @@ export function groupKeyTitle(config: KitConfig, lang: KitLang, key: string): st
   }
   const builtin = BUILTIN_KEY_TITLES[key as keyof typeof BUILTIN_KEY_TITLES];
   if (builtin) return kitT(lang, builtin);
-  const bare = key.startsWith('fields.') ? key.slice(7) : key;
-  return appFieldTitle(config, key) ?? bare;
+  // Составной ключ колонки (progress:/sum:/fresh:) подписывается как колонка — по имени
+  // поля (colKey), иначе чип «Порядок» печатал «progress:tasks» при шапке «Задачи»
+  // (приёмка efe20f03). Подписи нет нигде — имя поля, но не служебный префикс.
+  const field = colKey(key);
+  const bare = field.startsWith('fields.') ? field.slice(7) : field;
+  return appFieldTitle(config, key) ?? appFieldTitle(config, field) ?? bare;
 }
 
 /** Подпись значения поля (статус — из словаря, вне словаря — честно помечен). */

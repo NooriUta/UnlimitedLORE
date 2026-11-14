@@ -1867,6 +1867,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-shell__viewsmore:hover { color: var(--t1); }
 .sk-shell__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-shell__id { color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* Приёмка препрода efe20f03: длинный код в «Недавних» (☰ на телефоне) не сжимался и вытеснял название
+   в ноль. Код рядом с названием вторичен: не шире 45% строки, режется многоточием (полный — в подсказке). */
+.sk-shell__item > .sk-shell__id { flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-shell__tag {
   flex-shrink: 0;
   padding: 1px 5px;
@@ -5800,7 +5803,19 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-scope__sheet .sk-scope__grp,
 .sk-scope__sheet .sk-scope__list { min-width: 0; max-width: 100%; }
 .sk-scope__sheet .sk-scope__row { min-width: 0; max-width: 100%; }
-.sk-scope__sheet .sk-scope__id { max-width: 34%; }
+/* Приёмка препрода efe20f03: при slug ≤34% имя резалось до ~9 букв, а slug брал больше места, чем имя.
+   В листе имя главное: оно берёт свободную ширину и переносится (до двух строк) только при нехватке;
+   slug вторичен — мельче и сжимается ПЕРВЫМ (flex-shrink 1000 против 1), вплоть до нуля. */
+.sk-scope__sheet .sk-scope__title {
+  flex: 1 1 auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+}
+.sk-scope__sheet .sk-scope__id { flex: 0 1000 auto; max-width: 34%; min-width: 0; font-size: var(--fs-2xs); }
 .sk-scope__sheet .sk-scope__check,
 .sk-scope__sheet .sk-scope__only,
 .sk-scope__sheet .sk-scope__act,
@@ -7251,6 +7266,44 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* PU-23: дети раскрытой строки — строками той же таблицы; чуть приглушённый фон отделяет их от верхнего уровня. */
 .sk-list__row--child { background: var(--bg2); }
 .sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }
+/* PU-23: иерархия ОДНОГО типа (list.tree) — строки той же таблицы с отступом по глубине. Отступ —
+   в em от уровня (--tree-lvl), уровни ограничены: глубокая ветка не раздувает ширину таблицы.
+   Кнопка раскрытия — цель касания не меньше --tap; у листа на её месте пустое место той же ширины,
+   чтобы названия одного уровня стояли ровно. */
+.sk-list__tree {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  padding-inline-start: calc(min(var(--tree-lvl, 0), 6) * 1.25em);
+}
+.sk-list__tbody { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.sk-list__tbtn,
+.sk-list__tspc {
+  flex: 0 0 auto;
+  min-width: max(var(--tap), 1.5em);
+  min-height: max(var(--tap), 1.5em);
+}
+.sk-list__tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t3);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-list__tbtn:hover { color: var(--acc); background: var(--bg2); }
+.sk-list__tbtn[aria-expanded='true'] { color: var(--acc); }
+.sk-list__tbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+/* Строка пути (фильтр нашёл потомка): видна ради контекста — приглушена. */
+.sk-list__row--path > .sk-list__td { color: var(--t3); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-list__tree { padding-inline-start: calc(min(var(--tree-lvl, 0), 3) * 0.75em); }
+  .sk-list__tbody { white-space: normal; }
+}
 /* PU-23: дети другого типа — вложенная таблица своего типа, компактно (без полосы управления). */
 /* Владелица 14.11.2026: «либо size под длину, либо если не помещается — scroll». width: 0 + min-width:
    100% — контейнер берёт ширину ячейки и не распирает внешнюю таблицу; лишнее — горизонтальной прокруткой. */
@@ -7289,3 +7342,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* Поиск: открыть найденную запись во весь экран (владелица 14.11.2026). */
 .sk-palette__full { display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; min-width: 34px; padding: 3px 10px; border-radius: 999px; background: var(--acc); color: var(--bg0); cursor: pointer; flex: 0 0 auto; }
 .sk-palette__full:hover { filter: brightness(1.12); }
+
+@media (pointer: coarse) {
+  /* Ряды пилюль/чипов (приёмка препрода efe20f03): цель 20 px при зазоре рядов 4–10 px — зона 44
+     выступала на 12 px и ложилась на соседний ряд. Замер Chromium (сенсор, 300 px): у крестиков связей
+     в редакторе (.sk-relfield__chips) касание по видимому крестику уходило соседнему ряду в 119 точках
+     из 640, у кодов в свойствах записи (.sk-rec-fields__refs) — в 265 из 2240. Зазор рядов — 44 − 20
+     (зона цели 20 px укладывается целиком), а зона внутри ряда по вертикали не дальше половины
+     зазора: ряды не перекрываются при любой высоте цели. Ряды, где зона обрезана самой пилюлей
+     (overflow: hidden у .sk-pill, .sk-rec-chips__link), не перекрываются и сюда не входят — лишний
+     зазор там ничего не дал бы. Блок — в конце файла: зазор должен перебить gap самих рядов. */
+  .sk-relfield__chips, .sk-rec-fields__refs {
+    --chiprow-gap: calc(var(--hit) - 20px);
+    row-gap: var(--chiprow-gap);
+  }
+  :where(.sk-relfield__chips, .sk-rec-fields__refs)
+    :where(button, summary, [role='tab'], [role='button'], [role='option'], [role='menuitem'], [role='radio'], [role='checkbox'], a[href][class])::after {
+    height: min(max(100%, var(--hit)), calc(100% + var(--chiprow-gap)));
+  }
+}
