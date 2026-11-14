@@ -46,12 +46,18 @@ public class LoreAdrResource extends LoreResourceBase {
 
     // ── Write-path: create / upsert KnowADR ──────────────────────────────────
 
+    /** Прежний upsert без режима — для внутренних вызовов (LoreTidyResource). */
+    public Response createAdr(AdrCreateRequest req, String role) {
+        return createAdr(req, role, null);
+    }
+
     @POST
     @Path("adr")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createAdr(AdrCreateRequest req,
-                              @HeaderParam("X-Seer-Role") String role) {
+                              @HeaderParam("X-Seer-Role") String role,
+                              @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
@@ -60,6 +66,8 @@ public class LoreAdrResource extends LoreResourceBase {
             return badParams("adr_id contains illegal characters");
         Response stale = versionConflict("adr", req.adr_id(), req.expected_version());
         if (stale != null) return stale;
+        Response taken = createOnly("adr", req.adr_id(), mode);   // MT-MCP-TRUTH п.1: ?mode=create
+        if (taken != null) return taken;
         try {
             String now  = Instant.now().toString();
             String nsid = UUID.randomUUID().toString();

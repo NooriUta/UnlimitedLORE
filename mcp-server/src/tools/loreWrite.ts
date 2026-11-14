@@ -354,7 +354,9 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'done, which ONLY a human sets. An agent never moves a task from uat to done.\n\n' +
       'WK-05 core (ADR-LORE-014-D5): eight core statuses planned · active · waiting · review · done · failed · blocked · cancelled; ' +
       'old values stay valid synonyms (todo/backlog/design→planned, partial→active, ready_for_deploy/uat→review stages stand_check/uat). ' +
-      'Task gate, refused BEFORE any write: done by an agent → 409 DONE_BY_HUMAN_ONLY (move to review instead); done only from review ' +
+      'Task gate, refused BEFORE any write: done by an agent → 409 DONE_BY_HUMAN_ONLY (move to review instead) — the ONE exception ' +
+      'is the owner\'s word (decision 14.11.2026, D4): evidence_type=owner_word with a non-empty evidence_ref quoting or linking her ' +
+      'message lets an agent close (empty ref → 409 NO_EVIDENCE); done only from review ' +
       '(incl. ready_for_deploy/uat) → else 409 DONE_ONLY_FROM_REVIEW; a closing human becomes the reviewer unless they are the ' +
       'executor → 409 NO_REVIEWER; reviewer = executor → 409 REVIEWER_IS_EXECUTOR; done needs evidence by kind of work (from task_type: ' +
       'dev → pr|release, docs → lore, ops → probe|pr, research/analytics → lore, legal/sales/hiring/finance/support/procurement → doc, ' +
@@ -367,8 +369,8 @@ export function registerLoreWrite(rawServer: McpServer): void {
       status: LORE_STATUS,
       reason: z.string().optional().describe('WHY: required for a task going blocked or returned from review to active (WK-05); QG-16: sprint + status=blocked — WHY it is blocked, plain text (stored on the new SCD2 state, gone on unblock). Omitted on a blocked sprint → the answer carries a hint and gate QG-LORE-BLOCKED-REASON lists it unless an open dependency or open question explains it'),
       expected: z.string().optional().describe(EXPECTED_STATUS_DESC),
-      evidence_type: z.string().optional().describe('task: proof of done by kind of work — pr | release | lore | probe | doc | url (allowed set per kind: /lore/model workflow.kinds)'),
-      evidence_ref: z.string().optional().describe('task: the proof itself — "PR #1337", "spec:SPEC-X", a URL, a document number, "10/10 CI runs without OOM"'),
+      evidence_type: z.string().optional().describe('task: proof of done by kind of work — pr | release | lore | probe | doc | url (allowed set per kind: /lore/model workflow.kinds); owner_word — the owner said it is done (any kind; the only evidence that lets an AGENT set done)'),
+      evidence_ref: z.string().optional().describe('task: the proof itself — "PR #1337", "spec:SPEC-X", a URL, a document number, "10/10 CI runs without OOM"; for owner_word — her verbatim quote or a link to her message (required)'),
       stage: z.string().optional().describe('task: stage inside the core status, e.g. stand_check | uat in review, implement | test in active'),
       waiting_for: z.string().optional().describe('task + status=waiting: whose answer we wait for (required)'),
     },
@@ -405,7 +407,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
       task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
-      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case, jtd=helper job, enb=enabler; omit when unclassified — legal'),
+      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case, jtd=helper job, enb=enabler; omitted — the task is still created, but the answer carries warning {code: WORK_CLASS_MISSING, allowed: [uc, jtd, enb]} (MT-CAL-CLASS-REQUIRED, D5) — set it via task_set'),
       uc_id: z.string().optional().describe('D16: the use case this task realizes. Creates the REALIZES edge ATOMICALLY with the task — no second call, no window where the task exists unlinked. A non-existent uc_id is a 400, not a silent no-op.'),
     },
     path: '/lore/task',

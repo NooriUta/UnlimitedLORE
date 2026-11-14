@@ -250,9 +250,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // с «current thread cannot be blocked». Реактивная цепочка ниже от этого не
     // меняется — меняется поток, на котором она собирается.
     @io.smallrye.common.annotation.Blocking
-    public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role,
+                                    @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return Uni.createFrom().item(disabled());
         requireAdmin(role);
+        // MT-MCP-TRUTH п.1: задача создаётся INSERT-ом, и занятый код и так даёт 409 TASK_ID_TAKEN
+        // со свободным кодом; здесь режим только проверяется на допустимость (create|upsert), чтобы
+        // клиент слал одинаковый ?mode=create на все четыре пути создания.
+        Response badMode = modeError(mode);
+        if (badMode != null) return Uni.createFrom().item(badMode);
         if (req == null || req.sprint_id() == null || req.task_id() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, task_id, title required"));
@@ -386,6 +392,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             body.put("task_id", tid);
                             body.put("order_index", order);
                             body.put("quality", WorkQuality.compact(taskQuality(uid)));
+                            // MT-CAL-CLASS-REQUIRED (D5): класс не задан — явная подсказка, не отказ.
+                            Map<String, Object> wcWarn = workClassWarning(workClass);
+                            if (wcWarn != null) body.put("warning", wcWarn);
                             Map<String, Object> roles = applyRoles(uid,
                                 req.author_agent(), req.executor_agent(), req.reviewer_agent());
                             if (!roles.isEmpty()) body.put("roles", roles);
@@ -431,6 +440,26 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(LoreUpstream.error(ex))));
             });
+    }
+
+    /** Канон класса работы ADR-LORE-022 — порядок как в подсказке. */
+    static final List<String> WORK_CLASSES = List.of("uc", "jtd", "enb");
+
+    /**
+     * MT-CAL-CLASS-REQUIRED, решение владелицы 14.11.2026 (D5 «подсказка»): задача без work_class
+     * создаётся (отказа нет), но ответ несёт отдельное поле {@code warning} — заметнее строки в
+     * quality.missing: что не задано, какие значения допустимы и чем дописать. Класс задан — null.
+     */
+    static Map<String, Object> workClassWarning(String workClass) {
+        if (workClass != null && !workClass.isBlank()) return null;
+        Map<String, Object> w = new LinkedHashMap<>();
+        w.put("code", "WORK_CLASS_MISSING");
+        w.put("field", "work_class");
+        w.put("allowed", WORK_CLASSES);
+        w.put("detail", "задача создана без класса работы — без него не работают калибровка и правила вех. "
+            + "Допустимо: uc — реализует сценарий, jtd — вспомогательная работа, enb — обеспечивающая (enabler); "
+            + "допишите task_set work_class=uc|jtd|enb");
+        return w;
     }
 
     private Response taskIdTaken(String sid, String tid, String suggested) {
