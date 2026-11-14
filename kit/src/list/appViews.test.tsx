@@ -55,3 +55,24 @@ describe('вид приложения в списке', () => {
     expect(readListState(new URLSearchParams('')).appView).toBeUndefined();
   });
 });
+
+// Приёмка препрода 14.11.2026: при `lav=volva` в адресе после перезагрузки и после смены проекта
+// активен «Список» — «Völva» приходилось нажимать снова. Корень: initialState переносил из адреса
+// только часть полей. Правило: при загрузке восстанавливается КАЖДОЕ поле, которое умеет читать
+// readListState (вид приложения, месяц календаря, фильтр библиотеки и т.д.).
+import type { UrlWindow } from '../resilience/urlState';
+const winAt = (search: string): UrlWindow => ({
+  location: { pathname: '/', search, hash: '' },
+  history: { pushState: () => {}, replaceState: () => {} },
+} as unknown as UrlWindow);
+describe('вид приложения восстанавливается из адреса', () => {
+  it('lav=volva в адресе — сразу открыт вид приложения', () => {
+    render(<ListView config={config} data={data} urlState={winAt('?lav=volva')} appViews={appViews} />);
+    expect(screen.getByTestId('app-view-body')).toBeTruthy();
+  });
+  it('вид приложения пришёл позже (настройка догрузилась) — выбор из адреса подхватывается', () => {
+    const { rerender } = render(<ListView config={config} data={data} urlState={winAt('?lav=volva')} />);
+    rerender(<ListView config={config} data={data} urlState={winAt('?lav=volva')} appViews={appViews} />);
+    expect(screen.getByTestId('app-view-body')).toBeTruthy();
+  });
+});
