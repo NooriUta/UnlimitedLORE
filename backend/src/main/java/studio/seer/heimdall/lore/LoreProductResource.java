@@ -2088,7 +2088,7 @@ public class LoreProductResource extends LoreResourceBase {
     private CheckOutcome checkWorkQualityTasks() {
         List<Map<String, Object>> rows = ingest.queryPublic(
             "SELECT task_uid, title, work_class, " +
-            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('TAGGED_WITH').component_id AS own_components, " +
             "out('PART_OF').out('BELONGS_TO').component_id AS sprint_components, " +

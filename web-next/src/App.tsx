@@ -90,9 +90,11 @@ export function routeOf(path: string, search = ''): Route {
   if (p === '/kit/passport') return 'passport';
   if (p === '/news') return 'news';
   if (p === '/admin') return 'admin';
+  // Приёмка 14.11.2026 (PU-29): старая админка v1 жила на /lore?section=admin&tab=… —
+  // на любом пути это админка (дальше legacyAdminHref разводит вкладки), а не «Новости».
+  if (new URLSearchParams(search).get('section') === 'admin') return 'admin';
   // Старые адреса паспорта (?section=tasks|sprints&passport=…) — не отдельные
   // страницы, а оболочка: App переписывает их в раздел с записью (legacyPassportHref).
-  void search;
   return LIST_ROUTES[p] ?? 'home';
 }
 

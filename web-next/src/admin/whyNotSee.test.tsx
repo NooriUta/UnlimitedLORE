@@ -13,7 +13,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
-import { agentChain, since24h, type ToolExplain, type WhyInput } from './whyAccess';
+import { agentChain, since24h, toolQuery, type ToolExplain, type WhyInput } from './whyAccess';
 import { WhyNotSee, WHY_AGENT, WHY_MODE, WHY_PROJECT, WHY_TOOL } from './WhyNotSee';
 import { Home403Card } from './Home403Card';
 import type { AgentProjects, AccessExplain } from './access';
@@ -116,6 +116,31 @@ describe('S7B-21 · цепочка агента — как решает серв
     const r = agentChain(base({ tool: 'adr', toolExplain: { ok: false, forbidden: false, reason: 'HTTP 502' } }), tr);
     expect(r.steps[0].outcome.state).toBe('unverified');
     expect(r.verdict).toBe('toolUnknown');
+  });
+
+  // Приёмка 14.11.2026 (PU-29): неизвестный slug давал ложный вердикт «у владельца нет роли»
+  // и «Исправить» (выдать роль в несуществующем проекте). Проекта нет в списке — так и сказано.
+  it('проект не из списка проектов — «такого проекта нет», без вердикта о роли и без «Исправить»', () => {
+    const r = agentChain(base({ project: 'UnlimitedLORE', knownProjects: ['P1', 'P2', 'P3'] }), tr);
+    expect(r.verdict).toBe('unknownProject');
+    expect(r.fix).toBeNull();
+    expect(r.steps.find(s => s.id === 'role')?.outcome.state).toBe('unverified');
+    expect(JSON.stringify(r.steps)).not.toContain('ownerNoRole');
+  });
+
+  // Приёмка 14.11.2026: шаг «Владелец» показывал сырой kc_sub, а не имя.
+  it('шаг «владелец» — имя владельца, а не kc_sub', () => {
+    const r = agentChain(base({ agent: { ...AGENT, owner_name: 'Ольга' } }), tr);
+    expect(r.steps.find(s => s.id === 'owner')?.outcome).toMatchObject({ state: 'confirmed', detail: 'Ольга' });
+  });
+
+  // Приёмка 14.11.2026: имя инструмента MCP из подсказки поля (adr_new, task_set) давало
+  // «family or path required» — сервер ждёт семейство. Имя инструмента → его семейство.
+  it('toolQuery: инструмент MCP (adr_new, task_set) → семейство; путь записи — путь; семейство — как есть', () => {
+    expect(toolQuery('adr_new')).toEqual({ family: 'adr' });
+    expect(toolQuery('task_set')).toEqual({ family: 'task' });
+    expect(toolQuery('adr')).toEqual({ family: 'adr' });
+    expect(toolQuery('lore/task/edit')).toEqual({ path: 'lore/task/edit' });
   });
 
   it('since24h — ISO-момент ровно сутки назад (UTC, без долей)', () => {

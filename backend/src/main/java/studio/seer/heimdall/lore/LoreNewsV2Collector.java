@@ -52,7 +52,7 @@ final class LoreNewsV2Collector {
      */
     static final String SQL_TASKS =
         "SELECT task_uid, title, out('BELONGS_TO').component_id[0] AS component_id, " +
-        "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
         "out('PART_OF').sprint_id[0] AS sprint_id FROM KnowTask";
     /** S7A-09: спринты — без context_md, приоритета, PR и плана; выражения — те же, что у среза sprints. */
     static final String SQL_SPRINTS =

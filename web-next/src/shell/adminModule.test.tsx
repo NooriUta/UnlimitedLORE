@@ -103,6 +103,15 @@ describe('S7B-01 · старые адреса /admin?adm=…', () => {
     expect(legacyAdminHref('?section=admin&tab=projects')).toBe('/?mod=admin&sec=adm-home');
   });
 
+  // Приёмка 14.11.2026 (PU-29): старая ссылка v1 /lore?section=admin&tab=… открывала «Новости»:
+  // V1_TABS срабатывал только для пути /admin, а routeOf не знал /lore.
+  it('S7B-31: App на /lore?section=admin&tab=tags ведёт в админку, а не в «Новости»', async () => {
+    const w = fakeWin('?section=admin&tab=tags', '/lore');
+    const { container } = render(<App path="/lore" win={w} storage={mem()} narrow={false} />);
+    expect(w.location.search).toBe('?mod=admin&sec=adm-dicts&adm-dicts-tab=tags');
+    expect(container.querySelector('[data-section="adm-dicts"]')).toBeTruthy();
+  });
+
   it('App на /admin переписывает адрес и рисует раздел внутри оболочки', async () => {
     const w = fakeWin('?adm=flags', '/admin');
     const { container } = render(<App path="/admin" win={w} storage={mem()} narrow={false} />);

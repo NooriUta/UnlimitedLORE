@@ -569,7 +569,7 @@ public class LoreStatusResource extends LoreResourceBase {
     Uni<Void> autoDeriveSprintStatus(String taskUid, ChangeAuthor author) {
         MartQuery ctxQ = new MartQuery("sql",
             "SELECT out('PART_OF').sprint_id[0] AS sid, " +
-            "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status " +
+            "COALESCE(out('PART_OF').out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS sprint_status " +
             "FROM KnowTask WHERE task_uid = :uid LIMIT 1",
             Map.of("uid", taskUid), -1);
         return client.query(db, basicAuth(), ctxQ).chain(ctxRes -> {
@@ -579,7 +579,7 @@ public class LoreStatusResource extends LoreResourceBase {
             final String curToken = rawToToken((String) ctx.get(0).get("sprint_status"));
 
             MartQuery tasksQ = new MartQuery("sql",
-                "SELECT out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+                "SELECT COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw " +
                 "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sid",
                 Map.of("sid", sid), -1);
             return client.query(db, basicAuth(), tasksQ).chain(tRes -> {

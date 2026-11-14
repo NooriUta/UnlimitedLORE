@@ -13,8 +13,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * SPRINT_UXR_S9_SCALE_OPT/S9-03 — закреплённые значения фасета (текущие релизы).
  *
  * <p>S9-02: срезы {@code open_tasks}/{@code closed_tasks} не отдавали релиз, и разделу
- * «Задачи» нечем было группировать по релизу. Релиз задачи — релиз её спринта
- * (PART_OF → IMPLEMENTED_IN_RELEASE), как в {@code tasks_of_sprint}.
+ * «Задачи» нечем было группировать по релизу. Сначала релизом задачи считался релиз её спринта
+ * (PART_OF → IMPLEMENTED_IN_RELEASE). 14.11.2026 правило сменено (владелица: «почему эти задачи
+ * запланировано, когда к ним релизы привязаны»; PU-07): релиз задачи — релиз её PR
+ * (CLOSED_BY → SHIPPED_IN), см. {@link TaskReleaseColumnTest}.
  *
  * <p>S9-03: «текущий релиз» знает только сервер ({@code KnowRelease.is_current}); он едет
  * в том же ответе {@code /facets}, а не отдельным запросом на каждом экране.
@@ -22,11 +24,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class TaskReleaseAxisAndPinnedTest {
 
     @Test
-    void taskSlicesCarryTheirSprintRelease() {
+    void taskSlicesCarryTheirOwnRelease() {
         for (String id : List.of("open_tasks", "closed_tasks")) {
             String sql = LoreSlices.compose(id, Map.of()).sql();
-            assertTrue(sql.contains("out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids"),
-                id + ": релиз спринта задачи: " + sql);
+            assertTrue(sql.contains("out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids"),
+                id + ": релиз задачи — релиз её PR: " + sql);
             assertFalse(sql.contains("note_md"), id + ": проекция остаётся облегчённой: " + sql);
         }
     }

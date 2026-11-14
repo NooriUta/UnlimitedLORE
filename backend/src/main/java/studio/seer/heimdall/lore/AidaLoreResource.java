@@ -264,7 +264,7 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> links = ingestService.queryPublic(
                 "SELECT @out.sprint_id AS s, @in.component_id AS c FROM BELONGS_TO WHERE @out.sprint_id IS NOT NULL", Map.of());
             List<Map<String, Object>> sprints = ingestService.queryPublic(
-                "SELECT sprint_id, out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw FROM KnowSprint", Map.of());
+                "SELECT sprint_id, COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw FROM KnowSprint", Map.of());
             List<Map<String, Object>> taskRows = ingestService.queryPublic(
                 "SELECT in('HAS_STATE').task_uid AS tuid, status_raw, effort_days FROM KnowTaskHist WHERE valid_to IS NULL", Map.of());
             List<Map<String, Object>> releases = ingestService.queryPublic(
