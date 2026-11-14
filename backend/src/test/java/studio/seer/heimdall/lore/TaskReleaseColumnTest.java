@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TaskReleaseColumnTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"open_tasks", "closed_tasks"})
+    @ValueSource(strings = {"open_tasks", "closed_tasks", "tasks_of_sprint", "tasks_of_sprints_batch"})
     void taskReleaseIsReleaseOfItsOwnPr(String id) {
         LoreSlices.SliceDef def = LoreSlices.get(id);
         assertNotNull(def, id);
