@@ -32,6 +32,12 @@ class LoreReadinessLiveDbTest {
     }
 
     private static void setStatus(String uid, String status) {
+        // WK-05 (ADR-LORE-014-D5): done — только из review и с доказательством по виду работы.
+        if ("done".equals(status)) {
+            post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + uid + "\",\"status\":\"review\"}");
+            post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + uid + "\",\"status\":\"done\",\"evidence_type\":\"pr\",\"evidence_ref\":\"PR #1\"}");
+            return;
+        }
         post("/lore/status", "{\"entity_type\":\"task\",\"id\":\"" + uid + "\",\"status\":\"" + status + "\"}");
     }
 

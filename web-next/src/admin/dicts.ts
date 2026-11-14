@@ -27,6 +27,8 @@ export interface DictRow {
   sort_order: number | null;
   is_active: boolean;
   is_extensible: boolean;
+  /** WK-01: вид статьи — только у словаря с набором видов (DICT_KINDS); null — не задан. */
+  kind: string | null;
 }
 
 /** То, что правится в форме: код (только у нового), метки, вид, порядок, активность. */
@@ -38,6 +40,18 @@ export interface DictDraft {
   icon: string | null;
   sort_order: number | null;
   is_active: boolean;
+  /** WK-01: вид (tech | service у product); null — не задан и не шлётся (сервер: null = не трогать). */
+  kind?: string | null;
+}
+
+/**
+ * WK-01: наборы видов по словарям — зеркало LoreDictResource.KINDS. Вид продукта ИТ / не ИТ.
+ * Снять заданный вид запись не умеет (null = «не трогать»), поэтому форма его не предлагает.
+ */
+export const DICT_KINDS: Record<string, readonly string[]> = { product: ['tech', 'service'] };
+
+export function dictKinds(dictType: string): readonly string[] | null {
+  return Object.prototype.hasOwnProperty.call(DICT_KINDS, dictType) ? DICT_KINDS[dictType] : null;
 }
 
 export interface TagRow { tag_id: string; uses: number }
@@ -72,6 +86,7 @@ export function parseDictRows(rows: readonly unknown[]): DictRow[] {
     // Слайс маскирует NULL через ifnull(is_active, true); не пришло вовсе — тоже «активно».
     is_active: r.is_active !== false,
     is_extensible: r.is_extensible === true,
+    kind: strOrNull(r.kind),
   }));
 }
 
@@ -120,7 +135,7 @@ export function checkNewDictType(raw: string, existing: readonly string[]): NewD
   return existing.includes(code) ? { kind: 'exists', code } : { kind: 'new', code };
 }
 
-const FIELDS = ['code', 'label_ru', 'label_en', 'color', 'icon', 'sort_order', 'is_active'] as const;
+const FIELDS = ['code', 'label_ru', 'label_en', 'color', 'icon', 'sort_order', 'is_active', 'kind'] as const;
 type Field = (typeof FIELDS)[number];
 
 const shown = (f: Field, v: unknown): string | null => {
@@ -134,8 +149,9 @@ const shown = (f: Field, v: unknown): string | null => {
  * срезом, поэтому каждая строка «проверена». Нового значения нет — снятие,
  * прежнего не было — добавление (kit не терпит «было (пусто) → стало X»).
  */
-export function dictEntryDiff(before: DictRow | null, after: DictDraft): DiffRow[] {
-  return FIELDS.map(f => {
+export function dictEntryDiff(before: DictRow | null, after: DictDraft, dictType?: string): DiffRow[] {
+  const withKind = dictKinds(dictType ?? before?.dict_type ?? '') !== null;
+  return FIELDS.filter(f => f !== 'kind' || withKind).map(f => {
     const from = before ? shown(f, before[f]) : null;
     const to = shown(f, f === 'code' ? after.code.trim() : after[f]);
     const base = { id: f, text: f, check: { state: 'checked' as const } };
@@ -164,6 +180,9 @@ export function dictEntryBody(dictType: string, d: DictDraft): Record<string, un
     sort_order: d.sort_order ?? null,
     is_active: d.is_active,
     is_extensible: null,
+    // WK-01: вид — только у словаря с видами (у прочих ключа нет: контракт v1 тот же);
+    // не задан — null, сервер его не трогает.
+    ...(dictKinds(dictType) ? { kind: d.kind && dictKinds(dictType)!.includes(d.kind) ? d.kind : null } : {}),
   };
 }
 

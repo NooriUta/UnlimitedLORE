@@ -40,6 +40,9 @@ public class AgentQuotaFilter implements ContainerRequestFilter {
     @ConfigProperty(name = AgentQuota.PER_AGENT)
     Optional<Integer> perAgent;
 
+    @ConfigProperty(name = AgentQuota.PER_CLIENT)
+    Optional<Integer> perClient;
+
     @ConfigProperty(name = AgentQuota.TOTAL)
     Optional<Integer> total;
 
@@ -48,7 +51,7 @@ public class AgentQuotaFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext req) {
-        if (perAgent.isEmpty() && total.isEmpty()) return;          // выключено — ни одного запроса
+        if (perAgent.isEmpty() && perClient.isEmpty() && total.isEmpty()) return;   // выключено — ни одного запроса
         String path = req.getUriInfo().getPath();
         if (path == null || !(path.startsWith("/lore/") || path.startsWith("lore/"))) return;
         String scope = identity == null || identity.isAnonymous() ? null : AgentScopeFilter.agentScopeOf(identity);
@@ -56,8 +59,12 @@ public class AgentQuotaFilter implements ContainerRequestFilter {
         try {
             long from = System.currentTimeMillis() - window.toMillis();
             long agentN = perAgent.isPresent() ? count(AgentQuota.AGENT_SQL, Map.of("scope", scope, "from", from)) : 0;
+            String client = AgentActionLog.clientMark(true, LoreRequestStatsFilter.clientIdOf(identity));
+            long clientN = perClient.isPresent() && AgentQuota.countsPerClient(client)
+                ? count(AgentQuota.CLIENT_SQL, Map.of("client", client, "from", from)) : 0;
             long totalN = total.isPresent() ? count(AgentQuota.TOTAL_SQL, Map.of("from", from)) : 0;
-            AgentQuota.Denial d = AgentQuota.judge(scope, toInt(perAgent), toInt(total), agentN, totalN);
+            AgentQuota.Denial d = AgentQuota.judge(scope, client, toInt(perAgent), toInt(perClient), toInt(total),
+                agentN, clientN, totalN);
             if (d == null) return;
             req.abortWith(Response.status(429).type(MediaType.APPLICATION_JSON)
                 .header("Cache-Control", "no-store")

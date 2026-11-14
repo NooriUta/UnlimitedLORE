@@ -76,7 +76,7 @@ public class LoreHistoryResource extends LoreResourceBase {
         List<Map<String, Object>> rows = LoreEntityHistory.scope(type, raw, allowed);
 
         Map<String, Object> attribution = new LinkedHashMap<>();
-        attribution.put("source", "changed_by версии (S2-12); у версий без автора — journal lore.action (AO-01) ± valid_from");
+        attribution.put("source", "changed_by версии (S2-12); у версий без автора — журнал действий AgentActionLog (AO-01, V86; клиент и машина) ± valid_from");
         List<Map<String, Object>> journal = List.of();
         if (!rows.isEmpty()) {
             try {
@@ -98,6 +98,21 @@ public class LoreHistoryResource extends LoreResourceBase {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", type);
         body.put("id", id);
+        // MINI-06: заголовок записи одним путём с историей (мобилке не собирать его из второго среза).
+        // Не прочитался — title null и title_ok=false с причиной: «заголовок не прочитан» ≠ «заголовка нет».
+        String titleSql = LoreEntityHistory.titleSql(type);
+        if (titleSql != null) {
+            try {
+                List<Map<String, Object>> t = ingestService.queryPublic(titleSql, Map.of("id", id));
+                body.put("title", t.isEmpty() ? null : t.get(0).get("title"));
+                body.put("title_ok", true);
+            } catch (RuntimeException e) {
+                LOG.warnf("[LORE HISTORY] заголовок %s/%s: %s", type, id, e.getMessage());
+                body.put("title", null);
+                body.put("title_ok", false);
+                body.put("title_reason", "заголовок записи не прочитан: " + e.getMessage());
+            }
+        }
         body.put("rows", LoreTimeFormat.isoUtc(pageRows));
         body.put("page", paged.get("page"));
         body.put("attribution", attribution);

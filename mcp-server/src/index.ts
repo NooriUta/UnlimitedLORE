@@ -3,7 +3,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerLoreRead } from './tools/loreRead.js';
 import { registerLoreWrite } from './tools/loreWrite.js';
-import { BACKEND_FALLBACK_URL, BACKEND_URL, clientAgentScope } from './backend.js';
+import { BACKEND_FALLBACK_URL, BACKEND_URL, clientAgentScope, lorePost } from './backend.js';
+import { SourceTrail } from './sourceTrail.js';
 import { registerMuninn } from './tools/muninn.js';
 import { registerClaudeRules } from './tools/claudeRules.js';
 import { registerForgejo, forgejoConfigured } from './tools/forgejo.js';
@@ -77,6 +78,8 @@ async function main(): Promise<void> {
   const server = withStrictTools(
     new McpServer({ name: 'aida-lore', version: build.commit }),
     legacySurfaceGate(surface.gate, { legacy, narrowed }),
+    // AO-02: след источников — копилка прочитанного, отправка после создания (бэкенд за флагом).
+    (() => { const trail = new SourceTrail((p, b) => lorePost(p, b)); return (n: string, a: unknown, r: unknown) => trail.observe(n, a, r); })(),
   );
 
   registerLoreRead(server);

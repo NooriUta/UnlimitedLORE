@@ -166,26 +166,44 @@ describe('K2-VIEW-LIBRARY · «Библиотека» открывается в 
     expect(w.location.search).not.toMatch(/lib=1/);
   });
 
-  it('?lib=1&libo=KIT по ссылке: группы по области, выбранный компонент — справа паспортом', async () => {
+  // K2-LIBRARY-DUP-PASSPORT, решение владелицы 14.11: «в библиотеке оставь только левую часть меню,
+  // не дублируй второй раз компонент паспорта, а паспорт открывается обычно как для таблицы».
+  // Панели чтения нет; выбор в дереве — ?open= (тот же механизм, что щелчок по строке списка);
+  // на экране не больше одного паспорта.
+  it('K2: вход в «Библиотеку» — только дерево, паспорт сам не открывается', async () => {
     const { fn, paths } = net(COMPONENTS);
-    const { w } = win('?lib=1&libo=KIT');
+    const { w } = win('?lib=1');
     const { container } = render(<ListScreen screen="components" fetchImpl={fn} urlState={w} />);
     await waitFor(() => expect(container.querySelector('.sk-lib')).not.toBeNull());
     expect(screen.getByRole('region', { name: 'platform' })).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'frontend' })).toBeTruthy();
-    const current = container.querySelector('.sk-lib__doc[aria-current="true"]') as HTMLElement;
-    expect(current.getAttribute('data-doc-id')).toBe('KIT');
-    // Читалка — паспорт компонента (его ADR, спеки, задачи и технологии).
-    await waitFor(() => expect(paths).toContain('/lore/record/component/KIT'));
+    expect(container.querySelector('.sk-lib__reader')).toBeNull();
+    expect(paths.some(p => p.startsWith('/lore/record/component/'))).toBe(false);
   });
 
-  it('выбор документа пишет ?libo= в адрес', async () => {
-    const { fn } = net(COMPONENTS);
+  it('K2: выбор в дереве открывает обычный паспорт через ?open=, второго паспорта нет', async () => {
+    const { fn, paths } = net(COMPONENTS);
     const { w, calls } = win('?lib=1');
-    render(<ListScreen screen="components" fetchImpl={fn} urlState={w} />);
+    const { container } = render(<ListScreen screen="components" fetchImpl={fn} urlState={w} />);
     const frontend = await screen.findByRole('region', { name: 'frontend' });
     fireEvent.click(within(frontend).getByRole('button', { name: /KIT/ }));
-    await waitFor(() => expect(calls.some(u => /[?&]libo=KIT/.test(u))).toBe(true));
+    await waitFor(() => expect(calls.some(u => /[?&]open=KIT/.test(u))).toBe(true));
+    expect(calls.some(u => /[?&]libo=/.test(u))).toBe(false);
+    // Паспорт — ленивый модуль: под нагрузкой полного прогона он грузится дольше секунды.
+    await waitFor(() => expect(paths).toContain('/lore/record/component/KIT'), { timeout: 5000 });
+    expect(container.querySelector('.sk-lib__reader')).toBeNull();
+    // Выбранный — отмечен в дереве.
+    const current = container.querySelector('.sk-lib__doc[aria-current="true"]') as HTMLElement;
+    expect(current.getAttribute('data-doc-id')).toBe('KIT');
+  });
+
+  it('K2: старая ссылка ?lib=1&libo=KIT — открывает тот же паспорт через ?open=', async () => {
+    const { fn, paths } = net(COMPONENTS);
+    const { w } = win('?lib=1&libo=KIT');
+    render(<ListScreen screen="components" fetchImpl={fn} urlState={w} />);
+    await waitFor(() => expect(w.location.search).toMatch(/[?&]open=KIT/));
+    expect(w.location.search).not.toMatch(/libo=/);
+    // Паспорт — ленивый модуль: под нагрузкой полного прогона он грузится дольше секунды.
+    await waitFor(() => expect(paths).toContain('/lore/record/component/KIT'), { timeout: 5000 });
   });
 });
 

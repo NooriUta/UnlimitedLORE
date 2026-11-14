@@ -36,7 +36,8 @@ public class LoreWhoamiResource extends LoreResourceBase {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @io.smallrye.common.annotation.Blocking
-    public Response whoami(@HeaderParam("X-Seer-Role") String role) {
+    public Response whoami(@HeaderParam("X-Seer-Role") String role,
+                           @HeaderParam(AgentMachine.HEADER) String machineHeader) {
         if (!enabled) return disabled();
         if (!oidcEnabled || identity == null || !(identity.getPrincipal() instanceof JsonWebToken jwt))
             return noStore(Response.ok(Whoami.body(Whoami.Token.authOff(role), Whoami.Graph.EMPTY)));
@@ -46,7 +47,11 @@ public class LoreWhoamiResource extends LoreResourceBase {
         Whoami.Token t = new Whoami.Token(true, callerKcSub() != null ? callerKcSub() : jwt.getSubject(),
             callerClientId(), AgentScopeFilter.agentScopeOf(identity), roles, exp > 0 ? exp : null);
         try {
-            return noStore(Response.ok(Whoami.body(t, graph(t))));
+            String machine = Whoami.machineOf(t, machineHeader);
+            Whoami.Graph g = graph(t);
+            Map<String, Object> body = Whoami.body(t, t.agentScope() != null ? Whoami.withCallMachine(g, machine) : g);
+            body.put("machine", machine);
+            return noStore(Response.ok(body));
         } catch (Exception e) {
             LOG.warnf("[LORE WHOAMI] граф не прочитан: %s", e.getMessage());
             Map<String, Object> b = Whoami.body(t, Whoami.Graph.EMPTY);
@@ -54,6 +59,7 @@ public class LoreWhoamiResource extends LoreResourceBase {
             id.put("state", "error");
             id.put("reason", "граф не прочитан: " + LoreUpstream.detail(e));
             b.put("identity", id);
+            b.put("machine", Whoami.machineOf(t, machineHeader));
             return noStore(Response.ok(b));
         }
     }

@@ -86,9 +86,17 @@ public class LoreAuditLogFilter implements ContainerResponseFilter {
             role = humanRole(req);
         }
 
-        AUDIT.infof("ts=%s axis=%s role=%s family=%s path=%s method=%s status=%d entity_id=%s",
-            Instant.now(), axis, role, family, path, req.getMethod(), res.getStatus(),
-            entityIdOf(res.getEntity()));
+        AUDIT.info(line(Instant.now().toString(), axis, role, family, path, req.getMethod(), res.getStatus(),
+            entityIdOf(res.getEntity()),
+            // D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина вызова; человек — «(n/a)».
+            AgentMachine.mark("agent".equals(axis), req.getHeaderString(AgentMachine.HEADER))));
+    }
+
+    /** Строка аудита (lore.audit); машина — последним полем. */
+    static String line(String ts, String axis, String role, String family, String path, String method,
+                       int status, String entityId, String machine) {
+        return "ts=" + ts + " axis=" + axis + " role=" + role + " family=" + family + " path=" + path
+            + " method=" + method + " status=" + status + " entity_id=" + entityId + " machine=" + machine;
     }
 
     private static String humanRole(ContainerRequestContext req) {

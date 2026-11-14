@@ -82,8 +82,13 @@ class TaskRolesFromEdgesLiveDbTest {
     void doneGateReadsRoleHoldersFromEdges() {
         List<Map<String, Object>> rows = ingest.queryPublic(LoreStatusResource.DONE_GATE_SQL, Map.of("uid", TASK));
         assertEquals(1, rows.size(), "задача найдена");
-        assertNull(LoreStatusResource.doneGateRefusal(rows.get(0)),
-            "ревьюер назначен ребром и отличен от исполнителя — гейт пропускает: " + rows.get(0));
+        // WK-05 (ADR-LORE-014-D5): решение — LoreDoneGate; здесь — что чтение видит держателей рёбер.
+        Map<String, Object> r = rows.get(0);
+        assertNotNull(r.get("reviewer_agent"), "ревьюер назначен ребром — гейт его видит: " + r);
+        assertNotEquals(r.get("executor_agent"), r.get("reviewer_agent"), "ревьюер отличен от исполнителя: " + r);
+        assertNull(LoreDoneGate.done(new LoreDoneGate.Facts(false, "другой человек", String.valueOf(r.get("executor_agent")),
+            String.valueOf(r.get("reviewer_agent")), "review", null, "pr", "#1"), LoreModelFile.content().workflow()),
+            "приёмщик назначен ребром — гейт пропускает: " + r);
     }
 
     /** Перенос задачи сохраняет роли: у новой задачи те же держатели. */

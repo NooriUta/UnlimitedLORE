@@ -1208,8 +1208,9 @@ public class AidaLoreResource extends LoreResourceBase {
                 // свёртывается здесь же, до страницы, чтобы fields/total её не видели).
                 // K2-FEED-BODY-MORE: колонки-источники → body_head/body_rest/body_more (после
                 // обнуления тела правами — обнулённому голова не строится).
-                out.put("rows", LoreStatusCategory.enrich(id,
-                    LoreBodyHead.fold(LoreChangedAt.fold(castRows(out.get("rows"))))));
+                // MINI-04: ось проекта под одним именем projects (git_projects остаётся для веба).
+                out.put("rows", LoreProjectsField.enrich(id, LoreStatusCategory.enrich(id,
+                    LoreBodyHead.fold(LoreChangedAt.fold(castRows(out.get("rows")))))));
                 // Владелица 09.11: итоги спринта — строки задач сворачиваются в строку на
                 // спринт той же функцией, что кормит паспорт (одно число — один источник).
                 if ("sprint_totals".equals(id)) LoreSprintTotals.fold(out, given.getOrDefault("sprint_ids", ""), sprintsExisting.get());

@@ -157,7 +157,7 @@ public class LoreRunbookResource extends LoreResourceBase {
                 rbsql.toString(), upsertP)).await().indefinitely();
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowRunbook SET date_created=:d WHERE runbook_id=:id AND date_created IS NULL",
-                Map.of("d", java.time.LocalDate.now().toString(), "id", req.runbook_id())))
+                Map.of("d", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "id", req.runbook_id())))
                 .await().indefinitely();
 
             // Step 2: check for an existing open SCD2 hist row

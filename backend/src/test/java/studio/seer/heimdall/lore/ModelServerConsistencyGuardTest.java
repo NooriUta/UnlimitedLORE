@@ -103,6 +103,29 @@ class ModelServerConsistencyGuardTest {
         assertFalse(compatible("bool", "STRING"));
     }
 
+    /**
+     * SPRINT_LORE_PRODUCT_BACKLOG/MINI-04-LIST-ROWS-CATEGORY-PROJECTS: срез, обещающий клиенту
+     * {@code projects} всегда ({@link LoreProjectsField#GUARANTEED}), читает ось проекта в SQL — иначе
+     * «всегда массив» значит «всегда пустой». И обратно: срез со статусом и осью проекта в SQL
+     * в перечне есть — новый срез-список проектных записей не забыт.
+     */
+    @Test
+    void projectListSlicesCarryTheProjectAxis() {
+        List<String> bad = new ArrayList<>();
+        for (String slice : LoreProjectsField.GUARANTEED) {
+            LoreSlices.SliceDef def = LoreSlices.get(slice);
+            if (def == null) bad.add(slice + ": среза нет");
+            else if (!LoreProjectsField.readsProjectAxis(def.baseSql())) bad.add(slice + ": оси проекта в SQL нет");
+        }
+        for (String slice : LoreStatusCategory.SLICE_STATUS.keySet()) {
+            LoreSlices.SliceDef def = LoreSlices.get(slice);
+            if (def != null && LoreProjectsField.readsProjectAxis(def.baseSql())
+                    && !LoreProjectsField.GUARANTEED.contains(slice))
+                bad.add(slice + ": статус и ось проекта есть, а в GUARANTEED нет");
+        }
+        assertEquals(List.of(), bad, "срез-список проектных записей без гарантированного projects (MINI-04)");
+    }
+
     static JsonObject listFacets() throws IOException {
         Path p = Path.of("..", "shared", "model", "list-facets.json");
         return new JsonObject(Files.readString(p, StandardCharsets.UTF_8));

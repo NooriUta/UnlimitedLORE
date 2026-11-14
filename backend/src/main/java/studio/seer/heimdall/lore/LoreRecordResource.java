@@ -124,6 +124,8 @@ public class LoreRecordResource extends LoreResourceBase {
             List.of());
         out.put("schema", recordSchema(type));
         out.put("computed", Map.of());
+        // S4-24: куда писать и что просить — из модели; null — пути создания у типа нет.
+        out.put("create", LoreModelCreate.block(type));
         return noStore(Response.ok(out));
     }
 

@@ -572,9 +572,13 @@ class LoreRecordFacadeLiveDbTest {
         admin().body(Map.of("sprint_id", sid, "task_id", "UCC-1", "title", "доставка", "work_class", "uc",
             "uc_id", "UC-UC-COLS-1", "executor_agent", "claude-full", "reviewer_agent", "architect"))
             .post("/lore/task").then().statusCode(200);
-        for (String st : new String[]{"active", "done"})
+        // WK-05 (ADR-LORE-014-D5): done — только из review и с доказательством по виду работы.
+        for (String st : new String[]{"active", "review"})
             admin().body(Map.of("entity_type", "task", "id", sid + "/UCC-1", "status", st))
                 .post("/lore/status").then().statusCode(200);
+        admin().body(Map.of("entity_type", "task", "id", sid + "/UCC-1", "status", "done",
+                "evidence_type", "pr", "evidence_ref", "#1"))
+            .post("/lore/status").then().statusCode(200);
 
         JsonPath j = admin().get("/lore/slice/use_cases").then().statusCode(200).extract().jsonPath();
         Map<String, Object> root = j.getMap("rows.find { it.uc_id == 'FEAT-UC-COLS' }");

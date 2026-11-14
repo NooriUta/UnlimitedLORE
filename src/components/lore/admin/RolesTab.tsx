@@ -35,6 +35,8 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   // AL-47 (регресс-гвард поймал): полная переиндексация корпуса документов, была
   // защищена только ролью admin — а её несут все семь узких агентных профилей.
   { what: 'Переиндексация корпуса', api: '/lore/admin/lore/ingest', humanOnly: true, agents: [] },
+  // AO-02: след прочитанного — пишет MCP за любым агентным профилем после создания записи.
+  { what: 'След источников', api: '/lore/sources', humanOnly: false, agents: ['full', 'architect', 'developer', 'pm', 'marketer', 'analyst', 'product-analyst', 'tester'] },
   { what: 'ADR', api: '/lore/adr*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
   { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },

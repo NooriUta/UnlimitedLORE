@@ -14,7 +14,7 @@
 //
 // Иконки — её выбор 09.11 («три»): Свойства · Граф · Аналитика.
 import { beforeAll, describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen , within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { RecordView, registerGameIcons } from '../index';
 import type { KitConfig, KitCtx, KitData, KitRecord } from '../index';
@@ -88,14 +88,14 @@ describe('S4-30 · правая колонка: открыта → только 
     // Подписи полей в рейке не обрезаются, а честно отсутствуют.
     expect(screen.queryByText('Версия')).toBeNull();
     for (const name of ['Свойства', 'Граф', 'Аналитика']) {
-      expect(screen.getByRole('button', { name }), name).toBeTruthy();
+      expect(within(propsZone() as HTMLElement).getByRole('button', { name }), name).toBeTruthy();
     }
   });
 
   it('в рейке кнопки — ИКОНКИ, а не подписи: видимого текста нет', () => {
     show();
     drag(border(), 180);
-    const btn = screen.getByRole('button', { name: 'Свойства' });
+    const btn = within(propsZone() as HTMLElement).getByRole('button', { name: 'Свойства' });
     // Имя для скринридера есть, видимого текста — нет: это и есть «только иконками».
     expect(btn.textContent?.trim()).toBe('');
     expect(btn.querySelector('svg')).toBeTruthy();
@@ -104,7 +104,7 @@ describe('S4-30 · правая колонка: открыта → только 
   it('из рейки «Свойства» возвращает колонку целиком', () => {
     show();
     drag(border(), 180);
-    act(() => { screen.getByRole('button', { name: 'Свойства' }).click(); });
+    act(() => { within(propsZone() as HTMLElement).getByRole('button', { name: 'Свойства' }).click(); });
     expect(propsZone()?.classList.contains('sk-rec__props--rail')).toBe(false);
     expect(screen.getByText('Версия')).toBeTruthy();
   });
@@ -125,12 +125,12 @@ describe('S4-30 · правая колонка: открыта → только 
     expect(propsZone()?.classList.contains('sk-rec__props--rail')).toBe(true);
   });
 
-  it('во весь экран рейка у края — те же три иконки, без видимого текста', () => {
+  it('во весь экран (S4-29, 14.11): рейки у края нет — те же значки в строке статуса, без видимого текста', () => {
     render(<RecordView record={record} ctx={ctx} tab="overview" onTab={() => {}} placement="full" />);
-    const rail = document.querySelector('.sk-rec-rail') as HTMLElement;
-    expect(rail).toBeTruthy();
-    for (const name of ['Свойства', 'Граф', 'Аналитика']) {
-      const btn = screen.getByRole('button', { name });
+    expect(document.querySelector('.sk-rec-rail')).toBeNull();
+    const sw = screen.getByRole('group', { name: 'Вид паспорта' });
+    for (const name of ['Контент', 'Свойства', 'Аналитика']) {
+      const btn = within(sw).getByRole('button', { name });
       expect(btn.textContent?.trim(), name).toBe('');
       expect(btn.querySelector('svg'), name).toBeTruthy();
     }

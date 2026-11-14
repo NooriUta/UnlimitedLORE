@@ -41,6 +41,8 @@ final class LoreRecordFrom {
         DATE10,
         /** true → «Да», иначе null. */
         BOOL_YES,
+        /** MC-08: флаг поля вида bool — Boolean как есть («true»/«false» строкой — тоже), иное — null («не задан»). */
+        BOOL,
         /** Любое значение текстом ({@code String.valueOf}), null — null. */
         TEXT,
         /** Токен плана из свободного status_raw ({@link LoreRecordValues#planToken}). */
@@ -108,6 +110,7 @@ final class LoreRecordFrom {
             case TRIM -> trim(LoreRecordValues.str(first));
             case DATE10 -> date10(LoreRecordValues.str(first));
             case BOOL_YES -> Boolean.TRUE.equals(first) ? "Да" : null;
+            case BOOL -> first instanceof Boolean b ? b : "true".equals(first) ? Boolean.TRUE : "false".equals(first) ? Boolean.FALSE : null;
             case TEXT -> first == null ? null : String.valueOf(first);
             case PLAN_TOKEN -> LoreRecordValues.planToken(LoreRecordValues.str(first));
             case DOC_TOKEN -> LoreRecordValues.docToken(first);
@@ -209,7 +212,7 @@ final class LoreRecordFrom {
             s("planned_start", "planned_start_date"),
             s("planned_end_date", "planned_end_date"),
             v("created", Transform.DATE10, "created_date"),
-            v("no_release", Transform.BOOL_YES, "no_release_required"),
+            v("no_release", Transform.BOOL, "no_release_required"),
             s("track", "track_id"),
             v("status", Transform.PLAN_TOKEN, "status_raw"))),
         Map.entry("task", List.of(
@@ -384,7 +387,7 @@ final class LoreRecordFrom {
             s("label_en", "label_en"),
             s("icon", "icon"),
             v("sort_order", Transform.RAW, "sort_order"),
-            v("is_active", Transform.BOOL_YES, "is_active"),
+            v("is_active", Transform.BOOL, "is_active"),
             v("parent", Transform.HEAD_OR, "parent_code"),
             list("projects", "git_projects"),
             list("components", "components"))));
