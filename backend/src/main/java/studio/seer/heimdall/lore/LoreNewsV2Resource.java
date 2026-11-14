@@ -17,6 +17,7 @@ import studio.seer.heimdall.lore.news.NewsAtomWriter;
 import studio.seer.heimdall.lore.news.NewsDynamics;
 import studio.seer.heimdall.lore.news.NewsV2;
 import studio.seer.heimdall.lore.news.NewsV2Engine;
+import studio.seer.heimdall.lore.news.NewsWhoNames;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -278,6 +279,21 @@ public class LoreNewsV2Resource extends LoreResourceBase {
                 .compute(q);
             @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
             meta.put("read_mark", mark.toMap());
+            // PU-29 (приёмка 14.11.2026): автор-человек — с именем из KnowUser, а не сырым kc_sub.
+            // Не прочиталось — who_names нет, клиент показывает ключи как раньше; причина в лог.
+            java.util.Set<String> whos = NewsWhoNames.whos(out);
+            if (!whos.isEmpty()) {
+                try {
+                    Map<String, String> names = new java.util.HashMap<>();
+                    for (Map<String, Object> u : ingestService.queryPublic(
+                            "SELECT kc_sub, display_name FROM KnowUser WHERE kc_sub IN :subs", Map.of("subs", List.copyOf(whos))))
+                        if (u.get("kc_sub") != null && u.get("display_name") != null && !u.get("display_name").toString().isBlank())
+                            names.put(u.get("kc_sub").toString(), u.get("display_name").toString());
+                    NewsWhoNames.attach(out, names);
+                } catch (RuntimeException e) {
+                    LOG.warnf("[LORE NEWS v2] имена людей: %s", e.getMessage());
+                }
+            } else NewsWhoNames.attach(out, Map.of());
             return new Built(out, null);
         } catch (Exception e) {
             LOG.warnf("[LORE NEWS v2] %s", e.getMessage());

@@ -268,4 +268,6 @@ export interface NewsResponse {
   metrics: NewsMetrics;
   matrix?: NewsMatrix;
   meta: NewsMeta;
+  /** PU-29: подпись значения «Кто» (kc_sub → имя из KnowUser). Старый сервер не шлёт — ключ как есть. */
+  who_names?: Record<string, string>;
 }
