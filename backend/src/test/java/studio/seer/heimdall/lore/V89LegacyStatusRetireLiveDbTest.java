@@ -46,6 +46,8 @@ class V89LegacyStatusRetireLiveDbTest {
                 ("root:" + LoreArcadeDbTestResource.ROOT_PASSWORD).getBytes(StandardCharsets.UTF_8)))
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
         HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
+        // Посев обязан падать громко: проглоченный 4xx/5xx превращался в «положительный контроль не сработал» без причины (#1401).
+        if (r.statusCode() / 100 != 2) throw new AssertionError("SQL " + r.statusCode() + ": " + query + " → " + r.body());
         io.vertx.core.json.JsonObject j = new io.vertx.core.json.JsonObject(r.body());
         List<Map<String, Object>> out = new ArrayList<>();
         io.vertx.core.json.JsonArray arr = j.getJsonArray("result", new io.vertx.core.json.JsonArray());
@@ -60,7 +62,8 @@ class V89LegacyStatusRetireLiveDbTest {
     }
 
     private static void status(String type, String id) throws Exception {
-        sql("UPDATE " + type + " SET status_id='" + id + "' UPSERT WHERE status_id='" + id + "'");
+        // без UPSERT: на голом легаси-типе нет свойства и индекса status_id, которые раньше давал инициализатор схемы
+        sql("CREATE VERTEX " + type + " SET status_id='" + id + "'");
     }
 
     private static void hasStatus(String histType, String stateUid, String statusType, String code) throws Exception {
@@ -82,7 +85,7 @@ class V89LegacyStatusRetireLiveDbTest {
         status("StatusPhase", "planned");
         status("StatusMilestone", "upcoming");
         status("StatusDecision", "fixed");
-        sql("UPDATE TrackType SET type_id='engine', label='Engine' UPSERT WHERE type_id='engine'");
+        sql("CREATE VERTEX TrackType SET type_id='engine', label='Engine'");
 
         sql("CREATE VERTEX KnowTaskHist SET state_uid='v89-task'");
         hasStatus("KnowTaskHist", "v89-task", "StatusTask", "todo");
