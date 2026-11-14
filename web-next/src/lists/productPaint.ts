@@ -119,5 +119,15 @@ export function withProductColumn(cfg: KitConfig, title: string): KitConfig {
     return next;
   })();
   const add = (xs: readonly string[] | undefined) => (xs ?? []).includes(PRODUCT_COLUMN) ? [...(xs ?? [])] : [...(xs ?? []), PRODUCT_COLUMN];
-  return { ...cfg, kinds, list: { ...list, columns, filters: add(list.filters), groupings: add(list.groupings) } };
+  // Своё поле записи `products` (у вехи, компонента) — подмножество «Продукта»: productsOf
+  // уже включает его. Оставить оба значит показать одно и то же дважды — две колонки
+  // «Продукт»/«Продукты» и два фильтра (PU-27, скрин владелицы 13.11). Правило общее:
+  // где есть краска, своё поле `products` в колонках, фильтрах и разрезах заменяется
+  // «Продуктом» НА СВОЁМ МЕСТЕ (порядок — первый разрез — не сдвигается), без повтора.
+  const own = new Set(['products', 'fields.products']);
+  const swap = (xs: readonly string[]) => [...new Set(xs.map(x => (own.has(x) ? PRODUCT_COLUMN : x)))];
+  return {
+    ...cfg, kinds,
+    list: { ...list, columns: swap(columns), filters: swap(add(list.filters)), groupings: swap(add(list.groupings)) },
+  };
 }

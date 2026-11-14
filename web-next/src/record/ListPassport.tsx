@@ -21,6 +21,7 @@ import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
+import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
@@ -453,6 +454,15 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           загрузки и сбоя (MP2-09/10). RecordReader свою строку не рисует,
           когда крошки/листалка/инструменты не переданы. */}
       <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
+      {/* PU-27: у вехи — сгорание по задачам её спринтов (строка BURN-DOWN и
+          «Цель к сроку»), той же строкой, что у спринта; срок — «Когда» вехи. */}
+      {type === 'milestone' && (
+        <MilestoneBurnLine
+          milestoneId={view.record.id}
+          fetchImpl={fetchImpl}
+          {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
+        />
+      )}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
