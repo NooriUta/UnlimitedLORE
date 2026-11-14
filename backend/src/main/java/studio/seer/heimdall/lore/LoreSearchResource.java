@@ -487,8 +487,7 @@ public class LoreSearchResource extends LoreResourceBase {
         scannedBranches.forEach((type, why) ->
             warnings.add(Map.of("type", type, "scanned", true, "error", why)));
 
-        hits.sort((a, bb) -> Double.compare(
-            ((Number) bb.get("score")).doubleValue(), ((Number) a.get("score")).doubleValue()));
+        sortHits(hits, q);
         List<Map<String, Object>> page = hits.stream().skip(offset).limit(limit).toList();
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -677,6 +676,22 @@ public class LoreSearchResource extends LoreResourceBase {
         out.sort((a, bb) -> Double.compare(
             ((Number) bb.get("score")).doubleValue(), ((Number) a.get("score")).doubleValue()));
         return out;
+    }
+
+    /**
+     * Порядок выдачи: запись, чей код РАВЕН запросу (без регистра и пробелов по краям), — первой и с
+     * пометкой {@code exact}; остальные — по счёту. Приёмка препрода 14.11.2026: по точному коду спринта
+     * первой шла спека с похожими словами (выше BM25 × приоритет типа), Shift+Enter открыл не то.
+     */
+    static void sortHits(List<Map<String, Object>> hits, String q) {
+        String want = q == null ? "" : q.trim();
+        for (Map<String, Object> h : hits)
+            if (!want.isEmpty() && want.equalsIgnoreCase(String.valueOf(h.get("ref_id")))) h.put("exact", true);
+        hits.sort((a, bb) -> {
+            boolean ea = Boolean.TRUE.equals(a.get("exact")), eb = Boolean.TRUE.equals(bb.get("exact"));
+            if (ea != eb) return ea ? -1 : 1;
+            return Double.compare(((Number) bb.get("score")).doubleValue(), ((Number) a.get("score")).doubleValue());
+        });
     }
 
     /**
