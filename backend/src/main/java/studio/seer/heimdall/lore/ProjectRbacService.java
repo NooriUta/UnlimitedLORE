@@ -3,6 +3,7 @@ package studio.seer.heimdall.lore;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,6 +58,39 @@ public class ProjectRbacService {
         if (projectRole == null || agentScope == null) return false;
         Set<String> allowed = ROLE_AGENT_MATRIX.get(projectRole);
         return allowed != null && allowed.contains(agentScope);
+    }
+
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-03 — ответ «что будет делать агент с профилем agentScope у
+     * этого владельца» ДО выдачи учётки: по каждому проекту владельца (строки HAS_PROJECT_ROLE
+     * {slug, role}) — роль, делегирует ли она agentScope ({@link #delegationAllowed}, та же
+     * матрица, что на записи) и какие профили она делегирует вообще (для счётчиков мастера).
+     * Чистая функция; проекты по алфавиту; строка без проекта пропускается.
+     */
+    static List<Map<String, Object>> delegationPlan(List<Map<String, Object>> roleRows, String agentScope) {
+        var out = new java.util.ArrayList<Map<String, Object>>();
+        for (var r : roleRows) {
+            Object slug = r.get("slug");
+            if (slug == null || String.valueOf(slug).isBlank()) continue;
+            String role = r.get("role") == null ? null : String.valueOf(r.get("role"));
+            var row = new java.util.LinkedHashMap<String, Object>();
+            row.put("project", String.valueOf(slug));
+            row.put("role", role);
+            row.put("delegates", delegationAllowed(role, agentScope));
+            row.put("profiles", role == null ? List.of()
+                : ROLE_AGENT_MATRIX.getOrDefault(role, Set.of()).stream().sorted().toList());
+            out.add(row);
+        }
+        out.sort(java.util.Comparator.comparing(m -> String.valueOf(m.get("project"))));
+        return out;
+    }
+
+    /** {@link #delegationPlan} по ролям человека из графа. */
+    public List<Map<String, Object>> delegationForOwner(String kcSub, String agentScope) {
+        if (kcSub == null) return List.of();
+        return delegationPlan(ingestService.queryPublic(
+            "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+            Map.of("sub", kcSub)), agentScope);
     }
 
     /**

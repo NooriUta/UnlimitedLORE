@@ -20,6 +20,7 @@ import { RotatePanel } from './KcDanger';
 import { TokenCheckNote } from './TokenCheckNote';
 import { fetchAgents, type AgentsData } from './agents';
 import { fetchRoleMatrix, type RolesData } from './roles';
+import { fetchOwnerDelegation, type DelegationRow } from './access';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
 import { PROJECT_WIZ_PARAMS } from './projectLike';
 import {
@@ -404,6 +405,68 @@ function PersonVerify({ kcSub, login, changes, fetchImpl }: {
   );
 }
 
+/**
+ * AP-03: что будет делать агент с выбранным профилем в проектах владельца — по ответу сервера
+ * (delegation). Исходы: «пишет во всех N» · «в проектах X, Y — только читать: роль R не
+ * делегирует профиль» · «у владельца нет проектов» · «не смогли проверить». Не запрещает:
+ * читающего агента можно завести осознанно, мастер только называет последствие до «Выдать».
+ */
+function DelegationNote({ state, retry, profile, testId }: {
+  state: { kind: 'loading' } | { kind: 'ok'; data: DelegationRow[] | null } | { kind: 'error'; error: unknown };
+  retry: () => void; profile: string; testId: string;
+}) {
+  const t = useAppT();
+  if (state.kind === 'loading') {
+    return (
+      <div data-testid={testId} data-state="loading">
+        <Skeleton lines={1} label={t('admin.wiz.agent.deleg.loading')} />
+      </div>
+    );
+  }
+  if (state.kind === 'error' || !state.data) {
+    const reason = state.kind === 'error' ? reasonOf(state.error) : '';
+    return (
+      <p className="adm-note" data-tone="wrn" role="status" data-testid={testId} data-state="error">
+        {t('admin.wiz.agent.deleg.error', { reason })}{' '}
+        <button type="button" className="adm-btn" onClick={retry}>{t('admin.wiz.person.verify.retry')}</button>
+      </p>
+    );
+  }
+  const rows = state.data;
+  if (rows.length === 0) {
+    return (
+      <p className="adm-note" data-tone="wrn" role="status" data-testid={testId} data-state="none">
+        {t('admin.wiz.agent.deleg.noProjects')}
+      </p>
+    );
+  }
+  const readOnly = rows.filter(r => !r.delegates);
+  if (readOnly.length === 0) {
+    return (
+      <p className="adm-note" data-tone="inf" role="status" data-testid={testId} data-state="all">
+        {t('admin.wiz.agent.deleg.all', { profile, n: rows.length })}
+      </p>
+    );
+  }
+  return (
+    <div className="adm-note" data-tone="wrn" role="alert" data-testid={testId}
+      data-state={readOnly.length === rows.length ? 'none-writes' : 'partial'}>
+      <span>{t('admin.wiz.agent.deleg.partial', { profile, n: rows.length - readOnly.length, m: rows.length })}</span>
+      <ul className="adm-plist">
+        {readOnly.map(r => (
+          <li key={r.project} className="adm-sub">
+            <span className="adm-mono">{r.project}</span>{' — '}
+            {r.role
+              ? t('admin.wiz.agent.deleg.readsRole', { role: r.role, profile })
+              : t('admin.wiz.agent.deleg.readsNoRole', { profile })}
+          </li>
+        ))}
+      </ul>
+      <span className="adm-hint">{t('admin.wiz.agent.deleg.allowed')}</span>
+    </div>
+  );
+}
+
 // ── UC-2 / UC-7: агент человеку · агент новой машины ─────────────────────
 
 interface AgentWizardProps { mode: 'agent' | 'machine'; fetchImpl: typeof fetch; meSub: string | null; env: WizardsEnv; onDone: () => void }
@@ -431,6 +494,22 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
   const profile = profileParam ?? (mode === 'machine' ? (profiles.includes('full') ? 'full' : profiles[0] ?? null) : null);
   const problem = machineProblem(machine);
   const takenBy = agents.kind === 'ok' ? machineTakenBy(agents.data.rows, machine, ownerSub) : null;
+  // AP-03: где агент с этим профилем будет писать, а где только читать — ответ сервера ДО выдачи.
+  const [deleg, retryDeleg] = useLoad<DelegationRow[] | null>(
+    () => (ownerSub ? fetchOwnerDelegation(ownerSub, profile, { fetchImpl }) : Promise.resolve(null)),
+    [ownerSub, profile, fetchImpl],
+  );
+  const delegNote = (testId: string) => (ownerSub && profile
+    ? <DelegationNote state={deleg} retry={retryDeleg} profile={profile} testId={testId} />
+    : null);
+  /** Счётчик у профиля: пишет в N из M проектов владельца (по ответу сервера). */
+  const profileCount = (p: string) => (deleg.kind === 'ok' && deleg.data
+    ? (
+      <span className="adm-dim" data-testid={`adm-wiz-profile-count-${p}`}>
+        {' · '}{t('admin.wiz.agent.deleg.count', { n: deleg.data.filter(r => r.profiles.includes(p)).length, m: deleg.data.length })}
+      </span>
+    )
+    : null);
 
   const machineBlocked = problem === 'empty' ? t('admin.wiz.agent.b.machineEmpty')
     : problem === 'chars' ? t('admin.wiz.agent.b.machineChars')
@@ -504,6 +583,7 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
                   <input type="radio" name="adm-wiz-profile" data-testid={`adm-wiz-profile-${p}`} checked={profile === p} onChange={() => setProfile(p)} />
                   <b>{p}</b>
                   <span className="adm-dim">{profileWords(t, p)}</span>
+                  {profileCount(p)}
                 </label>
               ))}
             </fieldset>
@@ -516,12 +596,15 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
       </label>
       {harnessField}
       <p className="adm-hint">{t('admin.wiz.agent.inherits')}</p>
+      {delegNote('adm-wiz-delegation')}
     </div>
   );
 
   const mcp = issued ? { ...env, clientId: issued.agent.clientId, machine } : null;
   const secretStep = (
     <div className="adm-field">
+      {/* AP-03: последствие названо рядом с «Выдать», до нажатия. */}
+      {!issued && delegNote('adm-wiz-delegation-issue')}
       {!issued && (
         <div className="adm-field--btns">
           <button type="button" className="adm-btn" data-testid="adm-wiz-issue" disabled={issuing || !!machineBlocked || !ownerSub} onClick={() => { void issue(); }}>
