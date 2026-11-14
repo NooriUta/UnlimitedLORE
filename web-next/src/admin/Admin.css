@@ -121,7 +121,7 @@
 .adm-danger__btns { display: flex; gap: 6px; }
 
 /* S7B-26: Главная «что требует внимания» — карточки с числом и кнопкой в экран-лекарство. */
-.adm-attn { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.adm-attn { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 8px; }
 .adm-attn__card {
   display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
   padding: 8px 10px; border: 1px solid var(--bd); border-left-width: 3px; border-radius: 6px; background: var(--bg1);
@@ -139,7 +139,7 @@
 .adm-harness-pending { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 4px; }
 
 /* S7B-17: мастера UC-1/UC-2/UC-7 — выбор мастера карточками; код команды и .mcp.json переносится, а не режется. */
-.adm-wiz-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.adm-wiz-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 8px; }
 .adm-wiz-card {
   display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left;
   padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); color: var(--t1);

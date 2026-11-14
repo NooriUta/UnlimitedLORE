@@ -29,8 +29,9 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 import { KitLangProvider } from '../index';
 import {
   MartProse, SandboxedHtmlFrame, TipTapField,
-  sanitizeMd, sanitizeSvg, toSegments, frameThemeCss, readFrameTheme, FRAME_THEME_FALLBACK,
+  sanitizeMd, sanitizeSvg, toSegments, frameThemeCss, readFrameTheme, hostFrameTheme, FRAME_THEME_FALLBACK,
 } from './index';
+import { wrapSandboxHtml } from './SandboxedHtmlFrame';
 
 describe('sanitizeMd / sanitizeSvg — общий санитайзер kit', () => {
   it('режет <script>, on*-обработчики и javascript:-ссылки, разметку markdown оставляет', () => {
@@ -109,6 +110,50 @@ describe('SandboxedHtmlFrame — HTML только в песочнице', () =>
     expect(th.text).toBe('red');
     expect(th.link).toBe(FRAME_THEME_FALLBACK.link);
     expect(frameThemeCss(th)).toContain('color:red');
+  });
+
+  // K4-SANDBOX-DARK-CONTRAST (приёмка 14.11, тёмная тема): белая рамка и бледный
+  // текст. Текст песочница брала из токенов тёмной темы (светлый --t1), а схему
+  // цвета — нет: документ srcdoc без color-scheme считается светлым, хост — тёмный,
+  // и при несовпадении схем браузер обязан подложить под iframe непрозрачный
+  // светлый Canvas (CSS Color Adjust §2.2). Светлое на белом. Схема хоста едет
+  // в песочницу вместе с цветами — пара «фон + текст» из одной темы.
+  it('схема цвета хоста едет в песочницу вместе с цветами (тёмная тема — тёмная схема)', () => {
+    const dark = readFrameTheme(n => ({ '--t1': '#e8dcc0', 'color-scheme': 'dark' } as Record<string, string>)[n] ?? '');
+    expect(dark.scheme).toBe('dark');
+    expect(frameThemeCss(dark)).toMatch(/:root\{color-scheme:dark;?\}/);
+    const light = readFrameTheme(n => (n === 'color-scheme' ? 'light' : ''));
+    expect(frameThemeCss(light)).toMatch(/:root\{color-scheme:light;?\}/);
+    expect(wrapSandboxHtml('<p>x</p>', 't', dark)).toContain('color-scheme:dark');
+  });
+
+  // Витрина /kit переключает тему на обёртке ([data-mode] поддерева), а не на <html>:
+  // песочница читала корень и в «Светлой» получала светлый текст тёмной темы.
+  // jsdom наследование CSS-переменных не считает, поэтому проверяются две части:
+  // hostFrameTheme читает ТОТ узел, что ему дали, а рамка даёт ему себя.
+  it('тема берётся в месте рамки: hostFrameTheme(узел) читает узел, рамка передаёт себя', () => {
+    const el = document.createElement('div');
+    el.style.setProperty('--t1', 'rgb(1, 2, 3)');
+    document.body.appendChild(el);
+    expect(hostFrameTheme(el).text).toBe('rgb(1, 2, 3)');
+    expect(hostFrameTheme().text).not.toBe('rgb(1, 2, 3)');
+    el.remove();
+
+    const spy = vi.spyOn(window, 'getComputedStyle');
+    try {
+      const { container } = render(<div data-mode="light"><SandboxedHtmlFrame html="<p>x</p>" /></div>);
+      const frame = container.querySelector('iframe')!;
+      expect(spy.mock.calls.some(c => c[0] === frame), 'тема прочитана у самого iframe').toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('схема хоста не задана — запасная пара системных цветов (CanvasText на Canvas одной схемы)', () => {
+    const th = readFrameTheme(() => '');
+    expect(th.scheme).toBe(FRAME_THEME_FALLBACK.scheme);
+    expect(th.text).toBe('CanvasText');
+    expect(frameThemeCss(th)).toMatch(/color-scheme:normal/);
   });
 });
 
