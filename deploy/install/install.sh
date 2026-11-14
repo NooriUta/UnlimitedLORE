@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Инсталлятор LORE для Linux — SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE.
 #
-#   install.sh [--dir DIR] [--version TAG] [--src DIR] [--port N] [--bind ADDR] [--dry-run]
+#   install.sh [--dir DIR] --version vN.0.0 [--build] [--port N] [--bind ADDR] [--dry-run]
+#   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -23,7 +24,12 @@
 #
 # Окружение (необязательно): ARCADEDB_ROOT_PASSWORD, MINIO_PASSWORD — задать свои
 # пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE — готовые
-# образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE.
+# образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE; GHCR_OWNER.
+#
+# Версии — ТОЛЬКО мажорные vN.0.0 (решение владелицы 14.11.2026; то же правило, что у
+# публикации на GitHub, D-2026-GITHUB-ONLY-MAJOR-VERSIONS). Образы мажорной версии берутся
+# готовыми из ghcr.io/<GHCR_OWNER>/lore-backend и lore-web (публикует lore-release.yml);
+# --build собирает их из исходников тега на месте.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,6 +37,8 @@ REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 DIR="/opt/lore"
 VERSION=""
+BUILD=0
+GHCR_OWNER="${GHCR_OWNER:-nooriuta}"
 SRC="$REPO_DIR"
 PORT=""
 BIND=""
@@ -44,6 +52,17 @@ say()  { printf '── %s\n' "$*"; }
 warn() { printf 'ВНИМАНИЕ: %s\n' "$*" >&2; }
 die()  { printf 'ОШИБКА: %s\n' "$*" >&2; exit "${2:-1}"; }
 usage() { sed -n '3,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# Мажорная версия: vN.0.0 — то же правило, что у публикации образов и зеркала GitHub.
+is_major() { [[ "$1" =~ ^v[0-9]+\.0\.0$ ]]; }
+
+# Образы мажорной версии — готовые из ghcr, если не задано своё и не просили --build.
+default_images() {
+  [ -n "$VERSION" ] && [ "$BUILD" = 0 ] || return 0
+  : "${LORE_BACKEND_IMAGE:=ghcr.io/$GHCR_OWNER/lore-backend:$VERSION}"
+  : "${LORE_WEB_IMAGE:=ghcr.io/$GHCR_OWNER/lore-web:$VERSION}"
+  export LORE_BACKEND_IMAGE LORE_WEB_IMAGE
+}
 
 # Команда, меняющая систему: в --dry-run только печатается.
 run() {
@@ -64,6 +83,7 @@ parse_args() {
       --verify)    MODE="verify"; shift ;;
       --purge)     PURGE=1; shift ;;
       --dry-run)   DRY=1; shift ;;
+      --build)     BUILD=1; shift ;;
       --selftest)  MODE="selftest"; shift ;;
       -h|--help)   usage; exit 0 ;;
       *) die "неизвестный аргумент: $1 (см. --help)" 2 ;;
@@ -73,6 +93,9 @@ parse_args() {
   if [ -n "$PORT" ]; then
     case "$PORT" in *[!0-9]*) die "--port: нужно число, а не «$PORT»" 2 ;; esac
     [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || die "--port вне 1..65535" 2
+  fi
+  if [ -n "$VERSION" ]; then
+    is_major "$VERSION" || die "--version $VERSION: инсталлятор — только для мажорных версий vN.0.0 (например v2.0.0)" 2
   fi
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
   return 0
@@ -265,6 +288,7 @@ verify() {
 
 do_install() {
   check_prereq
+  default_images
   prepare_src
   write_env
   images
@@ -317,10 +341,18 @@ selftest() {
   expect_rc 2 --port 70000 --dry-run
   expect_rc 0 --help
   # 2. dry-run установки: план без docker, ничего не пишет, секретов не печатает
-  ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.9.9 --src "$t"
+  is_major v12.0.0 || fail "is_major: v12.0.0 — мажор"; ok
+  is_major v9a0b0 && fail "is_major: точка в регулярке не экранирована (v9a0b0)"; ok
+  is_major v1.18.0 && fail "is_major: v1.18.0 — не мажор (правило vN.0.0)"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --version v9.9.9
+  printf '%s' "$out" | grep -q 'мажорных' || fail "не-мажорная версия: причина не названа: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'ghcr.io/nooriuta/lore-backend:v9.0.0' || fail "мажор без --build: нет готового образа ghcr: $out"; ok
+  printf '%s' "$out" | grep -q 'compose build' && fail "мажор без --build собирает образы"; ok
+  ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "в плане нет сборки: $out"; ok
   printf '%s' "$out" | grep -q 'compose up -d arcadedb minio' || fail "в плане нет подъёма базы"; ok
-  printf '%s' "$out" | grep -q "archive v9.9.9" || fail "--version не дошёл до выгрузки исходников"; ok
+  printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok
   printf '%s' "$out" | grep -q 'dictionary' || fail "в плане нет проверки слайсов"; ok
   printf '%s' "$out" | grep -q 'sekret' && fail "dry-run напечатал пароль"; ok
   [ ! -e "$t/inst" ] || fail "dry-run создал каталог установки"; ok
