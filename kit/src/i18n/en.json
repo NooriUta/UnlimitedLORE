@@ -513,6 +513,8 @@
   "kit.list.childEmpty": "No nested records",
   "kit.list.expand": "Expand: {title}",
   "kit.list.collapse": "Collapse: {title}",
+  "kit.list.tree.expand": "Show nested: {title}",
+  "kit.list.tree.collapse": "Hide nested: {title}",
   "kit.list.col.expand": "Expand",
   "kit.progress.label": "Done {done} of {total}",
   "kit.progress.partial": "Done {done} of {total} — count incomplete",

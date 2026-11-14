@@ -549,7 +549,8 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
     }
     const hasTreeView = !!views?.includes('tree');
     if (hasTreeView && !tree) c.err('list.tree', 'tree-config', 'вид tree требует list.tree {parent, order}');
-    if (!hasTreeView && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но вида tree в list.views нет');
+    // PU-23: list.tree читает и «Таблица» (иерархия одного типа строками), не только «Дерево».
+    if (!hasTreeView && !views?.includes('list') && tree) c.warn('list.tree', 'tree-unused', 'list.tree задан, но ни вида tree, ни таблицы (list) в list.views нет');
   }
 
   // palette

@@ -7251,6 +7251,44 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 /* PU-23: дети раскрытой строки — строками той же таблицы; чуть приглушённый фон отделяет их от верхнего уровня. */
 .sk-list__row--child { background: var(--bg2); }
 .sk-list__row--child > .sk-list__td:nth-child(2) { padding-left: 16px; }
+/* PU-23: иерархия ОДНОГО типа (list.tree) — строки той же таблицы с отступом по глубине. Отступ —
+   в em от уровня (--tree-lvl), уровни ограничены: глубокая ветка не раздувает ширину таблицы.
+   Кнопка раскрытия — цель касания не меньше --tap; у листа на её месте пустое место той же ширины,
+   чтобы названия одного уровня стояли ровно. */
+.sk-list__tree {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  padding-inline-start: calc(min(var(--tree-lvl, 0), 6) * 1.25em);
+}
+.sk-list__tbody { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.sk-list__tbtn,
+.sk-list__tspc {
+  flex: 0 0 auto;
+  min-width: max(var(--tap), 1.5em);
+  min-height: max(var(--tap), 1.5em);
+}
+.sk-list__tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--t3);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.sk-list__tbtn:hover { color: var(--acc); background: var(--bg2); }
+.sk-list__tbtn[aria-expanded='true'] { color: var(--acc); }
+.sk-list__tbtn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+/* Строка пути (фильтр нашёл потомка): видна ради контекста — приглушена. */
+.sk-list__row--path > .sk-list__td { color: var(--t3); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-list__tree { padding-inline-start: calc(min(var(--tree-lvl, 0), 3) * 0.75em); }
+  .sk-list__tbody { white-space: normal; }
+}
 /* PU-23: дети другого типа — вложенная таблица своего типа, компактно (без полосы управления). */
 /* Владелица 14.11.2026: «либо size под длину, либо если не помещается — scroll». width: 0 + min-width:
    100% — контейнер берёт ширину ячейки и не распирает внешнюю таблицу; лишнее — горизонтальной прокруткой. */

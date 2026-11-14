@@ -74,6 +74,7 @@ import {
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
+import { hierarchyRows, type HierarchyRow } from './hierarchy';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
 import { FIND_FROM as GROUP_FIND_FROM } from './FacetFilter';
 import { fieldValueTitle, groupKeyTitle, groupTitle as groupTitleOf, keyTitleMissing } from './groupLabel';
@@ -438,9 +439,14 @@ function resolveWin(urlState: ListViewProps['urlState']): UrlWindow | null {
 
 /** Раскрытые строки в URL: lx=id1,id2 (id кодирует URLSearchParams). */
 const EXPAND_PARAM = 'lx';
-function initialExpanded(win: UrlWindow | null): Set<string> {
+/**
+ * Раскрытые строки ИЕРАРХИИ одного типа (PU-23): lh=id1,id2. Отдельно от lx: раскрыть вложенное
+ * (задачи спринта) и показать подкомпоненты — разные действия с разными кнопками.
+ */
+const TREE_PARAM = 'lh';
+function initialExpanded(win: UrlWindow | null, param: string = EXPAND_PARAM): Set<string> {
   if (!win) return new Set();
-  const raw = readUrlState(win).get(EXPAND_PARAM);
+  const raw = readUrlState(win).get(param);
   return new Set(raw ? raw.split(',').filter(Boolean) : []);
 }
 
@@ -675,6 +681,15 @@ export function ListView({
     const n = new Set(prev);
     if (n.has(id)) n.delete(id); else n.add(id);
     if (win) pushUrlState({ [EXPAND_PARAM]: n.size ? [...n].join(',') : null }, { win, replace: true });
+    return n;
+  });
+  // PU-23: раскрытие иерархии одного типа (list.tree) — в адресе, как lx: ссылка воспроизводит вид.
+  const [treeOpen, setTreeOpen] = useState<Set<string>>(() => initialExpanded(win, TREE_PARAM));
+  const setTree = (id: string, open: boolean) => setTreeOpen(prev => {
+    if (prev.has(id) === open) return prev;
+    const n = new Set(prev);
+    if (open) n.add(id); else n.delete(id);
+    if (win) pushUrlState({ [TREE_PARAM]: n.size ? [...n].join(',') : null }, { win, replace: true });
     return n;
   });
   // Режим выбора (S4-10): включается долгим нажатием или кнопкой «Выбрать».
@@ -2242,21 +2257,94 @@ export function ListView({
         </tr>
       );
     };
-    const rowsOf = (rs: KitRecord[]) => rs.map(r => (
+    /*
+      PU-23, вторая ветка правила владелицы 14.11.2026: иерархия ОДНОГО типа (компонент →
+      подкомпоненты) — строками той же таблицы, с отступом по глубине и кнопкой раскрытия у
+      родителя. Родитель — list.tree.parent, та же настройка, что у вида «Дерево». При группировке
+      иерархии нет: группа режет дерево поперёк, и родитель с детьми оказались бы в разных группах.
+    */
+    const treeSpec = listCfg?.tree && !grouped && !subKey ? listCfg.tree : null;
+    const treeCol = treeSpec
+      ? columns.find(c => c === 'title+id' || c === 'title') ?? columns.find(c => c !== 'select' && c !== 'actions' && c !== 'status') ?? null
+      : null;
+    const treeToggle = (r: KitRecord, h: HierarchyRow) => {
+      if (h.kids === 0) return <span className="sk-list__tspc" aria-hidden="true" />;
+      return (
+        <button
+          type="button"
+          className="sk-list__tbtn"
+          aria-expanded={h.open}
+          aria-label={t(h.open ? 'kit.list.tree.collapse' : 'kit.list.tree.expand', { title: r.title })}
+          onClick={e => { e.stopPropagation(); setTree(r.id, !h.open); }}
+          onKeyDown={e => {
+            // Стрелки — как в дереве: вправо раскрыть, влево свернуть. Enter/пробел — родной клик
+            // кнопки; до клавиш списка (открыть запись) они не доходят.
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+              e.preventDefault();
+              setTree(r.id, e.key === 'ArrowRight');
+            }
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+          }}
+        >
+          <span aria-hidden="true">{h.open ? '▾' : '▸'}</span>
+        </button>
+      );
+    };
+    const rowOf = (r: KitRecord, h?: HierarchyRow) => (
       <Fragment key={r.id}>
                     <tr
-                      className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}`}
+                      className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}${h?.path ? ' sk-list__row--path' : ''}`}
                       data-record-id={r.id}
+                      data-depth={h ? h.depth : undefined}
+                      data-tree-path={h?.path ? 'true' : undefined}
                       aria-selected={selectable ? selected.has(r.id) : undefined}
                       {...rowProps(r)}
                       onClick={e => onRecordClick(e, r.id)}
                     >
                       {expandCell(r)}
-                      {columns.map(c => { const a = colAttrs(c); return <td key={c} className={`sk-list__td ${a.className}`} data-w={a['data-w']}>{ellip(c, r, cell(c, r))}</td>; })}
+                      {columns.map(c => {
+                        const a = colAttrs(c);
+                        const node = ellip(c, r, cell(c, r));
+                        return (
+                          <td key={c} className={`sk-list__td ${a.className}`} data-w={a['data-w']}>
+                            {h && c === treeCol
+                              ? (
+                                <span className="sk-list__tree" style={{ '--tree-lvl': String(h.depth) } as CSSProperties}>
+                                  {treeToggle(r, h)}
+                                  <span className="sk-list__tbody">{node}</span>
+                                </span>
+                              )
+                              : node}
+                          </td>
+                        );
+                      })}
                     </tr>
                     {expandRow(r)}
                   </Fragment>
-    ));
+    );
+    const rowsOf = (rs: KitRecord[]) => rs.map(r => rowOf(r));
+    /** Строки группы: иерархией (list.tree) или плоско; предел «ещё N» — по видимым строкам. */
+    const groupRows = (g: ListGroup, limit: number, key: string = g.key) => {
+      if (!treeSpec) {
+        return (
+          <>
+            {rowsOf(g.records.slice(0, limit))}
+            {g.records.length > limit && (
+              <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit, key)}</td></tr>
+            )}
+          </>
+        );
+      }
+      const hrows = hierarchyRows(g.records, records, treeSpec.parent, treeOpen, hasFilter);
+      return (
+        <>
+          {hrows.slice(0, limit).map(h => rowOf(h.record, h))}
+          {hrows.length > limit && (
+            <tr className="sk-list__morerow"><td colSpan={span}>{moreButton({ ...g, records: hrows.map(h => h.record) }, limit, key)}</td></tr>
+          )}
+        </>
+      );
+    };
     body = (
       <div className="sk-list__scroll">
         <table className="sk-list__table">
@@ -2373,14 +2461,7 @@ export function ListView({
                       </Fragment>
                     );
                   })
-                  : (
-                    <>
-                      {rowsOf(g.records.slice(0, limit))}
-                      {g.records.length > limit && (
-                        <tr className="sk-list__morerow"><td colSpan={span}>{moreButton(g, limit)}</td></tr>
-                      )}
-                    </>
-                  ))}
+                  : groupRows(g, limit))}
               </tbody>
             );
           })}
