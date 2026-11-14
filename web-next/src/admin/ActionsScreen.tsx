@@ -23,6 +23,7 @@ import { DangerBatch } from './DangerBatch';
 import { KcDenials } from './KcDenials';
 import { fetchAgents, type AgentRow } from './agents';
 import { HarnessMark, callerHarness } from './HarnessMark';
+import { MachineCell } from './machineMark';
 import './Admin.css';
 
 export interface ActionsScreenProps {
@@ -163,6 +164,8 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
                   <th scope="col">{t('admin.log.col.entity')}</th>
                   <th scope="col">{t('admin.log.col.caller')}</th>
                   <th scope="col">{t('admin.log.col.axis')}</th>
+                  <th scope="col">{t('admin.log.col.client')}</th>
+                  <th scope="col">{t('admin.log.col.machine')}</th>
                   <th scope="col">{t('admin.log.col.outcome')}</th>
                   <th scope="col">{t('admin.log.col.batch')}</th>
                 </tr>
@@ -203,6 +206,8 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
                           {r.caller ?? <span className="adm-missing">{t('admin.log.caller.none')}</span>}
                         </td>
                         <td>{label(t, AXIS_LABEL, r.axis)}</td>
+                        <td><MachineCell value={r.client} testId="adm-log-client" /></td>
+                        <td><MachineCell value={r.machine} testId="adm-log-machine" /></td>
                         <td>
                           <span className="adm-outcome" data-testid="adm-log-outcome" data-outcome={outcome}>
                             {t(OUTCOME_LABEL[outcome])}

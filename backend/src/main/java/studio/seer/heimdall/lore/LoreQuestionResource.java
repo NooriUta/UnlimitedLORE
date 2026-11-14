@@ -116,7 +116,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                 Map.of("qid", req.question_id()))).await().indefinitely();
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowQuestion SET opened_date=:d WHERE question_id=:qid AND opened_date IS NULL",
-                Map.of("d", java.time.LocalDate.now().toString(), "qid", req.question_id()))).await().indefinitely();
+                Map.of("d", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "qid", req.question_id()))).await().indefinitely();
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("question_id", req.question_id());
@@ -197,7 +197,7 @@ public class LoreQuestionResource extends LoreResourceBase {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowQuestion SET status='closed', closed_date=:cd " +
                     "WHERE question_id=:q AND status <> 'closed'",
-                    Map.of("cd", java.time.LocalDate.now().toString(), "q", req.question_id()))).await().indefinitely();
+                    Map.of("cd", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "q", req.question_id()))).await().indefinitely();
             }
             if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
             Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),

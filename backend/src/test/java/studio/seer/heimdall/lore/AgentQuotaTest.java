@@ -45,7 +45,7 @@ class AgentQuotaTest {
 
     @Test
     void countSql_readsTheActionJournal_agentAxisOnly_window() {
-        assertTrue(AgentQuota.AGENT_SQL.contains("metric = 'lore.action'"));
+        assertTrue(AgentQuota.AGENT_SQL.contains("FROM AgentActionLog"));
         assertTrue(AgentQuota.AGENT_SQL.contains("segment = 'agent'"));
         assertTrue(AgentQuota.AGENT_SQL.contains("source = :scope"));
         assertTrue(AgentQuota.AGENT_SQL.contains("ts >= :from"));

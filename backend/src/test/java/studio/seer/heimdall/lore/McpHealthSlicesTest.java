@@ -28,7 +28,7 @@ class McpHealthSlicesTest {
     @Test
     void failuresAreAgentWritesAnsweredWithAnErrorCode() {
         String sql = LoreSlices.compose("mcp_failures", Map.of()).sql();
-        assertTrue(sql.contains("metric = 'lore.action'"), sql);
+        assertTrue(sql.contains("FROM AgentActionLog"), sql);
         assertTrue(sql.contains("segment = 'agent'"), sql);
         assertTrue(sql.contains("value >= 400"), "упавшая запись — код ответа ≥ 400: " + sql);
         assertTrue(sql.contains("max(ts) AS last_failure"), sql);
@@ -82,7 +82,7 @@ class McpHealthSlicesTest {
     void failureRowsAreTheSameEventsTheCounterCounts() {
         String count = LoreSlices.compose("mcp_failures", Map.of()).sql();
         String rows = LoreSlices.compose("mcp_failure_rows", Map.of()).sql();
-        String cond = "metric = 'lore.action' AND segment = 'agent' AND value >= 400";
+        String cond = "FROM AgentActionLog WHERE segment = 'agent' AND value >= 400";
         assertTrue(count.contains(cond), count);
         assertTrue(rows.contains(cond), "то же условие, что у счётчика: " + rows);
         assertTrue(rows.contains("object_type AS family"), rows);

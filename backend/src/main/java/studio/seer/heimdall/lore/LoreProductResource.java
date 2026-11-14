@@ -165,7 +165,7 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(", goal_level=:gl");
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
             sql.append(", date_created = ifnull(date_created, :d)");
-            p.put("d", LocalDate.now().toString());
+            p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             // S4-MODEL-TYPES (свежесть): истории у фичи нет — момент заведения/правки на вершине.
             sql.append(", updated_at=:upd");
             p.put("upd", java.time.Instant.now().toString());
@@ -253,7 +253,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
             sql.append(", date_created = ifnull(date_created, :d)");
-            p.put("d", LocalDate.now().toString());
+            p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             // S4-MODEL-TYPES (свежесть): истории у сценария нет — момент заведения/правки на вершине.
             sql.append(", updated_at=:upd");
             p.put("upd", java.time.Instant.now().toString());
@@ -1293,7 +1293,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.kind() != null)       { sql.append(", kind=:k");       p.put("k", req.kind()); }
             if (req.importance() != null) { sql.append(", importance=:i"); p.put("i", req.importance()); }
             sql.append(", date_created = ifnull(date_created, :d)");
-            p.put("d", LocalDate.now().toString());
+            p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE job_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
@@ -1327,7 +1327,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)  { sql.append(", body_md=:b");  p.put("b", req.body_md()); }
             if (req.severity() != null) { sql.append(", severity=:s"); p.put("s", req.severity()); }
             sql.append(", date_created = ifnull(date_created, :d)");
-            p.put("d", LocalDate.now().toString());
+            p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE pain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
@@ -1364,7 +1364,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.metric_md() != null) { sql.append(", metric_md=:m"); p.put("m", req.metric_md()); }
             if (req.rank() != null)      { sql.append(", rank=:r");      p.put("r", req.rank()); }
             sql.append(", date_created = ifnull(date_created, :d)");
-            p.put("d", LocalDate.now().toString());
+            p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE gain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
@@ -2455,7 +2455,7 @@ public class LoreProductResource extends LoreResourceBase {
     private CheckOutcome checkSprintDoneDateFuture() {
         List<Map<String, Object>> rows = ingest.queryPublic(
             LoreSlices.get("sprint_done_dates").baseSql(), Map.of());
-        String today = LocalDate.now().toString();
+        String today = LocalDate.now(java.time.ZoneOffset.UTC).toString();
 
         List<Map<String, Object>> findings = new ArrayList<>();
         int found = 0;
