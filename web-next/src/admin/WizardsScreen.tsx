@@ -25,8 +25,9 @@ import { PROJECT_WIZ_PARAMS } from './projectLike';
 import {
   agentClientIdOf, backendOf, createKcUser, fetchFirstCall, fetchKcClients, fetchKcUsers, findKcUser,
   issueAgent, likeChanges, loginOf, machineProblem, machineTakenBy, mcpAddCommand, mcpJsonText, reasonOf,
-  templateProfiles, type FirstCall, type IssuedAgent, type KcUser,
+  templateProfiles, verifyPersonRoles, type FirstCall, type IssuedAgent, type KcUser, type RoleVerify,
 } from './wizards';
+import type { RoleChange } from './roles';
 
 export type WizardKind = 'person' | 'agent' | 'machine' | 'project' | 'secret';
 // UC-5 «проект как у похожего» (S7B-18) — ProjectLikeWizard.tsx.
@@ -320,6 +321,8 @@ export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; o
 
   const check = (
     <div className="adm-field">
+      {/* S7B-13: шаг сам сверяет роли с сервером, а не только ведёт в «Люди». */}
+      {found && applied && <PersonVerify kcSub={found.id} login={found.username} changes={changes} fetchImpl={fetchImpl} />}
       <p className="adm-lead">{t('admin.wiz.person.checkLead')}</p>
       <div className="adm-field--btns">
         <button type="button" className="adm-btn" data-testid="adm-wiz-open-who" onClick={() => nav.go('who', {})}>
@@ -340,6 +343,65 @@ export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; o
     { text: t('admin.wiz.manual.forgejo'), href: 'https://git.seidrstudio.pro', hint: t('admin.wiz.manual.forgejoHint') },
   ];
   return <Steps steps={steps} urlKey={STEP_KEY} lang={lang} flow="adm-person" onDone={onDone} manual={{ title: t('admin.wiz.manual.title'), items: manual }} />;
+}
+
+/**
+ * S7B-13: проверка после пачки — матрица ролей перечитывается С СЕРВЕРА и сверяется с тем,
+ * что пачка назначала. Исходы названы разными словами: «совпало N из N» · «совпало N из M,
+ * расхождения по проектам» · «не смогли проверить» (а не «всё в порядке»).
+ */
+function PersonVerify({ kcSub, login, changes, fetchImpl }: {
+  kcSub: string; login: string; changes: readonly RoleChange[]; fetchImpl: typeof fetch;
+}) {
+  const t = useAppT();
+  const key = JSON.stringify(changes);
+  const res = useLoadState<RoleVerify>(
+    async signal => verifyPersonRoles(await fetchRoleMatrix(signal, fetchImpl), kcSub, changes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- changes сверяются по содержимому (key)
+    [kcSub, key, fetchImpl],
+  );
+  const v = res.data;
+  if (res.state === 'loading' && !v) {
+    return (
+      <div data-testid="adm-wiz-person-verify" data-state="loading">
+        <Skeleton lines={1} label={t('admin.wiz.person.verify.loading')} />
+      </div>
+    );
+  }
+  if (!v) {
+    const reason = res.error instanceof Error ? res.error.message : String(res.error ?? '');
+    return (
+      <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-wiz-person-verify" data-state="error">
+        {t('admin.wiz.person.verify.error', { reason })}{' '}
+        <button type="button" className="adm-btn" onClick={res.reload}>{t('admin.wiz.person.verify.retry')}</button>
+      </p>
+    );
+  }
+  const ok = v.misses.length === 0;
+  return (
+    <div className="adm-note" data-tone={ok ? 'inf' : 'wrn'} role="status" data-testid="adm-wiz-person-verify"
+      data-state={ok ? 'ok' : 'mismatch'}>
+      <span>{t(ok ? 'admin.wiz.person.verify.ok' : 'admin.wiz.person.verify.mismatch', { login, n: v.matched, m: v.total })}</span>
+      {!ok && (
+        <ul className="adm-plist">
+          {v.misses.map(x => (
+            <li key={x.project} className="adm-sub">
+              <span className="adm-mono">{x.project}</span>{' — '}
+              {x.unverified
+                ? t('admin.wiz.person.verify.unverified')
+                : t('admin.wiz.person.verify.miss', {
+                  expected: x.expected ?? t('admin.wiz.person.verify.noRole'),
+                  actual: x.actual ?? t('admin.wiz.person.verify.noRole'),
+                })}
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="adm-btn" data-testid="adm-wiz-person-verify-again" onClick={res.reload}>
+        {t('admin.wiz.person.verify.retry')}
+      </button>
+    </div>
+  );
 }
 
 // ── UC-2 / UC-7: агент человеку · агент новой машины ─────────────────────

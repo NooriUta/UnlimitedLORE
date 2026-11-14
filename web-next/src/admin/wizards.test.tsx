@@ -367,6 +367,56 @@ async function applyDiff() {
   await screen.findByTestId('kit-batch');
 }
 
+// S7B-13, приёмка 14.11: шаг 4 «Проверка» мастера «подключить человека» ничего не проверял сам —
+// только ссылка на «Люди». Теперь шаг перечитывает матрицу ролей с сервера и сверяет роли
+// человека с применённой пачкой: «совпало N из M», расхождения — по проектам.
+describe('S7B-13 · шаг «Проверка» сверяет роли с сервером', () => {
+  function checkFetch(annaCells: unknown[] | 'fail') {
+    const base = batchFetch();
+    let applied = false;
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/lore/user/role/batch')) {
+        const b = JSON.parse(String(init?.body)) as { dry_run?: boolean };
+        if (!b.dry_run) applied = true;
+      }
+      if (applied && url.startsWith('/lore/slice/role_matrix')) {
+        if (annaCells === 'fail') return json({ error: 'DOWN' }, 502);
+        return json({ ...MATRIX, rows: [...MATRIX.rows, { kc_sub: 'u-anna', display_name: 'anna', state: 'checked', cells: annaCells }] });
+      }
+      return base(input, init);
+    });
+  }
+  const toCheck = async (f: ReturnType<typeof checkFetch>) => {
+    await personToDiff(f as unknown as ReturnType<typeof batchFetch>);
+    await applyDiff();
+    next();
+    await waitFor(() => expect(step()).toBe('check'));
+    return screen.findByTestId('adm-wiz-person-verify');
+  };
+
+  it('роли на сервере совпали с пачкой — «проверено: 3 из 3»', async () => {
+    const box = await toCheck(checkFetch([
+      cell('NooriUta/UnlimitedLORE', 'developer'), cell('AIDA/miniLORE', 'developer'), cell('NooriUta/volva', 'owner'),
+    ]));
+    await waitFor(() => expect(box.getAttribute('data-state')).toBe('ok'));
+    expect(box.textContent).toMatch(/3 из 3/);
+  });
+
+  it('одной роли нет — «2 из 3», проект назван', async () => {
+    const box = await toCheck(checkFetch([cell('NooriUta/UnlimitedLORE', 'developer'), cell('AIDA/miniLORE', 'developer')]));
+    await waitFor(() => expect(box.getAttribute('data-state')).toBe('mismatch'));
+    expect(box.textContent).toMatch(/2 из 3/);
+    expect(box.textContent).toContain('NooriUta/volva');
+  });
+
+  it('матрица не прочиталась — «не смогли проверить», а не «всё в порядке»', async () => {
+    const box = await toCheck(checkFetch('fail'));
+    await waitFor(() => expect(box.getAttribute('data-state')).toBe('error'));
+    expect(box.textContent).toMatch(/не смогли/i);
+  });
+});
+
 describe('S7B-29 · смена мастера', () => {
   it('выбор другого мастера открывает ЕГО первый шаг, а не шаг прежнего', async () => {
     const f = mockFetch();

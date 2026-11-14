@@ -544,6 +544,35 @@ describe('экран журнала · откат пачки (S7B-13)', () => {
     expect(fk.writes()[0]).toMatchObject({ kc_sub: 'u-fro', undo_of: BATCH, changes: BATCH_BODY.undo });
   });
 
+  // S7B-13, приёмка 14.11: подтверждение отката просило kc_sub (6a04e5a3-…), а мастер везде —
+  // логин. Логин берётся из учёток Keycloak (GET /lore/kc/users: id = kc_sub → username).
+  it('подтверждение отката — ЛОГИНОМ человека, а не kc_sub', async () => {
+    const fk = fakeRb();
+    const base = fk.f;
+    const f = vi.fn(async (url: string, init?: RequestInit) => (url.startsWith('/lore/kc/users')
+      ? json([{ id: 'u-fro', username: 'frolova', enabled: true, roles: [] }])
+      : base(url, init))) as unknown as typeof fetch;
+    const panel = await openPanel(f);
+    fireEvent.click(await within(panel).findByTestId('adm-log-rollback-btn'));
+    await screen.findByTestId('kit-diff-apply');
+    await waitFor(() => expect(document.body.textContent).toContain('frolova'));
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'u-fro' } });
+    fireEvent.click(screen.getByTestId('kit-diff-apply'));
+    expect(fk.writes()).toHaveLength(0);
+    fireEvent.change(screen.getByTestId('kit-diff-confirm'), { target: { value: 'frolova' } });
+    fireEvent.click(screen.getByTestId('kit-diff-apply'));
+    expect(await screen.findByTestId('kit-batch-summary')).toBeTruthy();
+    expect(fk.writes()).toHaveLength(1);
+    // Имя в тело отката не уходит по-прежнему.
+    expect('display_name' in fk.writes()[0]).toBe(false);
+  });
+
+  it('логин не нашёлся — подтверждение по kc_sub, и это сказано словами', async () => {
+    const panel = await openPanel(fakeRb().f);
+    fireEvent.click(await within(panel).findByTestId('adm-log-rollback-btn'));
+    expect(await screen.findByTestId('adm-log-rollback-nologin')).toBeTruthy();
+  });
+
   it('окно закрыто — честная надпись «откатить нельзя», кнопки нет', async () => {
     const panel = await openPanel(fakeRb(BATCH_BODY).f);
     const closed = await within(panel).findByTestId('adm-log-rollback-closed');
