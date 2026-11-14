@@ -52,6 +52,12 @@ export interface GraphExplorerProps {
   engineSwitch?: boolean;
   /** Двойной щелчок по узлу. */
   onOpen?: (id: string) => void;
+  /**
+   * S9-08: узлы-действия (кластер-хаб) — одиночное нажатие сразу вызывает onOpen, а не
+   * выделение. Препрод 14.11: кластер «38 задач» по нажатию только выделялся, и человек не
+   * находил, как его раскрыть.
+   */
+  clickOpens?: (id: string) => boolean;
   /** Адрес записи: у выбранного узла появляется обычная ссылка «Открыть». */
   hrefOf?: (id: string) => string;
   /** Карточка выбранного узла (у LORE — Peek паспорта); нет — строка с названием. */
@@ -109,6 +115,12 @@ export function GraphExplorer(props: GraphExplorerProps) {
   const edgeColor = useCallback((e: GxEdge) => toCssColor(rels[e.rel]?.color ?? '--bd'), [rels]);
   const edgeDash = useCallback((e: GxEdge) => (e.kind ? KIND_DASH[e.kind] ?? null : null), []);
 
+  const { clickOpens, onOpen } = props;
+  const onSelect = useCallback((id: string | null) => {
+    if (id && clickOpens?.(id) && onOpen) { onOpen(id); return; }
+    setSelected(id);
+  }, [clickOpens, onOpen]);
+
   const Engine = engine === 'obsidian' ? ObsidianEngine : engine === 'structure' ? ReactFlowEngine : ForceEngine;
   const sel = selected ? nodes.find(n => n.id === selected) : undefined;
 
@@ -155,7 +167,7 @@ export function GraphExplorer(props: GraphExplorerProps) {
             <Suspense fallback={<div className="sk-gx__loading" role="status">{kitT(lang, 'kit.graph.loading')}</div>}>
               <Engine key={engine} nodes={view.nodes} edges={view.edges} settings={settings}
                 nodeColor={nodeColor} edgeColor={edgeColor} edgeDash={edgeDash}
-                selected={selected} onSelect={setSelected} onOpen={props.onOpen} onError={setFailure} onLayoutDone={onLayoutDone} />
+                selected={selected} onSelect={onSelect} onOpen={props.onOpen} onError={setFailure} onLayoutDone={onLayoutDone} />
             </Suspense>
           )}
           {layoutSlow && failure === undefined && view.nodes.length > 0 && (

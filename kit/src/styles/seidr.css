@@ -4473,6 +4473,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx__canvas { position: absolute; inset: 0; }
 .sk-gx__loading { padding: 16px; color: var(--t3); font-size: var(--fs-sm); }
 .sk-gx__sel { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); font-size: var(--fs-sm); }
+/* S9-08 (препрод 14.11): панель кластера в карточке-peek — в потоке, а не absolute: иначе карточка схлопывалась в линию. */
+.sk-gx__csel { display: flex; align-items: center; gap: 8px; padding: 8px 32px 8px 8px; font-size: var(--fs-sm); }
 .sk-gx__peek { position: absolute; top: 8px; right: 8px; width: min(380px, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); box-shadow: 0 6px 20px color-mix(in srgb, var(--bg0) 60%, transparent); }
 .sk-gx__peek-close { position: absolute; top: 4px; right: 4px; z-index: 1; }
 .sk-gx__sel-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t1); }

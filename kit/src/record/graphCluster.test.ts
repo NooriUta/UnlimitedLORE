@@ -114,11 +114,19 @@ describe('S9-08 · честность числа', () => {
     expect(g.clusters[0].atLeast).toBe(false);
   });
 
-  it('выдача обрезана лимитом — число кластера «не меньше», а не точное', () => {
-    const g = egoGraph('ego', hub(149), opts({ limit: 40 }));
-    expect(g.truncated).toBe(true);
+  it('выдача источника неполна — число кластера «не меньше», а не точное', () => {
+    const g = egoGraph('ego', hub(149), opts({ incomplete: true }));
     expect(g.clusters[0].atLeast, 'под кластером может быть больше, чем он показал').toBe(true);
-    expect(g.clusters[0].count).toBe(40);
+    expect(g.clusters[0].count).toBe(149);
+  });
+
+  // Препрод 14.11 (ADR-LORE-045): свой лимит рисования резал выдачу ДО свёртки, и кластер
+  // показывал «не меньше 38» при 163 известных. Лимит режет холст, а не знание о соседях.
+  it('лимит рисования не урезает число кластера и не делает его «не меньше»', () => {
+    const g = egoGraph('ego', hub(149), opts({ limit: 40 }));
+    expect(g.clusters[0].count).toBe(149);
+    expect(g.clusters[0].atLeast).toBe(false);
+    expect(g.truncated).toBe(false);
   });
 
   it('кластер стоит НА холсте: у него есть место, а не только число', () => {

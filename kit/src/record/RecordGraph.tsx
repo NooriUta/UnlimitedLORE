@@ -67,8 +67,15 @@ export function RecordGraph(
   const chips = around.filter(t => state.structural || !isStructural(ctx.config, t.type));
   const allowed = allowedEdgeTypes(around.map(t => t.type), ctx.config, state);
   const limit = ctx.config.graph?.limit ?? 60;
+  // S9-08 (препрод 14.11): число кластера — точное из счётчика рёбер сервера, если он есть
+  // (на шаге 1 рёбра типа = соседи типа); «не меньше» — только когда выдача ИСТОЧНИКА неполна
+  // и точного числа нет. Свой лимит рисования неполнотой не считается.
+  const exact = state.depth === 1 && serverRels?.length && !ctx.data.meta.graphRelsCut
+    ? new Map(serverRels.map(r => [r.rel, r.count] as const))
+    : undefined;
   const g = egoGraph(record.id, ctx.data, {
     depth: state.depth, limit, types: allowed, expanded: new Set(state.open),
+    incomplete: !!ctx.data.meta.truncated, exact,
   });
   const off = new Set(state.off);
   // Вид: выбор человека главнее ширины; не выбирал — на телефоне СПИСОК, там
@@ -182,6 +189,17 @@ export function RecordGraph(
       const forms = k ? ctx.config.graph?.types?.[k]?.count : undefined;
       return forms ? (forms[pluralForm(lang, n)] ?? forms.many).replace('{n}', String(n)) : null;
     });
+    // Точный счёт сервера больше загруженного — разбивка по видам из загруженного соврала бы;
+    // один вид — его формы слова с точным числом, несколько — подпись типом связи.
+    if (c.count !== c.ids.length) {
+      const only = perKind.size === 1 ? [...perKind.keys()][0] : '';
+      const forms = only ? ctx.config.graph?.types?.[only]?.count : undefined;
+      if (forms) {
+        const what = (forms[pluralForm(lang, c.count)] ?? forms.many).replace('{n}', String(c.count));
+        return `${c.atLeast ? kitT(lang, 'kit.record.graph.clusterAtLeastKind', { what }) : what} ▸`;
+      }
+      parts.length = 0;
+    }
     if (parts.length > 0 && parts.every(p => p !== null)) {
       const what = parts.join(' · ');
       return `${c.atLeast ? kitT(lang, 'kit.record.graph.clusterAtLeastKind', { what }) : what} ▸`;
@@ -282,7 +300,7 @@ export function RecordGraph(
       {legend}
       {g.truncated && (
         <p className="sk-rec-note" role="note">
-          {kitT(lang, 'kit.record.graph.shown', { shown: g.nodes.length, total: g.total, limit })}
+          {kitT(lang, 'kit.record.graph.shown', { shown: g.nodes.length + g.clusters.reduce((n, c) => n + c.ids.length, 0), total: g.total, limit })}
         </p>
       )}
       <svg
@@ -414,7 +432,10 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
   const selected = cluster && (peek || nodes.some(n => cluster.is(n.id)))
     ? (id: string) => (cluster.is(id)
       ? (
-        <div className="sk-gx__sel" role="status" data-testid="gx-cluster">
+        // S9-08 (препрод 14.11): свой класс, а не sk-gx__sel — тот прижат position:absolute к низу
+        // холста, и внутри карточки-peek (тоже absolute, высота по содержимому) карточка
+        // схлопывалась в линию: кнопки «раскрыть» не было видно.
+        <div className="sk-gx__csel" role="status" data-testid="gx-cluster">
           <span className="sk-gx__sel-title">{nodes.find(n => n.id === id)?.title ?? id}</span>
           <button type="button" className="sk-btn" onClick={() => cluster.open(id)}>{kitT(lang, 'kit.record.graph.clusterOpen')}</button>
         </div>
@@ -425,7 +446,8 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
     <div ref={host} className="sk-rec-graph__gx">
       <GraphExplorer nodes={gxNodes} edges={gxEdges} types={types} rels={rels} lang={lang}
         engine={engine} onEngineChange={onEngine} engineSwitch={false}
-        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={selected} />
+        hrefOf={ctx.href} onOpen={open} storageKey="record" renderSelected={selected}
+        clickOpens={cluster?.is} />
     </div>
   );
 }
