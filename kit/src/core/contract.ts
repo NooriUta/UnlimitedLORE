@@ -38,7 +38,9 @@ export type KitRelation = 'composition'|'aggregation'|'association'|'attribute'|
  */
 export interface KitRelationDef { key:string; label:string; relation:KitRelation; rel:string; dir:'out'|'in'; manageable?:boolean;
   /** Вид записи на другом конце (kind; не путать с `target` у onRelation — там id). Одно ребро бывает в нескольких связях вида (у компонента BELONGS_TO:in — ADR, спринты, решения…): без цели вкладка «ADR» показала бы и спринты. Не задан — любые записи. */
-  targetKind?:string }
+  targetKind?:string;
+  /** S9-05 / D14: колонки таблицы этой связи (ключи колонок списка: 'status', 'id', 'fields.<поле>', 'progress:<поле>'…) — их называет приложение по виду ребёнка. Нет — общие колонки (Статус · Вид · Код · Запись). */
+  columns?:string[] }
 export interface KindConfig { title:string; icon:string; relations?:KitRelationDef[];
   /** K-14: подпись значения, унаследованного от записи ЭТОГО вида, словом приложения («от спринта»). Нет — kit говорит нейтрально «унаследовано (вид)». */
   inherited?:string;

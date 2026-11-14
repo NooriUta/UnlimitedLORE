@@ -58,8 +58,10 @@ class LoreRecordSnapshotTest {
      * LoreRecordValues.withKinds, #1265). Снимок «до» их не знал; сверка идёт без них, а их
      * значения проверяет {@link #addedLinkKeysCarryKindsOfBothEnds()}. Список явный: снимаются
      * только эти ключи, любой другой лишний или пропавший ключ связи по-прежнему роняет сверку.
+     * S9-05 / D14: {@code values} — колонки таблицы детей по типу ребёнка (задача, спринт) у
+     * связей из срезов; их проверяет ChildColumnsByTypeTest.
      */
-    static final List<String> LINK_KEYS_ADDED_AFTER = List.of("fromKind", "toKind");
+    static final List<String> LINK_KEYS_ADDED_AFTER = List.of("fromKind", "toKind", "values");
 
     /** Связи без ключей, заведённых после снимка ({@link #LINK_KEYS_ADDED_AFTER}); порядок прочих ключей сохранён. */
     static List<Map<String, Object>> sansAddedLinkKeys(List<? extends Map<String, ?>> links) {
@@ -240,7 +242,8 @@ class LoreRecordSnapshotTest {
         for (String tk : SLICE_ROWS.keySet()) {
             String[] p = tk.split("\\.");
             for (Map<String, Object> row : variants(SLICE_ROWS.get(tk)))
-                assertSnapshot(Legacy.sliceLink(p[0], p[1], row), LoreRecordValues.sliceLink(p[0], p[1], row), tk + " " + row);
+                assertSnapshot(Legacy.sliceLink(p[0], p[1], row),
+                    sansAddedLinkKeys(List.of(LoreRecordValues.sliceLink(p[0], p[1], row))).get(0), tk + " " + row);
         }
     }
 
