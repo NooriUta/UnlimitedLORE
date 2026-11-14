@@ -93,6 +93,9 @@ class SmallFixesBatch1LiveDbTest {
     /** LH-44 п.3: V51 снимает HAS_STATUS у KnowADRHist и только их. */
     @Test
     void v51DropsLegacyAdrHasStatusOnly() throws Exception {
+        // V89 снял StatusAdr и HAS_STATUS из схемы: легаси-форму, которую чинит V51, заводим здесь сами.
+        sql("CREATE VERTEX TYPE StatusAdr IF NOT EXISTS");
+        sql("CREATE EDGE TYPE HAS_STATUS IF NOT EXISTS");
         sql("CREATE VERTEX KnowADRHist SET state_uid='lh44-probe-hist'");
         sql("UPDATE StatusAdr SET status_id='LH44_PROBE' UPSERT WHERE status_id='LH44_PROBE'");
         sql("CREATE EDGE HAS_STATUS FROM (SELECT FROM KnowADRHist WHERE state_uid='lh44-probe-hist') "

@@ -8,3 +8,4 @@
 #
 # Формат: версия<TAB>типы через запятую<TAB>зачем (задача, замысел)
 82	KnowMachine,USES_MACHINE	SPRINT_UXR_POLISH_UAT_1113/PU-18: машины, различающиеся регистром, сливаются в каноническую; рёбра одного актора к вариантам схлопываются
+89	HAS_STATUS,OF_TYPE,StatusAdr,StatusDecision,StatusMilestone,StatusPhase,StatusSprint,StatusTask,TrackType,KnowDecisionHist	SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE: легаси-словари статусов и TrackType сняты после переноса статуса в status_raw и типа трека в PlanTrack.area; KnowDecisionHist — истории-сироты без владельца (151 на проде 14.11)

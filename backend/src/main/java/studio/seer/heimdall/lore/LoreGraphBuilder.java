@@ -57,7 +57,7 @@ final class LoreGraphBuilder {
      * бы весь корпус. Список — тот же, что вне каталога «Связать» ({@link LoreLinkTypes}),
      * плюс исключения обратных связей ({@code LoreSearchResource.STRUCTURAL_EDGES}):
      * <ul>
-     *   <li>HAS_STATE — строка истории SCD2; HAS_STATUS — словарь статусов;</li>
+     *   <li>HAS_STATE — строка истории SCD2;</li>
      *   <li>BELONGS_TO_PROJECT — запись → проект; BELONGS_TO — запись → компонент;</li>
      *   <li>PART_OF — задача/фаза → спринт; IN_PHASE — задача → фаза;</li>
      *   <li>TAGGED_WITH — задача → компонент, запись → тег;</li>
@@ -65,7 +65,7 @@ final class LoreGraphBuilder {
      * </ul>
      */
     static final Set<String> STRUCTURAL_RELS = Set.of(
-        "HAS_STATE", "HAS_STATUS", "BELONGS_TO_PROJECT", "BELONGS_TO",
+        "HAS_STATE", "BELONGS_TO_PROJECT", "BELONGS_TO",
         "PART_OF", "IN_PHASE", "TAGGED_WITH", "DOC_CHILD_OF");
 
     static final String KIND_STRUCTURAL = "structural";
