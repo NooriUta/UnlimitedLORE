@@ -106,6 +106,8 @@ dcurl() {
   local pw; pw="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")"
   printf 'user = "root:%s"\n' "$pw" | docker run -i --rm --network "$(project)_default" "$CURL_IMAGE" -K - -sS -m 30 "$@"
 }
+# То же без кредов базы — для проб приложения: пароль root ArcadeDB бэкенду LORE не нужен.
+acurl() { docker run --rm --network "$(project)_default" "$CURL_IMAGE" -sS -m 30 "$@"; }
 
 check_prereq() {
   say "проверка окружения"
@@ -238,7 +240,7 @@ verify() {
   local base="http://lore-app-next" fails=0 code body p
   say "проверка установки"
   probe() { # имя путь [шаблон-в-теле]
-    body="$(dcurl -w '\n%{http_code}' "$base$2" 2>/dev/null || true)"
+    body="$(acurl -w '\n%{http_code}' "$base$2" 2>/dev/null || true)"
     code="${body##*$'\n'}"; body="${body%$'\n'*}"
     if [ "$code" = 200 ] && { [ -z "${3:-}" ] || printf '%s' "$body" | grep -q "$3"; }; then
       printf '  OK    %-24s %s\n' "$1" "$code"
@@ -247,12 +249,12 @@ verify() {
       fails=$((fails + 1))
     fi
   }
-  probe "health (ready)"       "/lore/version"
+  probe "version"              "/lore/version"
   probe "dictionary непустой"  "/lore/slice/dictionary" '"dict_type"'
   for p in $SLICES; do probe "$p" "/lore/slice/$p" '"rows"'; done
   probe "use_cases_of_feature" "/lore/slice/use_cases_of_feature?id=install-probe" '"rows"'
   probe "search"               "/lore/search?q=lore"
-  if ! dcurl -f "http://lore-backend:9100/q/health/ready" >/dev/null 2>&1; then
+  if ! acurl -f "http://lore-backend:9100/q/health/ready" >/dev/null 2>&1; then
     printf '  FAIL  %-24s\n' "backend /q/health/ready"; fails=$((fails + 1))
   else
     printf '  OK    %-24s\n' "backend /q/health/ready"
