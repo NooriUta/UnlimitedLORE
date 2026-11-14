@@ -33,6 +33,7 @@ import {
   utcClock, writeNewsQuery, type NewsPeriod, type NewsQuery, type NewsScope, type NewsZone,
 } from './model';
 import { Delta, NewsPanels, type NewsSection } from './NewsPanels';
+import { NewsDynamicsPanel } from './NewsDynamics';
 import { figuresOf } from './bucketFigures';
 import { useRefPeek } from '@seidr/kit/content';
 import { loreRefPeek } from '../../record/lorePeek';
@@ -91,7 +92,8 @@ export function defaultNewsStatusOf(raw: string | null | undefined): string {
 
 const StatusOfCtx = createContext<(raw: string | null | undefined) => string>(defaultNewsStatusOf);
 
-export const NEWS_SECTIONS_ALL: readonly NewsSection[] = ['metrics', 'groups', 'matrix', 'burn', 'knowledge', 'feed'];
+// S7A-11: «Динамика» — первым блоком под «все метрики» (неделя к неделе / месяц к месяцу).
+export const NEWS_SECTIONS_ALL: readonly NewsSection[] = ['dynamics', 'metrics', 'groups', 'matrix', 'burn', 'knowledge', 'feed'];
 
 type T = (k: NewsKey, vars?: Record<string, string | number>) => string;
 
@@ -199,6 +201,10 @@ export function NewsFeed({
           // Свёрнутые метрики остаются в документе (hidden): числа не пропадают,
           // их просто не показывают до нажатия «все метрики».
           <div className="sk-news__more" data-testid="news-more" hidden={!metricsOpen}>
+            {/* Динамика — свой запрос (/news/v2/dynamics): грузится, только когда блок открыт. */}
+            {panels.includes('dynamics') && metricsOpen && (
+              <NewsDynamicsPanel source={source} query={q} scope={scope} urlPrefix={urlPrefix} />
+            )}
             <NewsPanels data={data} query={q} update={update} sections={panels} fixed={fixedAxes} />
           </div>
         )}

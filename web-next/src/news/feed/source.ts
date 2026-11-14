@@ -2,6 +2,7 @@
 // живой GET /lore/news/v2 или фикстура по контракту, пока эндпоинт не на
 // стенде. Переключение — выбором источника у экрана, одной строкой.
 import { parseNewsResponse } from './model';
+import { NEWS_DYNAMICS_FIXTURE, parseDynamicsResponse, type NewsDynamicsResponse } from './dynamics';
 import type { NewsReadMark, NewsResponse } from './types';
 import { loreFetch } from '../../auth/session';
 
@@ -11,6 +12,11 @@ export interface NewsSource {
   load(params: URLSearchParams, signal?: AbortSignal): Promise<NewsResponse>;
   /** PUT /lore/news/v2/read-mark — черту двигает только человек (§8). */
   setReadMark(at: string): Promise<NewsReadMark>;
+  /**
+   * GET /lore/news/v2/dynamics — блок «Динамика» (S7A-11). Нет метода — источник динамику
+   * не умеет, и блок говорит «не смогли посчитать», а не рисует пусто.
+   */
+  loadDynamics?(params: URLSearchParams, signal?: AbortSignal): Promise<NewsDynamicsResponse>;
 }
 
 /** Ошибка HTTP с кодом — kit различает 403 («нет прав») и сбой по status. */
@@ -52,6 +58,11 @@ export function httpNewsSource(opts: HttpNewsSourceOptions = {}): NewsSource {
       if (!res.ok) return fail(res);
       return parseNewsResponse(await res.json());
     },
+    async loadDynamics(params, signal) {
+      const res = await f(`${base}/news/v2/dynamics?${params.toString()}`, { headers: headers(), signal });
+      if (!res.ok) return fail(res);
+      return parseDynamicsResponse(await res.json());
+    },
     async setReadMark(at) {
       const res = await f(`${base}/news/v2/read-mark`, {
         method: 'PUT',
@@ -76,6 +87,9 @@ export function fixtureNewsSource(data: NewsResponse): NewsSource {
     async setReadMark(at) {
       mark = { state: 'ok', at };
       return mark;
+    },
+    async loadDynamics() {
+      return parseDynamicsResponse(JSON.parse(JSON.stringify(NEWS_DYNAMICS_FIXTURE)));
     },
   };
 }
