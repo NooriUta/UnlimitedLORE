@@ -86,6 +86,13 @@ public class LoreAccessResource extends LoreResourceBase {
                 body.put("count", agents.size());
                 body.put("visible_projects", rbac.allowedProjectsForUser(kcSub).size());
                 body.put("note", "агенты читают все проекты владельца; пишут — по матрице D4 роли владельца");
+                // AP-03: ответ ДО выдачи агента — по каждому проекту владельца, делегирует ли его
+                // роль профиль agent_scope (та же матрица, что на записи) и какие профили вообще.
+                if (agentScope != null && !agentScope.isBlank()) {
+                    if (!SAFE_ID.matcher(agentScope).matches()) return badParams("agent_scope contains illegal characters");
+                    body.put("agent_scope", agentScope);
+                }
+                body.put("delegation", rbac.delegationForOwner(kcSub, agentScope));
                 return noStore(Response.ok(body));
             }
             return badParams("client_id or kc_sub required");

@@ -53,6 +53,34 @@ class ProjectRbacServiceMatrixTest {
         assertFalse(ProjectRbacService.delegationAllowed("owner", null));
     }
 
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-03: мастер «Дать человеку агента» выдавал профиль, который роль
+     * владельца не делегирует, без слова. Ответ сервера ДО выдачи — по каждому проекту владельца:
+     * его роль и делегирует ли она профиль (та же матрица D4, что на записи), а не копия в UI.
+     */
+    @Test
+    void delegationPlanNamesEveryOwnerProjectWithItsVerdict() {
+        java.util.List<java.util.Map<String, Object>> roles = java.util.List.of(
+            java.util.Map.of("slug", "AIDA/GLADSHEIM", "role", "pm"),
+            java.util.Map.of("slug", "AIDA/miniLORE", "role", "owner"),
+            java.util.Map.of("slug", "NooriUta/volva", "role", "reader"));
+        var plan = ProjectRbacService.delegationPlan(roles, "full");
+        org.junit.jupiter.api.Assertions.assertEquals(3, plan.size());
+        org.junit.jupiter.api.Assertions.assertEquals(
+            java.util.List.of("AIDA/GLADSHEIM", "AIDA/miniLORE", "NooriUta/volva"),
+            plan.stream().map(p -> p.get("project")).toList(), "проекты по алфавиту");
+        org.junit.jupiter.api.Assertions.assertEquals(false, plan.get(0).get("delegates"));
+        org.junit.jupiter.api.Assertions.assertEquals("pm", plan.get(0).get("role"));
+        org.junit.jupiter.api.Assertions.assertEquals(true, plan.get(1).get("delegates"));
+        org.junit.jupiter.api.Assertions.assertEquals(false, plan.get(2).get("delegates"));
+        // pm делегирует pm — там агент пишет
+        org.junit.jupiter.api.Assertions.assertEquals(true,
+            ProjectRbacService.delegationPlan(roles.subList(0, 1), "pm").get(0).get("delegates"));
+        // строка без проекта не превращается в «проект null»
+        org.junit.jupiter.api.Assertions.assertTrue(ProjectRbacService.delegationPlan(
+            java.util.List.of(java.util.Map.of("role", "owner")), "full").isEmpty());
+    }
+
     @Test
     void businessAnalystDelegatesBothAnalystProfilesNotDeveloper() {
         assertTrue(ProjectRbacService.delegationAllowed("business-analyst", "product-analyst"));

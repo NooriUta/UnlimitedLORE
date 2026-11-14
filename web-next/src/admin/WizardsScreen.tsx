@@ -20,13 +20,15 @@ import { RotatePanel } from './KcDanger';
 import { TokenCheckNote } from './TokenCheckNote';
 import { fetchAgents, type AgentsData } from './agents';
 import { fetchRoleMatrix, type RolesData } from './roles';
+import { fetchOwnerDelegation, type DelegationRow } from './access';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
 import { PROJECT_WIZ_PARAMS } from './projectLike';
 import {
   agentClientIdOf, backendOf, createKcUser, fetchFirstCall, fetchKcClients, fetchKcUsers, findKcUser,
   issueAgent, likeChanges, loginOf, machineProblem, machineTakenBy, mcpAddCommand, mcpJsonText, reasonOf,
-  templateProfiles, type FirstCall, type IssuedAgent, type KcUser,
+  templateProfiles, verifyPersonRoles, type FirstCall, type IssuedAgent, type KcUser, type RoleVerify,
 } from './wizards';
+import type { RoleChange } from './roles';
 
 export type WizardKind = 'person' | 'agent' | 'machine' | 'project' | 'secret';
 // UC-5 «проект как у похожего» (S7B-18) — ProjectLikeWizard.tsx.
@@ -320,6 +322,8 @@ export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; o
 
   const check = (
     <div className="adm-field">
+      {/* S7B-13: шаг сам сверяет роли с сервером, а не только ведёт в «Люди». */}
+      {found && applied && <PersonVerify kcSub={found.id} login={found.username} changes={changes} fetchImpl={fetchImpl} />}
       <p className="adm-lead">{t('admin.wiz.person.checkLead')}</p>
       <div className="adm-field--btns">
         <button type="button" className="adm-btn" data-testid="adm-wiz-open-who" onClick={() => nav.go('who', {})}>
@@ -340,6 +344,127 @@ export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; o
     { text: t('admin.wiz.manual.forgejo'), href: 'https://git.seidrstudio.pro', hint: t('admin.wiz.manual.forgejoHint') },
   ];
   return <Steps steps={steps} urlKey={STEP_KEY} lang={lang} flow="adm-person" onDone={onDone} manual={{ title: t('admin.wiz.manual.title'), items: manual }} />;
+}
+
+/**
+ * S7B-13: проверка после пачки — матрица ролей перечитывается С СЕРВЕРА и сверяется с тем,
+ * что пачка назначала. Исходы названы разными словами: «совпало N из N» · «совпало N из M,
+ * расхождения по проектам» · «не смогли проверить» (а не «всё в порядке»).
+ */
+function PersonVerify({ kcSub, login, changes, fetchImpl }: {
+  kcSub: string; login: string; changes: readonly RoleChange[]; fetchImpl: typeof fetch;
+}) {
+  const t = useAppT();
+  const key = JSON.stringify(changes);
+  const res = useLoadState<RoleVerify>(
+    async signal => verifyPersonRoles(await fetchRoleMatrix(signal, fetchImpl), kcSub, changes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- changes сверяются по содержимому (key)
+    [kcSub, key, fetchImpl],
+  );
+  const v = res.data;
+  if (res.state === 'loading' && !v) {
+    return (
+      <div data-testid="adm-wiz-person-verify" data-state="loading">
+        <Skeleton lines={1} label={t('admin.wiz.person.verify.loading')} />
+      </div>
+    );
+  }
+  if (!v) {
+    const reason = res.error instanceof Error ? res.error.message : String(res.error ?? '');
+    return (
+      <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-wiz-person-verify" data-state="error">
+        {t('admin.wiz.person.verify.error', { reason })}{' '}
+        <button type="button" className="adm-btn" onClick={res.reload}>{t('admin.wiz.person.verify.retry')}</button>
+      </p>
+    );
+  }
+  const ok = v.misses.length === 0;
+  return (
+    <div className="adm-note" data-tone={ok ? 'inf' : 'wrn'} role="status" data-testid="adm-wiz-person-verify"
+      data-state={ok ? 'ok' : 'mismatch'}>
+      <span>{t(ok ? 'admin.wiz.person.verify.ok' : 'admin.wiz.person.verify.mismatch', { login, n: v.matched, m: v.total })}</span>
+      {!ok && (
+        <ul className="adm-plist">
+          {v.misses.map(x => (
+            <li key={x.project} className="adm-sub">
+              <span className="adm-mono">{x.project}</span>{' — '}
+              {x.unverified
+                ? t('admin.wiz.person.verify.unverified')
+                : t('admin.wiz.person.verify.miss', {
+                  expected: x.expected ?? t('admin.wiz.person.verify.noRole'),
+                  actual: x.actual ?? t('admin.wiz.person.verify.noRole'),
+                })}
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="adm-btn" data-testid="adm-wiz-person-verify-again" onClick={res.reload}>
+        {t('admin.wiz.person.verify.retry')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * AP-03: что будет делать агент с выбранным профилем в проектах владельца — по ответу сервера
+ * (delegation). Исходы: «пишет во всех N» · «в проектах X, Y — только читать: роль R не
+ * делегирует профиль» · «у владельца нет проектов» · «не смогли проверить». Не запрещает:
+ * читающего агента можно завести осознанно, мастер только называет последствие до «Выдать».
+ */
+function DelegationNote({ state, retry, profile, testId }: {
+  state: { kind: 'loading' } | { kind: 'ok'; data: DelegationRow[] | null } | { kind: 'error'; error: unknown };
+  retry: () => void; profile: string; testId: string;
+}) {
+  const t = useAppT();
+  if (state.kind === 'loading') {
+    return (
+      <div data-testid={testId} data-state="loading">
+        <Skeleton lines={1} label={t('admin.wiz.agent.deleg.loading')} />
+      </div>
+    );
+  }
+  if (state.kind === 'error' || !state.data) {
+    const reason = state.kind === 'error' ? reasonOf(state.error) : '';
+    return (
+      <p className="adm-note" data-tone="wrn" role="status" data-testid={testId} data-state="error">
+        {t('admin.wiz.agent.deleg.error', { reason })}{' '}
+        <button type="button" className="adm-btn" onClick={retry}>{t('admin.wiz.person.verify.retry')}</button>
+      </p>
+    );
+  }
+  const rows = state.data;
+  if (rows.length === 0) {
+    return (
+      <p className="adm-note" data-tone="wrn" role="status" data-testid={testId} data-state="none">
+        {t('admin.wiz.agent.deleg.noProjects')}
+      </p>
+    );
+  }
+  const readOnly = rows.filter(r => !r.delegates);
+  if (readOnly.length === 0) {
+    return (
+      <p className="adm-note" data-tone="inf" role="status" data-testid={testId} data-state="all">
+        {t('admin.wiz.agent.deleg.all', { profile, n: rows.length })}
+      </p>
+    );
+  }
+  return (
+    <div className="adm-note" data-tone="wrn" role="alert" data-testid={testId}
+      data-state={readOnly.length === rows.length ? 'none-writes' : 'partial'}>
+      <span>{t('admin.wiz.agent.deleg.partial', { profile, n: rows.length - readOnly.length, m: rows.length })}</span>
+      <ul className="adm-plist">
+        {readOnly.map(r => (
+          <li key={r.project} className="adm-sub">
+            <span className="adm-mono">{r.project}</span>{' — '}
+            {r.role
+              ? t('admin.wiz.agent.deleg.readsRole', { role: r.role, profile })
+              : t('admin.wiz.agent.deleg.readsNoRole', { profile })}
+          </li>
+        ))}
+      </ul>
+      <span className="adm-hint">{t('admin.wiz.agent.deleg.allowed')}</span>
+    </div>
+  );
 }
 
 // ── UC-2 / UC-7: агент человеку · агент новой машины ─────────────────────
@@ -369,6 +494,22 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
   const profile = profileParam ?? (mode === 'machine' ? (profiles.includes('full') ? 'full' : profiles[0] ?? null) : null);
   const problem = machineProblem(machine);
   const takenBy = agents.kind === 'ok' ? machineTakenBy(agents.data.rows, machine, ownerSub) : null;
+  // AP-03: где агент с этим профилем будет писать, а где только читать — ответ сервера ДО выдачи.
+  const [deleg, retryDeleg] = useLoad<DelegationRow[] | null>(
+    () => (ownerSub ? fetchOwnerDelegation(ownerSub, profile, { fetchImpl }) : Promise.resolve(null)),
+    [ownerSub, profile, fetchImpl],
+  );
+  const delegNote = (testId: string) => (ownerSub && profile
+    ? <DelegationNote state={deleg} retry={retryDeleg} profile={profile} testId={testId} />
+    : null);
+  /** Счётчик у профиля: пишет в N из M проектов владельца (по ответу сервера). */
+  const profileCount = (p: string) => (deleg.kind === 'ok' && deleg.data
+    ? (
+      <span className="adm-dim" data-testid={`adm-wiz-profile-count-${p}`}>
+        {' · '}{t('admin.wiz.agent.deleg.count', { n: deleg.data.filter(r => r.profiles.includes(p)).length, m: deleg.data.length })}
+      </span>
+    )
+    : null);
 
   const machineBlocked = problem === 'empty' ? t('admin.wiz.agent.b.machineEmpty')
     : problem === 'chars' ? t('admin.wiz.agent.b.machineChars')
@@ -442,6 +583,7 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
                   <input type="radio" name="adm-wiz-profile" data-testid={`adm-wiz-profile-${p}`} checked={profile === p} onChange={() => setProfile(p)} />
                   <b>{p}</b>
                   <span className="adm-dim">{profileWords(t, p)}</span>
+                  {profileCount(p)}
                 </label>
               ))}
             </fieldset>
@@ -454,12 +596,15 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
       </label>
       {harnessField}
       <p className="adm-hint">{t('admin.wiz.agent.inherits')}</p>
+      {delegNote('adm-wiz-delegation')}
     </div>
   );
 
   const mcp = issued ? { ...env, clientId: issued.agent.clientId, machine } : null;
   const secretStep = (
     <div className="adm-field">
+      {/* AP-03: последствие названо рядом с «Выдать», до нажатия. */}
+      {!issued && delegNote('adm-wiz-delegation-issue')}
       {!issued && (
         <div className="adm-field--btns">
           <button type="button" className="adm-btn" data-testid="adm-wiz-issue" disabled={issuing || !!machineBlocked || !ownerSub} onClick={() => { void issue(); }}>

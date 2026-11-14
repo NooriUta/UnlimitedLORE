@@ -96,6 +96,27 @@ export function likeChanges(
     .sort((a, b) => a.project.localeCompare(b.project));
 }
 
+/**
+ * S7B-13: шаг «Проверка» мастера «подключить человека» — сверка ролей человека на сервере
+ * (матрица ролей, перечитанная ПОСЛЕ пачки) с тем, что пачка должна была назначить.
+ * Ячейка не проверена сервером — это не «совпало», а промах с причиной «не проверено».
+ */
+export interface RoleVerifyMiss { project: string; expected: string | null; actual: string | null; unverified: boolean }
+export interface RoleVerify { matched: number; total: number; misses: RoleVerifyMiss[] }
+
+export function verifyPersonRoles(data: RolesData, kcSub: string, changes: readonly RoleChange[]): RoleVerify {
+  const person = data.people.find(p => p.kc_sub === kcSub);
+  const misses: RoleVerifyMiss[] = [];
+  for (const c of changes) {
+    const expected = c.action === 'remove' ? null : (c.role ?? null);
+    const cell = person?.cells.find(x => x.project === c.project);
+    const unverified = cell !== undefined && cell.state !== 'checked';
+    const actual = cell && cell.state === 'checked' ? cell.role : null;
+    if (unverified || actual !== expected) misses.push({ project: c.project, expected, actual, unverified });
+  }
+  return { matched: changes.length - misses.length, total: changes.length, misses };
+}
+
 // ── агент: профиль, машина, учётка ───────────────────────────────────────
 
 const PART = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;

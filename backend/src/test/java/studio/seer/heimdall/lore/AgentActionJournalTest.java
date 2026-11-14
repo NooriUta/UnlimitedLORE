@@ -93,4 +93,28 @@ class AgentActionJournalTest {
         assertEquals("rb-1", LoreAuditLogFilter.entityIdOf(Map.of("batch_id", "rb-1", "kc_sub", "u-1")));
         assertNull(LoreAuditLogFilter.entityIdOf(Map.of("ok", true)));
     }
+
+    /**
+     * SPRINT_UXR_S7B_ADMIN/S7B-02, приёмка 14.11: в журнале прода 6 строк Keycloak 11:09–11:11
+     * «объект не записан» — это POST /lore/kc/agent-client. Его ответ называет клиента ключом
+     * {@code clientId} (camelCase, как в API Keycloak), а правило знало только *_id/*_uid/id —
+     * и журнал писал путь эндпоинта. Соседние строки (enable/disable, ротация) отвечают
+     * {@code client_id} — у них объект был. То же у POST /lore/kc/user: {ok, username, note}.
+     * Правило: id-ключ в любом написании (snake и camel), snake важнее; логин — естественный ключ.
+     */
+    @Test
+    void camelCaseIdAndUsernameNameTheObject() {
+        java.util.Map<String, Object> agent = new java.util.LinkedHashMap<>();
+        agent.put("ok", true); agent.put("clientId", "lore-mcp-pm_TestU3"); agent.put("template", "lore-mcp-pm");
+        agent.put("secret", "s"); agent.put("roles_copied", 2);
+        assertEquals("lore-mcp-pm_TestU3", LoreAuditLogFilter.entityIdOf(agent));
+        assertEquals("test-user-9",
+            LoreAuditLogFilter.entityIdOf(Map.of("ok", true, "username", "test-user-9", "note", "пароль задаётся в KC")));
+        // snake_case id важнее camelCase, в каком бы порядке ни шли ключи
+        java.util.Map<String, Object> both = new java.util.LinkedHashMap<>();
+        both.put("requestId", "r-1"); both.put("task_uid", "SPRINT_X/T1");
+        assertEquals("SPRINT_X/T1", LoreAuditLogFilter.entityIdOf(both));
+        // слово, просто оканчивающееся на «id», — не ключ
+        assertNull(LoreAuditLogFilter.entityIdOf(Map.of("ok", true, "valid", "yes", "paid", "no")));
+    }
 }

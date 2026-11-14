@@ -21,6 +21,7 @@ import {
 } from './actions';
 import { DangerBatch } from './DangerBatch';
 import { KcDenials } from './KcDenials';
+import { fetchKcUsers } from './wizards';
 import { fetchAgents, type AgentRow } from './agents';
 import { HarnessMark, callerHarness } from './HarnessMark';
 import { MachineCell } from './machineMark';
@@ -453,13 +454,40 @@ function BatchPanel({ batchId, fetchImpl, onNothing, onClose, onChanged }: {
 /**
  * «Откатить пачку» (S7B-13). Тело — готовое от сервера (rollback.body), путь —
  * тот же DangerBatch, что в «Ролях»: дифф (dry_run с undo_of) → ввод слова →
- * одна пачка. Слово подтверждения — kc_sub человека: имени журнал не знает.
+ * одна пачка. Слово подтверждения — ЛОГИН человека, как в мастере (S7B-13, приёмка 14.11:
+ * раньше просили kc_sub «6a04e5a3-…»). Журнал логина не знает — его даёт Keycloak
+ * (GET /lore/kc/users: id = kc_sub → username). Не нашли — подтверждение по kc_sub, и это
+ * сказано словами. В тело отката логин не идёт (display_name не затираем).
  * Окно закрыто, срок не назван или тела нет — честная надпись, а не кнопка.
  */
 function Rollback({ data, fetchImpl, onChanged }: { data: BatchData; fetchImpl?: typeof fetch; onChanged?: () => void }) {
   const t = useAppT();
   const [open, setOpen] = useState(false);
   const body = data.rollback?.body ?? null;
+  const sub = body?.kc_sub ?? null;
+  // undefined — ещё ищем; null — не нашли (причина в loginMiss).
+  const [login, setLogin] = useState<string | null | undefined>(undefined);
+  const [loginMiss, setLoginMiss] = useState<string>('');
+  useEffect(() => {
+    if (!open || !sub) return;
+    let alive = true;
+    setLogin(undefined);
+    fetchKcUsers(fetchImpl).then(
+      users => {
+        if (!alive) return;
+        const u = users.find(x => x.id === sub);
+        setLogin(u ? u.username : null);
+        // Пустая причина — «учётки с этим kc_sub в Keycloak нет» (слова — при рисовании).
+        if (!u) setLoginMiss('');
+      },
+      (e: unknown) => {
+        if (!alive) return;
+        setLogin(null);
+        setLoginMiss(e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e));
+      },
+    );
+    return () => { alive = false; };
+  }, [open, sub, fetchImpl]);
   if (!data.undoOpen || !body) {
     return (
       <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-log-rollback-closed">
@@ -477,8 +505,18 @@ function Rollback({ data, fetchImpl, onChanged }: { data: BatchData; fetchImpl?:
       </div>
     );
   }
+  if (login === undefined) return <Skeleton lines={1} label={t('admin.log.batch.loginLoading')} />;
   return (
-    <DangerBatch person={{ kc_sub: body.kc_sub, name: body.kc_sub }} changes={body.changes} undoOf={body.undo_of}
-      fetchImpl={fetchImpl} onClose={() => setOpen(false)} onChanged={onChanged} />
+    <>
+      {login === null && (
+        <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-log-rollback-nologin">
+          {t('admin.log.batch.loginMissing', { reason: loginMiss || t('admin.log.batch.loginNotFound') })}
+        </p>
+      )}
+      {/* key: слово подтверждения сменилось — DangerBatch с новым словом, а не со старым. */}
+      <DangerBatch key={login ?? body.kc_sub} person={{ kc_sub: body.kc_sub, name: login ?? body.kc_sub }}
+        changes={body.changes} undoOf={body.undo_of}
+        fetchImpl={fetchImpl} onClose={() => setOpen(false)} onChanged={onChanged} />
+    </>
   );
 }

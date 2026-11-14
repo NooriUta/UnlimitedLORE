@@ -17,6 +17,7 @@
 import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError, type SliceBody } from '../api/loreSlice';
 import { getJson } from './actions';
+import { fetchProfileLastCalls } from './mcp';
 import { harnessLogo } from './harnessLogos';
 import { ACTIVITY_DEFAULT_H, activityWindowH, MACHINE_CLIENT_PREFIX, parseActivity, type MachineActivity } from './activity';
 
@@ -86,6 +87,13 @@ export interface AgentsData {
   logos: Record<string, string>;
   /** Строк больше, чем пришло (метаданные полноты среза). */
   truncated: boolean;
+  /**
+   * S7B-07: последний MCP-вызов ПРОФИЛЯ (mcp_connections, тот же источник, что экран MCP):
+   * профиль → epoch millis. Это другой источник, чем last_seen_at (отметка сессий агента),
+   * и профиль общий у нескольких агентов — поэтому показываем рядом и подписываем, а не
+   * склеиваем. null — срез не прочитался (не «профиль не звал»); undefined — не запрашивали.
+   */
+  profileCalls?: Record<string, number> | null;
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null);
@@ -153,14 +161,16 @@ export function parseAgents(body: SliceBody<Record<string, unknown>>, dict?: Har
 
 export async function fetchAgents(signal?: AbortSignal, fetchImpl?: typeof fetch, lang: 'ru' | 'en' = 'ru'): Promise<AgentsData> {
   // Справочник читается рядом и НЕ роняет экран: без него агенты видны, нет только правки.
-  const [body, dict] = await Promise.all([
+  const [body, dict, profileCalls] = await Promise.all([
     fetchSlice<Record<string, unknown>>('agent_owners', { limit: '1000' }, { signal, fetchImpl }),
     fetchSlice<Record<string, unknown>>('dictionary', { dict_type: 'harness' }, { signal, fetchImpl }).then(
       b => parseHarnessDict(b.rows, lang),
       (e: unknown) => ({ error: e instanceof Error ? e.message : String(e) }),
     ),
+    // S7B-07: вызовы профилей — рядом и тоже не роняют экран.
+    fetchProfileLastCalls(signal, fetchImpl).catch(() => null),
   ]);
-  return parseAgents(body, dict);
+  return { ...parseAgents(body, dict), profileCalls };
 }
 
 /** Код стоит у актора, но в активном справочнике его нет — рисуем как есть с пометкой. */
