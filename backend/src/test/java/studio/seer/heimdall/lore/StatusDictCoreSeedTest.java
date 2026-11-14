@@ -82,6 +82,14 @@ class StatusDictCoreSeedTest {
     }
 
     @Test
+    void everySeedIconIsASlugKitCanDraw() {
+        // Та же форма, что ICON_RE в kit/src/core/validate.ts: иконка вне неё — заглушка «нет иконки».
+        java.util.regex.Pattern slug = java.util.regex.Pattern.compile("^((lucide|material-symbols|tabler):)?[a-z0-9]+(-[a-z0-9]+)*$");
+        StatusDictCoreSeed.SEEDS.forEach((dict, entries) -> entries.forEach(e ->
+            assertTrue(slug.matcher(e.icon()).matches(), dict + "/" + e.code() + ": «" + e.icon() + "» kit не нарисует")));
+    }
+
+    @Test
     void insertIsPlainInsertWithParamsNotUpsert() {
         String sql = StatusDictCoreSeed.INSERT_SQL.toUpperCase(Locale.ROOT);
         assertTrue(sql.startsWith("INSERT INTO KNOWDICTENTRY"), sql);

@@ -61,13 +61,17 @@ final class StatusDictCoreSeed {
         new Entry("blocked", "Заблокировано", "Blocked", "handcuffed", "var(--dng)", 70),
         new Entry("cancelled", "Отменено", "Cancelled", "cross-mark", "var(--t3)", 80));
 
-    /** Статусы ADR — как на проде (коды в верхнем регистре, DEPRECATED тоже есть на проде). */
+    /**
+     * Статусы ADR — как на проде (коды в верхнем регистре, DEPRECATED тоже есть на проде). Иконки
+     * DRAFT и DEPRECATED — по выбору владелицы S4-32 (14.11.2026: «9b», «10e»; ICON_CANON
+     * statusDraft/statusDeprecated); на проде их строки меняются отдельно, после выкатки фронта.
+     */
     static final List<Entry> ADR = List.of(
-        new Entry("DRAFT", "Черновик", "Draft", "quill-ink", "var(--t3)", 5),
+        new Entry("DRAFT", "Черновик", "Draft", "lucide:file-pen-line", "var(--t3)", 5),
         new Entry("PROPOSED", "Предложен", "Proposed", "calendar", "var(--inf)", 10),
         new Entry("ACCEPTED", "Принят", "Accepted", "laurel-crown", "var(--suc)", 20),
         new Entry("DEFERRED", "Отложен", "Deferred", "pause-button", "var(--wrn)", 25),
-        new Entry("DEPRECATED", "Устарел", "Deprecated", "broken-tablet", "var(--wrn)", 30),
+        new Entry("DEPRECATED", "Устарел", "Deprecated", "material-symbols:history-toggle-off", "var(--wrn)", 30),
         new Entry("SUPERSEDED", "Заменён", "Superseded", "pause-button", "var(--t3)", 40));
 
     /** Справочник → что в нём обязано быть. Порядок — порядок вставки. */
