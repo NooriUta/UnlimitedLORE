@@ -789,9 +789,16 @@ public class LoreStatusResource extends LoreResourceBase {
             if (v == null && "done".equals(req.status())) {
                 boolean agent = callerAgentScope() != null
                     || (author != null && ChangeAuthor.KIND_AGENT.equals(author.kind()));
-                v = LoreDoneGate.done(new LoreDoneGate.Facts(agent, agent ? null : callerName(author),
+                String caller = agent ? null : callerName(author);
+                v = LoreDoneGate.done(new LoreDoneGate.Facts(agent, caller,
                     str(row.get("executor_agent")), str(row.get("reviewer_agent")), current,
                     str(row.get("task_type")), evType, evRef), LoreModelFile.content().workflow());
+                // PU-29 (правило владелицы 14.11.2026): нажатие человека — само подтверждение; доказательство
+                // «кто · когда» пишет сервер, если человек своего не прислал (прежнее остаётся в строке review).
+                if (v == null && !agent && blank(req.evidence_type())) {
+                    evType = LoreDoneGate.HUMAN;
+                    evRef = LoreDoneGate.humanEvidenceRef(caller, java.time.Instant.now().toString());
+                }
             }
             Response refusal = v == null ? null : noStore(Response.status(v.status()).entity(new LoreError(v.code(), v.detail())));
             return new TaskGate(refusal, evType, evRef);
