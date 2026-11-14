@@ -11,6 +11,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { DiffPreview, Forbidden, FreshCell, LoadError, Pill, Skeleton, EmptyState, useKitLang, useLoadState, useMinuteNow, useUrlParam, type DiffRow } from '@seidr/kit';
 import { AgentProjectsPanel } from './AccessBlocks';
 import { RotatePanel } from './KcDanger';
+import { AgentTestDelete } from './TestAccountDelete';
 import { bindKcClient, fetchKcClients, orphanBindOptions } from './wizards';
 import { fetchRoleMatrix } from './roles';
 import { useAppT } from '../i18n';
@@ -118,6 +119,8 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
                         </section>
                         <AgentProjectsPanel clientId={r.client_id} agentScope={r.agent_role}
                           ownerName={r.owner_display_name} fetchImpl={fetchImpl} />
+                        {/* AP-01: «Удалить» — только у тестовых учёток; у реальных кнопки нет. */}
+                        <AgentTestDelete clientId={r.client_id} fetchImpl={fetchImpl} onDeleted={res.reload} />
                       </td>
                     </tr>
                   )}
