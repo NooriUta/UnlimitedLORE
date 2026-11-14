@@ -52,7 +52,8 @@ class LoreModelConsistencyTest {
     @Test
     void passportSlotWithoutSectionIsNamed() throws Exception {
         LoreModelFile.Content c = parse(LoreModelLiveReplaceTest.canon().replaceFirst(
-            "\"passport\" : \\{\\s*\"adr\" : \\[ \\{", "\"passport\" : { \"adr\" : [ { \"key\" : \"призрак\", \"slot\" : \"own\" }, {"));
+            // Первый тип раздела passport — любой (MD-04: в каноне первым стал actor, а не adr).
+            "\"passport\" : \\{\\s*\"(\\w+)\" : \\[ \\{", "\"passport\" : { \"$1\" : [ { \"key\" : \"призрак\", \"slot\" : \"own\" }, {"));
         List<String> p = LoreModelConsistency.problems(c, null, null, SLICES);
         assertEquals(1, p.size(), p.toString());
         assertTrue(p.get(0).contains("призрак"));

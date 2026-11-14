@@ -35,6 +35,9 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   'product',
   // S9-05 A: человек и агент — только чтение (правят в админке); порядок — как у фасада.
   'user', 'agent',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта, боль, выгода, работа (были только списки)
+  // и ранбук — только чтение; пишутся своими путями MCP (actor_new, pain_new… runbook_new).
+  'actor', 'pain', 'gain', 'job', 'runbook',
   // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий». Последним.
   'project'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
@@ -94,6 +97,12 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   // Проект: перечень — тот же срез, что выбор проекта (git_projects); ключ — slug.
   if (type === 'project') return (await slice<Row>('git_projects', { fields: 'slug,name', limit: '1000' })).rows.map(r => ({ id: str(r.slug), title: str(r.name) || str(r.slug) }));
   // Продукт: перечень — срез products; ключ — код, подпись — label_ru.
+  // MD-04: профиль клиента, роли продукта и ранбуки — те же срезы, что их разделы.
+  if (type === 'actor') return (await slice<Row>('actors', { fields: 'actor_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.actor_id), title: str(r.name) || str(r.actor_id) }));
+  if (type === 'pain') return (await slice<Row>('pains', { fields: 'pain_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.pain_id), title: str(r.title) || str(r.pain_id) }));
+  if (type === 'gain') return (await slice<Row>('gains', { fields: 'gain_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.gain_id), title: str(r.title) || str(r.gain_id) }));
+  if (type === 'job') return (await slice<Row>('jobs', { fields: 'job_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.job_id), title: str(r.title) || str(r.job_id) }));
+  if (type === 'runbook') return (await slice<Row>('runbooks', { fields: 'runbook_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.runbook_id), title: str(r.name) || str(r.runbook_id) }));
   if (type === 'product') return (await slice<Row>('products', { fields: 'code,label_ru', limit: '1000' })).rows.map(r => ({ id: str(r.code), title: str(r.label_ru) || str(r.code) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));
 }

@@ -296,6 +296,40 @@ final class LoreRecordFrom {
             s("file_path", "file_path"),
             when("body_redacted", "body_redacted", "body_redacted"),
             when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
+        // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта, профиль клиента и ранбук — шапка и тело из
+        // строки *_by_id; связи — по рёбрам модели. Статуса у этих вершин нет — ключа status нет.
+        Map.entry("actor", List.of(
+            v("title", Transform.FIRST_OF, "name", "actor_id"),
+            s("kind", "kind"),
+            list("projects", "projects"),
+            s("body_md", "body_md"))),
+        Map.entry("pain", List.of(
+            v("title", Transform.FIRST_OF, "title", "pain_id"),
+            s("severity", "severity"),
+            v("date", Transform.DATE10, "date_created"),
+            s("body_md", "body_md"))),
+        Map.entry("gain", List.of(
+            v("title", Transform.FIRST_OF, "title", "gain_id"),
+            s("rank", "rank"),
+            v("date", Transform.DATE10, "date_created"),
+            s("body_md", "body_md"),
+            s("metric_md", "metric_md"))),
+        Map.entry("job", List.of(
+            v("title", Transform.FIRST_OF, "title", "job_id"),
+            s("kind", "kind"),
+            s("importance", "importance"),
+            v("date", Transform.DATE10, "date_created"),
+            s("body_md", "body_md"))),
+        // Тело ранбука обнуляется без роли в его проекте (BODY_SCOPED runbook_by_id) — признак рядом,
+        // как у документа: «нет доступа» не выдаётся за «не написано».
+        Map.entry("runbook", List.of(
+            v("title", Transform.FIRST_OF, "name", "runbook_id"),
+            s("area", "area"),
+            v("date", Transform.DATE10, "date_created"),
+            list("projects", "projects"),
+            s("content_md", "content_md"),
+            when("body_redacted", "body_redacted", "body_redacted"),
+            when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
         // S9-05 A: человек и агент — шапка из строки, дети (задачи по открытым ролям) — срезом.
         Map.entry("user", List.of(
             v("title", Transform.FIRST_OF, "display_name", "kc_sub"),

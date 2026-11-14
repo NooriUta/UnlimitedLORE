@@ -1264,6 +1264,23 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")),
             " ORDER BY actor_id");
 
+        // ── SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: паспорта роли продукта и профиля клиента ──────
+        // Шапка — одна строка по деловому ключу; связи (сценарии, профиль, агенты, ссылки) фасад
+        // читает по рёбрам модели (READ_BY_EDGE), поэтому здесь только свойства и проекты.
+        slice("actor_by_id",
+            "SELECT actor_id, name, kind, body_md, out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowProjectActor WHERE actor_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+        slice("pain_by_id",
+            "SELECT pain_id, title, body_md, severity, date_created FROM KnowPain WHERE pain_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+        slice("gain_by_id",
+            "SELECT gain_id, title, body_md, metric_md, rank, date_created FROM KnowGain WHERE gain_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+        slice("job_by_id",
+            "SELECT job_id, title, body_md, kind, importance, date_created FROM KnowJob WHERE job_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+
         // ADR-LORE-031 §3: ассеты, потерявшие вход ATTACHED_TO (сущность удалена) —
         // кормит двухшаговый GC в Админке. По построению upload сироту создать
         // не может, так что непустой срез = следы удалённых сущностей.
@@ -3407,6 +3424,11 @@ public final class LoreSlices {
         Map.entry("tech_by_id", "паспорт технологии — тот же общий реестр"),
         Map.entry("actors", "AL-106: агенты видны всем при включённом скоупе (решение владельца 04.11.2026)"),
         Map.entry("actor_load", "AL-106: та же выборка акторов с нагрузкой — видна всем"),
+        // MD-04: паспорта — тот же скоуп, что у их списков (actors, pains, gains, jobs).
+        Map.entry("actor_by_id", "паспорт роли продукта (MD-04): AL-106, роли видны всем, как actors"),
+        Map.entry("pain_by_id", "паспорт боли (MD-04): общий продуктовый профиль, как pains"),
+        Map.entry("gain_by_id", "паспорт выгоды (MD-04): общий продуктовый профиль, как gains"),
+        Map.entry("job_by_id", "паспорт работы (MD-04): глобальная вершина (AL-113), как jobs"),
         Map.entry("role_profile_coverage", "AO-06: агрегат покрытия ролей профилем — числа по корпусу, без записей проектов"),
         Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая")
     );

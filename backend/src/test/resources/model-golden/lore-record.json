@@ -11633,6 +11633,1870 @@
     },
     "read_only" : true
   },
+  "actor" : {
+    "schema_unread" : {
+      "type" : "actor",
+      "label" : "Роль продукта",
+      "label_key" : "pp.kind.actor",
+      "icon" : "hooded-figure",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "kind",
+        "label" : "Вид роли",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "kind", "projects" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "FELT_BY",
+            "dir" : "in",
+            "label" : "боли роли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "DESIRED_BY",
+            "dir" : "in",
+            "label" : "выгоды роли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "PERFORMED_BY",
+            "dir" : "in",
+            "label" : "работы роли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "features",
+        "label" : "Сценарии",
+        "relation" : "association",
+        "rel" : "HAS_ACTOR",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "pains",
+        "label" : "Боли",
+        "relation" : "association",
+        "rel" : "FELT_BY",
+        "dir" : "in",
+        "target_type" : "pain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "gains",
+        "label" : "Выгоды",
+        "relation" : "association",
+        "rel" : "DESIRED_BY",
+        "dir" : "in",
+        "target_type" : "gain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "jobs",
+        "label" : "Работы",
+        "relation" : "association",
+        "rel" : "PERFORMED_BY",
+        "dir" : "in",
+        "target_type" : "job",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "agents",
+        "label" : "Агенты",
+        "relation" : "association",
+        "rel" : "FILLS_ROLE",
+        "dir" : "in",
+        "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "actor",
+      "label" : "Роль продукта",
+      "label_key" : "pp.kind.actor",
+      "icon" : "hooded-figure",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "kind",
+        "label" : "Вид роли",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "kind", "projects" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "FELT_BY",
+            "dir" : "in",
+            "label" : "боли роли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "DESIRED_BY",
+            "dir" : "in",
+            "label" : "выгоды роли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "PERFORMED_BY",
+            "dir" : "in",
+            "label" : "работы роли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "features",
+        "label" : "Сценарии",
+        "relation" : "association",
+        "rel" : "HAS_ACTOR",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "pains",
+        "label" : "Боли",
+        "relation" : "association",
+        "rel" : "FELT_BY",
+        "dir" : "in",
+        "target_type" : "pain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "gains",
+        "label" : "Выгоды",
+        "relation" : "association",
+        "rel" : "DESIRED_BY",
+        "dir" : "in",
+        "target_type" : "gain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "jobs",
+        "label" : "Работы",
+        "relation" : "association",
+        "rel" : "PERFORMED_BY",
+        "dir" : "in",
+        "target_type" : "job",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "agents",
+        "label" : "Агенты",
+        "relation" : "association",
+        "rel" : "FILLS_ROLE",
+        "dir" : "in",
+        "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ ],
+    "unread" : [ ],
+    "edge_links" : {
+      "features" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('HAS_ACTOR')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "pains" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('FELT_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "gains" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DESIRED_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "jobs" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PERFORMED_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "agents" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('FILLS_ROLE')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201"
+    },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
+  "pain" : {
+    "schema_unread" : {
+      "type" : "pain",
+      "label" : "Боль",
+      "label_key" : "pp.kind.pain",
+      "icon" : "thorn-helix",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "severity",
+        "label" : "Острота",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создана",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "severity", "date" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "features",
+          "label" : "Фичи и сценарии",
+          "rels" : [ {
+            "rel" : "ADDRESSES",
+            "dir" : "in",
+            "label" : "заявлена фичами",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "RELIEVES",
+            "dir" : "in",
+            "label" : "снимают сценарии",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "FELT_BY",
+            "dir" : "out",
+            "label" : "чья боль",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "BLOCKS",
+            "dir" : "out",
+            "label" : "мешает работам",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "claimedBy",
+        "label" : "Заявлена фичами",
+        "relation" : "association",
+        "rel" : "ADDRESSES",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "relievedBy",
+        "label" : "Снимают сценарии",
+        "relation" : "association",
+        "rel" : "RELIEVES",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли",
+        "relation" : "association",
+        "rel" : "FELT_BY",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "jobs",
+        "label" : "Мешает работам",
+        "relation" : "association",
+        "rel" : "BLOCKS",
+        "dir" : "out",
+        "target_type" : "job",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "pain",
+      "label" : "Боль",
+      "label_key" : "pp.kind.pain",
+      "icon" : "thorn-helix",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "severity",
+        "label" : "Острота",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создана",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "severity", "date" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "features",
+          "label" : "Фичи и сценарии",
+          "rels" : [ {
+            "rel" : "ADDRESSES",
+            "dir" : "in",
+            "label" : "заявлена фичами",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "RELIEVES",
+            "dir" : "in",
+            "label" : "снимают сценарии",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "FELT_BY",
+            "dir" : "out",
+            "label" : "чья боль",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "BLOCKS",
+            "dir" : "out",
+            "label" : "мешает работам",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "claimedBy",
+        "label" : "Заявлена фичами",
+        "relation" : "association",
+        "rel" : "ADDRESSES",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "relievedBy",
+        "label" : "Снимают сценарии",
+        "relation" : "association",
+        "rel" : "RELIEVES",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли",
+        "relation" : "association",
+        "rel" : "FELT_BY",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "jobs",
+        "label" : "Мешает работам",
+        "relation" : "association",
+        "rel" : "BLOCKS",
+        "dir" : "out",
+        "target_type" : "job",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ ],
+    "unread" : [ ],
+    "edge_links" : {
+      "claimedBy" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ADDRESSES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "relievedBy" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('RELIEVES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "actors" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('FELT_BY')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "jobs" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('BLOCKS')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201"
+    },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
+  "gain" : {
+    "schema_unread" : {
+      "type" : "gain",
+      "label" : "Выгода",
+      "label_key" : "pp.kind.gain",
+      "icon" : "gift-of-knowledge",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "rank",
+        "label" : "Ранг",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создана",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "metric_md",
+        "label" : "Метрика",
+        "label_key" : null,
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        }, {
+          "key" : "metric_md",
+          "label" : "Метрика",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "rank", "date" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "features",
+          "label" : "Фичи и сценарии",
+          "rels" : [ {
+            "rel" : "PROMISES",
+            "dir" : "in",
+            "label" : "обещана фичами",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "DELIVERS",
+            "dir" : "in",
+            "label" : "дают сценарии",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "DESIRED_BY",
+            "dir" : "out",
+            "label" : "чья выгода",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "SUCCESS_OF",
+            "dir" : "out",
+            "label" : "успех в работах",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "promisedBy",
+        "label" : "Обещана фичами",
+        "relation" : "association",
+        "rel" : "PROMISES",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "deliveredBy",
+        "label" : "Дают сценарии",
+        "relation" : "association",
+        "rel" : "DELIVERS",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли",
+        "relation" : "association",
+        "rel" : "DESIRED_BY",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "jobs",
+        "label" : "Успех в работах",
+        "relation" : "association",
+        "rel" : "SUCCESS_OF",
+        "dir" : "out",
+        "target_type" : "job",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "gain",
+      "label" : "Выгода",
+      "label_key" : "pp.kind.gain",
+      "icon" : "gift-of-knowledge",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "rank",
+        "label" : "Ранг",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создана",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "metric_md",
+        "label" : "Метрика",
+        "label_key" : null,
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        }, {
+          "key" : "metric_md",
+          "label" : "Метрика",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "rank", "date" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "features",
+          "label" : "Фичи и сценарии",
+          "rels" : [ {
+            "rel" : "PROMISES",
+            "dir" : "in",
+            "label" : "обещана фичами",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "DELIVERS",
+            "dir" : "in",
+            "label" : "дают сценарии",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "DESIRED_BY",
+            "dir" : "out",
+            "label" : "чья выгода",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "SUCCESS_OF",
+            "dir" : "out",
+            "label" : "успех в работах",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "promisedBy",
+        "label" : "Обещана фичами",
+        "relation" : "association",
+        "rel" : "PROMISES",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "deliveredBy",
+        "label" : "Дают сценарии",
+        "relation" : "association",
+        "rel" : "DELIVERS",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли",
+        "relation" : "association",
+        "rel" : "DESIRED_BY",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "jobs",
+        "label" : "Успех в работах",
+        "relation" : "association",
+        "rel" : "SUCCESS_OF",
+        "dir" : "out",
+        "target_type" : "job",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ ],
+    "unread" : [ ],
+    "edge_links" : {
+      "promisedBy" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PROMISES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "deliveredBy" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DELIVERS')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "actors" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('DESIRED_BY')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "jobs" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('SUCCESS_OF')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201"
+    },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
+  "job" : {
+    "schema_unread" : {
+      "type" : "job",
+      "label" : "Работа",
+      "label_key" : "pp.kind.job",
+      "icon" : "archery-target",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "kind",
+        "label" : "Вид работы",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "importance",
+        "label" : "Важность",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создана",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "kind", "importance", "date" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "features",
+          "label" : "Фичи и сценарии",
+          "rels" : [ {
+            "rel" : "HELPS_WITH",
+            "dir" : "in",
+            "label" : "помогают фичи",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "PERFORMS",
+            "dir" : "in",
+            "label" : "выполняют сценарии",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "PERFORMED_BY",
+            "dir" : "out",
+            "label" : "чья работа",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "BLOCKS",
+            "dir" : "in",
+            "label" : "мешают боли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "SUCCESS_OF",
+            "dir" : "in",
+            "label" : "успех — выгоды",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "helpedBy",
+        "label" : "Помогают фичи",
+        "relation" : "association",
+        "rel" : "HELPS_WITH",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "performedBy",
+        "label" : "Выполняют сценарии",
+        "relation" : "association",
+        "rel" : "PERFORMS",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли",
+        "relation" : "association",
+        "rel" : "PERFORMED_BY",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "pains",
+        "label" : "Мешают боли",
+        "relation" : "association",
+        "rel" : "BLOCKS",
+        "dir" : "in",
+        "target_type" : "pain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "gains",
+        "label" : "Успех — выгоды",
+        "relation" : "association",
+        "rel" : "SUCCESS_OF",
+        "dir" : "in",
+        "target_type" : "gain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "job",
+      "label" : "Работа",
+      "label_key" : "pp.kind.job",
+      "icon" : "archery-target",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "kind",
+        "label" : "Вид работы",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "importance",
+        "label" : "Важность",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создана",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "body_md",
+        "label" : "Описание",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "body_md",
+          "label" : "Описание",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "kind", "importance", "date" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "features",
+          "label" : "Фичи и сценарии",
+          "rels" : [ {
+            "rel" : "HELPS_WITH",
+            "dir" : "in",
+            "label" : "помогают фичи",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "PERFORMS",
+            "dir" : "in",
+            "label" : "выполняют сценарии",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "profile",
+          "label" : "Профиль клиента",
+          "rels" : [ {
+            "rel" : "PERFORMED_BY",
+            "dir" : "out",
+            "label" : "чья работа",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "BLOCKS",
+            "dir" : "in",
+            "label" : "мешают боли",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "SUCCESS_OF",
+            "dir" : "in",
+            "label" : "успех — выгоды",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        }, {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на неё ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "helpedBy",
+        "label" : "Помогают фичи",
+        "relation" : "association",
+        "rel" : "HELPS_WITH",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "performedBy",
+        "label" : "Выполняют сценарии",
+        "relation" : "association",
+        "rel" : "PERFORMS",
+        "dir" : "in",
+        "target_type" : "feature",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "actors",
+        "label" : "Роли",
+        "relation" : "association",
+        "rel" : "PERFORMED_BY",
+        "dir" : "out",
+        "target_type" : "actor",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "pains",
+        "label" : "Мешают боли",
+        "relation" : "association",
+        "rel" : "BLOCKS",
+        "dir" : "in",
+        "target_type" : "pain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "gains",
+        "label" : "Успех — выгоды",
+        "relation" : "association",
+        "rel" : "SUCCESS_OF",
+        "dir" : "in",
+        "target_type" : "gain",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На неё ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ ],
+    "unread" : [ ],
+    "edge_links" : {
+      "helpedBy" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('HELPS_WITH')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "performedBy" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PERFORMS')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "actors" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('PERFORMED_BY')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "pains" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('BLOCKS')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "gains" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('SUCCESS_OF')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowJob WHERE job_id = :id) LIMIT 201"
+    },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
+  "runbook" : {
+    "schema_unread" : {
+      "type" : "runbook",
+      "label" : "Ранбук",
+      "label_key" : "pp.kind.runbook",
+      "icon" : "spell-book",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "area",
+        "label" : "Область",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создан",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "content_md",
+        "label" : "Текст",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "content_md",
+          "label" : "Текст",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "area", "date", "projects" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на него ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "adrs",
+        "label" : "ADR",
+        "relation" : "association",
+        "rel" : "REFERENCES_ADR",
+        "dir" : "out",
+        "target_type" : "adr",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На него ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "runbook",
+      "label" : "Ранбук",
+      "label_key" : "pp.kind.runbook",
+      "icon" : "spell-book",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "area",
+        "label" : "Область",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "date",
+        "label" : "Создан",
+        "label_key" : "pp.field.date",
+        "kind" : "date",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "projects",
+        "label" : "Проекты",
+        "label_key" : "pp.field.projects",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "project",
+          "rel" : "BELONGS_TO_PROJECT",
+          "dir" : "out"
+        },
+        "relation" : "attribute",
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "content_md",
+        "label" : "Текст",
+        "label_key" : "pp.field.body",
+        "kind" : "md",
+        "group" : "body",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ {
+          "key" : "content_md",
+          "label" : "Текст",
+          "editable" : false,
+          "write" : null
+        } ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "area", "date", "projects" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ {
+          "key" : "refs",
+          "label" : "Ссылки",
+          "rels" : [ {
+            "rel" : "REFERENCES",
+            "dir" : "out",
+            "label" : "ссылается",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "REFERENCES",
+            "dir" : "in",
+            "label" : "на него ссылаются",
+            "relation" : "association",
+            "edge_props" : [ ]
+          } ]
+        } ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "attribute",
+        "rel" : "BELONGS_TO_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "adrs",
+        "label" : "ADR",
+        "relation" : "association",
+        "rel" : "REFERENCES_ADR",
+        "dir" : "out",
+        "target_type" : "adr",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsOut",
+        "label" : "Ссылается",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "refsIn",
+        "label" : "На него ссылаются",
+        "relation" : "association",
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ ],
+    "unread" : [ ],
+    "edge_links" : {
+      "adrs" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES_ADR')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201"
+    },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
   "project" : {
     "schema_unread" : {
       "type" : "project",
