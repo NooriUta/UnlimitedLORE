@@ -1660,7 +1660,13 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='task_status', code='failed', label_ru='Неуспех', label_en='Failed', icon='cancel', color='var(--dng)', sort_order=65, is_active=true UPSERT WHERE dict_type='task_status' AND code='failed'",
             "UPDATE KnowDictEntry SET dict_type='sprint_status', code='waiting', label_ru='Ждём ответа', label_en='Waiting', icon='hourglass', color='var(--inf)', sort_order=35, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='waiting'",
             "UPDATE KnowDictEntry SET dict_type='sprint_status', code='review', label_ru='На приёмке', label_en='Review', icon='magnifying-glass', color='var(--wrn)', sort_order=45, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='review'",
-            "UPDATE KnowDictEntry SET dict_type='sprint_status', code='failed', label_ru='Неуспех', label_en='Failed', icon='cancel', color='var(--dng)', sort_order=65, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='failed'"))
+            "UPDATE KnowDictEntry SET dict_type='sprint_status', code='failed', label_ru='Неуспех', label_en='Failed', icon='cancel', color='var(--dng)', sort_order=65, is_active=true UPSERT WHERE dict_type='sprint_status' AND code='failed'")),
+
+        // SPRINT_LORE_AGENT_OBSERVABILITY/AO-02 (след источников «к сущности», механизм за флагом
+        // lore.agent.sources.enabled, по умолчанию выкл): ребро SOURCED_FROM «опирался на» со свойствами
+        // at, via. Аддитивно, major 17: новый тип ребра. Отдельным шагом — V86 уже влит (#1343),
+        // его SQL менять нельзя (контрольная сумма). V87 — WK-05 (#1349), выше. DDL рядом с логикой (AgentSourceTrail).
+        new Step(88, 17, "source_trail_edge", AgentSourceTrail.DDL)
     );
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */

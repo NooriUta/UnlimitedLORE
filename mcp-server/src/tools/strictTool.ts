@@ -44,7 +44,10 @@ function isRawShapeCompat(obj: unknown): obj is RawShape {
   return Object.values(obj).some(isZodTypeLike);
 }
 
-export function withStrictTools(server: McpServer, gate?: (name: string) => boolean): McpServer {
+/** AO-02: наблюдатель успешных вызовов (след источников). Не ждётся и не может уронить вызов. */
+export type ToolObserver = (name: string, args: unknown, result: unknown) => unknown;
+
+export function withStrictTools(server: McpServer, gate?: (name: string) => boolean, observe?: ToolObserver): McpServer {
   const registerTool = server.registerTool.bind(server) as (
     name: string,
     config: { description?: string; inputSchema?: unknown; annotations?: unknown },
@@ -74,7 +77,14 @@ export function withStrictTools(server: McpServer, gate?: (name: string) => bool
         annotations = rest.shift() as Record<string, unknown>;
       }
     }
-    const handler = rest[0];
+    const inner = rest[0];
+    const handler = observe && typeof inner === 'function'
+      ? async (...args: unknown[]) => {
+          const result = await (inner as (...a: unknown[]) => unknown)(...args);
+          try { observe(name, args[0], result); } catch (e) { console.error(`[aida-lore-mcp] наблюдатель ${name}: ${(e as Error).message}`); }
+          return result;
+        }
+      : inner;
 
     return registerTool(
       name,

@@ -33,7 +33,12 @@ class AgentActionLogLiveDbTest {
     LoreSchemaMigrationRunner runner;
 
     private static List<Map<String, Object>> sql(String query) throws Exception {
-        String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", query).encode();
+        return sql(query, Map.of());
+    }
+
+    private static List<Map<String, Object>> sql(String query, Map<String, Object> params) throws Exception {
+        String body = io.vertx.core.json.JsonObject.of("language", "sql", "command", query,
+            "params", new io.vertx.core.json.JsonObject(params)).encode();
         HttpRequest req = HttpRequest.newBuilder(
                 URI.create(LoreArcadeDbTestResource.BASE_URL + "/api/v1/command/" + LoreArcadeDbTestResource.TEST_DB))
             .header("Content-Type", "application/json")
@@ -73,5 +78,23 @@ class AgentActionLogLiveDbTest {
         runner.copyLegacyActions();
         assertEquals(3, n("SELECT count(*) AS n FROM AgentActionLog WHERE " + mine), "повтор не дублирует");
         assertEquals(before, n("SELECT count(*) AS n FROM MetricSnapshot WHERE " + mine), "источник не тронут");
+    }
+
+    /** AO-02: ребро следа — тип из V88, повтор не плодит рёбер, нет вершины — отказ (ресурс пишет «пропущено»). */
+    @Test
+    void sourceTrailEdgeIsIdempotentAndNeedsBothEnds() throws Exception {
+        assertEquals(1, sql("SELECT name FROM schema:types WHERE name = 'SOURCED_FROM'").size(), "тип ребра создан V88");
+        sql("INSERT INTO KnowADR SET adr_id = '" + TAG + "-ADR'");
+        sql("INSERT INTO KnowSpec SET spec_id = '" + TAG + "-SPEC'");
+        String edge = AgentSourceTrail.edgeSql(LoreModelTypes.GRAPH.get("adr"), LoreModelTypes.GRAPH.get("spec"));
+        Map<String, Object> p = Map.of("tid", TAG + "-ADR", "sid", TAG + "-SPEC", "at", "2026-11-14T00:00:00Z", "via", "spec_by_id");
+        assertEquals(1, sql(edge, p).size(), "ребро создано — ответ непуст");
+        assertEquals(1, sql(edge, p).size(), "повтор отдаёт то же ребро — непуст (ресурс считает записанным)");
+        assertEquals(1, n("SELECT count(*) AS n FROM SOURCED_FROM WHERE @out.adr_id = '" + TAG + "-ADR'"), "повтор не плодит рёбер");
+        assertEquals(1, n("SELECT out('SOURCED_FROM').size() AS n FROM KnowADR WHERE adr_id = '" + TAG + "-ADR'"),
+            "источник виден обходом графа");
+        assertEquals("spec_by_id", sql("SELECT via FROM SOURCED_FROM WHERE @out.adr_id = '" + TAG + "-ADR'").get(0).get("via"));
+        assertEquals(0, sql(edge, Map.of("tid", TAG + "-NONE", "sid", TAG + "-SPEC", "at", "x", "via", "")).size(),
+            "нет вершины цели — ArcadeDB молча не создаёт: пустой ответ, ресурс пишет «пропущено»");
     }
 }

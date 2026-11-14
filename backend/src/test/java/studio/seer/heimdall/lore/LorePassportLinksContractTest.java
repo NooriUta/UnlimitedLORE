@@ -156,6 +156,7 @@ class LorePassportLinksContractTest {
         Map.entry("USES_MACHINE", "личность: агент → машина (miniLORE)"),
         Map.entry("MACHINE_ACCESS", "права: человек → доступ к машине miniLORE"),
         Map.entry("LOGGED_BY", "журнал сессий агентов"),
+        Map.entry("SOURCED_FROM", "след прочитанного агентом (AO-02, за флагом) — наблюдаемость агента, связью в паспорте не показывается"),
         Map.entry("ClRoutineHasOutput", "журнал рутин (ClRoutine*); пути записи в коде нет"),
         Map.entry("ON_MILESTONE", "конфиг плана (контрольные точки, срез plan_checkpoints); пути записи в коде нет"),
         Map.entry("OF_TYPE", "конфиг плана (тип трека, срез plan_tracks); пути записи в коде нет"),
