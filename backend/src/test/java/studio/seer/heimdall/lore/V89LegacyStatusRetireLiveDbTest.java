@@ -132,7 +132,8 @@ class V89LegacyStatusRetireLiveDbTest {
 
         for (String t : LoreSchemaMigrations.RETIRED_LEGACY_STATUS_TYPES)
             assertEquals(0, sql("SELECT name FROM schema:types WHERE name = '" + t + "'").size(), t + " снят из схемы");
-        assertTrue(out.transferred() >= 5, "перенесено: " + out);
+        // ровно 4: задача, закрытый спринт, фаза, веха; «своё» status_raw не трогается, unknown не выдумывается, сирота снимается
+        assertEquals(4, out.transferred(), "перенесено: " + out);
         assertTrue(out.noValue() >= 1 && out.orphanHistsDeleted() >= 1 && out.tracksMoved() >= 1, out.toString());
 
         // словари — в универсальном справочнике
