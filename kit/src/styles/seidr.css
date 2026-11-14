@@ -5800,7 +5800,19 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-scope__sheet .sk-scope__grp,
 .sk-scope__sheet .sk-scope__list { min-width: 0; max-width: 100%; }
 .sk-scope__sheet .sk-scope__row { min-width: 0; max-width: 100%; }
-.sk-scope__sheet .sk-scope__id { max-width: 34%; }
+/* Приёмка препрода efe20f03: при slug ≤34% имя резалось до ~9 букв, а slug брал больше места, чем имя.
+   В листе имя главное: оно берёт свободную ширину и переносится (до двух строк) только при нехватке;
+   slug вторичен — мельче и сжимается ПЕРВЫМ (flex-shrink 1000 против 1), вплоть до нуля. */
+.sk-scope__sheet .sk-scope__title {
+  flex: 1 1 auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+}
+.sk-scope__sheet .sk-scope__id { flex: 0 1000 auto; max-width: 34%; min-width: 0; font-size: var(--fs-2xs); }
 .sk-scope__sheet .sk-scope__check,
 .sk-scope__sheet .sk-scope__only,
 .sk-scope__sheet .sk-scope__act,
