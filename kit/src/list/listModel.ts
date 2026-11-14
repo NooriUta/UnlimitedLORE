@@ -256,6 +256,12 @@ export interface ListState {
   calDate?: string | null;
   /** Фильтр «Библиотеки»: все / актуальные / устарели (K2-VIEW-LIBRARY); нет — «все». */
   libFilter?: 'all' | 'fresh' | 'stale' | null;
+  /**
+   * Вид приложения (проп appViews у ListView, SPRINT_VIZ_EMBED/EMB-L2): id
+   * выбранного вида со своей отрисовкой. Задан и такой вид есть — он главнее
+   * view; вида нет (выключен настройкой) — действует view.
+   */
+  appView?: string | null;
 }
 
 export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
@@ -263,9 +269,10 @@ export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group:
 /**
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
  * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
- * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря), llf (фильтр библиотеки).
+ * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря), llf (фильтр библиотеки),
+ * lav (вид приложения).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf', 'lav'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -284,6 +291,7 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lm: s.month ?? null,
     lcd: s.calDate ?? null,
     llf: s.libFilter && s.libFilter !== 'all' ? s.libFilter : null,
+    lav: s.appView || null,
   };
 }
 
@@ -330,6 +338,7 @@ export function readListState(p: URLSearchParams): ListState {
     month: /^\d{4}-(0[1-9]|1[0-2])$/.test(p.get('lm') ?? '') ? p.get('lm')! : undefined,
     calDate: p.get('lcd') ?? undefined,
     libFilter: p.get('llf') === 'fresh' || p.get('llf') === 'stale' ? (p.get('llf') as 'fresh' | 'stale') : undefined,
+    appView: p.get('lav') || undefined,
   };
 }
 

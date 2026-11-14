@@ -37,6 +37,7 @@ import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import { loreListPeek } from '../record/lorePeek';
+import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -374,6 +375,17 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
     [scope],
   );
+  // Встроенный график Völva (SPRINT_VIZ_EMBED/EMB-L2, D-2026-LORE-VIZ-EMBED-PLACES):
+  // вид РЯДОМ с видами раздела, только при charts.layer=volva; иначе ничего не
+  // меняется. Проект — из скоупа шапки; подпись — бэкенд LORE.
+  const volvaLayer = useChartLayer(fetchImpl, !!def.volvaChart);
+  const volvaLabels = useVolvaSprintsLabels();
+  const appViews = useMemo(() => (def.volvaChart && volvaLayer === 'volva' ? [{
+    id: 'volva',
+    label: volvaLabels.view,
+    icon: VOLVA_VIEW_ICON,
+    render: () => <VolvaChart chart={def.volvaChart!} title={volvaLabels.title} projects={scope} fetchImpl={fetchImpl} />,
+  }] : undefined), [def.volvaChart, volvaLayer, volvaLabels.view, volvaLabels.title, scope, fetchImpl]);
   // Фильтр «Изменены» (K2-DATE-RANGE): только у разделов, где у записи есть
   // время (у кого есть лента — FEEDS); у прочих он недоступен с причиной.
   const hasTime = !!def.feed;
@@ -667,6 +679,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // S4-25: иконки видов — выбор владелицы (lucide из v1), из общего словаря kit.
         viewIcons={{ list: ICON_CANON.viewList, board: ICON_CANON.viewBoard }}
         head={head}
+        appViews={appViews}
         // Личная ширина колонок (S4-35, «ширина личная, набор командный»):
         // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
         // в память (приватный режим ширину просто не запомнит).
