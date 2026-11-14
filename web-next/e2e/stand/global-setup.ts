@@ -5,7 +5,7 @@
 // а «стенд не ответил» — это факт для отчёта, а не повод молчать.
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { BUILD_FILE, REPORT_DIR, type StandBuild } from './paths.ts';
-import { extractBundle, isForbiddenStandUrl } from './summary.ts';
+import { extractBundle, isForbiddenStandUrl } from '../../src/standSmoke/summary.ts';
 
 export default async function globalSetup(): Promise<void> {
   rmSync(REPORT_DIR, { recursive: true, force: true });

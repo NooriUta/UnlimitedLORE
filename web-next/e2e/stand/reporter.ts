@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { FullResult, Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 import { preflightFromEnv, readBuild, REPORT_DIR } from './paths.ts';
-import { buildSummary, outcomeOf, renderMarkdown, type ScenarioResult, type StandVersion } from './summary.ts';
+import { buildSummary, outcomeOf, renderMarkdown, type ScenarioResult, type StandVersion } from '../../src/standSmoke/summary.ts';
 
 // eslint-disable-next-line no-control-regex
 const stripAnsi = (s: string) => s.replace(/\u001b\[[0-9;]*m/g, '');

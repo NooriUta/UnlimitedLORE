@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { standPreflight, type Preflight } from './summary.ts';
+import { standPreflight, type Preflight } from '../../src/standSmoke/summary.ts';
 
 export const REPORT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', '.stand-report');
 export const BUILD_FILE = resolve(REPORT_DIR, 'build.json');
