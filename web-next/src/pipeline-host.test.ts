@@ -322,6 +322,26 @@ describe('PL-04: снимок прода → база препрода (толь
   });
 });
 
+// D-2026-KC-PREPROD-REALM-DUPLICATES (14.11.2026): препрод входит через свои realm'ы-дубли
+// в том же KC, прод — через исходные. Токен прода в препрод не проходит (ключи свои).
+describe('препрод на realm omilorePreprod, прод на omilore', () => {
+  const ISS_PRE = 'https://odal.seidrstudio.pro/kc/realms/omilorePreprod';
+  const ISS_PROD = 'https://odal.seidrstudio.pro/kc/realms/omilore';
+
+  it('lore-cd.yml (препрод): issuer бэкенда и веба — omilorePreprod, KC-мост — тот же realm', () => {
+    expect(cd()).toMatch(new RegExp(`LORE_OIDC_ISSUER: ${ISS_PRE.replace(/[./]/g, '\\$&')}\\s*$`, 'm'));
+    expect(cd()).toMatch(new RegExp(`VITE_OIDC_ISSUER: ${ISS_PRE.replace(/[./]/g, '\\$&')}\\s*$`, 'm'));
+    expect(cd()).toMatch(/^\s+KC_ADMIN_REALM: omilorePreprod\s*$/m);
+    expect(cd()).not.toMatch(/realms\/omilore\s*$/m);
+  });
+
+  it('lore-release.yml (прод) остаётся на omilore — препродный realm туда не протёк', () => {
+    const rel = code(read(REL));
+    expect(rel).not.toMatch(/omilorePreprod/);
+    if (/realms\//.test(rel)) expect(rel).toMatch(new RegExp(ISS_PROD.replace(/[./]/g, '\\$&')));
+  });
+});
+
 // PL-03: пустая база версии N выкладывается артефактом CI — не руками на ci-server.
 describe('PL-03: шаблон пустой базы lore-schema-vN.zip — артефакт CI', () => {
   const W = '.github/workflows/lore-empty-db-template.yml';
