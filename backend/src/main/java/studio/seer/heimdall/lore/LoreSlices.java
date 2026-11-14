@@ -271,9 +271,14 @@ public final class LoreSlices {
     private static final String OPEN_TASK_STATUS_EXPR =
         "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
 
-    /** S9-02: релизы спринта задачи — одна проекция у open_tasks и closed_tasks. */
+    /**
+     * Релиз ЗАДАЧИ — релиз, в который уехал её PR (CLOSED_BY → SHIPPED_IN); одна проекция у
+     * open_tasks и closed_tasks. Раньше (S9-02) брались релизы спринта, и запланированная задача
+     * из спринта, где другие уже уехали, показывала «v1.17.20 +2» (владелица 14.11.2026;
+     * правило PU-07: у задачи — тот релиз, в котором уехал её PR). Нет PR в релизе — пусто.
+     */
     private static final String TASK_RELEASES_SQL =
-        "out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids";
+        "out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids";
 
     /**
      * RM-P17: как зовётся родитель строки истории — одна пара на цепочку SCD2.
