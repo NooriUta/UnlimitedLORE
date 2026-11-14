@@ -74,11 +74,11 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 
 ## Версии и образы
 
-Инсталлятор ставит **только мажорные версии** `vN.0.0` (решение владелицы 14.11.2026; то же правило, что у публикации на GitHub). Для такой версии образы берутся готовыми из GitHub Container Registry — `ghcr.io/nooriuta/lore-backend:vN.0.0` и `ghcr.io/nooriuta/lore-web:vN.0.0`, без входа. Публикует их релизный workflow при мажорном теге — те же образы, что прошли препрод и прод.
+Инсталлятор ставит **только мажорные версии** `vX.Y.0` (решение владелицы 14.11.2026; то же правило, что у публикации на GitHub). Для такой версии образы берутся готовыми из GitHub Container Registry — `ghcr.io/nooriuta/lore-backend:vX.Y.0` и `ghcr.io/nooriuta/lore-web:vX.Y.0`, без входа. Публикует их релизный workflow при мажорном теге — те же образы, что прошли препрод и прод.
 
 ```bash
-bash deploy/install/install.sh --version v2.0.0            # готовые образы из ghcr
-bash deploy/install/install.sh --version v2.0.0 --build    # собрать из исходников тега на месте
+bash deploy/install/install.sh --version v1.18.0            # готовые образы из ghcr
+bash deploy/install/install.sh --version v1.18.0 --build    # собрать из исходников тега на месте
 ```
 
-Не мажорная версия (`v1.17.21`) — отказ с причиной. Без `--version` инсталлятор собирает из рабочего чекаута (`--src`) — это путь разработки.
+Патч (`v1.17.21`) и rc — отказ с причиной. Без `--version` инсталлятор собирает из рабочего чекаута (`--src`) — это путь разработки.

@@ -650,7 +650,7 @@ jobs:
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/lore-host-deploy.sh probe
 
-      # SELF-PROVISION-STANDALONE (владелица 14.11.2026): образы мажорного релиза (vN.0.0) —
+      # SELF-PROVISION-STANDALONE (владелица 14.11.2026): образы мажорного релиза (vX.Y.0) —
       # в ghcr.io для внешнего установщика; те же :sha8, что прошли препрод и прод, без
       # пересборки. Не мажор — шаг ничего не делает. Нет токена на мажоре — BLOCKED, красно.
       - name: Публикация образов мажорного релиза в ghcr.io

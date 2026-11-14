@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Инсталлятор LORE для Linux — SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE.
 #
-#   install.sh [--dir DIR] --version vN.0.0 [--build] [--port N] [--bind ADDR] [--dry-run]
+#   install.sh [--dir DIR] --version vX.Y.0 [--build] [--port N] [--bind ADDR] [--dry-run]
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
@@ -26,7 +26,7 @@
 # пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE — готовые
 # образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE; GHCR_OWNER.
 #
-# Версии — ТОЛЬКО мажорные vN.0.0 (решение владелицы 14.11.2026; то же правило, что у
+# Версии — ТОЛЬКО мажорные vX.Y.0 (решение владелицы 14.11.2026; то же правило, что у
 # публикации на GitHub, D-2026-GITHUB-ONLY-MAJOR-VERSIONS). Образы мажорной версии берутся
 # готовыми из ghcr.io/<GHCR_OWNER>/lore-backend и lore-web (публикует lore-release.yml);
 # --build собирает их из исходников тега на месте.
@@ -50,11 +50,11 @@ CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
 
 say()  { printf '── %s\n' "$*"; }
 warn() { printf 'ВНИМАНИЕ: %s\n' "$*" >&2; }
-die()  { printf 'ОШИБКА: %s\n' "$*" >&2; exit "${2:-1}"; }
+die()  { printf 'ОШИБКА: %s\n' "$1" >&2; exit "${2:-1}"; }
 usage() { sed -n '3,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
-# Мажорная версия: vN.0.0 — то же правило, что у публикации образов и зеркала GitHub.
-is_major() { [[ "$1" =~ ^v[0-9]+\.0\.0$ ]]; }
+# Мажорная версия: vX.Y.0 — то же правило, что у публикации образов и зеркала GitHub.
+is_major() { [[ "$1" =~ ^v[0-9]+\.[0-9]+\.0$ ]]; }
 
 # Образы мажорной версии — готовые из ghcr, если не задано своё и не просили --build.
 default_images() {
@@ -95,7 +95,7 @@ parse_args() {
     [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || die "--port вне 1..65535" 2
   fi
   if [ -n "$VERSION" ]; then
-    is_major "$VERSION" || die "--version $VERSION: инсталлятор — только для мажорных версий vN.0.0 (например v2.0.0)" 2
+    is_major "$VERSION" || die "--version $VERSION: инсталлятор — только для мажорных версий vX.Y.0 (например v1.18.0); патчи vX.Y.Z (Z>0) и rc — нет" 2
   fi
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
   return 0
@@ -343,7 +343,9 @@ selftest() {
   # 2. dry-run установки: план без docker, ничего не пишет, секретов не печатает
   is_major v12.0.0 || fail "is_major: v12.0.0 — мажор"; ok
   is_major v9a0b0 && fail "is_major: точка в регулярке не экранирована (v9a0b0)"; ok
-  is_major v1.18.0 && fail "is_major: v1.18.0 — не мажор (правило vN.0.0)"; ok
+  is_major v1.18.0 || fail "is_major: v1.18.0 — мажор (правило X.Y.0, владелица 14.11.2026)"; ok
+  is_major v1.18.3 && fail "is_major: v1.18.3 — патч, не мажор"; ok
+  is_major v1.18.0-rc1 && fail "is_major: rc — не мажор"; ok
   expect_rc 2 --dry-run --dir "$t/inst" --version v9.9.9
   printf '%s' "$out" | grep -q 'мажорных' || fail "не-мажорная версия: причина не названа: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
