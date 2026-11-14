@@ -65,7 +65,7 @@ class LoreSprintTracksTest {
             "src/main/java/studio/seer/heimdall/lore/LoreStatusResource.java"));
         int handler = src.indexOf("public Uni<Response> updateSprintPlan(");
         assertTrue(handler > 0, "обработчик /lore/sprint/plan найден");
-        int end = src.indexOf("private Uni<Response> checkTaskDoneGate", handler);
+        int end = src.indexOf("record TaskGate(", handler);
         String body = src.substring(handler, end);
         assertTrue(body.contains("LoreSprintTracks.needsCheck("), "запись трека проверяется");
         assertTrue(body.contains("LoreSprintTracks.EXISTS_SQL"), "по вершинам PlanTrack");

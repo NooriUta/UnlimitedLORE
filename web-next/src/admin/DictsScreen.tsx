@@ -20,7 +20,7 @@ import {
 import { useAppT, type AppKey } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  DICT_COLOR_TOKENS, checkNewDictType, dictEntryBody, dictEntryDiff, dictTypes, fetchDicts, fetchTags, isCanonDict,
+  DICT_COLOR_TOKENS, checkNewDictType, dictKinds, dictEntryBody, dictEntryDiff, dictTypes, fetchDicts, fetchTags, isCanonDict,
   needsDictConfirm, saveDictEntry, usageOf, type AreaUsage, type DictDraft, type DictRow, type DictsData, type TagRow,
   type UsageCell,
 } from './dicts';
@@ -167,6 +167,7 @@ function DictsBody({ data, fetchImpl, reload }: { data: DictsData; fetchImpl?: t
                 <th scope="col">{t('admin.dicts.col.label')}</th>
                 <th scope="col">{t('admin.dicts.col.look')}</th>
                 <th scope="col">{t('admin.dicts.col.uses')}</th>
+                {dictKinds(dt) && <th scope="col">{t('admin.dicts.col.kind')}</th>}
                 <th scope="col">{t('admin.dicts.col.order')}</th>
                 <th scope="col">{t('admin.dicts.col.active')}</th>
                 <th scope="col"><span className="sk-sr">{t('admin.dicts.col.act')}</span></th>
@@ -176,7 +177,7 @@ function DictsBody({ data, fetchImpl, reload }: { data: DictsData; fetchImpl?: t
               {shown.map(r => {
                 const open = edit?.before?.code === r.code;
                 return (
-                  <DictRowView key={r.code} r={r} usage={data.usage} open={open}
+                  <DictRowView key={r.code} r={r} usage={data.usage} open={open} withKind={dictKinds(dt) !== null}
                     onEdit={() => (open ? setEdit(null) : openEdit(r))} onReactivate={() => openEdit(r, true)}>
                     {open && edit && (
                       <DictForm dt={dt} before={edit.before} draft={edit.draft} usage={data.usage}
@@ -219,8 +220,8 @@ function UsageView({ cell }: { cell: UsageCell }) {
   return <span className="adm-missing" data-testid="adm-dict-uses" data-state="unknown" title={cell.reason}>{t('admin.dicts.usageUnknown')}</span>;
 }
 
-function DictRowView({ r, usage, open, onEdit, onReactivate, children }: {
-  r: DictRow; usage: AreaUsage; open: boolean; onEdit: () => void; onReactivate: () => void; children?: ReactNode;
+function DictRowView({ r, usage, open, withKind, onEdit, onReactivate, children }: {
+  r: DictRow; usage: AreaUsage; open: boolean; withKind?: boolean; onEdit: () => void; onReactivate: () => void; children?: ReactNode;
 }) {
   const t = useAppT();
   return (
@@ -233,6 +234,7 @@ function DictRowView({ r, usage, open, onEdit, onReactivate, children }: {
         </td>
         <td><Chip color={r.color} icon={r.icon} text={r.label_ru ?? r.code} /></td>
         <td><UsageView cell={usageOf(r.dict_type, r.code, usage)} /></td>
+        {withKind && <td><KindMark kind={r.kind} /></td>}
         <td><span className="adm-mono">{r.sort_order ?? '—'}</span></td>
         <td>{r.is_active ? <GameIcon slug="tick" size={12} label={t('admin.dicts.on')} /> : <span className="adm-dim">{t('admin.dicts.off')}</span>}</td>
         <td>
@@ -244,7 +246,7 @@ function DictRowView({ r, usage, open, onEdit, onReactivate, children }: {
           </span>
         </td>
       </tr>
-      {children && <tr><td colSpan={7}>{children}</td></tr>}
+      {children && <tr><td colSpan={withKind ? 8 : 7}>{children}</td></tr>}
     </>
   );
 }
@@ -252,7 +254,16 @@ function DictRowView({ r, usage, open, onEdit, onReactivate, children }: {
 const FIELD_LABEL: Record<string, AppKey> = {
   code: 'admin.dicts.f.code', label_ru: 'admin.dicts.f.labelRu', label_en: 'admin.dicts.f.labelEn',
   color: 'admin.dicts.f.color', icon: 'admin.dicts.f.icon', sort_order: 'admin.dicts.f.order', is_active: 'admin.dicts.f.active',
+  kind: 'admin.dicts.f.kind',
 };
+/** WK-01: подписи видов продукта. Неизвестный сервером вид — показывается кодом, а не прячется. */
+const KIND_LABEL: Record<string, AppKey> = { tech: 'admin.dicts.kind.tech', service: 'admin.dicts.kind.service' };
+
+function KindMark({ kind }: { kind: string | null }) {
+  const t = useAppT();
+  if (!kind) return <span className="adm-missing" data-testid="adm-dict-kind" data-kind="none">{t('admin.dicts.kind.none')}</span>;
+  return <span data-testid="adm-dict-kind" data-kind={kind}>{KIND_LABEL[kind] ? t(KIND_LABEL[kind]) : kind}</span>;
+}
 const COLOR_LABEL: Record<(typeof DICT_COLOR_TOKENS)[number], AppKey> = {
   'var(--acc)': 'admin.dicts.color.acc', 'var(--suc)': 'admin.dicts.color.suc', 'var(--inf)': 'admin.dicts.color.inf',
   'var(--wrn)': 'admin.dicts.color.wrn', 'var(--dng)': 'admin.dicts.color.dng', 'var(--t2)': 'admin.dicts.color.t2',
@@ -274,7 +285,7 @@ function DictForm({ dt, before, draft, usage, onDraft, onCancel, onSaved, fetchI
   const use = isNew ? null : usageOf(dt, draft.code, usage);
   const confirmNeeded = needsDictConfirm(dt, before, draft);
 
-  const all = dictEntryDiff(before, draft).map(r => ({ ...r, text: t(FIELD_LABEL[r.id]) })) as DiffRow[];
+  const all = dictEntryDiff(before, draft, dt).map(r => ({ ...r, text: t(FIELD_LABEL[r.id]) })) as DiffRow[];
   const changed = all.filter(r => r.kind !== 'same');
   const rows = changed.length ? changed : all;
 
@@ -334,6 +345,17 @@ function DictForm({ dt, before, draft, usage, onDraft, onCancel, onSaved, fetchI
           <input className="adm-input adm-mono" type="number" aria-label={t('admin.dicts.f.order')} value={draft.sort_order ?? ''}
             onChange={e => set('sort_order')(e.target.value === '' ? null : Number(e.target.value))} />
         </label>
+        {dictKinds(dt) && (
+          <label className="adm-field">
+            <span className="adm-field__l">{t('admin.dicts.f.kind')}</span>
+            <select className="adm-input" aria-label={t('admin.dicts.f.kind')} value={draft.kind ?? ''}
+              onChange={e => set('kind')(e.target.value === '' ? null : e.target.value)}>
+              {/* Снять заданный вид запись не умеет (null = «не трогать») — «не задан» только пока не задан. */}
+              {!before?.kind && <option value="">{t('admin.dicts.kind.none')}</option>}
+              {dictKinds(dt)!.map(k => <option key={k} value={k}>{KIND_LABEL[k] ? t(KIND_LABEL[k]) : k}</option>)}
+            </select>
+          </label>
+        )}
         <label className="adm-field adm-field--btns">
           <input type="checkbox" checked={draft.is_active} onChange={e => set('is_active')(e.target.checked)} />
           <span>{t('admin.dicts.f.active')}</span>

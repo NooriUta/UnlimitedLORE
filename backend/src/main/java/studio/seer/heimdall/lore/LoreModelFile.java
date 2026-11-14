@@ -56,7 +56,9 @@ final class LoreModelFile {
         List<LoreModelNav.Group> nav,
         Map<String, String> audience,
         // S4-24: паспорт создания _new — путь записи, поля формы, обязательное «одно из» (LoreModelCreate).
-        Map<String, LoreModelCreate.Spec> create) {}
+        Map<String, LoreModelCreate.Spec> create,
+        // WK-05: переходы ядра и виды работы со стадиями и доказательством done (LoreModelWorkflow).
+        LoreModelWorkflow.Workflow workflow) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -154,7 +156,8 @@ final class LoreModelFile {
         Content c = new Content(List.copyOf(types), ro(typeDefs), ro(childOnly), set(doc, "read_only"), ro(graph), ro(aliases),
             strMap(doc.get("type_color"), "type_color"), set(doc, "no_type_color"), strMap(doc.get("precision"), "precision"),
             ro(time), ro(display), ro(computed), strMap(doc.get("edge_fields"), "edge_fields"),
-            set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"), ro(create));
+            set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"), ro(create),
+            LoreModelWorkflow.parse(doc.get("workflow")));
         check(c);
         return c;
     }
@@ -181,6 +184,7 @@ final class LoreModelFile {
         }
         bad.addAll(LoreModelNav.problems(c.nav(), c.audience()));
         bad.addAll(LoreModelCreate.problems(c.create(), c.typeDefs()));
+        bad.addAll(LoreModelWorkflow.problems(c.workflow()));
         if (!bad.isEmpty()) throw new IllegalStateException("файл модели несогласован: " + bad);
     }
 
@@ -229,6 +233,7 @@ final class LoreModelFile {
         Map<String, Object> create = new TreeMap<>();
         c.create().forEach((k, v) -> create.put(k, LoreModelCodec.encode(v)));
         d.put("create", create);
+        d.put("workflow", LoreModelWorkflow.render(c.workflow()));
         return new JsonObject(d).encodePrettily().replace("\r\n", "\n") + "\n";
     }
 

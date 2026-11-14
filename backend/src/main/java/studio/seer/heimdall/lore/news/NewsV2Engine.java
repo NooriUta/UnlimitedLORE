@@ -37,6 +37,14 @@ import java.util.regex.Pattern;
  */
 public final class NewsV2Engine {
 
+    /**
+     * S7A-14: версия ФОРМЫ ответа GET /lore/news/v2 (и /lore/news/summary) — {@code meta.form_version}.
+     * Клиент (miniLORE, веб) узнаёт, какую форму разбирает, а не угадывает по набору ключей.
+     * Менять при любом изменении формы: аддитивное поле — минорная цифра, удаление/переименование —
+     * старшая. 2.1 — первая версия с явной меткой (days[].groups[].burn есть с S7A-09).
+     */
+    public static final String FORM_VERSION = "news/2.1";
+
     public static final String NOPROJ = "(no-project)";
     public static final String NOCOMP = "(no-component)";
     public static final String NOSPR  = "(no-sprint)";
@@ -944,6 +952,21 @@ public final class NewsV2Engine {
         return out;
     }
 
+    /**
+     * SPRINT_MINILORE_POLISH/PL-4: ответ GET /lore/news/summary — из полного ответа {@link #compute}
+     * только {@code metrics} (с дельтой к прошлому периоду) и {@code meta}; своих подсчётов нет.
+     * {@code meta.summary_period} — какой период просили (day/week/month).
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> summary(Map<String, Object> full, String period) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("metrics", full.get("metrics"));
+        Map<String, Object> meta = new LinkedHashMap<>((Map<String, Object>) full.get("meta"));
+        meta.put("summary_period", period);
+        out.put("meta", meta);
+        return out;
+    }
+
     List<Map<String, Object>> feedRows(Core c, Query q, String axis) {
         Set<String> keep = new HashSet<>();
         for (Event e : c.E) keep.add(e.elKey() + "|" + e.kind() + "|" + dayOf(e));
@@ -1354,6 +1377,7 @@ public final class NewsV2Engine {
 
     Map<String, Object> meta(Core c, Query q, List<Map<String, Object>> checks) {
         Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("form_version", FORM_VERSION);   // S7A-14
         meta.put("generated_at", in.now().toString());
         meta.put("scope", in.scope() == null ? mapOf("applied", false)
             : mapOf("applied", true, "projects", in.scope().size()));

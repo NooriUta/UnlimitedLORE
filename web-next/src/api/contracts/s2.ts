@@ -283,6 +283,8 @@ export interface UserSettings {
   stripes: boolean;
   /** Карточка Peek по наведению на ссылку (S9-10, D-2026-LORE-PEEK-ONE-CARD); выключить можно, как в Wikipedia. */
   peek_hover: boolean;
+  /** S4-18: спрашивать «A → B?» до записи смены статуса (по умолчанию — смена сразу и 8 с «Вернуть»). */
+  status_confirm: boolean;
   /**
    * Вид вкладки «Граф» по умолчанию (GC-03, владелица 11.11.2026: «настройкой в
    * настройках человека»). auto — не выбирал: решает экран (секторы / список на телефоне).
@@ -293,7 +295,7 @@ export interface UserSettings {
    * снизу или во весь экран. auto — не выбирал: решает экран (справа). Сервер
    * хранил её давно (LoreMePrefs.passport_place), клиент не знал.
    */
-  passport_place: 'auto' | 'left' | 'right' | 'bottom' | 'full';
+  passport_place: 'auto' | RecordPlacement;
   /** Флаг «новая навигация»; cookie seer-prefs.nav остаётся кэшем для перехода между хостами. */
   nav_version: 'v1' | 'v2';
   /** S4-TECH-NOTES: показывать технические сведения (коды источников, оговорки модели, сырые метрики). */
@@ -316,6 +318,7 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   single_key_shortcuts: true,
   stripes: true,
   peek_hover: true,
+  status_confirm: false,
   graph_view: 'auto',
   passport_place: 'auto',
   nav_version: 'v2',
@@ -336,8 +339,9 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   single_key_shortcuts: bool,
   stripes: bool,
   peek_hover: bool,
+  status_confirm: bool,
   graph_view: oneOf('auto', 'sectors', 'list', 'force', 'obsidian'),
-  passport_place: oneOf('auto', 'left', 'right', 'bottom', 'full'),
+  passport_place: oneOf('auto', ...RECORD_PLACEMENTS),
   nav_version: oneOf('v1', 'v2'),
   show_tech: bool,
   text_scale: v => typeof v === 'number' && Number.isFinite(v),
@@ -457,4 +461,5 @@ export const S2_ENDPOINTS: readonly S2Endpoint[] = [
   { contract: 'memory', task: 'S2-05', method: 'POST', path: '/lore/me/memory/hit', errors: [...R, 'BAD_PARAMS', 'NOT_FOUND', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
   { contract: 'memory', task: 'S2-05', method: 'GET', path: '/lore/me/recent', query: ['limit'], errors: R, agents: 'own' },
   { contract: 'memory', task: 'S2-05', method: 'POST', path: '/lore/me/recent', errors: [...R, 'BAD_PARAMS'], agents: 'none' },
-];
+];import { RECORD_PLACEMENTS, type RecordPlacement } from '@seidr/kit';
+

@@ -40,7 +40,9 @@ public abstract class LoreResourceBase {
         Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
     static final Set<String> PLAN_STATUSES =
         Set.of("todo", "active", "partial", "done", "blocked", "cancelled",
-               "planned", "backlog", "design", "ready_for_deploy", "uat");
+               "planned", "backlog", "design", "ready_for_deploy", "uat",
+               // WK-05: статусы ядра, которых не было (shared/lore-statuses.json core).
+               "waiting", "review", "failed");
     static final Set<String> ADR_STATUSES =
         Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
@@ -59,7 +61,10 @@ public abstract class LoreResourceBase {
         // Правило владелицы 13.11.2026: агент проверил на стенде → UAT, принимает человек.
         Map.entry("uat",              "🧪 UAT TESTING"),
         Map.entry("backlog",          "🟣 BACKLOG"),
-        Map.entry("design",           "🔬 DESIGN"));
+        Map.entry("design",           "🔬 DESIGN"),
+        Map.entry("waiting",          "⏳ WAITING"),
+        Map.entry("review",           "🔍 REVIEW"),
+        Map.entry("failed",           "❌ FAILED"));
 
     /** JSON error body returned by every LORE endpoint (and LoreExceptionMapper). */
     public record LoreError(String error, String detail) {}

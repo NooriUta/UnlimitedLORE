@@ -71,7 +71,11 @@ final class LoreStatusVocabulary {
         new Entry("backlog",          "🟣", List.of("BACKLOG", "БЭКЛОГ", "БЭКЛ")),
         new Entry("planned",          "📋", List.of("PLANNED", "ЗАПЛАН", "ПЛАН")),
         new Entry("deferred",         "⏸", List.of("DEFER", "ОТЛОЖ", "HOLD", "PAUSE", "CONDITION", "УСЛОВН", "ПАУ")),
-        new Entry("todo",             "⬜", List.of("TODO", "TO DO", "НЕ НАЧАТ"))
+        new Entry("todo",             "⬜", List.of("TODO", "TO DO", "НЕ НАЧАТ")),
+        // WK-05: новые статусы ядра — в конце, чтобы не сдвинуть опознание прежних строк по словам.
+        new Entry("waiting",          "⏳", List.of("WAITING", "ЖДЁМ", "ЖДЕМ", "ОЖИДА")),
+        new Entry("review",           "🔍", List.of("REVIEW", "РЕВЬЮ")),
+        new Entry("failed",           "❌", List.of("FAILED", "FAIL", "ПРОВАЛ"))
     );
 
     /**

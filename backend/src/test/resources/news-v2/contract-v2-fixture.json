@@ -5098,6 +5098,7 @@
     }
   },
   "meta" : {
+    "form_version" : "news/2.1",
     "generated_at" : "2026-11-07T20:00:00Z",
     "scope" : {
       "applied" : false

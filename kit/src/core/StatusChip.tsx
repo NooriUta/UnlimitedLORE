@@ -3,6 +3,7 @@
 // (hotkey) то же делает клавиша S. Смена оптимистичная, save → Promise; отказ —
 // откат и role=alert с причиной. Сохранение: проп save, иначе hooks.onSave
 // конфига (API), иначе localStorage по умолчанию. Роль без canStatus — показ.
+import { STATUS_UNDO_MS, StatusConfirm, useUndoWindow } from './statusGuard';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { kitT, useKitLang } from '../i18n';
@@ -86,8 +87,14 @@ export function StatusChip({ record, config, save, role, hotkey, compact, confir
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
+  // S4-18: по настройке — сначала вопрос; иначе смена сразу и окно «Вернуть» с остатком.
+  const [ask, setAsk] = useState<string | null>(null);
+  const win = useUndoWindow(config.statuses.undoMs ?? STATUS_UNDO_MS);
+  const lastKey = st.last ? `${st.last.from}>${st.last.to}` : '';
+  useEffect(() => { if (lastKey) win.start(); else win.clear(); }, [lastKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const pick = (code: string) => {
     close(true);
+    if (config.statuses.confirmChange && code !== st.status) { setAsk(code); return; }
     void st.change(code);
   };
 
@@ -130,9 +137,13 @@ export function StatusChip({ record, config, save, role, hotkey, compact, confir
           {kitT(lang, 'kit.status.saveFailed', { reason: st.error })}
         </span>
       )}
-      {config.statuses.undo && st.last && !st.pending && interactive && (
-        <button type="button" className="sk-schip__undo" onClick={() => void st.undo()}>
-          {kitT(lang, 'kit.status.undo', { title: lastFrom })}
+      {ask !== null && (
+        <StatusConfirm from={title} to={findStatus(config.statuses, ask)?.title ?? ask}
+          onCancel={() => setAsk(null)} onConfirm={() => { const to = ask; setAsk(null); void st.change(to); }} />
+      )}
+      {config.statuses.undo && st.last && !st.pending && interactive && win.left > 0 && (
+        <button type="button" className="sk-schip__undo" onClick={() => { win.clear(); void st.undo(); }}>
+          {kitT(lang, 'kit.status.undoLeft', { title: lastFrom, s: win.left })}
         </button>
       )}
     </span>

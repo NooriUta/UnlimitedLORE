@@ -2162,7 +2162,7 @@
       "priority": "string?",
       "project": "string?",
       "sprint_id": "string",
-      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo|uat)?"
+      "status": "enum(active|backlog|blocked|cancelled|design|done|failed|partial|planned|ready_for_deploy|review|todo|uat|waiting)?"
     },
     "output": {
       "content": [
@@ -2258,10 +2258,14 @@
   "status_set": {
     "input": {
       "entity_type": "enum(checkpoint|phase|sprint|task)",
+      "evidence_ref": "string?",
+      "evidence_type": "string?",
       "expected": "string?",
       "id": "string",
       "reason": "string?",
-      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo|uat)"
+      "stage": "string?",
+      "status": "enum(active|backlog|blocked|cancelled|design|done|failed|partial|planned|ready_for_deploy|review|todo|uat|waiting)",
+      "waiting_for": "string?"
     },
     "output": {
       "content": [
@@ -2280,7 +2284,7 @@
     "input": {
       "entity_type": "enum(checkpoint|phase|sprint|task)",
       "ids": "string[]",
-      "status": "enum(active|backlog|blocked|cancelled|design|done|partial|planned|ready_for_deploy|todo|uat)"
+      "status": "enum(active|backlog|blocked|cancelled|design|done|failed|partial|planned|ready_for_deploy|review|todo|uat|waiting)"
     },
     "output": {
       "content": [
