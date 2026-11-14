@@ -22,6 +22,8 @@ import java.util.function.BiFunction;
  */
 final class LoreNewsReadMarkStore {
 
+    private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(LoreNewsReadMarkStore.class);
+
     static final String TYPE = "LoreNewsReadMark";
     static final String SHARED = "shared";
 
@@ -62,7 +64,11 @@ final class LoreNewsReadMarkStore {
             return at == null ? new State("unavailable", null, "mark_at не разобран: " + rows.get(0).get("mark_at"))
                 : new State("ok", at, null);
         } catch (Exception e) {
-            return new State("unavailable", null, String.valueOf(e.getMessage()));
+            // Владелица 14.11.2026: «Received: Bad Request, status code 400» без ответа базы — корень не
+            // установить. Причина с телом ответа БД — и в ответ, и в лог (заголовки не читаются).
+            String why = LoreUpstream.detail(e);
+            LOG.warnf("[LORE NEWS] черта «прочитано»: %s", why);
+            return new State("unavailable", null, why);
         }
     }
 
@@ -74,7 +80,11 @@ final class LoreNewsReadMarkStore {
                 Map.of("id", SHARED, "at", at.toString(), "now", Instant.now().toString(), "by", by == null ? "unknown" : by));
             return get();
         } catch (Exception e) {
-            return new State("unavailable", null, String.valueOf(e.getMessage()));
+            // Владелица 14.11.2026: «Received: Bad Request, status code 400» без ответа базы — корень не
+            // установить. Причина с телом ответа БД — и в ответ, и в лог (заголовки не читаются).
+            String why = LoreUpstream.detail(e);
+            LOG.warnf("[LORE NEWS] черта «прочитано»: %s", why);
+            return new State("unavailable", null, why);
         }
     }
 }

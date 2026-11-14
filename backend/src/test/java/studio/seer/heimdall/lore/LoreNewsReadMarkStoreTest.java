@@ -98,4 +98,17 @@ class LoreNewsReadMarkStoreTest {
         assertTrue(LoreSchemaMigrations.requiredLiveTypes().contains(LoreNewsReadMarkStore.TYPE),
             "тип черты должен попасть в сверку обязательных типов на старте");
     }
+
+    // Владелица 14.11.2026: «Черта «прочитано» недоступна: Received: 'Bad Request, status code 400' when
+    // invoking REST Client method …» — ответ базы терялся, корень было не установить ни из экрана, ни из лога.
+    @Test
+    void writeFailureCarriesTheDatabaseAnswer() {
+        LoreNewsReadMarkStore s = new LoreNewsReadMarkStore((sql, p) -> List.of(), (sql, p) -> {
+            throw new jakarta.ws.rs.WebApplicationException(jakarta.ws.rs.core.Response.status(400)
+                .entity("{\"error\":\"Cannot execute command\",\"detail\":\"Type with name 'LoreNewsReadMark' was not found\"}").build());
+        });
+        LoreNewsReadMarkStore.State st = s.set(Instant.parse("2026-11-14T12:00:00Z"), "u1");
+        assertEquals("unavailable", st.state());
+        assertTrue(st.error().contains("LoreNewsReadMark' was not found"), "ответ базы в причине: " + st.error());
+    }
 }
