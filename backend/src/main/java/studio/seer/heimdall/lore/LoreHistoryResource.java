@@ -98,6 +98,21 @@ public class LoreHistoryResource extends LoreResourceBase {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", type);
         body.put("id", id);
+        // MINI-06: заголовок записи одним путём с историей (мобилке не собирать его из второго среза).
+        // Не прочитался — title null и title_ok=false с причиной: «заголовок не прочитан» ≠ «заголовка нет».
+        String titleSql = LoreEntityHistory.titleSql(type);
+        if (titleSql != null) {
+            try {
+                List<Map<String, Object>> t = ingestService.queryPublic(titleSql, Map.of("id", id));
+                body.put("title", t.isEmpty() ? null : t.get(0).get("title"));
+                body.put("title_ok", true);
+            } catch (RuntimeException e) {
+                LOG.warnf("[LORE HISTORY] заголовок %s/%s: %s", type, id, e.getMessage());
+                body.put("title", null);
+                body.put("title_ok", false);
+                body.put("title_reason", "заголовок записи не прочитан: " + e.getMessage());
+            }
+        }
         body.put("rows", LoreTimeFormat.isoUtc(pageRows));
         body.put("page", paged.get("page"));
         body.put("attribution", attribution);

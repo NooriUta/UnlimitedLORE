@@ -153,6 +153,7 @@
   "views.team.sprintsByStatus": "Все по статусу",
   "views.team.sprintsActive": "В работе",
   "views.team.adrsByStatus": "Все по статусу",
+  "views.team.specsByStatus": "Все по статусу",
   "views.team.adrsProposed": "На рассмотрении",
   "sprints.title": "Спринты",
   "sprints.col.tasks": "Задачи",

@@ -442,9 +442,10 @@ export const S2_ENDPOINTS: readonly S2Endpoint[] = [
   { contract: 'history', task: 'S2-03', method: 'GET', path: '/lore/history', query: ['type', 'id', 'dict_type', 'limit', 'offset'], errors: ['BAD_PARAMS', 'NOT_FOUND'], agents: 'all' },
 
   { contract: 'views', task: 'S2-04', method: 'GET', path: '/lore/me/views', query: ['section'], errors: R, agents: 'own' },
-  { contract: 'views', task: 'S2-04', method: 'POST', path: '/lore/me/views', errors: [...R, 'BAD_PARAMS', 'FORBIDDEN', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
-  { contract: 'views', task: 'S2-04', method: 'PUT', path: '/lore/me/views/{view_id}', versioned: true, errors: [...R, 'BAD_PARAMS', 'NOT_FOUND', 'CONFLICT', 'FORBIDDEN', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
-  { contract: 'views', task: 'S2-04', method: 'DELETE', path: '/lore/me/views/{view_id}', query: ['expected_version'], versioned: true, errors: [...R, 'NOT_FOUND', 'CONFLICT', 'FORBIDDEN', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
+  // MINI-03: как на сервере (LoreMeResource) — создание и правка одним POST (правка — view_uid + expected_version),
+  // удаление — POST /delete. Прежние PUT/DELETE /{view_id} сервер не реализует.
+  { contract: 'views', task: 'S2-04', method: 'POST', path: '/lore/me/views', versioned: true, errors: [...R, 'BAD_PARAMS', 'NOT_FOUND', 'CONFLICT', 'FORBIDDEN', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
+  { contract: 'views', task: 'S2-04', method: 'POST', path: '/lore/me/views/delete', versioned: true, errors: [...R, 'NOT_FOUND', 'CONFLICT', 'FORBIDDEN', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
   { contract: 'views', task: 'S2-04', method: 'GET', path: '/lore/me/favorites', errors: R, agents: 'own' },
   { contract: 'views', task: 'S2-04', method: 'PUT', path: '/lore/me/favorites/{type}/{id}', errors: [...R, 'BAD_PARAMS', 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
   { contract: 'views', task: 'S2-04', method: 'DELETE', path: '/lore/me/favorites/{type}/{id}', errors: [...R, 'AGENT_SCOPE_FORBIDDEN'], agents: 'none' },
