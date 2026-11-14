@@ -10,6 +10,7 @@ import type { KitConfig, KitLang, KitRecord, ListSort } from '@seidr/kit';
 import type { LoreClient } from '../sprints/loreClient';
 import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
+import { loadSprintChildren, sprintChildCell } from '../sprints/sprintChildren';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -139,6 +140,14 @@ export interface ListNested {
   load: (client: LoreClient, ids: readonly string[], signal: AbortSignal) => Promise<Map<string, Record<string, unknown>>>;
   /** Содержимое раскрытой строки; грузится лениво — по раскрытию. */
   render: (id: string, client: LoreClient) => ReactNode;
+  /**
+   * PU-23: дети раскрытой строки — строками той же таблицы (те же колонки). Есть — render
+   * не используется; грузятся лениво, по раскрытию, свои ячейки подменяет cell.
+   */
+  children?: {
+    load: (client: LoreClient, id: string, signal: AbortSignal) => Promise<KitRecord[]>;
+    cell?: (col: string, child: KitRecord, client: LoreClient) => ReactNode | undefined;
+  };
 }
 
 const BASE = { modules: [], menu: { groups: [] } } satisfies Pick<KitConfig, 'modules' | 'menu'>;
@@ -213,6 +222,16 @@ function sprintsConfig(lang: KitLang): KitConfig {
           // ЗАГОЛОВКЕ колонки («Оценка, дн»), а не в каждой ячейке: иначе «д»
           // повторяется в каждой строке и съедает ширину, за которую мы же и
           // боремся (S4-35).
+          { key: 'effort_total', title: f(lang, 'effortTotal'), type: 'number' },
+          { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
+        ],
+      },
+      // PU-23: задачи раскрытого спринта — строками той же таблицы. Поля задачи объявлены, чтобы
+      // колонки, которых у задачи нет (прогресс задач, проект, релиз…), честно читались «н/п».
+      task: {
+        title: appT(lang, 'sprints.kind.task'), icon: 'checkbox-tree',
+        fields: [
+          { key: 'code', title: appT(lang, 'sprintTree.field.code'), type: 'text' },
           { key: 'effort_total', title: f(lang, 'effortTotal'), type: 'number' },
           { key: 'actual_total', title: f(lang, 'actualTotal'), type: 'number' },
         ],
@@ -690,6 +709,7 @@ export const LIST_SCREENS = {
       lateFields: TOTALS_FIELDS,
       load: loadSprintTotals,
       render: (id, client) => createElement(SprintTasks, { sprintId: id, client }),
+      children: { load: loadSprintChildren, cell: sprintChildCell },
     },
   },
   adrs: {

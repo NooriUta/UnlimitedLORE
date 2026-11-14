@@ -3,6 +3,7 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
+import { useChildRows } from '../lists/useChildRows';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyChunk } from '../shell/staleChunk';
 import {
@@ -247,6 +248,9 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
+  // PU-23: дети раскрытой строки — строками той же таблицы (если экран их объявил).
+  const childLoad = useMemo(() => (nested?.children ? (id: string, signal: AbortSignal) => nested.children!.load(client, id, signal) : undefined), [nested, client]);
+  const childRows = useChildRows(childLoad);
   const lang = useKitLang();
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
@@ -666,7 +670,13 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
         // в память (приватный режим ширину просто не запомнит).
         widths={{ screen: screen, store: appStorage }}
-        expand={nested ? { render: r => nested.render(r.id, client) } : undefined}
+        expand={nested ? {
+          render: r => nested.render(r.id, client),
+          ...(nested.children ? {
+            rows: childRows,
+            childCell: (col: string, child: KitRecord) => nested.children!.cell?.(col, child, client),
+          } : {}),
+        } : undefined}
         peek={listPeek}
         onOpen={id => {
           setOpen({ ...open, id });
