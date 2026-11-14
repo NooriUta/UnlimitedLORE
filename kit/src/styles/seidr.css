@@ -504,6 +504,10 @@ a:hover { text-decoration: underline; }
 /* Поля ввода и кнопки не наследуют шрифт сами — у них стиль user-agent. */
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
+/* Кнопка с классом kit начинает без обвязки браузера: забытый сброс в новом классе давал серые
+   кнопки user-agent (меню «Ещё» паспорта, приёмка 14.11). :where — нулевая специфичность,
+   правило любого класса (.sk-btn, .sk-tab, …) этот сброс перекрывает. */
+:where(button[class*="sk-"]) { border: 0; background: none; appearance: none; }
 code, pre, kbd, samp { font-family: var(--mono); }
 
 @media (pointer: coarse) {
@@ -1302,7 +1306,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   width: 100%;
   min-height: max(var(--tap), 30px);
   padding: 0 10px;
+  border: 0;
   border-radius: var(--r-md);
+  background: none;
   color: var(--t2);
   font-size: var(--fs-sm);
   text-align: left;
