@@ -3041,9 +3041,12 @@ public final class LoreSlices {
         // Without dict_type — весь справочник; с dict_type — один домен.
         // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
         // Admin LORE (ADR-LORE-025): tag usage counts for the read-only «Теги» tab.
+        // Без потолка (PU-29, 14.11.2026): LIMIT 500 давал «показано 500 из 500»
+        // при большем корпусе, а поиск вкладки искал только в этих 500. Справочник
+        // — не лента; серверный потолок HTTP-API назван флагом truncated.
         slice("tags_usage",
             "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
-            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id");
         // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
         // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 

@@ -1166,6 +1166,8 @@
   "admin.tags.loading": "Reading tags…",
   "admin.tags.note": "Read-only: merging and renaming tags is done with MCP tools; there is no UI editor.",
   "admin.tags.truncated": "The tags answer was cut by the limit — not all are shown.",
+  "admin.tags.truncUnknown": "The server did not say whether the tags answer is complete — there is no way to check, what is shown may not be all.",
+  "admin.tags.shownCut": "{n} of {loaded} loaded shown — not all of them, search covers only the loaded ones",
   "admin.tags.search": "Search tag",
   "admin.tags.searchPh": "tag…",
   "admin.tags.sort": "Order",
