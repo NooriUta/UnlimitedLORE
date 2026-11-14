@@ -641,7 +641,10 @@ export function KitShell({
           </nav>
         )}
         {narrow && (
-          <Sheet open={drawer} onClose={() => setDrawer(false)} title={activeModule?.title ?? kitT(lang, 'kit.shell.menu')} side="left">
+          <Sheet open={drawer} onClose={() => setDrawer(false)} side="left"
+            // K4-SHELL-PHONE-BARS, вариант 2 владелицы: модули — только в нижнем баре, в ☰ — разделы
+            // текущего модуля; заголовок листа говорит это словами: «Forseti · разделы».
+            title={activeModule?.title ? kitT(lang, 'kit.shell.menuOf', { module: activeModule.title }) : kitT(lang, 'kit.shell.menu')}>
             {menu(() => setDrawer(false))}
           </Sheet>
         )}

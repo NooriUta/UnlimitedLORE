@@ -67,7 +67,7 @@
 .kitp__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); }
 .kitp__swatches {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(110px, 100%), 1fr));
   gap: var(--gap);
   list-style: none;
 }
@@ -77,10 +77,10 @@
 .kitp__tok { display: inline-block; min-width: 9ch; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
 .kitp__display { font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-lg); }
 .kitp__mono { font-family: var(--mono); }
-.kitp__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--gap); }
+.kitp__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: var(--gap); }
 .kitp__panel { padding: 8px 0; color: var(--t2); }
 .kitp__earcol { padding: 8px; border: 1px solid var(--bd); border-radius: var(--r-md); }
-.kitp__split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.kitp__split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; }
 
 /* Пара «подпись — значение» для ряда чипов: так же, как в «Свойствах» записи,
    чтобы витрина показывала элемент в его настоящем окружении. */
@@ -90,4 +90,4 @@
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .kitp__chips { grid-template-columns: minmax(0, 1fr); } }
 
 /* S4-FIELD-EDITORS: витрина редакторов полей. */
-.kitp__fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; margin-bottom: 8px; }
+.kitp__fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 4px 16px; margin-bottom: 8px; }

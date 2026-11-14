@@ -1067,6 +1067,9 @@ public final class LoreSlices {
             // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
             "actual_days, bookkeeping, " +
             "work_class, out('REALIZES').uc_id AS realizes_uc, " +
+            // PU-07 (приёмка 0dccfe73): релиз задачи — релиз её PR, а не спринта; вложенная
+            // таблица под строкой спринта брала релиз родителя (сторож TaskReleaseColumnTest).
+            TASK_RELEASES_SQL + ", " +
             // PU-23 (14.11.2026): колонка «Изменено» во вложенной таблице задач спринта —
             // свежесть та же, что у open_tasks/closed_tasks (S4-04).
             changedAtSql(FIRST_STATE_FROM_SQL) + " " +
@@ -1733,6 +1736,8 @@ public final class LoreSlices {
             // 08.11.2026: паритет с tasks_of_sprint (TasksBatchSliceParityTest) — ЗАЧЕМ-ось
             // и UC (ADR-LORE-022) нужны строке задачи в списке/на доске v2.
             "work_class, out('REALIZES').uc_id AS realizes_uc, " +
+            // PU-07: релиз задачи — её PR (паритет с tasks_of_sprint).
+            TASK_RELEASES_SQL + ", " +
             // PU-23: та же свежесть, что у tasks_of_sprint (сторож TasksBatchSliceParityTest).
             changedAtSql(FIRST_STATE_FROM_SQL) + " " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +

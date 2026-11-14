@@ -2269,7 +2269,11 @@ export function ListView({
                 // по возрастанию → по убыванию → без сортировки. Только у колонок, по которым сортируют.
                 const sortable = headSortKeys.includes(c);
                 const dir = state.sort?.key === c ? state.sort.dir : null;
-                const cycle = () => update({ sort: dir === null ? { key: c, dir: 'asc' } : dir === 'asc' ? { key: c, dir: 'desc' } : null });
+                // «Без сортировки» = умолчание экрана (initial.sort), а не «как пришло» (AP-04,
+                // приёмка 0dccfe73): до щелчка список стоял на «Изменено ↓» — туда и возвращается.
+                // Умолчание на этой же колонке — снимается совсем, иначе цикл не вышел бы из неё.
+                const off = initial?.sort && initial.sort.key !== c ? initial.sort : null;
+                const cycle = () => update({ sort: dir === null ? { key: c, dir: 'asc' } : dir === 'asc' ? { key: c, dir: 'desc' } : off });
                 return (
                 <th
                   key={c}
