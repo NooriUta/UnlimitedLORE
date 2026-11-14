@@ -28,6 +28,8 @@ export interface AgentRef {
   client_id: string | null;
   /** Профиль агента (agent_scope): по нему сверяется делегирование D4. */
   agent_role: string | null;
+  /** Имя владельца (agent_owners.owner_display_name) — для шага «владелец» вместо kc_sub. */
+  owner_name?: string | null;
 }
 
 export interface WhyInput {
@@ -41,6 +43,8 @@ export interface WhyInput {
   owner: Got<AccessExplain> | null;
   /** GET /lore/admin/access/tool?agent_scope&family|path; null/нет — инструмент не спрашивали. */
   toolExplain?: Got<ToolExplain> | null;
+  /** Известные проекты (список выбора). Задан и проекта в нём нет — «такого проекта нет». */
+  knownProjects?: readonly string[];
 }
 
 /** Ответ сервера «почему 403 на инструменте» (AgentToolExplain). */
@@ -77,7 +81,11 @@ export function parseToolExplain(raw: unknown): ToolExplain {
 /** Инструмент из поля/журнала: путь записи (lore/…) — как путь, иначе — семейство. */
 export function toolQuery(tool: string): { family?: string; path?: string } {
   const t = tool.trim();
-  return /^\/?lore\//.test(t) ? { path: t } : { family: t };
+  if (/^\/?lore\//.test(t)) return { path: t };
+  // Приёмка 14.11.2026: имя инструмента MCP (adr_new, task_set, status_set) — семейство до «_»;
+  // сервер объясняет по семейству, имени инструмента он не знает («family or path required»).
+  const m = /^([a-z]+)_[a-z_]+$/.exec(t);
+  return { family: m ? m[1] : t };
 }
 
 export async function fetchToolExplain(
@@ -104,7 +112,7 @@ export type WhyFix =
   /** Человеческое семейство: агентом не исправить — делает человек. */
   | { kind: 'human'; tool: string };
 
-export type WhyVerdict = 'writes' | 'reads' | 'none' | 'unknown' | 'toolUnknown' | 'toolDenied';
+export type WhyVerdict = 'writes' | 'reads' | 'none' | 'unknown' | 'toolUnknown' | 'toolDenied' | 'unknownProject';
 
 export interface WhyResult {
   verdict: WhyVerdict;
@@ -175,7 +183,14 @@ export function agentChain(i: WhyInput, tr: Tr): WhyResult {
       fix: { kind: 'owner', actor_id: a.actor_id, client_id: a.client_id, agent: a.name ?? a.actor_id },
     });
   }
-  step('owner', { state: 'confirmed', detail: acc.owner_kc_sub });
+  // Приёмка 14.11.2026: имя владельца, а не сырой kc_sub.
+  step('owner', { state: 'confirmed', detail: a.owner_name || acc.owner_kc_sub });
+
+  // Приёмка 14.11.2026: неизвестный slug давал ложное «у владельца нет роли» и «Исправить».
+  if (i.knownProjects && !i.knownProjects.includes(i.project)) {
+    step('role', { state: 'unverified', reason: tr('admin.why.unknownProject', { project: i.project }) });
+    return done({ verdict: 'unknownProject', stopped: stop(1, tr('admin.why.stopUnknownProject')), fix: null });
+  }
 
   const ex = i.owner && i.owner.ok ? i.owner.data : null;
   const role = ex?.project_role ?? null;
