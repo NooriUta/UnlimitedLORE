@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { DiffPreview, Forbidden, LoadError, Skeleton, useKitLang, useLoadState } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
+import { useProjectScope } from '../scope/ProjectScope';
+import { fetchGitProjects, type GitProject } from './projectLike';
 import { LoreHttpError } from '../api/loreSlice';
 import {
   checkVolva, fetchAppSettings, removeSetting, saveSetting, settingError, splitSettings,
@@ -182,25 +184,52 @@ const VERDICT: Record<Exclude<VolvaVerdict['kind'], 'ok'>, AppKey> = {
   not_configured: 'admin.set.volva.notConfigured',
   unknown_chart: 'admin.set.volva.unknownChart',
   forbidden: 'admin.set.volva.forbidden',
+  needs_project: 'admin.set.volva.needsProject',
   error: 'admin.set.volva.error',
 };
 
+/**
+ * Проверка Völva. График заперт на проект: при «Все проекты» в шапке бэкенд
+ * отвечал PROJECT_REQUIRED, и выбрать проект было негде (приёмка 14.11.2026).
+ * Выбор — у кнопки; по умолчанию первый проект шапки, иначе первый из списка.
+ * Список не прочитан — сказано, проект вводится руками.
+ */
 function VolvaCheck({ fetchImpl }: { fetchImpl?: typeof fetch }) {
   const t = useAppT();
+  const scope = useProjectScope();
+  const projects = useLoadState<GitProject[]>(() => fetchGitProjects(fetchImpl), [fetchImpl]);
+  const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [v, setV] = useState<VolvaVerdict | null>(null);
+  const list = projects.data ?? [];
+  const project = picked ?? scope[0] ?? list[0]?.slug ?? '';
   const run = () => {
     setBusy(true);
     setV(null);
-    checkVolva(fetchImpl).then(r => { setV(r); setBusy(false); });
+    checkVolva(project, fetchImpl).then(r => { setV(r); setBusy(false); });
   };
   const expires = v?.kind === 'ok' ? (kitMinute(v.expires)?.text ?? v.expires) : '';
+  const label = t('admin.set.volva.project');
+  const failed = !projects.data && projects.state !== 'loading';
   return (
     <div className="adm-card">
       <div className="adm-field--btns">
-        <button type="button" className="adm-btn" disabled={busy} onClick={run}>{t('admin.set.volva.btn')}</button>
+        {!failed ? (
+          <select className="adm-input adm-mono" aria-label={label} value={project} onChange={e => setPicked(e.target.value)}>
+            {list.length === 0 && <option value="">{projects.data ? t('admin.set.volva.noProjects') : t('admin.set.volva.loadingProjects')}</option>}
+            {project && !list.some(p => p.slug === project) && <option value={project}>{project}</option>}
+            {list.map(p => <option key={p.slug} value={p.slug}>{p.slug}</option>)}
+          </select>
+        ) : (
+          <input className="adm-input adm-mono" type="text" aria-label={label} value={project}
+            placeholder="owner/repo" onChange={e => setPicked(e.target.value)} />
+        )}
+        <button type="button" className="adm-btn" disabled={busy || !project.trim()} onClick={run}>{t('admin.set.volva.btn')}</button>
         <span className="adm-hint">{t('admin.set.volva.note')}</span>
       </div>
+      {failed && (
+        <p className="adm-note" data-tone="wrn" role="status">{t('admin.set.volva.projectsFailed', { d: reasonOf(projects.error) })}</p>
+      )}
       {v && (
         <p className="adm-note" data-tone={v.kind === 'ok' ? 'inf' : v.kind === 'error' ? 'dng' : 'wrn'} role="status"
           data-testid="adm-volva-verdict" data-kind={v.kind}>

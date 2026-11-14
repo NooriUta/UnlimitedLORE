@@ -28,12 +28,19 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-interface FakeOpts { dict?: number; embed?: number; post?: number }
+interface FakeOpts { dict?: number; embed?: number; post?: number; projects?: number }
 function fake(o: FakeOpts = {}) {
   return vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'POST') return o.post ? json({ error: 'FORBIDDEN', detail: 'admin only' }, o.post) : json({ ok: true });
     if (url.startsWith('/lore/slice/dictionary')) return o.dict ? json({ error: 'DOWN', detail: 'down' }, o.dict) : json({ rows: ROWS });
+    if (url.startsWith('/lore/slice/git_projects')) {
+      return o.projects ? json({ error: 'DOWN', detail: 'graph down' }, o.projects)
+        : json({ rows: [{ slug: 'NooriUta/UnlimitedLORE', name: 'LORE' }, { slug: 'NooriUta/volva', name: 'Völva' }] });
+    }
     if (url.startsWith('/lore/embed/volva/')) {
+      if (!new URL(url, 'http://x').searchParams.get('project')) {
+        return json({ error: 'PROJECT_REQUIRED', detail: 'нужен проект' }, 400);
+      }
       return o.embed
         ? json({ error: o.embed === 503 ? 'NOT_CONFIGURED' : 'X', detail: `d${o.embed}` }, o.embed)
         : json({ url: 'https://volva.example/embed/velocity?jwt=secret', expires_at: '2026-11-11T12:00:00Z' });
@@ -144,6 +151,35 @@ describe('S7B-31 · блок «Параметры приложения»', () =>
     expect(v.getAttribute('data-kind')).toBe('ok');
     expect(v.textContent).toContain('https://volva.example');
     expect(v.textContent).not.toContain('secret');
+  });
+
+  // Приёмка 14.11.2026: при «Все проекты» в шапке проверка отвечала
+  // PROJECT_REQUIRED, а выбрать проект было негде. Теперь выбор — у кнопки.
+  it('проверка Völva: проект выбирается у кнопки и уходит в запрос подписи', async () => {
+    const f = fake();
+    mount(f);
+    const sel = await screen.findByRole('combobox', { name: 'Проект для проверки' }) as HTMLSelectElement;
+    await waitFor(() => expect([...sel.options].map(o => o.value)).toContain('NooriUta/volva'));
+    fireEvent.change(sel, { target: { value: 'NooriUta/volva' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить интеграцию Völva' }));
+    const v = await screen.findByTestId('adm-volva-verdict');
+    expect(v.getAttribute('data-kind')).toBe('ok');
+    const embed = calls(f).map(c => c[0]).find(u => u.startsWith('/lore/embed/volva/'))!;
+    expect(new URL(embed, 'http://x').searchParams.get('project')).toBe('NooriUta/volva');
+  });
+
+  it('проверка Völva: PROJECT_REQUIRED — «нужен проект», а не «ошибка»', () => {
+    expect(volvaVerdict(new LoreHttpError(400, 'PROJECT_REQUIRED', 'нужен проект'))).toMatchObject({ kind: 'needs_project' });
+  });
+
+  it('проверка Völva: список проектов не прочитан — сказано, проект можно ввести руками', async () => {
+    const f = fake({ projects: 502 });
+    mount(f);
+    expect(await screen.findByText(/Список проектов не прочитан/)).toBeTruthy();
+    const box = screen.getByRole('textbox', { name: 'Проект для проверки' });
+    fireEvent.change(box, { target: { value: 'NooriUta/volva' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить интеграцию Völva' }));
+    expect((await screen.findByTestId('adm-volva-verdict')).getAttribute('data-kind')).toBe('ok');
   });
 
   it('словарь не прочитан — сбой, а не «всё не задано»', async () => {
