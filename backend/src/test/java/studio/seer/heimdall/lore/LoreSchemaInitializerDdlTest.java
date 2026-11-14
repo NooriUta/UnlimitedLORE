@@ -34,6 +34,9 @@ class LoreSchemaInitializerDdlTest {
     private static final String PROBE = "SELECT name FROM schema:types";
 
     /** Подставной клиент: пишет все команды, отвечает по правилу. */
+    // @Vetoed: иначе Quarkus берёт подставной клиент бином (реализация LoreCommandClient) и роняет
+    // сборку контейнера всех Quarkus-тестов — неразрешённый параметр конструктора (CI #1371).
+    @jakarta.enterprise.inject.Vetoed
     static final class FakeClient implements LoreCommandClient {
         final List<String> sent = new ArrayList<>();
         final Function<String, Uni<LoreCommandResult>> answer;
