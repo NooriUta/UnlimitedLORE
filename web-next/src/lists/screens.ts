@@ -394,6 +394,12 @@ interface SectionSpec {
   groupings: string[];
   collapsedGroupings?: string[];
   columns: string[];
+  /**
+   * PU-23: родитель того же типа (иерархия, ссылка на себя). Таблица показывает детей строками под
+   * родителем с отступом — list.tree, та же настройка, что у вида «Дерево». Нет — список плоский.
+   * order нужен виду «Дерево»; в таблице соседи одного уровня идут порядком сортировки списка.
+   */
+  tree?: NonNullable<KitConfig['list']>['tree'];
 }
 
 function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
@@ -414,6 +420,7 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
       groupings: spec.groupings,
       ...(spec.collapsedGroupings ? { collapsedGroupings: spec.collapsedGroupings } : {}),
       columns: spec.columns,
+      ...(spec.tree ? { tree: spec.tree } : {}),
     },
   };
 }
@@ -470,6 +477,7 @@ const docsSpec: SectionSpec = {
   filters: [LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
   groupings: [LORE_FILTER_FIELDS.component, 'fields.docKind'],
   columns: ['id', 'title', 'docKind', 'component', 'parent'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /** S9-05 A: люди — статуса нет, разрез по проектам. */
@@ -560,6 +568,7 @@ const componentsSpec: SectionSpec = {
   filters: ['fields.area', LORE_FILTER_FIELDS.project, 'fields.owner'],
   groupings: ['fields.area', 'fields.owner'],
   columns: ['id', 'title', 'area', 'owner', 'adrs', 'specs'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /** Проекты (S4-29, 53а): СТАТУСА НЕТ — справочник git-проектов; щелчок — паспорт проекта. */
@@ -618,6 +627,7 @@ const featuresSpec: SectionSpec = {
   filters: [STATUS_FACET, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project, 'fields.level'],
   groupings: ['status', 'fields.level', LORE_FILTER_FIELDS.component],
   columns: ['id', 'title', 'status', 'level', 'ucs', 'tasks', 'components'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /**
@@ -669,6 +679,7 @@ const productsSpec: SectionSpec = {
   filters: [LORE_FILTER_FIELDS.project, 'fields.parent'],
   groupings: ['fields.parent'],
   columns: ['id', 'title', 'parent', 'children', 'components', 'project'],
+  tree: { parent: 'parent', order: 'title' },
 };
 
 /** Боли: «заявлено» (ADDRESSES) и «снимает» (RELIEVES) — два разных утверждения (ADR-LORE-032 D5). */

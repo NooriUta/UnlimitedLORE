@@ -132,7 +132,10 @@ describe('K-01 · валидатор конфига', () => {
     const cfg = minimalConfig();
     cfg.list = { views: ['tree'] };
     expect(codes(validateKitConfig(cfg))).toContain('tree-config');
+    // PU-23: таблица (list) читает list.tree — иерархия одного типа строками; без list и tree — не нужен.
     cfg.list = { views: ['list'], tree: { parent: 'parent', order: 'order' } };
+    expect(warnCodes(validateKitConfig(cfg))).not.toContain('tree-unused');
+    cfg.list = { views: ['cards'], tree: { parent: 'parent', order: 'order' } };
     expect(warnCodes(validateKitConfig(cfg))).toContain('tree-unused');
   });
 
