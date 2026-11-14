@@ -15,7 +15,7 @@
 // Отчёт: e2e/.stand-report/ (summary.json, summary.md, скрины), в git не идёт.
 import { existsSync } from 'node:fs';
 import { defineConfig } from '@playwright/test';
-import { standPreflight } from './e2e/stand/summary.ts';
+import { standPreflight } from './src/standSmoke/summary.ts';
 
 const pre = standPreflight({
   standUrl: process.env.LORE_STAND_URL,

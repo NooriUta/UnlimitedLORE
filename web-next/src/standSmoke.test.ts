@@ -12,7 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildSummary, extractBundle, isForbiddenStandUrl, outcomeOf, renderMarkdown, standPreflight, type ScenarioResult,
-} from '../e2e/stand/summary.ts';
+} from './standSmoke/summary.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const webNext = resolve(here, '..');
