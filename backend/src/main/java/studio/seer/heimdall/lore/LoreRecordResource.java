@@ -102,7 +102,7 @@ public class LoreRecordResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("UNKNOWN_TYPE",
                 "тип паспорта '" + type + "' не заведён; есть: " + LoreRecordRegistry.TYPES)));
         // Ключ релиза — release_uid «проект#тег»: «#» допустим только у релиза.
-        boolean idOk = "release".equals(type) ? RELEASE_UID.matcher(id).matches() : SAFE_ID.matcher(id).matches();
+        boolean idOk = "release".equals(type) ? RELEASE_UID.matcher(id).matches() : SAFE_READ_ID.matcher(id).matches();
         if (!NEW_ID.equals(id) && !idOk)
             return badParams("id contains illegal characters");
         Set<String> scope;

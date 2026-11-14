@@ -30,6 +30,16 @@ public abstract class LoreResourceBase {
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
 
+    /**
+     * MT-MCP-TRUTH п.2, решение владелицы 14.11.2026 (D2 «только на чтение»): на ЧТЕНИИ записи по id
+     * (паспорт /lore/record, история /lore/history) ключ может нести Unicode-буквы и цифры — код статьи
+     * словаря, actor_id, kc_sub; несуществующая запись тогда честно получает 404, а не 400 «ключ
+     * недопустим». Пунктуация та же, что у SAFE_ID: кавычек, пробела, точки с запятой, скобок и «%» нет
+     * (по образцу LoreSlices.VALUE_RE, значения к тому же уходят связанными параметрами). Пути ЗАПИСИ
+     * остаются на ASCII SAFE_ID.
+     */
+    static final Pattern SAFE_READ_ID = Pattern.compile("[\\p{L}\\p{N}_./\\-]{1,100}");
+
     // Canonical source of truth for these vocabularies: shared/lore-statuses.json.
     // Drift between this mirror and the JSON is caught by LoreStatusesConsistencyTest
     // (JUnit). The MCP + frontend mirrors are guarded by scripts/check-lore-statuses.mjs.
