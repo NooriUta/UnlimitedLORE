@@ -250,9 +250,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // с «current thread cannot be blocked». Реактивная цепочка ниже от этого не
     // меняется — меняется поток, на котором она собирается.
     @io.smallrye.common.annotation.Blocking
-    public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role,
+                                    @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return Uni.createFrom().item(disabled());
         requireAdmin(role);
+        // MT-MCP-TRUTH п.1: задача создаётся INSERT-ом, и занятый код и так даёт 409 TASK_ID_TAKEN
+        // со свободным кодом; здесь режим только проверяется на допустимость (create|upsert), чтобы
+        // клиент слал одинаковый ?mode=create на все четыре пути создания.
+        Response badMode = modeError(mode);
+        if (badMode != null) return Uni.createFrom().item(badMode);
         if (req == null || req.sprint_id() == null || req.task_id() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, task_id, title required"));

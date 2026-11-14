@@ -285,6 +285,55 @@ public abstract class LoreResourceBase {
             type, id, expected, cur, rows.get(0).get("updated_by"))));
     }
 
+    /**
+     * MT-MCP-TRUTH п.1: проба «id занят» для строгого режима создания — по вершине типа.
+     * Вершина без строки истории тоже «занято»: upsert перепишет её так же.
+     */
+    static final Map<String, String> CREATE_ONLY_PROBE = Map.of(
+        "adr", "SELECT adr_id FROM KnowADR WHERE adr_id = :id LIMIT 1",
+        "spec", "SELECT spec_id FROM KnowSpec WHERE spec_id = :id LIMIT 1",
+        "decision", "SELECT decision_id FROM KnowDecision WHERE decision_id = :id LIMIT 1",
+        "task", "SELECT task_uid FROM KnowTask WHERE task_uid = :id LIMIT 1");
+
+    /** Режим записи: пусто или {@code upsert} — прежнее поведение, {@code create} — строгий; прочее — 400. */
+    Response modeError(String mode) {
+        if (mode == null || mode.isBlank() || "upsert".equals(mode) || "create".equals(mode)) return null;
+        return badParams("mode must be create|upsert (or omitted = upsert), got: " + mode);
+    }
+
+    /**
+     * MT-MCP-TRUTH п.1 — строгий режим «только создать» ({@code ?mode=create}) для POST создания
+     * adr/spec/decision: на занятый id — 409 ID_TAKEN, запись не трогается. Без режима — прежний upsert
+     * (MCP *_set правят по тому же пути). Не смогли проверить занятость — 502, а не запись вслепую:
+     * «не смогли проверить» ≠ «свободно». {@code null} — можно писать дальше.
+     *
+     * <p>Проба и запись — два запроса, гонка двух одновременных созданий одного id между ними не
+     * закрыта (уникальный индекс на ключе у adr/spec/decision упсертом не задействуется); она на
+     * порядки уже прежнего окна «клиент проверил паспорт → сервер переписал».
+     */
+    Response createOnly(String type, String id, String mode) {
+        Response bad = modeError(mode);
+        if (bad != null) return bad;
+        if (!"create".equals(mode)) return null;
+        String probe = CREATE_ONLY_PROBE.get(type);
+        if (probe == null) throw new IllegalArgumentException("create-only: нет пробы для типа " + type);
+        List<Map<String, Object>> rows;
+        try {
+            rows = ingestService.queryPublic(probe, Map.of("id", id));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE CREATE-ONLY] %s/%s: проба не удалась: %s", type, id, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+        if (rows.isEmpty()) return null;
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("error", "ID_TAKEN");
+        body.put("detail", type + " '" + id + "' уже существует — mode=create не переписывает запись; "
+            + "чтобы править её, пошлите без mode=create (или выберите другой код)");
+        body.put("type", type);
+        body.put("id", id);
+        return noStore(Response.status(Response.Status.CONFLICT).entity(body));
+    }
+
     Response badParams(String msg) {
         return noStore(Response.status(Response.Status.BAD_REQUEST)
             .entity(new LoreError("BAD_PARAMS", msg)));
