@@ -666,7 +666,7 @@
   "kit.peek.tasks.truncated": "Выборка обрезана сервером — задач может быть больше",
   "kit.peek.tasks.more": "ещё {n} — в полном чтении",
   "kit.peek.text": "Текст",
-  "kit.mdedit.hint": "✎ — правка на месте · исходник markdown и «вместе» — кнопками в самом редакторе",
+  "kit.mdedit.hint": "Правка на месте · исходник markdown и «вместе» — кнопками в самом редакторе",
   "kit.mdedit.edit": "Править «{field}»",
   "kit.mdedit.editing": "Правка «{field}»",
   "kit.mdedit.empty": "Текста нет",

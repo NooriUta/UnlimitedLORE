@@ -666,7 +666,7 @@
   "kit.peek.tasks.truncated": "The server truncated the selection — there may be more tasks",
   "kit.peek.tasks.more": "{n} more — in full reading",
   "kit.peek.text": "Text",
-  "kit.mdedit.hint": "✎ — edit in place · markdown source and “side by side” are buttons in the editor itself",
+  "kit.mdedit.hint": "Edit in place · markdown source and “side by side” are buttons in the editor itself",
   "kit.mdedit.edit": "Edit “{field}”",
   "kit.mdedit.editing": "Editing “{field}”",
   "kit.mdedit.empty": "No text",
