@@ -71,6 +71,19 @@ describe('KitShell — модули нижней панелью на телеф�
     expect(await axeViolations(container)).toEqual([]);
   });
 
+  // K4-SHELL-PHONE-BARS, выбор владелицы 14.11.2026 из прототипа k4-phone-bars: «Вариант 2 — бар, ☰ без
+  // модулей. Модули — только в нижнем баре (переключение одним касанием). В ☰ — только разделы текущего
+  // модуля». Заголовок листа — «<модуль> · разделы», как в прототипе.
+  it('узко, вариант 2: в ☰ только разделы текущего модуля и заголовок «<модуль> · разделы», модулей в ☰ нет', () => {
+    render(<KitShell config={CONFIG} win={fakeWin()} storage={mem()} narrow />);
+    fireEvent.click(screen.getByRole('button', { name: 'Меню' }));
+    const sheet = screen.getByRole('dialog');
+    expect(sheet.textContent).toContain('LORE · разделы');
+    expect(within(sheet).queryByRole('button', { name: 'Исследования' })).toBeNull();
+    expect(within(sheet).queryByRole('navigation', { name: 'Модули' })).toBeNull();
+    expect(sheet.textContent).toContain('Спринты');
+  });
+
   it('широко (положительный контроль): модули в шапке, нижней панели нет', () => {
     const { container } = render(<KitShell config={CONFIG} win={fakeWin()} storage={mem()} narrow={false} />);
     const nav = screen.getByRole('navigation', { name: 'Модули' });

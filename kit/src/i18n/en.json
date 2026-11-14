@@ -71,6 +71,7 @@
   "kit.shell.modules": "Modules",
   "kit.shell.sections": "Sections",
   "kit.shell.menu": "Menu",
+  "kit.shell.menuOf": "{module} · sections",
   "kit.shell.skip": "Skip to content",
   "kit.shell.status": "Status bar",
   "kit.shell.planned": "soon",
