@@ -10,7 +10,7 @@
 //
 // Тип ребёнка — из объявления `nested.children.kind`, иначе из `kind` загруженных записей.
 import type { ReactNode } from 'react';
-import { ListNestedTable, StatusChip } from '@seidr/kit';
+import { ListNestedTable, Pill, StatusChip } from '@seidr/kit';
 import type { KitConfig, KitLang, KitRecord, ListExpand, ListExpandRows } from '@seidr/kit';
 import { appT } from '../i18n';
 import { recordHref } from '../nav/loreRoutes';
@@ -37,13 +37,23 @@ function NestedChildren({ parent, kind, rows, config, client, lang }: {
   parent: KitRecord; kind: string; rows: ListExpandRows; config: KitConfig; client: LoreClient; lang: KitLang;
 }) {
   const href = recordHref(kind, '_') ? (id: string) => recordHref(kind, id) ?? '' : undefined;
-  const cellOf = STATUS_KINDS.has(kind)
-    ? (col: string, r: KitRecord): ReactNode | undefined => (col === 'status'
-      ? <StatusChip record={r} config={config} compact save={c => client.setStatus(kind as 'task' | 'sprint', c.id, String(c.to))} />
-      : undefined)
-    : undefined;
-  const label = appT(lang, 'lists.nested.label', { kind: config.kinds[kind]?.title ?? kind, title: parent.title });
-  return <ListNestedTable config={config} rows={rows} label={label} href={href} cellOf={cellOf} />;
+  // Приёмка препрода 14.11.2026: колонка, указывающая на саму раскрытую строку («Спринт» внутри
+  // спринта), — повтор родителя; во вложенной таблице её нет.
+  const own: KitConfig = config.list?.columns
+    ? { ...config, list: { ...config.list, columns: config.list.columns.filter(c => c !== parent.kind && c !== `fields.${parent.kind}`) } }
+    : config;
+  const cellOf = (col: string, r: KitRecord): ReactNode | undefined => {
+    if (col === 'status' && STATUS_KINDS.has(kind)) {
+      return <StatusChip record={r} config={own} compact save={c => client.setStatus(kind as 'task' | 'sprint', c.id, String(c.to))} />;
+    }
+    // Код — коротким (S5-01), а не полным uid «СПРИНТ/S5-01»: спринт и так виден строкой выше.
+    if (col === 'id' && typeof r.fields.code === 'string' && r.fields.code) {
+      return <Pill variant="id">{r.fields.code}</Pill>;
+    }
+    return undefined;
+  };
+  const label = appT(lang, 'lists.nested.label', { kind: own.kinds[kind]?.title ?? kind, title: parent.title });
+  return <ListNestedTable config={own} rows={rows} label={label} href={href} cellOf={cellOf} />;
 }
 
 export interface BuildExpandArgs {
