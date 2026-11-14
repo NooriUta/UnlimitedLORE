@@ -82,7 +82,10 @@ final class StatusHistoryService {
     /** Поля версии, которые сервис ставит сам и никогда не переносит из прежней строки. */
     static final Set<String> VERSION_FIELDS = Set.of(
         "state_uid", "valid_from", "valid_to", "status_raw", "status_category",
-        "changed_by", "changed_by_kind", "status_known_from", "status_backfilled", "rid");
+        "changed_by", "changed_by_kind", "status_known_from", "status_backfilled", "rid",
+        // MT-NOTE-APPEND п.3: пометка «версия — правка текста» принадлежит своей версии;
+        // смена статуса после правки — уже не правка текста.
+        "version_kind");
 
     /** Имя переносимого поля: только идентификатор (имена приходят из БД, в SQL идут текстом). */
     private static final Pattern FIELD_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
@@ -94,6 +97,8 @@ final class StatusHistoryService {
         record NotFound(String detail) implements Outcome {}
         record Conflict(String detail, Map<String, Object> current) implements Outcome {}
         record BadType(String detail) implements Outcome {}
+        /** Правка текста не меняет ни одного поля — версия не открывается. */
+        record Unchanged(String detail) implements Outcome {}
     }
 
     /** Значение статуса, как оно хранится: токены плана → status_raw, ADR — верхним регистром. */
@@ -270,6 +275,113 @@ final class StatusHistoryService {
                 + ") was closed by a concurrent write — re-read and retry", current(cur, statusOf(k, cur, null)));
         }
         return new Outcome.Ok(type, id, oldStatus, newRaw, nsid, now);
+    }
+
+    // ── MT-NOTE-APPEND п.3: версия-правка текста (вариант А, D-2026-NOTE-APPEND-IS-WORTH-FIXING) ──
+
+    /** Значение {@code version_kind} у версии, открытой правкой текста без смены статуса. */
+    static final String TEXT_VERSION = "text";
+
+    /** Какие поля версионируются правкой текста, по типам. Остальное (статус!) — только {@link #transition}. */
+    static final Map<String, Set<String>> TEXT_FIELDS = Map.of(
+        "task",   Set.of("note_md", "effort_days"),
+        "sprint", Set.of("context_md", "outcome_md"));
+
+    /**
+     * Поля прежней версии, которые правка текста НЕ переносит: служебные поля версии
+     * (у новой свои), автор прежней версии и хэш прежнего текста (его пересчитывает
+     * LoreHashStamper по новой открытой строке). Статус, его категория, пометка бэкфилла
+     * и поля состояния (причина блокировки, стадия, доказательство) — переносятся:
+     * состояние продолжается.
+     */
+    private static final Set<String> TEXT_NO_CARRY = Set.of(
+        "state_uid", "valid_from", "valid_to", "changed_by", "changed_by_kind", "rid",
+        "version_kind", "content_hash", "status_known_from");
+
+    /**
+     * Скрипт версии-правки текста (чистая функция). openRow — открытая версия целиком,
+     * обязана нести {@code @rid}. Закрытие — условное (Scd2Guard), вставка — копия всех
+     * полей прежней версии плюс {@code texts}; {@code status_known_from} — прежний, а у
+     * легаси-строки без него — её {@code valid_from}: момент статуса не уезжает на дату
+     * правки. Вершина не трогается — статус не меняется.
+     */
+    static Plan textPlan(Kind k, String id, Map<String, Object> openRow, Map<String, Object> texts,
+                         ChangeAuthor author, String now, String nsid) {
+        ChangeAuthor by = author == null ? ChangeAuthor.UNKNOWN : author;
+        Map<String, Object> p = new HashMap<>();
+        p.put("id", id); p.put("nsid", nsid); p.put("now", now); p.put("vk", TEXT_VERSION);
+        p.put("oldrid", ridOf(openRow));
+        by.bind(p);
+        StringBuilder set = new StringBuilder();
+        for (Map.Entry<String, Object> e : openRow.entrySet()) {
+            String f = e.getKey();
+            if (e.getValue() == null || f.startsWith("@") || TEXT_NO_CARRY.contains(f)
+                    || texts.containsKey(f) || !FIELD_NAME.matcher(f).matches()) continue;
+            set.append(f).append(" = :c_").append(f).append(", ");
+            p.put("c_" + f, e.getValue());
+        }
+        for (Map.Entry<String, Object> e : texts.entrySet()) {
+            set.append(e.getKey()).append(" = :t_").append(e.getKey()).append(", ");
+            p.put("t_" + e.getKey(), e.getValue());
+        }
+        Object known = openRow.get("status_known_from") != null ? openRow.get("status_known_from") : openRow.get("valid_from");
+        if (known != null) { set.append("status_known_from = :skf, "); p.put("skf", known); }
+        set.append("state_uid = :nsid, valid_from = :now, version_kind = :vk");
+        String script = Scd2Guard.guardedClose(k.vertex(), k.hist(), false)
+            + "INSERT INTO " + k.hist() + " SET " + set + ChangeAuthor.SET_SQL + ";"
+            + "CREATE EDGE HAS_STATE FROM (SELECT FROM " + k.vertex() + " WHERE " + k.key() + " = :id) TO (SELECT FROM "
+            + k.hist() + " WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";
+        return new Plan(script, p);
+    }
+
+    static Outcome textVersion(Db db, String type, String id, Map<String, Object> texts, ChangeAuthor author) {
+        return textVersion(db, type, id, texts, author, Instant.now().toString(), UUID.randomUUID().toString());
+    }
+
+    /**
+     * Правка текста без смены статуса — новая версия SCD2 (откат правки возможен из истории).
+     * Тот же текст — {@link Outcome.Unchanged}, без записи; открытой версии нет —
+     * {@link Outcome.NotFound}; прочитанную версию закрыл сосед — {@link Outcome.Conflict}.
+     */
+    static Outcome textVersion(Db db, String type, String id, Map<String, Object> texts, ChangeAuthor author,
+                               String now, String nsid) {
+        Set<String> allowed = TEXT_FIELDS.get(type);
+        Kind k = KINDS.get(type);
+        if (allowed == null || k == null || texts == null || texts.isEmpty() || !allowed.containsAll(texts.keySet()))
+            return new Outcome.BadType("text versions are kept for " + TEXT_FIELDS + " only, got " + type + " "
+                + (texts == null ? "{}" : texts.keySet()));
+        List<Map<String, Object>> open = db.query(openRowSql(k), Map.of("id", id));
+        Map<String, Object> openRow = open == null || open.isEmpty() ? null : open.get(0);
+        if (openRow == null || ridOf(openRow) == null)
+            return new Outcome.NotFound(type + " '" + id + "' has no open history version");
+        boolean changed = false;
+        for (Map.Entry<String, Object> e : texts.entrySet())
+            if (!sameValue(openRow.get(e.getKey()), e.getValue())) { changed = true; break; }
+        String status = statusOf(k, openRow, null);
+        if (!changed) return new Outcome.Unchanged(type + " '" + id + "': text is the same, no version opened");
+        Plan plan = textPlan(k, id, openRow, texts, author, now, nsid);
+        Object res;
+        try {
+            res = db.script(plan.script(), plan.params());
+        } catch (RuntimeException ex) {
+            if (Scd2Guard.isConcurrentModification(ex))
+                return new Outcome.Conflict(type + " '" + id + "': concurrent write to the same version — re-read and retry",
+                    Map.of());
+            throw ex;
+        }
+        if (Scd2Guard.isConflict(res)) {
+            List<Map<String, Object>> again = db.query(openRowSql(k), Map.of("id", id));
+            Map<String, Object> cur = again == null || again.isEmpty() ? null : again.get(0);
+            return new Outcome.Conflict(type + " '" + id + "': the version read was closed by a concurrent write — re-read and retry",
+                current(cur, statusOf(k, cur, null)));
+        }
+        return new Outcome.Ok(type, id, status, status, nsid, now);
+    }
+
+    /** Равенство значений поля: числа — по значению (движок отдаёт то Integer, то Double). */
+    private static boolean sameValue(Object a, Object b) {
+        if (a instanceof Number x && b instanceof Number y) return Double.compare(x.doubleValue(), y.doubleValue()) == 0;
+        return java.util.Objects.equals(a, b);
     }
 
     /** Тело «текущее состояние» для 409: статус и служебные поля версии, без тел. */
