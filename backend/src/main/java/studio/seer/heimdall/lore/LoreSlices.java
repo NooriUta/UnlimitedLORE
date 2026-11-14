@@ -1727,7 +1727,9 @@ public final class LoreSlices {
             ROLE_HOLDERS + ", task_type, actual_days, bookkeeping, " +
             // 08.11.2026: паритет с tasks_of_sprint (TasksBatchSliceParityTest) — ЗАЧЕМ-ось
             // и UC (ADR-LORE-022) нужны строке задачи в списке/на доске v2.
-            "work_class, out('REALIZES').uc_id AS realizes_uc " +
+            "work_class, out('REALIZES').uc_id AS realizes_uc, " +
+            // PU-23: та же свежесть, что у tasks_of_sprint (сторож TasksBatchSliceParityTest).
+            changedAtSql(FIRST_STATE_FROM_SQL) + " " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
