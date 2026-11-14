@@ -67,15 +67,15 @@ class LoreNewsReadMarkStoreTest {
         List<Map<String, Object>> stored = new ArrayList<>();
         List<String> sqls = new ArrayList<>();
         LoreNewsReadMarkStore s = new LoreNewsReadMarkStore(
-            (sql, p) -> stored.isEmpty() ? List.of() : List.of(Map.of("mark_at", stored.get(0).get("at"))),
+            (sql, p) -> stored.isEmpty() ? List.of() : List.of(Map.of("mark_at", stored.get(0).get("markAt"))),
             (sql, p) -> { sqls.add(sql); stored.clear(); stored.add(p); });
         LoreNewsReadMarkStore.State st = s.set(Instant.parse("2026-11-08T09:00:00Z"), "owner-sub");
         assertEquals("ok", st.state());
         assertEquals(Instant.parse("2026-11-08T09:00:00Z"), st.at());
         assertEquals(1, sqls.size());
-        assertTrue(sqls.get(0).contains("UPSERT WHERE mark_id = :id"), "одна общая черта — UPSERT по ключу, не вторая строка");
-        assertEquals(LoreNewsReadMarkStore.SHARED, stored.get(0).get("id"));
-        assertEquals("owner-sub", stored.get(0).get("by"));
+        assertTrue(sqls.get(0).contains("UPSERT WHERE mark_id = :markId"), "одна общая черта — UPSERT по ключу, не вторая строка");
+        assertEquals(LoreNewsReadMarkStore.SHARED, stored.get(0).get("markId"));
+        assertEquals("owner-sub", stored.get(0).get("touchedBy"));
     }
 
     @Test
@@ -110,5 +110,14 @@ class LoreNewsReadMarkStoreTest {
         LoreNewsReadMarkStore.State st = s.set(Instant.parse("2026-11-14T12:00:00Z"), "u1");
         assertEquals("unavailable", st.state());
         assertTrue(st.error().contains("LoreNewsReadMark' was not found"), "ответ базы в причине: " + st.error());
+    }
+
+    // Сторож корня 14.11.2026: имена параметров записи — не ключевые слова SQL (BY, AT, NOW…).
+    @Test
+    void writeParamsAreNotSqlKeywords() {
+        List<String> sqls = new ArrayList<>();
+        new LoreNewsReadMarkStore((sql, p) -> List.of(), (sql, p) -> sqls.add(sql)).set(Instant.parse("2026-11-14T12:00:00Z"), "u1");
+        for (String kw : List.of(":by ", ":by,", ":at ", ":at,", ":now ", ":now,"))
+            assertFalse(sqls.get(0).contains(kw), "параметр-ключевое слово " + kw + " в: " + sqls.get(0));
     }
 }
