@@ -100,7 +100,7 @@ describe('MD-WINDOW · заведение записи на сервере', () 
   it('решение: родитель-ADR уходит в adr_id', async () => {
     const f = ok({ ok: true, decision_id: 'D-1' });
     await createLoreRecord('decision', { title: 'Правило', code: 'D-1', adr: 'ADR-LORE-050' }, ctx, f);
-    expect(posts(f)[0][0]).toBe('/lore/decision');
+    expect(posts(f)[0][0]).toBe('/lore/decision?mode=create');
     expect(JSON.parse(String(posts(f)[0][1]!.body))).toMatchObject({ decision_id: 'D-1', title: 'Правило', adr_id: 'ADR-LORE-050' });
   });
 
@@ -108,7 +108,7 @@ describe('MD-WINDOW · заведение записи на сервере', () 
     const f = ok({ ok: true });
     await createLoreRecord('spec', { title: 'Спека', code: 'SPEC-X' }, ctx, f);
     await createLoreRecord('adr', { title: 'Решение архитектуры', code: 'ADR-X' }, ctx, f);
-    expect(posts(f).map(c => c[0])).toEqual(['/lore/spec', '/lore/adr']);
+    expect(posts(f).map(c => c[0])).toEqual(['/lore/spec?mode=create', '/lore/adr?mode=create']);
     expect(JSON.parse(String(posts(f)[0][1]!.body))).toMatchObject({ spec_id: 'SPEC-X', title: 'Спека' });
     expect(JSON.parse(String(posts(f)[1][1]!.body))).toMatchObject({ adr_id: 'ADR-X', name: 'Решение архитектуры' });
   });
