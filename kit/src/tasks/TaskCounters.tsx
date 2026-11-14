@@ -12,9 +12,15 @@ import { kitT, useKitLang } from '../i18n';
 import { taskStatusName } from './TaskTable';
 import { TASK_STATUSES, type TaskRowData } from './taskGroups';
 import { kitNumber } from '../core/fmtValue';
+import type { KitDictItem } from '../core/contract';
 
 export interface TaskCountersProps {
   tasks: readonly TaskRowData[];
+  /**
+   * PU-16 (D13 владелицы, «как в v1»): словарь типов задач — подписи счётчиков
+   * по типам. Нет словаря — подпись кодом: тип назван, просто не красиво.
+   */
+  types?: readonly KitDictItem[];
   className?: string;
 }
 
@@ -26,7 +32,7 @@ function orderedCodes(codes: Iterable<string>): string[] {
   return [...known, ...rest];
 }
 
-export function TaskCounters({ tasks, className }: TaskCountersProps) {
+export function TaskCounters({ tasks, types, className }: TaskCountersProps) {
   const lang = useKitLang();
   if (tasks.length === 0) return null;
 
@@ -34,7 +40,12 @@ export function TaskCounters({ tasks, className }: TaskCountersProps) {
   let done = 0;
   let effort = 0;
   let hasEffort = false;
+  // Типы — в порядке первого появления; задача без типа типом не считается,
+  // её число — отдельной пометкой, иначе сумма по типам не сошлась бы со списком.
+  const byType = new Map<string, number>();
+  let untyped = 0;
   for (const t of tasks) {
+    if (t.taskType) byType.set(t.taskType, (byType.get(t.taskType) ?? 0) + 1); else untyped += 1;
     const meta = statusMeta(t.status);
     counts.set(meta.code, (counts.get(meta.code) ?? 0) + 1);
     if (meta.category === 'done') done += 1;
@@ -57,6 +68,27 @@ export function TaskCounters({ tasks, className }: TaskCountersProps) {
           );
         })}
       </span>
+      {byType.size > 0 && (
+        <span className="sk-tc__group sk-tc__types" data-testid="tc-types">
+          {[...byType].map(([code, n]) => {
+            const item = types?.find(x => x.code === code);
+            const name = item?.title ?? code;
+            return (
+              <span key={code} className="sk-tc__type" title={`${name}: ${n}`}>
+                {item?.icon && <GameIcon slug={item.icon} size={13} color={item.color} label={name} />}
+                <span className="sk-tc__tname">{name}</span>
+                <span className="sk-tc__n">{n}</span>
+              </span>
+            );
+          })}
+          {untyped > 0 && (
+            <span className="sk-tc__type sk-tc__type--none" title={`${kitT(lang, 'kit.tasks.counters.untyped')}: ${untyped}`}>
+              <span className="sk-tc__tname">{kitT(lang, 'kit.tasks.counters.untyped')}</span>
+              <span className="sk-tc__n">{untyped}</span>
+            </span>
+          )}
+        </span>
+      )}
       <span className="sk-tc__progress" data-testid="tc-progress" title={kitT(lang, 'kit.tasks.counters.progress')}>
         {done}/{tasks.length}
       </span>

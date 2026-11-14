@@ -5166,6 +5166,11 @@ button.sk-tree__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-tc__progress,
 .sk-tc__effort { font-family: var(--mono); font-size: var(--fs-xs); color: var(--t1); }
 .sk-tc__progress { padding-left: 8px; border-left: 1px solid var(--bd); }
+/* PU-16: счётчики по типам задач — отделены чертой от статусов, как в v1. */
+.sk-tc__types { padding-left: 8px; border-left: 1px solid var(--bd); }
+.sk-tc__type { display: inline-flex; align-items: center; gap: 3px; }
+.sk-tc__tname { font-size: var(--fs-xs); color: var(--t2); }
+.sk-tc__type--none .sk-tc__tname { color: var(--t3); font-style: italic; }
 .sk-tasks__gcount { margin-left: 8px; color: var(--t3); font-weight: 400; }
 .sk-tasks__row { border-top: 1px solid var(--bd); }
 .sk-tasks__row:hover { background: var(--bg2); }

@@ -794,6 +794,7 @@
   "kit.tech.hide": "Скрыть технические сведения",
   "kit.tasks.counters.progress": "Закрыто из всего",
   "kit.tasks.counters.effort": "Сумма оценок, д",
+  "kit.tasks.counters.untyped": "Без типа",
   "kit.list.cols.title": "Колонки",
   "kit.list.cols.hint": "«Запись» не выключается. Порядок — стрелками, ширина — краем заголовка.",
   "kit.list.cols.up": "{title}: выше",

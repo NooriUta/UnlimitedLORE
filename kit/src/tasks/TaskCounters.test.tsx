@@ -73,3 +73,37 @@ describe('S4-36 · счётчики в шапке спринта', () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 });
+
+// SPRINT_UXR_POLISH_UAT_1113/PU-16, решение владелицы D13 «возвращаем всё»: как в v1 —
+// рядом со статусами счётчики по ТИПАМ задач.
+describe('PU-16 · счётчики по типам задач', () => {
+  const TYPED: TaskRowData[] = [
+    task('A', { taskType: 'feature' }),
+    task('B', { taskType: 'feature' }),
+    task('C', { taskType: 'bug' }),
+    task('D'),
+  ];
+
+  it('у каждого встреченного типа — свой счётчик, подпись из словаря', () => {
+    render(<TaskCounters tasks={TYPED} types={[{ code: 'feature', title: 'Фича' }, { code: 'bug', title: 'Дефект' }]} />);
+    const group = screen.getByTestId('tc-types');
+    expect(within(group).getByTitle('Фича: 2').textContent).toContain('2');
+    expect(within(group).getByTitle('Дефект: 1').textContent).toContain('1');
+  });
+
+  it('словаря нет — подпись кодом, а не пустота', () => {
+    render(<TaskCounters tasks={TYPED} />);
+    expect(within(screen.getByTestId('tc-types')).getByTitle('feature: 2')).toBeTruthy();
+  });
+
+  it('задачи без типа не выдаются за тип: их число — отдельной пометкой', () => {
+    render(<TaskCounters tasks={TYPED} />);
+    const group = screen.getByTestId('tc-types');
+    expect(within(group).getByTitle(/Без типа: 1|No type: 1/)).toBeTruthy();
+  });
+
+  it('типа нет ни у кого — ряда типов нет', () => {
+    render(<TaskCounters tasks={[task('X'), task('Y')]} />);
+    expect(screen.queryByTestId('tc-types')).toBeNull();
+  });
+});
