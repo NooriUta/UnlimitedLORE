@@ -125,6 +125,7 @@
   "lists.field.milestone": "Milestone",
   "lists.field.tasks": "Tasks",
   "lists.field.sprint": "Sprint",
+  "lists.nested.label": "{kind} · {title}",
   "lists.field.effort": "Estimate",
   "lists.field.priority": "Priority",
   "lists.field.tags": "Tags",

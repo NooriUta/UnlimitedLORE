@@ -74,18 +74,27 @@ describe('«Спринты» на ListScreen: паритет с SprintsPage', ()
   // верхнего уровня?»): задачи раскрытого спринта — СТРОКАМИ ТОЙ ЖЕ ТАБЛИЦЫ, в тех же колонках, а не
   // потоком «иконка · код · название» в одной широкой ячейке. Статус задачи по-прежнему меняется за
   // два касания (паритет со SprintsPage, S4-09).
-  it('PU-23: задачи раскрытого спринта — строками той же таблицы; статус меняется за два касания', async () => {
+  // Правило владелицы 14.11.2026 (уточнение PU-23): задачи — объекты ДРУГОГО типа, чем спринт, поэтому
+  // под спринтом встраивается ВЛОЖЕННАЯ ТАБЛИЦА ЗАДАЧ с колонками, подписями и статусами экрана
+  // «Задачи», а не строки в колонках спринта с «н/п» в чужих колонках.
+  it('PU-23: задачи раскрытого спринта — вложенной таблицей задач со своими колонками; статус меняется за два касания', async () => {
     const f = fakeFetch();
     const { container } = render(<ListScreen screen="sprints" fetchImpl={f.fn} urlState={false} />);
     await screen.findAllByText('Спринт SP');
     fireEvent.click(screen.getByRole('button', { name: 'Раскрыть: Спринт SP' }));
-    await waitFor(() => expect(container.querySelectorAll('tr[data-child-of="SP"]').length).toBe(2));
-    const parentCells = container.querySelector('tr[data-record-id="SP"]')!.querySelectorAll('td').length;
-    const kids = [...container.querySelectorAll('tr[data-child-of="SP"]')] as HTMLElement[];
-    for (const k of kids) expect(k.querySelectorAll('td').length).toBe(parentCells);
+    await waitFor(() => expect(container.querySelector('tr[data-expand-of="SP"] [data-nested] table')).toBeTruthy());
+    const nested = container.querySelector('tr[data-expand-of="SP"] [data-nested]') as HTMLElement;
+    expect(container.querySelector('tr[data-child-of]')).toBeNull();
+    const heads = within(nested).getAllByRole('columnheader').map(h => h.textContent);
+    // Колонки экрана «Задачи» (спринт задачи, компоненты), а не спринта (задачи x/y, проект).
+    expect(heads).toEqual(expect.arrayContaining(['Спринт', 'Компоненты']));
+    expect(heads).not.toContain('Задачи');
+    expect(heads).not.toContain('Проект');
+    const kids = [...nested.querySelectorAll('tr[data-record-id]')] as HTMLElement[];
+    // Закрытая задача тоже видна: под спринтом нужны все его задачи.
     expect(kids.map(k => k.getAttribute('data-record-id'))).toEqual(['SP/T1', 'SP/T2']);
-    // Код — короткий код задачи, название — ссылка на паспорт задачи.
-    expect(within(kids[0]).getByText('T1')).toBeTruthy();
+    expect(within(kids[0]).getByText('SP')).toBeTruthy();
+    // Название — ссылка на паспорт задачи.
     expect(within(kids[0]).getByRole('link', { name: 'Задача T1' }).getAttribute('href')).toMatch(/sec=task.*open=SP%2FT1|open=SP%2FT1.*sec=task/);
     fireEvent.click(within(kids[1]).getByRole('button', { name: /^Статус: / }));
     fireEvent.click(screen.getByRole('menuitem', { name: /В работе/ }));

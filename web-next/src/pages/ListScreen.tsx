@@ -5,6 +5,7 @@
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
 import { ModelNotes } from '../record/ModelNotes';
 import { useChildRows } from '../lists/useChildRows';
+import { buildExpand, childScreenOf } from '../lists/nestedExpand';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyChunk } from '../shell/staleChunk';
 import {
@@ -13,7 +14,7 @@ import {
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
-import type { DateFilterScope, DateRangeValue, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
+import type { DateFilterScope, DateRangeValue, KitConfig, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { isRecordPlacement } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
 import { useFeed } from '../lists/useFeed';
@@ -245,13 +246,44 @@ export interface ListScreenProps {
   titleId?: string;
 }
 
+/** Статусы и показ колонок типа из модели (K-14 п. 4); нет типа — null. */
+function useModelStatuses(modelType: string | undefined, fetchImpl: typeof fetch | undefined): TypeStatuses | null {
+  const [modelStatuses, setModelStatuses] = useState<TypeStatuses | null>(null);
+  useEffect(() => {
+    if (!modelType) { setModelStatuses(null); return; }
+    let live = true;
+    setModelStatuses(null);
+    fetchTypeStatuses(modelType, fetchImpl ? { fetchImpl } : {}).then(
+      r => { if (live) setModelStatuses(r); },
+      // Ожидаемые отказы `fetchTypeStatuses` возвращает оговорками; сюда
+      // попадаем, только если упал сам загрузчик — и это тоже надо сказать.
+      e => { if (live) setModelStatuses({ items: [], notes: [`статусы — умолчание приложения: ${e instanceof Error ? e.message : String(e)}`] }); },
+    );
+    return () => { live = false; };
+  }, [modelType, fetchImpl]);
+  return modelStatuses;
+}
+
+/** Конфиг экрана поверх модели: ось статусов и показ колонок — из неё, если пришли. */
+function withModelStatuses(baseConfig: KitConfig, modelStatuses: TypeStatuses | null): KitConfig {
+  const items = modelStatuses?.items ?? [];
+  // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
+  // из той же модели, что статусы. Нет в модели — колонки как раньше.
+  const display = modelStatuses?.display;
+  const withDisplay = display && baseConfig.list
+    ? { ...baseConfig, list: { ...baseConfig.list, columnDisplay: display as NonNullable<NonNullable<typeof baseConfig.list>['columnDisplay']> } }
+    : baseConfig;
+  if (!items.length) return withDisplay;
+  return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
+}
+
 export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId }: ListScreenProps) {
   const def: ListScreenDef = LIST_SCREENS[screen];
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
-  // PU-23: дети раскрытой строки — строками той же таблицы (если экран их объявил).
-  const childLoad = useMemo(() => (nested?.children ? (id: string, signal: AbortSignal) => nested.children!.load(client, id, signal) : undefined), [nested, client]);
+  // PU-23: дети раскрытой строки (если экран их объявил); как рисовать — правило lists/nestedExpand.
+  const childLoad = useMemo(() => (nested?.children ? (parent: KitRecord, signal: AbortSignal) => nested.children!.load(client, parent, signal) : undefined), [nested, client]);
   const childRows = useChildRows(childLoad);
   const lang = useKitLang();
   const t = useAppT();
@@ -311,21 +343,22 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // об этом. Молчаливое умолчание — это ровно тот дефект, из-за которого в
   // меню статуса задачи были чужие статусы и два «В работе»: клиент показывал
   // свой список, уверенно и неправильно.
-  const [modelStatuses, setModelStatuses] = useState<TypeStatuses | null>(null);
-  const modelType = def.modelType;
-  useEffect(() => {
-    if (!modelType) { setModelStatuses(null); return; }
-    let live = true;
-    setModelStatuses(null);
-    fetchTypeStatuses(modelType, fetchImpl ? { fetchImpl } : {}).then(
-      r => { if (live) setModelStatuses(r); },
-      // Ожидаемые отказы `fetchTypeStatuses` возвращает оговорками; сюда
-      // попадаем, только если упал сам загрузчик — и это тоже надо сказать.
-      e => { if (live) setModelStatuses({ items: [], notes: [`статусы — умолчание приложения: ${e instanceof Error ? e.message : String(e)}`] }); },
-    );
-    return () => { live = false; };
-  }, [modelType, fetchImpl]);
+  const modelStatuses = useModelStatuses(def.modelType, fetchImpl);
   const modelCodes = useMemo(() => (modelStatuses?.items ?? []).map(s => s.code), [modelStatuses]);
+  // PU-23: экран дочернего типа (спринт → «Задачи») — его конфиг и статусы модели, как у его
+  // собственного списка: вложенная таблица детей рисуется ими.
+  const childScreen = childScreenOf(nested?.children?.kind);
+  const childModel = useModelStatuses(childScreen ? (LIST_SCREENS[childScreen] as ListScreenDef).modelType : undefined, fetchImpl);
+  const childConfig = useMemo(
+    () => (childScreen ? withModelStatuses(LIST_SCREENS[childScreen].config(lang), childModel) : undefined),
+    [childScreen, childModel, lang],
+  );
+  const expand = useMemo(() => (nested ? buildExpand({
+    nested, client, childRows, lang,
+    childConfigOf: kind => (kind === nested.children?.kind && childConfig
+      ? childConfig
+      : (() => { const id = childScreenOf(kind); return id ? LIST_SCREENS[id].config(lang) : undefined; })()),
+  }) : undefined), [nested, client, childRows, lang, childConfig]);
   // Цвет продукта (S4-PRODUCT-HILITE): одно правило на все разделы — продукты
   // записи и её компонентов из среза products, цвет из данных продукта. Не
   // загрузился срез — список работает без колонки, а причина сказана словами.
@@ -339,17 +372,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     return () => { live = false; };
   }, [fetchImpl]);
   const paintIdx = paint && 'idx' in paint ? paint.idx : null;
-  const ownConfig = useMemo(() => {
-    const items = modelStatuses?.items ?? [];
-    // S4-35 / ADR-LORE-049: показ колонок (приоритет, ширина, переполнение) —
-    // из той же модели, что статусы. Нет в модели — колонки как раньше.
-    const display = modelStatuses?.display;
-    const withDisplay = display && baseConfig.list
-      ? { ...baseConfig, list: { ...baseConfig.list, columnDisplay: display as NonNullable<NonNullable<typeof baseConfig.list>['columnDisplay']> } }
-      : baseConfig;
-    if (!items.length) return withDisplay;
-    return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
-  }, [baseConfig, modelStatuses]);
+  const ownConfig = useMemo(() => withModelStatuses(baseConfig, modelStatuses), [baseConfig, modelStatuses]);
   const config = useMemo(() => {
     const own = ownConfig;
     return paintIdx ? withProductColumn(own, t('lists.field.product')) : own;
@@ -684,13 +707,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         // ключ раздела свой у каждого списка, хранилище — общее v2 с откатом
         // в память (приватный режим ширину просто не запомнит).
         widths={{ screen: screen, store: appStorage }}
-        expand={nested ? {
-          render: r => nested.render(r.id, client),
-          ...(nested.children ? {
-            rows: childRows,
-            childCell: (col: string, child: KitRecord) => nested.children!.cell?.(col, child, client),
-          } : {}),
-        } : undefined}
+        // PU-23: дети другого типа — вложенная таблица своего экрана, того же — строки этой таблицы.
+        expand={expand}
         peek={listPeek}
         onOpen={id => {
           setOpen({ ...open, id });

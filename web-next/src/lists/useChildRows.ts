@@ -1,10 +1,11 @@
 // PU-23: дети раскрытой строки списка — ленивая загрузка по раскрытию и состояние на каждую строку.
-// kit спрашивает rows(r) при отрисовке раскрытой строки; первый вопрос запускает загрузку, ответ
-// приходит следующей отрисовкой. Сбой — со своим «повторить», а не пустой список.
+// kit спрашивает детей при отрисовке раскрытой строки; первый вопрос запускает загрузку, ответ
+// приходит следующей отрисовкой. Сбой — со своим «повторить», а не пустой список. Загрузчику
+// отдаётся сама строка-родитель: часть полей ребёнка (релиз задачи = релиз спринта) — её.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KitRecord, ListExpandRows } from '@seidr/kit';
 
-export type ChildLoader = (id: string, signal: AbortSignal) => Promise<KitRecord[]>;
+export type ChildLoader = (parent: KitRecord, signal: AbortSignal) => Promise<KitRecord[]>;
 
 export function useChildRows(load: ChildLoader | undefined): (r: KitRecord) => ListExpandRows | undefined {
   const [byId, setById] = useState<Record<string, ListExpandRows>>({});
@@ -14,18 +15,19 @@ export function useChildRows(load: ChildLoader | undefined): (r: KitRecord) => L
   // Новый загрузчик (сменился клиент или экран) — прежние ответы к нему не относятся.
   useEffect(() => { started.current.clear(); setById({}); }, [load]);
 
-  const start = useCallback((id: string) => {
+  const start = useCallback((parent: KitRecord) => {
     if (!load) return;
+    const id = parent.id;
     ctls.current.get(id)?.abort();
     const ctl = new AbortController();
     ctls.current.set(id, ctl);
     started.current.add(id);
     setById(m => ({ ...m, [id]: { state: 'loading', records: [] } }));
-    load(id, ctl.signal).then(
+    load(parent, ctl.signal).then(
       records => { if (!ctl.signal.aborted) setById(m => ({ ...m, [id]: { state: 'ok', records } })); },
       (e: unknown) => {
         if (ctl.signal.aborted) return;
-        setById(m => ({ ...m, [id]: { state: 'error', records: [], error: e instanceof Error ? e.message : String(e), onRetry: () => start(id) } }));
+        setById(m => ({ ...m, [id]: { state: 'error', records: [], error: e instanceof Error ? e.message : String(e), onRetry: () => start(parent) } }));
       },
     );
   }, [load]);
@@ -37,7 +39,7 @@ export function useChildRows(load: ChildLoader | undefined): (r: KitRecord) => L
     if (!started.current.has(r.id)) {
       started.current.add(r.id);
       // Загрузку не начинаем посреди отрисовки kit — следующим тиком.
-      queueMicrotask(() => start(r.id));
+      queueMicrotask(() => start(r));
     }
     return { state: 'loading', records: [] };
   }, [byId, load, start]);
