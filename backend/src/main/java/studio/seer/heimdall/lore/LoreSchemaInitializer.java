@@ -85,16 +85,32 @@ public class LoreSchemaInitializer {
         return false;
     }
 
+    /**
+     * Проба с повтором: только что созданная база (установка с нуля — база
+     * создана, бэкенд стартовал следом) первые мгновения отвечает ошибкой, и
+     * одна неудача означала бы «не смогли проверить» → ядро не поднято → отказ
+     * старта. После {@link #probeAttempts} неудач — по-прежнему null, без DDL.
+     */
     private Boolean probeCoreTypes() {
-        try {
-            var res = client.command(db, basicAuth(),
-                    new LoreCommandClient.LoreCommand("sql", "SELECT name FROM schema:types"))
-                .await().indefinitely();
-            return coreTypesPresent(res == null ? null : res.result());
-        } catch (Exception e) {
-            LOG.warnf("[LORE] проба ядровых типов в %s не ответила: %s — автоподъём ядра не выполняется", db, e.getMessage());
-            return null;
+        String last = null;
+        for (int i = 1; i <= probeAttempts; i++) {
+            try {
+                var res = client.command(db, basicAuth(),
+                        new LoreCommandClient.LoreCommand("sql", "SELECT name FROM schema:types"))
+                    .await().indefinitely();
+                return coreTypesPresent(res == null ? null : res.result());
+            } catch (Exception e) {
+                last = e.getMessage();
+                LOG.debugf("[LORE] проба ядровых типов %d/%d: %s", i, probeAttempts, last);
+                if (i < probeAttempts && probeDelayMs > 0) {
+                    try { Thread.sleep(probeDelayMs); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                }
+            }
         }
+        LOG.warnf("[LORE] проба ядровых типов в %s не ответила за %d попыток: %s — автоподъём ядра не выполняется",
+            db, probeAttempts, last);
+        return null;
     }
 
     @PostConstruct
