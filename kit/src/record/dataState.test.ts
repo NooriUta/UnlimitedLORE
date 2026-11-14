@@ -100,3 +100,25 @@ describe('S4-30 · состояние данных', () => {
     expect(byBlock.checked).toEqual(['a']);
   });
 });
+
+// SPRINT_LORE_MODEL_AS_CONFIG/MC-07 (приёмка v1.17.21): «Задачи» человека — «?» вместо числа.
+// Блок обрезан (первые 100 из 230), и приложение назвало его ещё и в errors. Обрезка уже
+// сказана строкой data_state — повтор в errors не превращает её в сбой.
+describe('MC-07 · «обрезано» не становится сбоем', () => {
+  it('обрезанный блок, повторённый в errors, — не failed', () => {
+    const s = dataStateOf({ generated_at: 'x',
+      data_state: [{ source: 'user_tasks', part: 'tasks', state: 'truncated', has_more: true, shown: 100, total: 230 }],
+      errors: [{ block: 'user_tasks · tasks', reason: 'truncated' }],
+    } as never);
+    expect(s.truncatedBlocks).toEqual(['user_tasks · tasks']);
+    expect(s.failed).toEqual([]);
+  });
+
+  it('полное число обрезанного блока — когда источник его назвал', () => {
+    const s = dataStateOf({ generated_at: 'x', data_state: [
+      { source: 'user_tasks', part: 'tasks', state: 'truncated', total: 230 },
+      { source: 'edge:OWNED_BY', part: 'agents', state: 'truncated' },
+    ] } as never);
+    expect(s.truncatedTotals).toEqual({ 'user_tasks · tasks': 230 });
+  });
+});

@@ -449,7 +449,20 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     const names = [...s.failed, ...s.forbidden].map(f => f.block);
     return new Set(names.flatMap(n => [n, ...n.split(' · ')]));
   }, [ctx.data.meta]);
-  const tabCount = (id: string, defs: KitRelationDef[]): number | null => (failed.has(id) ? null : relCount(defs));
+  // MC-07: раздел обрезан, а источник назвал полное число — счётчик говорит его
+  // («230»), а не размер первой страницы. Имя блока — «источник · часть», как у failed.
+  const truncTotals = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const [block, n] of Object.entries(dataStateOf(ctx.data.meta).truncatedTotals))
+      for (const k of [block, ...block.split(' · ')]) m.set(k, n);
+    return m;
+  }, [ctx.data.meta]);
+  const tabCount = (id: string, defs: KitRelationDef[]): number | null => {
+    if (failed.has(id)) return null;
+    const loaded = relCount(defs);
+    const total = truncTotals.get(id);
+    return total !== undefined && total > loaded ? total : loaded;
+  };
   const zoned = placement !== undefined;
   const hasProps = zoned && (kind?.fields?.length ?? 0) > 0;
   // Снизу и на весь экран свойства — колонкой справа рядом с контентом (владелица 08.11):
