@@ -26,7 +26,7 @@ const ru = {
   'task.prop.effort': 'Оценка, дн',
   'task.prop.author': 'Автор',
   'task.prop.executor': 'Исполнитель',
-  'task.prop.reviewer': 'Ревьюер',
+  'task.prop.reviewer': 'Принимающий',
   'task.prop.components': 'Компоненты',
   'task.prop.uc': 'Сценарии',
   'task.prop.none': 'не задано',

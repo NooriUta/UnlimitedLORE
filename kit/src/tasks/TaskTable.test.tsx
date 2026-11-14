@@ -38,7 +38,7 @@ describe('TaskTable · атрибуты видны в строке', () => {
     expect(within(row).getByText('feature')).toBeTruthy();
     // Шапка таблицы — заголовки колонок.
     expect(within(table).getAllByRole('columnheader').map(h => h.textContent)).toEqual(
-      expect.arrayContaining(['Статус', 'ID', 'Задача', 'Фаза', 'Оценка, д', 'Исполнитель', 'Ревьюер', 'Тип']),
+      expect.arrayContaining(['Статус', 'ID', 'Задача', 'Фаза', 'Оценка, д', 'Исполнитель', 'Принимающий', 'Тип']),
     );
   });
 
@@ -191,7 +191,7 @@ describe('TaskTable · правка в строке', () => {
     render(<TaskTable tasks={tasks} phases={phases} groupBy="none" onSave={vi.fn(async () => {})} label="Задачи" />);
     const row = openEdit();
     expect(within(row).queryByRole('textbox', { name: 'Исполнитель' })).toBeNull();
-    expect(within(row).queryByRole('textbox', { name: 'Ревьюер' })).toBeNull();
+    expect(within(row).queryByRole('textbox', { name: 'Принимающий' })).toBeNull();
     expect(within(row).getAllByRole('textbox').length).toBe(2);
   });
 

@@ -736,7 +736,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
       // modal={false} внутри оболочки: «во весь экран» накрывает область
       // содержимого, шапка и меню остаются видимыми и рабочими (замечание
       // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
-      <RecordDock placement={place} modal={shell == null}
+      <RecordDock placement={place} modal={shell == null} controls="bar"
         onExitFull={() => setOpen({ ...open, place: backPlace })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
         {open.id === NEW_RECORD_ID && createType ? (
           // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
@@ -753,7 +753,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
               ids={ids} onGo={id => setOpen({ ...open, id })}
               onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} backPlace={backPlace}
               // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
-              onPlace={p => setOpen({ ...open, place: p })} />
+              onPlace={p => setOpen({ ...open, place: p })}
+              onClose={() => setOpen({ ...open, id: null })} />
           </Suspense>
         ) : (
           // Паспорта у типа нет — это говорится словами и на месте щелчка, а не

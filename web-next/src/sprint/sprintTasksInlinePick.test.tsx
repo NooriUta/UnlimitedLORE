@@ -75,7 +75,7 @@ describe('PU-25 · правка строки задач спринта: роли
     const { impl, calls } = fakeFetch();
     const row = await openEdit(impl);
     expect(calls.some(c => c.url === '/lore/slice/task_identities?id=SPRINT_X%2FT-1')).toBe(true);
-    for (const role of ['Автор', 'Исполнитель', 'Ревьюер'])
+    for (const role of ['Автор', 'Исполнитель', 'Принимающий'])
       expect([...sel(row, role).options].map(o => o.textContent), role).toEqual(['Алекса', 'Claude Code', 'Codex']);
     expect([...sel(row, 'Класс').options].map(o => o.value)).toEqual(['uc', 'jtd', 'enb']);
     expect([...sel(row, 'Тип').options].map(o => o.value)).toEqual(['dev', 'docs']);
@@ -86,7 +86,7 @@ describe('PU-25 · правка строки задач спринта: роли
     const row = await openEdit(impl);
     expect(sel(row, 'Автор').value).toBe('Алекса');
     expect(sel(row, 'Исполнитель').value).toBe('AGENT-FULL-x1');
-    expect(sel(row, 'Ревьюер').value).toBe('Алекса');
+    expect(sel(row, 'Принимающий').value).toBe('Алекса');
     expect(sel(row, 'Класс').value).toBe('enb');
     expect(sel(row, 'Тип').value).toBe('dev');
   });
