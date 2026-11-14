@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "e841bd60b1c9ed59",
+  "version" : "5e3eb67fad8ba596",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -83,15 +83,16 @@
         "active" : true
       }, {
         "code" : "waiting",
-        "title" : "waiting",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "Ждём ответа",
+        "title_en" : "Waiting",
+        "icon" : "hourglass",
+        "color" : "var(--inf)",
+        "order" : 35,
         "category" : "in_progress",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "blocked",
         "title" : "Заблокировано",
@@ -106,15 +107,16 @@
         "active" : true
       }, {
         "code" : "review",
-        "title" : "review",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "На приёмке",
+        "title_en" : "Review",
+        "icon" : "magnifying-glass",
+        "color" : "var(--wrn)",
+        "order" : 45,
         "category" : "in_progress",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "ready_for_deploy",
         "title" : "Готово к деплою",
@@ -153,15 +155,16 @@
         "active" : true
       }, {
         "code" : "failed",
-        "title" : "failed",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "Неуспех",
+        "title_en" : "Failed",
+        "icon" : "cancel",
+        "color" : "var(--dng)",
+        "order" : 65,
         "category" : "withdrawn",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "cancelled",
         "title" : "Отменено",
@@ -254,15 +257,16 @@
         "active" : true
       }, {
         "code" : "waiting",
-        "title" : "waiting",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "Ждём ответа",
+        "title_en" : "Waiting",
+        "icon" : "hourglass",
+        "color" : "var(--inf)",
+        "order" : 35,
         "category" : "in_progress",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "blocked", "review", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "blocked",
         "title" : "Заблокировано",
@@ -277,15 +281,16 @@
         "active" : true
       }, {
         "code" : "review",
-        "title" : "review",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "На приёмке",
+        "title_en" : "Review",
+        "icon" : "magnifying-glass",
+        "color" : "var(--wrn)",
+        "order" : 45,
         "category" : "in_progress",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "ready_for_deploy", "uat", "done", "failed", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "ready_for_deploy",
         "title" : "Готово к деплою",
@@ -324,15 +329,16 @@
         "active" : true
       }, {
         "code" : "failed",
-        "title" : "failed",
-        "title_en" : null,
-        "icon" : null,
-        "color" : null,
-        "order" : null,
+        "title" : "Неуспех",
+        "title_en" : "Failed",
+        "icon" : "cancel",
+        "color" : "var(--dng)",
+        "order" : 65,
         "category" : "withdrawn",
         "allow" : [ "todo", "planned", "backlog", "design", "active", "partial", "waiting", "blocked", "review", "ready_for_deploy", "uat", "done", "cancelled" ],
-        "in_dictionary" : false,
-        "in_lifecycle" : true
+        "in_dictionary" : true,
+        "in_lifecycle" : true,
+        "active" : true
       }, {
         "code" : "cancelled",
         "title" : "Отменено",
@@ -8914,12 +8920,28 @@
       "order" : 30,
       "active" : true
     }, {
+      "code" : "waiting",
+      "title" : "Ждём ответа",
+      "title_en" : "Waiting",
+      "icon" : "hourglass",
+      "color" : "var(--inf)",
+      "order" : 35,
+      "active" : true
+    }, {
       "code" : "partial",
       "title" : "Частично",
       "title_en" : "Partial",
       "icon" : "battery-50",
       "color" : "var(--wrn)",
       "order" : 40,
+      "active" : true
+    }, {
+      "code" : "review",
+      "title" : "На приёмке",
+      "title_en" : "Review",
+      "icon" : "magnifying-glass",
+      "color" : "var(--wrn)",
+      "order" : 45,
       "active" : true
     }, {
       "code" : "ready_for_deploy",
@@ -8944,6 +8966,14 @@
       "icon" : "divided-spiral",
       "color" : "var(--suc)",
       "order" : 60,
+      "active" : true
+    }, {
+      "code" : "failed",
+      "title" : "Неуспех",
+      "title_en" : "Failed",
+      "icon" : "cancel",
+      "color" : "var(--dng)",
+      "order" : 65,
       "active" : true
     }, {
       "code" : "blocked",
@@ -9003,12 +9033,28 @@
       "order" : 30,
       "active" : true
     }, {
+      "code" : "waiting",
+      "title" : "Ждём ответа",
+      "title_en" : "Waiting",
+      "icon" : "hourglass",
+      "color" : "var(--inf)",
+      "order" : 35,
+      "active" : true
+    }, {
       "code" : "partial",
       "title" : "Частично",
       "title_en" : "Partial",
       "icon" : "battery-50",
       "color" : "var(--wrn)",
       "order" : 40,
+      "active" : true
+    }, {
+      "code" : "review",
+      "title" : "На приёмке",
+      "title_en" : "Review",
+      "icon" : "magnifying-glass",
+      "color" : "var(--wrn)",
+      "order" : 45,
       "active" : true
     }, {
       "code" : "ready_for_deploy",
@@ -9033,6 +9079,14 @@
       "icon" : "divided-spiral",
       "color" : "var(--suc)",
       "order" : 60,
+      "active" : true
+    }, {
+      "code" : "failed",
+      "title" : "Неуспех",
+      "title_en" : "Failed",
+      "icon" : "cancel",
+      "color" : "var(--dng)",
+      "order" : 65,
       "active" : true
     }, {
       "code" : "blocked",
@@ -9069,5 +9123,5 @@
       "active" : false
     } ]
   },
-  "warnings" : [ "task_status: статус «waiting» есть в жизненном цикле task, но его нет в справочнике — подпись = код, иконки и цвета нет", "task_status: статус «review» есть в жизненном цикле task, но его нет в справочнике — подпись = код, иконки и цвета нет", "task_status: статус «failed» есть в жизненном цикле task, но его нет в справочнике — подпись = код, иконки и цвета нет", "sprint_status: статус «waiting» есть в жизненном цикле sprint, но его нет в справочнике — подпись = код, иконки и цвета нет", "sprint_status: статус «review» есть в жизненном цикле sprint, но его нет в справочнике — подпись = код, иконки и цвета нет", "sprint_status: статус «failed» есть в жизненном цикле sprint, но его нет в справочнике — подпись = код, иконки и цвета нет", "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
+  "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }
