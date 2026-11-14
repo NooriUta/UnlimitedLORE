@@ -15,7 +15,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { RulesScreen } from './RulesScreen';
-import { diffView, parseDocHistory, versionDiffRows } from './rules';
+import { diffView, parseDocHistory, versionDiff, versionDiffRows } from './rules';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 beforeEach(() => { window.history.replaceState(null, '', '/'); });
@@ -147,5 +147,37 @@ describe('экран «Правила CLAUDE»', () => {
   it('доков правил нет — честное «пусто»', async () => {
     mount(fake({ docs: [] }).f);
     expect(await screen.findByTestId('adm-rules-empty')).toBeTruthy();
+  });
+});
+
+// SPRINT_UXR_S7B_ADMIN/S7B-06, приёмка 14.11: (1) дифф версий шёл целым телом — kit wordDiff
+// сдаётся на 400 словах, а док правил ~13 КБ, и экран рисовал «снимется всё / добавится всё»;
+// (2) версии 1 в выборе не было — чипы строились с rows.slice(1).
+describe('S7B-06 · дифф длинного дока построчно; версия 1 в списке', () => {
+  const LONG = Array.from({ length: 300 }, (_, i) => `Правило номер ${i + 1}: делать как договорились, без исключений.`);
+  const from = LONG.join('\n');
+  const to = [...LONG.slice(0, 150), 'Новое правило: дифф по строкам.', ...LONG.slice(150, 299), 'Правило номер 300: изменено.'].join('\n');
+
+  it('модель: длинный док — точный построчный дифф, только изменённые строки и контекст', () => {
+    const d = versionDiff(from, to);
+    expect(d.exact).toBe(true);
+    const removed = d.rows.filter(r => r.kind === 'remove');
+    const added = d.rows.filter(r => r.kind === 'add');
+    expect(removed.map(r => r.text)).toEqual([LONG[299]]);
+    expect(added.map(r => r.text)).toEqual(['Новое правило: дифф по строкам.', 'Правило номер 300: изменено.']);
+    // Неизменённые строки не идут стеной: строк диффа — десятки, а не сотни.
+    expect(d.rows.length).toBeLessThan(20);
+    expect(d.rows.some(r => r.kind === 'same' && /\d+/.test(r.text) && r.id.startsWith('skip'))).toBe(true);
+  });
+
+  it('экран: версия 1 есть в выборе; выбрана — сказано, что сравнивать её не с чем', async () => {
+    const rows = [v(1, 'h1', { content_md: 'один' }), v(2, 'h2', { content_md: 'два' }), v(3, 'h3', { content_md: 'три' })];
+    mount(fake({ hist: { rows, attribution: { ok: true } } }).f);
+    await pick();
+    const box = await screen.findByTestId('adm-rule-diff');
+    const radios = within(box).getAllByRole('radio');
+    expect(radios.map(r => r.textContent)).toEqual(['версия 1', 'версия 2', 'версия 3']);
+    fireEvent.click(radios[0]);
+    expect((await within(box).findByTestId('adm-rule-first')).textContent).toMatch(/перв/i);
   });
 });

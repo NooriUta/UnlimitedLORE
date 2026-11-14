@@ -452,6 +452,8 @@
   "admin.rules.versionN": "version {n}",
   "admin.rules.comparing": "Version {from} → version {to}",
   "admin.rules.coarse": "The texts are long — the diff is coarse: everything removed and everything added as a whole.",
+  "admin.rules.skipped": "… unchanged lines: {n}",
+  "admin.rules.firstVersion": "Version 1 is the first record of the doc; there is no previous one to compare with. Written",
   "admin.rules.diffLabel": "What changed",
   "admin.rules.noBodies": "The server does not return version bodies — no line diff; body changes are visible by hash.",
   "admin.rules.change.changed": "body changed",

@@ -452,6 +452,8 @@
   "admin.rules.versionN": "версия {n}",
   "admin.rules.comparing": "Версия {from} → версия {to}",
   "admin.rules.coarse": "Тексты длинные — дифф грубый: всё убранное и всё добавленное целиком.",
+  "admin.rules.skipped": "… без изменений строк: {n}",
+  "admin.rules.firstVersion": "Версия 1 — первая запись дока, предыдущей нет: сравнивать её не с чем. Записана",
   "admin.rules.diffLabel": "Что изменилось",
   "admin.rules.noBodies": "Тела версий сервер не отдаёт — построчного диффа нет; смена тела видна по хешу.",
   "admin.rules.change.changed": "тело изменилось",
