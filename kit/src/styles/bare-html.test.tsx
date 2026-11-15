@@ -32,11 +32,12 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
 import { ObjectMention } from '../elements/ObjectMention';
+import type { KitConfig } from '../core/contract';
 
 const SNAPSHOT = '../../demo/seidr-bare.html';
 // В jsdom-окружении import.meta.url не file:// — пути от корня пакета kit
@@ -48,6 +49,15 @@ const css = readFileSync(resolve(KIT, 'src/styles/seidr.css'), 'utf8');
 const noop = () => {};
 const FRESH_NOW = Date.parse('2026-11-11T12:00:00Z');
 const STATUSES = ['done', 'active', 'partial', 'planned', 'backlog', 'blocked', 'cancelled'] as const;
+/** Словарь статусов приложения для шильдика статуса: значок game-icons, цвет — токен темы. */
+const BARE_STATUS_ITEMS = [
+  { code: 'proposed', title: 'Предложено', icon: 'calendar', color: 'var(--inf)', category: 'active' },
+  { code: 'accepted', title: 'Принято', icon: 'laurel-crown', color: 'var(--suc)', category: 'active' },
+  { code: 'superseded', title: 'Вытеснено', icon: 'pause-button', color: 'var(--t3)', category: 'cancelled' },
+] as const;
+const BARE_STATUS_CONFIG = {
+  modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [...BARE_STATUS_ITEMS] }, roles: { viewer: { canStatus: false } },
+} as unknown as KitConfig;
 const MD = '## Заголовок\n\nТекст с **жирным**, `кодом` и [ссылкой](https://example.org).\n\n- пункт один\n- [x] пункт два\n\n| поле | значение |\n|---|---|\n| статус | в работе |\n\n```mermaid\ngraph LR; A[Задача] --> B[PR] --> C[Релиз]\n```\n';
 
 /** Те же семейства элементов, что и на витрине /kit (S4-00d). */
@@ -75,6 +85,11 @@ function Samples() {
         <div className="bare__row">
           {STATUSES.map(s => <StatusStar key={s} status={s} label={`Статус: ${s}`} showLabel />)}
           <StatusStar status="active" label="Открыть" onOpen={noop} />
+        </div>
+        {/* Шильдик статуса по словарю приложения (витрина «Шильдики»): только показ, обычный и ужатый до значка. */}
+        <div className="bare__row">
+          {BARE_STATUS_ITEMS.map(i => <StatusChip key={i.code} record={{ id: i.code, kind: 'demo', title: i.code, status: i.code, fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" />)}
+          <StatusChip record={{ id: 'compact', kind: 'demo', title: 'compact', status: 'accepted', fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" compact />
         </div>
         <div className="bare__row">
           <Kbd keys={['Ctrl', 'K']} />

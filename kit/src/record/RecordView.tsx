@@ -25,6 +25,7 @@ import { asChip, isChipList } from '../core/chipValue';
 import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
 import { IconButton } from '../elements/IconButton';
+import { MiniList } from '../elements/MiniList';
 import { ICON_CANON } from '../elements/iconCanon';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
@@ -207,7 +208,19 @@ export function boolOf(v: unknown): boolean | null {
   return null;
 }
 
-function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
+/** Пункт списка: строка как есть; у объекта — text, title, name, label или id; иначе текст значения. */
+function listItemText(v: unknown): string {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    for (const k of ['text', 'title', 'name', 'label', 'id']) {
+      const x = o[k];
+      if (typeof x === 'string' && x.trim()) return x.trim();
+    }
+  }
+  return valueText(v).trim();
+}
+
+export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
   const lang = useKitLang();
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
@@ -218,6 +231,13 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type
   if (type === 'sum') return <SumCell value={value} />;
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
+  // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
+  // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
+  if (type === 'list') {
+    const items = (Array.isArray(value) ? value : [value]).map(listItemText).filter(s => s !== '');
+    if (items.length === 0) return <span className="sk-rec-fields__none">—</span>;
+    return <MiniList kind="plain" label={title ?? ''} items={items.map((text, i) => ({ id: String(i), text }))} />;
+  }
   if (type === 'ref') {
     // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
     // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
