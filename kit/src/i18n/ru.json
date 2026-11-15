@@ -251,6 +251,7 @@
   "kit.record.verdict.score": "Вердикт {score} из {max}",
   "kit.record.verdict.failed": "Не пройдено",
   "kit.record.verdict.hints": "Подсказки",
+  "kit.record.verdict.unknown": "Не смогли проверить",
   "kit.record.verdict.ok": "Все проверки пройдены",
   "kit.record.blockError": "Блок «{block}» не отрисовался",
   "kit.record.blockError.hint": "Сломан только этот блок — остальная запись работает.",

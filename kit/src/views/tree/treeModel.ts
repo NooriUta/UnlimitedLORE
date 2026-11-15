@@ -236,7 +236,7 @@ export interface VerdictRollup {
 const ratio = (v: { score: number; max: number }) => (v.max > 0 ? v.score / v.max : 1);
 
 /** Свёртка вердикта: худший процент поднимается к предкам; сбой — отдельный счёт. */
-export function rollupVerdict(model: TreeModel, verdictOf: (r: KitRecord) => KitVerdict): Map<string, VerdictRollup> {
+export function rollupVerdict(model: TreeModel, verdictOf: (r: KitRecord) => KitVerdict | undefined): Map<string, VerdictRollup> {
   const out = new Map<string, VerdictRollup>();
   for (const n of postOrder(model)) {
     let own: KitVerdict | undefined;

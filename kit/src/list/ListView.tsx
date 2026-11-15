@@ -25,6 +25,7 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
+import { verdictText } from '../core/verdict';
 import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
@@ -521,7 +522,7 @@ function DayCell({ iso, badTitle }: { iso?: string | null; badTitle?: string }) 
 function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLang }) {
   const fn = ctx.config.verdict;
   if (!fn) return <span className="sk-list__verdict" data-verdict="none">—</span>;
-  let v: KitVerdict;
+  let v: KitVerdict | undefined;
   try {
     v = fn(r, ctx);
   } catch (e) {
@@ -531,10 +532,11 @@ function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLan
       </span>
     );
   }
-  if (!v.max) return <span className="sk-list__verdict" data-verdict="none">—</span>;
-  const state = v.failed.length ? 'fail' : 'ok';
+  const unknown = v?.unknown ?? [];
+  if (!v || (!v.max && unknown.length === 0)) return <span className="sk-list__verdict" data-verdict="none">—</span>;
+  const state = v.failed.length ? 'fail' : unknown.length ? 'unknown' : 'ok';
   return (
-    <span className="sk-list__verdict" data-verdict={state} title={[...v.failed, ...v.hints].join(', ') || undefined}>
+    <span className="sk-list__verdict" data-verdict={state} title={[...v.failed, ...v.hints, ...unknown].map(verdictText).join(', ') || undefined}>
       {v.score}/{v.max}
     </span>
   );

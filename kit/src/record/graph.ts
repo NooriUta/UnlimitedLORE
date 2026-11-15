@@ -296,6 +296,7 @@ export function edgeColor(config: Pick<KitConfig, 'edges'>, type: string): strin
 export function verdictTone(v: KitVerdict | undefined): 'suc' | 'wrn' | 'dng' | 't3' {
   if (!v || !(v.max > 0)) return 't3';
   const r = v.score / v.max;
-  if (r >= 1 && v.failed.length === 0) return 'suc';
+  // «Не смогли проверить» при полном счёте — не зелёный: часть проверок не выполнялась.
+  if (r >= 1 && v.failed.length === 0) return v.unknown?.length ? 'wrn' : 'suc';
   return r >= 0.5 ? 'wrn' : 'dng';
 }

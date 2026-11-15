@@ -313,6 +313,9 @@ describe('K-01 · примеры конфигов', () => {
       expect(cfg.verdict).toBeTypeOf('function');
       for (const r of data.records) {
         const v = cfg.verdict!(r, { data, config: cfg, href: (id) => `#${id}`, esc: (s) => s, md: (s) => s });
+        // K5-VERDICT-CONTRACT: вердикт может быть не задан (запись без проверок); в примерах он есть у каждой.
+        expect(v, r.id).toBeDefined();
+        if (!v) continue;
         expect(v.score, r.id).toBeLessThanOrEqual(v.max);
         expect(v.score, r.id).toBeGreaterThanOrEqual(0);
       }

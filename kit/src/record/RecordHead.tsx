@@ -4,6 +4,7 @@ import type { KitCtx, KitRecord } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
 import { kitT, type KitLang } from '../i18n';
 import { verdictTone } from './graph';
+import { verdictCode, verdictHint, verdictText } from '../core/verdict';
 import { StatusSlot } from './StatusSlot';
 import { kitMinute } from '../core/fmtValue';
 
@@ -71,6 +72,9 @@ export function RecordVerdict({ record, ctx, lang }: { record: KitRecord; ctx: K
   const fn = ctx.config.verdict;
   if (!fn) return null;
   const v = fn(record, ctx);
+  // Запись без проверок: вердикта нет — строки нет. «Все проверки пройдены» при нуле проверок — неправда.
+  if (!v) return null;
+  const unknown = v.unknown ?? [];
   const tone = verdictTone(v);
   const pct = v.max > 0 ? Math.max(0, Math.min(100, Math.round((v.score / v.max) * 100))) : 0;
   const style = { '--verdict-c': `var(--${tone})`, '--verdict-w': `${pct}%` } as CSSProperties;
@@ -81,19 +85,25 @@ export function RecordVerdict({ record, ctx, lang }: { record: KitRecord; ctx: K
         {v.score}/{v.max}
       </span>
       <span className="sk-rec-verdict__bar" aria-hidden="true"><span className="sk-rec-verdict__fill" /></span>
-      {v.failed.length === 0 && v.hints.length === 0 && (
+      {v.max > 0 && v.failed.length === 0 && v.hints.length === 0 && unknown.length === 0 && (
         <span className="sk-rec-verdict__ok">{kitT(lang, 'kit.record.verdict.ok')}</span>
       )}
       {v.failed.length > 0 && (
         <span className="sk-rec-verdict__group">
           <span className="sk-rec-verdict__label">{kitT(lang, 'kit.record.verdict.failed')}</span>
-          {v.failed.map(f => <span key={f} className="sk-pill sk-pill--value sk-rec-verdict__failed">{f}</span>)}
+          {v.failed.map(f => <span key={verdictCode(f)} title={verdictHint(f)} className="sk-pill sk-pill--value sk-rec-verdict__failed">{verdictText(f)}</span>)}
         </span>
       )}
       {v.hints.length > 0 && (
         <span className="sk-rec-verdict__group">
           <span className="sk-rec-verdict__label">{kitT(lang, 'kit.record.verdict.hints')}</span>
-          {v.hints.map(h => <span key={h} className="sk-rec-verdict__hint">{h}</span>)}
+          {v.hints.map(h => <span key={verdictCode(h)} title={verdictHint(h)} className="sk-rec-verdict__hint">{verdictText(h)}</span>)}
+        </span>
+      )}
+      {unknown.length > 0 && (
+        <span className="sk-rec-verdict__group" data-verdict-group="unknown">
+          <span className="sk-rec-verdict__label">{kitT(lang, 'kit.record.verdict.unknown')}</span>
+          {unknown.map(u => <span key={verdictCode(u)} title={verdictHint(u)} className="sk-rec-verdict__hint">{verdictText(u)}</span>)}
         </span>
       )}
     </section>

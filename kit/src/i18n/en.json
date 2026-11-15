@@ -251,6 +251,7 @@
   "kit.record.verdict.score": "Verdict {score} of {max}",
   "kit.record.verdict.failed": "Failed",
   "kit.record.verdict.hints": "Hints",
+  "kit.record.verdict.unknown": "Could not check",
   "kit.record.verdict.ok": "All checks passed",
   "kit.record.blockError": "Block “{block}” failed to render",
   "kit.record.blockError.hint": "Only this block is broken — the rest of the record works.",
