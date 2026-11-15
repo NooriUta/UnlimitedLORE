@@ -83,7 +83,7 @@ describe('GC-04 · клиент /lore/graph', () => {
 
   it('типы графа: подпись и цвет-токен у каждого типа LORE, без сырых цветов', () => {
     for (const t of ['sprint', 'task', 'adr', 'spec', 'decision', 'release', 'milestone', 'component', 'project']) {
-      expect(LORE_GRAPH_TYPES('ru')[t]?.color, t).toMatch(/^(--(acc|suc|wrn|dng|inf|t1|t2|t3)|var\(--type-[a-z]+\))$/);
+      expect(LORE_GRAPH_TYPES('ru')[t]?.color, t).toMatch(/^(--(acc|suc|wrn|dng|inf|t1|t2|t3)|var\(--section-[a-z]+\))$/);
     }
   });
 

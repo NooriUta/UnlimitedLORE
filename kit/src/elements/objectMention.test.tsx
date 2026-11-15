@@ -125,7 +125,7 @@ describe('места упоминаний идут через ObjectMention', ()
 describe('тема: токены цвета видов и правило упоминания', () => {
   const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
   it('токены --section-* канона объявлены темой', () => {
-    for (const t of ['adrs', 'components', 'decisions', 'features', 'milestones', 'releases', 'sprints', 'tech']) {
+    for (const t of ['adrs', 'components', 'decisions', 'features', 'milestones', 'releases', 'sprints', 'tech', 'actors', 'rbjg']) {
       expect(css, `--section-${t}`).toMatch(new RegExp(`--section-${t}\\s*:`));
     }
   });

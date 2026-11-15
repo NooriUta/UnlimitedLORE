@@ -85,6 +85,8 @@
   --section-components: #88B8A8;
   --section-tech:       #C0A36E;
   --section-features:   #A8B860;
+  --section-actors:     #D4922A;
+  --section-rbjg:       #C85848;
 
   /* ── «бумага» диаграмм MartProse (S4-00d) ──
      Диаграммы mermaid/bpmn рисуются на светлой подложке при любой теме: их

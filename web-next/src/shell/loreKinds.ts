@@ -21,6 +21,10 @@ export const LORE_KIND_COLOR: Readonly<Record<string, string>> = {
   component: 'var(--section-components)',
   tech: 'var(--section-tech)',
   feature: 'var(--section-features)',
+  actor: 'var(--section-actors)',
+  pain: 'var(--section-rbjg)',
+  gain: 'var(--section-rbjg)',
+  job: 'var(--section-rbjg)',
 };
 
 export function loreKinds(lang: KitLang): KitConfig['kinds'] {
