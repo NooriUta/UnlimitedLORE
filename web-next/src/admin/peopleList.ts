@@ -35,6 +35,8 @@ export function peopleListConfig(lang: KitLang): KitConfig {
         title: t('admin.people.kind'),
         icon: 'person',
         fields: [
+          // AP-07: аватар человека — колонку рисует экран (cellOf), значение в записи не хранится.
+          { key: 'face', title: t('admin.people.face'), type: 'text' },
           { key: 'roles', title: t('admin.col.role'), type: 'enum' },
           { key: 'projects', title: t('admin.people.projects'), type: 'enum' },
           { key: 'n_projects', title: t('admin.people.nProjects'), type: 'number' },
@@ -49,7 +51,7 @@ export function peopleListConfig(lang: KitLang): KitConfig {
       quick: [{ id: 'no-projects', title: t('admin.people.noProjects'), filter: { projects: '' } }],
       filters: ['fields.roles', 'fields.projects'],
       groupings: ['roles'],
-      columns: ['title', 'roles', 'n_projects', 'agents'],
+      columns: ['face', 'title', 'roles', 'n_projects', 'agents'],
     },
   };
 }

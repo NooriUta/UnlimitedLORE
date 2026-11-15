@@ -13,7 +13,7 @@
 import { kitMinute } from '@seidr/kit/core';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
-import { BucketFigures, GameIcon } from '@seidr/kit';
+import { BucketFigures, GameIcon, PersonFace } from '@seidr/kit';
 import { Pill } from '@seidr/kit';
 import { statusMeta } from '@seidr/kit';
 import { statusLook, useStatusDict } from '@seidr/kit';
@@ -26,6 +26,7 @@ import { pushUrlState, readUrlState } from '@seidr/kit';
 import { classifyError, errorDetail } from '@seidr/kit';
 import { useLoadState } from '@seidr/kit';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '@seidr/kit';
+import { usePerson } from '../../people/avatars';
 import { newsT, type NewsKey } from './i18n';
 import {
   DEFAULT_NEWS_QUERY, NEWS_KIND_META, NEWS_TYPE_META, axisLabel, buildNewsParams, drillLabel, eventAxisValues, kindLabel,
@@ -893,7 +894,8 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
         {/* П24 (решение владелицы 10.11): связанное — ссылкой, если у него есть паспорт. */}
         {e.type === 'task' && e.sprint && <RowRef type="sprint" id={e.sprint} testId="news-ref-sprint" title={t('ref.sprint')} />}
         {e.type === 'decision' && e.parent && <RowRef type="adr" id={e.parent} testId="news-ref-adr" title={t('ref.adr')} />}
-        {e.who && (
+        {e.who && e.author === 'human' && <HumanWho sub={e.who} title={t('ref.person')} label={newsGroupLabel('who', e.who, lang)} />}
+        {e.who && e.author !== 'human' && (
           <RowRef type={e.author === 'agent' ? 'agent' : 'person'} id={e.who} testId="news-who"
             title={t(e.author === 'agent' ? 'ref.agent' : 'ref.person')} icon={e.author === 'agent' ? 'robot-golem' : 'person'}
             label={newsGroupLabel('who', e.who, lang)} />
@@ -987,17 +989,30 @@ export function NewsStatusMark({ code }: { code: string | null }) {
  * Связанное в строке ленты (П24): автор, спринт задачи, ADR решения. Адрес даёт
  * приложение (`refHrefOf`); нет адреса — текст той же формы, а не ссылка в никуда.
  */
-function RowRef({ type, id, testId, title, icon, label }: { type: string; id: string; testId: string; title: string; icon?: string; label?: string }) {
+function RowRef({ type, id, testId, title, icon, label, face }: { type: string; id: string; testId: string; title: string; icon?: string; label?: string;
+  /** Вместо значка — лицо (AP-07: аватар человека). */
+  face?: ReactNode }) {
   const href = useContext(RefHrefCtx)(type, id);
   const body = (
     <>
-      {icon && <GameIcon slug={icon} size={11} />}
+      {face ?? (icon && <GameIcon slug={icon} size={11} />)}
       {label ?? id}
     </>
   );
   return href
     ? <a className="sk-news__ref" href={href} data-testid={testId} data-ref={type} title={`${title}: ${id}`}>{body}</a>
     : <span className="sk-news__ref is-static" data-testid={testId} data-ref={type} title={`${title}: ${id}`}>{body}</span>;
+}
+
+/**
+ * Автор-человек в строке ленты (AP-07 «аватары доделать», владелица 15.11.2026): аватар из профиля
+ * LORE — запросом с токеном и из blob: (people/avatars.ts, кэш на вкладку); нет — прежний значок.
+ * Профиль спрашивается только у людей: у агента его нет.
+ */
+function HumanWho({ sub, title, label }: { sub: string; title: string; label: string }) {
+  const { src } = usePerson(sub);
+  const face = src ? <PersonFace name={label} src={src} size="sm" decorative /> : undefined;
+  return <RowRef type="person" id={sub} testId="news-who" title={title} icon="person" label={label} {...(face ? { face } : {})} />;
 }
 
 /** «Скопировать код» — кнопка рядом с кодом; буфер недоступен — молча не врём, что скопировали. */

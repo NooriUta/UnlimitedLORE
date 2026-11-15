@@ -5,6 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ProfileEditor, initialsOf, type ProfileRow } from './ProfileEditor';
+import { resetPeopleCache } from '../people/avatars';
 
 const row = (over: Partial<ProfileRow> = {}): ProfileRow => ({
   kc_sub: 'sub-1', login: 'omiloreadmin', display_name: 'Алёна', avatar_url: null, found: true, ...over,
@@ -29,11 +30,30 @@ describe('ProfileEditor', () => {
     expect((screen.getByLabelText('Отображаемое имя') as HTMLInputElement).value).toBe('Алёна');
   });
 
-  it('аватар есть — картинка по относительному адресу от базы', async () => {
-    const f = vi.fn(async () => json([row({ avatar_url: '/lore/users/sub-1/avatar' })]));
-    render(<ProfileEditor sub="sub-1" lang="ru" base="https://lore.example" fetchImpl={f as unknown as typeof fetch} />);
+  // AP-07 «аватары доделать»: картинка за входом (без токена 401, препрод 1f09ded3), а <img src>
+  // заголовок с токеном не шлёт. Значит, картинка берётся тем же запросом с токеном (fetchImpl) и
+  // показывается из blob:, а не голым адресом — иначе аватар не виден никогда.
+  it('аватар есть — картинка запросом с токеном и из blob:, а не голым адресом', async () => {
+    resetPeopleCache();
+    const create = vi.fn(() => 'blob:avatar-1');
+    (URL as unknown as { createObjectURL: unknown }).createObjectURL = create;
+    const f = vi.fn(async (url: string) => (url.endsWith('/avatar')
+      ? new Response(new Blob(['png'], { type: 'image/png' }), { status: 200 })
+      : json([row({ avatar_url: '/lore/users/sub-1/avatar' })])));
+    render(<ProfileEditor sub="sub-1" lang="ru" fetchImpl={f as unknown as typeof fetch} />);
+    await waitFor(() => expect(f).toHaveBeenCalledWith('/lore/users/sub-1/avatar'));
     const img = await screen.findByRole('img') as HTMLImageElement;
-    expect(img.getAttribute('src')).toBe('https://lore.example/lore/users/sub-1/avatar');
+    await waitFor(() => expect(img.getAttribute('src')).toBe('blob:avatar-1'));
+  });
+
+  it('картинка не отдалась (404/401) — инициалы, а не битая картинка', async () => {
+    resetPeopleCache();
+    const f = vi.fn(async (url: string) => (url.endsWith('/avatar')
+      ? json({ error: 'NO_AVATAR' }, 404)
+      : json([row({ avatar_url: '/lore/users/sub-1/avatar' })])));
+    render(<ProfileEditor sub="sub-1" lang="ru" fetchImpl={f as unknown as typeof fetch} />);
+    await waitFor(() => expect(f).toHaveBeenCalledWith('/lore/users/sub-1/avatar'));
+    expect((await screen.findByLabelText('Аватара нет — инициалы')).textContent).toBe('АЛ');
   });
 
   it('не смогли загрузить — так и сказано, с причиной и «Повторить», а не пустой профиль', async () => {
@@ -90,8 +110,12 @@ describe('ProfileEditor', () => {
     const calls: { url: string; init?: RequestInit }[] = [];
     const f = vi.fn(async (url: string, init?: RequestInit) => {
       calls.push({ url, init });
-      return init?.method === 'POST' ? json({ ...row({ avatar_url: '/lore/users/sub-1/avatar' }), ok: true }) : json([row()]);
+      if (init?.method === 'POST') return json({ ...row({ avatar_url: '/lore/users/sub-1/avatar' }), ok: true });
+      if (url.endsWith('/avatar')) return new Response(new Blob(['png'], { type: 'image/png' }), { status: 200 });
+      return json([row()]);
     });
+    resetPeopleCache();
+    (URL as unknown as { createObjectURL: unknown }).createObjectURL = vi.fn(() => 'blob:new-avatar');
     render(<ProfileEditor sub="sub-1" lang="ru" fetchImpl={f as unknown as typeof fetch} />);
     const pick = await screen.findByLabelText('Файл аватара: png, jpeg или webp до 2 МБ');
     const file = new File([new Uint8Array([137, 80, 78, 71])], 'me.png', { type: 'image/png' });
@@ -100,6 +124,8 @@ describe('ProfileEditor', () => {
     const post = calls.find(c => c.init?.method === 'POST')!;
     expect(post.url).toBe('/lore/users/sub-1/avatar');
     expect(post.init!.body).toBeInstanceOf(FormData);
-    expect((screen.getByRole('img') as HTMLImageElement).getAttribute('src')).toMatch(/^\/lore\/users\/sub-1\/avatar\?v=1$/);
+    // Новая картинка — свежим запросом с токеном (кэш сброшен), из blob:.
+    await waitFor(() => expect((screen.getByRole('img') as HTMLImageElement).getAttribute('src')).toBe('blob:new-avatar'));
+    expect(calls.filter(c => c.url === '/lore/users/sub-1/avatar' && !c.init?.method).length).toBeGreaterThan(0);
   });
 });
