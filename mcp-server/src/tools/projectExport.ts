@@ -3,6 +3,7 @@
 // /lore/export/project/{owner}/{repo}?format=json — те же файлы, что в zip), инструмент
 // раскладывает их на диск.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -17,6 +18,8 @@ import { loreGet } from '../backend.js';
  */
 export function writeVault(dir: string, files: Record<string, string>, overwrite: boolean): { written: number; root: string | null } {
   const base = resolve(dir);
+  // Пустой архив: писать нечего — и непустую папку трогать незачем (не ошибка).
+  if (Object.keys(files).length === 0) return { written: 0, root: null };
   const targets = Object.keys(files).sort().map((p) => {
     if (isAbsolute(p) || p.startsWith('/') || p.startsWith('\\')) throw new Error(`путь «${p}» вне папки назначения — отказ`);
     const abs = resolve(base, p);
@@ -50,7 +53,7 @@ interface ExportJson {
   files: Record<string, string>;
 }
 
-export function registerProjectExport(server: McpServer, json: (v: unknown) => unknown, err: (e: unknown) => unknown): void {
+export function registerProjectExport(server: McpServer, json: (v: unknown) => CallToolResult, err: (e: unknown) => CallToolResult): void {
   server.tool(
     'project_export',
     'Export a LORE project to a local folder as Obsidian-compatible Markdown (SPRINT_LORE_MD_ARCHIVE, GET /lore/export/project). ' +

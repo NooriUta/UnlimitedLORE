@@ -1519,6 +1519,25 @@
       ]
     }
   },
+  "project_export": {
+    "input": {
+      "dir": "string",
+      "overwrite": "boolean?",
+      "project": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "files": "number",
+            "ok": "boolean",
+            "path": "string"
+          }
+        }
+      ]
+    }
+  },
   "project_new": {
     "input": {
       "default_branch": "string?",

@@ -44,6 +44,15 @@ describe('project_export — раскладка архива на диск', () 
     } finally { rmSync(d, { recursive: true, force: true }); }
   });
 
+  it('пустой архив ничего не пишет и не трогает непустую папку', () => {
+    const d = tmp();
+    try {
+      writeFileSync(join(d, 'мои заметки.md'), 'своё');
+      expect(writeVault(d, {}, false)).toEqual({ written: 0, root: null });
+      expect(readFileSync(join(d, 'мои заметки.md'), 'utf8')).toBe('своё');
+    } finally { rmSync(d, { recursive: true, force: true }); }
+  });
+
   it('путь, выходящий за папку назначения, — отказ', () => {
     const d = tmp();
     try {
