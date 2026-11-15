@@ -100,8 +100,13 @@ final class StatusDictCoreSeed {
      * Существующие строки не трогаются. Справочник, которого нет в {@code existing}, — пустой.
      */
     static List<Insert> plan(Map<String, Set<String>> existing) {
+        return plan(SEEDS, existing);
+    }
+
+    /** То же правило для любого набора справочников (V93 — qg_status). */
+    static List<Insert> plan(Map<String, List<Entry>> seeds, Map<String, Set<String>> existing) {
         List<Insert> out = new ArrayList<>();
-        for (Map.Entry<String, List<Entry>> s : SEEDS.entrySet()) {
+        for (Map.Entry<String, List<Entry>> s : seeds.entrySet()) {
             Set<String> have = new HashSet<>();
             for (String c : existing.getOrDefault(s.getKey(), Set.of())) have.add(c.toLowerCase(Locale.ROOT));
             for (Entry e : s.getValue())

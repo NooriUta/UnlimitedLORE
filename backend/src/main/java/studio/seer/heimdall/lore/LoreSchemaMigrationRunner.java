@@ -498,6 +498,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 86) copyLegacyActions();
         if (version == 89) retireLegacyStatusTypes();
         if (version == 90) seedCoreStatuses();
+        if (version == 93) seedQgStatuses();
     }
 
     /**
@@ -514,6 +515,17 @@ public class LoreSchemaMigrationRunner {
         StringBuilder before = new StringBuilder();
         existing.forEach((d, c) -> before.append(before.length() == 0 ? "" : ", ").append(d).append('=').append(c.size()));
         LOG.infof("[V90] базовые статусы: вставлено %d строк (было: %s)", plan.size(), before);
+        return plan.size();
+    }
+
+    /** V93: словарь состояний гейта qg_status — только недостающие строки (как V90). */
+    int seedQgStatuses() {
+        Map<String, java.util.Set<String>> existing = new java.util.LinkedHashMap<>();
+        for (String dict : QgStatusDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(dict));
+        List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(QgStatusDictSeed.SEEDS, existing);
+        for (StatusDictCoreSeed.Insert i : plan)
+            sqlRows(StatusDictCoreSeed.INSERT_SQL, i.params());
+        LOG.infof("[V93] состояния гейта qg_status: вставлено %d строк (было %d)", plan.size(), existing.get("qg_status").size());
         return plan.size();
     }
 
