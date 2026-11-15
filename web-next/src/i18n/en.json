@@ -10,6 +10,7 @@
   "kitPage.density.comfortable": "Medium",
   "kitPage.sec.tokens": "Tokens",
   "kitPage.sec.elements": "Elements",
+  "kitPage.st.vsum": "Verdict summary",
   "kitPage.sec.badges": "Badges",
   "kitPage.bd.row": "List row: status · code · title · priority",
   "kitPage.bd.rowNarrow": "In a narrow column the status shrinks to its icon; the label stays in the accessible name.",

@@ -75,6 +75,7 @@ import {
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
+import { applyCheck, checkTitle, parseCheck } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
 import { hierarchyRows, type HierarchyRow } from './hierarchy';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
@@ -473,6 +474,8 @@ export function initialState(win: UrlWindow | null, initial: Partial<ListState> 
   if (params.has('lm')) s.month = parsed.month;
   if (params.has('lcd')) s.calDate = parsed.calDate;
   if (params.has('llf')) s.libFilter = parsed.libFilter;
+  // K4-VERDICT-FILTER: условие по проверке — тоже из адреса, иначе ссылка из сводки открывала бы раздел целиком.
+  if (params.has('lck')) s.check = parsed.check;
   return s;
 }
 
@@ -796,7 +799,20 @@ export function ListView({
     [JSON.stringify(state.filters), JSON.stringify(state.ops), state.text]);
   const activeQuick = quick.find(q => q.id === state.quick) ?? null;
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
-  const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
+  // K4-VERDICT-FILTER: условие по проверке вердикта (адрес: lck=fail:<код>). Считает вердикт
+  // приложение; без config.verdict условие не действует и об этом сказано чипом ниже.
+  const checkCond = useMemo(() => parseCheck(state.check), [state.check]);
+  const verdictFn = config.verdict;
+  const pool = useMemo(() => {
+    const base = applyFilterSet(records, filterSet);
+    return checkCond && verdictFn ? applyCheck(base, checkCond, r => verdictFn(r, ctx)) : base;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, filterSet, checkCond, verdictFn]);
+  const checkWords = useMemo(
+    () => (checkCond ? (verdictFn ? checkTitle(records, checkCond, r => verdictFn(r, ctx)) : checkCond.code) : ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [records, checkCond, verdictFn],
+  );
 
   // PU-12: ряд фасетов в одну строку с «+N» — общий хук (facetFold.tsx), тот же у ControlBar.
   // Фильтр по дате — такое же место в ряду, как фасет оси: не влез и не задан — тоже в «+N».
@@ -1319,6 +1335,12 @@ export function ListView({
   }
   if (activeQuick) {
     chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
+  }
+  // K4-VERDICT-FILTER: проверка — снимаемым чипом, подписью — её текст, а не код.
+  if (checkCond) {
+    const kindKey = checkCond.kind === 'fail' ? 'kit.list.check.fail' : checkCond.kind === 'hint' ? 'kit.list.check.hint' : 'kit.list.check.unknown';
+    const off = verdictFn ? '' : ` · ${t('kit.list.check.noVerdict')}`;
+    chips.push({ id: 'ck', text: `${t(kindKey)}: ${checkWords}${off}`, remove: () => update({ check: null }) });
   }
   // Диапазон снимается с сохранением зоны: зона — выбор человека, а не часть условия.
   const clearDate = () => dateFilter?.onChange({ ...NO_DATE_RANGE, zone: dateFilter.value.zone });
