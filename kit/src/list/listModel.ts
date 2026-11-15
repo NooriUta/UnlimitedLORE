@@ -238,7 +238,7 @@ export function sortRecords(records: readonly KitRecord[], sort: ListSort | null
 }
 
 export type ShownLine =
-  | { kind: 'complete'; shown: number; loaded: number; total: number }
+  | { kind: 'complete'; shown: number; loaded: number; total: number; /** Вид — часть источника по выбору приложения: сколько записей в источнике. */ of?: number }
   | { kind: 'truncated'; shown: number; loaded: number; total: number }
   | { kind: 'unknown_total'; shown: number; loaded: number };
 
@@ -247,11 +247,20 @@ export type ShownLine =
  * загруженного; M — серверный итог. Выдача обрезана, если так сказал сервер или
  * итог больше загруженного (флаг потеряли — «полной» не верим). Обрезано без
  * итога — M неизвестен и не выдумывается.
+ *
+ * K5-LIST-TOTAL-TRUNCATED: приложение, которое само показывает часть общей выгрузки,
+ * называет размер источника в meta.subset_of. Это не обрезка — выдача полная, строка
+ * добавляет «это часть». Настоящую обрезку (флаг или total больше загруженного)
+ * subset_of не прячет.
  */
 export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown: number): ShownLine {
   const total = typeof meta?.total === 'number' ? meta.total : undefined;
   const truncated = meta?.truncated === true || (total !== undefined && total > loaded);
-  if (!truncated) return { kind: 'complete', shown, loaded, total: total ?? loaded };
+  if (!truncated) {
+    const whole = total ?? loaded;
+    const of = typeof meta?.subset_of === 'number' && meta.subset_of > whole ? meta.subset_of : undefined;
+    return of === undefined ? { kind: 'complete', shown, loaded, total: whole } : { kind: 'complete', shown, loaded, total: whole, of };
+  }
   if (total === undefined) return { kind: 'unknown_total', shown, loaded };
   return { kind: 'truncated', shown, loaded, total };
 }

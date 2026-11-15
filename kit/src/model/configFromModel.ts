@@ -123,6 +123,8 @@ const AXIS_TO_CONTRACT: Record<AxisStatusCategory, Category> = {
 const FIELD_TYPE: Record<string, FieldType> = {
   text: 'text', md: 'md', enum: 'enum', ref: 'ref', date: 'date',
   datetime: 'date', time: 'text', number: 'number', boolean: 'text',
+  // K5-FIELD-LIST: значения списком — варианты квиза, подсказки, перечни.
+  list: 'list',
 };
 
 const UML: readonly string[] = ['composition', 'aggregation', 'association', 'realization', 'attribute'];
