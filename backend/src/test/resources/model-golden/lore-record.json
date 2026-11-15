@@ -11095,12 +11095,34 @@
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
+      }, {
+        "key" : "login",
+        "label" : "Логин",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "avatar",
+        "label" : "Аватар",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
       } ],
       "layout" : {
         "body" : [ ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "projects" ]
+          "fields" : [ "projects", "login", "avatar" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {
@@ -11193,12 +11215,34 @@
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
+      }, {
+        "key" : "login",
+        "label" : "Логин",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "avatar",
+        "label" : "Аватар",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
       } ],
       "layout" : {
         "body" : [ ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "projects" ]
+          "fields" : [ "projects", "login", "avatar" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {

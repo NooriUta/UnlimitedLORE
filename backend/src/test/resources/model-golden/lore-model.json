@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "67e58fb9f4b7ed21",
+  "version" : "52749304e5a83384",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -6666,6 +6666,46 @@
           "priority" : 3,
           "width" : "m",
           "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "login",
+        "label" : "Логин",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "avatar",
+        "label" : "Аватар",
+        "label_key" : null,
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
         },
         "property" : null,
         "property_type" : null,
