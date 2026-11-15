@@ -6,7 +6,7 @@
 // (K4-VERDICT-FILTER). Правило: число в карточке обязано совпасть с «Показано N» в списке, куда
 // она ведёт. Считает вердикт приложение, kit только рисует. Выдача обрезана — «итоги неполные».
 import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { KitConfig, KitCtx, KitRecord, KitVerdict } from '../core/contract';
 import { applyCheck } from './listModel';
 import { VerdictSummary, summarizeVerdicts } from './VerdictSummary';
@@ -90,5 +90,42 @@ describe('K4-SUMMARY-QUEUE · карточки сводки', () => {
     render(<VerdictSummary records={RECORDS} ctx={noVerdict} lang="ru" hrefOf={href} />);
     expect(screen.getByTestId('kit-vsum-off')).toBeTruthy();
     expect(screen.queryByTestId('kit-vsum-topic')).toBeNull();
+  });
+});
+
+// Находки пилота 15.11.2026 (696ed81e, проход UI/UX 6a0c66d6): «Темы 11 из 181» стояла на телефоне
+// двенадцатой, а переход по ссылке сводки перезагружал страницу и заново тянул 915 КБ данных.
+describe('K4-SUMMARY-QUEUE · порядок по тяжести и переход без перезагрузки', () => {
+  it('сначала худшая доля пройденных, виды без проверок — в конец, при равенстве — порядок появления', () => {
+    const recs = [rec('a1', 'good'), rec('r1', 'rule'), rec('b1', 'bad'), rec('b2', 'bad'), rec('m1', 'mid'), rec('m2', 'mid'), rec('c1', 'tie')];
+    const VV: Record<string, KitVerdict | undefined> = {
+      a1: { score: 1, max: 1, failed: [], hints: [] },
+      b1: { score: 0, max: 1, failed: [{ code: 'x', message: 'x' }], hints: [] },
+      b2: { score: 0, max: 1, failed: [{ code: 'x', message: 'x' }], hints: [] },
+      m1: { score: 1, max: 1, failed: [], hints: [] },
+      m2: { score: 0, max: 1, failed: [{ code: 'x', message: 'x' }], hints: [] },
+      c1: { score: 1, max: 1, failed: [], hints: [] },
+    };
+    expect(summarizeVerdicts(recs, r => VV[r.id]).map(g => g.kind)).toEqual(['bad', 'mid', 'good', 'tie', 'rule']);
+  });
+
+  it('onNavigate: обычный щелчок уходит приложению, ссылка остаётся ссылкой', () => {
+    const calls: [string, string | undefined][] = [];
+    render(<VerdictSummary records={RECORDS} ctx={ctx} lang="ru" hrefOf={href} onNavigate={(k, c) => calls.push([k, c])} />);
+    const link = within(screen.getByTestId('kit-vsum-topic')).getByText('нет квиза по руне темы').closest('a')!;
+    expect(link.getAttribute('href')).toBe('?sec=topic&lck=fail:quiz');
+    const plain = fireEvent.click(link);
+    expect(plain).toBe(false); // переход браузера отменён
+    expect(calls).toEqual([['topic', 'fail:quiz']]);
+  });
+
+  it('щелчок с Ctrl (новая вкладка) не перехватывается', () => {
+    const calls: unknown[] = [];
+    render(<VerdictSummary records={RECORDS} ctx={ctx} lang="ru" hrefOf={href} onNavigate={(k, c) => calls.push([k, c])} />);
+    const head = within(screen.getByTestId('kit-vsum-topic')).getByText('Темы').closest('a')!;
+    fireEvent.click(head, { ctrlKey: true });
+    expect(calls).toEqual([]);
+    fireEvent.click(head);
+    expect(calls).toEqual([['topic', undefined]]);
   });
 });
