@@ -81,3 +81,25 @@ export function frameHeightFromMessage(
   const h = mb.frame?.height;
   return typeof h === 'number' && Number.isFinite(h) && h > 0 ? Math.ceil(h) : null;
 }
+
+/** Коды ошибки встройки (VE-7, Völva 0.1.12); неизвестный код — UNKNOWN. */
+export type EmbedErrorCode = 'FORBIDDEN' | 'NOT_FOUND' | 'QUERY_FAILED' | 'UNKNOWN';
+const EMBED_ERROR_CODES: readonly EmbedErrorCode[] = ['FORBIDDEN', 'NOT_FOUND', 'QUERY_FAILED'];
+
+/**
+ * Ошибка из сообщения встройки {metabase:{type:"error", error:{code, message}}} — только с
+ * ожидаемого origin. Текст Völva не берём: показываем свой по коду (и сам код).
+ */
+export function frameErrorFromMessage(
+  e: { origin: string; data: unknown },
+  expectedOrigin: string | null,
+): EmbedErrorCode | null {
+  if (!expectedOrigin || e.origin !== expectedOrigin) return null;
+  const data = e.data;
+  if (!data || typeof data !== 'object') return null;
+  const mb = (data as { metabase?: { type?: string; error?: { code?: unknown } } }).metabase;
+  if (!mb || mb.type !== 'error') return null;
+  const code = mb.error?.code;
+  return typeof code === 'string' && (EMBED_ERROR_CODES as readonly string[]).includes(code)
+    ? (code as EmbedErrorCode) : 'UNKNOWN';
+}

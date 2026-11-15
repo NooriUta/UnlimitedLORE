@@ -137,6 +137,28 @@ describe('EmbedChartFrame: рамка', () => {
       expect(container.querySelector('iframe')).not.toBeNull();
     });
 
+    // VE-7: Völva шлёт ошибку сообщением — своё состояние с кодом и «Повторить», а не пустая рамка.
+    it('ошибка от встройки — «Völva: ошибка» с причиной по коду; FORBIDDEN — «нет прав»', () => {
+      const errMsg = (f: HTMLIFrameElement, code: string) => act(() => {
+        window.dispatchEvent(new MessageEvent('message', { origin: 'https://volva.example.org', source: f.contentWindow, data: { metabase: { type: 'error', error: { code, message: 'x' } } } }));
+      });
+      let retried = 0;
+      const { container } = ru(<EmbedChartFrame source="Völva" title="t" answerTimeoutMs={0}
+        state={{ kind: 'ready', signedUrl: SIGNED }} onRetry={() => { retried++; }} />);
+      errMsg(container.querySelector('iframe')!, 'QUERY_FAILED');
+      const box = container.querySelector('[data-embed-state="embed_error"]')!;
+      expect(box).not.toBeNull();
+      expect(box.textContent).toMatch(/Völva: ошибка/);
+      expect(box.textContent).toMatch(/QUERY_FAILED/);
+      expect(container.querySelector('iframe')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: /Повторить/ }));
+      expect(retried).toBe(1);
+      const f2 = container.querySelector('iframe')!;
+      expect(f2).not.toBeNull();
+      errMsg(f2, 'FORBIDDEN');
+      expect(container.querySelector('[data-embed-state="forbidden"]')).not.toBeNull();
+    });
+
     it('сообщение пришло вовремя — рамка остаётся и после срока', () => {
       vi.useFakeTimers();
       const { container } = ru(<EmbedChartFrame source="Völva" title="t" answerTimeoutMs={5000} state={{ kind: 'ready', signedUrl: SIGNED }} />);
