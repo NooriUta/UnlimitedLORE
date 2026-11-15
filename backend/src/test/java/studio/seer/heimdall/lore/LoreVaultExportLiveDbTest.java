@@ -97,6 +97,24 @@ class LoreVaultExportLiveDbTest {
         assertArrayEquals(zip, again, "две выгрузки без изменений в базе — те же байты");
     }
 
+    /** MDA-03: тот же архив картой «путь → текст» — для MCP, который раскладывает файлы на диск. */
+    @Test
+    @Order(2)
+    @TestSecurity(user = "mda02-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    @SuppressWarnings("unchecked")
+    void jsonFormatCarriesExactlyTheZipFiles() throws Exception {
+        byte[] zip = given().when().get("/lore/export/project/" + P_OWN)
+            .then().statusCode(200).extract().asByteArray();
+        var json = given().queryParam("format", "json").when().get("/lore/export/project/" + P_OWN)
+            .then().statusCode(200).contentType("application/json").extract().jsonPath();
+        Map<String, String> files = json.getMap("files");
+        assertEquals(unzip(zip), new TreeMap<>(files), "json и zip — одни и те же файлы");
+        assertEquals("LORE/LORE_TEST_ORG__mda02-own/", json.getString("root"));
+        assertEquals(1, json.getInt("counts.task"), "счётчики по типам рядом с файлами");
+        assertEquals(0, json.getInt("hidden_by_rights"));
+    }
+
     @Test
     @Order(3)
     @TestSecurity(user = "mda02-viewer", roles = {"viewer"})

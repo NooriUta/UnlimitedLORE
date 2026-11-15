@@ -69,9 +69,10 @@ public class LoreVaultExportResource extends LoreResourceBase {
 
     @GET
     @Path("project/{owner}/{repo}")
-    @Produces("application/zip")
+    @Produces({"application/zip", "application/json"})
     @io.smallrye.common.annotation.Blocking
     public Response exportProject(@PathParam("owner") String owner, @PathParam("repo") String repo,
+                                  @jakarta.ws.rs.QueryParam("format") String format,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         String slug = owner + "/" + repo;
@@ -121,6 +122,19 @@ public class LoreVaultExportResource extends LoreResourceBase {
         String name = val(project.get(0).get("name"));
         Map<String, String> files = LoreVaultExport.build(new LoreVaultExport.Input(slug,
             name == null ? repo : name, recs, unreadable, hidden[0]));
+        if ("json".equals(format)) {
+            // MDA-03: те же файлы картой «путь → текст» — MCP раскладывает их на диск без разбора zip.
+            Map<String, Integer> counts = new TreeMap<>();
+            for (LoreVaultExport.Rec r : recs) counts.merge(r.type(), 1, Integer::sum);
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("project", slug);
+            out.put("root", LoreVaultExport.root(slug));
+            out.put("counts", counts);
+            out.put("unreadable", unreadable);
+            out.put("hidden_by_rights", hidden[0]);
+            out.put("files", files);
+            return noStore(Response.ok(out));
+        }
         byte[] zip = LoreVaultExport.zip(files);
         // Не noStore(): он всегда ставит application/json. Тот же Cache-Control — руками.
         return Response.ok(zip, "application/zip")
