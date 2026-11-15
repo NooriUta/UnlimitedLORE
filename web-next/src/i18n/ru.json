@@ -10,6 +10,7 @@
   "kitPage.density.comfortable": "Средне",
   "kitPage.sec.tokens": "Токены",
   "kitPage.sec.elements": "Элементы",
+  "kitPage.st.vsum": "Сводка по вердикту",
   "kitPage.sec.badges": "Шильдики",
   "kitPage.bd.row": "Строка списка: статус · код · название · приоритет",
   "kitPage.bd.rowNarrow": "В узкой колонке статус ужимается до значка, подпись остаётся в имени для чтения.",
