@@ -23,18 +23,31 @@ const where = (page: Page): string => { try { const u = new URL(page.url()); ret
  */
 async function brokerLogin(page: Page, login: string, password: string): Promise<string | null> {
   const stand = new URL(process.env.LORE_STAND_URL!.trim()).host;
-  await page.goto('/news');
+  // Шаг со временем — в журнал прогона: прогон 34799 простоял 3 мин без следа, где.
+  const t0 = Date.now();
+  const step = (s: string) => console.log(`[BR] +${Math.round((Date.now() - t0) / 1000)}с ${s} — ${where(page)}`);
+  step('открыть стенд');
+  await page.goto('/news', { timeout: 30_000 });
   const provider = page.locator('#social-seer');
-  try { await provider.waitFor({ timeout: 45_000 }); } catch {
+  try { await provider.waitFor({ timeout: 30_000 }); } catch {
     return `кнопки «Войти через AIDA» (#social-seer) нет; страница ${where(page)} «${(await page.title().catch(() => '')).slice(0, 60)}»`;
   }
-  await provider.click();
-  try { await page.locator('#username').waitFor({ timeout: 45_000 }); } catch {
+  step('нажать «Войти через AIDA»');
+  await provider.click({ timeout: 15_000 });
+  // На странице omilorePreprod ТОЖЕ есть #username — ждать формы по полю нельзя: ожидание
+  // срабатывает ещё до ухода со страницы, и ввод идёт в исчезающую форму (гипотеза 34799).
+  // Ждём адрес realm seerPreprod.
+  try { await page.waitForURL(/\/realms\/seerPreprod\//, { timeout: 30_000 }); } catch {
+    return `перехода в seerPreprod нет; страница ${where(page)}`;
+  }
+  try { await page.locator('#username').waitFor({ timeout: 30_000 }); } catch {
     return `формы входа seerPreprod нет; страница ${where(page)}`;
   }
-  await page.locator('#username').fill(login);
-  await page.locator('#password').fill(password);
-  await page.locator('#kc-login').click();
+  step('ввести учётку seerPreprod');
+  await page.locator('#username').fill(login, { timeout: 15_000 });
+  await page.locator('#password').fill(password, { timeout: 15_000 });
+  await page.locator('#kc-login').click({ timeout: 15_000 });
+  step('ждать сессию на стенде');
   const kcStop = page.locator('#kc-page-title, .kc-feedback-text, #input-error');
   const deadline = Date.now() + 45_000;
   while (Date.now() < deadline) {
