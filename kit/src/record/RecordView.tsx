@@ -27,6 +27,7 @@ import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
 import { IconButton } from '../elements/IconButton';
 import { MiniList } from '../elements/MiniList';
+import { KvValue } from './KvValue';
 import { ICON_CANON } from '../elements/iconCanon';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
@@ -234,6 +235,8 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }:
   if (type === 'sum') return <SumCell value={value} />;
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
+  // K4-FIELD-KV: вложенный объект — таблицей «ключ → значение», а не сырым JSON.
+  if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} />;
   // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
   // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
   if (type === 'list') {

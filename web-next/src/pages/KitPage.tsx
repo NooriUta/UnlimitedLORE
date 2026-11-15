@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, CalendarMonth, ControlBar, KvValue, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   BurnChart, BurnSpark, burnSum, type BurnPoint,
   DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
@@ -447,6 +447,9 @@ export default function KitPage() {
           <h3 className="kitp__h3">{t('kitPage.mini.head')}</h3>
           <p>{t('kitPage.mini.lead')}</p>
           <MiniListDemo />
+          <h3 className="kitp__h3">{t('kitPage.kv.head')}</h3>
+          <p>{t('kitPage.kv.lead')}</p>
+          <KvValue label={t('kitPage.kv.head')} value={{ combat: { base_damage: 3, crit: { chance: 0.1, mult: 2 } }, economy: { start_gold: 50 }, runes: [{ rune: 'Fehu', heat: 2 }, { rune: 'Uruz', heat: 3, rare: true }], enabled: true }} />
           <h3 className="kitp__h3">{t('kitPage.lib.head')}</h3>
           <p>{t('kitPage.lib.lead')}</p>
           <LibraryView

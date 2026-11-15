@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -265,6 +265,7 @@ function Samples() {
         {/* K4-MINILIST: todo с отметками и квиз после ответа (верный и подсказка к неверному). */}
         <MiniList kind="check" label="Чек-лист" items={[{ id: 'a', text: 'Тест до кода', done: true }, { id: 'b', text: 'Витрина' }]} onToggle={noop} />
         <MiniList kind="choice" label="Вопрос" items={[{ id: 'x', text: 'Строки слева без пары' }, { id: 'y', text: 'Только пары', hint: 'Это INNER JOIN' }]} picked="y" correct="x" reveal />
+        <KvValue label="Правила" value={{ combat: { base_damage: 3, crit: { chance: 0.1, mult: 2 } }, economy: { start_gold: 50 }, runes: [{ rune: 'Fehu', heat: 2 }, { rune: 'Uruz', heat: 3, rare: true }], enabled: true }} />
       </section>
       <section className="bare__sec" data-kit="burn-target">
         <h2 className="bare__h2">Цель к сроку</h2>

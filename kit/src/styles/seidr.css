@@ -7442,3 +7442,19 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-vsum__n { color: var(--vsum-g); font-family: var(--mono); }
 .sk-vsum__note { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
 .sk-vsum__note--warn { color: var(--wrn); }
+
+/* K4-FIELD-KV: поле «ключ → значение» с вложенностью. Плотно, как свойства паспорта: ключ —
+   приглушённый, значение — моно. Вложенный объект — группа <details> с ▾, список объектов —
+   подтаблица. На узком экране прокручивается рамка поля, а не весь экран. */
+.sk-kv { min-width: 0; max-width: 100%; font-size: var(--fs-sm); color: var(--t1); }
+.sk-kv__scroll { overflow-x: auto; max-width: 100%; }
+.sk-kv__rows, .sk-kv__sub { border-collapse: collapse; width: 100%; }
+.sk-kv__rows th, .sk-kv__rows td, .sk-kv__sub th, .sk-kv__sub td { padding: 2px 8px 2px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--bd); }
+.sk-kv__key { color: var(--t2); font-weight: 400; white-space: nowrap; }
+.sk-kv__val { font-family: var(--mono); color: var(--t1); overflow-wrap: anywhere; }
+.sk-kv__sub th { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; white-space: nowrap; }
+.sk-kv__group { margin: 4px 0 0; padding-left: 10px; border-left: 2px solid var(--bd); }
+.sk-kv__group > summary { cursor: pointer; padding: 2px 0; list-style: none; }
+.sk-kv__group > summary::-webkit-details-marker { display: none; }
+.sk-kv__group > summary::before { content: '▸'; display: inline-block; width: 1em; color: var(--t3); }
+.sk-kv__group[open] > summary::before { content: '▾'; }
