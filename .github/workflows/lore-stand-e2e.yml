@@ -68,9 +68,17 @@ jobs:
           PROBE_URL: https://playwright.azureedge.net/builds/chromium/1148/chromium-headless-shell-linux.zip
         run: bash .github/scripts/pick-fastest-net.sh
 
+      # Три попытки: загрузка с CDN Playwright на этом раннере рвётся (прогон 7848 —
+      # таймаут 30 с на 90 % архива, запасные CDN недоступны: EAI_AGAIN и IPv6 ENETUNREACH).
+      # Playwright докачивает только недостающие сборки, повтор дешёвый.
       - name: Install Chromium
         working-directory: web-next
-        run: npx playwright install --with-deps chromium
+        run: |
+          for i in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "::warning::загрузка Chromium не удалась (попытка $i из 3)"; sleep 15
+          done
+          echo "::error::Chromium не установлен за 3 попытки"; exit 1
 
       # Достижим ли стенд и KC из контейнера раннера — через прокси раннера и напрямую.
       # Только диагностика: шаг не роняет джобу (прогон 7846 упал на входе без следа).
