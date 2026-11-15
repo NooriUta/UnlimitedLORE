@@ -10,20 +10,39 @@ import { expect, test, type Page } from '@playwright/test';
 import { parseStandAccounts } from './accounts.ts';
 import { requireStandUrl, shot } from './stand.ts';
 
+const where = (page: Page): string => { try { const u = new URL(page.url()); return `${u.host}${u.pathname}`; } catch { return '?'; } };
+
+/**
+ * Вход через провайдера seer. Возвращает null при успехе или текст стопа (экран KC / причина).
+ * Кнопка — #social-seer (замер KC omilorePreprod 15.11.2026: <a id="social-seer">«Войти через
+ * AIDA»</a>). Признак успеха — сессия oidc.user:* на домене стенда, как у автологина: строк
+ * ленты у учётки без проектов нет, а «Новости» живут без оболочки (прогоны 7847/7853).
+ */
 async function brokerLogin(page: Page, login: string, password: string): Promise<string | null> {
+  const stand = new URL(process.env.LORE_STAND_URL!.trim()).host;
   await page.goto('/news');
-  const provider = page.locator('a[id^="social-"], a:has-text("AIDA")').first();
-  await provider.waitFor({ timeout: 45_000 });
+  const provider = page.locator('#social-seer');
+  try { await provider.waitFor({ timeout: 45_000 }); } catch {
+    return `кнопки «Войти через AIDA» (#social-seer) нет; страница ${where(page)} «${(await page.title().catch(() => '')).slice(0, 60)}»`;
+  }
   await provider.click();
-  await page.locator('#username').waitFor({ timeout: 45_000 });
+  try { await page.locator('#username').waitFor({ timeout: 45_000 }); } catch {
+    return `формы входа seerPreprod нет; страница ${where(page)}`;
+  }
   await page.locator('#username').fill(login);
   await page.locator('#password').fill(password);
   await page.locator('#kc-login').click();
-  const app = page.locator('[data-testid^="news-row-"]');
-  const kcTitle = page.locator('#kc-page-title, .kc-feedback-text, #input-error');
-  await app.or(kcTitle).first().waitFor({ timeout: 45_000 });
-  if (await app.first().isVisible().catch(() => false)) return null;
-  return ((await kcTitle.first().textContent()) ?? '').trim().replace(/\s+/g, ' ').slice(0, 160);
+  const kcStop = page.locator('#kc-page-title, .kc-feedback-text, #input-error');
+  const deadline = Date.now() + 45_000;
+  while (Date.now() < deadline) {
+    const onStand = (() => { try { return new URL(page.url()).host === stand; } catch { return false; } })();
+    if (onStand && await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('oidc.user:'))).catch(() => false)) return null;
+    if (!onStand && await kcStop.first().isVisible().catch(() => false)) {
+      return `экран KC: «${((await kcStop.first().textContent()) ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)}» (${where(page)})`;
+    }
+    await page.waitForTimeout(500);
+  }
+  return `за 45 с сессии на стенде нет; страница ${where(page)}`;
 }
 
 async function whoami(page: Page): Promise<Record<string, unknown>> {
