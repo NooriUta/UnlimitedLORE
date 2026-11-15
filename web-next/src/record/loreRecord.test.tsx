@@ -3,7 +3,7 @@
 // «статус · задачи x/y · просрочено · свежесть» из строк существующих слайсов
 // (sprints + задачи спринта), без новых эндпоинтов.
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { KNOWN_STATUSES, KitLangProvider, RecordView, recordFacts, type KitConfig, type KitCtx } from '@seidr/kit';
 import ru from '../i18n/ru.json';
 import en from '../i18n/en.json';
@@ -90,7 +90,8 @@ describe('S5-01 · шапка паспорта спринта', () => {
   it('статус словами локали, задачи 1/3, просрочено, свежесть', () => {
     view();
     const line = screen.getByTestId('kit-facts');
-    expect(line.textContent).toContain('В работе'); // код плана active (status_raw in_progress → planStatusOf), подпись как v1
+    // код плана active (status_raw in_progress → planStatusOf), подпись как v1; PU-29: статус значком, подпись — подсказкой.
+    expect(within(line).getByTitle(/В работе/)).toBeTruthy();
     expect(line.textContent).toContain('1/3');
     expect(line.textContent).toContain('Просрочено на 2 дн');
     expect(line.textContent).toContain('1 дн назад');
@@ -110,7 +111,7 @@ describe('S5-01 · шапка паспорта спринта', () => {
   it('английская локаль: статус и факты по-английски', () => {
     view('en');
     const line = screen.getByTestId('kit-facts');
-    expect(line.textContent).toContain('In progress');
+    expect(within(line).getByTitle(/In progress/)).toBeTruthy();
     expect(line.textContent).toContain('Overdue by 2 d');
   });
 });

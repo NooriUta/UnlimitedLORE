@@ -87,6 +87,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "gain" -> new Source("gain_by_id", "id", false);
             case "job" -> new Source("job_by_id", "id", false);
             case "runbook" -> new Source("runbook_by_id", "id", false);
+            // MD-04, второй заход по QG: паспорт гейта качества — та же строка, что читает страница QG.
+            case "quality_gate" -> new Source("quality_gate_by_id", "id", false);
             default -> null;
         };
     }

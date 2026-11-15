@@ -110,7 +110,11 @@ final class V1SchemaSafetyChecklist {
         // только INSERT строки справочника KnowDictEntry, которой нет (посев НОВОЙ строки —
         // разрешённая форма); существующие строки не читаются на запись, схема не меняется.
         "java__status_dict_core_seed",
-        "посев недостающих строк task_status/sprint_status/adr_status; существующие не переписываются");
+        "посев недостающих строк task_status/sprint_status/adr_status; существующие не переписываются",
+        // SPRINT_QG_REBUILD/QG-09, V93. Доказательство — QgStatusDictSeedTest (существующие не трогаются,
+        // план через тот же StatusDictCoreSeed.plan): только INSERT строк НОВОГО справочника qg_status, v1 его не знает.
+        "java__qg_status_dict_seed",
+        "посев недостающих строк qg_status (новый справочник, v1 о нём не знает); существующие не переписываются");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

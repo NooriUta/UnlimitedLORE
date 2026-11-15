@@ -84,7 +84,7 @@ npx playwright test -c playwright.stand.config.ts rbac.stand.ts
 cd web-next
 $env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
 $env:LORE_STAND_ACCOUNTS_JSON = Get-Content <путь к файлу учёток> -Raw   # {"test-sa":"…",…}
-npm run e2e:stand:login        # пишет e2e/stand/.auth/<логин>.json и stand.json (= test-admin)
+npm run e2e:stand:login        # пишет e2e/stand/.auth/<логин>.json и stand.json (= test-sa)
 $env:LORE_STAND_STORAGE_STATE = 'e2e/stand/.auth/stand.json'
 npm run e2e:stand              # RBAC + смоук
 ```

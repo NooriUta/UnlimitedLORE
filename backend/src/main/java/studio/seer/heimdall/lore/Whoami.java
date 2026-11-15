@@ -29,17 +29,18 @@ final class Whoami {
      *                   ({@link AgentScopeFilter#agentScopeOf}); null — человек
      * @param exp        срок действия, epoch seconds; null — не известен
      * @param headerRole роль из заголовка — только при выключенном auth, иначе null
+     * @param username   AP-09: логин из токена (preferred_username); null — в токене нет
      */
     record Token(boolean authEnabled, String sub, String clientId, String agentScope,
-                 Set<String> realmRoles, Long exp, String headerRole) {
+                 Set<String> realmRoles, Long exp, String headerRole, String username) {
 
         Token(boolean authEnabled, String sub, String clientId, String agentScope, Set<String> realmRoles, Long exp) {
-            this(authEnabled, sub, clientId, agentScope, realmRoles, exp, null);
+            this(authEnabled, sub, clientId, agentScope, realmRoles, exp, null, null);
         }
 
         /** auth выключен (dev/local): токена нет, роль — из заголовка как есть. */
         static Token authOff(String headerRole) {
-            return new Token(false, null, null, null, Set.of(), null, headerRole);
+            return new Token(false, null, null, null, Set.of(), null, headerRole, null);
         }
     }
 
@@ -104,6 +105,8 @@ final class Whoami {
         b.put("kind", agent ? "agent" : "human");
         b.put("client_id", t.clientId());
         b.put("sub", t.sub());
+        // AP-09: человеку показывается логин, а не UUID — особенно когда в графе его нет (identity unknown).
+        b.put("username", t.username());
         b.put("profile", ambiguous ? "ambiguous" : t.agentScope());
         if (ambiguous) b.put("profile_note", "в токене два разных профиля agent_scope — запись отказывает (AO-07)");
         b.put("seer_role", seerRole(t.realmRoles()));

@@ -6,7 +6,7 @@
 //   unknown    — токен есть, а в графе такого нет: «не опознан», а не «нет прав»;
 //   error      — не смогли проверить (запрос упал или граф не прочитан);
 //   unverified — auth выключен: роль из заголовка, она не проверена.
-import { useLoadState } from '@seidr/kit';
+import { Forbidden, useLoadState, type LoadResult } from '@seidr/kit';
 import { useAppT } from '../i18n';
 import { getJson } from './actions';
 import { machineMark } from './machineMark';
@@ -18,6 +18,8 @@ export interface WhoamiBody {
   profile?: string | null;
   client_id?: string | null;
   sub?: string | null;
+  /** AP-09: логин из токена (preferred_username); null — в токене нет. */
+  username?: string | null;
   identity?: { state?: 'known' | 'unknown' | 'error'; display_name?: string; name?: string; reason?: string };
   /** D-2026-LORE-AGENT-MACHINE-EVERYWHERE: машина этого вызова — имя | "(unknown)" | "(n/a)". */
   machine?: string;
@@ -32,10 +34,34 @@ export function whoamiState(b: WhoamiBody | null): WhoamiState {
   return s === 'known' ? 'known' : s === 'unknown' ? 'unknown' : 'error';
 }
 
-export function WhoamiBar({ fetchImpl }: { fetchImpl?: typeof fetch }) {
+/**
+ * AP-08 (автотест RBAC 15.11.2026, кейс AD-01): экран админки — только admin/superadmin. «Не смогли
+ * проверить» (null) и выключенный auth — не повод закрывать: там решают 403 сервера (гейт ADMIN_ONLY).
+ */
+export function adminDenied(b: WhoamiBody | null): boolean {
+  if (!b || b.auth_enabled === false || b.kind === 'unverified') return false;
+  return b.seer_role !== 'admin' && b.seer_role !== 'superadmin';
+}
+
+/** Честное «нет прав» на админку — с ролью вызывающего, а не пустые карточки с нулями. */
+export function AdminForbidden({ role }: { role: string | null | undefined }) {
   const t = useAppT();
-  const res = useLoadState<WhoamiBody>(
+  return <Forbidden title={t('admin.noAccess.title')} reason={t('admin.noAccess.reason', { role: role || '—' })} />;
+}
+
+/** Один запрос «кто я» на экран админки: и строке «Вы: …», и решению «пускать ли». */
+export function useWhoami(fetchImpl?: typeof fetch): LoadResult<WhoamiBody> {
+  return useLoadState<WhoamiBody>(
     signal => getJson('/lore/whoami', { signal, fetchImpl }) as Promise<WhoamiBody>, [fetchImpl]);
+}
+
+export function WhoamiBar({ fetchImpl }: { fetchImpl?: typeof fetch }) {
+  return <WhoamiBarView res={useWhoami(fetchImpl)} />;
+}
+
+/** Строка «Вы: …» по уже загруженному ответу (экран админки грузит его один раз — AP-08). */
+export function WhoamiBarView({ res }: { res: LoadResult<WhoamiBody> }) {
+  const t = useAppT();
   if (res.state === 'loading' && !res.data) return null;
   const b = res.data ?? null;
   const state = whoamiState(b);
@@ -52,7 +78,8 @@ export function WhoamiBar({ fetchImpl }: { fetchImpl?: typeof fetch }) {
       break;
     }
     case 'unknown':
-      text = t('admin.whoami.unknown', { who: b?.client_id ?? b?.sub ?? '—', role });
+      // AP-09: человеку — логин из токена, не UUID; у агента — его client_id. UUID — в подсказке.
+      text = t('admin.whoami.unknown', { who: (b?.kind === 'agent' ? b?.client_id : b?.username) || '—', role });
       break;
     case 'unverified':
       text = t('admin.whoami.unverified', { role });
@@ -63,7 +90,7 @@ export function WhoamiBar({ fetchImpl }: { fetchImpl?: typeof fetch }) {
   const tone = state === 'known' ? undefined : state === 'error' ? 'dng' : 'wrn';
   return (
     <p className="adm-note" role="status" data-testid="adm-whoami" data-state={state} data-tone={tone}
-      title={state === 'unknown' ? b?.identity?.reason : undefined}>
+      title={state === 'unknown' ? [b?.identity?.reason, b?.sub ? `kc_sub: ${b.sub}` : null].filter(Boolean).join(' · ') || undefined : undefined}>
       {text}
     </p>
   );

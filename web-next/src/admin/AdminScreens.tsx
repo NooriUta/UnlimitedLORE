@@ -17,7 +17,7 @@ import { RulesScreen } from './RulesScreen';
 import { TidyScreen } from './TidyScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import { WizardsScreen } from './WizardsScreen';
-import { WhoamiBar } from './WhoamiBar';
+import { AdminForbidden, WhoamiBarView, adminDenied, useWhoami } from './WhoamiBar';
 import { AdminNavProvider, type AdminNav } from './adminNav';
 import type { AdminSection } from './adminModule';
 
@@ -52,5 +52,13 @@ export default function AdminSectionView({ id }: { id: AdminSection }) {
   }), [navigate]);
   const Screen = SCREENS[id];
   // AO-WHOAMI: «Вы: …» над каждым разделом — кем LORE видит смотрящего.
-  return <AdminNavProvider value={nav}><WhoamiBar /><Screen /></AdminNavProvider>;
+  // AP-08: тот же ответ решает, пускать ли: не admin/superadmin — честное «нет прав», а не карточки с нулями.
+  const who = useWhoami();
+  const denied = adminDenied(who.data ?? null);
+  return (
+    <AdminNavProvider value={nav}>
+      <WhoamiBarView res={who} />
+      {denied ? <AdminForbidden role={who.data?.seer_role} /> : <Screen />}
+    </AdminNavProvider>
+  );
 }

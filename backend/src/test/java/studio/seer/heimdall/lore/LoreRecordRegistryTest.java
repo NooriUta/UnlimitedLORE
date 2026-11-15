@@ -37,7 +37,7 @@ class LoreRecordRegistryTest {
         // S5-DOC-PASSPORT: документ — после спеки (группа «Знания»), правится (не READ_ONLY).
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
             "component", "tech", "feature", "product", "user", "agent",
-            "actor", "pain", "gain", "job", "runbook", "project"), LoreRecordRegistry.TYPES);
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "project"), LoreRecordRegistry.TYPES);
         // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
         assertNotNull(LoreRecordRegistry.get("decision"));
         assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("decision", "question")));

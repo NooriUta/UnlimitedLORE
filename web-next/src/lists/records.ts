@@ -325,6 +325,23 @@ export function runbookRecord(row: Row): KitRecord {
   };
 }
 
+/**
+ * MD-04, второй заход по QG: строка среза quality_gates → запись kit. Состояние гейта (draft /
+ * active / stale / retired, ADR-LORE-053 D7) идёт полем, а не осью статуса: словарь qg_status
+ * заводится данными после выкатки правил записи. Итог последнего прогона — отдельное поле.
+ */
+export function qualityGateRecord(row: Row): KitRecord {
+  const id = str(row.qg_id);
+  return {
+    id, kind: 'quality_gate', title: str(row.name) || id, status: '',
+    fields: {
+      state: str(row.status), lastRun: str(row.last_run_status),
+      component: str(row.component_id), components: list(row.components),
+      project: list(row.projects), sprint: str(row.sprint_id),
+    },
+  };
+}
+
 /** S9-05 A: строка среза users → запись kit. Статуса у человека нет — пустой, а не выдуманный. */
 export function userRecord(row: Row): KitRecord {
   const id = str(row.kc_sub);

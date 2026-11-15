@@ -71,6 +71,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   doc: () => <ListScreen screen="docs" titleId={SECTION_TITLE_ID} />,
   // MD-04: ранбуки — свой раздел и паспорт (были только вкладкой проекта).
   runbook: () => <ListScreen screen="runbooks" titleId={SECTION_TITLE_ID} />,
+  // MD-04, второй заход по QG: гейты качества — раздел и паспорт (в v2 не было ни того, ни другого).
+  quality_gate: () => <ListScreen screen="quality_gates" titleId={SECTION_TITLE_ID} />,
   user: () => <ListScreen screen="users" titleId={SECTION_TITLE_ID} />,
   agent: () => <ListScreen screen="agents" titleId={SECTION_TITLE_ID} />,
   question: () => <ListScreen screen="questions" titleId={SECTION_TITLE_ID} />,

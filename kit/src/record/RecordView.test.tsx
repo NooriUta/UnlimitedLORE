@@ -90,7 +90,8 @@ describe('K-04 · шапка записи', () => {
     expect(within(head).getByRole('heading', { level: 1 }).textContent).toBe('Квиз про руны');
     expect(head.textContent).toContain('Q-1');
     expect(head.textContent).toContain('Квизы');
-    expect(head.textContent).toContain('нужна правка');
+    // PU-29: статус в шапке — значком, название подсказкой.
+    expect(within(head).getByTitle(/нужна правка/)).toBeTruthy();
   });
 
   it('неизвестный статус виден кодом, а не пропадает', () => {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, loreGet, loreSliceWithMeta, loreSlices } from '../backend.js';
 import { completeness, parseLoreQueryBlock } from './runBlock.js';
+import { registerProjectExport } from './projectExport.js';
 
 // ADR-LORE-017 (T16): slices that take a `project` param inherit LORE_ACTIVE_PROJECT
 // when the caller omits it. Tier 2 (Task/Component/ADR/tech-registry) deliberately
@@ -83,6 +84,9 @@ const err = (e: unknown) => ({
 });
 
 export function registerLoreRead(server: McpServer): void {
+  // MDA-03: выгрузка проекта в локальную папку .md (Obsidian).
+  registerProjectExport(server, json, err);
+
   server.tool(
     'list_slices',
     'List all available LORE read slices (≈43) with their required and optional ' +

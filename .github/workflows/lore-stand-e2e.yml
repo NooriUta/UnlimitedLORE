@@ -51,19 +51,10 @@ jobs:
         working-directory: web-next
         run: bash ../.github/scripts/npm-retry.sh ci
 
-      # Chromium (~100 МБ) — из кеша по версии Playwright; без кеша — загрузка по более
-      # быстрому из двух путей (прокси раннера или напрямую), см. шаг «Сеть» ниже.
-      - name: Playwright version
-        id: pw
-        working-directory: web-next
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Chromium
-        id: pwcache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ms-playwright-chromium-${{ steps.pw.outputs.version }}
+      # Chromium (~100 МБ) качается на каждом прогоне по более быстрому из двух путей (шаг
+      # «Сеть» ниже). Кеша нет: actions/cache в локальном Forgejo не зеркалирован — прогон
+      # 7845 упал на подготовке «actions/cache … Repository not found». Остальные
+      # workflow репо обходятся checkout, setup-node, setup-java, upload-artifact.
 
       # Владелица 15.11.2026: «поставь проверку и так и так и выбор быстрого варианта».
       # Быстрее бывает то прокси, то прямой путь — зависит от источника (замер CICDGitHub:
@@ -73,19 +64,44 @@ jobs:
       # (7cb22d9). Билд 1148 = chromium-headless-shell Playwright 1.49.1 — при смене версии
       # Playwright поменять PROBE_URL.
       - name: Сеть — выбрать быстрый путь
-        if: steps.pwcache.outputs.cache-hit != 'true'
         env:
           PROBE_URL: https://playwright.azureedge.net/builds/chromium/1148/chromium-headless-shell-linux.zip
         run: bash .github/scripts/pick-fastest-net.sh
 
+      # Браузеры — из зеркала kkRepo на ci-server (владелица 15.11.2026: «положите в kkrepo с
+      # cicdgithub сессией»; заведено CICDGitHub, raw-прокси на cdn.playwright.dev, пути как на
+      # CDN — RUNBOOK-CI-MIRROR-KKREPO-NEXUS). Проба — файлом (у kkRepo нет /service/rest):
+      # жив — PLAYWRIGHT_DOWNLOAD_HOST на зеркало; нет — откат на CDN (с предупреждением).
+      # Три попытки: CDN на этом раннере рвётся (прогон 7848 — таймаут на 90 % архива,
+      # запасные CDN недоступны: EAI_AGAIN и IPv6 ENETUNREACH).
       - name: Install Chromium
         working-directory: web-next
+        env:
+          PW_MIRROR: http://192.168.3.131:8081/repository/playwright-proxy
         run: |
-          if [ "${{ steps.pwcache.outputs.cache-hit }}" = "true" ]; then
-            npx playwright install-deps chromium
+          export NO_PROXY="${NO_PROXY:+$NO_PROXY,}192.168.3.131" no_proxy="${no_proxy:+$no_proxy,}192.168.3.131"
+          if curl -sf --max-time 20 -o /dev/null "$PW_MIRROR/builds/ffmpeg/1010/ffmpeg-linux.zip"; then
+            export PLAYWRIGHT_DOWNLOAD_HOST="$PW_MIRROR"; echo "браузеры — из зеркала kkRepo"
           else
-            npx playwright install --with-deps chromium
+            echo "::warning::зеркало kkRepo не ответило — браузеры с CDN"
           fi
+          for i in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "::warning::загрузка Chromium не удалась (попытка $i из 3)"; sleep 15
+          done
+          echo "::error::Chromium не установлен за 3 попытки"; exit 1
+
+      # Достижим ли стенд и KC из контейнера раннера — через прокси раннера и напрямую.
+      # Только диагностика: шаг не роняет джобу (прогон 7846 упал на входе без следа).
+      - name: Сеть — достижимость стенда и KC
+        continue-on-error: true
+        run: |
+          for u in "$LORE_STAND_URL/news" "https://odal.seidrstudio.pro/kc/realms/omilorePreprod/.well-known/openid-configuration"; do
+            echo "== $u"
+            getent hosts "$(echo "$u" | sed -E 's#https?://([^/]+).*#\1#')" || echo "DNS: не разрешается"
+            echo "через прокси (${HTTPS_PROXY:-нет}): $(curl -sS -o /dev/null --max-time 20 -w '%{http_code} %{remote_ip} %{time_total}s' "$u" 2>&1)"
+            echo "напрямую: $(env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy curl -sS -o /dev/null --max-time 20 -w '%{http_code} %{remote_ip} %{time_total}s' "$u" 2>&1)"
+          done
 
       - name: Автологин тестовых учёток
         working-directory: web-next

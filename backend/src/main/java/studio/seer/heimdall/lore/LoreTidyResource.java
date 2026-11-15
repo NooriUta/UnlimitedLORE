@@ -154,6 +154,18 @@ public class LoreTidyResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * QG-STALE-DOCS (механический уровень): та же проверка ссылок, что у экрана, но по выбранным типам
+     * и без снимка экрана — для рутины QG. Скрытое владелицей («не ссылка») не считается, как и на экране.
+     */
+    Map<String, Object> computeFor(List<String> types) {
+        MdRefRules.Ctx ctx = loadCtx();
+        Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes = loadScopes();
+        List<MdRefCheck.Field> fields = new ArrayList<>();
+        for (Target t : TARGETS) if (types.contains(t.type())) fields.addAll(loadFields(t, null));
+        return MdRefCheck.compute(fields, ctx, scopes, MdRefRules.defaults(), loadDismissed());
+    }
+
     @SuppressWarnings("unchecked")
     static Object rowOf(Map<String, Object> answer, String type, String id) {
         List<Map<String, Object>> rows = (List<Map<String, Object>>) ((Map<String, Object>) answer.get("manual")).get("rows");

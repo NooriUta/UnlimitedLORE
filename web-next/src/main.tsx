@@ -8,6 +8,7 @@ import { installKitVocabulary } from './kitVocabulary';
 import { LORE_LUCIDE_ICONS } from './shell/loreIcons';
 import App from './App';
 import { v2Auth } from './auth/session';
+import { primeRuntimeAuthConfig } from './auth/runtimeAuthConfig';
 import { installServerPulse } from './shell/serverPulse';
 import { themeSource } from './storage/themeSource';
 import { ShowTechFromSettings } from './settings/ShowTech';
@@ -34,7 +35,8 @@ const kitLang = document.documentElement.lang === 'en' ? 'en' : 'ru';
 // Свой вход v2 (S3-18): сессия поднимается до приложения — callback Keycloak,
 // сохранённый пользователь, тихое продление. Пока не поднялась, AuthGate
 // показывает скелет; нет сессии — уводит на вход; вход выключен — как раньше.
-void v2Auth.init();
+// Realm — настройка среды (15.11.2026): сначала адрес входа своей среды от бэкенда, потом сессия.
+void primeRuntimeAuthConfig().finally(() => { void v2Auth.init(); });
 
 // Устаревший чанк после выкатки (S4-STALE-CHUNK): вкладка на прежней сборке
 // просит чанк, которого на сервере уже нет. Одна перезагрузка, повтор — плашка.
