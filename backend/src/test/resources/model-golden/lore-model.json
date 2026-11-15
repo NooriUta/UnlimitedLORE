@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "fb7a619d2d03730c",
+  "version" : "67e58fb9f4b7ed21",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision" ],
@@ -9657,7 +9657,7 @@
       "pin_top" : false,
       "items" : [ {
         "section" : "settings",
-        "icon" : "cog",
+        "icon" : "material-symbols:settings-outline",
         "view" : "settings"
       } ]
     } ]

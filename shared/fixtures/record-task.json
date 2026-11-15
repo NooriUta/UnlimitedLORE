@@ -1,0 +1,941 @@
+{
+  "contract": "lore.record/1",
+  "record": {
+    "type": "task",
+    "id": "SPRINT_TEST_FIXTURES/T-02",
+    "title": "TEST: вторая задача",
+    "status": "planned",
+    "version": "2026-11-14T21:14:13.280Z"
+  },
+  "values": {
+    "title": "TEST: вторая задача",
+    "body_md": "TEST",
+    "note_md": "TEST",
+    "code": "T-02",
+    "sprint": "SPRINT_TEST_FIXTURES",
+    "phase": null,
+    "components": [],
+    "effort": null,
+    "actual": null,
+    "author": null,
+    "executor": null,
+    "reviewer": null,
+    "task_type": "dev",
+    "work_class": null,
+    "realizes_uc": [],
+    "prs": [],
+    "status": "planned",
+    "projects": []
+  },
+  "parts": [
+    {
+      "key": "questions",
+      "label": "Вопросы",
+      "type": "question",
+      "rel": "RAISED_IN",
+      "dir": "in",
+      "owned": "shared",
+      "relation": "aggregation",
+      "columns": [
+        "status",
+        "code",
+        "title",
+        "priority"
+      ],
+      "optional_columns": [
+        "due_date"
+      ],
+      "order_by": "question_id",
+      "create": null,
+      "state": "ok",
+      "count": 0,
+      "items": []
+    }
+  ],
+  "links": [],
+  "perms": {
+    "can_edit": true,
+    "can_status": true,
+    "can_create": true,
+    "status_next": [
+      "todo",
+      "backlog",
+      "design",
+      "active",
+      "partial",
+      "waiting",
+      "blocked",
+      "review",
+      "ready_for_deploy",
+      "uat",
+      "done",
+      "failed",
+      "cancelled"
+    ],
+    "reason": null
+  },
+  "facts": {},
+  "schema": {
+    "type": "task",
+    "label": "Задача",
+    "label_key": "pp.kind.task",
+    "icon": "checkbox-tree",
+    "fields": [
+      {
+        "key": "title",
+        "label": "Название",
+        "label_key": "pp.field.title",
+        "kind": "text",
+        "group": "head",
+        "required": true,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "title"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "status",
+        "label": "Статус",
+        "label_key": null,
+        "kind": "enum",
+        "group": "head",
+        "required": false,
+        "editable": true,
+        "dict": "task_status",
+        "write": {
+          "endpoint": "/lore/status",
+          "field": "status"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "status",
+            "message": "Статус задан",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "code",
+        "label": "Код",
+        "label_key": null,
+        "kind": "text",
+        "group": "head",
+        "required": false,
+        "editable": false,
+        "write": null,
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "sprint",
+        "label": "Спринт",
+        "label_key": "pp.field.sprint",
+        "kind": "ref",
+        "group": "props",
+        "required": true,
+        "editable": false,
+        "ref": {
+          "type": "sprint",
+          "rel": "PART_OF",
+          "dir": "out"
+        },
+        "relation": "composition",
+        "write": null,
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "phase",
+        "label": "Фаза",
+        "label_key": null,
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": true,
+        "ref": {
+          "type": "phase",
+          "rel": "IN_PHASE",
+          "dir": "out"
+        },
+        "relation": "attribute",
+        "write": {
+          "endpoint": "/lore/record/{type}/{id}/relation",
+          "field": "IN_PHASE"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "components",
+        "label": "Компоненты",
+        "label_key": "pp.field.components",
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": true,
+        "multi": true,
+        "ref": {
+          "type": "component",
+          "rel": "TAGGED_WITH",
+          "dir": "out"
+        },
+        "relation": "attribute",
+        "write": {
+          "endpoint": "/lore/record/{type}/{id}/relation",
+          "field": "TAGGED_WITH"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "component",
+            "message": "Компонент привязан (свой или от спринта)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "projects",
+        "label": "Проекты",
+        "label_key": "pp.field.projects",
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": false,
+        "multi": true,
+        "ref": {
+          "type": "project",
+          "rel": null,
+          "dir": null
+        },
+        "relation": "attribute",
+        "write": null,
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "author",
+        "label": "Автор",
+        "label_key": "pp.field.author",
+        "kind": "enum",
+        "group": "props",
+        "section": "Роли",
+        "required": false,
+        "editable": true,
+        "options": {
+          "slice": "task_identities",
+          "param": "id",
+          "value": "code",
+          "label": "title",
+          "group": "kind"
+        },
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "author_agent"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "executor",
+        "label": "Исполнитель",
+        "label_key": "pp.field.executor",
+        "kind": "enum",
+        "group": "props",
+        "section": "Роли",
+        "required": false,
+        "editable": true,
+        "options": {
+          "slice": "task_identities",
+          "param": "id",
+          "value": "code",
+          "label": "title",
+          "group": "kind"
+        },
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "executor_agent"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "reviewer",
+        "label": "Принимающий",
+        "label_key": "pp.field.reviewer",
+        "kind": "enum",
+        "group": "props",
+        "section": "Роли",
+        "required": false,
+        "editable": true,
+        "options": {
+          "slice": "task_identities",
+          "param": "id",
+          "value": "code",
+          "label": "title",
+          "group": "kind"
+        },
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "reviewer_agent"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "effort",
+        "label": "Оценка, чел.-дн",
+        "label_key": "pp.field.effort",
+        "kind": "number",
+        "group": "props",
+        "section": "Оценка",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "effort_days"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "effort_days",
+            "message": "Оценка по времени задана (effort_days > 0)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "actual",
+        "label": "Факт, чел.-дн",
+        "label_key": "pp.field.actual",
+        "kind": "number",
+        "group": "props",
+        "section": "Оценка",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "actual_days"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "task_type",
+        "label": "Тип задачи",
+        "label_key": "pp.field.taskType",
+        "kind": "enum",
+        "group": "props",
+        "section": "Классы",
+        "required": false,
+        "editable": true,
+        "dict": "task_type",
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "task_type"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "work_class",
+        "label": "Класс работы",
+        "label_key": "pp.field.workClass",
+        "kind": "enum",
+        "group": "props",
+        "section": "Классы",
+        "required": false,
+        "editable": true,
+        "dict": "work_class",
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "work_class"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "work_class",
+            "message": "Класс работы задан (uc | jtd | enb)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "realizes_uc",
+        "label": "Сценарий (UC)",
+        "label_key": null,
+        "kind": "ref",
+        "group": "props",
+        "section": "Классы",
+        "required": false,
+        "editable": true,
+        "multi": true,
+        "ref": {
+          "type": "use_case",
+          "rel": "REALIZES",
+          "dir": "out"
+        },
+        "relation": "realization",
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "uc_id"
+        },
+        "required_level": null,
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "realizes_uc",
+            "message": "work_class=uc обязан нести REALIZES на сценарий",
+            "when": {
+              "field": "work_class",
+              "eq": "uc",
+              "text": "когда «Класс работы» = uc"
+            }
+          }
+        ]
+      },
+      {
+        "key": "prs",
+        "label": "PR",
+        "label_key": "pp.field.prs",
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": true,
+        "multi": true,
+        "ref": {
+          "type": "pr",
+          "rel": "CLOSED_BY",
+          "dir": "out"
+        },
+        "relation": "realization",
+        "write": {
+          "endpoint": "/lore/record/{type}/{id}/relation",
+          "field": "CLOSED_BY"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "files",
+        "label": "Файлы",
+        "label_key": null,
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": false,
+        "multi": true,
+        "ref": {
+          "type": "file",
+          "rel": "EDITED_IN",
+          "dir": "in"
+        },
+        "relation": "attribute",
+        "write": null,
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "note_md",
+        "label": "Заметка",
+        "label_key": "pp.field.body",
+        "kind": "md",
+        "group": "body",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/task/edit",
+          "field": "note_md"
+        },
+        "required_level": null,
+        "required_rules": []
+      }
+    ],
+    "layout": {
+      "body": [
+        {
+          "key": "note_md",
+          "label": "Заметка",
+          "editable": true,
+          "write": {
+            "endpoint": "/lore/task/edit",
+            "field": "note_md"
+          }
+        }
+      ],
+      "props": [
+        {
+          "section": null,
+          "fields": [
+            "sprint",
+            "phase",
+            "components",
+            "projects",
+            "prs",
+            "files"
+          ]
+        },
+        {
+          "section": "Роли",
+          "fields": [
+            "author",
+            "executor",
+            "reviewer"
+          ]
+        },
+        {
+          "section": "Оценка",
+          "fields": [
+            "effort",
+            "actual"
+          ]
+        },
+        {
+          "section": "Классы",
+          "fields": [
+            "task_type",
+            "work_class",
+            "realizes_uc"
+          ]
+        }
+      ],
+      "parts": [
+        {
+          "key": "questions",
+          "label": "Вопросы",
+          "type": "question",
+          "rel": "RAISED_IN",
+          "dir": "in",
+          "owned": "shared",
+          "relation": "aggregation",
+          "columns": [
+            "status",
+            "code",
+            "title",
+            "priority"
+          ],
+          "optional_columns": [
+            "due_date"
+          ],
+          "order_by": "question_id",
+          "create": null
+        }
+      ],
+      "link_tabs": [
+        {
+          "key": "justification",
+          "label": "ADR",
+          "rels": [
+            {
+              "rel": "JUSTIFIED_BY",
+              "dir": "out",
+              "label": "обоснована ADR",
+              "relation": "realization",
+              "edge_props": []
+            },
+            {
+              "rel": "PROMOTED_TO",
+              "dir": "in",
+              "label": "из рекомендации QG",
+              "relation": "realization",
+              "edge_props": []
+            },
+            {
+              "rel": "LED_TO",
+              "dir": "in",
+              "label": "из инсайта BRAGI",
+              "relation": "realization",
+              "edge_props": []
+            }
+          ]
+        },
+        {
+          "key": "realization",
+          "label": "Реализация",
+          "rels": [
+            {
+              "rel": "CLOSED_BY",
+              "dir": "out",
+              "label": "закрыта PR",
+              "relation": "realization",
+              "edge_props": []
+            },
+            {
+              "rel": "REALIZES",
+              "dir": "out",
+              "label": "реализует сценарий",
+              "relation": "realization",
+              "edge_props": []
+            }
+          ]
+        },
+        {
+          "key": "refs",
+          "label": "Ссылки",
+          "rels": [
+            {
+              "rel": "REFERENCES",
+              "dir": "out",
+              "label": "ссылается",
+              "relation": "association",
+              "edge_props": []
+            },
+            {
+              "rel": "REFERENCES",
+              "dir": "in",
+              "label": "на неё ссылаются",
+              "relation": "association",
+              "edge_props": []
+            }
+          ]
+        }
+      ],
+      "tree": {
+        "children": []
+      }
+    },
+    "relations": [
+      {
+        "key": "sprint",
+        "label": "Спринт",
+        "relation": "composition",
+        "rel": "PART_OF",
+        "dir": "out",
+        "target_type": "sprint",
+        "place": "head",
+        "manageable": false
+      },
+      {
+        "key": "phase",
+        "label": "Фаза",
+        "relation": "attribute",
+        "rel": "IN_PHASE",
+        "dir": "out",
+        "target_type": "phase",
+        "place": "prop",
+        "manageable": true
+      },
+      {
+        "key": "components",
+        "label": "Компоненты",
+        "relation": "attribute",
+        "rel": "TAGGED_WITH",
+        "dir": "out",
+        "target_type": "component",
+        "place": "prop",
+        "manageable": true
+      },
+      {
+        "key": "roles",
+        "label": "Роли",
+        "relation": "attribute",
+        "rel": "ROLE_HELD_BY",
+        "dir": "out",
+        "target_type": "actor",
+        "place": "prop",
+        "manageable": false
+      },
+      {
+        "key": "files",
+        "label": "Файлы",
+        "relation": "attribute",
+        "rel": "EDITED_IN",
+        "dir": "in",
+        "target_type": "file",
+        "place": "prop",
+        "manageable": false
+      },
+      {
+        "key": "prs",
+        "label": "PR",
+        "relation": "realization",
+        "rel": "CLOSED_BY",
+        "dir": "out",
+        "target_type": "pr",
+        "place": "link_tab",
+        "manageable": true
+      },
+      {
+        "key": "useCases",
+        "label": "Сценарии",
+        "relation": "realization",
+        "rel": "REALIZES",
+        "dir": "out",
+        "target_type": "use_case",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "adrs",
+        "label": "Обоснована ADR",
+        "relation": "realization",
+        "rel": "JUSTIFIED_BY",
+        "dir": "out",
+        "target_type": "adr",
+        "place": "link_tab",
+        "manageable": true
+      },
+      {
+        "key": "qgRecs",
+        "label": "Рекомендации QG",
+        "relation": "realization",
+        "rel": "PROMOTED_TO",
+        "dir": "in",
+        "target_type": "qg_recommendation",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "insights",
+        "label": "Инсайты BRAGI",
+        "relation": "realization",
+        "rel": "LED_TO",
+        "dir": "in",
+        "target_type": "insight",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "gates",
+        "label": "Блокирующие вопросы",
+        "relation": "association",
+        "rel": "GATES",
+        "dir": "in",
+        "target_type": "question",
+        "place": "link_tab",
+        "manageable": true
+      },
+      {
+        "key": "refsOut",
+        "label": "Ссылается",
+        "relation": "association",
+        "rel": "REFERENCES",
+        "dir": "out",
+        "target_type": "any",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "refsIn",
+        "label": "На неё ссылаются",
+        "relation": "association",
+        "rel": "REFERENCES",
+        "dir": "in",
+        "target_type": "any",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "publications",
+        "label": "Публикации",
+        "relation": "association",
+        "rel": "PRODUCED_BY",
+        "dir": "in",
+        "target_type": "publication",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "questions",
+        "label": "Вопросы",
+        "relation": "aggregation",
+        "rel": "RAISED_IN",
+        "dir": "in",
+        "target_type": "question",
+        "place": "part",
+        "manageable": true
+      },
+      {
+        "key": "history",
+        "label": "История",
+        "relation": "composition",
+        "rel": "HAS_STATE",
+        "dir": "out",
+        "target_type": "hist",
+        "place": "history",
+        "manageable": false
+      },
+      {
+        "key": "assets",
+        "label": "Вложения",
+        "relation": "composition",
+        "rel": "ATTACHED_TO",
+        "dir": "out",
+        "target_type": "asset",
+        "place": "body",
+        "manageable": false
+      }
+    ],
+    "requirements": [
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "status",
+        "message": "Статус задан",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "status"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "effort_days",
+        "message": "Оценка по времени задана (effort_days > 0)",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "effort"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "component",
+        "message": "Компонент привязан (свой или от спринта)",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "components"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "project",
+        "message": "Проект известен (через спринт)",
+        "when": null,
+        "targets": []
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "work_class",
+        "message": "Класс работы задан (uc | jtd | enb)",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "work_class"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "realizes_uc",
+        "message": "work_class=uc обязан нести REALIZES на сценарий",
+        "when": {
+          "field": "work_class",
+          "eq": "uc",
+          "text": "когда «Класс работы» = uc"
+        },
+        "targets": [
+          {
+            "kind": "field",
+            "key": "realizes_uc"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "justified_by",
+        "message": "work_class=enb обязан нести JUSTIFIED_BY на ADR",
+        "when": {
+          "field": "work_class",
+          "eq": "enb",
+          "text": "когда «Класс работы» = enb"
+        },
+        "targets": [
+          {
+            "kind": "relation",
+            "key": "adrs"
+          }
+        ]
+      }
+    ],
+    "requirements_block": "schema"
+  },
+  "meta": {
+    "facade": "server",
+    "sources": {
+      "block": [
+        "questions",
+        "adrs",
+        "gates"
+      ],
+      "record": "tasks_by_uids"
+    },
+    "data_state": [
+      {
+        "source": "tasks_by_uids",
+        "state": "ok"
+      },
+      {
+        "source": "questions_of_task",
+        "part": "questions",
+        "state": "ok"
+      },
+      {
+        "source": "adrs_of_task",
+        "part": "adrs",
+        "state": "ok"
+      },
+      {
+        "source": "gating_questions_of_task",
+        "part": "gates",
+        "state": "ok"
+      },
+      {
+        "source": "edge:PROMOTED_TO:in",
+        "part": "qgRecs",
+        "state": "ok"
+      },
+      {
+        "source": "edge:LED_TO:in",
+        "part": "insights",
+        "state": "ok"
+      },
+      {
+        "source": "edge:REFERENCES:out",
+        "part": "refsOut",
+        "state": "ok"
+      },
+      {
+        "source": "edge:REFERENCES:in",
+        "part": "refsIn",
+        "state": "ok"
+      },
+      {
+        "source": "edge:PRODUCED_BY:in",
+        "part": "publications",
+        "state": "ok"
+      },
+      {
+        "source": "version",
+        "state": "ok"
+      }
+    ]
+  },
+  "computed": {}
+}

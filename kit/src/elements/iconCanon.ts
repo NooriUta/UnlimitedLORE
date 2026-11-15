@@ -9,8 +9,8 @@ export const ICON_CANON = {
   sectionTask: 'lucide:list-checks',
   /** Раздел «Новости» (в v1 town-crier — нет в наборе). */
   sectionNews: 'lucide:megaphone',
-  /** Раздел «Настройки» (как было; поиск вне наборов — S4-32). */
-  sectionSettings: 'cog',
+  /** Раздел «Настройки» (S4-32, выбор владелицы 14.11: «3e»). */
+  sectionSettings: 'material-symbols:settings-outline',
   /** Сегменты полосы списка. */
   segFilter: 'lucide:filter',
   segGroup: 'lucide:group',
@@ -18,9 +18,9 @@ export const ICON_CANON = {
   /** Виды списка. */
   viewList: 'lucide:list',
   viewBoard: 'lucide:columns-3',
-  /** Статусы без аналога в v1 (как было; S4-32). */
-  statusDraft: 'quill-ink',
-  statusDeprecated: 'broken-tablet',
+  /** Статусы без аналога в v1 (S4-32, 14.11: «9b», «10e»; №11 — «оставь то что есть»). */
+  statusDraft: 'lucide:file-pen-line',
+  statusDeprecated: 'material-symbols:history-toggle-off',
   statusUnknown: 'help',
   /** Меню и оболочка. */
   myViews: 'lucide:star',
@@ -29,10 +29,12 @@ export const ICON_CANON = {
   scopeAll: 'lucide:layers',
   commands: 'lucide:command',
   views: 'lucide:eye',
-  team: null,
+  /** «Командные» виды (S4-32, 14.11: «18e»). */
+  team: 'material-symbols:groups-outline',
   // «План» и «Знание» — разделы LORE: канон приложения (web-next/src/shell/loreIcons.ts, K-14).
   /** Быстрые фильтры. */
-  quickNoRelease: null,
+  /** «Без релиза» (S4-32, 14.11: «21c»). */
+  quickNoRelease: 'tabler:package-off',
   quickNoDecisions: 'lucide:file-question',
   /** События ленты новостей. */
   newsReady: 'wave-crest',

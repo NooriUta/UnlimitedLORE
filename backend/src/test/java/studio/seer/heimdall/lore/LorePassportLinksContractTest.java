@@ -148,7 +148,6 @@ class LorePassportLinksContractTest {
     static final Map<String, String> SERVICE = Map.ofEntries(
         Map.entry("E", "базовый тип рёбер схемы (EXTENDS E) — экземпляров нет"),
         Map.entry("HAS_STATE", "строка истории SCD2 — раздел «История», а не связь"),
-        Map.entry("HAS_STATUS", "легаси: словарь статусов у KnowADRHist, снят V51; пути записи нет"),
         Map.entry("ATTACHED_TO", "вложения тела (MinIO) — показываются в тексте MD, а не связью"),
         Map.entry("ROLE_HELD_BY", "роли задачи — поля автор/исполнитель/принимающий (выбор из task_identities)"),
         Map.entry("OWNED_BY", "личность: агент → его владелец (права, AL-104)"),
@@ -159,7 +158,6 @@ class LorePassportLinksContractTest {
         Map.entry("SOURCED_FROM", "след прочитанного агентом (AO-02, за флагом) — наблюдаемость агента, связью в паспорте не показывается"),
         Map.entry("ClRoutineHasOutput", "журнал рутин (ClRoutine*); пути записи в коде нет"),
         Map.entry("ON_MILESTONE", "конфиг плана (контрольные точки, срез plan_checkpoints); пути записи в коде нет"),
-        Map.entry("OF_TYPE", "конфиг плана (тип трека, срез plan_tracks); пути записи в коде нет"),
         Map.entry("CHANGED_IN", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("FORMALIZED_AS", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("INCLUDES", "объявлено DDL, ни записи, ни чтения в коде нет (сценарии — UC_INCLUDES)"),
@@ -273,6 +271,14 @@ class LorePassportLinksContractTest {
      * ArcadeDB создаёт тип на первой записи, поэтому такие рёбра живут на проде без объявления.
      */
     static final Map<String, String> UNDECLARED_EDGES = Map.of();
+
+    /**
+     * Снятые из схемы рёбра, которые обходят только шаги миграций, убирающие их легаси-экземпляры
+     * (на базе, где тип ещё есть). В остальном коде обход такого ребра — ошибка, как и прежде.
+     */
+    static final Map<String, String> RETIRED_EDGES_READ_BY_MIGRATIONS = Map.of(
+        "HAS_STATUS", "снят V89 (SELF-PROVISION-STANDALONE); обходят V51 и V89, снимающие легаси-рёбра",
+        "OF_TYPE", "снят V89 (SELF-PROVISION-STANDALONE); обходит V89, переносящий тип трека в PlanTrack.area");
 
     private static final Pattern CREATE_EDGE =
         Pattern.compile("(?i)CREATE\\s+EDGE\\s+TYPE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`?(\\w+)`?");
@@ -558,7 +564,10 @@ class LorePassportLinksContractTest {
                     Matcher q = QUOTED.matcher(t.group(1));
                     while (q.find()) {
                         seen.add(q.group(1));
-                        if (!known.contains(q.group(1))) bad.add(p.getFileName() + ": обход '" + q.group(1) + "'");
+                        if (!known.contains(q.group(1))
+                                && !(p.getFileName().toString().equals("LoreSchemaMigrationRunner.java")
+                                     && RETIRED_EDGES_READ_BY_MIGRATIONS.containsKey(q.group(1))))
+                            bad.add(p.getFileName() + ": обход '" + q.group(1) + "'");
                     }
                 }
             }

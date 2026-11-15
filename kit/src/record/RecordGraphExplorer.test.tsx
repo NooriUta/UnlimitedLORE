@@ -109,9 +109,9 @@ describe('GC-03 · вкладка «Граф»: Секторы / Список / 
 
   it('глубина 1–4 (владелица 11.11: «связи 2, 3, 4 уровней»), выбор пишется в адрес', () => {
     show();
-    const depth = screen.getByRole('group', { name: 'Глубина' });
-    expect([...depth.querySelectorAll('button')].map(b => b.textContent)).toEqual(['1', '2', '3', '4']);
-    fireEvent.click(screen.getByRole('button', { name: '4' }));
+    const depth = screen.getByRole('combobox', { name: /Шагов от записи/ }) as HTMLSelectElement;
+    expect([...depth.options].map(o => o.textContent)).toEqual(['1', '2', '3', '4']);
+    fireEvent.change(depth, { target: { value: '4' } });
     expect(new URLSearchParams(window.location.search).get('gdepth')).toBe('4');
   });
 
@@ -123,7 +123,7 @@ describe('GC-03 · вкладка «Граф»: Секторы / Список / 
     const legend = screen.getByTestId('kit-graph-legend');
     expect(legend.textContent).toContain('7');
     expect(legend.textContent).toContain('JUSTIFIED_BY');
-    expect(screen.getByRole('button', { name: /упоминает/ }).getAttribute('aria-pressed')).toBe('false');
+    expect((screen.getByRole('checkbox', { name: /упоминает/ }) as HTMLInputElement).checked).toBe(false);
   });
 
   it('подсветка уровней: «цвет по уровню» красит узлы по глубине от записи (graphDepth)', async () => {

@@ -1,0 +1,13 @@
+{
+  "rows": [
+    {
+      "phase_uid": "SPRINT_TEST_FIXTURES/PHASE_A",
+      "phase_id": "Фаза A",
+      "order_index": 1,
+      "valid_from": "2026-11-14T21:15:05.784Z",
+      "title": "TEST faza",
+      "status_raw": "📋 PLANNED",
+      "summary_md": null
+    }
+  ]
+}

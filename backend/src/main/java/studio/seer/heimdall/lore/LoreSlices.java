@@ -1813,6 +1813,9 @@ public final class LoreSlices {
             // открытая строка (после первой смены цели строк больше одной).
             "out('HAS_STATE')[valid_to IS NULL].goal_md[0]      AS goal_md, " +
             "out('HAS_STATE')[valid_to IS NULL].decisions_md[0] AS decisions_md, " +
+            // V89: статус вехи — код milestone_status в открытой строке истории (до V89 жил только в
+            // легаси-ребре HAS_STATUS → StatusMilestone и в паспорт не попадал).
+            "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status, " +
             // Свежесть: версия цели, иначе отметка правки полей вершины. Даты заведения
             // у вехи нет — без того и другого changed_at пуст, а не выдуман.
             changedAtSql("updated_at") + ", " +
@@ -1835,6 +1838,9 @@ public final class LoreSlices {
             "SELECT milestone_id, label, week, date_display, priority, " +
             "out('HAS_STATE')[valid_to IS NULL].goal_md[0]      AS goal_md, " +
             "out('HAS_STATE')[valid_to IS NULL].decisions_md[0] AS decisions_md, " +
+            // V89: статус вехи — код milestone_status в открытой строке истории (до V89 жил только в
+            // легаси-ребре HAS_STATUS → StatusMilestone и в паспорт не попадал).
+            "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status, " +
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
             // 11.11 (полнота модели рёбер): фичи, целящие в веху (feature_link rel:milestone).
             "in('TARGETS_MILESTONE')[@this INSTANCEOF 'KnowUseCase'].uc_id AS feature_ids, " +
@@ -2005,7 +2011,8 @@ public final class LoreSlices {
             "SELECT config_id, w0_date, weeks_total FROM PlanConfig WHERE config_id = 'default'");
 
         slice("plan_tracks",
-            "SELECT track_id, label, out('OF_TYPE').type_id[0] AS type " +
+            // V89: тип трека — код справочника area на самой вершине (OF_TYPE → TrackType снят).
+            "SELECT track_id, label, area AS type " +
             "FROM PlanTrack ORDER BY track_id",
             List.of(), Map.of(), "");
 
