@@ -11,6 +11,7 @@
 import type { CSSProperties } from 'react';
 import type { KitCtx, KitRecord, KitVerdict } from '../core/contract';
 import { GameIcon } from '../elements/GameIcon';
+import { navClick } from '../core/navClick';
 import { kitT, type KitLang } from '../i18n';
 import { checkKey, countChecks, type CheckCount, type CheckKind } from './listModel';
 
@@ -31,14 +32,18 @@ function safe(r: KitRecord, verdictOf: VerdictOf): KitVerdict | undefined {
   try { return verdictOf(r); } catch { return undefined; }
 }
 
-/** Счёт сводки по видам записей, в порядке первого появления вида. */
+/**
+ * Счёт сводки по видам записей — ПО ТЯЖЕСТИ (пилот 15.11: «Темы 11 из 181» на телефоне стояла
+ * двенадцатой): сначала меньшая доля пройденных, виды без проверок — в конец; при равенстве —
+ * порядок первого появления вида.
+ */
 export function summarizeVerdicts(records: readonly KitRecord[], verdictOf: VerdictOf): VerdictSummaryGroup[] {
   const byKind = new Map<string, KitRecord[]>();
   for (const r of records) {
     const list = byKind.get(r.kind);
     if (list) list.push(r); else byKind.set(r.kind, [r]);
   }
-  return [...byKind.entries()].map(([kind, own]) => {
+  const groups = [...byKind.entries()].map(([kind, own]) => {
     let checked = 0;
     let passed = 0;
     for (const r of own) {
@@ -51,6 +56,9 @@ export function summarizeVerdicts(records: readonly KitRecord[], verdictOf: Verd
     }
     return { kind, total: own.length, checked, passed, checks: countChecks(own, verdictOf) };
   });
+  const share = (g: VerdictSummaryGroup) => (g.checked > 0 ? g.passed / g.checked : Number.POSITIVE_INFINITY);
+  // sort устойчивый: равные остаются в порядке появления.
+  return groups.sort((a, b) => share(a) - share(b));
 }
 
 const GROUP_KEY: Record<CheckKind, 'kit.list.check.fail' | 'kit.list.check.hint' | 'kit.list.check.unknown'> = {
@@ -64,18 +72,24 @@ export interface VerdictSummaryProps {
   lang: KitLang;
   /** Адрес списка вида; с check — списка под условием («fail:quiz»). Не задан — причины без ссылок. */
   hrefOf?: (kind: string, check?: string) => string;
+  /**
+   * Переход по ссылке сводки силами приложения (без перезагрузки страницы). Ссылка остаётся
+   * ссылкой: адрес, новая вкладка, Ctrl/⌘-щелчок — браузеру; обычный щелчок — сюда.
+   */
+  onNavigate?: (kind: string, check?: string) => void;
   /** Выдача обрезана сервером — итоги посчитаны по части записей. */
   truncated?: boolean;
   className?: string;
 }
 
-export function VerdictSummary({ records, ctx, lang, hrefOf, truncated, className }: VerdictSummaryProps) {
+export function VerdictSummary({ records, ctx, lang, hrefOf, onNavigate, truncated, className }: VerdictSummaryProps) {
   const t = (k: Parameters<typeof kitT>[1], p?: Record<string, string | number>) => kitT(lang, k, p);
   const fn = ctx.config.verdict;
   const cls = ['sk-vsum', className].filter(Boolean).join(' ');
   if (!fn) return <p className="sk-vsum__note" data-testid="kit-vsum-off">{t('kit.vsum.off')}</p>;
   if (records.length === 0) return <p className="sk-vsum__note" data-testid="kit-vsum-empty">{t('kit.vsum.empty')}</p>;
   const groups = summarizeVerdicts(records, r => fn(r, ctx));
+  const go = (kind: string, check?: string) => (onNavigate ? navClick(() => onNavigate(kind, check)) : undefined);
   return (
     <div className={cls} data-testid="kit-vsum">
       {truncated && <p className="sk-vsum__note sk-vsum__note--warn" role="status">{t('kit.vsum.truncated')}</p>}
@@ -95,7 +109,7 @@ export function VerdictSummary({ records, ctx, lang, hrefOf, truncated, classNam
           return (
             <section key={g.kind} className="sk-vsum__card" data-testid={`kit-vsum-${g.kind}`} data-tone={tone} style={style}>
               <h3 className="sk-vsum__head">
-                {hrefOf ? <a className="sk-vsum__kind" href={hrefOf(g.kind)}>{head}</a> : <span className="sk-vsum__kind">{head}</span>}
+                {hrefOf ? <a className="sk-vsum__kind" href={hrefOf(g.kind)} onClick={go(g.kind)}>{head}</a> : <span className="sk-vsum__kind">{head}</span>}
               </h3>
               {g.checked === 0 ? (
                 <p className="sk-vsum__none">{t('kit.vsum.noChecks', { total: g.total })}</p>
@@ -118,7 +132,7 @@ export function VerdictSummary({ records, ctx, lang, hrefOf, truncated, classNam
                       {own.map(c => (
                         <li key={c.code} className="sk-vsum__check">
                           {hrefOf
-                            ? <a className="sk-vsum__why" href={hrefOf(g.kind, checkKey(c))} title={c.title === c.code ? undefined : c.code}>{c.title}</a>
+                            ? <a className="sk-vsum__why" href={hrefOf(g.kind, checkKey(c))} onClick={go(g.kind, checkKey(c))} title={c.title === c.code ? undefined : c.code}>{c.title}</a>
                             : <span className="sk-vsum__why" title={c.title === c.code ? undefined : c.code}>{c.title}</span>}
                           <span className="sk-vsum__n">{c.n}</span>
                         </li>

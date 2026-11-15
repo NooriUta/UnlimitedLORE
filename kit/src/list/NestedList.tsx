@@ -63,7 +63,13 @@ export function NestedList({ ctx, records, missing, columns, rowActions, testId,
       },
     };
   }, [ctx.config, columns, multiKind, ownAxes]);
-  const data = useMemo(() => ({ ...ctx.data, records: [...records] }), [ctx.data, records]);
+  // Итог — СВОИ записи, а не вся выдача (K5-LIST-TOTAL-TRUNCATED, пилот 15.11): с meta всей
+  // выгрузки связь с одной записью писала «Показано 1 из 1292 — обрезана сервером». Обрезку
+  // выдачи паспорт называет сам (RecordLinks); неполноту своего состава — `note` вызывающего.
+  const data = useMemo(() => {
+    const { total: _t, returned: _r, truncated: _c, subset_of: _s, ...meta } = ctx.data.meta;
+    return { ...ctx.data, records: [...records], meta: { ...meta, total: records.length } };
+  }, [ctx.data, records]);
   return (
     <div className={['sk-nested', className].filter(Boolean).join(' ')} data-testid={testId}>
       <ListView

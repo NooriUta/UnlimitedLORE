@@ -121,6 +121,15 @@ describe('configFromModel: виды записей из типов модели'
     expect(r.kinds.sprint.fields?.find(f => f.key === 'priority')?.type).toBe('number');
   });
 
+  it('вид boolean — тип bool: паспорт пишет «да/нет», а не «true» (пилот «Дата-странники», 15.11)', () => {
+    const flag = {
+      ...doc,
+      types: { sprint: { label: 'С', icon: ICON, fields: [{ key: 'frozen', label: 'Перегон замёрз', kind: 'boolean', visibility: 'visible' }], relations: [] } },
+    };
+    const r = configFromModel(parseModel(flag), { statusDict: 'task' });
+    expect(r.kinds.sprint.fields?.[0].type).toBe('bool');
+  });
+
   it('связи с местом «вкладка» становятся связями вида, поля-связи — нет', () => {
     const r = configFromModel(model, { statusDict: 'task' });
     expect(r.kinds.sprint.relations?.map(x => x.key)).toEqual(['tasks']);
