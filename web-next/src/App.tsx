@@ -187,6 +187,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
               client={meClient}
               lang={lang}
               name={v2Auth.getState().user?.name}
+              sub={v2Auth.getState().user?.sub}
               onLogout={v2Auth.enabled ? () => { void v2Auth.logout(); } : undefined}
             />
           )}

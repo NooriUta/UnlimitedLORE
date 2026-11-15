@@ -1845,5 +1845,20 @@
   "volva.notConfigured.hint": "Бэкенду LORE нужны ключ подписи LORE_VOLVA_EMBED_SECRET (Infisical — тот же, что embedding-secret-key у Völva) и адрес LORE_VOLVA_EMBED_SITE_URL. Проверка — «Флаги» → «Проверить интеграцию Völva».",
   "volva.unknownChart.hint": "Графика «{chart}» нет в белом списке lore.volva.embed.charts на бэкенде LORE.",
   "volva.needsProject.title": "Выберите проект",
-  "volva.needsProject.hint": "График Völva запирается по проекту: выберите один или несколько проектов в шапке."
+  "volva.needsProject.hint": "График Völva запирается по проекту: выберите один или несколько проектов в шапке.",
+  "profile.title": "Профиль",
+  "profile.loading": "Загружаем профиль…",
+  "profile.loadFailed": "Не смогли загрузить профиль:",
+  "profile.retry": "Повторить",
+  "profile.notFound": "Человека {sub} в LORE нет — профиль не завести.",
+  "profile.login": "Логин",
+  "profile.name": "Отображаемое имя",
+  "profile.save": "Сохранить имя",
+  "profile.saved": "Имя сохранено",
+  "profile.avatarSaved": "Аватар сохранён",
+  "profile.avatarAlt": "Аватар: {name}",
+  "profile.noAvatar": "Аватара нет — инициалы",
+  "profile.avatarAdd": "Загрузить аватар",
+  "profile.avatarChange": "Сменить аватар",
+  "profile.avatarPick": "Файл аватара: png, jpeg или webp до 2 МБ"
 }
