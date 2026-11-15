@@ -28,6 +28,8 @@ jobs:
     env:
       LORE_STAND_URL: ${{ inputs.stand_url }}
       LORE_STAND_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_ACCOUNTS_JSON }}
+      # Проба брокеринга seer → omilore (BR-01/02): пароль test-* в seerPreprod.
+      LORE_STAND_BROKER_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_BROKER_ACCOUNTS_JSON }}
       LORE_STAND_STORAGE_STATE: e2e/stand/.auth/stand.json
       # Chrome в образе раннера нет — Chromium из Playwright.
       LORE_STAND_CHANNEL: ''
@@ -55,7 +57,7 @@ jobs:
         working-directory: web-next
         run: npm run e2e:stand:login
 
-      - name: RBAC + смоук на стенде
+      - name: RBAC + смоук + брокеринг на стенде
         working-directory: web-next
         run: npm run e2e:stand
 
