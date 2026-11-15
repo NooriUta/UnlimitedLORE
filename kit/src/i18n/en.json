@@ -144,6 +144,7 @@
   "kit.list.desc.group": "grouping",
   "kit.list.desc.sort": "order",
   "kit.list.shown": "Showing {shown} of {total}",
+  "kit.list.shownSubset": "Showing {shown} of {total} · a subset: {of} in the source",
   "kit.list.shownTruncated": "Showing {shown} of {total} · {loaded} loaded — the server truncated the result, filter and counters cover loaded rows only",
   "kit.list.shownUnknown": "Showing {shown} · {loaded} loaded, total unknown — the server truncated the result",
   "kit.list.more": "{n} more",

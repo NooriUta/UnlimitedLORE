@@ -16,14 +16,16 @@ import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, 
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
+import KitBadges from './KitBadges';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'badges', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
+  badges: 'kitPage.sec.badges',
   states: 'kitPage.sec.states',
   charts: 'kitPage.sec.charts',
   shell: 'kitPage.sec.shell',
@@ -214,6 +216,9 @@ export default function KitPage() {
             <IconButton icon={SECTION_ICONS.commands} label={t('kitPage.el.toolbar')} />
           </Toolbar>
         </section>
+
+        {/* Шильдики: статус, код, тип, приоритет, тег и фильтр рядом — материал для бренд-бука. */}
+        <KitBadges />
 
         <section id="kit-states" className="kitp__sec" aria-labelledby="kit-states-h">
           <h2 id="kit-states-h" className="kitp__h2">{t('kitPage.sec.states')}</h2>

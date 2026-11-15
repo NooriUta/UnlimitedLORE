@@ -1267,7 +1267,9 @@ export function ListView({
   const errors = feedGroupsList ? [] : (data.meta.errors ?? []).filter(e => e.block === 'records' || e.block === 'list');
   const shown = shownOf(data.meta, records.length, filtered.length);
   const shownText = shown.kind === 'complete'
-    ? t('kit.list.shown', { shown: shown.shown, total: shown.total })
+    ? (shown.of !== undefined
+      ? t('kit.list.shownSubset', { shown: shown.shown, total: shown.total, of: shown.of })
+      : t('kit.list.shown', { shown: shown.shown, total: shown.total }))
     : shown.kind === 'truncated'
       ? t('kit.list.shownTruncated', { shown: shown.shown, total: shown.total, loaded: shown.loaded })
       : t('kit.list.shownUnknown', { shown: shown.shown, loaded: shown.loaded });
