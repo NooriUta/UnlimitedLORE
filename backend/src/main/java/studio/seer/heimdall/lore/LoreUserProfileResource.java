@@ -79,7 +79,7 @@ public class LoreUserProfileResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("NO_AVATAR", "у человека " + sub + " нет аватара — рисуйте инициалы")));
         String etag = UserProfiles.etagOf(ref);
-        if (etag != null && etag.equals(ifNoneMatch))
+        if (LoreEtag.matches(ifNoneMatch, etag))
             return Response.notModified().header("ETag", etag).build();
         try {
             byte[] data = s3.get(ref);
