@@ -7448,7 +7448,10 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
    подтаблица. На узком экране прокручивается рамка поля, а не весь экран. */
 .sk-kv { min-width: 0; max-width: 100%; font-size: var(--fs-sm); color: var(--t1); }
 .sk-kv__scroll { overflow-x: auto; max-width: 100%; }
-.sk-kv__rows, .sk-kv__sub { border-collapse: collapse; width: 100%; }
+.sk-kv__rows, .sk-kv__sub { border-collapse: collapse; width: auto; }
+/* Значение — сразу за ключом, а не у правого края: на широком экране таблица во всю ширину
+   разносила их на полэкрана (проверка на препроде 16.11). */
+.sk-kv__rows .sk-kv__key { padding-right: 16px; }
 .sk-kv__rows th, .sk-kv__rows td, .sk-kv__sub th, .sk-kv__sub td { padding: 2px 8px 2px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--bd); }
 .sk-kv__key { color: var(--t2); font-weight: 400; white-space: nowrap; }
 .sk-kv__val { font-family: var(--mono); color: var(--t1); overflow-wrap: anywhere; }

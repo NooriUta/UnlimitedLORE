@@ -65,14 +65,12 @@ export function appliedShowTech(given?: Host): boolean {
 }
 
 /**
- * Вид вкладки «Граф», выбранный человеком (GC-03), — в словах kit:
- * секторы → graph, список → links. Не выбирал (auto, атрибута нет) — undefined:
- * тогда вид решает экран, подменять молчание выбором нельзя.
+ * Вид вкладки «Граф», выбранный человеком (GC-03). Не выбирал (auto, атрибута нет) — undefined:
+ * тогда kit открывает прежний выбор на месте или Обсидиан. «Секторы» и «Список» сняты 16.11.2026
+ * (владелица: «оставьте только последние 3») — их сохранённые значения тоже undefined.
  */
-export function appliedGraphView(given?: Host): 'graph' | 'links' | 'force' | 'obsidian' | undefined {
+export function appliedGraphView(given?: Host): 'force' | 'obsidian' | 'structure' | undefined {
   const v = host(given)?.getAttribute('data-graph-view');
-  if (v === 'sectors') return 'graph';
-  if (v === 'list') return 'links';
-  return v === 'force' || v === 'obsidian' ? v : undefined;
+  return v === 'force' || v === 'obsidian' || v === 'structure' ? v : undefined;
 }import { isRecordPlacement, type RecordPlacement } from '@seidr/kit';
 
