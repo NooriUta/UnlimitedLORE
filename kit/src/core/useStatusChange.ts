@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KitRecord } from './contract';
 import type { KitSaveFn } from './statusSave';
+import { publishRecordUpdate } from './recordUpdates';
 
 export interface StatusChangeState {
   status: string;
@@ -47,6 +48,8 @@ export function useStatusChange(record: KitRecord, save: KitSaveFn, onChange?: (
       setStatus(to);
       try {
         await save({ type: 'status', id: record.id, field: 'status', from, to });
+        // K5-RECORD-UPDATED-EVENT: сервер принял — все места, где видна запись, обновляют элемент.
+        publishRecordUpdate({ id: record.id, field: 'status', value: to });
         setLast(isUndo ? null : { from, to });
         onChange?.(to);
         return true;

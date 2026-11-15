@@ -25,6 +25,7 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
+import { usePatchedData } from '../core/recordUpdates';
 import { verdictText } from '../core/verdict';
 import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
@@ -572,10 +573,13 @@ const DATE_SLOT = '@kit:date';
 const CELL_VALUES_INLINE = 1;
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data: dataIn, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
+  // K5-RECORD-UPDATED-EVENT: правка записи, принятая сервером где-то ещё (паспорт, статус), —
+  // сразу в строке, без перезагрузки списка.
+  const data = usePatchedData(dataIn);
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
   const narrow = useNarrow(narrowProp);
   // Сколько условий остаётся в строке: на телефоне меньше — три чипа «Поле:
