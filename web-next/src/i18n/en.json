@@ -1863,5 +1863,10 @@
   "profile.noAvatar": "No avatar — initials",
   "profile.avatarAdd": "Upload avatar",
   "profile.avatarChange": "Change avatar",
-  "profile.avatarPick": "Avatar file: png, jpeg or webp up to 2 MB"
+  "profile.avatarPick": "Avatar file: png, jpeg or webp up to 2 MB",
+  "projectExport.button": "Export to MD",
+  "projectExport.busy": "Exporting…",
+  "projectExport.hint": "Download the project as a zip of Obsidian-ready .md files",
+  "projectExport.forbidden": "No rights on this project — export unavailable",
+  "projectExport.failed": "Export failed ({status})"
 }

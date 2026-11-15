@@ -1863,5 +1863,10 @@
   "profile.noAvatar": "Аватара нет — инициалы",
   "profile.avatarAdd": "Загрузить аватар",
   "profile.avatarChange": "Сменить аватар",
-  "profile.avatarPick": "Файл аватара: png, jpeg или webp до 2 МБ"
+  "profile.avatarPick": "Файл аватара: png, jpeg или webp до 2 МБ",
+  "projectExport.button": "Выгрузить в MD",
+  "projectExport.busy": "Выгружаю…",
+  "projectExport.hint": "Скачать проект zip-архивом папки .md для Obsidian",
+  "projectExport.forbidden": "Нет прав на проект — выгрузка недоступна",
+  "projectExport.failed": "Выгрузка не удалась ({status})"
 }
