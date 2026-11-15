@@ -103,6 +103,9 @@ class LoreRecordRowLinksTest {
             Map.entry("doc", Map.of()),
             Map.entry("user", Map.of()),
             Map.entry("agent", Map.of()),
+            // MD-04: роль продукта, профиль клиента и ранбук — все вкладки по рёбрам модели, из строки ничего.
+            Map.entry("actor", Map.of()), Map.entry("pain", Map.of()), Map.entry("gain", Map.of()),
+            Map.entry("job", Map.of()), Map.entry("runbook", Map.of()),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.

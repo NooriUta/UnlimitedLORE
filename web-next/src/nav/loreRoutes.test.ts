@@ -32,8 +32,8 @@ describe('B-02 · тип записи → раздел v2; релиз — в р�
 
   it('неизвестный тип и тип без раздела в v2 — null, а не тихий дефолтный раздел', () => {
     expect(recordHref('martian', 'X-1')).toBeNull();
-    // S5-DOC-PASSPORT: doc получил раздел — в примерах «без раздела» его больше нет.
-    for (const t of ['runbook', 'quality_gate', 'use_case', 'actor']) expect(recordHref(t, 'X-1'), t).toBeNull();
+    // S5-DOC-PASSPORT: doc получил раздел; MD-04 — runbook и actor тоже: в примерах «без раздела» их больше нет.
+    for (const t of ['quality_gate', 'use_case', 'finding']) expect(recordHref(t, 'X-1'), t).toBeNull();
     expect(sectionOfType('toString')).toBeNull();
   });
 
@@ -121,14 +121,15 @@ describe('B-07 · переход в другой раздел не тащит q,
 // kit зовёт ctx.href(id) без типа (связи, граф, таблица связей паспорта). Паспорт
 // отдавал «#код» — ссылка вела никуда (находка 09.11 при приёмке на проде).
 describe('ссылка по коду из известных записей', () => {
-  const recs = [{ id: 'S/T-1', kind: 'task' }, { id: 'ADR-1', kind: 'adr' }, { id: 'DOC-1', kind: 'runbook' }];
+  const recs = [{ id: 'S/T-1', kind: 'task' }, { id: 'ADR-1', kind: 'adr' }, { id: 'QG-1', kind: 'quality_gate' }];
   it('тип известен → адрес раздела оболочки', () => {
     expect(knownRecordHref('S/T-1', recs, () => 'x')).toBe('/?mod=forseti&sec=task&open=S%2FT-1');
     expect(knownRecordHref('ADR-1', recs, () => 'x')).toBe('/?mod=forseti&sec=adr&open=ADR-1');
   });
   it('записи нет или у типа нет раздела в v2 — запасная ссылка, раздел не выдумывается', () => {
     expect(knownRecordHref('NOPE', recs, id => '#' + id)).toBe('#NOPE');
-    expect(knownRecordHref('DOC-1', recs, id => '#' + id)).toBe('#DOC-1');
+    // MD-04: у ранбука раздел появился — пример «без раздела» теперь гейт качества.
+    expect(knownRecordHref('QG-1', recs, id => '#' + id)).toBe('#QG-1');
   });
 });
 

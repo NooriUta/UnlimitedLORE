@@ -74,9 +74,11 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   components: 'component', tech: 'tech', features: 'feature',
   // S4-29 (53а): паспорт проекта (только чтение).
   projects: 'project',
-  // S4-PRODUCTS-NODE: паспорт продукта (только чтение). Боли, выгоды, работы и роли —
-  // без паспорта v2: щелчок отвечает словами (NoPassport).
+  // S4-PRODUCTS-NODE: паспорт продукта (только чтение).
   products: 'product',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роли, боли, выгоды и работы пришли в v2 раньше паспорта —
+  // теперь у каждого свой паспорт (только чтение); ранбук — раздел и паспорт.
+  actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job', runbooks: 'runbook',
 };
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
@@ -93,7 +95,7 @@ const defaultPlace = (): RecordPlacement => appliedPassportPlace() ?? 'right';
  * Названы обе вещи: чего нет (паспорт типа) и что есть (список и фильтры).
  * Код записи печатается — по нему её можно найти в LORE другим путём.
  */
-function NoPassport({ id, section, onBack }: { id: string; section: string; onBack: () => void }) {
+export function NoPassport({ id, section, onBack }: { id: string; section: string; onBack: () => void }) {
   const t = useAppT();
   return (
     <div className="list-screen__nopassport" role="status">

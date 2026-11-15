@@ -38,6 +38,7 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     decision: { title: t('shell.sec.decision'), icon: 'gavel' },
     spec: { title: t('shell.sec.spec'), icon: 'scroll-unfurled' },
     doc: { title: t('shell.sec.doc'), icon: 'bookshelf' },
+    runbook: { title: t('shell.sec.runbook'), icon: 'spell-book' },
     question: { title: t('shell.sec.question'), icon: 'help' },
     component: { title: t('shell.sec.component'), icon: 'cog' },
     tech: { title: t('shell.sec.tech'), icon: 'gears' },

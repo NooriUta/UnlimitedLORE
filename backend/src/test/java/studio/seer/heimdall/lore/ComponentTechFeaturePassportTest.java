@@ -18,7 +18,8 @@ class ComponentTechFeaturePassportTest {
     @Test
     void elevenPassportTypesInKitOrder() {
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
-            "component", "tech", "feature", "product", "user", "agent", "project"), LoreRecordRegistry.TYPES);
+            "component", "tech", "feature", "product", "user", "agent",
+            "actor", "pain", "gain", "job", "runbook", "project"), LoreRecordRegistry.TYPES);
     }
 
     @Test

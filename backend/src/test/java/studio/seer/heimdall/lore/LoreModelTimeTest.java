@@ -44,7 +44,9 @@ class LoreModelTimeTest {
             Map.entry("decision", "KnowDecisionHist"), Map.entry("milestone", "KnowMilestoneHist"),
             Map.entry("release", "KnowReleaseHist"), Map.entry("tech", "KnowSpecHist"),
             // S4-PRODUCTS-NODE: продукт — статья словаря, её цепочка SCD2 — KnowDictEntryHist (history_dict).
-            Map.entry("product", "KnowDictEntryHist"));
+            Map.entry("product", "KnowDictEntryHist"),
+            // MD-04: ранбук — тело в открытой версии KnowRunbookHist (runbook_new пишет SCD2-цепочку).
+            Map.entry("runbook", "KnowRunbookHist"));
         for (String t : LoreRecordRegistry.TYPES) {
             String hist = LoreModelTypes.GRAPH.get(t).hist();
             if (want.containsKey(t)) assertEquals(want.get(t), hist, t + ": цепочка SCD2 есть в графе");

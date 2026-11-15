@@ -69,6 +69,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   decision: () => <ListScreen screen="decisions" titleId={SECTION_TITLE_ID} />,
   spec: () => <ListScreen screen="specs" titleId={SECTION_TITLE_ID} />,
   doc: () => <ListScreen screen="docs" titleId={SECTION_TITLE_ID} />,
+  // MD-04: ранбуки — свой раздел и паспорт (были только вкладкой проекта).
+  runbook: () => <ListScreen screen="runbooks" titleId={SECTION_TITLE_ID} />,
   user: () => <ListScreen screen="users" titleId={SECTION_TITLE_ID} />,
   agent: () => <ListScreen screen="agents" titleId={SECTION_TITLE_ID} />,
   question: () => <ListScreen screen="questions" titleId={SECTION_TITLE_ID} />,

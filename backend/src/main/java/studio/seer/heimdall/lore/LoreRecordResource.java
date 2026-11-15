@@ -80,6 +80,13 @@ public class LoreRecordResource extends LoreResourceBase {
             // и агент (actor_id, как у вкладки «Агенты») — паспорта, на которые проект уже ссылался.
             case "user" -> new Source("user_by_id", "kc_sub", false);
             case "agent" -> new Source("agent_by_id", "id", false);
+            // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта и профиль клиента (были только списки),
+            // ранбук (не было ни раздела, ни паспорта). Ключи — те же, что у их списков и связей.
+            case "actor" -> new Source("actor_by_id", "id", false);
+            case "pain" -> new Source("pain_by_id", "id", false);
+            case "gain" -> new Source("gain_by_id", "id", false);
+            case "job" -> new Source("job_by_id", "id", false);
+            case "runbook" -> new Source("runbook_by_id", "id", false);
             default -> null;
         };
     }

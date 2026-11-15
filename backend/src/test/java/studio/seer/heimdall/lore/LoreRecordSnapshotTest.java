@@ -36,7 +36,9 @@ class LoreRecordSnapshotTest {
 
     /** Типы, рождённые после перевода на общий сборщик: снимка «до» у них нет. */
     // S5-DOC-PASSPORT: документ заведён после перевода на общий сборщик — ручной функции у него не было.
-    static final List<String> POST_REFACTOR = List.of("project", "product", "doc", "user", "agent");
+    static final List<String> POST_REFACTOR = List.of("project", "product", "doc", "user", "agent",
+        // MD-04: роль продукта, профиль клиента и ранбук — паспорта после рефакторинга.
+        "actor", "pain", "gain", "job", "runbook");
 
     /**
      * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга
