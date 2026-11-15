@@ -23,7 +23,10 @@ export async function standLogin(browser: Browser, baseURL: string, login: strin
     const resp = await page.goto('/news', { timeout: timeoutMs }).catch(e => { throw new Error(`goto: ${(e as Error).message.split('\n')[0]}`); });
     step = `ждать форму входа или приложение (HTTP ${resp?.status() ?? '—'})`;
     const form = page.locator('#username');
-    const app = page.locator('[data-testid^="news-row-"]');
+    // Признак «вошла» — оболочка приложения, а не строки ленты: у тестовой учётки с пустым
+    // проектным скоупом лента пуста (прогон 7847: KC пустил, вернул на /news «LORE v2», а
+    // строк ленты не было 45 с у всех шести).
+    const app = page.locator('.sk-shell__side, [data-testid^="news-row-"]');
     await form.or(app).first().waitFor({ timeout: timeoutMs });
     if (await form.isVisible().catch(() => false)) {
       step = 'ввести учётку в форму KC';
@@ -38,8 +41,10 @@ export async function standLogin(browser: Browser, baseURL: string, login: strin
         return { login, ok: false, reason: `Keycloak отказал: ${text || 'без текста'}` };
       }
     }
-    step = 'ждать ленту';
+    step = 'ждать оболочку приложения';
     await app.first().waitFor({ timeout: timeoutMs });
+    step = 'ждать сессию OIDC в хранилище';
+    await page.waitForFunction(() => Object.keys(localStorage).some(k => k.includes('oidc.user:')), undefined, { timeout: timeoutMs });
     await ctx.storageState({ path: file });
     return { login, ok: true, reason: null };
   } catch (e) {
