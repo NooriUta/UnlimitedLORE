@@ -8,6 +8,7 @@
 // new.lore; возврат из Keycloak распознаётся по ?code&state на корне.
 import { createAuthSession, createOidcManager, type AuthSession } from '@seidr/kit/auth';
 import { OIDC_PREFIX, oidcStore } from '../storage/oidcSession';
+import { resolveOidc, runtimeAuthConfig } from './runtimeAuthConfig';
 
 export const AUTH_ENABLED = import.meta.env.VITE_LORE_AUTH_ENABLED === 'true';
 const REDIRECT_PATH = '/';
@@ -18,12 +19,16 @@ export const v2Auth: AuthSession = createAuthSession({
   // Вход выключен — dev-роль, как шлёт v1 (K-14: заголовок — предметность LORE, не kit).
   devHeaders: { 'X-Seer-Role': 'admin' },
   manager: () => {
-    const issuer = import.meta.env.VITE_OIDC_ISSUER as string | undefined;
-    if (!issuer) throw new Error('VITE_LORE_AUTH_ENABLED=true, но VITE_OIDC_ISSUER не задан при сборке образа');
+    // Realm — настройка среды: адрес входа от бэкенда своей среды (/lore/auth/config), сборка — запасной путь.
+    const { issuer, clientId } = resolveOidc({
+      issuer: import.meta.env.VITE_OIDC_ISSUER as string | undefined,
+      clientId: import.meta.env.VITE_OIDC_CLIENT_ID as string | undefined,
+    }, runtimeAuthConfig());
+    if (!issuer) throw new Error('VITE_LORE_AUTH_ENABLED=true, но адрес входа не пришёл ни от бэкенда (/lore/auth/config), ни из сборки');
     const origin = globalThis.location.origin;
     return createOidcManager({
       issuer,
-      clientId: (import.meta.env.VITE_OIDC_CLIENT_ID as string | undefined) || 'lore-app',
+      clientId,
       redirectUri: `${origin}${REDIRECT_PATH}`,
       postLogoutRedirectUri: `${origin}${REDIRECT_PATH}`,
       store: oidcStore(),

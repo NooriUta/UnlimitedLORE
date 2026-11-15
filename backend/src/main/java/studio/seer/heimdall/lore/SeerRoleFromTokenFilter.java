@@ -61,8 +61,14 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
         // на него смотрят healthcheck в compose и проверка деплоя в CD, а данных
         // он не отдаёт. Закрыть его значило бы сломать перезапуск стенда, и
         // выглядело бы это как «контейнер не поднимается».
+        // Единственное исключение — настройка входа своей среды (LoreAuthConfigResource): она нужна ДО входа
+        // и отдаёт только публичное (issuer, клиент фронта). Ровно этот путь, не поддерево.
+        if (p.equals(AUTH_CONFIG_PATH)) return false;
         return p.equals("lore") || p.startsWith("lore/");
     }
+
+    /** Открытый путь настройки входа (без ведущего «/»). */
+    static final String AUTH_CONFIG_PATH = "lore/auth/config";
 
     @Override
     public void filter(ContainerRequestContext ctx) {
