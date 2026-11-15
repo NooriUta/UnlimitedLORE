@@ -233,28 +233,42 @@ public class LoreQgActionsPoller {
                 LOG.infof("[LORE QG] опрос прогонов Actions: проекты %s (%s)", p.projects(), p.source());
             }
         }
+        List<String> outcomes = new ArrayList<>();
         for (String s : p.projects()) {
             try {
-                pollProject(s);
+                outcomes.add(s + ": " + pollProject(s));
             } catch (Exception e) {
                 // Недоступный Forgejo — потеря метрики, а не работы пользователя.
                 LOG.warnf("[LORE QG] опрос прогонов %s не удался: %s", s, e.getMessage());
+                outcomes.add(s + ": ошибка");
             }
         }
+        // Строка на КАЖДЫЙ заход (15.11.2026): без неё успешный проход и проход,
+        // не увидевший настройку, неотличимы в журнале — оба молчат.
+        LOG.info(passLine(p, outcomes));
     }
 
-    void pollProject(String slug) throws Exception {
+    /** Итог захода одной строкой: откуда список, что опрошено, сколько записано. Чистая функция. */
+    static String passLine(Projects p, List<String> outcomes) {
+        return "[LORE QG] заход опроса Actions: источник — " + p.source()
+            + ", проектов " + p.projects().size()
+            + (p.projects().isEmpty() ? " (записей канала 1 не будет)" : "")
+            + (outcomes.isEmpty() ? "" : "; " + String.join("; ", outcomes));
+    }
+
+    /** @return итог по проекту словами — он попадает в строку захода. */
+    String pollProject(String slug) throws Exception {
         Optional<ForgejoBridge.Repo> repo = forgejo.resolve(slug);
         if (repo.isEmpty()) {
             LOG.warnf("[LORE QG] проект %s не разрешается в репозиторий Forgejo — пропущен", slug);
-            return;
+            return "не разрешается в репозиторий Forgejo";
         }
         var resp = forgejo.api(repo.get(), "GET",
             "/repos/" + repo.get().owner() + "/" + repo.get().name()
                 + "/actions/runs?limit=" + pageSize, null);
         if (resp.statusCode() != 200) {
             LOG.warnf("[LORE QG] Forgejo вернул %d на список прогонов %s", resp.statusCode(), slug);
-            return;
+            return "Forgejo вернул " + resp.statusCode();
         }
         JsonObject body = new JsonObject(resp.body());
         JsonArray runs = body.getJsonArray("workflow_runs", new JsonArray());
@@ -262,7 +276,7 @@ public class LoreQgActionsPoller {
         for (int i = 0; i < runs.size(); i++) {
             if (recordRun(slug, runs.getJsonObject(i))) written++;
         }
-        LOG.debugf("[LORE QG] %s: записано прогонов %d из %d", slug, written, runs.size());
+        return "записано прогонов " + written + " из " + runs.size();
     }
 
     /** @return true если прогон записан; false если он ещё идёт и записывать нечего. */

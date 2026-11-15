@@ -1739,9 +1739,11 @@ export function registerLoreWrite(rawServer: McpServer): void {
       name:         z.string(),
       description:  z.string().optional(),
       component_id: z.string().optional(),
-      status:       z.string().optional().describe('e.g. "active", "draft", "deprecated"'),
+      status:       z.string().optional().describe('ADR-LORE-053-D7 lifecycle: draft | active | stale | retired (omitted on a new gate = draft). active needs an owner project, retired needs retired_reason'),
       content_md:   z.string().optional().describe('gate body in Markdown'),
       sprint_id:    z.string().optional().describe('sprint this QG belongs to, e.g. "SPRINT_AUTH_REDESIGN"'),
+      project:      z.string().optional().describe('owner project slug (KnowGitProject) — creates BELONGS_TO_PROJECT; required before status=active'),
+      retired_reason: z.string().optional().describe('why the gate is retired — required with status=retired'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/quality-gate', p)); }
