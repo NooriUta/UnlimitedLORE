@@ -45,6 +45,12 @@ export const QUESTION_STATUSES = ['open', 'deferred', 'closed', 'dropped'] as co
 export const FEATURE_STATUSES = ['proposed', 'dropped', 'active', 'in_rework', 'shipped'] as const;
 
 /**
+ * `qgStatuses` из shared/lore-statuses.json — состояния гейта качества (ADR-LORE-053-D7,
+ * зеркало QgGateLifecycle). `active` здесь — «гейт работает», а не «в работе» задачи.
+ */
+export const QG_STATUSES = ['draft', 'active', 'stale', 'retired'] as const;
+
+/**
  * Значение оси → её код, иначе `unknown`.
  *
  * Регистр и пробелы вокруг не значат ничего (в корпусе встречается и то и
@@ -63,3 +69,4 @@ export const decisionStatusOf = (raw: unknown): string => axisStatusOf(raw, DECI
 export const specStatusOf = (raw: unknown): string => axisStatusOf(raw, SPEC_STATUSES);
 export const questionStatusOf = (raw: unknown): string => axisStatusOf(raw, QUESTION_STATUSES);
 export const featureStatusOf = (raw: unknown): string => axisStatusOf(raw, FEATURE_STATUSES);
+export const gateStatusOf = (raw: unknown): string => axisStatusOf(raw, QG_STATUSES);

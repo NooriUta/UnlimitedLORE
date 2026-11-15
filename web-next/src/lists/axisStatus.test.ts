@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  DECISION_STATUSES, FEATURE_STATUSES, QUESTION_STATUSES, SPEC_STATUSES,
+  DECISION_STATUSES, FEATURE_STATUSES, QG_STATUSES, QUESTION_STATUSES, SPEC_STATUSES,
   axisStatusOf, decisionStatusOf, featureStatusOf, questionStatusOf, specStatusOf,
 } from './axisStatus';
 import { planStatusOf } from '../sprints/taskStatus';
@@ -48,6 +48,12 @@ describe('статусные оси неплановых типов', () => {
   it('копия словаря вопросов совпадает с shared', () => {
     expect(Array.isArray(shared.questionStatuses)).toBe(true);
     expect([...QUESTION_STATUSES].sort()).toEqual([...shared.questionStatuses].sort());
+  });
+
+  // MD-04: состояния гейта качества — та же сверка копии с shared.
+  it('копия словаря состояний гейта совпадает с shared', () => {
+    expect(Array.isArray(shared.qgStatuses)).toBe(true);
+    expect([...QG_STATUSES].sort()).toEqual([...shared.qgStatuses].sort());
   });
 
   it('копия словаря фич совпадает с shared', () => {

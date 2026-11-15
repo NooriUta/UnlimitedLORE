@@ -45,6 +45,13 @@
     "closed",
     "dropped"
   ],
+  "_qgStatusesComment": "SPRINT_LORE_MODEL_DOCS_TIDY/MD-04. qgStatuses mirror QgGateLifecycle.STATUSES (ADR-LORE-053-D7; the live list is the qg_status dictionary, V93). Guarded by QualityGateStatusAxisTest; the web-next copy (lists/axisStatus.ts) by axisStatus.test.ts.",
+  "qgStatuses": [
+    "draft",
+    "active",
+    "stale",
+    "retired"
+  ],
   "featureStatuses": [
     "proposed",
     "dropped",
@@ -258,6 +265,17 @@
         "done": "finished",
         "deprecated": "withdrawn",
         "superseded": "withdrawn"
+      }
+    },
+    "gate": {
+      "appliesTo": [
+        "quality_gate"
+      ],
+      "map": {
+        "draft": "not_started",
+        "active": "in_force",
+        "stale": "in_progress",
+        "retired": "withdrawn"
       }
     }
   },

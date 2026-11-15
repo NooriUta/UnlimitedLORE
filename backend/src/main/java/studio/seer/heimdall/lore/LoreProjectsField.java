@@ -37,7 +37,9 @@ final class LoreProjectsField {
      */
     static final Set<String> GUARANTEED = Set.of(
         "adrs", "adr", "specs", "spec_by_id", "decisions", "decisions_of_adr",
-        "sprints", "sprint_tree", "docs", "runbooks", "releases", "products", "product_by_id");
+        "sprints", "sprint_tree", "docs", "runbooks", "releases", "products", "product_by_id",
+        // MD-04: у гейта качества появилась ось состояния — проект-владелец обязан приходить всегда.
+        "quality_gates", "quality_gate_by_id");
 
     private static final Pattern AXIS = Pattern.compile("(?i)\\bAS\\s+(git_)?projects\\b");
 
