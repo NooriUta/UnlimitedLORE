@@ -319,6 +319,16 @@
           ],
           "filled": 1,
           "of": 2148
+        },
+        "priority_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "KnowSprint.priority"
+          ],
+          "filled": 9,
+          "of": 2148,
+          "note": "приходит с записи в текущую версию"
         }
       },
       "from_record_to_current_version": [],

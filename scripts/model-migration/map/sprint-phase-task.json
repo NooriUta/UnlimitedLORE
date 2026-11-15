@@ -110,14 +110,18 @@
         "note": "служебное"
       },
       "valid_from": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "valid_from",
+        "how": "DATETIME",
         "basis": "owner",
-        "note": "служебное"
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
       },
       "valid_to": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "valid_to",
+        "how": "DATETIME",
         "basis": "owner",
-        "note": "служебное"
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
       },
       "changed_by": {
         "rule": "keep",
@@ -146,9 +150,11 @@
         "basis": "proposal"
       },
       "status_known_from": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "status_known_from",
+        "how": "DATETIME",
         "basis": "proposal",
-        "note": "служебное"
+        "note": "само поле — предложение исполнителя (оставить); вид хранения — по решению владелицы «даты настоящим типом»"
       },
       "status_backfilled": {
         "rule": "keep",
@@ -278,14 +284,18 @@
         "note": "служебное; недостающее добавляется всем версиям"
       },
       "valid_from": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "valid_from",
+        "how": "DATETIME",
         "basis": "owner",
-        "note": "служебное"
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
       },
       "valid_to": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "valid_to",
+        "how": "DATETIME",
         "basis": "owner",
-        "note": "служебное"
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
       },
       "changed_by": {
         "rule": "keep",
@@ -315,9 +325,11 @@
         "basis": "proposal"
       },
       "status_known_from": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "status_known_from",
+        "how": "DATETIME",
         "basis": "proposal",
-        "note": "служебное"
+        "note": "само поле — предложение исполнителя (оставить); вид хранения — по решению владелицы «даты настоящим типом»"
       },
       "status_backfilled": {
         "rule": "keep",
@@ -430,14 +442,18 @@
         "note": "служебное; недостающее добавляется всем версиям"
       },
       "valid_from": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "valid_from",
+        "how": "DATETIME",
         "basis": "owner",
-        "note": "служебное"
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
       },
       "valid_to": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "valid_to",
+        "how": "DATETIME",
         "basis": "owner",
-        "note": "служебное"
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
       },
       "changed_by": {
         "rule": "keep",
@@ -471,9 +487,11 @@
         "basis": "proposal"
       },
       "status_known_from": {
-        "rule": "keep",
+        "rule": "transform",
+        "to": "status_known_from",
+        "how": "DATETIME",
         "basis": "proposal",
-        "note": "служебное"
+        "note": "само поле — предложение исполнителя (оставить); вид хранения — по решению владелицы «даты настоящим типом»"
       },
       "status_backfilled": {
         "rule": "keep",

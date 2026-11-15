@@ -111,6 +111,7 @@ const TRANSFORMS = {
   'KnowPhaseHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, true),
   'KnowPhase.phase_id': (f, v, r) => { r.out.phase_id = String(v).trim().replace(/^Фаза\s+/u, ''); },
 };
+const TYPE_ONLY = { DATE: asDate, DATETIME: asDateTime };
 const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, r.toVersion) };
 const RENAMES = {
   'KnowSprint.name': (v, rec) => (v === rec.sprint_id ? null : v),
@@ -125,6 +126,8 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     const k = `${T}.${f}`;
     if (e.rule === 'drop') { if (given(v)) r.dropped.push(f); continue; }
     if (!given(v)) continue;
+    // Смена только вида хранения (дата, момент) — общее решение владелицы, от согласованности самого поля не зависит.
+    if (e.rule === 'transform' && TYPE_ONLY[e.how] && !TRANSFORMS[k]) { TYPE_ONLY[e.how](f, v, r, e.to || f); continue; }
     if (e.rule === 'open' || (e.rule === 'transform' && e.basis !== 'owner')) { r.held[f] = v; continue; }
     if (e.rule === 'keep') { r.out[f] = v; continue; }
     if (e.rule === 'rename') {
@@ -147,6 +150,6 @@ export function applyMap(T, typeMap, record, ctx = {}) {
 /** Преобразования карты, для которых нет кода, — сторож полноты исполнителя. */
 export function missingTransforms(types) {
   const out = [];
-  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && e.basis === 'owner' && !TRANSFORMS[`${T}.${f}`]) out.push(`${T}.${f}`);
+  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && e.basis === 'owner' && !TRANSFORMS[`${T}.${f}`] && !TYPE_ONLY[e.how]) out.push(`${T}.${f}`);
   return out;
 }

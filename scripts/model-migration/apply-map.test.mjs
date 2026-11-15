@@ -152,3 +152,14 @@ test('фаза: настоящий статус, которого нет в сп
   assert.equal(title.titleFallback, 'Alert Engine');
   assert.deepEqual(title.rejects, []);
 });
+
+test('служебные моменты версии приводятся к настоящему виду, даже если само поле — предложение', () => {
+  const c = { statusCodes: { sprint_status: DICT }, statusDict: 'sprint_status', statusVocab: VOCAB, canonToCode: { in_progress: 'active' } };
+  const r = applyMap('KnowSprintHist', MAP.KnowSprintHist, { valid_from: '2026-06-04T10:00:00+03:00', valid_to: '2026-06-05', status_known_from: '2026-06-04T07:00:00Z' }, c);
+  assert.equal(r.out.valid_from, '2026-06-04T07:00:00.000Z');
+  assert.equal(r.out.valid_to, '2026-06-05T00:00:00.000Z');
+  assert.equal(r.out.status_known_from, '2026-06-04T07:00:00.000Z');
+  assert.deepEqual(r.held, {});
+  const bad = applyMap('KnowSprintHist', MAP.KnowSprintHist, { valid_from: 'давно' }, c);
+  assert.deepEqual(bad.rejects, [{ field: 'valid_from', value: 'давно', why: 'не момент времени' }]);
+});

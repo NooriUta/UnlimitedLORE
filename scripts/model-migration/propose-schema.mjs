@@ -41,6 +41,16 @@ for (const [T, t] of Object.entries(report.types)) {
     rejects: Object.fromEntries(Object.entries(t.rejects).map(([k, e]) => [k, e.n])),
   };
 }
+// Поле, которое приходит в версию только с записи (этап сведения), сухой прогон в версии не видит — добавляем.
+for (const [T, t] of Object.entries(types)) {
+  const H = types[T + 'Hist'];
+  if (!H) continue;
+  for (const f of t.from_record_to_current_version) {
+    if (H.fields[f]) continue;
+    const kind = NEW_KIND[f] || 'text';
+    H.fields[f] = { kind, db_type: DB_TYPE[kind] || 'STRING', from: [`${T}.${f.replace(/_note$/, '')}`], filled: report.types[T].toVersion[f] || 0, of: H.records, note: 'приходит с записи в текущую версию' };
+  }
+}
 const out = {
   _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы первого объекта (спринт, фаза, задача) — владелицей не утверждено. Выведено из карты переноса и сухого прогона по снимку прода: в схему попали только поля, которые перенос реально дал. Запись в базу-приёмник по этой схеме начинается после её слова.',
   _source: report.source,
