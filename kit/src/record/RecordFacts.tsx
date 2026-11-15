@@ -44,7 +44,8 @@ export function RecordFacts({ record, ctx, spec, lang, onTasks, tail }: RecordFa
     <section className="sk-rec-facts" data-testid="kit-facts" aria-label={kitT(lang, 'kit.record.facts')}>
       <ul className="sk-rec-facts__list">
         <Fact name="status" tone="t2">
-          <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
+          {/* PU-29 (владелица 14.11.2026): статус в шапке паспорта — значком, как в списке; название в подсказке. */}
+          <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} compact />
         </Fact>
         {t && (
           <Fact name="tasks" tone={tasksTone(t)}>

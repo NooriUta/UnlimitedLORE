@@ -122,7 +122,8 @@ describe('S5-01 · строка-вердикт в шапке', () => {
     // S4-29: последним в строке стоит хвост — переключатель вида паспорта значками (не факт, data-fact нет).
     expect(items).toEqual(['status', 'tasks', 'due', 'fresh', null]);
     expect(within(line).getByRole('group', { name: 'Вид паспорта' })).toBeTruthy();
-    expect(line.textContent).toContain('В работе');
+    // PU-29: статус в шапке — значком, название подсказкой (а не строкой текста).
+    expect(within(line).getByTitle(/В работе/)).toBeTruthy();
     expect(line.textContent).toContain('2/5');
     expect(line.textContent).toContain('Просрочено на 3 дн');
     expect(line.textContent).toContain('2 дн назад');

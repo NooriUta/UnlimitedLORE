@@ -59,9 +59,9 @@ function ctxOf(cfg: KitConfig, role?: string, onSave?: (c: unknown) => Promise<v
 const head = (ctx: KitCtx) => render(<RecordHead record={record} ctx={ctx} lang="ru" titleId="t" />);
 
 describe('статус в шапке записи: плашка или кнопка — по правам', () => {
-  it('положительный контроль: шапка рисуется и показывает статус словом', () => {
+  it('положительный контроль: шапка рисуется и называет статус (значком с подсказкой, PU-29)', () => {
     head(ctxOf(config({ reader: { canEdit: false, canStatus: false } }), 'reader'));
-    expect(screen.getByText('Предложено')).toBeTruthy();
+    expect(screen.getByTitle('Предложено')).toBeTruthy();
   });
 
   it('права на смену ЕСТЬ — статус становится кнопкой', () => {
@@ -72,8 +72,8 @@ describe('статус в шапке записи: плашка или кноп�
   it('прав НЕТ — кнопки нет вовсе, только плашка', () => {
     head(ctxOf(config({ reader: { canEdit: true, canStatus: false } }), 'reader'));
     expect(screen.queryByRole('button', { name: /^Статус/ })).toBeNull();
-    // Статус при этом по-прежнему ВИДЕН: нет прав ≠ нет значения.
-    expect(screen.getByText('Предложено')).toBeTruthy();
+    // Статус при этом по-прежнему ВИДЕН: нет прав ≠ нет значения (значок, имя — подсказкой, PU-29).
+    expect(screen.getByRole('img', { name: 'Предложено' })).toBeTruthy();
   });
 
   it('статусной оси нет вовсе (K-14) — кнопки нет, даже если права есть', () => {

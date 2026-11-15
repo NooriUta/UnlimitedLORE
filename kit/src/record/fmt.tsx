@@ -38,7 +38,9 @@ export function findRecord(ctx: KitCtx, id: string): KitRecord | undefined {
 }
 
 /** Пилюля статуса по config.statuses; кода нет в конфиге — код виден как есть. */
-export function StatusPill({ code, ctx, unknownTitle, kind }: { code: string; ctx: KitCtx; unknownTitle: string; /** Вид записи — оформление по её циклу (statuses.byKind). */ kind?: string }) {
+export function StatusPill({ code, ctx, unknownTitle, kind, compact }: { code: string; ctx: KitCtx; unknownTitle: string; /** Вид записи — оформление по её циклу (statuses.byKind). */ kind?: string;
+  /** PU-29: только значок, название — подсказкой и именем для чтения (шапка паспорта, как ячейка списка #1387). */
+  compact?: boolean }) {
   // Пустой код или пустая ось — плашки нет вовсе (B5, аудит 10.11): «—» у типа
   // без статуса (релиз, компонент, технология) читалось как реальный статус
   // записи. Те же правила у StatusSlot, пиков и таблицы связей — они зовут эту
@@ -46,6 +48,15 @@ export function StatusPill({ code, ctx, unknownTitle, kind }: { code: string; ct
   if (!code || !ctx.config.statuses?.items?.length) return null;
   const item = statusItemFor(ctx.config.statuses, code, kind);
   const style = { '--pill-c': item ? toCssColor(item.color) : 'var(--t3)' } as CSSProperties;
+  // Значок без подписи возможен только у статуса из словаря: у неизвестного значка нет, и код остаётся словом.
+  if (compact && item) {
+    return (
+      <span className="sk-pill sk-pill--value sk-pill--icon sk-rec-status" style={style} data-status={code} data-known="true"
+        role="img" aria-label={item.title} title={item.title}>
+        <GameIcon slug={item.icon} size={12} />
+      </span>
+    );
+  }
   return (
     <span className="sk-pill sk-pill--value sk-rec-status" style={style} data-status={code} data-known={item ? 'true' : 'false'}
       title={item ? undefined : unknownTitle}>
