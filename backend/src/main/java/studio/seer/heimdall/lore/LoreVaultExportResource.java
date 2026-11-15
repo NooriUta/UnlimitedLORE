@@ -59,12 +59,18 @@ public class LoreVaultExportResource extends LoreResourceBase {
         return m;
     }
 
-    /** Задачи спринтов проекта: тело и статус — из ОТКРЫТОЙ версии истории (valid_to IS NULL). */
+    /**
+     * Задачи спринтов проекта: статус, тело и оценка — из ОТКРЫТОЙ версии истории, а если в ней
+     * поля нет — из любой версии, где оно есть (та же форма, что у среза tasks_of_sprint). Смена
+     * статуса вставляет открытую версию без заметки и оценки, а у легаси-задач открытой версии нет
+     * вовсе: без фолбэка выгрузка теряла статус и тело, которые паспорт показывает (прод 15.11:
+     * 13 задач без статуса).
+     */
     static final String TASKS_SQL =
         "SELECT task_uid, title, " +
-        "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
-        "out('HAS_STATE')[valid_to IS NULL].note_md[0] AS note_md, " +
-        "out('HAS_STATE')[valid_to IS NULL].effort_days[0] AS effort_days " +
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].note_md[0], out('HAS_STATE')[note_md IS NOT NULL].note_md[0]) AS note_md, " +
+        "COALESCE(out('HAS_STATE')[valid_to IS NULL].effort_days[0], out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0]) AS effort_days " +
         "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids";
 
     @GET
