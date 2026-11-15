@@ -144,7 +144,7 @@ class LoreMePrefsTest {
     @Test
     void graphViewIsAutoByDefaultAndKnowsFourViews() {
         assertEquals("auto", LoreMePrefs.defaults().get("graph_view"), "по умолчанию вид не выбран — решает экран");
-        for (String v : List.of("auto", "sectors", "list", "force", "obsidian"))
+        for (String v : List.of("auto", "sectors", "list", "force", "obsidian", "structure"))
             assertTrue(LoreMePrefs.validateSettingsPatch(Map.of("graph_view", v)).isEmpty(), v + " — допустимое значение");
         assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("graph_view", "canvas")).size(), "незнакомый вид — отказ");
     }

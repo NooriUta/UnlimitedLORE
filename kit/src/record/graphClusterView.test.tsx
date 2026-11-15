@@ -1,19 +1,33 @@
 // @vitest-environment jsdom
-// Хаб в графе на экране: кластер «N ▸» и список связей первым на телефоне
-// (SPRINT_UXR_S9_SCALE_OPT/S9-08).
+// Хаб в графе на экране: кластер «N ▸» вместо сотни узлов (SPRINT_UXR_S9_SCALE_OPT/S9-08, PU-11).
 //
-// Критерий задачи дословно: «хаб показывает кластер „N релизов ▸" вместо N
-// узлов, на телефоне первым открывается список связей».
+// Слово «релизов» в подписи — предметное, и kit его не знает: подпись даёт конфиг приложения
+// (`config.edges[type].label`), водораздел K-14. Поэтому проверяется, что у кластера ПОДПИСЬ ТИПА
+// РЕБРА и число, а не выдуманное слово.
 //
-// Слово «релизов» в подписи — предметное, и kit его не знает: подпись даёт
-// конфиг приложения (`config.edges[type].label`), водораздел K-14. Поэтому
-// здесь проверяется, что на экране стоит ПОДПИСЬ ТИПА РЕБРА и число, а не
-// выдуманное слово.
-import { beforeEach, describe, expect, it } from 'vitest';
-import { fireEvent, render, within } from '@testing-library/react';
+// 16.11.2026 владелица сняла «Секторы» и «Список»: правило кластера одно для всех раскладок (PU-11),
+// поэтому проверки смотрят в движок графа знаний (заглушка с теми же узлами, что получает
+// Обсидиан). Проверки геометрии секторов (коробка foreignObject, «список первым на телефоне»)
+// ушли вместе с видом.
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { KitConfig, KitCtx, KitData, KitEdge, KitRecord } from '../core/contract';
+import type { GxEngineProps } from '../graph/engineTypes';
 import { RecordGraph } from './RecordGraph';
 import { GRAPH_CLUSTER_MAX } from './graph';
+
+const stub = () => function Stub(p: GxEngineProps) {
+  return (
+    <div data-testid="eng">
+      {p.nodes.map(n => (
+        <button key={n.id} type="button" data-node={n.id} data-type={n.type} onClick={() => p.onSelect(n.id)}>{n.title ?? n.id}</button>
+      ))}
+    </div>
+  );
+};
+vi.mock('../graph/ForceEngine', () => ({ default: stub() }));
+vi.mock('../graph/ObsidianEngine', () => ({ default: stub() }));
+vi.mock('../graph/ReactFlowEngine', () => ({ default: stub() }));
 
 const rec = (id: string): KitRecord => ({ id, kind: 'item', title: `Запись ${id}`, status: 'todo', fields: {} });
 
@@ -38,133 +52,60 @@ const ctxOf = (data: KitData): KitCtx => ({
   config, data, href: (id: string) => `/r/${id}`, role: 'reader', lang: 'ru',
 } as unknown as KitCtx);
 
-function draw(n: number, narrow?: boolean) {
-  const data = hub(n);
-  return render(<RecordGraph record={rec('ego')} ctx={ctxOf(data)} lang="ru" narrow={narrow} />);
+async function draw(data: KitData) {
+  const r = render(<RecordGraph record={rec('ego')} ctx={ctxOf(data)} lang="ru" />);
+  await screen.findByTestId('eng');
+  return r;
 }
 
-// Состояние графа живёт в АДРЕСЕ, а адрес в jsdom один на весь файл: клик по
-// «раскрыть» в одной проверке оставлял gopen=… всем следующим, и они видели уже
-// раскрытый кластер. Поймано первым прогоном — поэтому адрес чистится до каждой.
-beforeEach(() => { window.history.replaceState(null, '', '/'); });
+// Состояние графа живёт в АДРЕСЕ (gopen) — чистится до каждой проверки.
+beforeEach(() => { window.history.replaceState(null, '', '/'); localStorage.clear(); });
 
-const clusters = (c: HTMLElement) => [...c.querySelectorAll('[data-cluster]')];
-const nodes = (c: HTMLElement) => [...c.querySelectorAll('[data-node]')];
+const clusters = () => [...document.querySelectorAll('[data-type="@kit:cluster"]')];
+const nodesOf = (prefix: string) => document.querySelectorAll(`[data-node^="${prefix}"]:not([data-type="@kit:cluster"])`);
 
-describe('S9-08 · кластер вместо сотни кружков', () => {
-  it('положительный контроль: соседей в пределах потолка — кружки, кластеров нет', () => {
-    const { container } = draw(GRAPH_CLUSTER_MAX, false);
-    expect(clusters(container)).toHaveLength(0);
-    // Центр плюс соседи обоих типов.
-    expect(nodes(container).length).toBeGreaterThan(GRAPH_CLUSTER_MAX);
+describe('S9-08 · кластер вместо сотни узлов', () => {
+  it('положительный контроль: соседей в пределах потолка — узлы, кластеров нет', async () => {
+    await draw(hub(GRAPH_CLUSTER_MAX));
+    expect(clusters()).toHaveLength(0);
+    expect(nodesOf('m')).toHaveLength(GRAPH_CLUSTER_MAX);
   });
 
-  it('соседей больше потолка — на холсте ОДИН кластер вместо них', () => {
-    const { container } = draw(149, false);
-    expect(clusters(container)).toHaveLength(1);
-    expect(container.querySelectorAll('[data-node^="m"]')).toHaveLength(0);
+  it('соседей больше потолка — ОДИН кластер вместо них', async () => {
+    await draw(hub(149));
+    expect(clusters()).toHaveLength(1);
+    expect(nodesOf('m')).toHaveLength(0);
   });
 
-  it('кластер несёт ЧИСЛО и ПОДПИСЬ ТИПА из конфига, а не выдуманное слово', () => {
-    const { container } = draw(149, false);
-    const text = clusters(container)[0].textContent ?? '';
+  it('кластер несёт ЧИСЛО и ПОДПИСЬ ТИПА из конфига, а не выдуманное слово', async () => {
+    await draw(hub(149));
+    const text = clusters()[0].textContent ?? '';
     expect(text).toMatch(/149/);
     expect(text).toMatch(/Много чего/);
   });
 
-  it('связи другого типа не пропали: хаб их больше не вытесняет', () => {
-    const { container } = draw(149, false);
-    expect(container.querySelectorAll('[data-node^="f"]')).toHaveLength(2);
+  it('связи другого типа не пропали: хаб их больше не вытесняет', async () => {
+    await draw(hub(149));
+    expect(nodesOf('f')).toHaveLength(2);
   });
 
-  it('кластер раскрывается нажатием — узлы возвращаются на холст', () => {
-    const { container } = draw(20, false);
-    fireEvent.click(clusters(container)[0].querySelector('[data-cluster-open]')!);
-    expect(container.querySelectorAll('[data-node^="m"]').length).toBe(20);
-  });
-
-  it('кластер — настоящая кнопка: он работает и с клавиатуры', () => {
-    const { container } = draw(20, false);
-    const btn = clusters(container)[0].querySelector('[data-cluster-open]')!;
-    expect(btn.tagName.toLowerCase(), 'не кнопка — значит недоступно без мыши').toBe('button');
-    expect(btn.getAttribute('aria-expanded')).toBe('false');
+  it('кластер раскрывается щелчком по нему — узлы возвращаются на холст', async () => {
+    await draw(hub(20));
+    fireEvent.click(clusters()[0]);
+    expect(nodesOf('m')).toHaveLength(20);
+    expect(clusters()).toHaveLength(0);
   });
 });
 
 describe('S9-08 · честность числа кластера', () => {
-  it('выдача источника обрезана — сказано, что под кластером может быть больше', () => {
+  it('выдача источника обрезана — сказано, что под кластером может быть больше', async () => {
     const full = hub(149);
-    const data = { ...full, meta: { ...full.meta, truncated: true } };
-    const { container } = render(
-      <RecordGraph record={rec('ego')} ctx={ctxOf(data)} lang="ru" narrow={false} />,
-    );
-    const c = clusters(container)[0];
-    expect(c.getAttribute('data-at-least')).toBe('true');
-    expect((c.textContent ?? '') + (c.querySelector('title')?.textContent ?? ''), 'точное число там, где его нет').toMatch(/\+|не меньше|не менее/i);
+    await draw({ ...full, meta: { ...full.meta, truncated: true } });
+    expect(clusters()[0].textContent ?? '').toMatch(/\+|не меньше|не менее/i);
   });
 
-  it('выдача целая — число точное, без оговорки', () => {
-    const { container } = draw(149, false);
-    expect(clusters(container)[0].getAttribute('data-at-least')).toBeNull();
-  });
-});
-
-describe('S9-08 · телефон: первым список связей', () => {
-  it('на узком экране по умолчанию открыт СПИСОК, а не холст', () => {
-    const { container } = draw(149, true);
-    expect(container.querySelector('.sk-rec-graph__svg'), 'граф на телефоне не читается').toBeNull();
-    expect(container.querySelector('[data-testid="kit-graph-links"]')).toBeTruthy();
-  });
-
-  it('на широком экране по умолчанию холст', () => {
-    const { container } = draw(149, false);
-    expect(container.querySelector('.sk-rec-graph__svg')).toBeTruthy();
-  });
-
-  it('переключатель есть на обеих ширинах: выбор за человеком, а не за порогом', () => {
-    for (const narrow of [true, false]) {
-      const { container, unmount } = draw(149, narrow);
-      expect(within(container).getByTestId('kit-graph-view'), `ширина narrow=${narrow}`).toBeTruthy();
-      unmount();
-    }
-  });
-
-  it('на телефоне можно переключиться на холст', () => {
-    const { container } = draw(149, true);
-    const sw = within(container).getByTestId('kit-graph-view');
-    fireEvent.click(within(sw).getByRole('button', { name: /граф|холст|секторы/i }));
-    expect(container.querySelector('.sk-rec-graph__svg')).toBeTruthy();
-  });
-
-  it('в списке связей хаб тоже не каша: однотипные свёрнуты числом', () => {
-    const { container } = draw(149, true);
-    const list = container.querySelector('[data-testid="kit-graph-links"]')!;
-    expect(list.textContent).toMatch(/149/);
-    expect(list.querySelectorAll('[data-node^="m"]').length, 'сто сорок девять строк — та же каша').toBeLessThan(149);
-  });
-});
-
-// MP2-13 (проход 13.11.2026): карточки элементов графа «съезжали». Кластер-хаб
-// живёт в foreignObject фиксированного размера; коробка 144×32 была НИЖЕ
-// кнопки kit с тап-зоной 44px, и на телефоне карточка вылезала из коробки.
-// Теперь коробка не меньше тап-зоны, а кнопка заполняет её целиком.
-describe('MP2-13 · карточка кластера не выезжает из своей коробки', () => {
-  it('коробка foreignObject не меньше тап-зоны кнопки (44px) и прежней ширины', () => {
-    const { container } = draw(149, false);
-    const boxes = [...container.querySelectorAll('foreignObject')];
-    expect(boxes.length).toBeGreaterThan(0);
-    for (const b of boxes) {
-      expect(Number(b.getAttribute('height')), 'высота коробки кластера').toBeGreaterThanOrEqual(44);
-      expect(Number(b.getAttribute('width')), 'ширина коробки кластера').toBeGreaterThanOrEqual(144);
-    }
-  });
-
-  it('кнопка заполняет коробку целиком: height 100%, min-height 0 (иначе тап-зона выезжает)', () => {
-    const { container } = draw(149, false);
-    const btn = container.querySelector('[data-cluster-open]') as HTMLElement;
-    expect(btn).toBeTruthy();
-    expect(btn.style.height).toBe('100%');
-    expect(btn.style.minHeight).toBe('0');
-    expect(btn.style.boxSizing).toBe('border-box');
+  it('выдача целая — число точное, без оговорки', async () => {
+    await draw(hub(149));
+    expect(clusters()[0].textContent ?? '').not.toMatch(/не меньше|не менее/i);
   });
 });

@@ -102,17 +102,17 @@ describe('S9-08 препрод · модель: свёртка по ПОЛНОЙ
 });
 
 describe('S9-08 препрод · экран', () => {
-  it('сектора: подписи «163 задачи ▸» и «21 решение ▸», без «не меньше» и без «Показано 1 из 185»', () => {
+  // 16.11 «Секторы» сняты владелицей — подписи кластеров смотрим в Обсидиане (вид по умолчанию).
+  const titles = async () => (await screen.findByTestId('eng-obsidian')).getAttribute('data-titles')!.split('|');
+  it('подписи «163 задачи ▸» и «21 решение ▸», без «не меньше» и без «Показано 1 из 185»', async () => {
     const { container } = show();
-    const labels = [...container.querySelectorAll('[data-cluster] .sk-rec-graph__cbtn')].map(b => b.textContent);
-    expect(labels).toEqual(expect.arrayContaining(['163 задачи ▸', '21 решение ▸']));
+    expect(await titles()).toEqual(expect.arrayContaining(['163 задачи ▸', '21 решение ▸']));
     expect(container.textContent).not.toMatch(/не меньше|Показано/);
   });
 
-  it('точный счёт из счётчика рёбер сервера главнее обрезанной выдачи', () => {
-    const { container } = show(adr045({ truncated: true, graphRels: [{ rel: 'JUSTIFIES', count: 163 }, { rel: 'DECIDED_IN', count: 21 }, { rel: 'DEPENDS_ON', count: 1 }] }));
-    const labels = [...container.querySelectorAll('[data-cluster] .sk-rec-graph__cbtn')].map(b => b.textContent);
-    expect(labels).toEqual(expect.arrayContaining(['163 задачи ▸', '21 решение ▸']));
+  it('точный счёт из счётчика рёбер сервера главнее обрезанной выдачи', async () => {
+    show(adr045({ truncated: true, graphRels: [{ rel: 'JUSTIFIES', count: 163 }, { rel: 'DECIDED_IN', count: 21 }, { rel: 'DEPENDS_ON', count: 1 }] }));
+    expect(await titles()).toEqual(expect.arrayContaining(['163 задачи ▸', '21 решение ▸']));
   });
 
   for (const view of ['structure', 'force'] as const) {
