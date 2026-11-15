@@ -61,6 +61,20 @@ class LoreStatusBatchEvidenceTest {
         assertTrue(e.contains("400"), "код HTTP тоже виден: " + e);
     }
 
+    /**
+     * 15.11.2026, живая проверка на проде: done агента без доказательства в пачке вернул
+     * голое «HTTP 409». Гейт (LoreDoneGate) кладёт в ответ не Map, а {@link LoreResourceBase.LoreError} —
+     * разбор понимал только Map, и код DONE_BY_HUMAN_ONLY с текстом терялись.
+     */
+    @Test
+    void отказГейтаТипомLoreError_тожеНазванКодомИТекстом() {
+        Response r = Response.status(409)
+            .entity(new LoreResourceBase.LoreError("DONE_BY_HUMAN_ONLY", "агент не ставит done"))
+            .build();
+        String e = LoreStatusResource.batchError("S/T-1", r);
+        assertEquals("S/T-1: HTTP 409 DONE_BY_HUMAN_ONLY — агент не ставит done", e);
+    }
+
     @Test
     void отказБезТела_честноHttpКод() {
         String e = LoreStatusResource.batchError("S/T-1", Response.status(503).build());
