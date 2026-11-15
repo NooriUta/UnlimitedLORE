@@ -51,7 +51,8 @@ class AgentScopeFilterTest {
         // news добавлен S7A-04: общая черта «прочитано» сдвигается только человеком (§8).
         // record добавлен ADR-LORE-047 A2: путь привязки паспорта ведёт в обработчики разных
         // семейств — строкой матрицы он расширил бы профиль; агенты привязывают через свои *_link.
-        assertEquals(Set.of("dict", "kc", "admin", "user", "news", "record", "model"), AgentScopeFilter.humanOnlyFamilies(), "model — правка модели LORE, MC-05");
+        // users добавлен AP-07: профиль автора (имя, аватар) — свой меняет человек, чужой — админ, агенту не дан.
+        assertEquals(Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model"), AgentScopeFilter.humanOnlyFamilies(), "model — правка модели LORE, MC-05; users — профиль автора, AP-07");
     }
 
     @Test

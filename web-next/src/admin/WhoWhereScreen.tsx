@@ -23,6 +23,7 @@ import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
+import { ProfileEditor } from '../settings/ProfileEditor';
 import { PersonTestDelete } from './TestAccountDelete';
 import { WhyNotSee } from './WhyNotSee';
 import { AgentChip } from './HarnessMark';
@@ -233,6 +234,7 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
 function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Person; meSub: string | null; fetchImpl?: typeof fetch; allSlugs: string[] }) {
   const t = useAppT();
   const isMe = p.kc_sub === meSub;
+  const lang = useKitLang();
   // S7B-20 (UC-4): «Отключить…» — действие паспорта; кого отключаем — в адресе (?adm-off=kc_sub).
   const [off, setOff] = useUrlParam('adm-off');
   return (
@@ -259,6 +261,8 @@ function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Per
           ? p.agents.map(a => <AgentChip key={a.actor_id} row={a} noneLabel={t('admin.harness.none')} />)
           : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
       </p>
+      {/* AP-07: имя и аватар человека — правит админ (свой — человек сам, в личных настройках). */}
+      <ProfileEditor sub={p.kc_sub} lang={lang} {...(fetchImpl ? { fetchImpl } : {})} />
       <PersonAgentsLine kcSub={p.kc_sub} isMe={isMe} fetchImpl={fetchImpl} />
       <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
       {/* S7B-ACL-3: машины, которыми человек владеет и к которым допущен. */}

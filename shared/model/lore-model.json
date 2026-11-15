@@ -3137,9 +3137,19 @@
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "out",
       "relation" : "attribute"
+    }, {
+      "key" : "login",
+      "label" : "Логин",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "avatar",
+      "label" : "Аватар",
+      "kind" : "text",
+      "group" : "props"
     } ],
     "props" : [ {
-      "fields" : [ "projects" ]
+      "fields" : [ "projects", "login", "avatar" ]
     } ],
     "linkTabs" : [ {
       "key" : "tasks",
@@ -4375,6 +4385,7 @@
       "code" : "spec_id"
     },
     "user" : {
+      "avatar" : "avatar_ref",
       "title" : "display_name"
     }
   },

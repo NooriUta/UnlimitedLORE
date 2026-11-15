@@ -1777,7 +1777,17 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY LoreComponent.full_name       IF NOT EXISTS STRING",
             "CREATE PROPERTY LoreComponent.area            IF NOT EXISTS STRING",
             "CREATE PROPERTY LoreComponent.parent_id       IF NOT EXISTS STRING",
-            "CREATE PROPERTY LoreComponent.team            IF NOT EXISTS STRING"))
+            "CREATE PROPERTY LoreComponent.team            IF NOT EXISTS STRING")),
+
+        // SPRINT_LORE_ADMIN_POLISH/AP-07 — профиль автора: логин, имя и аватар человека, один источник для LORE и
+        // miniLORE. Исключение из остановки смены схемы до MIG-01 — слово владелицы 15.11.2026 («это разреши, оно
+        // мелкое»; прямое подтверждение «ок» в канале). До шага логин жил в display_name — его писало назначение
+        // ролей; теперь логин — своё поле, а display_name — имя, которое человек выбирает сам. Данные не переносятся
+        // (шаг только объявляет, сторож аддитивности): у старых записей логин читается как coalesce(login, display_name),
+        // новые назначения ролей пишут login сами. avatar_ref — ключ файла аватара в хранилище ассетов. Аддитивно, major 17. Номер V92 сверен с сессией модели (V91 — её).
+        new Step(92, 17, "user_profile_login_avatar", List.of(
+            "CREATE PROPERTY KnowUser.login      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUser.avatar_ref IF NOT EXISTS STRING"))
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */
