@@ -546,6 +546,8 @@
   "admin.whoami.human": "You: {name} · human · role {role}",
   "admin.whoami.agent": "You: {name} · agent, profile {profile} · client {client}",
   "admin.whoami.unknown": "You are not recognised: {who} is not in the LORE graph (token role — {role})",
+  "admin.noAccess.title": "Admin is for administrators only",
+  "admin.noAccess.reason": "This area is open to the admin and superadmin roles. Your role is {role}.",
   "admin.whoami.unverified": "You: role {role} — not verified, auth is off",
   "admin.whoami.error": "Who you are — could not check (/lore/whoami did not answer)",
   "admin.wiz.agent.check.ok": "Checked: the new account's token carries agent_scope = {scope}",

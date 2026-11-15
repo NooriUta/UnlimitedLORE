@@ -546,6 +546,8 @@
   "admin.whoami.human": "Вы: {name} · человек · роль {role}",
   "admin.whoami.agent": "Вы: {name} · агент, профиль {profile} · клиент {client}",
   "admin.whoami.unknown": "Вы не опознаны: {who} нет в графе LORE (роль из токена — {role})",
+  "admin.noAccess.title": "Админка — только для администраторов",
+  "admin.noAccess.reason": "Раздел открыт ролям admin и superadmin. Ваша роль — {role}.",
   "admin.whoami.unverified": "Вы: роль {role} — не проверена, auth выключен",
   "admin.whoami.error": "Кто вы — не смогли проверить (/lore/whoami не ответил)",
   "admin.wiz.agent.check.ok": "Проверено: токен новой учётки несёт agent_scope = {scope}",
