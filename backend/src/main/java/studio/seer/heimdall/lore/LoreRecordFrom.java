@@ -330,6 +330,21 @@ final class LoreRecordFrom {
             s("content_md", "content_md"),
             when("body_redacted", "body_redacted", "body_redacted"),
             when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
+        // MD-04, второй заход по QG: гейт качества. Состояние — код словаря qg_status
+        // (draft / active / stale / retired, ADR-LORE-053 D7); итог последнего прогона — отдельным
+        // полем, это не состояние гейта. Спринт у гейта хранится строкой — кодом спринта.
+        Map.entry("quality_gate", List.of(
+            v("title", Transform.FIRST_OF, "name", "qg_id"),
+            s("status", "status"),
+            s("last_run_status", "last_run_status"),
+            v("date", Transform.DATE10, "date_created"),
+            v("retired_at", Transform.DATE10, "retired_at"),
+            s("retired_reason", "retired_reason"),
+            s("sprint", "sprint_id"),
+            list("components", "components"),
+            list("projects", "projects"),
+            s("description", "description"),
+            s("content_md", "content_md"))),
         // S9-05 A: человек и агент — шапка из строки, дети (задачи по открытым ролям) — срезом.
         Map.entry("user", List.of(
             v("title", Transform.FIRST_OF, "display_name", "kc_sub"),

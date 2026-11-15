@@ -2510,7 +2510,8 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, sprint_id, content_md " +
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, sprint_id, content_md, " +
+            "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -2518,7 +2519,12 @@ public final class LoreSlices {
             " ORDER BY qg_id");
 
         slice("quality_gate_by_id",
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id " +
+            // MD-04 (второй заход по QG): паспорт гейта. Владелец — проект ребром BELONGS_TO_PROJECT
+            // (ADR-LORE-053 D7), компонент — связью списком; retired_at и retired_reason пишет путь
+            // записи при переходе в retired. component_id (первый) оставлен прежним читателям.
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id, " +
+            "retired_at, retired_reason, " +
+            "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
