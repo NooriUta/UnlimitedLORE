@@ -33,7 +33,8 @@ export function RecordHead({ record, ctx, lang, titleId, withStatus = true, tail
       <h1 id={titleId} className="sk-rec-head__title">{record.title}</h1>
       {withStatus && (
         <div className="sk-rec-head__status">
-          <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
+          {/* PU-29 (владелица 14.11.2026): статус в шапке паспорта — значком, как в списке; название в подсказке. */}
+          <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} compact />
           {record.updated_at && (
             <time className="sk-rec-head__time" dateTime={record.updated_at}>
               {kitT(lang, 'kit.record.updated', { at: kitMinute(record.updated_at)?.text ?? record.updated_at })}
