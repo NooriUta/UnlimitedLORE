@@ -51,19 +51,10 @@ jobs:
         working-directory: web-next
         run: bash ../.github/scripts/npm-retry.sh ci
 
-      # Chromium (~100 МБ) — из кеша по версии Playwright; без кеша — загрузка по более
-      # быстрому из двух путей (прокси раннера или напрямую), см. шаг «Сеть» ниже.
-      - name: Playwright version
-        id: pw
-        working-directory: web-next
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Chromium
-        id: pwcache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ms-playwright-chromium-${{ steps.pw.outputs.version }}
+      # Chromium (~100 МБ) качается на каждом прогоне по более быстрому из двух путей (шаг
+      # «Сеть» ниже). Кеша нет: actions/cache в локальном Forgejo не зеркалирован — прогон
+      # 7845 упал на подготовке «actions/cache … Repository not found». Остальные
+      # workflow репо обходятся checkout, setup-node, setup-java, upload-artifact.
 
       # Владелица 15.11.2026: «поставь проверку и так и так и выбор быстрого варианта».
       # Быстрее бывает то прокси, то прямой путь — зависит от источника (замер CICDGitHub:
@@ -73,19 +64,13 @@ jobs:
       # (7cb22d9). Билд 1148 = chromium-headless-shell Playwright 1.49.1 — при смене версии
       # Playwright поменять PROBE_URL.
       - name: Сеть — выбрать быстрый путь
-        if: steps.pwcache.outputs.cache-hit != 'true'
         env:
           PROBE_URL: https://playwright.azureedge.net/builds/chromium/1148/chromium-headless-shell-linux.zip
         run: bash .github/scripts/pick-fastest-net.sh
 
       - name: Install Chromium
         working-directory: web-next
-        run: |
-          if [ "${{ steps.pwcache.outputs.cache-hit }}" = "true" ]; then
-            npx playwright install-deps chromium
-          else
-            npx playwright install --with-deps chromium
-          fi
+        run: npx playwright install --with-deps chromium
 
       - name: Автологин тестовых учёток
         working-directory: web-next
