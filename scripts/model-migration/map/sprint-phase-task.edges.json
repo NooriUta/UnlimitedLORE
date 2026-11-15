@@ -1,0 +1,28 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. Карта переноса СВЯЗЕЙ первого объекта (спринт, фаза, задача). Перечень снят с снимка прода 15.11.2026 (edge-census.mjs, только чтение). Правила: keep — связь переносится, оба конца уже в приёмнике; wait — связь ведёт к объекту, который ещё не перенесён, переносится вместе с ним; drop — не переносится. basis: owner — решение владелицы; proposal — предложение исполнителя; open — не решено.",
+  "edges": {
+    "HAS_STATE": { "rule": "keep", "basis": "owner", "note": "запись → версия; переносится этапом записи версий. В снимке одна связь стоит наоборот (версия спринта → спринт) — в отчёт, не переносится" },
+    "PART_OF": { "rule": "keep", "basis": "proposal", "note": "фаза → спринт и задача → спринт: состав спринта" },
+    "IN_PHASE": { "rule": "keep", "basis": "owner", "note": "задача → фаза. Решение владелицы: история связи ведётся в самой связи («действует с / по»); дат в старой базе у связи нет — переносится без них" },
+    "DEPENDS_ON": { "rule": "keep", "basis": "proposal", "props": ["kind", "reason"], "note": "спринт → спринт; у связи есть вид и причина" },
+    "ROLE_HELD_BY": { "rule": "wait", "basis": "owner", "waits": ["KnowActor", "KnowUser"], "note": "роль задачи; история в самой связи — решение владелицы" },
+    "TAGGED_WITH": { "rule": "wait", "basis": "open", "waits": ["KnowTag", "LoreComponent"], "note": "спринт → тег ждёт решения о судьбе плана-доски и тегов; задача → компонент под этим именем — разобрать" },
+    "BELONGS_TO_PROJECT": { "rule": "wait", "basis": "owner", "waits": ["KnowGitProject"], "note": "проект — только связью" },
+    "BELONGS_TO": { "rule": "wait", "basis": "owner", "waits": ["LoreComponent"], "note": "компонент — только связью" },
+    "IMPLEMENTED_IN_RELEASE": { "rule": "wait", "basis": "owner", "waits": ["KnowRelease"], "props": ["source", "created_at", "note"], "note": "source остаётся со справочником «по дате / проверено вручную / по PR»" },
+    "TARGETS_MILESTONE": { "rule": "wait", "basis": "owner", "waits": ["KnowMilestone"], "note": "веха спринта; история в самой связи — решение владелицы" },
+    "JUSTIFIED_BY": { "rule": "wait", "basis": "proposal", "waits": ["KnowADR"] },
+    "CLOSED_BY": { "rule": "wait", "basis": "proposal", "waits": ["KnowPR"], "note": "блок «Релиз и PR» проектируется отдельно (MD-05)" },
+    "REALIZES": { "rule": "wait", "basis": "proposal", "waits": ["KnowUseCase"] },
+    "IMPLEMENTED_IN": { "rule": "wait", "basis": "proposal", "waits": ["KnowADR", "KnowDoc"] },
+    "HAS_PR": { "rule": "drop", "basis": "owner", "note": "решение владелицы: HAS_PR и её роль не переносятся, роль PR выводится из ветки-цели" },
+    "RAISED_IN": { "rule": "wait", "basis": "proposal", "waits": ["KnowQuestion"] },
+    "YIELDED": { "rule": "wait", "basis": "open", "waits": ["KnowFinding"], "note": "гейты качества и находки — второй заход" },
+    "EDITED_IN": { "rule": "wait", "basis": "proposal", "waits": ["KnowFile"] },
+    "GATES": { "rule": "wait", "basis": "proposal", "waits": ["KnowQuestion"], "props": ["solved_at"] },
+    "RELEASED_IN": { "rule": "wait", "basis": "open", "waits": ["KnowRelease"], "note": "19 связей спринт → релиз рядом с IMPLEMENTED_IN_RELEASE (969) — похоже на дубль, разобрать" },
+    "INCLUDES": { "rule": "wait", "basis": "open", "waits": ["KnowRelease"], "note": "18 связей релиз → спринт — обратная запись той же связи, разобрать" },
+    "PROMOTED_TO": { "rule": "wait", "basis": "open", "waits": ["QGRecommendation"], "note": "гейты качества — второй заход" },
+    "LED_TO": { "rule": "wait", "basis": "open", "waits": ["BragiInsight"], "note": "Bragi вне первого захода" }
+  }
+}

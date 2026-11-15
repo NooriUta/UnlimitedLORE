@@ -21,7 +21,20 @@ export function connect(env = loadEnv()) {
       return call(`/api/v1/query/${env.MIG_SRC_DB}`, srcAuth, { language: 'sql', command, params });
     },
     dstQuery: (command, params) => call(`/api/v1/query/${env.MIG_DST_DB}`, dstAuth, { language: 'sql', command, params }),
-    dstCommand: (command, params, language = 'sql') => call(`/api/v1/command/${env.MIG_DST_DB}`, dstAuth, { language, command, params }),
+    /**
+     * Запись в приёмник. Две связи, которые одновременно пишутся в одну запись, база отвергает
+     * (ConcurrentModificationException) и просит повторить — повторяем с растущей паузой, до 10 раз.
+     * Другие ошибки не повторяются.
+     */
+    async dstCommand(command, params, language = 'sql') {
+      for (let attempt = 0; ; attempt++) {
+        try { return await call(`/api/v1/command/${env.MIG_DST_DB}`, dstAuth, { language, command, params }); }
+        catch (e) {
+          if (attempt >= 10 || !/ConcurrentModificationException/.test(e.message)) throw e;
+          await new Promise(r => setTimeout(r, 20 * (attempt + 1) + Math.floor(Math.random() * 30)));
+        }
+      }
+    },
     /** Все записи типа страницами по @rid — порядок детерминированный. */
     async *scan(T, page = 2000) {
       let last = '#-1:-1';
