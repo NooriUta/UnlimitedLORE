@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Направляет сборку на кеширующее зеркало Nexus в локальной сети.
+# Направляет сборку на кеширующее зеркало в локальной сети (Nexus, с 15.11.2026 — kkRepo).
 #
 # ЗАЧЕМ. Канал до внешних реестров нестабилен: backend CI падал примерно в трети
 # прогонов с `Read timed out` на Maven Central (52 артефакта подряд, PR #173).
@@ -42,7 +42,11 @@ NPM_MIRROR="$NEXUS/repository/npm-proxy/"
 # зеркало отдало одно и не отдало другое, сборка падает, сколько запасных ни
 # пропиши. У npm запаса нет вовсе: реестр один. Единственный работающий откат —
 # повторить целиком, без зеркала.
-if ! curl -sf --noproxy '*' -m 8 -o /dev/null "$NEXUS/service/rest/v1/repositories"; then
+# Проба — реальный артефакт из maven-прокси, а не REST API продукта: с 15.11.2026 зеркало
+# на ci-server — kkRepo (OH-KKREPO-PILOT), у него нет /service/rest/v1/repositories (404),
+# а имена репозиториев и адреса те же. Артефакт отвечает и у Nexus, и у kkRepo.
+PROBE_ARTIFACT="${MAVEN_MIRROR}org/slf4j/slf4j-api/2.0.13/slf4j-api-2.0.13.pom"
+if ! curl -sf --noproxy '*' -m 8 -o /dev/null "$PROBE_ARTIFACT"; then
   echo "::notice::Nexus ($NEXUS) не отвечает — сборка идёт напрямую, как раньше"
   exit 0
 fi
