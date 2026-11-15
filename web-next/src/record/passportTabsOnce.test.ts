@@ -85,4 +85,11 @@ describe('B13 · дублирующихся вкладок в паспорте �
     expect((k.relations ?? []).map(r => r.key)).not.toContain('projects');
     expect((k.tabs ?? []).map(t => t.key)).toContain('projects');
   });
+
+  it('K4-MENTION-LOOK: поле-связь знает вид записей на другом конце (refKind) — облик чипов', () => {
+    const c = sprint();
+    c.schema.relations = [{ key: 'projects', label: 'Проекты', relation: 'association', rel: 'IN_PROJECT', dir: 'out', count: 0, place: 'prop', target_type: 'project' }];
+    const f = (kindOf(c).fields ?? []).find(x => x.key === 'projects');
+    expect(f?.refKind).toBe('project');
+  });
 });

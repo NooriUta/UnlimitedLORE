@@ -13,6 +13,8 @@
 import { useState } from 'react';
 import { VALUE_CHIPS_INLINE, chipLabel, toChips } from '../core/chipValue';
 import { kitT, useKitLang } from '../i18n';
+import type { KindConfig } from '../core/contract';
+import { ObjectMention } from '../elements/ObjectMention';
 
 /**
  * Ряд значений-чипов: первые три и «ещё N» (S4-29).
@@ -34,9 +36,13 @@ export interface ValueChipsProps {
   href: (id: string) => string;
   /** Подпись источника наследования по его виду словом приложения («от спринта»); нет — нейтрально (K-14). */
   fromLabel?: (type: string) => string | undefined;
+  /** K4-MENTION-LOOK: вид записей поля (refKind) — облик чипов: значок и цвет вида. Чип, назвавший свой вид, главнее. */
+  kind?: string;
+  /** Виды приложения (config.kinds) — откуда облик. Нет — чипы нейтральные. */
+  kinds?: Record<string, KindConfig>;
 }
 
-export function ValueChips({ value, href, fromLabel }: ValueChipsProps) {
+export function ValueChips({ value, href, fromLabel, kind, kinds }: ValueChipsProps) {
   const lang = useKitLang();
   const [open, setOpen] = useState(false);
   const all = toChips(value);
@@ -62,7 +68,7 @@ export function ValueChips({ value, href, fromLabel }: ValueChipsProps) {
             data-inherited={from ? (from.type || 'unknown') : undefined}
             title={title}
           >
-            <a className="sk-rec-chips__link" href={href(c.id)}>{chipLabel(c)}</a>
+            <ObjectMention id={c.id} kind={c.kind ?? kind} href={href(c.id)} kinds={kinds} hint={title} className="sk-rec-chips__link">{chipLabel(c)}</ObjectMention>
             {from && <span className="sk-rec-chips__from">{kindWord}</span>}
           </span>
         );

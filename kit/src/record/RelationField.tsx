@@ -9,9 +9,12 @@ import type { KitCtx, KitRecord } from '../core/contract';
 import { chipId, chipLabel, isChipList, toChips } from '../core/chipValue';
 import { kitT, type KitLang } from '../i18n';
 import { RelationPicker } from './RelationPicker';
+import { ObjectMention } from '../elements/ObjectMention';
 
-export function RelationField({ record, ctx, lang, label, value, rel, dir, view }: {
+export function RelationField({ record, ctx, lang, label, value, rel, dir, view, refKind }: {
   record: KitRecord; ctx: KitCtx; lang: KitLang; label: string; value: unknown; rel: string; dir: 'out' | 'in'; view: React.ReactNode;
+  /** K4-MENTION-LOOK: вид записей на другом конце — облик чипов. */
+  refKind?: string;
 }) {
   const onRelation = ctx.config.hooks?.onRelation;
   const options = ctx.config.hooks?.relationOptions;
@@ -22,7 +25,7 @@ export function RelationField({ record, ctx, lang, label, value, rel, dir, view 
 
   const chips = isChipList(value) ? toChips(value)
     : (Array.isArray(value) ? value : value === null || value === undefined || value === '' ? [] : [value])
-      .map(v => ({ id: String(v), label: String(v), inherited_from: null }));
+      .map(v => ({ id: String(v), label: String(v), inherited_from: null } as { id: string; label: string; inherited_from: null; kind?: string }));
   const own = chips.filter(c => !c.inherited_from);
   const inherited = chips.filter(c => c.inherited_from);
 
@@ -43,14 +46,14 @@ export function RelationField({ record, ctx, lang, label, value, rel, dir, view 
       <ul className="sk-relfield__chips">
         {own.map(c => (
           <li key={chipId(c)} className="sk-relfield__chip">
-            <a href={ctx.href(chipId(c))}>{chipLabel(c)}</a>
+            <ObjectMention id={chipId(c)} kind={c.kind ?? refKind} href={ctx.href(chipId(c))} kinds={ctx.config.kinds}>{chipLabel(c)}</ObjectMention>
             <button type="button" className="sk-relfield__x" disabled={busy}
               aria-label={kitT(lang, 'kit.record.rel.unlink', { title: chipId(c) })} onClick={() => void call(chipId(c), 'remove')}>×</button>
           </li>
         ))}
         {inherited.map(c => (
           <li key={chipId(c)} className="sk-relfield__chip sk-relfield__chip--inherited" title={kitT(lang, 'kit.record.rel.inherited')}>
-            <a href={ctx.href(chipId(c))}>{chipLabel(c)}</a>
+            <ObjectMention id={chipId(c)} kind={c.kind ?? refKind} href={ctx.href(chipId(c))} kinds={ctx.config.kinds}>{chipLabel(c)}</ObjectMention>
           </li>
         ))}
       </ul>

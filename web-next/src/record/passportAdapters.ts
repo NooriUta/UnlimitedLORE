@@ -3,6 +3,7 @@
 // поля типа описаны здесь. Когда придут контракты по объектам (docs/reports/lore-object-contracts.md)
 // и реестр — эти описания заменяются ответом сервера, раскладка kit не меняется.
 // Честность: упавший дополнительный слайс — meta.errors блока, а не «пусто».
+import { withLoreKindLook } from '../shell/loreKinds';
 import { appliedGraphView } from '../settings/applied';
 import type { KitConfig, KitData, KitEdge, KitLang, KitRecord } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
@@ -57,7 +58,8 @@ const graphViewPref = () => { const view = appliedGraphView(); return view ? { v
 
 export function baseConfig(lang: KitLang, kinds: KitConfig['kinds']): KitConfig {
   return {
-    modules: [], menu: { groups: [] }, kinds,
+    // K4-MENTION-LOOK: упоминания в паспорте ведут к записям любого вида — облик всех видов LORE.
+    modules: [], menu: { groups: [] }, kinds: withLoreKindLook(lang, kinds),
     edges: loreEdgesConfig(lang),
     // Вид вкладки «Граф» по умолчанию — личная настройка человека (GC-03).
     graph: { depth: 1, limit: 60, colorBy: 'type', ...graphViewPref() },

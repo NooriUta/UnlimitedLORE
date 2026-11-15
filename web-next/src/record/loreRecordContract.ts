@@ -338,8 +338,13 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
     const r = c.schema.relations.find(x => x.place === 'prop' && x.key === key && x.manageable);
     return r ? { relation: { rel: r.rel, dir: r.dir } } : {};
   };
+  // K4-MENTION-LOOK: вид записей на другом конце — облик чипов (значок, цвет вида).
+  const refKindOf = (key: string) => {
+    const t = c.schema.relations.find(x => x.key === key)?.target_type;
+    return t && t !== 'any' ? { refKind: t } : {};
+  };
   const propFields = propRels.map(r => ({
-    key: r.key, title: r.label, type: 'ref' as const, ...edgeOf(r.key),
+    key: r.key, title: r.label, type: 'ref' as const, ...edgeOf(r.key), ...refKindOf(r.key),
   }));
   // body_md в разделах — только когда это НАСТОЯЩЕЕ тело, а не копия (прод
   // v1.17.13, 11.11: у решения «Контент» был пуст). Копия — когда его текст
@@ -446,7 +451,7 @@ export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
       // S4-24: правимо только при ОБОИХ — сервер назвал поле правимым И дал путь записи.
       ...(f.editable && f.write ? { editable: true } : {}),
       ...(f.required ? { required: 'block' as const } : {}),
-      ...(f.kind === 'ref' ? edgeOf(f.key) : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
+      ...(f.kind === 'ref' ? { ...edgeOf(f.key), ...refKindOf(f.key) } : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
   });
   const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
   // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit

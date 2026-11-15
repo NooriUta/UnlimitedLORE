@@ -8,6 +8,7 @@
 // прочитаны, скрыто правами, связи вне выдачи) — называется словами, а не молчанием.
 import type { KitData, KitLang, KitMeta, KitRecord } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { LORE_KIND_COLOR } from '../shell/loreKinds';
 
 export interface LoreGraphNode { id: string; type: string; title: string | null; status: string | null; status_category: string | null; depth: number }
 export interface LoreGraphEdge { from: string; rel: string; to: string; kind?: string }
@@ -161,5 +162,6 @@ const COUNT: Record<'ru' | 'en', Record<string, CountForms>> = {
 export function LORE_GRAPH_TYPES(lang: KitLang): Record<string, { label: string; color: string; count?: CountForms }> {
   const k = lang === 'en' ? 'en' : 'ru';
   const l = LABEL[k];
-  return Object.fromEntries(Object.entries(TONE).map(([t, c]) => [t, { label: l[t] ?? t, color: c, count: COUNT[k][t] }]));
+  // K4-MENTION-LOOK: у вида с каноном v1 — его цвет (тот же, что у упоминания); у прочих — тон.
+  return Object.fromEntries(Object.entries(TONE).map(([t, c]) => [t, { label: l[t] ?? t, color: LORE_KIND_COLOR[t] ?? c, count: COUNT[k][t] }]));
 }

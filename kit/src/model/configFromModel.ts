@@ -241,11 +241,21 @@ function kindsOf(model: LoreModelDoc, notes: string[]): Pick<ConfigFromModel, 'k
     }
     const title = str(t.label);
     if (!title) notes.push(`у типа «${name}» нет названия — показан кодом`);
+    // K4-MENTION-LOOK: цвет вида — имя токена темы (или var(--…)); null — канона
+    // цвета у типа нет, и это не пропуск. Сырое значение — не токен: нейтрально, причина словами.
+    const rawColor = str(t.color);
+    let color: string | undefined;
+    if (rawColor) {
+      if (TOKEN_RE.test(rawColor)) color = rawColor;
+      else if (/^(--)?[A-Za-z][\w-]*$/.test(rawColor)) color = `var(--${rawColor.replace(/^--/, '')})`;
+      else notes.push(`у типа «${name}» цвет «${rawColor}» не токен — упоминания нейтральные`);
+    }
     kinds[name] = {
       title: title || name,
       // Значок из документа — УМОЛЧАНИЕ: выбор значков это вид, и приложение
       // вправе его перебить (у LORE значки берутся из старого UI, S4-25).
       icon: str(t.icon) || UNKNOWN_ICON,
+      ...(color ? { color } : {}),
       ...(fields.length ? { fields } : {}),
       ...(relations.length ? { relations } : {}),
     };

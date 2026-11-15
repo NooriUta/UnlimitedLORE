@@ -9,13 +9,15 @@ import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
   BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   BurnChart, BurnSpark, burnSum, type BurnPoint,
-  DENSITIES, FieldEditor, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
+  DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, resolveMerge } from '@seidr/kit/content';
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
+import { loreKinds } from '../shell/loreKinds';
+import { loreRefLook } from '../record/loreMdRefs';
 
 const SECTIONS = ['tokens', 'elements', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
@@ -95,6 +97,10 @@ export default function KitPage() {
   const palette = useKitPalette();
   const recent = useMemo(() => createRecentList(createSafeStorage(), { key: 'seidr.kit.vitrine.recent' }), []);
   const [openedRecord, setOpenedRecord] = useState<string | null>(null);
+  // K4-MENTION-LOOK: облик видов LORE для витрины упоминаний — тот же, что у паспорта.
+  const kitLang = useKitLang();
+  const mentionKinds = useMemo(() => loreKinds(kitLang), [kitLang]);
+  const mentionMdLook = useMemo(() => loreRefLook(kitLang), [kitLang]);
   const paletteCtx = useMemo<KitCtx>(() => ({
     data: PALETTE_DEMO_DATA,
     config: {
@@ -516,6 +522,19 @@ export default function KitPage() {
               ]} />
             </dd>
           </dl>
+          {/* K4-MENTION-LOOK: упоминание чужого объекта — значок и цвет вида + ссылка.
+              Облик видов — loreKinds (тот же, что у паспорта и графа). */}
+          <h3 className="kitp__h3">{t('kitPage.mentions.title')}</h3>
+          <p>{t('kitPage.mentions.lead')}</p>
+          <p className="kitp__row" data-testid="kit-mentions">
+            <ObjectMention id="ADR-LORE-050" kind="adr" title="Ссылки в MD" href={paletteCtx.href('ADR-LORE-050')} kinds={mentionKinds} />
+            <ObjectMention id="SPRINT_UXR_S13_KIT4" kind="sprint" href={paletteCtx.href('SPRINT_UXR_S13_KIT4')} kinds={mentionKinds} />
+            <ObjectMention id="D-2026-LORE-MD-REF-THREE-TRIGGERS" kind="decision" href={paletteCtx.href('D-2026-LORE-MD-REF-THREE-TRIGGERS')} kinds={mentionKinds} />
+            <ObjectMention id="v1.17.21" kind="release" href={paletteCtx.href('v1.17.21')} kinds={mentionKinds} />
+            <ObjectMention id="NooriUta/UnlimitedLORE" kind="project" href={paletteCtx.href('NooriUta/UnlimitedLORE')} kinds={mentionKinds} />
+            <ObjectMention id="FORSETI" kind="component" kinds={mentionKinds} />
+          </p>
+          <MartProse text={t('kitPage.mentions.md')} refHref={r => paletteCtx.href(r.id)} refLook={mentionMdLook} />
           <h3 className="kitp__h3">{t('kitPage.merge.title')}</h3>
           <p>{t('kitPage.merge.lead')}</p>
           <MdMergePanel

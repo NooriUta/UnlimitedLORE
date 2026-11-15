@@ -13,10 +13,13 @@ import { MATERIAL_SYMBOLS_ICONS, TABLER_ICONS } from './extraIcons';
 import { ICON_CANON } from './iconCanon';
 
 const known = new Set<string>();
+/** Наборы по приставке ('' — game-icons): нужны разметке вне React (ссылки [[…]] в MD, K4-MENTION-LOOK). */
+const sets = new Map<string, IconifyJSON>();
 
 // S4-25: второй набор v1 — lucide. Вшиты только выбранные иконки (~9 КБ),
 // поэтому kit регистрирует их сам; слаг — «lucide:имя».
 addCollection(LUCIDE_ICONS);
+sets.set('lucide:', LUCIDE_ICONS as IconifyJSON);
 for (const name of [...Object.keys(LUCIDE_ICONS.icons), ...Object.keys(LUCIDE_ICONS.aliases ?? {})]) known.add(`lucide:${name}`);
 
 // S4-32: четыре значка вне наборов v1 по выбору владелицы 14.11.2026 — тем же офлайн-способом.
@@ -34,8 +37,30 @@ export function registerGameIcons(data: unknown): void {
   const set = data as IconifyJSON;
   addCollection(set);
   const pre = set.prefix && set.prefix !== 'game-icons' ? `${set.prefix}:` : '';
+  sets.set(pre, set);
   for (const name of Object.keys(set.icons ?? {})) known.add(pre + name);
   for (const name of Object.keys(set.aliases ?? {})) known.add(pre + name);
+}
+
+/**
+ * Значок строкой SVG — для разметки, которую рисует не React (ссылки [[…]] в
+ * чтении MD). Только зарегистрированные наборы; слага нет — null, а не пустой
+ * квадрат: вызывающий тогда оставляет ссылку без значка.
+ */
+export function gameIconSvg(slug: string, size = 12, className = 'sk-icon'): string | null {
+  if (!known.has(slug)) return null;
+  const i = slug.indexOf(':');
+  const pre = i >= 0 ? slug.slice(0, i + 1) : '';
+  const set = sets.get(pre);
+  if (!set) return null;
+  let name = i >= 0 ? slug.slice(i + 1) : slug;
+  // Псевдоним — к родителю (повороты псевдонимов не применяем: в наборах слагов kit их нет).
+  for (let n = 0; n < 4 && !set.icons[name] && set.aliases?.[name]; n++) name = set.aliases[name].parent;
+  const icon = set.icons[name];
+  if (!icon) return null;
+  const w = icon.width ?? set.width ?? 16;
+  const h = icon.height ?? set.height ?? 16;
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="${className}" aria-hidden="true" width="${size}" height="${size}" viewBox="${icon.left ?? 0} ${icon.top ?? 0} ${w} ${h}" fill="currentColor">${icon.body}</svg>`;
 }
 
 /** Есть ли слаг в зарегистрированном наборе (game-icons без префикса или «lucide:имя»). */
