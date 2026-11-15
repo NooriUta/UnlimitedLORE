@@ -55,31 +55,26 @@ const show = (config = cfg(), data = dataOf()) => {
   return render(<RecordView record={CENTER} ctx={ctx} tab="graph" onTab={() => {}} />);
 };
 
+/** Подпись узла-кластера — то, что получил движок (вид по умолчанию — Обсидиан, 16.11). */
+async function clusterTitle(): Promise<string> {
+  const eng = await screen.findByTestId('eng-obsidian');
+  const ids = eng.getAttribute('data-ids')!.split(',');
+  const titles = eng.getAttribute('data-titles')!.split('|');
+  return titles[ids.findIndex(i => i.startsWith('cluster:'))] ?? '';
+}
+
 describe('PU-11 · хаб графа', () => {
-  it('подпись кластера — «27 спек ▸» по формам слова от приложения', () => {
-    const { container } = show();
-    const c = container.querySelector('[data-cluster] .sk-rec-graph__cbtn')!;
-    expect(c.textContent).toBe('27 спек ▸');
+  it('подпись кластера — «27 спек ▸» по формам слова от приложения', async () => {
+    show();
+    expect(await clusterTitle()).toBe('27 спек ▸');
   });
-  it('форм слова нет — прежняя подпись типом связи (положительный контроль совместимости)', () => {
-    const { container } = show(cfg(false));
-    expect(container.querySelector('[data-cluster] .sk-rec-graph__cbtn')!.textContent).toContain('DOCUMENTED_IN');
+  it('форм слова нет — прежняя подпись типом связи (положительный контроль совместимости)', async () => {
+    show(cfg(false));
+    expect(await clusterTitle()).toContain('DOCUMENTED_IN');
   });
-  it('кластер целиком внутри холста', () => {
-    const { container } = show();
-    const svg = container.querySelector('svg.sk-rec-graph__svg')!;
-    const [vx, vy, vw, vh] = svg.getAttribute('viewBox')!.split(' ').map(Number);
-    const fo = container.querySelector('[data-cluster] foreignObject')!;
-    const x = Number(fo.getAttribute('x')), y = Number(fo.getAttribute('y'));
-    const w = Number(fo.getAttribute('width')), h = Number(fo.getAttribute('height'));
-    expect(x).toBeGreaterThanOrEqual(vx);
-    expect(y).toBeGreaterThanOrEqual(vy);
-    expect(x + w).toBeLessThanOrEqual(vx + vw);
-    expect(y + h).toBeLessThanOrEqual(vy + vh);
-  });
-  it('все соседи свёрнуты — граф не «пустой», кластер на месте', () => {
-    const { container } = show(cfg(), dataOf(false));
-    expect(container.querySelector('[data-cluster]')).toBeTruthy();
+  it('все соседи свёрнуты — граф не «пустой», кластер на месте', async () => {
+    show(cfg(), dataOf(false));
+    expect(await clusterTitle()).toBe('27 спек ▸');
   });
   // Приёмка preprod 14.11 (v1.17.21): OMILORE — 48 соседей по DOCUMENTED_IN, из них 25 спек и
   // 23 технологии (вид tech). Видов два — и подпись падала на код связи «DOCUMENTED_IN: 48»,
@@ -98,13 +93,13 @@ describe('PU-11 · хаб графа', () => {
       journal: [], meta: { generated_at: '2026-11-14T12:00:00Z' },
     };
   };
-  it('смешанный хаб (спеки + технологии) — счёт по видам, а не код связи', () => {
-    const { container } = show(mixedCfg(), mixedData());
-    expect(container.querySelector('[data-cluster] .sk-rec-graph__cbtn')!.textContent).toBe('25 спек · 23 технологии ▸');
+  it('смешанный хаб (спеки + технологии) — счёт по видам, а не код связи', async () => {
+    show(mixedCfg(), mixedData());
+    expect(await clusterTitle()).toBe('25 спек · 23 технологии ▸');
   });
-  it('смешанный хаб, у одного вида нет форм — подпись типом связи (положительный контроль)', () => {
-    const { container } = show(mixedCfg(false), mixedData());
-    expect(container.querySelector('[data-cluster] .sk-rec-graph__cbtn')!.textContent).toContain('DOCUMENTED_IN');
+  it('смешанный хаб, у одного вида нет форм — подпись типом связи (положительный контроль)', async () => {
+    show(mixedCfg(false), mixedData());
+    expect(await clusterTitle()).toContain('DOCUMENTED_IN');
   });
   it('Force: подпись узла-кластера смешанного хаба — тоже по видам', async () => {
     window.history.replaceState(null, '', '/r?gview=force');
