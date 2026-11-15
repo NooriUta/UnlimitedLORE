@@ -107,3 +107,48 @@ test('сторож: у каждого согласованного преобр�
   assert.deepEqual(missingTransforms(MAP), []);
   assert.deepEqual(missingTransforms({ KnowX: { a: { rule: 'transform', basis: 'owner' } } }), ['KnowX.a']);
 });
+
+// ── Статус по каноническому словарю приложения (shared/lore-statuses.json, statusMatch) ──────────────
+const VOCAB = JSON.parse(fs.readFileSync(new URL('../../shared/lore-statuses.json', import.meta.url), 'utf8')).statusMatch;
+const DICT = ['active', 'backlog', 'blocked', 'cancelled', 'design', 'done', 'failed', 'partial', 'planned', 'ready_for_deploy', 'review', 'todo', 'uat', 'waiting'];
+const sv = { vocab: VOCAB, codes: DICT, canonToCode: { in_progress: 'active' } };
+
+test('словарь приложения: написания прода сводятся к коду справочника', async () => {
+  const { classifyStatus } = await import('./apply-map.mjs');
+  assert.deepEqual(classifyStatus('🔄 IN PROGRESS', sv), { code: 'active', note: '' });
+  assert.deepEqual(classifyStatus('🧪 UAT TESTING', sv), { code: 'uat', note: '' });
+  assert.deepEqual(classifyStatus('🚀 READY FOR DEPLOY', sv), { code: 'ready_for_deploy', note: '' });
+  assert.deepEqual(classifyStatus('IN_PROGRESS', sv), { code: 'active', note: '' });
+  assert.deepEqual(classifyStatus('✅ DONE — PROD 2026-06-04 v1.4.6', sv), { code: 'done', note: 'PROD 2026-06-04 v1.4.6' });
+});
+
+test('словарь приложения: нестандартное написание опознаётся, но целиком сохраняется в приписке', async () => {
+  const { classifyStatus } = await import('./apply-map.mjs');
+  assert.deepEqual(classifyStatus('✅ FULLY CLOSED', sv), { code: 'done', note: 'FULLY CLOSED' });
+  assert.deepEqual(classifyStatus('MERGED 02.05.2026**', sv), { code: 'done', note: 'MERGED 02.05.2026**' });
+});
+
+test('словарь приложения: неузнанное и канон без кода в справочнике — без кода, текст в приписке', async () => {
+  const { classifyStatus } = await import('./apply-map.mjs');
+  assert.deepEqual(classifyStatus('STUB', sv), { code: null, note: 'STUB' });
+  assert.deepEqual(classifyStatus('⏸ DEFERRED', sv), { code: null, note: 'DEFERRED', known: true }); // статус опознан, но кода deferred в справочнике нет
+  assert.deepEqual(classifyStatus('P0', sv), { code: null, note: 'P0' });
+});
+
+test('фаза: статусом считается только точное написание; заголовок со словом-статусом остаётся заголовком', async () => {
+  const { classifyStatus } = await import('./apply-map.mjs');
+  const ph = { ...sv, codes: ['active', 'backlog', 'done', 'moved', 'planned'], strict: true };
+  assert.deepEqual(classifyStatus('📋 PLANNED', ph), { code: 'planned', note: '' });
+  assert.deepEqual(classifyStatus('ДЕПЛОЙ + ACTIVATION', ph), { code: null, note: 'ДЕПЛОЙ + ACTIVATION' });
+  assert.deepEqual(classifyStatus('Documentation foundation', ph), { code: null, note: 'Documentation foundation' });
+});
+
+test('фаза: настоящий статус, которого нет в справочнике фаз, — отказ, а не «название»', () => {
+  const c = { statusCodes: { phase_status: ['active', 'backlog', 'done', 'moved', 'planned'] }, statusDict: 'phase_status', statusVocab: VOCAB, canonToCode: { in_progress: 'active' } };
+  const partial = applyMap('KnowPhaseHist', MAP.KnowPhaseHist, { status_raw: '🟡 PARTIAL' }, c);
+  assert.equal(partial.titleFallback, null);
+  assert.deepEqual(partial.rejects, [{ field: 'status_raw', value: '🟡 PARTIAL', why: 'статус вне справочника' }]);
+  const title = applyMap('KnowPhaseHist', MAP.KnowPhaseHist, { status_raw: 'Alert Engine' }, c);
+  assert.equal(title.titleFallback, 'Alert Engine');
+  assert.deepEqual(title.rejects, []);
+});

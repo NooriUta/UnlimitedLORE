@@ -60,15 +60,40 @@ export function splitStatus(v, codes) {
   return { code: null, note: String(v).trim() };
 }
 
+const EXTRA_LABELS = { "READY FOR DEPLOY": "ready_for_deploy", "UAT TESTING": "uat" };
+const SEP = /\s*(?:—|–|→|:|\(|·|\s-\s)\s*/u;
+/**
+ * Статус по каноническому словарю приложения (shared/lore-statuses.json, раздел statusMatch) — тем же
+ * порядком, каким его сегодня опознаёт сервер: сначала значок, потом слово в начале строки.
+ * Отличия от сервера: неузнанное не превращается в «todo», а остаётся без кода; канон, которого нет в
+ * справочнике типа, кода не даёт. Приписка не теряется: при нестандартном написании в неё уходит вся строка.
+ * strict — статусом считается только точное написание (для фаз: там в поле статуса лежали заголовки).
+ */
+export function classifyStatus(v, { vocab, codes, canonToCode = {}, strict = false }) {
+  const raw = String(v).trim(), s = lead(raw), U = s.toUpperCase();
+  const exact = { ...EXTRA_LABELS };
+  for (const [canon, e] of Object.entries(vocab)) { exact[canon.toUpperCase()] = canon; exact[canon.toUpperCase().replace(/_/g, " ")] = canon; for (const w of e.words) exact[w] = canon; }
+  const cut = s.search(SEP), phrase = (cut < 0 ? s : s.slice(0, cut)).trim().toUpperCase();
+  let canon = exact[phrase] || null;
+  if (!canon && !strict) {
+    for (const [c, e] of Object.entries(vocab)) if (raw.startsWith(e.marker)) { canon = c; break; }
+    if (!canon) outer: for (const [c, e] of Object.entries(vocab)) for (const w of e.words) if (U.startsWith(w)) { canon = c; break outer; }
+  }
+  const code = canon ? (canonToCode[canon] || canon) : null;
+  // known: написание опознано как статус, но такого кода в справочнике типа нет — это не заголовок.
+  if (!code || !codes.includes(code)) return canon ? { code: null, note: s, known: true } : { code: null, note: s };
+  return { code, note: exact[phrase] === canon ? tail(cut < 0 ? "" : s.slice(cut)) : s };
+}
+
 const asDate = (f, v, r, to) => { const d = toDate(v); if (d === null) r.rejects.push({ field: f, value: v, why: 'не дата' }); else if (!given(r.out[to])) r.out[to] = d; };
 const asDateTime = (f, v, r, to) => { const d = toDateTime(v); if (d === null) r.rejects.push({ field: f, value: v, why: 'не момент времени' }); else r.out[to] = d; };
 const asPriority = (f, v, r, bucket) => { const p = toPriority(v); if (p.value === null) r.rejects.push({ field: f, value: v, why: 'приоритет вне шкалы' }); else { bucket.priority = p.value; if (p.note) bucket.priority_note = p.note; } };
 function asStatus(f, v, r, ctx, phase) {
   const codes = (ctx.statusCodes || {})[ctx.statusDict];
   if (!codes) throw new Error(`для ${f} не задан справочник статусов (ctx.statusDict)`);
-  const st = splitStatus(v, codes);
+  const st = ctx.statusVocab ? classifyStatus(v, { vocab: ctx.statusVocab, codes, canonToCode: ctx.canonToCode, strict: phase }) : splitStatus(v, codes);
   r.out.status = st.code;
-  if (st.code === null) { if (phase) r.titleFallback = st.note; else r.rejects.push({ field: f, value: v, why: 'статус вне справочника' }); }
+  if (st.code === null) { if (phase && !st.known) r.titleFallback = st.note; else r.rejects.push({ field: f, value: v, why: 'статус вне справочника' }); }
   else if (st.note) r.out.status_note = st.note;
 }
 
