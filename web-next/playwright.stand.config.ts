@@ -38,7 +38,9 @@ export default defineConfig({
     // Без входа не передаём файл вовсе: Playwright упал бы на несуществующем пути
     // до того, как сценарий успел бы честно сказать «не выполнен».
     storageState: pre.run ? process.env.LORE_STAND_STORAGE_STATE : undefined,
-    channel: 'chrome',
+    // Локально — Chrome машины; в CI без Chrome — LORE_STAND_CHANNEL= (пусто) даёт
+    // Chromium из `npx playwright install chromium`.
+    channel: process.env.LORE_STAND_CHANNEL === undefined ? 'chrome' : (process.env.LORE_STAND_CHANNEL.trim() || undefined),
     viewport: { width: 1440, height: 900 },
     screenshot: 'off',
     trace: 'off',
