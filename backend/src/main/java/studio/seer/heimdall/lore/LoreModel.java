@@ -62,7 +62,9 @@ final class LoreModel {
         "sprint", "sprint_status",
         "adr", "adr_status",
         "spec", "spec_status",
-        "decision", "decision_status");
+        "decision", "decision_status",
+        // MD-04: состояние гейта качества — словарь qg_status (V93); цикл правится путём записи гейта.
+        "quality_gate", "qg_status");
 
     /** Не перечни значений, а настройки приложения — в модель не едут (palette едет в блок palettes). */
     static final Set<String> NOT_ENUM_DICTS = Set.of("app_setting", "palette");

@@ -4,7 +4,7 @@
 import type { KitData, KitRecord } from '@seidr/kit';
 import type { SliceBody } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
-import { DECISION_STATUSES, FEATURE_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
+import { DECISION_STATUSES, FEATURE_STATUSES, QG_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
 
 type Row = Record<string, unknown>;
 
@@ -327,15 +327,17 @@ export function runbookRecord(row: Row): KitRecord {
 
 /**
  * MD-04, второй заход по QG: строка среза quality_gates → запись kit. Состояние гейта (draft /
- * active / stale / retired, ADR-LORE-053 D7) идёт полем, а не осью статуса: словарь qg_status
- * заводится данными после выкатки правил записи. Итог последнего прогона — отдельное поле.
+ * active / stale / retired, ADR-LORE-053 D7) — статус записи на оси гейта: значение вне оси
+ * становится unknown, пустое остаётся пустым (гейт без состояния виден, а не подогнан).
+ * Итог последнего прогона — отдельное поле.
  */
-export function qualityGateRecord(row: Row): KitRecord {
+export function qualityGateRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.qg_id);
   return {
-    id, kind: 'quality_gate', title: str(row.name) || id, status: '',
+    id, kind: 'quality_gate', title: str(row.name) || id,
+    status: str(row.status) ? axisStatusOf(row.status, axisFor(ctx, QG_STATUSES)) : '',
     fields: {
-      state: str(row.status), lastRun: str(row.last_run_status),
+      lastRun: str(row.last_run_status),
       component: str(row.component_id), components: list(row.components),
       project: list(row.projects), sprint: str(row.sprint_id),
     },

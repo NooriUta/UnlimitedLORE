@@ -139,6 +139,9 @@ class LoreStatusesConsistencyTest {
             "таблица plan разошлась с каноном");
         assertEquals(map(sc.get("doc").get("map")), new java.util.TreeMap<>(LoreStatusCategory.DOC_MAP),
             "таблица doc разошлась с каноном");
+        assertEquals(new TreeSet<>(array(sc.get("gate"), "appliesTo")), new TreeSet<>(LoreStatusCategory.GATE_TYPES));
+        assertEquals(map(sc.get("gate").get("map")), new java.util.TreeMap<>(LoreStatusCategory.GATE_MAP),
+            "таблица gate разошлась с каноном");
     }
 
     /** Покрытие: у каждого статуса, который тип может нести, есть категория — и она из оси. */
