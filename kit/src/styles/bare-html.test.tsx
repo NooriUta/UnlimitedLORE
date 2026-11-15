@@ -32,12 +32,12 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
 import { ObjectMention } from '../elements/ObjectMention';
-import type { KitConfig } from '../core/contract';
+import type { KitConfig, KitCtx } from '../core/contract';
 
 const SNAPSHOT = '../../demo/seidr-bare.html';
 // В jsdom-окружении import.meta.url не file:// — пути от корня пакета kit
@@ -55,6 +55,22 @@ const BARE_STATUS_ITEMS = [
   { code: 'accepted', title: 'Принято', icon: 'laurel-crown', color: 'var(--suc)', category: 'active' },
   { code: 'superseded', title: 'Вытеснено', icon: 'pause-button', color: 'var(--t3)', category: 'cancelled' },
 ] as const;
+/** Сводка по вердикту (K4-SUMMARY-QUEUE): два вида записей, провал, подсказка, «не смогли проверить», вид без проверок. */
+const BARE_VSUM_RECORDS = [
+  { id: 't1', kind: 'topic', title: 't1', status: '', fields: {} },
+  { id: 't2', kind: 'topic', title: 't2', status: '', fields: {} },
+  { id: 'q1', kind: 'quiz', title: 'q1', status: '', fields: {} },
+  { id: 'r1', kind: 'rule', title: 'r1', status: '', fields: {} },
+];
+const BARE_VSUM_VERDICTS: Record<string, { score: number; max: number; failed: { code: string; message: string }[]; hints: { code: string; message: string }[]; unknown?: { code: string; message: string }[] } | undefined> = {
+  t1: { score: 1, max: 2, failed: [{ code: 'quiz', message: 'нет квиза по руне темы' }], hints: [{ code: 'art', message: 'нет рисунка' }] },
+  t2: { score: 2, max: 2, failed: [], hints: [] },
+  q1: { score: 1, max: 1, failed: [], hints: [], unknown: [{ code: 'pack', message: 'пак игры не прочитан' }] },
+};
+const BARE_VSUM_CTX = { config: {
+  kinds: { topic: { title: 'Темы', icon: 'scroll-unfurled' }, quiz: { title: 'Квизы', icon: 'checkbox-tree' }, rule: { title: 'Правила', icon: 'gears' } },
+  verdict: (r: { id: string }) => BARE_VSUM_VERDICTS[r.id],
+} } as unknown as KitCtx;
 const BARE_STATUS_CONFIG = {
   modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [...BARE_STATUS_ITEMS] }, roles: { viewer: { canStatus: false } },
 } as unknown as KitConfig;
@@ -91,6 +107,8 @@ function Samples() {
           {BARE_STATUS_ITEMS.map(i => <StatusChip key={i.code} record={{ id: i.code, kind: 'demo', title: i.code, status: i.code, fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" />)}
           <StatusChip record={{ id: 'compact', kind: 'demo', title: 'compact', status: 'accepted', fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" compact />
         </div>
+        {/* Сводка по вердикту: карточки видов, причины со счётом, вид без проверок, плашка «итоги неполные». */}
+        <VerdictSummary records={BARE_VSUM_RECORDS} ctx={BARE_VSUM_CTX} lang="ru" hrefOf={(kind, check) => `#${kind}${check ? `?lck=${check}` : ''}`} truncated />
         <div className="bare__row">
           <Kbd keys={['Ctrl', 'K']} />
           <Tooltip text="Подсказка"><button type="button" className="sk-btn">Подсказка</button></Tooltip>

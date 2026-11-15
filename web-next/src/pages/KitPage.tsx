@@ -17,6 +17,7 @@ import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 import KitBadges from './KitBadges';
+import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
 
@@ -222,6 +223,9 @@ export default function KitPage() {
 
         <section id="kit-states" className="kitp__sec" aria-labelledby="kit-states-h">
           <h2 id="kit-states-h" className="kitp__h2">{t('kitPage.sec.states')}</h2>
+          {/* K4-SUMMARY-QUEUE: «прошло N из M» по видам; вид без проверок назван, а не выдан за ноль. */}
+          <h3 className="kitp__h3">{t('kitPage.st.vsum')}</h3>
+          <KitVerdictSummaryDemo />
           <div className="kitp__grid">
             <Skeleton lines={3} />
             <EmptyState compact />
