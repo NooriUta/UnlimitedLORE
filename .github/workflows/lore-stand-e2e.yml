@@ -47,11 +47,33 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           node --version
 
-      - name: Install web-next + Chromium
+      - name: Install web-next
+        working-directory: web-next
+        run: bash ../.github/scripts/npm-retry.sh ci
+
+      # Chromium (~100 МБ) — из кеша по версии Playwright; без кеша — напрямую, без прокси:
+      # раннер lore-only подставляет HTTP(S)_PROXY через медленный VPN, а CDN Playwright и
+      # apt доступны напрямую (замер CICDGitHub 15.11.2026: 5 мин без прокси, 0,3–2 КБ/с с ним).
+      - name: Playwright version
+        id: pw
+        working-directory: web-next
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Chromium
+        id: pwcache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-chromium-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium (без прокси)
         working-directory: web-next
         run: |
-          bash ../.github/scripts/npm-retry.sh ci
-          npx playwright install --with-deps chromium
+          if [ "${{ steps.pwcache.outputs.cache-hit }}" = "true" ]; then
+            env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx playwright install-deps chromium
+          else
+            env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx playwright install --with-deps chromium
+          fi
 
       - name: Автологин тестовых учёток
         working-directory: web-next
