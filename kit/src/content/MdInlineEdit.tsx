@@ -27,7 +27,7 @@
 import { ICON_CANON } from '../elements/iconCanon';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { MartProse, type MartRefHref, type MartRefPeek } from './MartProse';
+import { MartProse, type MartRefHref, type MartRefLook, type MartRefPeek } from './MartProse';
 import type { LiveBlocks } from './LiveBlock';
 import { splitDiagramFences } from './diagramFence';
 import { useNarrow } from '../core/narrow';
@@ -81,6 +81,8 @@ export interface MdInlineEditProps {
   refs?: TipTapRefSource;
   /** Куда ведёт [[ссылка]] в чтении (паспорт записи); нет — рамка без ссылки. */
   refHref?: MartRefHref;
+  /** K4-MENTION-LOOK: значок и цвет ссылок [[…]] в чтении — по виду записи. */
+  refLook?: MartRefLook;
   /** Peek со ссылки в чтении (S9-10): мышь — наведение, палец — нижний лист. */
   refPeek?: MartRefPeek;
   /**
@@ -119,7 +121,7 @@ export interface MdDraftSlot {
 
 export function MdInlineEdit({
   value, label, onSave, mode: modeProp, onMode, defaultMode = 'preview',
-  emptyText, hint = true, onUploadImage, mentionItems, refs, refHref, refPeek, drafts, blocks, className,
+  emptyText, hint = true, onUploadImage, mentionItems, refs, refHref, refLook, refPeek, drafts, blocks, className,
 }: MdInlineEditProps) {
   const narrow = useNarrow();
   const lang = useKitLang();
@@ -355,7 +357,7 @@ ${t('kit.mdedit.hint')}` : undefined}
           />
         )}
         {shown.trim()
-          ? <MartProse text={shown} refHref={refHref} refPeek={refPeek} blocks={blocks} />
+          ? <MartProse text={shown} refHref={refHref} refLook={refLook} refPeek={refPeek} blocks={blocks} />
           : <p className="sk-mdedit__empty">{emptyText ?? t('kit.mdedit.empty')}</p>}
       </section>
     );

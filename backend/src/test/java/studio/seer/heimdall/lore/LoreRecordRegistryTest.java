@@ -36,13 +36,15 @@ class LoreRecordRegistryTest {
     void typesNowAreSprintTaskAdrSpec() {
         // S5-DOC-PASSPORT: документ — после спеки (группа «Знания»), правится (не READ_ONLY).
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
-            "component", "tech", "feature", "product", "user", "agent", "project"), LoreRecordRegistry.TYPES);
+            "component", "tech", "feature", "product", "user", "agent",
+            "actor", "pain", "gain", "job", "runbook", "project"), LoreRecordRegistry.TYPES);
         // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
         assertNotNull(LoreRecordRegistry.get("decision"));
         assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("decision", "question")));
         // S4-V2-SECTIONS: компонент, технология и фича — последними, тоже только чтение.
         assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("component", "tech", "feature")));
-        assertNull(LoreRecordRegistry.get("pain"), "боль — не тип паспорта");
+        // MD-04: боль получила паспорт; не тип паспорта — находка (KnowFinding, паспорта v2 нет).
+        assertNull(LoreRecordRegistry.get("finding"), "находка — не тип паспорта");
     }
 
     @Test

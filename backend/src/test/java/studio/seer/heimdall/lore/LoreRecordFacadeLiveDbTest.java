@@ -112,7 +112,8 @@ class LoreRecordFacadeLiveDbTest {
         assertTrue(n.getList("meta.data_state").isEmpty(), "новая запись ничего не читала — список пуст");
 
         admin().get("/lore/record/task/NOPE_SPRINT/NOPE").then().statusCode(404);
-        admin().get("/lore/record/pain/P-1").then().statusCode(400);   // тип без паспорта (компонент, технология, фича заведены S4-V2-SECTIONS)
+        admin().get("/lore/record/finding/F-1").then().statusCode(400);   // тип без паспорта (компонент, технология, фича заведены S4-V2-SECTIONS)
+        admin().get("/lore/record/pain/P-NO-SUCH").then().statusCode(404);   // у боли паспорт есть (MD-04): нет записи — 404, а не «типа нет»
     }
 
     @Test

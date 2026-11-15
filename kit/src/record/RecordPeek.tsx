@@ -8,6 +8,7 @@
 // Честные состояния: упавший блок рёбер — ошибка, а не «задач нет»; обрезанная
 // выборка — пометка; ноль задач — проверенный ноль.
 // Открытый peek живёт в URL (?peek=<id>, useRecordPeek), как и вкладка записи.
+import { ObjectMention } from '../elements/ObjectMention';
 import { useCallback } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { Drawer } from '../shell/Sheet';
@@ -92,9 +93,8 @@ function PeekTasks({ record, ctx, lang, taskEdges, limit }: {
               {t.record
                 ? <StatusPill code={t.record.status} kind={t.record.kind} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} />
                 : <span className="sk-peek__missing">{kitT(lang, 'kit.record.links.missing')}</span>}
-              <a className="sk-rec-ref sk-peek__ref" href={ctx.href(t.id)}>
-                <span>{t.record ? t.record.title : t.id}</span>
-              </a>
+              <ObjectMention id={t.id} kind={t.record?.kind} title={t.record?.title} href={ctx.href(t.id)}
+                kinds={ctx.config.kinds} className="sk-rec-ref sk-peek__ref" />
               {t.record && <span className="sk-pill sk-pill--id">{t.id}</span>}
             </li>
           ))}

@@ -48,3 +48,45 @@ npm run e2e:stand
 - not-run — хоть один не выполнен (нет входа, вход истёк, нет прав админа); это НЕ зелёный. С `LORE_STAND_REQUIRE_RUN=1` (так в CI) not-run тоже роняет код выхода
 
 Логика сводки проверяется vitest-ом: `src/standSmoke.test.ts`.
+
+## RBAC под тестовыми учётками (`rbac.stand.ts`)
+
+Кейсы спеки SPEC-LORE-RBAC-ADMIN-TESTCASES, которые проверяются входом человека: RB-01…08, RB-11, RB-40, AD-01, AD-02. ID кейса — первое слово заголовка, он же строка отчёта.
+
+- **Только TEST-учётки** (D-2026-ONLY-TEST-PREFIXED-ACCOUNTS): `test-sa`, `test-admin`, `test-viewer`, `test-user-1..3`. Другой логин прогон отвергает сам (`src/standSmoke/rbac.ts`).
+- **Только препрод.** Записи нет: негативные кейсы шлют запись с пустым телом — отказ гейта даёт 403, прошедший гейт получает 400 и ничего не пишет.
+- **Кейсы агентов (§4)** здесь не гоняются: нужен секрет клиента, а к прогону он не попадает.
+
+Вход на каждую учётку сохраняет человек, один файл на учётку, имя файла = логин:
+
+```
+cd web-next
+npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/test-viewer.json https://preprod.new.lore.odal.seidrstudio.pro
+```
+
+Нет файла учётки — её кейсы «не выполнены» с именем учётки. RB-08 (просроченный токен) берёт токен из файла входа: он выполняется, когда файл старше срока токена (минуты), иначе «не выполнен».
+
+Запуск (PowerShell):
+
+```
+cd web-next
+$env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
+npx playwright test -c playwright.stand.config.ts rbac.stand.ts
+```
+
+Папка входов меняется переменной `LORE_STAND_AUTH_DIR`.
+
+## Автологин тестовых учёток (без входа руками)
+
+Владелица 15.11.2026: «доработай тесты, чтобы он сам подставлял тестовые учётки». Пароли берутся из переменной `LORE_STAND_ACCOUNTS_JSON` — в CI это секрет из Infisical (заводит CICDGitHub), локально — из файла владелицы. Принимаются только логины TEST*, пароли не печатаются, прод отвергается.
+
+```
+cd web-next
+$env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
+$env:LORE_STAND_ACCOUNTS_JSON = Get-Content <путь к файлу учёток> -Raw   # {"test-sa":"…",…}
+npm run e2e:stand:login        # пишет e2e/stand/.auth/<логин>.json и stand.json (= test-admin)
+$env:LORE_STAND_STORAGE_STATE = 'e2e/stand/.auth/stand.json'
+npm run e2e:stand              # RBAC + смоук
+```
+
+В CI — workflow «LORE stand e2e (preprod, test accounts)», запуск по кнопке; Chromium ставится из Playwright (`LORE_STAND_CHANNEL=''`).

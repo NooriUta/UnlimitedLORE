@@ -30,6 +30,7 @@ import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
 import { Kbd } from '../elements/Kbd';
 import { Pill } from '../elements/Pill';
+import { ObjectMention } from '../elements/ObjectMention';
 import {
   LIST_RESERVED_KEYS, ariaKeyshortcuts, assertKeymap, findAction, isMacPlatform, kbdKeys,
 } from '../keyboard/keymap';
@@ -1736,9 +1737,9 @@ export function ListView({
   const feedRef = (x: { id: string; type: string }): ReactNode => {
     const target = data.records.find(rr => rr.id === x.id);
     const label = config.edges?.[x.type]?.label ?? x.type;
-    return href
-      ? <a key={x.id} className="sk-feed__ref" href={href(x.id)} title={label}>{target?.title ?? x.id}</a>
-      : <span key={x.id} className="sk-feed__ref" title={label}>{target?.title ?? x.id}</span>;
+    // K4-MENTION-LOOK: связанная запись — упоминание: значок и цвет её вида; адреса нет — текст.
+    return <ObjectMention key={x.id} id={x.id} kind={target?.kind} href={href ? href(x.id) : null} kinds={config.kinds}
+      className="sk-feed__ref" hint={label}>{target?.title ?? x.id}</ObjectMention>;
   };
 
   const feedBecause = (r: KitRecord): ReactNode => {
@@ -2080,12 +2081,18 @@ export function ListView({
     body = emptyFilteredState;
   } else if (view === 'cards') {
     // Карточки (S4-22): сетка auto-fit; на карточке — название, ID, статус и поля колонок.
-    const extra = columns.filter(c0 => c0.startsWith('fields.'));
+    // Карточка показывает то же, что колонки списка (K4-PHONE-PEOPLE-CARDS): поля — все
+    // колонки, кроме служебных, с приставкой «fields.» или без (у экранов приложения её нет —
+    // раньше на карточку не попадало ни одно поле); код — только если колонкой его
+    // показывает и таблица (у человека код — kc_sub, ему на карточке не место).
+    const CARD_STRUCTURAL = new Set(['id', 'title', 'title+id', 'status', 'select', 'actions']);
+    const extra = columns.filter(c0 => !CARD_STRUCTURAL.has(c0));
+    const cardShowsId = columns.includes('id') || columns.includes('title+id');
     body = (
       <ul className="sk-cards">
         {filtered.map(r => (
           <li key={r.id} className={`sk-cards__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
-            <div className="sk-cards__head">{statusVisible(r) && cell('status', r)}<Pill variant="id">{r.id}</Pill></div>
+            <div className="sk-cards__head">{statusVisible(r) && cell('status', r)}{cardShowsId && <Pill variant="id">{r.id}</Pill>}</div>
             <div className="sk-cards__title"><Title r={r} href={href} onOpen={onOpen} /></div>
             {extra.length > 0 && (
               <dl className="sk-cards__fields">

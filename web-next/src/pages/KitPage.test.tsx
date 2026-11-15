@@ -63,6 +63,17 @@ describe('/kit — витрина Seiðr-kit', () => {
     expect(container.querySelectorAll('#kit-charts .sk-burn-spark').length).toBeGreaterThan(1);
   });
 
+  it('K4-MENTION-LOOK: упоминания — значок и цвет вида, нейтральный вид без канона, без адреса — текст', () => {
+    const { container } = render(<KitPage />);
+    const row = container.querySelector('[data-testid="kit-mentions"]')!;
+    expect(row).toBeTruthy();
+    const adr = row.querySelector('[data-mention][data-kind="adr"]') as HTMLElement;
+    expect(adr.tagName).toBe('A');
+    expect(adr.style.getPropertyValue('--mention-c')).toBe('var(--section-adrs)');
+    expect(row.querySelector('[data-mention][data-kind="project"]')!.hasAttribute('data-tinted')).toBe(false);
+    expect(row.querySelector('[data-mention][data-nolink]')).toBeTruthy();
+  });
+
   it('четыре честных исхода + обрезка различимы на одной странице', () => {
     const { container } = render(<KitPage />);
     for (const s of ['loading', 'empty', 'error', 'forbidden', 'partial']) {

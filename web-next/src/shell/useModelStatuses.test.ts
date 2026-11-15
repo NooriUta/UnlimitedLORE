@@ -14,14 +14,17 @@
 // (SPRINT_UXR_S10_SEIDR_KIT/K-MODEL-LOADER): он был написан и до сих пор не
 // вызывался ниоткуда.
 import { describe, expect, it } from 'vitest';
-import { LORE_STATUS_DICT, fetchModelStatuses } from './useModelStatuses';
+import { LORE_STATUS_DICT, LORE_STATUS_TYPE, fetchModelStatuses } from './useModelStatuses';
 
+// Форма сервера (LoreModel): блок статусов лежит ПО ТИПУ записи, имя словаря — внутри.
+// Прежде фикстура клала его под ключом словаря (`task_status`) — ровно ту же ошибку,
+// что и код, поэтому тест был зелёным, а оболочка жила на умолчании (CT-KIT-FIXTURES).
 const doc = (entries: unknown[]) => ({
   format: 'model/0',
   version: '2026-11-09T07:00:00Z',
   partial: false,
   missing: [],
-  statuses: { [LORE_STATUS_DICT]: { dict: LORE_STATUS_DICT, allow_scope: 'type', lifecycle_known: true, entries } },
+  statuses: { [LORE_STATUS_TYPE]: { dict: LORE_STATUS_DICT, allow_scope: 'type', lifecycle_known: true, entries } },
 });
 
 const entry = {

@@ -14,6 +14,10 @@ export const LUCIDE_ICONS: IconifyJSON = {
   "width": 24,
   "height": 24,
   "icons": {
+    // S4-32: статус «черновик» — выбор владелицы 14.11.2026 («9b»).
+    "file-pen-line": {
+      "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M14.364 13.634a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506l4.013-4.009a1 1 0 0 0-3.004-3.004zm.123-5.776A1 1 0 0 1 14 7V2\"/><path d=\"M20 19.645V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l2.516 2.516M8 18h1\"/></g>"
+    },
     // S4-30: мини-версия зоны «только иконками» (выбор владелицы 09.11.2026 —
     // «три», на предложенные slider-horizontal / share-2 / bar-chart-3; в
     // lucide 1.70 последняя называется chart-column).

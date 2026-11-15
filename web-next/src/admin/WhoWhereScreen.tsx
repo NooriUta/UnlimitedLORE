@@ -10,7 +10,7 @@
 // пять человек и двадцать пять проектов помещаются на экран, а не в ленту.
 import { useCallback, useMemo, useState, type SyntheticEvent } from 'react';
 import {
-  Drawer, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, setUrlParams, useKitLang, useLoadState, useUrlParam,
+  Drawer, PersonFace, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, setUrlParams, useKitLang, useLoadState, useUrlParam,
 } from '@seidr/kit';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
 import { PROJECT_WIZ_PARAMS } from './projectLike';
@@ -23,6 +23,8 @@ import type { AgentRow } from './agents';
 import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from './AccessBlocks';
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
+import { ProfileEditor } from '../settings/ProfileEditor';
+import { usePerson } from '../people/avatars';
 import { PersonTestDelete } from './TestAccountDelete';
 import { WhyNotSee } from './WhyNotSee';
 import { AgentChip } from './HarnessMark';
@@ -214,7 +216,8 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
         <button type="button" className="sk-btn" onClick={() => setAdding(true)}>{t('admin.people.add')}</button>
       </div>
       {/* Старые ссылки ?adm-q=… (S7B-25) открывают ту же выборку — текстом поиска списка. */}
-      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} openOnRowClick initial={q ? { text: q } : undefined} />
+      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} openOnRowClick initial={q ? { text: q } : undefined}
+        cellOf={(col, r) => (col === 'face' ? <PersonRowFace sub={r.id} name={r.title} fetchImpl={fetchImpl} /> : undefined)} />
       {person && (
         <Drawer open onClose={() => setOpen(null)} title={person.name}>
           <PersonPassport person={person} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
@@ -229,10 +232,21 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
   );
 }
 
+/**
+ * Аватар человека в строке списка (AP-07 «аватары доделать», владелица 15.11.2026): профили строк
+ * собираются одним запросом ?ids=…, картинка — запросом с токеном, из blob: (people/avatars.ts).
+ * Нет аватара — инициалы.
+ */
+function PersonRowFace({ sub, name, fetchImpl }: { sub: string; name: string; fetchImpl?: typeof fetch }) {
+  const { row, src } = usePerson(sub, fetchImpl);
+  return <PersonFace name={row?.display_name || name} src={src} size="sm" decorative />;
+}
+
 /** Паспорт человека — содержимое прежней раскрытой строки, без потерь. */
 function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Person; meSub: string | null; fetchImpl?: typeof fetch; allSlugs: string[] }) {
   const t = useAppT();
   const isMe = p.kc_sub === meSub;
+  const lang = useKitLang();
   // S7B-20 (UC-4): «Отключить…» — действие паспорта; кого отключаем — в адресе (?adm-off=kc_sub).
   const [off, setOff] = useUrlParam('adm-off');
   return (
@@ -259,6 +273,8 @@ function PersonPassport({ person: p, meSub, fetchImpl, allSlugs }: { person: Per
           ? p.agents.map(a => <AgentChip key={a.actor_id} row={a} noneLabel={t('admin.harness.none')} />)
           : <span className="adm-missing">{t('admin.who.noAgents')}</span>}
       </p>
+      {/* AP-07: имя и аватар человека — правит админ (свой — человек сам, в личных настройках). */}
+      <ProfileEditor sub={p.kc_sub} lang={lang} {...(fetchImpl ? { fetchImpl } : {})} />
       <PersonAgentsLine kcSub={p.kc_sub} isMe={isMe} fetchImpl={fetchImpl} />
       <EffectiveAccess kcSub={p.kc_sub} projects={allSlugs} fetchImpl={fetchImpl} />
       {/* S7B-ACL-3: машины, которыми человек владеет и к которым допущен. */}

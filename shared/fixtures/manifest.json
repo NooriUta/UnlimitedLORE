@@ -6,7 +6,7 @@
     { "name": "slice-adrs", "path": "/lore/slice/adrs?limit=5" },
     { "name": "slice-tasks_of_sprint", "path": "/lore/slice/tasks_of_sprint?sprint_id={sprint_id}&limit=10" },
     { "name": "slice-phases_of_sprint", "path": "/lore/slice/phases_of_sprint?sprint_id={sprint_id}" },
-    { "name": "slice-search", "path": "/lore/slice/search?pattern=LORE&limit=5" },
+    { "name": "slice-search", "path": "/lore/slice/search?pattern=TEST&limit=5" },
     { "name": "record-sprint", "path": "/lore/record/sprint/{sprint_id}" },
     { "name": "record-task", "path": "/lore/record/task/{task_uid}" },
     { "name": "record-adr", "path": "/lore/record/adr/{adr_id}" }

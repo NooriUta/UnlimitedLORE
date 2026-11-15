@@ -137,7 +137,12 @@ public class LoreUserResource extends LoreResourceBase {
         StringBuilder sql = new StringBuilder("UPDATE KnowUser SET kc_sub=:sub");
         Map<String, Object> p = new HashMap<>();
         p.put("sub", kcSub);
-        if (displayName != null) { sql.append(", display_name=:dn"); p.put("dn", displayName); }
+        // AP-07: сюда приходит ЛОГИН человека (из админки ролей). С V92 логин — своё поле, а display_name —
+        // имя, которое человек выбирает сам: назначение роли не должно затирать его. Пусто — заполняем логином.
+        if (displayName != null) {
+            sql.append(", login=:dn, display_name=coalesce(display_name, :dn)");
+            p.put("dn", displayName);
+        }
         sql.append(" UPSERT WHERE kc_sub=:sub");
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
             sql.toString(), p)).await().indefinitely();

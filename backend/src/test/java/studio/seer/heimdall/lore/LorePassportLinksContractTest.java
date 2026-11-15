@@ -148,7 +148,6 @@ class LorePassportLinksContractTest {
     static final Map<String, String> SERVICE = Map.ofEntries(
         Map.entry("E", "базовый тип рёбер схемы (EXTENDS E) — экземпляров нет"),
         Map.entry("HAS_STATE", "строка истории SCD2 — раздел «История», а не связь"),
-        Map.entry("HAS_STATUS", "легаси: словарь статусов у KnowADRHist, снят V51; пути записи нет"),
         Map.entry("ATTACHED_TO", "вложения тела (MinIO) — показываются в тексте MD, а не связью"),
         Map.entry("ROLE_HELD_BY", "роли задачи — поля автор/исполнитель/принимающий (выбор из task_identities)"),
         Map.entry("OWNED_BY", "личность: агент → его владелец (права, AL-104)"),
@@ -159,7 +158,6 @@ class LorePassportLinksContractTest {
         Map.entry("SOURCED_FROM", "след прочитанного агентом (AO-02, за флагом) — наблюдаемость агента, связью в паспорте не показывается"),
         Map.entry("ClRoutineHasOutput", "журнал рутин (ClRoutine*); пути записи в коде нет"),
         Map.entry("ON_MILESTONE", "конфиг плана (контрольные точки, срез plan_checkpoints); пути записи в коде нет"),
-        Map.entry("OF_TYPE", "конфиг плана (тип трека, срез plan_tracks); пути записи в коде нет"),
         Map.entry("CHANGED_IN", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("FORMALIZED_AS", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("INCLUDES", "объявлено DDL, ни записи, ни чтения в коде нет (сценарии — UC_INCLUDES)"),
@@ -171,15 +169,12 @@ class LorePassportLinksContractTest {
      * сущность. Конец с паспортом при этом сверяется как обычно.
      */
     static final Map<String, String> NO_PASSPORT = Map.ofEntries(
-        Map.entry("runbook", "у ранбука нет паспорта v2"),
+        // MD-04 (14.11): ранбук, боль, выгода, работа и роль продукта получили паспорт v2 —
+        // их концы рёбер теперь сверяются как у всех типов с паспортом.
         Map.entry("qg", "у гейта качества нет паспорта v2"),
         Map.entry("qg_job", "прогон гейта — служебная запись QG"),
         Map.entry("qg_recommendation", "рекомендация QG — служебная запись прогона"),
         Map.entry("qg_metric", "метрика гейта — служебная запись QG"),
-        Map.entry("pain", "профиль клиента (VP-канва) — без паспорта v2"),
-        Map.entry("gain", "профиль клиента (VP-канва) — без паспорта v2"),
-        Map.entry("job", "профиль клиента (VP-канва) — без паспорта v2"),
-        Map.entry("actor", "роль продукта KnowProjectActor — без паспорта v2"),
         Map.entry("pr", "PR — внешняя запись Forgejo, без паспорта"),
         Map.entry("file", "файл репозитория — без паспорта"),
         Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
@@ -276,6 +271,14 @@ class LorePassportLinksContractTest {
      * ArcadeDB создаёт тип на первой записи, поэтому такие рёбра живут на проде без объявления.
      */
     static final Map<String, String> UNDECLARED_EDGES = Map.of();
+
+    /**
+     * Снятые из схемы рёбра, которые обходят только шаги миграций, убирающие их легаси-экземпляры
+     * (на базе, где тип ещё есть). В остальном коде обход такого ребра — ошибка, как и прежде.
+     */
+    static final Map<String, String> RETIRED_EDGES_READ_BY_MIGRATIONS = Map.of(
+        "HAS_STATUS", "снят V89 (SELF-PROVISION-STANDALONE); обходят V51 и V89, снимающие легаси-рёбра",
+        "OF_TYPE", "снят V89 (SELF-PROVISION-STANDALONE); обходит V89, переносящий тип трека в PlanTrack.area");
 
     private static final Pattern CREATE_EDGE =
         Pattern.compile("(?i)CREATE\\s+EDGE\\s+TYPE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`?(\\w+)`?");
@@ -561,7 +564,10 @@ class LorePassportLinksContractTest {
                     Matcher q = QUOTED.matcher(t.group(1));
                     while (q.find()) {
                         seen.add(q.group(1));
-                        if (!known.contains(q.group(1))) bad.add(p.getFileName() + ": обход '" + q.group(1) + "'");
+                        if (!known.contains(q.group(1))
+                                && !(p.getFileName().toString().equals("LoreSchemaMigrationRunner.java")
+                                     && RETIRED_EDGES_READ_BY_MIGRATIONS.containsKey(q.group(1))))
+                            bad.add(p.getFileName() + ": обход '" + q.group(1) + "'");
                     }
                 }
             }
@@ -603,16 +609,26 @@ class LorePassportLinksContractTest {
      * унаследованное, S4-29). kit показывает только объявленные поля — значение без поля невидимо.
      * Без поля — только с причиной.
      */
-    static final Map<String, String> NO_CHIP_FIELD = Map.of(
-        "spec|components", "компонент спеки один — поле component (syncSpecComponent ставит одно ребро)",
-        "user|components", "у человека компонентов нет: ни ребра, ни наследования (S9-05)",
-        "agent|components", "у агента компонентов нет: ни ребра, ни наследования (S9-05)",
-        "doc|components", "компонент документа один — поле component (одно ребро BELONGS_TO, S5-DOC-PASSPORT)",
-        "tech|components", "компонент технологии один — поле component",
-        "tech|projects", "у технологии проектов нет: ни ребра в tech_by_id, ни наследования",
-        "component|components", "компонент — сам себе компонент; дерево — поля parent/children",
-        "project|projects", "проект — сам себе проект",
-        "project|components", "компоненты проекта — вкладкой components (срез project_components)");
+    static final Map<String, String> NO_CHIP_FIELD = Map.ofEntries(
+        Map.entry("spec|components", "компонент спеки один — поле component (syncSpecComponent ставит одно ребро)"),
+        Map.entry("user|components", "у человека компонентов нет: ни ребра, ни наследования (S9-05)"),
+        Map.entry("agent|components", "у агента компонентов нет: ни ребра, ни наследования (S9-05)"),
+        Map.entry("doc|components", "компонент документа один — поле component (одно ребро BELONGS_TO, S5-DOC-PASSPORT)"),
+        Map.entry("tech|components", "компонент технологии один — поле component"),
+        Map.entry("tech|projects", "у технологии проектов нет: ни ребра в tech_by_id, ни наследования"),
+        Map.entry("component|components", "компонент — сам себе компонент; дерево — поля parent/children"),
+        Map.entry("project|projects", "проект — сам себе проект"),
+        Map.entry("project|components", "компоненты проекта — вкладкой components (срез project_components)"),
+        // MD-04: роль продукта, профиль клиента и ранбук — путей записи BELONGS_TO к компоненту нет;
+        // у боли, выгоды и работы нет и BELONGS_TO_PROJECT (глобальные вершины профиля клиента, AL-113).
+        Map.entry("actor|components", "у роли продукта компонентов нет: ни ребра, ни наследования (MD-04)"),
+        Map.entry("runbook|components", "у ранбука компонентов нет: ни ребра, ни наследования (MD-04)"),
+        Map.entry("pain|projects", "боль — общий профиль клиента, проекта нет (MD-04)"),
+        Map.entry("pain|components", "боль — общий профиль клиента, компонента нет (MD-04)"),
+        Map.entry("gain|projects", "выгода — общий профиль клиента, проекта нет (MD-04)"),
+        Map.entry("gain|components", "выгода — общий профиль клиента, компонента нет (MD-04)"),
+        Map.entry("job|projects", "работа — глобальная вершина (AL-113), проекта нет (MD-04)"),
+        Map.entry("job|components", "работа — глобальная вершина (AL-113), компонента нет (MD-04)"));
 
     @Test
     void chipValuesHaveADeclaredField() {

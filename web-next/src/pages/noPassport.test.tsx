@@ -79,25 +79,28 @@ describe('паспорт есть у каждого раздела', () => {
     expect(sections.length, 'разделы не прочитались — проверка прошла бы мимо').toBeGreaterThan(5);
     const without = sections.filter(s => !(s in PASSPORT_OF));
     // S4-PRODUCTS-NODE (11.11): боли, выгоды, работы и роли пришли в v2 РАНЬШЕ своего
-    // паспорта — третий раз по правилу этого файла. Список явный: новый раздел без
-    // паспорта сюда молча не попадёт.
-    expect(without, 'раздел без паспорта: человек получит отказ вместо записи').toEqual(['actors', 'pains', 'gains', 'jobs']);
+    // паспорта — третий раз по правилу этого файла. MD-04 (14.11) дал им паспорта, и
+    // разделов без паспорта снова нет. Список явный: новый раздел без паспорта сюда молча не попадёт.
+    expect(without, 'раздел без паспорта: человек получит отказ вместо записи').toEqual([]);
     const unknown = Object.values(PASSPORT_OF).filter(t => !(PASSPORT_TYPES as readonly string[]).includes(t as string));
     expect(unknown, 'раздел ведёт на тип, которого фасад не отдаёт').toEqual([]);
   });
 });
 
-describe('раздел без паспорта отвечает словами (боли, S4-PRODUCTS-NODE)', () => {
-  const PAINS = { rows: [{ pain_id: 'PAIN-1', title: 'Долго искать', severity: 'high', actor_ids: [], addressed_by: 1, relieved_by: 0 }], truncated: false };
-  it('щелчок по боли — «паспорта нет», код записи и путь назад', async () => {
-    render(<ListScreen screen="pains" fetchImpl={net(PAINS)} urlState={fakeWin()} />);
-    const row = await screen.findByText('Долго искать', {}, { timeout: 8000 });
-    await act(async () => { fireEvent.click(row); });
-    await waitFor(() => {
-      const box = document.querySelector('.list-screen__nopassport');
-      expect(box, 'отказ словами').toBeTruthy();
-      expect(box!.textContent).toContain('PAIN-1');
-      expect(box!.querySelector('button'), 'путь назад').toBeTruthy();
-    }, { timeout: 8000 });
+// Живого раздела без паспорта с MD-04 нет (боли получили паспорт) — отказ проверяется самим
+// ответом: следующий раздел, пришедший раньше паспорта, получит именно его.
+describe('раздел без паспорта отвечает словами', () => {
+  it('отказ называет раздел, код записи и путь назад', async () => {
+    const back = vi.fn();
+    const { NoPassport } = await import('./ListScreen');
+    render(<NoPassport id="PAIN-1" section="Боли" onBack={back} />);
+    const box = document.querySelector('.list-screen__nopassport');
+    expect(box, 'отказ словами').toBeTruthy();
+    expect(box!.textContent).toContain('PAIN-1');
+    expect(box!.textContent).toContain('Боли');
+    const btn = box!.querySelector('button');
+    expect(btn, 'путь назад').toBeTruthy();
+    fireEvent.click(btn!);
+    expect(back).toHaveBeenCalledTimes(1);
   });
 });

@@ -29,6 +29,8 @@ export interface ChipValue {
   id: string;
   label?: string | null;
   inherited_from?: { type: string; id: string } | null;
+  /** K4-MENTION-LOOK: вид записи чипа, если его назвал источник; иначе вид берётся у поля (refKind). */
+  kind?: string;
 }
 
 /**
@@ -55,9 +57,11 @@ export function asChip(v: unknown): ChipValue | null {
   const id = str(o.id);
   if (id === null) return null;
   const from = o.inherited_from;
+  const kind = str(o.kind);
   return {
     id,
     label: str(o.label),
+    ...(kind ? { kind } : {}),
     // Битый источник (без типа или кода) читать нечем, но утверждение «пришло
     // не от самой записи» остаётся верным: обнулить его значило бы выдать
     // унаследованный чип за собственный.

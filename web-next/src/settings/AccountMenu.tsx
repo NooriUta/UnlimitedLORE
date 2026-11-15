@@ -13,7 +13,10 @@ import { applySettings } from './applySettings';
 import { MemoryPanel } from './MemoryPanel';
 import { fetchPalettes, type PalettesView } from './palettesSource';
 import { PersonalSettings } from './PersonalSettings';
+import { ProfileEditor } from './ProfileEditor';
 import { useSettings } from './useSettings';
+import { usePerson } from '../people/avatars';
+import { loreFetch } from '../auth/session';
 
 export interface AccountMenuProps {
   client: S2Client;
@@ -28,12 +31,16 @@ export interface AccountMenuProps {
   navTargetUrl?: string | null;
   /** Выход (S3-18); нет — вход выключен, кнопки «Выйти» нет. */
   onLogout?: () => void;
+  /** AP-07: kc_sub вошедшего — свой профиль (имя, аватар) он меняет сам. Нет — пункта «Профиль» нет. */
+  sub?: string | null;
+  /** Подмена загрузки (тесты) — профилю. */
+  fetchImpl?: typeof fetch;
   /** Подмена загрузки палитр (тесты); по умолчанию — модель с сервера. */
   loadPalettes?: () => Promise<PalettesView>;
 }
 
-export function AccountMenu({ client, lang, root, jar, name, subtitle, navTargetUrl, onLogout, loadPalettes }: AccountMenuProps) {
-  const [view, setView] = useState<'settings' | 'memory'>('settings');
+export function AccountMenu({ client, lang, root, jar, name, subtitle, navTargetUrl, onLogout, loadPalettes, sub, fetchImpl }: AccountMenuProps) {
+  const [view, setView] = useState<'settings' | 'memory' | 'profile'>('settings');
   // Список палитр — прикладной словарь, он приходит из модели (K-14 п. 5).
   // Пока не пришёл — панель показывает список темы kit и говорит об этом
   // сама: подставлять молча значило бы выдать умолчание за выбор модели.
@@ -54,10 +61,14 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
     if (target) applySettings(target, s, jar);
   }, [root, jar]);
   const { state, set, reload } = useSettings(client, apply);
+  // AP-07: свой аватар и имя профиля — запросом с токеном (people/avatars.ts). Нет входа — ничего не запрашивается.
+  const me = usePerson(sub ?? null, fetchImpl ?? loreFetch, view === 'profile' ? 0 : 1);
+  const shownName = me.row?.display_name?.trim() || name;
 
   return (
     <AvatarMenu
-      name={name}
+      name={shownName}
+      avatarSrc={me.src}
       subtitle={subtitle}
       title={t(lang, 'settings.title')}
       onOpenChange={open => { if (!open) setView('settings'); }}
@@ -74,7 +85,22 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
             palettes={palettes}
           />
         )
-        : <MemoryPanel client={client} lang={lang} onBack={() => setView('settings')} />}
+        : view === 'profile' && sub
+          ? (
+            <>
+              {/* AP-07: свой профиль — имя и аватар; права проверяет сервер. */}
+              <ProfileEditor sub={sub} lang={lang} {...(fetchImpl ? { fetchImpl } : {})} />
+              <div className="memory-actions">
+                <button type="button" className="sk-btn" onClick={() => setView('settings')}>{t(lang, 'settings.backToSettings')}</button>
+              </div>
+            </>
+          )
+          : <MemoryPanel client={client} lang={lang} onBack={() => setView('settings')} />}
+      {sub && view === 'settings' && (
+        <div className="memory-actions">
+          <button type="button" className="sk-btn" data-testid="account-profile" onClick={() => setView('profile')}>{t(lang, 'settings.profile')}</button>
+        </div>
+      )}
       {/* S7B-01: вход в админку — из меню аватара (прототип v6), модуль ?mod=admin.
           Ссылку видят все: права проверяет сервер, и экран без прав скажет
           «нет прав», а не притворится пустым. */}

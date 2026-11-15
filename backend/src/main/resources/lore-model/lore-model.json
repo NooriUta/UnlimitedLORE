@@ -3137,9 +3137,19 @@
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "out",
       "relation" : "attribute"
+    }, {
+      "key" : "login",
+      "label" : "Логин",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "avatar",
+      "label" : "Аватар",
+      "kind" : "text",
+      "group" : "props"
     } ],
     "props" : [ {
-      "fields" : [ "projects" ]
+      "fields" : [ "projects", "login", "avatar" ]
     } ],
     "linkTabs" : [ {
       "key" : "tasks",
@@ -3306,6 +3316,626 @@
       "rel" : "FILLS_ROLE",
       "dir" : "out",
       "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "actor",
+    "label" : "Роль продукта",
+    "labelKey" : "pp.kind.actor",
+    "icon" : "hooded-figure",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "kind",
+      "label" : "Вид роли",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Описание",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "kind", "projects" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "profile",
+      "label" : "Профиль клиента",
+      "rels" : [ {
+        "rel" : "FELT_BY",
+        "dir" : "in",
+        "label" : "боли роли",
+        "relation" : "association"
+      }, {
+        "rel" : "DESIRED_BY",
+        "dir" : "in",
+        "label" : "выгоды роли",
+        "relation" : "association"
+      }, {
+        "rel" : "PERFORMED_BY",
+        "dir" : "in",
+        "label" : "работы роли",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "features",
+      "label" : "Сценарии",
+      "rel" : "HAS_ACTOR",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "pains",
+      "label" : "Боли",
+      "rel" : "FELT_BY",
+      "dir" : "in",
+      "targetType" : "pain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "gains",
+      "label" : "Выгоды",
+      "rel" : "DESIRED_BY",
+      "dir" : "in",
+      "targetType" : "gain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "jobs",
+      "label" : "Работы",
+      "rel" : "PERFORMED_BY",
+      "dir" : "in",
+      "targetType" : "job",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "agents",
+      "label" : "Агенты",
+      "rel" : "FILLS_ROLE",
+      "dir" : "in",
+      "targetType" : "agent",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "pain",
+    "label" : "Боль",
+    "labelKey" : "pp.kind.pain",
+    "icon" : "thorn-helix",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "severity",
+      "label" : "Острота",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Создана",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Описание",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "severity", "date" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "features",
+      "label" : "Фичи и сценарии",
+      "rels" : [ {
+        "rel" : "ADDRESSES",
+        "dir" : "in",
+        "label" : "заявлена фичами",
+        "relation" : "association"
+      }, {
+        "rel" : "RELIEVES",
+        "dir" : "in",
+        "label" : "снимают сценарии",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "profile",
+      "label" : "Профиль клиента",
+      "rels" : [ {
+        "rel" : "FELT_BY",
+        "dir" : "out",
+        "label" : "чья боль",
+        "relation" : "association"
+      }, {
+        "rel" : "BLOCKS",
+        "dir" : "out",
+        "label" : "мешает работам",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "claimedBy",
+      "label" : "Заявлена фичами",
+      "rel" : "ADDRESSES",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "relievedBy",
+      "label" : "Снимают сценарии",
+      "rel" : "RELIEVES",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "actors",
+      "label" : "Роли",
+      "rel" : "FELT_BY",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "jobs",
+      "label" : "Мешает работам",
+      "rel" : "BLOCKS",
+      "dir" : "out",
+      "targetType" : "job",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "gain",
+    "label" : "Выгода",
+    "labelKey" : "pp.kind.gain",
+    "icon" : "gift-of-knowledge",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "rank",
+      "label" : "Ранг",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Создана",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Описание",
+      "labelKey" : "pp.field.body"
+    }, {
+      "key" : "metric_md",
+      "label" : "Метрика"
+    } ],
+    "props" : [ {
+      "fields" : [ "rank", "date" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "features",
+      "label" : "Фичи и сценарии",
+      "rels" : [ {
+        "rel" : "PROMISES",
+        "dir" : "in",
+        "label" : "обещана фичами",
+        "relation" : "association"
+      }, {
+        "rel" : "DELIVERS",
+        "dir" : "in",
+        "label" : "дают сценарии",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "profile",
+      "label" : "Профиль клиента",
+      "rels" : [ {
+        "rel" : "DESIRED_BY",
+        "dir" : "out",
+        "label" : "чья выгода",
+        "relation" : "association"
+      }, {
+        "rel" : "SUCCESS_OF",
+        "dir" : "out",
+        "label" : "успех в работах",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "promisedBy",
+      "label" : "Обещана фичами",
+      "rel" : "PROMISES",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "deliveredBy",
+      "label" : "Дают сценарии",
+      "rel" : "DELIVERS",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "actors",
+      "label" : "Роли",
+      "rel" : "DESIRED_BY",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "jobs",
+      "label" : "Успех в работах",
+      "rel" : "SUCCESS_OF",
+      "dir" : "out",
+      "targetType" : "job",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "job",
+    "label" : "Работа",
+    "labelKey" : "pp.kind.job",
+    "icon" : "archery-target",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "kind",
+      "label" : "Вид работы",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "importance",
+      "label" : "Важность",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Создана",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Описание",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "kind", "importance", "date" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "features",
+      "label" : "Фичи и сценарии",
+      "rels" : [ {
+        "rel" : "HELPS_WITH",
+        "dir" : "in",
+        "label" : "помогают фичи",
+        "relation" : "association"
+      }, {
+        "rel" : "PERFORMS",
+        "dir" : "in",
+        "label" : "выполняют сценарии",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "profile",
+      "label" : "Профиль клиента",
+      "rels" : [ {
+        "rel" : "PERFORMED_BY",
+        "dir" : "out",
+        "label" : "чья работа",
+        "relation" : "association"
+      }, {
+        "rel" : "BLOCKS",
+        "dir" : "in",
+        "label" : "мешают боли",
+        "relation" : "association"
+      }, {
+        "rel" : "SUCCESS_OF",
+        "dir" : "in",
+        "label" : "успех — выгоды",
+        "relation" : "association"
+      } ]
+    }, {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на неё ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "helpedBy",
+      "label" : "Помогают фичи",
+      "rel" : "HELPS_WITH",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "performedBy",
+      "label" : "Выполняют сценарии",
+      "rel" : "PERFORMS",
+      "dir" : "in",
+      "targetType" : "feature",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "actors",
+      "label" : "Роли",
+      "rel" : "PERFORMED_BY",
+      "dir" : "out",
+      "targetType" : "actor",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "pains",
+      "label" : "Мешают боли",
+      "rel" : "BLOCKS",
+      "dir" : "in",
+      "targetType" : "pain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "gains",
+      "label" : "Успех — выгоды",
+      "rel" : "SUCCESS_OF",
+      "dir" : "in",
+      "targetType" : "gain",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На неё ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
+    "type" : "runbook",
+    "label" : "Ранбук",
+    "labelKey" : "pp.kind.runbook",
+    "icon" : "spell-book",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "area",
+      "label" : "Область",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Создан",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    } ],
+    "body" : [ {
+      "key" : "content_md",
+      "label" : "Текст",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "area", "date", "projects" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "adrs",
+      "label" : "ADR",
+      "rel" : "REFERENCES_ADR",
+      "dir" : "out",
+      "targetType" : "adr",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
     } ]
@@ -3571,8 +4201,12 @@
       "group" : "props"
     } ]
   } ],
-  "read_only" : [ "agent", "component", "decision", "feature", "milestone", "product", "project", "question", "release", "tech", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "pain", "product", "project", "question", "release", "runbook", "tech", "user" ],
   "graph" : {
+    "actor" : {
+      "vertex" : "KnowProjectActor",
+      "key" : "actor_id"
+    },
     "adr" : {
       "vertex" : "KnowADR",
       "hist" : "KnowADRHist",
@@ -3599,10 +4233,22 @@
       "vertex" : "KnowUseCase",
       "key" : "uc_id"
     },
+    "gain" : {
+      "vertex" : "KnowGain",
+      "key" : "gain_id"
+    },
+    "job" : {
+      "vertex" : "KnowJob",
+      "key" : "job_id"
+    },
     "milestone" : {
       "vertex" : "KnowMilestone",
       "hist" : "KnowMilestoneHist",
       "key" : "milestone_id"
+    },
+    "pain" : {
+      "vertex" : "KnowPain",
+      "key" : "pain_id"
     },
     "product" : {
       "vertex" : "KnowDictEntry",
@@ -3621,6 +4267,11 @@
       "vertex" : "KnowRelease",
       "hist" : "KnowReleaseHist",
       "key" : "release_uid"
+    },
+    "runbook" : {
+      "vertex" : "KnowRunbook",
+      "hist" : "KnowRunbookHist",
+      "key" : "runbook_id"
     },
     "spec" : {
       "vertex" : "KnowSpec",
@@ -3648,6 +4299,9 @@
     }
   },
   "aliases" : {
+    "actor" : {
+      "title" : "name"
+    },
     "adr" : {
       "status" : "status",
       "title" : "name"
@@ -3674,10 +4328,19 @@
       "date" : "date_created",
       "parent" : "parent_uc_id"
     },
+    "gain" : {
+      "date" : "date_created"
+    },
+    "job" : {
+      "date" : "date_created"
+    },
     "milestone" : {
       "code" : "milestone_id",
       "date" : "date_display",
       "title" : "label"
+    },
+    "pain" : {
+      "date" : "date_created"
     },
     "product" : {
       "title" : "label_ru"
@@ -3695,6 +4358,10 @@
       "code" : "release_id",
       "date" : "release_date",
       "description_md" : "description_md"
+    },
+    "runbook" : {
+      "date" : "date_created",
+      "title" : "name"
     },
     "spec" : {
       "body_md" : "content_md",
@@ -3718,35 +4385,49 @@
       "code" : "spec_id"
     },
     "user" : {
+      "avatar" : "avatar_ref",
       "title" : "display_name"
     }
   },
   "type_color" : {
+    "actor" : "section-actors",
     "adr" : "section-adrs",
     "component" : "section-components",
     "decision" : "section-decisions",
     "feature" : "section-features",
+    "gain" : "section-rbjg",
+    "job" : "section-rbjg",
     "milestone" : "section-milestones",
+    "pain" : "section-rbjg",
     "release" : "section-releases",
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "product", "project", "question", "spec", "task", "user" ],
+  "no_type_color" : [ "agent", "doc", "product", "project", "question", "runbook", "spec", "task", "user" ],
   "precision" : {
     "adr.date" : "date",
     "decision.date" : "date",
     "feature.date" : "date",
     "feature.shipped_at" : "date",
+    "gain.date" : "date",
+    "job.date" : "date",
+    "pain.date" : "date",
     "question.closed" : "date",
     "question.due_date" : "date",
     "question.opened" : "date",
     "release.date" : "date",
+    "runbook.date" : "date",
     "sprint.created" : "datetime",
     "sprint.planned_end_date" : "date",
     "sprint.planned_start" : "date",
     "tech.checked_at" : "datetime"
   },
   "time" : {
+    "actor" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
     "adr" : {
       "history" : "scd2",
       "created" : [ {
@@ -3835,6 +4516,28 @@
         "precision" : "date"
       } ]
     },
+    "gain" : {
+      "history" : "none",
+      "created" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ]
+    },
+    "job" : {
+      "history" : "none",
+      "created" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ]
+    },
     "milestone" : {
       "history" : "scd2",
       "created" : [ ],
@@ -3846,6 +4549,17 @@
         "source" : "updated_at",
         "precision" : "datetime",
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
+      } ]
+    },
+    "pain" : {
+      "history" : "none",
+      "created" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "date_created",
+        "precision" : "date"
       } ]
     },
     "product" : {
@@ -3902,6 +4616,21 @@
         "precision" : "datetime"
       }, {
         "source" : "release_date",
+        "precision" : "date"
+      } ]
+    },
+    "runbook" : {
+      "history" : "scd2",
+      "created" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает первая запись тела; правка тела идёт в открытую версию на месте"
+      }, {
+        "source" : "date_created",
         "precision" : "date"
       } ]
     },
@@ -4091,6 +4820,31 @@
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
   "passport" : {
+    "actor" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "features",
+      "slot" : "own"
+    }, {
+      "key" : "pains",
+      "slot" : "own"
+    }, {
+      "key" : "gains",
+      "slot" : "own"
+    }, {
+      "key" : "jobs",
+      "slot" : "own"
+    }, {
+      "key" : "agents",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
     "adr" : [ {
       "key" : "content",
       "slot" : "own"
@@ -4286,6 +5040,53 @@
       "key" : "refsIn",
       "slot" : "own"
     } ],
+    "gain" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "promisedBy",
+      "slot" : "own"
+    }, {
+      "key" : "deliveredBy",
+      "slot" : "own"
+    }, {
+      "key" : "actors",
+      "slot" : "own"
+    }, {
+      "key" : "jobs",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "job" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "helpedBy",
+      "slot" : "own"
+    }, {
+      "key" : "performedBy",
+      "slot" : "own"
+    }, {
+      "key" : "actors",
+      "slot" : "own"
+    }, {
+      "key" : "pains",
+      "slot" : "own"
+    }, {
+      "key" : "gains",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
     "milestone" : [ {
       "key" : "sprints",
       "slot" : "own"
@@ -4294,6 +5095,28 @@
       "slot" : "own"
     }, {
       "key" : "content",
+      "slot" : "own"
+    } ],
+    "pain" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "claimedBy",
+      "slot" : "own"
+    }, {
+      "key" : "relievedBy",
+      "slot" : "own"
+    }, {
+      "key" : "actors",
+      "slot" : "own"
+    }, {
+      "key" : "jobs",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
       "slot" : "own"
     } ],
     "product" : [ {
@@ -4406,6 +5229,19 @@
       "slot" : "own"
     }, {
       "key" : "publications",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "runbook" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "adrs",
       "slot" : "own"
     }, {
       "key" : "refsOut",
@@ -4553,6 +5389,9 @@
       "section" : "doc",
       "icon" : "bookshelf"
     }, {
+      "section" : "runbook",
+      "icon" : "spell-book"
+    }, {
       "section" : "question",
       "icon" : "help"
     } ]
@@ -4599,7 +5438,7 @@
     "tone" : "var(--wrn)",
     "items" : [ {
       "section" : "settings",
-      "icon" : "cog",
+      "icon" : "material-symbols:settings-outline",
       "view" : "settings"
     } ]
   } ],
@@ -4622,6 +5461,7 @@
     "project" : "everywhere",
     "question" : "everywhere",
     "release" : "everywhere",
+    "runbook" : "everywhere",
     "settings" : "everywhere",
     "spec" : "everywhere",
     "sprint" : "everywhere",

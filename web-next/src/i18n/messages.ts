@@ -63,6 +63,9 @@ const ru = {
   'settings.showTech.label': 'Показывать технические сведения',
   'settings.showTech.hint': 'Коды источников, оговорки модели и сырые метрики. Выключено — вместо них одна строка, если данные неполны; блок можно раскрыть кнопкой «тех.» на месте.',
   'settings.memory.open': 'Что LORE помнит обо мне',
+  // AP-07: профиль автора — имя и аватар.
+  'settings.profile': 'Профиль: имя и аватар',
+  'settings.backToSettings': '← К настройкам',
   'settings.memory.title': 'Что LORE помнит обо мне',
   'settings.memory.back': 'К настройкам',
   'settings.memory.remembering': 'Запоминать частые разделы и недавние записи',
@@ -139,6 +142,9 @@ const en: Record<keyof typeof ru, string> = {
   'settings.showTech.label': 'Show technical details',
   'settings.showTech.hint': 'Source codes, model caveats and raw metrics. Off — one line instead when data is incomplete; a block can be opened with the “tech” button in place.',
   'settings.memory.open': 'What LORE remembers about me',
+  // AP-07: author profile — name and avatar.
+  'settings.profile': 'Profile: name and avatar',
+  'settings.backToSettings': '← Back to settings',
   'settings.memory.title': 'What LORE remembers about me',
   'settings.memory.back': 'Back to settings',
   'settings.memory.remembering': 'Remember frequent sections and recent records',

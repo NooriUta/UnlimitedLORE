@@ -72,6 +72,22 @@
   --st-blocked:          #e0685a;
   --st-cancelled:        #888888;
 
+  /* Цвета видов записей — канон v1 (src/styles/tokens.css, --section-*),
+     SPRINT_UXR_S13_KIT4/K4-MENTION-LOOK. Ими окрашено упоминание чужого объекта
+     (значок, рамка чипа) и узел графа — одинаково в обеих темах, как в v1.
+     Какой вид каким токеном — называет приложение (KindConfig.color), kit
+     держит только палитру. У вида без канона цвета нет: не выдумываем. */
+  --section-milestones: #E0A13D;
+  --section-sprints:    #7DBF78;
+  --section-adrs:       #B48EAD;
+  --section-decisions:  #D9A05B;
+  --section-releases:   #57C7D4;
+  --section-components: #88B8A8;
+  --section-tech:       #C0A36E;
+  --section-features:   #A8B860;
+  --section-actors:     #D4922A;
+  --section-rbjg:       #C85848;
+
   /* ── «бумага» диаграмм MartProse (S4-00d) ──
      Диаграммы mermaid/bpmn рисуются на светлой подложке при любой теме: их
      линии и подписи рассчитаны на светлый фон (v1, палитра «Лес» MartProse).
@@ -1651,6 +1667,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-avatar:hover .sk-avatar__face { box-shadow: 0 0 0 2px var(--acc); }
 .sk-avatar:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-avatar__initials { line-height: 1; }
+/* AP-07: лицо человека — картинка или инициалы; размер задаёт место (строка ленты, шапка, лист). */
+.sk-face { display: inline-grid; place-items: center; overflow: hidden; border-radius: var(--r-pill); flex-shrink: 0; }
+.sk-face--sm { width: 16px; height: 16px; font-size: var(--fs-2xs); background: var(--bg3); color: var(--t2); }
+.sk-face--md, .sk-face--lg { width: 100%; height: 100%; }
+.sk-face__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sk-avatar__face { overflow: hidden; }
 .sk-avatar-sheet .sk-sheet__body { display: flex; flex-direction: column; gap: 2px; }
 .sk-avatar__who {
   display: flex;
@@ -4377,6 +4399,15 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-ref:hover { text-decoration: underline; }
 .sk-rec-ref:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: var(--r-sm); }
 .sk-rec-ref[data-missing='true'] { color: var(--t3); }
+
+/* Упоминание чужого объекта (K4-MENTION-LOOK): значок вида в цвете вида.
+   Текст ссылки остаётся цветом ссылки места (читаемость), тип различается
+   значком и его цветом; ссылка [[…]] в MD — ещё и рамкой. Вида без цвета — нейтрально. */
+.sk-mention { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.sk-mention__icon { flex: 0 0 auto; color: var(--mention-c, var(--t3)); }
+.sk-mention__name { min-width: 0; }
+.sk-wref.sk-mention { display: inline-flex; gap: 3px; vertical-align: baseline; }
+.sk-wref[data-tinted='true'] { border-color: color-mix(in srgb, var(--mention-c) 55%, transparent); background: color-mix(in srgb, var(--mention-c) 10%, transparent); }
 
 .sk-rec-dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--edge-c, var(--t3)); flex: none; }
 .sk-rec-links { display: flex; flex-direction: column; gap: 10px; }

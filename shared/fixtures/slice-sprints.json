@@ -1,0 +1,34 @@
+{
+  "rows": [
+    {
+      "sprint_id": "SPRINT_TEST_FIXTURES",
+      "name": "SPRINT_TEST_FIXTURES",
+      "created_date": "2026-11-14T21:14:13.257531905Z",
+      "no_release_required": null,
+      "unplanned_intentional": null,
+      "changed_at": "2026-11-14T21:14:13.257Z",
+      "priority": null,
+      "valid_from": "2026-11-14T21:14:13.257Z",
+      "status_raw": "🔄 IN PROGRESS",
+      "pr_refs": null,
+      "release_ids": [],
+      "release_dates": [],
+      "done_date": null,
+      "git_projects": [],
+      "components": [],
+      "milestone_ids": [],
+      "planned_start_date": null,
+      "planned_end_date": null,
+      "track_id": null,
+      "context_md": null,
+      "status_category": "in_progress",
+      "projects": []
+    }
+  ],
+  "page": {
+    "limit": 5,
+    "offset": 0,
+    "total": 1,
+    "has_more": false
+  }
+}

@@ -64,10 +64,12 @@ describe('разделы «Продукт»: срезы, паспорта', () =
     expect(LIST_SCREENS.actors.slice).toBe('actors');
   });
 
-  it('у продукта — паспорт v2; у болей, выгод, работ и ролей его нет (честный отказ словами)', () => {
+  // MD-04 (14.11): боли, выгоды, работы и роли получили свой паспорт v2 (только чтение).
+  it('у продукта и у болей, выгод, работ и ролей — паспорт v2', () => {
     expect(PASSPORT_OF.products).toBe('product');
     expect((PASSPORT_TYPES as readonly string[])).toContain('product');
-    for (const s of ['pains', 'gains', 'jobs', 'actors'] as const) expect(PASSPORT_OF[s], s).toBeUndefined();
+    const expected = { pains: 'pain', gains: 'gain', jobs: 'job', actors: 'actor' } as const;
+    for (const s of ['pains', 'gains', 'jobs', 'actors'] as const) expect(PASSPORT_OF[s], s).toBe(expected[s]);
   });
 
   it('тип product открывается в своём разделе; чип продукта у компонента ведёт в паспорт продукта', () => {
