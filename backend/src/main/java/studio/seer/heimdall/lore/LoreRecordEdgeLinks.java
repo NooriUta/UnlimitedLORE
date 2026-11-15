@@ -29,7 +29,9 @@ final class LoreRecordEdgeLinks {
     static final int LIMIT = 200;
 
     /** Деловые ключи концов — первый непустой. */
-    static final List<String> ID_FIELDS = List.of("task_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
+    // qg_id — первым: у гейта качества есть и строковое поле sprint_id (код спринта), и без этого
+    // порядка конец-гейт назывался бы кодом своего спринта (MD-04, второй заход по QG).
+    static final List<String> ID_FIELDS = List.of("qg_id", "task_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
         "question_id", "milestone_id", "release_uid", "component_id", "uc_id", "runbook_id", "doc_id",
         "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "slug");
 
@@ -43,7 +45,8 @@ final class LoreRecordEdgeLinks {
         Map.entry("LoreComponent", "component"), Map.entry("KnowUseCase", "feature"),
         Map.entry("KnowRunbook", "runbook"), Map.entry("KnowDoc", "doc"), Map.entry("KnowGitProject", "project"),
         Map.entry("BragiPublication", "publication"), Map.entry("BragiInsight", "insight"),
-        Map.entry("QGRecommendation", "qg_recommendation"), Map.entry("KnowPain", "pain"),
+        Map.entry("QGRecommendation", "qg_recommendation"), Map.entry("QualityGate", "quality_gate"),
+        Map.entry("KnowPain", "pain"),
         Map.entry("KnowGain", "gain"), Map.entry("KnowJob", "job"), Map.entry("KnowProjectActor", "actor"),
         // S9-05 A: концы вкладок человека и агента.
         Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"));

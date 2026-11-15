@@ -20,7 +20,7 @@ import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
-  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, runbookRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
+  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, runbookRecord, qualityGateRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
   techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
@@ -481,6 +481,18 @@ const docsSpec: SectionSpec = {
   tree: { parent: 'parent', order: 'title' },
 };
 
+/** MD-04, второй заход по QG: гейты качества — состояние, итог прогона, компонент, проект-владелец. */
+const qualityGatesSpec: SectionSpec = {
+  kind: 'quality_gate', titleKey: 'lists.qualityGates.title', icon: 'checkered-flag',
+  fields: [['state', 'text'], ['lastRun', 'text'], ['component', 'ref'], ['components', 'ref'], ['project', 'ref'], ['sprint', 'text']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-project', 'lists.quick.noProjects', { project: '' }]],
+  filters: ['fields.state', 'fields.lastRun', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  groupings: ['fields.state', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  columns: ['id', 'title', 'state', 'lastRun', 'component', 'project'],
+};
+
 /** MD-04: ранбуки — область, ADR и проекты; статуса в срезе нет. */
 const runbooksSpec: SectionSpec = {
   kind: 'runbook', titleKey: 'lists.runbooks.title', icon: 'spell-book',
@@ -793,6 +805,11 @@ export const LIST_SCREENS = {
     modelType: 'doc',
     slice: 'docs', titleKey: 'lists.docs.title', icon: 'bookshelf',
     map: docRecord, config: lang => sectionConfig(lang, docsSpec), quickIcons: {},
+  },
+  // MD-04, второй заход по QG: гейты качества — раздел «Работа» и паспорт (только чтение).
+  quality_gates: {
+    slice: 'quality_gates', titleKey: 'lists.qualityGates.title', icon: 'checkered-flag',
+    map: qualityGateRecord, config: lang => sectionConfig(lang, qualityGatesSpec), quickIcons: {},
   },
   // MD-04: ранбуки — раздел «Знания» и паспорт (тип runbook, только чтение).
   runbooks: {

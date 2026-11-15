@@ -38,7 +38,9 @@ class LoreRecordSnapshotTest {
     // S5-DOC-PASSPORT: документ заведён после перевода на общий сборщик — ручной функции у него не было.
     static final List<String> POST_REFACTOR = List.of("project", "product", "doc", "user", "agent",
         // MD-04: роль продукта, профиль клиента и ранбук — паспорта после рефакторинга.
-        "actor", "pain", "gain", "job", "runbook");
+        "actor", "pain", "gain", "job", "runbook",
+        // MD-04, второй заход по QG: гейт качества — тоже после рефакторинга.
+        "quality_gate");
 
     /**
      * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга

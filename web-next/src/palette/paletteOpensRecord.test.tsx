@@ -144,14 +144,14 @@ describe('D-01 · результат поиска открывает запис�
   });
 
   it('тип без раздела: причина названа словами, и никуда не уводит', async () => {
-    // S5-DOC-PASSPORT: у документа теперь есть раздел; MD-04 — у ранбука тоже: тип без раздела — гейт качества.
-    const { w } = mount(found('quality_gate', 'QG-1', 'Гейт'));
+    // S5-DOC-PASSPORT: у документа теперь есть раздел; MD-04 — у ранбука и гейта качества тоже: тип без раздела — сценарий.
+    const { w } = mount(found('use_case', 'UC-1', 'Сценарий'));
     openPalette();
-    await search('гейт');
-    await act(async () => { fireEvent.click(screen.getByText('QG-1')); });
+    await search('сценарий');
+    await act(async () => { fireEvent.click(screen.getByText('UC-1')); });
     expect(w.location.search).not.toContain('open=');
     expect(document.body.textContent).toMatch(/раздел/i);
-    expect(document.body.textContent).toContain('quality_gate');
+    expect(document.body.textContent).toContain('use_case');
   });
 });
 
