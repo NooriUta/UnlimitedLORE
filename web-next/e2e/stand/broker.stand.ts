@@ -43,9 +43,21 @@ async function brokerLogin(page: Page, login: string, password: string): Promise
   try { await page.locator('#username').waitFor({ timeout: 30_000 }); } catch {
     return `формы входа seerPreprod нет; страница ${where(page)}`;
   }
-  step('ввести учётку seerPreprod');
+  // Вход seerPreprod — ДВУХШАГОВЫЙ (замер 15.11.2026: на первой странице только #username и
+  // «Войти», #password — на следующей). Прогон 34823 падал на fill(#password): поля ещё нет.
+  step('ввести логин seerPreprod');
   await page.locator('#username').fill(login, { timeout: 15_000 });
-  await page.locator('#password').fill(password, { timeout: 15_000 });
+  await page.locator('#kc-login').click({ timeout: 15_000 });
+  const pass = page.locator('#password');
+  const kcErr = page.locator('#input-error, .kc-feedback-text, [id^="input-error"]');
+  try { await pass.or(kcErr).first().waitFor({ timeout: 30_000 }); } catch {
+    return `после логина нет ни поля пароля, ни ошибки KC; страница ${where(page)}`;
+  }
+  if (!(await pass.isVisible().catch(() => false))) {
+    return `KC отказал на логине: «${((await kcErr.first().textContent()) ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)}»`;
+  }
+  step('ввести пароль seerPreprod');
+  await pass.fill(password, { timeout: 15_000 });
   await page.locator('#kc-login').click({ timeout: 15_000 });
   step('ждать сессию на стенде');
   const kcStop = page.locator('#kc-page-title, .kc-feedback-text, #input-error');
