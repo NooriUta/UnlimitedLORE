@@ -283,6 +283,30 @@ class LorePassportSurfaceTest {
             "продукт (S4-PRODUCTS-NODE): Компоненты · Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты · Обслуживает · Обслуживается · Вехи");
     }
 
+    /** MD-04: роль продукта — текст, сценарии, профиль клиента группой, агенты, ссылки. */
+    @Test
+    void actor() {
+        assertEquals(List.of("content", "features", "Профиль клиента[pains+gains+jobs]", "agents", "Ссылки[refsOut+refsIn]"),
+            tabs("actor"));
+    }
+
+    /** MD-04: боль, выгода, работа — текст, «кто заявил / кто делает», профиль клиента, ссылки. */
+    @Test
+    void customerProfile() {
+        assertEquals(List.of("content", "Фичи и сценарии[claimedBy+relievedBy]", "Профиль клиента[actors+jobs]",
+            "Ссылки[refsOut+refsIn]"), tabs("pain"));
+        assertEquals(List.of("content", "Фичи и сценарии[promisedBy+deliveredBy]", "Профиль клиента[actors+jobs]",
+            "Ссылки[refsOut+refsIn]"), tabs("gain"));
+        assertEquals(List.of("content", "Фичи и сценарии[helpedBy+performedBy]", "Профиль клиента[actors+pains+gains]",
+            "Ссылки[refsOut+refsIn]"), tabs("job"));
+    }
+
+    /** MD-04: ранбук — текст, ADR, на которые он опирается, ссылки. */
+    @Test
+    void runbook() {
+        assertEquals(List.of("content", "adrs", "Ссылки[refsOut+refsIn]"), tabs("runbook"));
+    }
+
     @Test
     void tech() {
         assertEquals(List.of("content", "Ссылки[refsOut+refsIn]"), tabs("tech"));
