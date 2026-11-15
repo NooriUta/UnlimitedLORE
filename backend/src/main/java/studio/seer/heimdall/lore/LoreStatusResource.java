@@ -96,7 +96,42 @@ public class LoreStatusResource extends LoreResourceBase {
     public record StatusUpdateResponse(
         boolean ok, String entity_type, String id,
         String old_status, String new_status, StatusRevision revision) {}
-    public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
+    /**
+     * WK-BATCH-EVIDENCE: пачка несёт то же, что одиночная смена — причину (у blocked
+     * обязательна) и доказательство done. Без них 14.11.2026 пачка blocked падала целиком,
+     * а пачку done по слову владелицы приходилось ставить по одной.
+     */
+    public record BatchStatusRequest(String entity_type, List<String> ids, String status,
+                                     String reason, String evidence_type, String evidence_ref) {
+        public BatchStatusRequest(String entity_type, List<String> ids, String status) {
+            this(entity_type, ids, status, null, null, null);
+        }
+    }
+
+    /** Запрос одного элемента пачки: всё, что пачка приняла, доходит до элемента. */
+    static StatusUpdateRequest batchItem(BatchStatusRequest req, String id) {
+        return new StatusUpdateRequest(req.entity_type(), id, req.status(), req.reason(), null,
+            req.evidence_type(), req.evidence_ref(), null, null);
+    }
+
+    /**
+     * Отказ элемента пачки — кодом и текстом сервера, как у одиночного вызова. Голое
+     * «HTTP 400» 14.11.2026 прятало REASON_REQUIRED: причину пришлось выяснять одиночным вызовом.
+     */
+    static String batchError(String id, Response r) {
+        String head = id + ": HTTP " + r.getStatus();
+        if (r.getEntity() instanceof Map<?, ?> m) {
+            Object code = m.get("error");
+            Object detail = m.get("detail");
+            if (code == null) code = m.get("code");
+            if (detail == null) detail = m.get("message");
+            StringBuilder s = new StringBuilder(head);
+            if (code != null) s.append(" ").append(code);
+            if (detail != null) s.append(" — ").append(detail);
+            return s.toString();
+        }
+        return head;
+    }
 
     // ── Write-path: status update (SCD2) ────────────────────────────────────
 
@@ -906,7 +941,7 @@ public class LoreStatusResource extends LoreResourceBase {
         List<String> errors = new java.util.ArrayList<>();
         for (String id : req.ids()) {
             try {
-                var body = new StatusUpdateRequest(req.entity_type(), id, req.status());
+                var body = batchItem(req, id);
                 Response r = updateStatus(body, "admin", machineHeader).await().indefinitely();
                 if (r.getStatus() == 200) {
                     // «Уже был такой статус» и «статус сменили» — разные исходы, и до
@@ -920,7 +955,7 @@ public class LoreStatusResource extends LoreResourceBase {
                         updated++;
                     }
                 } else {
-                    errors.add(id + ": HTTP " + r.getStatus());
+                    errors.add(batchError(id, r));
                 }
             } catch (Exception e) {
                 errors.add(id + ": " + e.getMessage());

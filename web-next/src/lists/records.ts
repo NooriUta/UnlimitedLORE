@@ -313,6 +313,18 @@ export function docRecord(row: Row): KitRecord {
   };
 }
 
+/**
+ * SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: строка среза runbooks → запись kit. Статуса у ранбука в
+ * срезе нет — пустой, а не выдуманный; ADR, на которые ранбук ссылается (REFERENCES_ADR), и проекты.
+ */
+export function runbookRecord(row: Row): KitRecord {
+  const id = str(row.runbook_id);
+  return {
+    id, kind: 'runbook', title: str(row.name) || id, status: '',
+    fields: { area: str(row.area), adrs: list(row.adr_ids), project: list(row.projects) },
+  };
+}
+
 /** S9-05 A: строка среза users → запись kit. Статуса у человека нет — пустой, а не выдуманный. */
 export function userRecord(row: Row): KitRecord {
   const id = str(row.kc_sub);

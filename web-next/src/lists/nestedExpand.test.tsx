@@ -101,3 +101,30 @@ function childConfig(kind: string): KitConfig | undefined {
   const id = childScreenOf(kind);
   return id ? LIST_SCREENS[id].config('ru') : undefined;
 }
+
+// SPRINT_UXR_POLISH_UAT_1113/PU-29, владелица 14.11.2026: щелчок по задаче во вложенной таблице
+// открывал паспорт, но левая часть переставала быть двухуровневой — ссылка recordHref('task', id)
+// уводила из «Спринтов» в раздел «Задачи». Правило: паспорт ребёнка открывается В ТОМ ЖЕ разделе;
+// ссылку «на месте» строит экран (childHref), вложенная таблица её только применяет.
+describe('PU-29 · ребёнок открывается в том же разделе', () => {
+  it('ссылки ребёнка (название и код) — из childHref экрана, а не адрес раздела ребёнка', () => {
+    const sprintCfg: KitConfig = {
+      modules: [], menu: { groups: [] },
+      kinds: { sprint: { title: 'Спринты', icon: 'sprint' } },
+      statuses: { items: [] },
+      list: { views: ['list'], columns: ['id', 'title'] },
+    };
+    const parent: KitRecord = { id: 'SP', kind: 'sprint', title: 'Спринт SP', status: '', fields: {} };
+    const kids: KitRecord[] = [{ id: 'SP/T1', kind: 'task', title: 'Задача T1', status: 'planned', fields: { code: 'T1' } }];
+    const childHref = (kind: string, id: string) => `?sec=sprint&open=${encodeURIComponent(id)}&okind=${kind}`;
+    const expand = buildExpand({ nested: nestedOf('task'), client, childRows: ok(kids), childConfigOf: k => childConfig(k), lang: 'ru', childHref });
+    render(<ListView config={sprintCfg} data={data(parent)} urlState={false} expand={expand} />);
+    fireEvent.click(screen.getByRole('button', { name: /Раскрыть/ }));
+    const nested = document.querySelector('tr[data-expand-of="SP"] [data-nested]') as HTMLElement;
+    const byTitle = within(nested).getByRole('link', { name: 'Задача T1' }).getAttribute('href') ?? '';
+    expect(byTitle).toBe('?sec=sprint&open=SP%2FT1&okind=task');
+    const byCode = nested.querySelector('a.sk-list__idlink')?.getAttribute('href') ?? '';
+    expect(byCode).toBe(byTitle);
+    expect(byTitle).not.toMatch(/sec=task/);
+  });
+});

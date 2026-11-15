@@ -1707,8 +1707,91 @@ final class LoreSchemaMigrations {
         // внесли руками, база с нуля жила без статусов. Java-шаг: вставляет ТОЛЬКО недостающее, прод-строки
         // не переписывает (UPSERT, как в V85/V87, перекрасил бы их). Аддитивно, major 17. Номер V90 сверен
         // с сессией «Обновление проекта» 14.11: V89 — снятие легаси-статусов (#1401), этот шаг после него.
-        new Step(90, 17, "java__status_dict_core_seed", List.of())
+        new Step(90, 17, "java__status_dict_core_seed", List.of()),
+
+        // SPRINT_LORE_MODEL_DOCS_TIDY/MDL-03 — декларация модели, первый заход. Правило владелицы 15.11.2026:
+        // «поля не объявлены, но читаются приложением — обязательные, ну или пишутся». 59 полей, которые в
+        // проде заполнены и у которых в коде найден писатель или читатель (либо это механика версий:
+        // state_uid, content_hash, source_commit, updated_at), но схема их не знала: база не проверяла тип,
+        // а по схеме нельзя было понять, из чего состоит запись. Шаг ТОЛЬКО объявляет — значений не меняет,
+        // убыли нет, аддитивно (major 17). Сознательно НЕ здесь: копии значения версии на вершине (канон не
+        // выбран), component_id (сверка с рёбрами), KnowSprintHist.pr_refs (в проде строки и список — MDL-06),
+        // план-доска, релиз и PR (отдельный блок, MD-05), гейты качества (второй заход). Сторож состава —
+        // DeclareStableFieldsStepTest.
+        new Step(91, 17, LoreSchemaMigrations.DECLARE_STABLE_FIELDS_STEP, List.of(
+            "CREATE PROPERTY KnowSprint.updated_at         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprintHist.state_uid      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprintHist.source_commit  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPhaseHist.state_uid       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPhaseHist.content_hash    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTask.updated_at           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.state_uid        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.source_commit    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowADR.updated_at            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowADRHist.state_uid         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowADRHist.source_commit     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDecisionHist.state_uid    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDecisionHist.content_hash IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowMilestone.updated_at      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowMilestoneHist.state_uid   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpec.updated_at           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpecHist.state_uid        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDocHist.state_uid         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.updated_at       IF NOT EXISTS STRING",
+            "CREATE PROPERTY LoreComponent.updated_at      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.updated_at        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprint.plan_id            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprint.effort_days        IF NOT EXISTS DOUBLE",
+            "CREATE PROPERTY KnowSprintHist.priority       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprintHist.block_reason   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPhase.order_index         IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowPhase.phase_id            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPhase.name                IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPhase.src                 IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTask.order_index          IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowTask.src                  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTaskHist.effort_days      IF NOT EXISTS DOUBLE",
+            "CREATE PROPERTY DEPENDS_ON.kind               IF NOT EXISTS STRING",
+            "CREATE PROPERTY DEPENDS_ON.reason             IF NOT EXISTS STRING",
+            "CREATE PROPERTY GATES.solved_at               IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowADR.date_created          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDecision.date_created     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDecision.refs_raw         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowMilestone.date_display    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowMilestone.label           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowMilestone.priority        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpec.file_path            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpecHist.spec_id          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.kind                  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.file_path             IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDocHist.doc_id            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRunbook.area              IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRunbook.date_created      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.opened_date      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.status           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.priority         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.closed_date      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.`trigger`        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowQuestion.due_date         IF NOT EXISTS STRING",
+            "CREATE PROPERTY LoreComponent.game_icon       IF NOT EXISTS STRING",
+            "CREATE PROPERTY LoreComponent.full_name       IF NOT EXISTS STRING",
+            "CREATE PROPERTY LoreComponent.area            IF NOT EXISTS STRING",
+            "CREATE PROPERTY LoreComponent.parent_id       IF NOT EXISTS STRING",
+            "CREATE PROPERTY LoreComponent.team            IF NOT EXISTS STRING")),
+
+        // SPRINT_LORE_ADMIN_POLISH/AP-07 — профиль автора: логин, имя и аватар человека, один источник для LORE и
+        // miniLORE. Исключение из остановки смены схемы до MIG-01 — слово владелицы 15.11.2026 («это разреши, оно
+        // мелкое»; прямое подтверждение «ок» в канале). До шага логин жил в display_name — его писало назначение
+        // ролей; теперь логин — своё поле, а display_name — имя, которое человек выбирает сам. Данные не переносятся
+        // (шаг только объявляет, сторож аддитивности): у старых записей логин читается как coalesce(login, display_name),
+        // новые назначения ролей пишут login сами. avatar_ref — ключ файла аватара в хранилище ассетов. Аддитивно, major 17. Номер V92 сверен с сессией модели (V91 — её).
+        new Step(92, 17, "user_profile_login_avatar", List.of(
+            "CREATE PROPERTY KnowUser.login      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUser.avatar_ref IF NOT EXISTS STRING"))
     );
+
+    /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */
+    static final String DECLARE_STABLE_FIELDS_STEP = "declare_stable_fields_first_pass";
 
     /** V89: имя шага (сторож RetiredLegacyStatusTypesTest и JAVA_STEPS_REVIEWED держатся за него). */
     static final String RETIRE_LEGACY_STATUS_STEP = "java__retire_legacy_status_types";

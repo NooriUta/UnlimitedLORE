@@ -82,7 +82,8 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // question), и строка матрицы для него расширила бы профиль, которому семейство цели
     // закрыто. Агенты привязывают через свои *_link (MCP) — там матрица по семейству цели.
     // model — правка модели LORE (MC-05, SPEC-LORE-MODEL-CONFIG-STORE §4): меняет поверхности всем, правит человек.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "news", "record", "model");
+    // AP-07: users — профиль автора (имя, аватар). Свой меняет человек, чужой — админ; агенту правка лица не дана.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути

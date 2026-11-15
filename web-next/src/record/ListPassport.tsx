@@ -13,7 +13,7 @@ import {
   HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
-import { loreRefHref, mdEditorWithRefs } from './loreMdRefs';
+import { loreRefHref, loreRefLook, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
 import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, topUpOpen, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
@@ -52,7 +52,8 @@ function ProseWithPeek({ text, type, id }: { text: string; type: string; id: str
   const blocks = blocksFor(type, id, lang);
   // Выключатель «Карточки по наведению» (настройки) читается из применённого атрибута.
   const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
-  return <MartProse text={text} refHref={loreRefHref} refPeek={peek} blocks={blocks} />;
+  const look = useMemo(() => loreRefLook(lang), [lang]);
+  return <MartProse text={text} refHref={loreRefHref} refLook={look} refPeek={peek} blocks={blocks} />;
 }
 
 // S6-04: живые блоки lore-query и lore-graph в теле записи; $this.id / $this.type — эта запись.

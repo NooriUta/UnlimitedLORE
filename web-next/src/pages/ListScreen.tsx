@@ -74,13 +74,27 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   components: 'component', tech: 'tech', features: 'feature',
   // S4-29 (53а): паспорт проекта (только чтение).
   projects: 'project',
-  // S4-PRODUCTS-NODE: паспорт продукта (только чтение). Боли, выгоды, работы и роли —
-  // без паспорта v2: щелчок отвечает словами (NoPassport).
+  // S4-PRODUCTS-NODE: паспорт продукта (только чтение).
   products: 'product',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роли, боли, выгоды и работы пришли в v2 раньше паспорта —
+  // теперь у каждого свой паспорт (только чтение); ранбук — раздел и паспорт.
+  actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job', runbooks: 'runbook',
 };
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
-type OpenRecord = { id: string | null; place: RecordPlacement };
+/** kind — вид открытой записи, если он не вид экрана (PU-29: задача, открытая из вложенной таблицы спринта). */
+type OpenRecord = { id: string | null; place: RecordPlacement; kind?: string | null };
+
+/**
+ * PU-29: вид паспорта открытой записи. Вид назван в адресе (?okind=) — паспорт этого вида
+ * (задача в «Спринтах»); не назван или неизвестен — паспорт вида экрана, а не пустота.
+ */
+export function passportTypeFor(screen: ListScreenId, okind: string | null | undefined): PassportType | undefined {
+  // Известные виды — те, у которых в приложении есть паспорт (значения PASSPORT_OF):
+  // список типов из passportAdapters сюда не тянем — он живёт в ленивом чанке паспорта.
+  if (okind && (Object.values(PASSPORT_OF) as string[]).includes(okind)) return okind as PassportType;
+  return PASSPORT_OF[screen];
+}
 /** Место записи по умолчанию — личная настройка (S4-24, одна с S4-17); не выбирал — справа. */
 const defaultPlace = (): RecordPlacement => appliedPassportPlace() ?? 'right';
 
@@ -93,7 +107,7 @@ const defaultPlace = (): RecordPlacement => appliedPassportPlace() ?? 'right';
  * Названы обе вещи: чего нет (паспорт типа) и что есть (список и фильтры).
  * Код записи печатается — по нему её можно найти в LORE другим путём.
  */
-function NoPassport({ id, section, onBack }: { id: string; section: string; onBack: () => void }) {
+export function NoPassport({ id, section, onBack }: { id: string; section: string; onBack: () => void }) {
   const t = useAppT();
   return (
     <div className="list-screen__nopassport" role="status">
@@ -127,7 +141,7 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     const raw = p.get('place') ?? '';
     // Места в адресе нет — личная настройка «Где открывать запись» (S4-24), иначе справа.
     const place = isRecordPlacement(raw) ? raw : defaultPlace();
-    return { id: id || null, place };
+    return { id: id || null, place, kind: p.get('okind') || null };
   };
   const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: defaultPlace() }));
   // D-24: «назад»/«вперёд» меняют адрес не нашими руками — паспорт обязан
@@ -154,7 +168,8 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     // Вкладка принадлежит ЗАПИСИ, поэтому при закрытии снимается вместе с ней
     // (D-21): иначе `tab=history` останется в адресе списка и следующая
     // открытая запись покажется не с начала, а с чужой вкладки.
-    const patch = { open: next.id, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
+    // okind — вид записи, если он чужой экрану (PU-29); своя запись и закрытие его снимают.
+    const patch = { open: next.id, okind: closed ? null : next.kind ?? null, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
     // Открыть и закрыть паспорт — шаг истории (D-24): «назад» его и отменяет.
     // Переход между записями (пейджер) и смена места — заменой, иначе листание
     // десяти записей потребовало бы десяти «назад», чтобы выйти из паспорта.
@@ -162,7 +177,7 @@ function useOpenRecord(urlState: ListScreenProps['urlState']) {
     pushUrlState(patch, { replace: !step, win, ...(closed ? { anchor: null } : {}) });
   };
   /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
-  const backHref = win ? urlStateHref(win, { open: null, place: null, tab: null }, { anchor: null }) : undefined;
+  const backHref = win ? urlStateHref(win, { open: null, okind: null, place: null, tab: null }, { anchor: null }) : undefined;
   // Окно отдаём наружу: паспорт пишет в адрес свою вкладку, и писать он обязан
   // в ТО ЖЕ окно, где живут `open` и `place` (D-21).
   return [open, set, backHref, win] as const;
@@ -355,10 +370,12 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   );
   const expand = useMemo(() => (nested ? buildExpand({
     nested, client, childRows, lang,
+    // PU-29: паспорт ребёнка — в ЭТОМ разделе (?open=<id>&okind=<вид>), левая часть остаётся двухуровневой.
+    childHref: (kind: string, id: string) => (urlWin ? urlStateHref(urlWin, { open: id, okind: kind === PASSPORT_OF[screen] ? null : kind, place: null }, { anchor: null }) : undefined),
     childConfigOf: kind => (kind === nested.children?.kind && childConfig
       ? childConfig
       : (() => { const id = childScreenOf(kind); return id ? LIST_SCREENS[id].config(lang) : undefined; })()),
-  }) : undefined), [nested, client, childRows, lang, childConfig]);
+  }) : undefined), [nested, client, childRows, lang, childConfig, urlWin, screen]);
   // Цвет продукта (S4-PRODUCT-HILITE): одно правило на все разделы — продукты
   // записи и её компонентов из среза products, цвет из данных продукта. Не
   // загрузился срез — список работает без колонки, а причина сказана словами.
@@ -713,7 +730,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         expand={expand}
         peek={listPeek}
         onOpen={id => {
-          setOpen({ ...open, id });
+          setOpen({ ...open, id, kind: null });
           // Название — из загруженных строк, адрес — тот же, что в адресной
           // строке сейчас: «Недавнее» становится рабочей ссылкой, а не кодом.
           shell?.openRecord(id, {
@@ -732,7 +749,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     // MP2-11: выход из полного экрана — в место, из которого вошли (по ссылке ?place=full — в
     // место из личной настройки), а не всегда вниз.
     const backPlace: RecordPlacement = lastDock.current;
-    const passportType = PASSPORT_OF[screen];
+    const passportType = passportTypeFor(screen, open.kind);
     content = (
       // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
       // modal={false} внутри оболочки: «во весь экран» накрывает область

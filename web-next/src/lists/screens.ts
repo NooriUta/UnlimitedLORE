@@ -20,7 +20,7 @@ import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
-  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
+  painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, runbookRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
   techRecord,
 } from './records';
 import type { RowMapCtx } from './records';
@@ -481,6 +481,18 @@ const docsSpec: SectionSpec = {
   tree: { parent: 'parent', order: 'title' },
 };
 
+/** MD-04: ранбуки — область, ADR и проекты; статуса в срезе нет. */
+const runbooksSpec: SectionSpec = {
+  kind: 'runbook', titleKey: 'lists.runbooks.title', icon: 'spell-book',
+  fields: [['area', 'text'], ['adrs', 'ref'], ['project', 'ref']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-adr', 'lists.quick.noAdr', { adrs: '' }]],
+  filters: ['fields.area', LORE_FILTER_FIELDS.project],
+  groupings: ['fields.area', LORE_FILTER_FIELDS.project],
+  columns: ['id', 'title', 'area', 'adrs', 'project'],
+};
+
 /** S9-05 A: люди — статуса нет, разрез по проектам. */
 const usersSpec: SectionSpec = {
   kind: 'user', titleKey: 'lists.users.title', icon: 'person',
@@ -781,6 +793,11 @@ export const LIST_SCREENS = {
     modelType: 'doc',
     slice: 'docs', titleKey: 'lists.docs.title', icon: 'bookshelf',
     map: docRecord, config: lang => sectionConfig(lang, docsSpec), quickIcons: {},
+  },
+  // MD-04: ранбуки — раздел «Знания» и паспорт (тип runbook, только чтение).
+  runbooks: {
+    slice: 'runbooks', titleKey: 'lists.runbooks.title', icon: 'spell-book',
+    map: runbookRecord, config: lang => sectionConfig(lang, runbooksSpec), quickIcons: {},
   },
   users: {
     modelType: 'user',

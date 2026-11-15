@@ -13,6 +13,7 @@ import type { CSSProperties } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { EmptyState, LoadError } from '../states/StateViews';
 import { Pill } from '../elements/Pill';
+import { ObjectMention } from '../elements/ObjectMention';
 import { kitT, pluralForm, type KitLang } from '../i18n';
 import { edgeColor, egoGraph, typesAround, verdictTone } from './graph';
 import type { EgoCluster } from './graph';
@@ -266,10 +267,11 @@ export function RecordGraph(
               <ul className="sk-rec-graph__litems">
                 {list.map(n => (
                   <li key={n.id}>
-                    <a className="sk-rec-graph__lref" href={ctx.href(n.id)} data-node={n.id}
-                      data-missing={n.record ? undefined : 'true'}>
+                    {/* K4-MENTION-LOOK: сосед — упоминание чужого объекта: значок и цвет вида. */}
+                    <ObjectMention id={n.id} kind={n.record?.kind} href={ctx.href(n.id)} kinds={ctx.config.kinds}
+                      className="sk-rec-graph__lref" missing={!n.record}>
                       {n.record ? n.record.title + " (" + n.id + ")" : n.id}
-                    </a>
+                    </ObjectMention>
                   </li>
                 ))}
               </ul>
@@ -404,7 +406,8 @@ function RecordGraphExplorer({ record, ctx, lang, engine, onEngine, nodes, links
   const host = useRef<HTMLDivElement>(null);
   const kindKeys = Object.keys(ctx.config.kinds);
   const types: Record<string, GxStyle> = {};
-  kindKeys.forEach((k, i) => { types[k] = { label: ctx.config.kinds[k].title, color: KIND_TONES[i % KIND_TONES.length] }; });
+  // K4-MENTION-LOOK: цвет вида от приложения — тот же, что у упоминания; нет — тон по порядку.
+  kindKeys.forEach((k, i) => { types[k] = { label: ctx.config.kinds[k].title, color: ctx.config.kinds[k].color || KIND_TONES[i % KIND_TONES.length] }; });
   // GC-04: типы от приложения главнее — иначе у соседей чужого типа ни подписи, ни цвета.
   for (const [k, v] of Object.entries(ctx.config.graph?.types ?? {})) types[k] = { label: v.label, color: v.color };
   const rels: Record<string, GxStyle> = {};

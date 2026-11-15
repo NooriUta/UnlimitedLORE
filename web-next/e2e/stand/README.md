@@ -75,3 +75,18 @@ npx playwright test -c playwright.stand.config.ts rbac.stand.ts
 ```
 
 Папка входов меняется переменной `LORE_STAND_AUTH_DIR`.
+
+## Автологин тестовых учёток (без входа руками)
+
+Владелица 15.11.2026: «доработай тесты, чтобы он сам подставлял тестовые учётки». Пароли берутся из переменной `LORE_STAND_ACCOUNTS_JSON` — в CI это секрет из Infisical (заводит CICDGitHub), локально — из файла владелицы. Принимаются только логины TEST*, пароли не печатаются, прод отвергается.
+
+```
+cd web-next
+$env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
+$env:LORE_STAND_ACCOUNTS_JSON = Get-Content <путь к файлу учёток> -Raw   # {"test-sa":"…",…}
+npm run e2e:stand:login        # пишет e2e/stand/.auth/<логин>.json и stand.json (= test-admin)
+$env:LORE_STAND_STORAGE_STATE = 'e2e/stand/.auth/stand.json'
+npm run e2e:stand              # RBAC + смоук
+```
+
+В CI — workflow «LORE stand e2e (preprod, test accounts)», запуск по кнопке; Chromium ставится из Playwright (`LORE_STAND_CHANNEL=''`).

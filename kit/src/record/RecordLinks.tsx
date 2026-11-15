@@ -7,15 +7,16 @@ import { EmptyState, LoadError } from '../states/StateViews';
 import { kitT, type KitLang } from '../i18n';
 import { edgeColor } from './graph';
 import { findRecord } from './fmt';
+import { ObjectMention } from '../elements/ObjectMention';
 
-export interface RecordLink { type: string; dir: 'out' | 'in'; other: string }
+export interface RecordLink { type: string; dir: 'out' | 'in'; other: string; /** Вид другого конца, если его назвало ребро (K4-MENTION-LOOK). */ kind?: string }
 
 /** Рёбра записи: тип, направление, другой конец; порядок — тип, out раньше in, id. */
 export function recordLinks(id: string, edges: readonly KitEdge[]): RecordLink[] {
   const out: RecordLink[] = [];
   for (const e of edges) {
-    if (e.from === id) out.push({ type: e.type, dir: 'out', other: e.to });
-    else if (e.to === id) out.push({ type: e.type, dir: 'in', other: e.from });
+    if (e.from === id) out.push({ type: e.type, dir: 'out', other: e.to, ...(e.toKind ? { kind: e.toKind } : {}) });
+    else if (e.to === id) out.push({ type: e.type, dir: 'in', other: e.from, ...(e.fromKind ? { kind: e.fromKind } : {}) });
   }
   return out.sort((a, b) => (a.type < b.type ? -1 : a.type > b.type ? 1 : 0)
     || (a.dir === b.dir ? 0 : a.dir === 'out' ? -1 : 1)
@@ -60,9 +61,9 @@ export function RecordLinks({ record, ctx, lang }: { record: KitRecord; ctx: Kit
                       <span aria-hidden="true">{l.dir === 'out' ? '→' : '←'}</span>
                       <span className="sk-sr">{dirLabel}</span>
                     </span>
-                    <a className="sk-rec-ref" href={ctx.href(l.other)}>
-                      {r ? <span>{r.title}</span> : <span>{l.other}</span>}
-                    </a>
+                    {/* K4-MENTION-LOOK: значок и цвет вида — общим элементом упоминания. */}
+                    <ObjectMention id={l.other} kind={r?.kind ?? l.kind} title={r?.title}
+                      href={ctx.href(l.other)} kinds={ctx.config.kinds} className="sk-rec-ref" />
                     {r && <span className="sk-pill sk-pill--id">{l.other}</span>}
                     {r && <span className="sk-rec-links__kind">{ctx.config.kinds[r.kind]?.title ?? r.kind}</span>}
                     {!r && <span className="sk-rec-links__missing">{kitT(lang, 'kit.record.links.missing')}</span>}

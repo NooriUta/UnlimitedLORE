@@ -30,8 +30,9 @@ export type SearchHitType = (typeof SEARCH_HIT_TYPES)[number];
 
 /**
  * Тип записи → раздел v2. Единственная такая карта в приложении.
- * Технологии — это спеки SPEC-TECH-*: поиск отдаёт их типом spec, своей строки нет.
- * Типов без раздела в v2 (doc, runbook, quality_gate, use_case, actor…) здесь нет:
+ * Технологии — это спеки SPEC-TECH-*: поиск отдаёт их типом spec; тип tech — у связей
+ * паспорта (вкладка «Технологии» компонента) и у ссылок [[tech:…]].
+ * Типов без раздела в v2 (quality_gate, finding, pr…) здесь нет:
  * открыть их в v2 пока негде, и ссылка честно null.
  */
 export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
@@ -54,6 +55,15 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   agent: 'agent',
   // S4-PRODUCTS-NODE: продукт — свой раздел и паспорт (чипы продуктов у компонента).
   product: 'product',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: раздел «Технологии» был, а строки в карте не было —
+  // recordHref('tech') давал null, и связь «Технологии» компонента вела в никуда.
+  tech: 'tech',
+  // MD-04: профиль клиента и роли продукта — паспорта v2 (были только списки); ранбук — раздел и паспорт.
+  actor: 'actor',
+  pain: 'pain',
+  gain: 'gain',
+  job: 'job',
+  runbook: 'runbook',
 };
 
 /** Модуль оболочки по умолчанию: адрес записи без модуля открывал бы «Новости». */

@@ -15,6 +15,7 @@ import { recordHref } from '../nav/loreRoutes';
 import { loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { typeByForm } from './loreRefForms';
+import { loreKindLook } from '../shell/loreKinds';
 import { LORE_ID_FORMS, loreRefsExist } from './loreRefPaste';
 import { cachedModelType, createLoreRecord, createSpecFor, warmCreateModel } from './loreRefCreate';
 import { v2Auth } from '../auth/session';
@@ -100,6 +101,14 @@ export function loreMdRefs(lang: KitLang, opts: Pick<SearchSliceOptions, 'fetchI
  * Куда ведёт [[ссылка]] в чтении (SPRINT_UXR_S10_SEIDR_KIT_2/MD-READ-PEEK): паспорт записи её типа.
  * Тип не задан и не узнан по форме или его в v2 открыть негде — null: рамка остаётся без ссылки.
  */
+/**
+ * Облик ссылки [[…]] в чтении (K4-MENTION-LOOK): значок и цвет вида — тип из ссылки
+ * или по форме кода, как у адреса. Вид не узнан — null: рамка без значка.
+ */
+export function loreRefLook(lang: KitLang): (ref: { id: string; type: string | null }) => ReturnType<typeof loreKindLook> {
+  return ref => loreKindLook(lang, ref.type ?? typeByForm(ref.id));
+}
+
 export function loreRefHref(ref: { id: string; type: string | null }): string | null {
   const type = ref.type ?? typeByForm(ref.id);
   return type ? recordHref(type, ref.id) : null;
@@ -116,7 +125,8 @@ export function mdEditorWithRefs(parents: Record<string, string>, blocks?: (lang
     const key = JSON.stringify(parents);
     const refs = useMemo(() => loreMdRefs(lang, { create: { parents } }), [lang, key]); // eslint-disable-line react-hooks/exhaustive-deps
     const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
-    return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refPeek={peek} blocks={blocks?.(lang)} />;
+    const look = useMemo(() => loreRefLook(lang), [lang]);
+    return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refLook={look} refPeek={peek} blocks={blocks?.(lang)} />;
   };
 }
 
@@ -125,5 +135,6 @@ export function MdInlineEditWithRefs(props: MdEditorSlotProps) {
   const lang = useKitLang();
   const refs = useMemo(() => loreMdRefs(lang), [lang]);
   const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
-  return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refPeek={peek} />;
+  const look = useMemo(() => loreRefLook(lang), [lang]);
+  return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refLook={look} refPeek={peek} />;
 }

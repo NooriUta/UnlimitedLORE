@@ -341,3 +341,22 @@ describe('S4-11 · пункт «Горячие клавиши» в меню ак
     act(() => { closeKeymapPanel(); });
   });
 });
+
+// SPRINT_LORE_ADMIN_POLISH/AP-07 — «сам пользователь конечно»: свой профиль (имя, аватар)
+// человек открывает из меню аватара. Вошедшего не знаем (sub нет) — пункта нет, а не пустой профиль.
+describe('AP-07 · «Профиль» в меню аватара', () => {
+  it('sub известен — пункт есть и открывает профиль своего kc_sub', async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify([{ kc_sub: 'sub-1', login: 'omiloreadmin', display_name: 'Алёна', avatar_url: null, found: true }]), { status: 200 }));
+    render(<AccountMenu client={client()} root={document.createElement('div')} lang="ru" jar={jar()} sub="sub-1" fetchImpl={f as unknown as typeof fetch} />);
+    const dlg = await openMenu();
+    fireEvent.click(within(dlg).getByTestId('account-profile'));
+    await within(dlg).findByTestId('profile-editor');
+    expect(f).toHaveBeenCalledWith('/lore/users?ids=sub-1');
+    expect(within(dlg).getByRole('button', { name: ru['settings.backToSettings'] })).toBeTruthy();
+  });
+  it('sub неизвестен — пункта «Профиль» нет', async () => {
+    render(<AccountMenu client={client()} root={document.createElement('div')} lang="ru" jar={jar()} />);
+    const dlg = await openMenu();
+    expect(within(dlg).queryByTestId('account-profile')).toBeNull();
+  });
+});
