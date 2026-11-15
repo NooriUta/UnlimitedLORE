@@ -1,0 +1,62 @@
+{
+  "generated_by": "shared/fixtures/snapshot.mjs",
+  "task": "SPRINT_UXR_S11_TEST_OPT/CT-KIT-FIXTURES",
+  "captured_at": "2026-11-14T21:22:41.253Z",
+  "source": "local",
+  "fixtures": [
+    {
+      "name": "model",
+      "path": "/lore/model",
+      "status": 200,
+      "file": "model.json"
+    },
+    {
+      "name": "slice-sprints",
+      "path": "/lore/slice/sprints?limit=5",
+      "status": 200,
+      "file": "slice-sprints.json"
+    },
+    {
+      "name": "slice-adrs",
+      "path": "/lore/slice/adrs?limit=5",
+      "status": 200,
+      "file": "slice-adrs.json"
+    },
+    {
+      "name": "slice-tasks_of_sprint",
+      "path": "/lore/slice/tasks_of_sprint?sprint_id=SPRINT_TEST_FIXTURES&limit=10",
+      "status": 200,
+      "file": "slice-tasks_of_sprint.json"
+    },
+    {
+      "name": "slice-phases_of_sprint",
+      "path": "/lore/slice/phases_of_sprint?sprint_id=SPRINT_TEST_FIXTURES",
+      "status": 200,
+      "file": "slice-phases_of_sprint.json"
+    },
+    {
+      "name": "slice-search",
+      "path": "/lore/slice/search?pattern=TEST&limit=5",
+      "status": 200,
+      "file": "slice-search.json"
+    },
+    {
+      "name": "record-sprint",
+      "path": "/lore/record/sprint/SPRINT_TEST_FIXTURES",
+      "status": 200,
+      "file": "record-sprint.json"
+    },
+    {
+      "name": "record-task",
+      "path": "/lore/record/task/SPRINT_TEST_FIXTURES/T-02",
+      "status": 200,
+      "file": "record-task.json"
+    },
+    {
+      "name": "record-adr",
+      "path": "/lore/record/adr/ADR-TEST-001",
+      "status": 200,
+      "file": "record-adr.json"
+    }
+  ]
+}

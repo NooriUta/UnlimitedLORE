@@ -1,0 +1,30 @@
+{
+  "rows": [
+    {
+      "adr_id": "ADR-TEST-001",
+      "name": null,
+      "status": "ACCEPTED",
+      "date_created": "2026-11-14",
+      "changed_at": "2026-11-14T21:14:05.022Z",
+      "component": null,
+      "components": [],
+      "tags": [],
+      "git_projects": [],
+      "decision_count": 1,
+      "body_head": [
+        "TEST контекст"
+      ],
+      "body_rest": 0,
+      "body_more": false,
+      "body_sec": 0,
+      "status_category": "in_force",
+      "projects": []
+    }
+  ],
+  "page": {
+    "limit": 5,
+    "offset": 0,
+    "total": 1,
+    "has_more": false
+  }
+}

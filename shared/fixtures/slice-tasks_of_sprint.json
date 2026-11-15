@@ -1,0 +1,32 @@
+{
+  "rows": [
+    {
+      "task_uid": "SPRINT_TEST_FIXTURES/T-02",
+      "task_id": "T-02",
+      "title": "TEST: вторая задача",
+      "order_index": 2,
+      "phase_uid": null,
+      "status_raw": "📋 PLANNED",
+      "effort_days": null,
+      "note_md": "TEST",
+      "component_ids": [],
+      "author_agent": null,
+      "executor_agent": null,
+      "reviewer_agent": null,
+      "task_type": "dev",
+      "actual_days": null,
+      "bookkeeping": false,
+      "work_class": null,
+      "realizes_uc": [],
+      "release_ids": [],
+      "changed_at": "2026-11-14T21:14:13.280Z",
+      "status_category": "not_started"
+    }
+  ],
+  "page": {
+    "limit": 10,
+    "offset": 0,
+    "total": 1,
+    "has_more": false
+  }
+}

@@ -913,12 +913,12 @@ public class LoreSearchResource extends LoreResourceBase {
 
     /**
      * Структурные рёбра — не «ссылка на запись», а её устройство: HAS_STATE
-     * ведёт к строке истории SCD2, HAS_STATUS — к словарю статусов,
+     * ведёт к строке истории SCD2,
      * BELONGS_TO_PROJECT — к проекту. Покажи их, и у любого хаба-проекта
      * «обратными связями» станет весь корпус. Список называется в ответе
      * ({@code excluded_edges}), чтобы отсутствие было объяснено, а не угадано.
      */
-    static final Set<String> STRUCTURAL_EDGES = Set.of("HAS_STATE", "HAS_STATUS", "BELONGS_TO_PROJECT");
+    static final Set<String> STRUCTURAL_EDGES = Set.of("HAS_STATE", "BELONGS_TO_PROJECT");
 
     /** Потолок входящих рёбер за один запрос; выше — {@code complete:false} и {@code capped_at}. */
     static final int BACKLINK_EDGE_CAP = 5000;

@@ -33,8 +33,9 @@ const FRESH_FIRST: ListSort = { key: 'updated_at', dir: 'desc' };
 
 /** Иконки и цвета статусов, которых нет в общей таблице kit (statusMeta). */
 const OWN_META: Record<string, { icon: string; color: string }> = {
-  draft: { icon: 'quill-ink', color: 'var(--st-deferred)' },
-  deprecated: { icon: 'broken-tablet', color: 'var(--st-cancelled)' },
+  // S4-32 (выбор владелицы 14.11: «9b», «10e») — иконки из канона, не строкой на месте.
+  draft: { icon: ICON_CANON.statusDraft, color: 'var(--st-deferred)' },
+  deprecated: { icon: ICON_CANON.statusDeprecated, color: 'var(--st-cancelled)' },
 };
 
 function statusItems(lang: KitLang, codes: [code: string, category: Category][]): KitConfig['statuses']['items'] {
@@ -734,8 +735,9 @@ export const LIST_SCREENS = {
     map: sprintRecord, config: lang => withCalendar(withFeed(lang, sprintsConfig(lang), FEEDS.sprints), SPRINT_DATES), feed: FEEDS.sprints,
     calendarDates: SPRINT_DATES,
     // Völva вместо нечитаемого Ганта — видом рядом с таймлайном, пока встройку не приняли.
-    volvaChart: 'sprints_timeline', // S4-25: у «без релиза» иконки нет (выбор владелицы; подбор вне наборов — S4-32).
-    quickIcons: {},
+    volvaChart: 'sprints_timeline',
+    // S4-32 (выбор владелицы 14.11: «21c»): у «Без релиза» теперь своя иконка.
+    quickIcons: { 'no-release': ICON_CANON.quickNoRelease },
     // Итоги спринта: задач x/y, оценка Σ дн, факт Σ дн — одним запросом к
     // `sprint_totals` (S4-09). Считает сервер: одно число из двух мест
     // расходится, и у kit это уже случилось со статусными цветами (K-14).

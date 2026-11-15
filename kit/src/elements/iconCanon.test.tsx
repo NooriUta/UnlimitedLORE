@@ -15,15 +15,16 @@ import { validateKitConfig } from '../core/validate';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
-/** Выбор владелицы 08.11 — дословно её итог (пункты 1–36), null — «без иконки». */
+/** Выбор владелицы 08.11 — дословно её итог (пункты 1–36), null — «без иконки».
+ *  S4-32 (14.11.2026, канал): «3e 9b 10e», «18e», «21c», по №11 «без статуса оставь то что есть». */
 const CHOICE: Record<keyof typeof ICON_CANON, string | null> = {
-  sectionTask: 'lucide:list-checks', sectionNews: 'lucide:megaphone', sectionSettings: 'cog',
+  sectionTask: 'lucide:list-checks', sectionNews: 'lucide:megaphone', sectionSettings: 'material-symbols:settings-outline',
   segFilter: 'lucide:filter', segGroup: 'lucide:group', segSort: 'lucide:list-ordered',
   viewList: 'lucide:list', viewBoard: 'lucide:columns-3',
-  statusDraft: 'quill-ink', statusDeprecated: 'broken-tablet', statusUnknown: 'help',
+  statusDraft: 'lucide:file-pen-line', statusDeprecated: 'material-symbols:history-toggle-off', statusUnknown: 'help',
   myViews: 'lucide:star', saveView: 'lucide:save', recent: 'lucide:history', scopeAll: 'lucide:layers',
-  commands: 'lucide:command', views: 'lucide:eye', team: null,
-  quickNoRelease: null, quickNoDecisions: 'lucide:file-question',
+  commands: 'lucide:command', views: 'lucide:eye', team: 'material-symbols:groups-outline',
+  quickNoRelease: 'tabler:package-off', quickNoDecisions: 'lucide:file-question',
   newsReady: 'wave-crest', newsCancelled: 'lucide:circle-x', newsVersion: 'upgrade', newsReactivated: 'lucide:undo-2',
   prioP0: 'lucide:flame', prioP1: 'lucide:chevron-up', prioP2: 'lucide:equal', prioP3: 'lucide:chevron-down',
   fieldProject: 'castle',

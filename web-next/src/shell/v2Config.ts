@@ -183,7 +183,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
           items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears')],
         },
         // S9-05 A: «Участники» — кто делает работу: люди и агенты, у каждого паспорт с его задачами.
-        { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', 'cog', 'settings')] },
+        { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', ICON_CANON.sectionSettings, 'settings')] },
       ],
     },
     kinds: {

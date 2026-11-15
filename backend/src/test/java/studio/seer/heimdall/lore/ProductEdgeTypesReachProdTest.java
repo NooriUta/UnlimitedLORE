@@ -54,10 +54,10 @@ class ProductEdgeTypesReachProdTest {
         "E",                        // базовый тип, от него наследуются остальные
         "BELONGS_TO_PROJECT", "CHANGED_IN", "ClRoutineHasOutput", "DECIDED_IN",
         "DEPENDS_ON", "DOCUMENTED_IN", "DOC_CHILD_OF", "FORMALIZED_AS",
-        "FOR_VARIANT", "GATES", "HAS_ASSET", "HAS_STATE", "HAS_STATUS",
+        "FOR_VARIANT", "GATES", "HAS_ASSET", "HAS_STATE",
         "HAS_VARIANT", "IMPLEMENTED_IN", "IMPLEMENTED_IN_RELEASE", "INCLUDES",
         "IN_CHANNEL", "IN_PHASE", "IN_RUBRIC", "LED_TO", "MEASURED_BY",
-        "OF_TYPE", "ON_MILESTONE", "PARENT_OF", "PART_OF", "PRODUCED",
+        "ON_MILESTONE", "PARENT_OF", "PART_OF", "PRODUCED",
         "PRODUCED_BY", "PROMOTED_TO", "REFERENCES_ADR", "RELEASED_IN",
         "SHIPPED_IN", "SUPERSEDES", "TAGGED_WITH", "TARGETS_KEY",
         "TARGETS_PAGE", "USES", "VALIDATES", "YIELDED");

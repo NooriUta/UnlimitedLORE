@@ -1,0 +1,972 @@
+{
+  "contract": "lore.record/1",
+  "record": {
+    "type": "sprint",
+    "id": "SPRINT_TEST_FIXTURES",
+    "title": "SPRINT_TEST_FIXTURES",
+    "status": "active",
+    "version": "2026-11-14T21:14:13.257Z"
+  },
+  "values": {
+    "title": "SPRINT_TEST_FIXTURES",
+    "body_md": null,
+    "context_md": null,
+    "outcome_md": null,
+    "priority": null,
+    "projects": [],
+    "components": [],
+    "releases": [],
+    "milestones": [],
+    "planned_start": null,
+    "planned_end_date": null,
+    "created": "2026-11-14",
+    "no_release": null,
+    "track": null,
+    "status": "active"
+  },
+  "parts": [
+    {
+      "key": "phases",
+      "label": "Фазы",
+      "type": "phase",
+      "rel": "PART_OF",
+      "dir": "in",
+      "owned": "strict",
+      "relation": "composition",
+      "columns": [
+        "status",
+        "title",
+        "progress",
+        "valid_from"
+      ],
+      "optional_columns": [],
+      "order_by": "order_index",
+      "create": null,
+      "state": "ok",
+      "count": 1,
+      "items": [
+        {
+          "id": "SPRINT_TEST_FIXTURES/PHASE_A",
+          "title": "TEST faza",
+          "status": null,
+          "values": {
+            "status": null,
+            "title": "TEST faza",
+            "code": "Фаза A",
+            "progress": "0/0",
+            "valid_from": "2026-11-14T21:15:05.784Z",
+            "summary_md": null
+          }
+        }
+      ]
+    },
+    {
+      "key": "tasks",
+      "label": "Задачи",
+      "type": "task",
+      "rel": "PART_OF",
+      "dir": "in",
+      "owned": "strict",
+      "relation": "composition",
+      "columns": [
+        "status",
+        "task_type",
+        "code",
+        "title",
+        "executor",
+        "effort"
+      ],
+      "optional_columns": [
+        "work_class",
+        "author",
+        "reviewer",
+        "actual",
+        "realizes_uc",
+        "prs"
+      ],
+      "order_by": "order_index",
+      "create": null,
+      "state": "ok",
+      "count": 1,
+      "items": [
+        {
+          "id": "SPRINT_TEST_FIXTURES/T-02",
+          "title": "TEST: вторая задача",
+          "status": "planned",
+          "values": {
+            "status": "planned",
+            "task_type": "dev",
+            "code": "T-02",
+            "title": "TEST: вторая задача",
+            "executor": null,
+            "effort": null,
+            "work_class": null,
+            "author": null,
+            "reviewer": null,
+            "actual": null,
+            "realizes_uc": [],
+            "prs": [],
+            "phase_uid": null,
+            "has_note": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "questions",
+      "label": "Вопросы",
+      "type": "question",
+      "rel": "RAISED_IN",
+      "dir": "in",
+      "owned": "shared",
+      "relation": "aggregation",
+      "columns": [
+        "status",
+        "code",
+        "title",
+        "priority"
+      ],
+      "optional_columns": [
+        "due_date"
+      ],
+      "order_by": "question_id",
+      "create": null,
+      "state": "ok",
+      "count": 0,
+      "items": []
+    }
+  ],
+  "links": [],
+  "perms": {
+    "can_edit": true,
+    "can_status": true,
+    "can_create": true,
+    "status_next": [
+      "todo",
+      "planned",
+      "backlog",
+      "design",
+      "partial",
+      "waiting",
+      "blocked",
+      "review",
+      "ready_for_deploy",
+      "uat"
+    ],
+    "reason": "открыто 1 задач"
+  },
+  "facts": {
+    "tasks": {
+      "done": 0,
+      "total": 1,
+      "open": 1
+    }
+  },
+  "schema": {
+    "type": "sprint",
+    "label": "Спринт",
+    "label_key": "pp.kind.sprint",
+    "icon": "sprint",
+    "fields": [
+      {
+        "key": "title",
+        "label": "Название",
+        "label_key": "pp.field.title",
+        "kind": "text",
+        "group": "head",
+        "required": true,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/sprint/update",
+          "field": "name"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "status",
+        "label": "Статус",
+        "label_key": null,
+        "kind": "enum",
+        "group": "head",
+        "required": false,
+        "editable": true,
+        "dict": "sprint_status",
+        "write": {
+          "endpoint": "/lore/status",
+          "field": "status"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "status",
+            "message": "Статус задан",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "priority",
+        "label": "Приоритет",
+        "label_key": "pp.field.priority",
+        "kind": "enum",
+        "group": "props",
+        "required": false,
+        "editable": true,
+        "dict": "priority",
+        "write": {
+          "endpoint": "/lore/sprint/plan",
+          "field": "priority"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "projects",
+        "label": "Проекты",
+        "label_key": "pp.field.projects",
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": true,
+        "multi": true,
+        "ref": {
+          "type": "project",
+          "rel": "BELONGS_TO_PROJECT",
+          "dir": "out"
+        },
+        "relation": "attribute",
+        "write": {
+          "endpoint": "/lore/record/{type}/{id}/relation",
+          "field": "BELONGS_TO_PROJECT"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "project",
+            "message": "Проект привязан (BELONGS_TO_PROJECT)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "releases",
+        "label": "Релизы",
+        "label_key": "pp.field.releases",
+        "kind": "ref",
+        "group": "props",
+        "required": false,
+        "editable": false,
+        "multi": true,
+        "ref": {
+          "type": "release",
+          "rel": "IMPLEMENTED_IN_RELEASE",
+          "dir": "out"
+        },
+        "relation": "attribute",
+        "write": null,
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "created",
+        "label": "Создан",
+        "label_key": "pp.field.created",
+        "kind": "date",
+        "group": "props",
+        "section": "Планирование",
+        "required": false,
+        "editable": false,
+        "write": null,
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "milestones",
+        "label": "Вехи",
+        "label_key": "pp.field.milestones",
+        "kind": "ref",
+        "group": "props",
+        "section": "Планирование",
+        "required": false,
+        "editable": true,
+        "multi": true,
+        "ref": {
+          "type": "milestone",
+          "rel": "TARGETS_MILESTONE",
+          "dir": "out"
+        },
+        "relation": "attribute",
+        "write": {
+          "endpoint": "/lore/record/{type}/{id}/relation",
+          "field": "TARGETS_MILESTONE"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "planned_start",
+        "label": "Начало по плану",
+        "label_key": "pp.field.plannedStart",
+        "kind": "date",
+        "group": "props",
+        "section": "Планирование",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/sprint/plan",
+          "field": "planned_start_date"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "planned_dates",
+            "message": "Плановые даты заданы (начало и конец)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "planned_end_date",
+        "label": "Конец по плану",
+        "label_key": "pp.field.plannedEnd",
+        "kind": "date",
+        "group": "props",
+        "section": "Планирование",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/sprint/plan",
+          "field": "planned_end_date"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "planned_dates",
+            "message": "Плановые даты заданы (начало и конец)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "no_release",
+        "label": "Не требует релиза",
+        "label_key": "pp.field.noRelease",
+        "kind": "bool",
+        "group": "props",
+        "section": "Планирование",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/sprint/update",
+          "field": "no_release_required"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "track",
+        "label": "Трек",
+        "label_key": null,
+        "kind": "enum",
+        "group": "props",
+        "section": "Планирование",
+        "required": false,
+        "editable": true,
+        "options": {
+          "slice": "track_options",
+          "value": "code",
+          "label": "title"
+        },
+        "write": {
+          "endpoint": "/lore/sprint/plan",
+          "field": "track_id"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "components",
+        "label": "Компоненты",
+        "label_key": "pp.field.components",
+        "kind": "ref",
+        "group": "props",
+        "section": "Модули",
+        "required": false,
+        "editable": true,
+        "multi": true,
+        "ref": {
+          "type": "component",
+          "rel": "BELONGS_TO",
+          "dir": "out"
+        },
+        "relation": "attribute",
+        "write": {
+          "endpoint": "/lore/record/{type}/{id}/relation",
+          "field": "BELONGS_TO"
+        },
+        "required_level": "warn",
+        "required_rules": [
+          {
+            "level": "warn",
+            "source": "quality",
+            "code": "component",
+            "message": "Компонент привязан (BELONGS_TO)",
+            "when": null
+          }
+        ]
+      },
+      {
+        "key": "context_md",
+        "label": "Контекст",
+        "label_key": "pp.adr.context",
+        "kind": "md",
+        "group": "body",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/sprint/update",
+          "field": "context_md"
+        },
+        "required_level": null,
+        "required_rules": []
+      },
+      {
+        "key": "outcome_md",
+        "label": "Итог",
+        "label_key": null,
+        "kind": "md",
+        "group": "body",
+        "required": false,
+        "editable": true,
+        "write": {
+          "endpoint": "/lore/sprint/update",
+          "field": "outcome_md"
+        },
+        "required_level": null,
+        "required_rules": []
+      }
+    ],
+    "layout": {
+      "body": [
+        {
+          "key": "context_md",
+          "label": "Контекст",
+          "editable": true,
+          "write": {
+            "endpoint": "/lore/sprint/update",
+            "field": "context_md"
+          }
+        },
+        {
+          "key": "outcome_md",
+          "label": "Итог",
+          "editable": true,
+          "write": {
+            "endpoint": "/lore/sprint/update",
+            "field": "outcome_md"
+          }
+        }
+      ],
+      "props": [
+        {
+          "section": null,
+          "fields": [
+            "priority",
+            "projects",
+            "releases"
+          ]
+        },
+        {
+          "section": "Планирование",
+          "fields": [
+            "created",
+            "milestones",
+            "planned_start",
+            "planned_end_date",
+            "no_release",
+            "track"
+          ]
+        },
+        {
+          "section": "Модули",
+          "fields": [
+            "components"
+          ]
+        }
+      ],
+      "parts": [
+        {
+          "key": "phases",
+          "label": "Фазы",
+          "type": "phase",
+          "rel": "PART_OF",
+          "dir": "in",
+          "owned": "strict",
+          "relation": "composition",
+          "columns": [
+            "status",
+            "title",
+            "progress",
+            "valid_from"
+          ],
+          "optional_columns": [],
+          "order_by": "order_index",
+          "create": null
+        },
+        {
+          "key": "tasks",
+          "label": "Задачи",
+          "type": "task",
+          "rel": "PART_OF",
+          "dir": "in",
+          "owned": "strict",
+          "relation": "composition",
+          "columns": [
+            "status",
+            "task_type",
+            "code",
+            "title",
+            "executor",
+            "effort"
+          ],
+          "optional_columns": [
+            "work_class",
+            "author",
+            "reviewer",
+            "actual",
+            "realizes_uc",
+            "prs"
+          ],
+          "order_by": "order_index",
+          "create": null
+        },
+        {
+          "key": "questions",
+          "label": "Вопросы",
+          "type": "question",
+          "rel": "RAISED_IN",
+          "dir": "in",
+          "owned": "shared",
+          "relation": "aggregation",
+          "columns": [
+            "status",
+            "code",
+            "title",
+            "priority"
+          ],
+          "optional_columns": [
+            "due_date"
+          ],
+          "order_by": "question_id",
+          "create": null
+        }
+      ],
+      "link_tabs": [
+        {
+          "key": "deps",
+          "label": "Связи",
+          "rels": [
+            {
+              "rel": "DEPENDS_ON",
+              "dir": "out",
+              "label": "зависит от",
+              "relation": "association",
+              "edge_props": [
+                "kind",
+                "reason"
+              ]
+            },
+            {
+              "rel": "DEPENDS_ON",
+              "dir": "in",
+              "label": "блокирует",
+              "relation": "association",
+              "edge_props": [
+                "kind",
+                "reason"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "refs",
+          "label": "Ссылки",
+          "rels": [
+            {
+              "rel": "REFERENCES",
+              "dir": "out",
+              "label": "ссылается",
+              "relation": "association",
+              "edge_props": []
+            },
+            {
+              "rel": "REFERENCES",
+              "dir": "in",
+              "label": "на него ссылаются",
+              "relation": "association",
+              "edge_props": []
+            }
+          ]
+        }
+      ],
+      "tree": {
+        "children": [
+          {
+            "part": "phases",
+            "label": "Фазы",
+            "columns": [
+              "status",
+              "title",
+              "progress",
+              "valid_from"
+            ],
+            "optional_columns": [],
+            "children": [
+              {
+                "part": "tasks",
+                "label": "Задачи",
+                "group_by": "phase_uid",
+                "columns": [
+                  "status",
+                  "task_type",
+                  "code",
+                  "title",
+                  "executor",
+                  "effort"
+                ],
+                "optional_columns": [
+                  "work_class",
+                  "author",
+                  "reviewer",
+                  "actual",
+                  "realizes_uc",
+                  "prs"
+                ]
+              }
+            ]
+          },
+          {
+            "part": "tasks",
+            "label": "вне фаз",
+            "group_by": "phase_uid",
+            "columns": [
+              "status",
+              "task_type",
+              "code",
+              "title",
+              "executor",
+              "effort"
+            ],
+            "optional_columns": [
+              "work_class",
+              "author",
+              "reviewer",
+              "actual",
+              "realizes_uc",
+              "prs"
+            ]
+          }
+        ]
+      }
+    },
+    "relations": [
+      {
+        "key": "tasks",
+        "label": "Задачи",
+        "relation": "composition",
+        "rel": "PART_OF",
+        "dir": "in",
+        "target_type": "task",
+        "place": "part",
+        "manageable": false
+      },
+      {
+        "key": "phases",
+        "label": "Фазы",
+        "relation": "composition",
+        "rel": "PART_OF",
+        "dir": "in",
+        "target_type": "phase",
+        "place": "part",
+        "manageable": false
+      },
+      {
+        "key": "dependsOn",
+        "label": "Зависит от",
+        "relation": "association",
+        "rel": "DEPENDS_ON",
+        "dir": "out",
+        "target_type": "sprint",
+        "place": "link_tab",
+        "manageable": true
+      },
+      {
+        "key": "blocks",
+        "label": "Блокирует",
+        "relation": "association",
+        "rel": "DEPENDS_ON",
+        "dir": "in",
+        "target_type": "sprint",
+        "place": "link_tab",
+        "manageable": true
+      },
+      {
+        "key": "components",
+        "label": "Компоненты",
+        "relation": "attribute",
+        "rel": "BELONGS_TO",
+        "dir": "out",
+        "target_type": "component",
+        "place": "prop",
+        "manageable": true
+      },
+      {
+        "key": "projects",
+        "label": "Проекты",
+        "relation": "attribute",
+        "rel": "BELONGS_TO_PROJECT",
+        "dir": "out",
+        "target_type": "project",
+        "place": "prop",
+        "manageable": true
+      },
+      {
+        "key": "releases",
+        "label": "Релизы",
+        "relation": "attribute",
+        "rel": "IMPLEMENTED_IN_RELEASE",
+        "dir": "out",
+        "target_type": "release",
+        "place": "prop",
+        "manageable": false
+      },
+      {
+        "key": "milestones",
+        "label": "Вехи",
+        "relation": "attribute",
+        "rel": "TARGETS_MILESTONE",
+        "dir": "out",
+        "target_type": "milestone",
+        "place": "prop",
+        "manageable": true
+      },
+      {
+        "key": "adrs",
+        "label": "Реализует ADR",
+        "relation": "realization",
+        "rel": "IMPLEMENTED_IN",
+        "dir": "in",
+        "target_type": "adr",
+        "place": "link_tab",
+        "manageable": true
+      },
+      {
+        "key": "questions",
+        "label": "Вопросы",
+        "relation": "aggregation",
+        "rel": "RAISED_IN",
+        "dir": "in",
+        "target_type": "question",
+        "place": "part",
+        "manageable": true
+      },
+      {
+        "key": "docs",
+        "label": "Знания",
+        "relation": "realization",
+        "rel": "IMPLEMENTED_IN",
+        "dir": "in",
+        "target_type": "doc",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "publications",
+        "label": "Публикации",
+        "relation": "association",
+        "rel": "PRODUCED_BY",
+        "dir": "in",
+        "target_type": "publication",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "refsOut",
+        "label": "Ссылается",
+        "relation": "association",
+        "rel": "REFERENCES",
+        "dir": "out",
+        "target_type": "any",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "refsIn",
+        "label": "На него ссылаются",
+        "relation": "association",
+        "rel": "REFERENCES",
+        "dir": "in",
+        "target_type": "any",
+        "place": "link_tab",
+        "manageable": false
+      },
+      {
+        "key": "history",
+        "label": "История",
+        "relation": "composition",
+        "rel": "HAS_STATE",
+        "dir": "out",
+        "target_type": "hist",
+        "place": "history",
+        "manageable": false
+      },
+      {
+        "key": "assets",
+        "label": "Вложения",
+        "relation": "composition",
+        "rel": "ATTACHED_TO",
+        "dir": "out",
+        "target_type": "asset",
+        "place": "body",
+        "manageable": false
+      }
+    ],
+    "requirements": [
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "status",
+        "message": "Статус задан",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "status"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "project",
+        "message": "Проект привязан (BELONGS_TO_PROJECT)",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "projects"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "component",
+        "message": "Компонент привязан (BELONGS_TO)",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "components"
+          }
+        ]
+      },
+      {
+        "level": "warn",
+        "source": "quality",
+        "code": "planned_dates",
+        "message": "Плановые даты заданы (начало и конец)",
+        "when": null,
+        "targets": [
+          {
+            "kind": "field",
+            "key": "planned_start"
+          },
+          {
+            "kind": "field",
+            "key": "planned_end_date"
+          }
+        ]
+      }
+    ],
+    "requirements_block": "schema"
+  },
+  "meta": {
+    "facade": "server",
+    "sources": {
+      "block": [
+        "phases",
+        "tasks",
+        "questions"
+      ],
+      "record": "sprint_tree"
+    },
+    "data_state": [
+      {
+        "source": "sprint_tree",
+        "state": "ok"
+      },
+      {
+        "source": "phases_of_sprint",
+        "part": "phases",
+        "state": "ok"
+      },
+      {
+        "source": "tasks_of_sprint",
+        "part": "tasks",
+        "state": "ok"
+      },
+      {
+        "source": "questions_of_sprint",
+        "part": "questions",
+        "state": "ok"
+      },
+      {
+        "source": "edge:PRODUCED_BY:in",
+        "part": "publications",
+        "state": "ok"
+      },
+      {
+        "source": "edge:REFERENCES:out",
+        "part": "refsOut",
+        "state": "ok"
+      },
+      {
+        "source": "edge:REFERENCES:in",
+        "part": "refsIn",
+        "state": "ok"
+      },
+      {
+        "source": "version",
+        "state": "ok"
+      }
+    ]
+  },
+  "computed": {
+    "tasks_total": {
+      "value": 1,
+      "known": 1,
+      "of": 1,
+      "done": 0
+    },
+    "effort_days_total": {
+      "value": null,
+      "known": 0,
+      "of": 1
+    },
+    "actual_days_total": {
+      "value": null,
+      "known": 0,
+      "of": 1
+    }
+  }
+}
