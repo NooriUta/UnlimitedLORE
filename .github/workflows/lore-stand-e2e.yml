@@ -1,0 +1,65 @@
+# Тесты стенда под тестовыми учётками (SPRINT_LORE_ADMIN_POLISH/AP-02,
+# SPRINT_UXR_S11_TEST_OPT/E2E-STAND): автологин test-* → RBAC (rbac.stand.ts) и смоук
+# (smoke.stand.ts) против ПРЕПРОДА. Владелица 15.11.2026: «доработай тесты, чтобы он
+# сам подставлял тестовые учётки и вы могли проверять».
+#
+# Запуск — по кнопке (workflow_dispatch), чтобы проверять выкатку, когда она встала.
+# Нужен секрет LORE_STAND_ACCOUNTS_JSON ({"test-sa":"…",…}; только TEST-логины —
+# остальные отвергает сам скрипт). Заводит его CICDGitHub из Infisical. Пароли в журнал
+# не попадают. Прод отвергается и автологином, и смоуком (isForbiddenStandUrl).
+name: LORE stand e2e (preprod, test accounts)
+
+on:
+  workflow_dispatch:
+    inputs:
+      stand_url:
+        description: 'Адрес стенда (только препрод)'
+        required: false
+        default: 'https://preprod.new.lore.odal.seidrstudio.pro'
+
+concurrency:
+  group: lore-stand-e2e
+  cancel-in-progress: false
+
+jobs:
+  stand-e2e:
+    runs-on: lore-only
+    timeout-minutes: 30
+    env:
+      LORE_STAND_URL: ${{ inputs.stand_url }}
+      LORE_STAND_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_ACCOUNTS_JSON }}
+      LORE_STAND_STORAGE_STATE: e2e/stand/.auth/stand.json
+      # Chrome в образе раннера нет — Chromium из Playwright.
+      LORE_STAND_CHANNEL: ''
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      - name: Use Nexus mirror (npm)
+        run: bash .github/scripts/use-nexus.sh
+
+      - name: Use runner-image Node
+        run: |
+          command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
+          node --version
+
+      - name: Install web-next + Chromium
+        working-directory: web-next
+        run: |
+          bash ../.github/scripts/npm-retry.sh ci
+          npx playwright install --with-deps chromium
+
+      - name: Автологин тестовых учёток
+        working-directory: web-next
+        run: npm run e2e:stand:login
+
+      - name: RBAC + смоук на стенде
+        working-directory: web-next
+        run: npm run e2e:stand
+
+      - name: Отчёт
+        if: always()
+        working-directory: web-next
+        run: cat e2e/.stand-report/summary.md 2>/dev/null || echo "отчёта нет"
