@@ -125,6 +125,8 @@ const FIELD_TYPE: Record<string, FieldType> = {
   datetime: 'date', time: 'text', number: 'number', boolean: 'bool',
   // K5-FIELD-LIST: значения списком — варианты квиза, подсказки, перечни.
   list: 'list',
+  // K4-FIELD-KV: вложенный объект (настройки, правила, конфиги) — таблицей «ключ → значение».
+  kv: 'kv', object: 'kv',
 };
 
 const UML: readonly string[] = ['composition', 'aggregation', 'association', 'realization', 'attribute'];

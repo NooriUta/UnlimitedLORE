@@ -86,7 +86,7 @@ const LIST_VIEWS = ['list', 'cards', 'board', 'tree', 'feed', 'timeline', 'calen
  */
 const STATUS_CATEGORIES = [...STATUS_AXIS, 'todo', 'active', 'done', 'cancelled'];
 // MC-08: bool — флаг («Да»/«Нет», незаданный — «—»), правится FieldEditor'ом boolean.
-const FIELD_TYPES = ['text', 'md', 'enum', 'ref', 'date', 'number', 'bool'];
+const FIELD_TYPES = ['text', 'md', 'enum', 'ref', 'date', 'number', 'bool', 'list', 'kv'];
 
 export interface ValidateConfigOptions {
   /** Проверка существования слага в наборе иконок (registerGameIcons/hasGameIcon). */

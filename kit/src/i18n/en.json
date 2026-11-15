@@ -274,6 +274,7 @@
   "kit.record.links.out": "outgoing",
   "kit.record.links.in": "incoming",
   "kit.record.links.missing": "outside the data",
+  "kit.record.part.shown": "showing {shown} of {total}",
   "kit.record.links.failed": "Links failed to load",
   "kit.record.links.truncated": "The server truncated the data — there may be more links",
   "kit.record.graph.label": "Local graph of record {id}",

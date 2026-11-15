@@ -1446,6 +1446,8 @@
   "kitPage.cal.e3": "Tag",
   "kitPage.cal.e4": "Deploy",
   "kitPage.cal.e5": "Release",
+  "kitPage.kv.head": "Key → value",
+  "kitPage.kv.lead": "A nested object (settings, rules, configs) as a table instead of raw JSON: groups collapse ▾, a list of objects becomes a sub-table, values are monospace. Field type kv.",
   "kitPage.mini.head": "Mini list",
   "kitPage.mini.lead": "One component for todo and quiz: checkmarks and “N of M done”; pick an option, after answering — the correct one and a hint for the wrong one. Items and the answer are app data.",
   "kitPage.mini.todo": "Checklist",
