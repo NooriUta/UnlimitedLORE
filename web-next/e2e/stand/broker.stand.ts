@@ -66,7 +66,9 @@ test.beforeEach(() => requireStandUrl());
 for (const [id, title] of [['BR-01', 'первый вход'], ['BR-02', 'повторный вход']] as const) {
   test(`${id} Брокеринг «Войти через AIDA» (${title}): сразу лента, та же учётка с ролями`, async ({ browser }, info) => {
     const acc = pickAccount();
-    const ctx = await browser.newContext({ baseURL: process.env.LORE_STAND_URL!.trim() });
+    // Пустое состояние ЯВНО: Playwright подставляет use.storageState (stand.json = test-sa) и в
+    // browser.newContext() — прогон 7861: «чистый» контекст уже был залогинен, в KC не уходил.
+    const ctx = await browser.newContext({ baseURL: process.env.LORE_STAND_URL!.trim(), storageState: { cookies: [], origins: [] } });
     const page = await ctx.newPage();
     try {
       const stop = await brokerLogin(page, acc.login, acc.password);
