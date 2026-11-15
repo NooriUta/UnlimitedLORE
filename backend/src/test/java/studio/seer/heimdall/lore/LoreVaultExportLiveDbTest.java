@@ -126,7 +126,7 @@ class LoreVaultExportLiveDbTest {
         Map<String, String> files = json.getMap("files");
         assertEquals(unzip(zip), new TreeMap<>(files), "json и zip — одни и те же файлы");
         assertEquals("LORE/LORE_TEST_ORG__mda02-own/", json.getString("root"));
-        assertEquals(1, json.getInt("counts.task"), "счётчики по типам рядом с файлами");
+        assertEquals(2, json.getInt("counts.task"), "счётчики по типам рядом с файлами (T-1 и T-2)");
         assertEquals(0, json.getInt("hidden_by_rights"));
     }
 
