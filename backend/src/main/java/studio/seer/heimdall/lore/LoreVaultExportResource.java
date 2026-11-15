@@ -92,6 +92,9 @@ public class LoreVaultExportResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.FORBIDDEN).type("application/json")
                 .entity(new LoreError("PROJECT_FORBIDDEN", "нет роли в проекте «" + slug + "» — выгрузка недоступна")));
 
+        // Скоуп вызывающего — один раз на выгрузку, а не на каждую запись (замер прода 15.11).
+        Set<String> scope = sliceResource.allowedProjectsOrNull(role);
+        long t0 = System.nanoTime();
         List<LoreVaultExport.Rec> recs = new ArrayList<>();
         Map<String, String> unreadable = new TreeMap<>();
         int[] hidden = {0};
@@ -108,9 +111,10 @@ public class LoreVaultExportResource extends LoreResourceBase {
                 String id = val(row.get(t.getValue()[1]));
                 if (id == null) continue;
                 if ("sprint".equals(t.getKey())) sprintIds.add(id);
-                recs.add(fromFacade(t.getKey(), t.getValue()[2], id, row, role, unreadable, hidden));
+                recs.add(fromFacade(t.getKey(), t.getValue()[2], id, row, scope, unreadable, hidden));
             }
         }
+        long t1 = System.nanoTime();
         if (!sprintIds.isEmpty()) {
             try {
                 for (Map<String, Object> row : ingest.queryPublic(TASKS_SQL, Map.of("sprint_ids", sprintIds))) {
@@ -125,9 +129,15 @@ public class LoreVaultExportResource extends LoreResourceBase {
                 unreadable.put("task", "задачи спринтов не прочитаны (" + e.getClass().getSimpleName() + ")");
             }
         }
+        long t2 = System.nanoTime();
         String name = val(project.get(0).get("name"));
         Map<String, String> files = LoreVaultExport.build(new LoreVaultExport.Input(slug,
             name == null ? repo : name, recs, unreadable, hidden[0]));
+        long t3 = System.nanoTime();
+        // Server-Timing: фазы видны в DevTools и в замере с клиента — «долго» проверяется числом.
+        String timing = String.format(java.util.Locale.ROOT, "records;dur=%.0f, tasks;dur=%.0f, build;dur=%.0f",
+            (t1 - t0) / 1e6, (t2 - t1) / 1e6, (t3 - t2) / 1e6);
+        LOG.infof("[LORE EXPORT] %s: %d записей, %s", slug, recs.size(), timing);
         if ("json".equals(format)) {
             // MDA-03: те же файлы картой «путь → текст» — MCP раскладывает их на диск без разбора zip.
             Map<String, Integer> counts = new TreeMap<>();
@@ -139,37 +149,37 @@ public class LoreVaultExportResource extends LoreResourceBase {
             out.put("unreadable", unreadable);
             out.put("hidden_by_rights", hidden[0]);
             out.put("files", files);
-            return noStore(Response.ok(out));
+            return Response.fromResponse(noStore(Response.ok(out))).header("Server-Timing", timing).build();
         }
         byte[] zip = LoreVaultExport.zip(files);
         // Не noStore(): он всегда ставит application/json. Тот же Cache-Control — руками.
         return Response.ok(zip, "application/zip")
             .header("Cache-Control", "no-store")
+            .header("Server-Timing", timing)
             .header("Content-Disposition", "attachment; filename=\"" + owner + "__" + repo + ".zip\"")
             .build();
     }
 
-    /** Запись через фасад паспорта: тело — поля группы body; обнулённое правами тело считается «скрыто». */
+    /**
+     * Запись через тело паспорта ({@link LoreRecordResource#body}): та же функция значений, что у
+     * паспорта, но без чипов, частей, вкладок связей и версии. Обнулённое правами тело — «скрыто».
+     */
     @SuppressWarnings("unchecked")
     private LoreVaultExport.Rec fromFacade(String type, String recordType, String id, Map<String, Object> row,
-                                           String role, Map<String, String> unreadable, int[] hidden) {
+                                           Set<String> scope, Map<String, String> unreadable, int[] hidden) {
         String title = first(row, "title", "name", "full_name", "version");
         String status = first(row, "status", "status_raw");
         StringBuilder body = new StringBuilder();
         try {
-            Response r = recordResource.record(recordType, id, role);
-            if (r.getStatus() == 200 && r.getEntity() instanceof Map<?, ?> env) {
-                Map<String, Object> values = (Map<String, Object>) env.get("values");
-                Map<String, Object> rec = (Map<String, Object>) env.get("record");
-                if (rec != null) {
-                    if (rec.get("title") != null) title = val(rec.get("title"));
-                    if (rec.get("status") != null) status = val(rec.get("status"));
-                }
-                if (Boolean.TRUE.equals(env.get("body_redacted")) || (values != null && Boolean.TRUE.equals(values.get("body_redacted")))) {
+            LoreRecordResource.Body r = recordResource.body(recordType, id, scope);
+            if (r.http() == 200) {
+                Map<String, Object> values = r.values();
+                if (values.get("title") != null) title = val(values.get("title"));
+                if (values.get("status") != null) status = val(values.get("status"));
+                if (Boolean.TRUE.equals(values.get("body_redacted"))) {
                     hidden[0]++;
                     body.append("> Тело скрыто правами: нет роли в проекте записи.\n");
-                } else if (values != null && env.get("schema") instanceof Map<?, ?> schema
-                        && schema.get("fields") instanceof List<?> fields) {
+                } else if (r.schema() != null && r.schema().get("fields") instanceof List<?> fields) {
                     for (Object o : fields) {
                         if (!(o instanceof Map<?, ?> fd) || !"body".equals(fd.get("group"))) continue;
                         Object v = values.get(String.valueOf(fd.get("key")));
@@ -178,11 +188,11 @@ public class LoreVaultExportResource extends LoreResourceBase {
                     }
                 }
             } else {
-                unreadable.merge(type, "тело " + id + " не прочитано (HTTP " + r.getStatus() + ")", (a, b) -> a);
+                unreadable.merge(type, "тело " + id + " не прочитано (HTTP " + r.http() + ")", (x, y) -> x);
             }
         } catch (RuntimeException e) {
             LOG.warnf("[LORE EXPORT] %s/%s: %s", type, id, e.getClass().getSimpleName());
-            unreadable.merge(type, "тело " + id + " не прочитано (" + e.getClass().getSimpleName() + ")", (a, b) -> a);
+            unreadable.merge(type, "тело " + id + " не прочитано (" + e.getClass().getSimpleName() + ")", (x, y) -> x);
         }
         return new LoreVaultExport.Rec(type, id, title, status, body.toString().strip(), Map.of());
     }

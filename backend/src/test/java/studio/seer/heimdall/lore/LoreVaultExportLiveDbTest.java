@@ -104,6 +104,12 @@ class LoreVaultExportLiveDbTest {
         byte[] again = given().when().get("/lore/export/project/" + P_OWN)
             .then().statusCode(200).extract().asByteArray();
         assertArrayEquals(zip, again, "две выгрузки без изменений в базе — те же байты");
+
+        // Скорость (прод 15.11: 7,8 с): фазы выгрузки видны в Server-Timing — «долго» проверяется числом.
+        String timing = given().when().get("/lore/export/project/" + P_OWN)
+            .then().statusCode(200).extract().header("Server-Timing");
+        assertNotNull(timing, "Server-Timing обязателен");
+        assertTrue(timing.contains("records;dur=") && timing.contains("tasks;dur="), timing);
     }
 
     /** MDA-03: тот же архив картой «путь → текст» — для MCP, который раскладывает файлы на диск. */
