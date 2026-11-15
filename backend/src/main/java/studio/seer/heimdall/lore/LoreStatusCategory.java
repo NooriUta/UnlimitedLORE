@@ -73,6 +73,19 @@ final class LoreStatusCategory {
         Map.entry("deprecated", "withdrawn"),
         Map.entry("superseded", "withdrawn"));
 
+    /** MD-04: гейт качества — свой цикл (ADR-LORE-053-D7). */
+    static final Set<String> GATE_TYPES = Set.of("quality_gate");
+
+    /**
+     * Состояния гейта. {@code active} у гейта — «действует» (гейт работает, как принятый ADR),
+     * а не «в работе» задачи; {@code stale} — открыт и требует внимания; {@code retired} — снят.
+     */
+    static final Map<String, String> GATE_MAP = Map.ofEntries(
+        Map.entry("draft", "not_started"),
+        Map.entry("active", "in_force"),
+        Map.entry("stale", "in_progress"),
+        Map.entry("retired", "withdrawn"));
+
     /** Какой срез каким полем несёт статус какого типа. */
     record StatusSource(String type, String field) {}
 
@@ -99,7 +112,9 @@ final class LoreStatusCategory {
         Map.entry("release_sprints", new StatusSource("sprint", "status_raw")),
         Map.entry("backlog_tasks", new StatusSource("task", "status_raw")),
         Map.entry("all_tasks", new StatusSource("task", "status_raw")),
-        Map.entry("release_tasks_by_tag", new StatusSource("task", "status_raw")));
+        Map.entry("release_tasks_by_tag", new StatusSource("task", "status_raw")),
+        Map.entry("quality_gates", new StatusSource("quality_gate", "status")),
+        Map.entry("quality_gate_by_id", new StatusSource("quality_gate", "status")));
 
     /** Категория статуса {@code status} у сущности типа {@code type}. */
     static String of(String type, Object status) {
@@ -109,6 +124,9 @@ final class LoreStatusCategory {
         String token = raw.toLowerCase(Locale.ROOT);
         if (DOC_TYPES.contains(type)) {
             return DOC_MAP.getOrDefault(token, UNKNOWN);
+        }
+        if (GATE_TYPES.contains(type)) {
+            return GATE_MAP.getOrDefault(token, UNKNOWN);
         }
         if (PLAN_TYPES.contains(type)) {
             String direct = PLAN_MAP.get(token);

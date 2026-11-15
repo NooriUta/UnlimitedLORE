@@ -283,6 +283,16 @@ jobs:
           set -u
           TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
 
+          # D-2026-GITHUB-ONLY-MAJOR-VERSIONS (владелица, 14.11.2026): на GitHub
+          # уходят только релизы vX.Y.0, и делает это github-major-sync из
+          # AIDA/core-services. Патчи (vX.Y.Z, Z≠0, и суффиксы вроде fix) отсюда
+          # не зеркалятся — иначе этот шаг пушит каждый патч и обходит защиту main
+          # на GitHub (так ушёл v1.17.23, 15.11).
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.0$'; then
+            echo "::notice::зеркало GitHub не трогаем: $TAG — не vX.Y.0 (D-2026-GITHUB-ONLY-MAJOR-VERSIONS; мажорные зеркалит github-major-sync)"
+            exit 0
+          fi
+
           # ГЛАВНОЕ В ЭТОМ ШАГЕ: github.com идёт МИМО прокси.
           #
           # Раннер выдаёт джобам HTTP(S)_PROXY (split-tunnel xray на хосте), и
@@ -555,8 +565,10 @@ jobs:
       - name: Вердикт оповещения Telegram
         if: ${{ always() && steps.notify_release.outcome == 'failure' }}
         run: |
-          echo "::error::оповещение о релизе в Telegram НЕ доставлено (см. шаг Notify release). Релиз опубликован; проверьте выход xray для api.telegram.org (~/xray/refresh-vpn.sh на ci-server)."
-          exit 1
+          # 15.11.2026: правило владелицы — недоставка в Telegram не красит релиз
+          # (known-flaky канал, как у Völva #58). Отказ виден предупреждением.
+          echo "::warning::оповещение о релизе в Telegram НЕ доставлено (см. шаг Notify release). Релиз опубликован; проверьте выход xray для api.telegram.org (~/xray/refresh-vpn.sh на ci-server)."
+          exit 0
 
   # ── PL-05: выкатка прода на lore-host ───────────────────────────────────────
   # Рядом с publish, а не после него: публикация описания и выкатка — разные

@@ -31,13 +31,13 @@ describe('MD-04 · гейт качества — раздел и паспорт'
     expect(PASSPORT_TYPES[PASSPORT_TYPES.length - 1]).toBe('project');
   });
 
-  it('строка среза quality_gates → запись kit: состояние и итог прогона — разные поля', () => {
+  it('строка среза quality_gates → запись kit: состояние — статус, итог прогона — поле', () => {
     expect(qualityGateRecord({
       qg_id: 'QG-LORE-SCHEMA', name: 'Схема', status: 'active', last_run_status: 'FAIL',
       component_id: 'LORE', components: ['LORE'], projects: ['NooriUta/UnlimitedLORE'], sprint_id: 'SPRINT_QG_REBUILD',
     })).toMatchObject({
-      id: 'QG-LORE-SCHEMA', kind: 'quality_gate', title: 'Схема', status: '',
-      fields: { state: 'active', lastRun: 'FAIL', component: 'LORE', components: ['LORE'], project: ['NooriUta/UnlimitedLORE'], sprint: 'SPRINT_QG_REBUILD' },
+      id: 'QG-LORE-SCHEMA', kind: 'quality_gate', title: 'Схема', status: 'active',
+      fields: { lastRun: 'FAIL', component: 'LORE', components: ['LORE'], project: ['NooriUta/UnlimitedLORE'], sprint: 'SPRINT_QG_REBUILD' },
     });
   });
 
@@ -45,6 +45,11 @@ describe('MD-04 · гейт качества — раздел и паспорт'
     const r = qualityGateRecord({ qg_id: 'QG-2' });
     expect(r.title).toBe('QG-2');
     expect(r.fields.project, 'проект пуст').toBeFalsy();
-    expect(r.fields.state).toBe('');
+    expect(r.status, 'гейт без состояния — пусто, а не unknown и не draft').toBe('');
+  });
+
+  it('состояние вне оси гейта не подгоняется под похожий код', () => {
+    expect(qualityGateRecord({ qg_id: 'QG-3', status: 'in_progress' }).status).toBe('unknown');
+    expect(qualityGateRecord({ qg_id: 'QG-4', status: ' Stale ' }).status).toBe('stale');
   });
 });
