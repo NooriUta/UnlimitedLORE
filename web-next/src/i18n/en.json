@@ -930,6 +930,7 @@
   "admin.people.projects": "Projects",
   "admin.people.nProjects": "Projects",
   "admin.people.agents": "Agents",
+  "admin.people.face": "Avatar",
   "admin.people.noProjects": "no projects",
   "admin.people.add": "+ Person",
   "admin.projects.add": "+ Project like an existing one",

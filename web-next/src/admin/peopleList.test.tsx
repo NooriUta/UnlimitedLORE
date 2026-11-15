@@ -12,6 +12,7 @@ import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import { peopleRecords } from './peopleList';
 import { buildParticipation } from './participation';
+import { resetPeopleCache } from '../people/avatars';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 beforeEach(() => { window.history.replaceState(null, '', '/'); });
@@ -84,5 +85,31 @@ describe('экран «Люди и их проекты»', () => {
     await settle();
     fireEvent.click(await screen.findByRole('button', { name: '+ Человек' }));
     expect(await screen.findByRole('dialog', { name: 'Подключить человека' })).toBeTruthy();
+  });
+});
+
+// AP-07 «аватары доделать» (владелица 15.11.2026, SPRINT_LORE_ADMIN_POLISH/AP-07): у человека в списке —
+// его аватар; профили всех строк — ОДНИМ запросом ?ids=…, картинки — запросом с токеном, из blob:.
+describe('«Люди»: аватары в строках', () => {
+  it('аватар есть — картинка в строке; профили одним запросом, не по строке', async () => {
+    resetPeopleCache();
+    (URL as unknown as { createObjectURL: unknown }).createObjectURL = vi.fn(() => 'blob:face');
+    const base = fake(3) as unknown as (url: string) => Promise<Response>;
+    const f = vi.fn(async (url: string) => {
+      if (url.startsWith('/lore/users?ids=')) {
+        const ids = decodeURIComponent(url.slice('/lore/users?ids='.length)).split(',');
+        return json(ids.map(id => ({ kc_sub: id, login: id, display_name: null, avatar_url: id === 'u-01' ? '/lore/users/u-01/avatar' : null, found: true })));
+      }
+      if (url.endsWith('/avatar')) return new Response(new Blob(['png'], { type: 'image/png' }), { status: 200 });
+      return base(url);
+    }) as unknown as typeof fetch;
+    render(<KitLangProvider lang="ru"><WhoWhereScreen fetchImpl={f} /></KitLangProvider>);
+    await settle();
+    await screen.findAllByRole('row');
+    await vi.waitFor(() => expect(document.querySelector('[data-record-id="u-01"] img')?.getAttribute('src')).toBe('blob:face'));
+    // Строка без аватара — инициалы, не картинка (положительный контроль на «не всем подряд»).
+    expect(document.querySelector('[data-record-id="u-00"] img')).toBeNull();
+    const calls = (f as unknown as { mock: { calls: [string][] } }).mock.calls.map(c => c[0]).filter(u => u.startsWith('/lore/users?ids='));
+    expect(calls.length).toBe(1);
   });
 });

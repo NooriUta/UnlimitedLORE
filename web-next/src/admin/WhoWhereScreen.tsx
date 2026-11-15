@@ -10,7 +10,7 @@
 // пять человек и двадцать пять проектов помещаются на экран, а не в ленту.
 import { useCallback, useMemo, useState, type SyntheticEvent } from 'react';
 import {
-  Drawer, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, setUrlParams, useKitLang, useLoadState, useUrlParam,
+  Drawer, PersonFace, EmptyState, Forbidden, ListView, LoadError, Pill, Skeleton, setUrlParams, useKitLang, useLoadState, useUrlParam,
 } from '@seidr/kit';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
 import { PROJECT_WIZ_PARAMS } from './projectLike';
@@ -24,6 +24,7 @@ import { EffectiveAccess, MyProjectsChip, PersonAgentsLine, WhoSeesBlock } from 
 import { PersonMachines } from './MachinesScreen';
 import { PersonOffboard } from './PersonOffboard';
 import { ProfileEditor } from '../settings/ProfileEditor';
+import { usePerson } from '../people/avatars';
 import { PersonTestDelete } from './TestAccountDelete';
 import { WhyNotSee } from './WhyNotSee';
 import { AgentChip } from './HarnessMark';
@@ -215,7 +216,8 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
         <button type="button" className="sk-btn" onClick={() => setAdding(true)}>{t('admin.people.add')}</button>
       </div>
       {/* Старые ссылки ?adm-q=… (S7B-25) открывают ту же выборку — текстом поиска списка. */}
-      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} openOnRowClick initial={q ? { text: q } : undefined} />
+      <ListView config={config} data={kitData} onOpen={id => setOpen(id)} openOnRowClick initial={q ? { text: q } : undefined}
+        cellOf={(col, r) => (col === 'face' ? <PersonRowFace sub={r.id} name={r.title} fetchImpl={fetchImpl} /> : undefined)} />
       {person && (
         <Drawer open onClose={() => setOpen(null)} title={person.name}>
           <PersonPassport person={person} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
@@ -228,6 +230,16 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
       )}
     </>
   );
+}
+
+/**
+ * Аватар человека в строке списка (AP-07 «аватары доделать», владелица 15.11.2026): профили строк
+ * собираются одним запросом ?ids=…, картинка — запросом с токеном, из blob: (people/avatars.ts).
+ * Нет аватара — инициалы.
+ */
+function PersonRowFace({ sub, name, fetchImpl }: { sub: string; name: string; fetchImpl?: typeof fetch }) {
+  const { row, src } = usePerson(sub, fetchImpl);
+  return <PersonFace name={row?.display_name || name} src={src} size="sm" decorative />;
 }
 
 /** Паспорт человека — содержимое прежней раскрытой строки, без потерь. */

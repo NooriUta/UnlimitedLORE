@@ -1667,6 +1667,12 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-avatar:hover .sk-avatar__face { box-shadow: 0 0 0 2px var(--acc); }
 .sk-avatar:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-avatar__initials { line-height: 1; }
+/* AP-07: лицо человека — картинка или инициалы; размер задаёт место (строка ленты, шапка, лист). */
+.sk-face { display: inline-grid; place-items: center; overflow: hidden; border-radius: var(--r-pill); flex-shrink: 0; }
+.sk-face--sm { width: 16px; height: 16px; font-size: var(--fs-2xs); background: var(--bg3); color: var(--t2); }
+.sk-face--md, .sk-face--lg { width: 100%; height: 100%; }
+.sk-face__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sk-avatar__face { overflow: hidden; }
 .sk-avatar-sheet .sk-sheet__body { display: flex; flex-direction: column; gap: 2px; }
 .sk-avatar__who {
   display: flex;
