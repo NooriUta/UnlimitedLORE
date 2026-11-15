@@ -1,0 +1,127 @@
+// SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Исполнитель карты переноса.
+//
+// Чистая функция: запись старой базы + карта её типа → запись новой базы. Базы не касается, поэтому
+// проверяется тестами без снимка прода и даёт один и тот же ответ на один и тот же вход.
+//
+// Правило: ничего не теряется молча. У результата шесть корзин:
+//   out           — поля записи в новой базе;
+//   toVersion     — значения, которые живут в текущей версии, а не на записи (кладёт вызывающий код,
+//                   если в текущей версии пусто);
+//   dropped       — поля, которые по карте не переносятся (имена);
+//   held          — поля без решения владелицы и преобразования-предложения: исходное значение удержано;
+//   rejects       — значения, которые не удалось привести к виду: поле, значение, причина;
+//   titleFallback — не-статус из статуса версии фазы: вызывающий код кладёт его в название, если оно пусто.
+// Поле записи, которого нет в карте, — ошибка: карта обязана знать каждое поле.
+
+const ENGINE = /^@/; // @rid, @type, @cat, @in, @out — служебные поля движка, новая база выдаёт свои
+const given = v => v !== undefined && v !== null && v !== '';
+
+const valid = (y, m, d) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d; };
+const iso = (y, m, d) => `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+/** Дата в виде ГГГГ-ММ-ДД из трёх форматов прода; иначе null — формат не угадывается. */
+export function toDate(v) {
+  const s = String(v).trim();
+  let m;
+  if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])/))) return valid(+m[1], +m[2], +m[3]) ? iso(+m[1], +m[2], +m[3]) : null;
+  if ((m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/))) return valid(+m[3], +m[2], +m[1]) ? iso(+m[3], +m[2], +m[1]) : null;
+  return null;
+}
+
+/** Момент в ISO-8601, UTC. Дата без времени — полночь UTC; время без пояса считается UTC. */
+export function toDateTime(v) {
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return toDate(s) ? `${s}T00:00:00.000Z` : null;
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s)) return null;
+  const withZone = /(Z|[+-]\d{2}:?\d{2})$/.test(s) ? s : s + 'Z';
+  const t = new Date(withZone.replace(' ', 'T'));
+  return Number.isNaN(t.getTime()) ? null : t.toISOString();
+}
+
+const lead = s => String(s).trim().replace(/^[^\p{L}\p{N}]+/u, ''); // значок и пробелы в начале
+const tail = s => s.replace(/^[\s—–\-:·,]+/, '').trim();
+
+const PRIORITY = { p0: 'critical', p1: 'high', p2: 'normal', p3: 'low', blocker: 'critical', critical: 'critical', high: 'high', normal: 'normal', low: 'low' };
+/** Словесная шкала приоритета (решение владелицы). Значение вне шкалы не угадывается — целиком в заметку. */
+export function toPriority(v) {
+  const s = lead(v);
+  const m = s.match(/^(P[0-3]|blocker|critical|high|normal|low)(?![\p{L}\p{N}_])/iu);
+  if (!m) return { value: null, note: String(v).trim() };
+  return { value: PRIORITY[m[1].toLowerCase()], note: tail(s.slice(m[0].length)) };
+}
+
+/** Статус → код из справочника типа и приписка. Не-статус: кода нет, весь текст — в приписку. */
+export function splitStatus(v, codes) {
+  const s = lead(v);
+  for (const code of [...codes].sort((a, b) => b.length - a.length)) {
+    const m = s.match(new RegExp('^' + code.replace(/_/g, '[ _]') + '(?![\\p{L}\\p{N}_])', 'iu'));
+    if (m) return { code, note: tail(s.slice(m[0].length)) };
+  }
+  return { code: null, note: String(v).trim() };
+}
+
+const asDate = (f, v, r, to) => { const d = toDate(v); if (d === null) r.rejects.push({ field: f, value: v, why: 'не дата' }); else if (!given(r.out[to])) r.out[to] = d; };
+const asDateTime = (f, v, r, to) => { const d = toDateTime(v); if (d === null) r.rejects.push({ field: f, value: v, why: 'не момент времени' }); else r.out[to] = d; };
+const asPriority = (f, v, r, bucket) => { const p = toPriority(v); if (p.value === null) r.rejects.push({ field: f, value: v, why: 'приоритет вне шкалы' }); else { bucket.priority = p.value; if (p.note) bucket.priority_note = p.note; } };
+function asStatus(f, v, r, ctx, phase) {
+  const codes = (ctx.statusCodes || {})[ctx.statusDict];
+  if (!codes) throw new Error(`для ${f} не задан справочник статусов (ctx.statusDict)`);
+  const st = splitStatus(v, codes);
+  r.out.status = st.code;
+  if (st.code === null) { if (phase) r.titleFallback = st.note; else r.rejects.push({ field: f, value: v, why: 'статус вне справочника' }); }
+  else if (st.note) r.out.status_note = st.note;
+}
+
+// Преобразования, согласованные владелицей. Ключ — «Тип.поле».
+const TRANSFORMS = {
+  'KnowSprint.created_date': (f, v, r) => asDate(f, v, r, 'created_at'),
+  'KnowSprint.date_created': (f, v, r) => asDate(f, v, r, 'created_at'),
+  'KnowSprint.updated_at': (f, v, r) => asDateTime(f, v, r, 'updated_at'),
+  'KnowTask.updated_at': (f, v, r) => asDateTime(f, v, r, 'updated_at'),
+  'KnowSprintHist.planned_start_date': (f, v, r) => asDate(f, v, r, 'planned_start_date'),
+  'KnowSprintHist.planned_end_date': (f, v, r) => asDate(f, v, r, 'planned_end_date'),
+  'KnowSprintHist.priority': (f, v, r) => asPriority(f, v, r, r.out),
+  'KnowSprintHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, false),
+  'KnowTaskHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, false),
+  'KnowPhaseHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, true),
+  'KnowPhase.phase_id': (f, v, r) => { r.out.phase_id = String(v).trim().replace(/^Фаза\s+/u, ''); },
+};
+const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, r.toVersion) };
+const RENAMES = {
+  'KnowSprint.name': (v, rec) => (v === rec.sprint_id ? null : v),
+};
+
+export function applyMap(T, typeMap, record, ctx = {}) {
+  const r = { out: {}, toVersion: {}, dropped: [], held: {}, rejects: [], titleFallback: null };
+  for (const [f, v] of Object.entries(record)) {
+    if (ENGINE.test(f)) continue;
+    const e = typeMap[f];
+    if (!e) throw new Error(`${T}.${f}: поля нет в карте переноса`);
+    const k = `${T}.${f}`;
+    if (e.rule === 'drop') { if (given(v)) r.dropped.push(f); continue; }
+    if (!given(v)) continue;
+    if (e.rule === 'open' || (e.rule === 'transform' && e.basis !== 'owner')) { r.held[f] = v; continue; }
+    if (e.rule === 'keep') { r.out[f] = v; continue; }
+    if (e.rule === 'rename') {
+      const nv = RENAMES[k] ? RENAMES[k](v, record) : v;
+      if (nv === null) { if (!(e.to in r.out)) r.out[e.to] = null; } else if (!given(r.out[e.to])) r.out[e.to] = nv;
+      continue;
+    }
+    if (e.rule === 'to_current_version') { if (TO_VERSION[k]) TO_VERSION[k](f, v, r); else r.toVersion[f] = v; continue; }
+    if (e.rule === 'transform') {
+      const fn = TRANSFORMS[k];
+      if (!fn) throw new Error(`${k}: преобразование согласовано в карте, но не реализовано`);
+      fn(f, v, r, ctx);
+      continue;
+    }
+    throw new Error(`${k}: неизвестное правило «${e.rule}»`);
+  }
+  return r;
+}
+
+/** Преобразования карты, для которых нет кода, — сторож полноты исполнителя. */
+export function missingTransforms(types) {
+  const out = [];
+  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && e.basis === 'owner' && !TRANSFORMS[`${T}.${f}`]) out.push(`${T}.${f}`);
+  return out;
+}
