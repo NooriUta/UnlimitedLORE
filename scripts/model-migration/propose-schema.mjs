@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+// SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Предложение новой схемы первого объекта — выводится, а не пишется руками.
+// Вход: карта переноса, тексты полей и отчёт сухого прогона (какие поля реально получились и у скольких
+// записей). Выход: schema/<объект>.json — конфиг, который показывает страница результата. Это ПРЕДЛОЖЕНИЕ:
+// запись в приёмник по нему начинается только после слова владелицы.
+// Запуск: node scripts/model-migration/propose-schema.mjs <отчёт сухого прогона.json>
+import fs from 'node:fs';
+
+const here = p => new URL(p, import.meta.url);
+const J = p => JSON.parse(fs.readFileSync(p, 'utf8'));
+const report = J(process.argv[2]);
+const MAP = J(here('./map/sprint-phase-task.json')).types;
+const TEXTS = J(here('./texts/sprint-phase-task.json')).types;
+
+// Вид нового поля: что делает преобразование — то и хранится.
+const NEW_KIND = { created_at: 'date', updated_at: 'datetime', planned_start_date: 'date', planned_end_date: 'date', status: 'enum', status_note: 'text', priority: 'enum', priority_note: 'text', title: 'text' };
+const DB_TYPE = { date: 'DATE', datetime: 'DATETIME', number: 'DOUBLE', bool: 'BOOLEAN', list: 'LIST' };
+
+const types = {};
+for (const [T, t] of Object.entries(report.types)) {
+  // откуда пришло новое поле: имя старого поля по карте
+  const from = {};
+  for (const [f, e] of Object.entries(MAP[T])) {
+    if (e.rule === 'keep') (from[f] ||= []).push(f);
+    else if ((e.rule === 'rename' || e.rule === 'transform') && /^[a-z][a-z0-9_]*$/.test(e.to || '')) (from[e.to] ||= []).push(f);
+  }
+  from.status_note = ['status_raw']; from.priority_note = ['priority'];
+  const fields = {};
+  for (const [f, n] of Object.entries(t.outFields).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+    const src = (from[f] || []).filter(x => MAP[T][x]);
+    const tx = TEXTS[T]?.[f] || TEXTS[T]?.[src[0]] || {};
+    const kind = NEW_KIND[f] || tx.kind || 'text';
+    fields[f] = { kind, db_type: DB_TYPE[kind] || 'STRING', from: src, filled: n, of: t.records, ...(tx.name ? { name: tx.name } : {}), ...(tx.service ? { service: true } : {}) };
+  }
+  types[T] = {
+    records: t.records,
+    version_of: T.endsWith('Hist') ? T.slice(0, -4) : null,
+    fields,
+    from_record_to_current_version: Object.keys(t.toVersion),
+    held: t.held,
+    rejects: Object.fromEntries(Object.entries(t.rejects).map(([k, e]) => [k, e.n])),
+  };
+}
+const out = {
+  _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы первого объекта (спринт, фаза, задача) — владелицей не утверждено. Выведено из карты переноса и сухого прогона по снимку прода: в схему попали только поля, которые перенос реально дал. Запись в базу-приёмник по этой схеме начинается после её слова.',
+  _source: report.source,
+  _assumed: [
+    'Имена типов остаются прежними (KnowSprint, KnowTask, KnowPhase): ответы срезов по решению владелицы не меняются, а новые имена типов потянули бы все срезы.',
+    'Версия остаётся отдельным типом с окончанием Hist и связью «имеет состояние»: так записано решение «тип версии выводится из типа записи». Ключи записи в версии не хранятся.',
+    'Удержанные значения (поля без решения) в новую схему не входят; при пробной записи они складываются в отдельный служебный тип отчёта, чтобы не потеряться.',
+    'Связи первого объекта в это предложение не входят — их карта ещё не составлена.',
+    'Служебные моменты версий (valid_from, valid_to, status_known_from) в карте стоят «оставить» и сейчас переносятся строкой; по решению «даты настоящим типом» их тоже нужно приводить — в исполнитель это ещё не включено.',
+  ],
+  types,
+};
+fs.mkdirSync(here('./schema/'), { recursive: true });
+fs.writeFileSync(here('./schema/sprint-phase-task.json'), JSON.stringify(out, null, 2) + '\n');
+console.log(Object.entries(types).map(([T, t]) => `${T}: полей ${Object.keys(t.fields).length}`).join(' · '));

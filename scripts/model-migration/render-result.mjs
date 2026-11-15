@@ -86,6 +86,27 @@ function passport(mt) {
     + '<div class="sub">✎ — поле правится в паспорте.</div></div>';
 }
 
+// Предложение новой схемы объекта — из schema/<объект>.json (его выводит propose-schema.mjs по сухому прогону).
+function schemaBlock(id) {
+  const f = path.join(HERE, 'schema', id + '.json');
+  if (!fs.existsSync(f)) return '';
+  const s = J(f);
+  const pct = e => (e.of ? Math.round((100 * e.filled) / e.of) : 0);
+  const block = ([T, t]) => {
+    const rows = Object.entries(t.fields).map(([n, e]) => `<tr><td><code class="new">${esc(n)}</code>${e.service ? ' ' + chip('служебное') : ''}</td><td>${e.name ? esc(e.name) : '<span class="sub">—</span>'}</td><td class="mono">${esc(e.db_type)}<div class="sub">${esc(e.kind)}</div></td><td class="mono sub">${esc(e.from.join(', ') || '—')}</td><td>${e.filled} из ${e.of} <span class="sub">· ${pct(e)}%</span></td></tr>`).join('');
+    const rej = Object.entries(t.rejects), held = Object.entries(t.held);
+    return `<section class="ty"><h3>${esc(vertexLabel(T))} <span class="mono sub">${esc(T)}</span> <span class="sub">записей ${t.records} · полей ${Object.keys(t.fields).length}</span></h3>`
+      + `<div class="tw"><table><thead><tr><th>Поле новой схемы</th><th>Название</th><th>Тип в базе</th><th>Из старого поля</th><th>Заполнено по снимку</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      + (t.from_record_to_current_version.length ? `<p class="sub">С записи в текущую версию уходят: ${t.from_record_to_current_version.map(x => `<code>${esc(x)}</code>`).join(' ')}</p>` : '')
+      + (held.length ? `<p class="sub">${chip('удержано до решения', 'wrn')} ${held.map(([k, n]) => `<code>${esc(k)}</code> ${n}`).join(' · ')}</p>` : '')
+      + (rej.length ? `<p class="sub">${chip('не привелось', 'dng')} ${rej.map(([k, n]) => `${esc(k)}: ${n}`).join(' · ')}</p>` : '')
+      + '</section>';
+  };
+  return `<h2>Новая схема — предложение</h2><p class="sub">${chip('не утверждено', 'wrn')} ${esc(s._about)} Источник данных: ${esc(s._source)}.</p>`
+    + `<p class="sub"><b>Допущения, которые нужно подтвердить:</b></p><ul class="sub">${s._assumed.map(a => `<li>${esc(a)}</li>`).join('')}</ul>`
+    + Object.entries(s.types).map(block).join('');
+}
+
 function objectPage(map, i) {
   const all = Object.values(map.types).flatMap(t => Object.values(t));
   const by = k => all.reduce((a, e) => ((a[e[k]] = (a[e[k]] || 0) + 1), a), {});
@@ -97,6 +118,7 @@ function objectPage(map, i) {
   return { id: map.id, title, html: `<section class="page" data-page="${esc(map.id)}"${i ? ' hidden' : ''}><h1>${esc(title)}</h1><p class="sub">${esc(map._about || '')}</p>`
     + `<div class="kpis">${kpi.map(k => `<div class="kpi"><b>${k[0]}</b><span>${esc(k[1])}</span></div>`).join('')}</div>`
     + `<h2>Модель после переноса</h2>${Object.entries(map.types).map(([T, f]) => typeBlock(T, f)).join('')}`
+    + schemaBlock(map.id)
     + `<h2>Паспорта</h2><p class="sub">Источник — shared/model/lore-model.json.</p>${mts.map(passport).join('') || '<p class="sub">Паспортов у типов этого объекта в модели нет.</p>'}</section>` };
 }
 
