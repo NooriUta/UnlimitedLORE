@@ -12,6 +12,7 @@ import { KitLangProvider } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsActivity, NewsFeed, type NewsResponse, type NewsSource } from './index';
 import { newsHrefV2 } from '../newsLinks';
 import { StatusDictCtx } from '@seidr/kit';
+import { PeopleFetchCtx, resetPeopleCache } from '../../people/avatars';
 import type { KitConfig } from '@seidr/kit';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
@@ -556,6 +557,34 @@ describe('S7A-12 v2 · мини-график, быстрые фильтры, д�
     expect(opt.textContent).not.toContain(sub);
     fireEvent.click(opt);
     await waitFor(() => expect(last(s).get('who')).toBe(sub));
+  });
+
+  // AP-07 «аватары доделать» (владелица 15.11.2026): у автора-человека в строке ленты — его аватар
+  // (запросом с токеном, из blob:); нет аватара — прежний значок «человек». У агента профиля нет — не спрашиваем.
+  it('«Кто»-человек с аватаром — картинка в строке; агент — без запроса профиля', async () => {
+    resetPeopleCache();
+    (URL as unknown as { createObjectURL: unknown }).createObjectURL = vi.fn(() => 'blob:olga');
+    const sub = '6f1c2a90-aaaa-bbbb-cccc-000000000002';
+    const data = clone();
+    data.events[0].author = 'human';
+    data.events[0].who = sub;
+    data.who_names = { [sub]: 'Ольга' };
+    const f = vi.fn(async (url: string) => (url.endsWith('/avatar')
+      ? new Response(new Blob(['png'], { type: 'image/png' }), { status: 200 })
+      : new Response(JSON.stringify([{ kc_sub: sub, login: 'olga', display_name: 'Ольга', avatar_url: `/lore/users/${sub}/avatar`, found: true }]), { status: 200 })));
+    render(
+      <KitLangProvider lang="ru">
+        <PeopleFetchCtx.Provider value={f as unknown as typeof fetch}>
+          <NewsFeed source={src({}, data)} urlPrefix={null} timeZone="Europe/Moscow" />
+        </PeopleFetchCtx.Provider>
+      </KitLangProvider>,
+    );
+    await screen.findByTestId('news-feed-days');
+    const who = screen.getAllByTestId('news-who')[0];
+    await waitFor(() => expect(who.querySelector('img')?.getAttribute('src')).toBe('blob:olga'));
+    expect(who.textContent).toContain('Ольга');
+    // Запросы — только про людей: ни одного ids= с агентом.
+    for (const [url] of f.mock.calls as unknown as [string][]) expect(url).toContain(sub);
   });
 
   it('«Кто» без by_who (старый сервер) — имена из строк ленты, без чисел; Esc закрывает', async () => {

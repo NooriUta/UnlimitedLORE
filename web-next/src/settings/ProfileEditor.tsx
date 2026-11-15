@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { appT, type AppKey } from '../i18n';
 import type { KitLang } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { forgetPerson, useAvatarSrc } from '../people/avatars';
 
 export interface ProfileRow {
   kc_sub: string | null;
@@ -65,6 +66,9 @@ export function ProfileEditor({ sub, lang, fetchImpl = loreFetch, base = '' }: {
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(reload, [sub, fetchImpl]);
+  // Картинка за входом: запросом с токеном и из blob: (people/avatars.ts), а не голым <img src>.
+  const avatarUrl = load.state === 'ok' && load.row.avatar_url ? `${base}${load.row.avatar_url}` : null;
+  const avatarSrc = useAvatarSrc(avatarUrl, fetchImpl, bust);
 
   if (load.state === 'loading') return <p className="profile-ed" aria-busy="true">{t('profile.loading')}</p>;
   if (load.state === 'error') {
@@ -88,6 +92,7 @@ export function ProfileEditor({ sub, lang, fetchImpl = loreFetch, base = '' }: {
       if (!r.ok) { setMsg({ kind: 'err', text: await serverWords(r) }); return; }
       const next = await r.json() as ProfileRow;
       setLoad({ state: 'ok', row: next });
+      forgetPerson(sub);
       setMsg({ kind: 'ok', text: t('profile.saved') });
     } catch (e) {
       setMsg({ kind: 'err', text: e instanceof Error ? e.message : String(e) });
@@ -103,6 +108,7 @@ export function ProfileEditor({ sub, lang, fetchImpl = loreFetch, base = '' }: {
       if (!r.ok) { setMsg({ kind: 'err', text: await serverWords(r) }); return; }
       const next = await r.json() as ProfileRow;
       setLoad({ state: 'ok', row: next });
+      forgetPerson(sub);
       setBust(b => b + 1);
       setMsg({ kind: 'ok', text: t('profile.avatarSaved') });
     } catch (e) {
@@ -117,8 +123,8 @@ export function ProfileEditor({ sub, lang, fetchImpl = loreFetch, base = '' }: {
   return (
     <div className="profile-ed" aria-busy={busy} data-testid="profile-editor">
       <div className="profile-ed__face">
-        {row.avatar_url
-          ? <img className="profile-ed__avatar" src={`${base}${row.avatar_url}${bust ? `?v=${bust}` : ''}`}
+        {avatarSrc
+          ? <img className="profile-ed__avatar" src={avatarSrc}
               alt={t('profile.avatarAlt', { name: row.display_name ?? row.login ?? sub })} width={64} height={64} />
           : <span className="profile-ed__initials" aria-label={t('profile.noAvatar')}>{initialsOf(row)}</span>}
         <label className="sk-btn profile-ed__pick">

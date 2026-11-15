@@ -15,6 +15,8 @@ import { fetchPalettes, type PalettesView } from './palettesSource';
 import { PersonalSettings } from './PersonalSettings';
 import { ProfileEditor } from './ProfileEditor';
 import { useSettings } from './useSettings';
+import { usePerson } from '../people/avatars';
+import { loreFetch } from '../auth/session';
 
 export interface AccountMenuProps {
   client: S2Client;
@@ -59,10 +61,14 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
     if (target) applySettings(target, s, jar);
   }, [root, jar]);
   const { state, set, reload } = useSettings(client, apply);
+  // AP-07: свой аватар и имя профиля — запросом с токеном (people/avatars.ts). Нет входа — ничего не запрашивается.
+  const me = usePerson(sub ?? null, fetchImpl ?? loreFetch, view === 'profile' ? 0 : 1);
+  const shownName = me.row?.display_name?.trim() || name;
 
   return (
     <AvatarMenu
-      name={name}
+      name={shownName}
+      avatarSrc={me.src}
       subtitle={subtitle}
       title={t(lang, 'settings.title')}
       onOpenChange={open => { if (!open) setView('settings'); }}
