@@ -60,7 +60,17 @@ async function brokerLogin(page: Page, login: string, password: string): Promise
   await pass.fill(password, { timeout: 15_000 });
   await page.locator('#kc-login').click({ timeout: 15_000 });
   step('ждать сессию на стенде');
-  const kcStop = page.locator('#kc-page-title, .kc-feedback-text, #input-error');
+  // Прогон 34848: после пароля страница …/broker/seer/endpoint 45 с без экрана и без сессии.
+  // Чтобы понять, ждёт ли KC обмена кодом с seerPreprod (серверный вызов) или рисует экран
+  // без #kc-page-title, пишем коды ответов брокера (без query: там code/state) и при таймауте
+  // — заголовок и начало текста страницы.
+  page.on('response', r => {
+    try { const u = new URL(r.url()); if (u.pathname.includes('/broker/') || u.pathname.includes('/login-actions/')) console.log(`[BR] ответ ${r.status()} ${u.host}${u.pathname}`); } catch { /* */ }
+  });
+  page.on('requestfailed', r => {
+    try { const u = new URL(r.url()); console.log(`[BR] запрос не прошёл ${u.host}${u.pathname}: ${r.failure()?.errorText ?? '?'}`); } catch { /* */ }
+  });
+  const kcStop = page.locator('#kc-page-title, .kc-feedback-text, #input-error, #kc-error-message, .pf-c-alert__title, .pf-v5-c-alert__title');
   const deadline = Date.now() + 45_000;
   while (Date.now() < deadline) {
     const onStand = (() => { try { return new URL(page.url()).host === stand; } catch { return false; } })();
@@ -70,7 +80,9 @@ async function brokerLogin(page: Page, login: string, password: string): Promise
     }
     await page.waitForTimeout(500);
   }
-  return `за 45 с сессии на стенде нет; страница ${where(page)}`;
+  const title = (await page.title().catch(() => '')).slice(0, 60);
+  const text = ((await page.locator('body').innerText({ timeout: 5_000 }).catch(() => '')) || '').trim().replace(/s+/g, ' ').slice(0, 200);
+  return `за 45 с сессии на стенде нет; страница ${where(page)} «${title}»; текст: «${text || 'пусто'}»`;
 }
 
 async function whoami(page: Page): Promise<Record<string, unknown>> {
