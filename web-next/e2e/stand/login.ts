@@ -23,28 +23,35 @@ export async function standLogin(browser: Browser, baseURL: string, login: strin
     const resp = await page.goto('/news', { timeout: timeoutMs }).catch(e => { throw new Error(`goto: ${(e as Error).message.split('\n')[0]}`); });
     step = `ждать форму входа или приложение (HTTP ${resp?.status() ?? '—'})`;
     const form = page.locator('#username');
-    // Признак «вошла» — оболочка приложения, а не строки ленты: у тестовой учётки с пустым
-    // проектным скоупом лента пуста (прогон 7847: KC пустил, вернул на /news «LORE v2», а
-    // строк ленты не было 45 с у всех шести).
-    const app = page.locator('.sk-shell__side, [data-testid^="news-row-"]');
-    await form.or(app).first().waitFor({ timeout: timeoutMs });
+    // Признак «вошла» — запись сессии oidc.user:* в хранилище браузера на ДОМЕНЕ СТЕНДА
+    // (её пишет приложение после обмена кодом), а не элемент страницы. Прогоны 7847/7853:
+    // KC пустил все шесть учёток и вернул на /news «LORE v2», но ни строк ленты (пусто при
+    // пустом проектном скоупе), ни .sk-shell__side (страница «Новости» живёт без оболочки)
+    // там нет — элемент страницы признаком входа быть не может.
+    const signedIn = (): Promise<boolean> => page.evaluate(() =>
+      Object.keys(localStorage).some(k => k.includes('oidc.user:'))).catch(() => false);
+    const until = async (cond: () => Promise<boolean>): Promise<boolean> => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) { if (await cond()) return true; await page.waitForTimeout(500); }
+      return false;
+    };
+    const stand = new URL(baseURL).host;
+    const onStand = () => { try { return new URL(page.url()).host === stand; } catch { return false; } };
+    await until(async () => (await form.isVisible().catch(() => false)) || (onStand() && await signedIn()));
     if (await form.isVisible().catch(() => false)) {
       step = 'ввести учётку в форму KC';
       await form.fill(login);
       await page.locator('#password').fill(password);
       await page.locator('#kc-login').click();
-      step = 'ждать приложение после входа';
+      step = 'ждать сессию после входа';
       const kcError = page.locator('#input-error, .kc-feedback-text, .alert-error, [id^="input-error"]');
-      await app.or(kcError).first().waitFor({ timeout: timeoutMs });
+      await until(async () => (await kcError.first().isVisible().catch(() => false)) || (onStand() && await signedIn()));
       if (await kcError.first().isVisible().catch(() => false)) {
         const text = (await kcError.first().textContent() ?? '').trim().replace(/\s+/g, ' ').slice(0, 160);
         return { login, ok: false, reason: `Keycloak отказал: ${text || 'без текста'}` };
       }
     }
-    step = 'ждать оболочку приложения';
-    await app.first().waitFor({ timeout: timeoutMs });
-    step = 'ждать сессию OIDC в хранилище';
-    await page.waitForFunction(() => Object.keys(localStorage).some(k => k.includes('oidc.user:')), undefined, { timeout: timeoutMs });
+    if (!(onStand() && await signedIn())) throw new Error(`за ${timeoutMs / 1000} с сессия oidc.user:* на стенде не появилась`);
     await ctx.storageState({ path: file });
     return { login, ok: true, reason: null };
   } catch (e) {
