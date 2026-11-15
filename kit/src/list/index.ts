@@ -40,3 +40,4 @@ export * from './ViewMenu';
 export * from './ColumnsChoice';
 export * from './columnsUrl';
 export * from './columnWidths';
+export * from './VerdictSummary';

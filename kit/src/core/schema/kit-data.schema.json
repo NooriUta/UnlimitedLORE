@@ -64,6 +64,7 @@
         "total": { "type": "integer", "minimum": 0 },
         "returned": { "type": "integer", "minimum": 0 },
         "truncated": { "type": "boolean" },
+        "subset_of": { "type": "number", "description": "приложение само показало часть: сколько записей в источнике, из которого взят вид" },
         "errors": {
           "description": "Честные ошибки блоков: блок не загрузился ≠ блок пуст.",
           "type": "array",

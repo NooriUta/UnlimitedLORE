@@ -153,6 +153,21 @@ describe('shownOf — «Показано N из M» из meta (формат K-01
   it('total больше загруженного без флага — тоже обрезано (флаг потеряли — не верим «полной»)', () => {
     expect(shownOf({ generated_at: '', total: 300 }, 200, 200).kind).toBe('truncated');
   });
+
+  // SPRINT_UXR_S14_KIT5/K5-LIST-TOTAL-TRUNCATED. «Дата-странники» показывают вид из общей выгрузки:
+  // 44 записи из 1292. Сервер ничего не обрезал, а список писал «выдача обрезана сервером».
+  it('приложение само показало часть (subset_of): выдача полная, и сказано, из скольких она взята', () => {
+    expect(shownOf({ generated_at: '', total: 44, returned: 44, subset_of: 1292 }, 44, 30))
+      .toEqual({ kind: 'complete', shown: 30, loaded: 44, total: 44, of: 1292 });
+  });
+  it('subset_of не прячет настоящую обрезку сервером', () => {
+    expect(shownOf({ generated_at: '', total: 44, truncated: true, subset_of: 1292 }, 30, 30).kind).toBe('truncated');
+    expect(shownOf({ generated_at: '', total: 60, subset_of: 1292 }, 44, 44).kind).toBe('truncated');
+  });
+  it('subset_of не больше показанного — оговорки «это часть» нет', () => {
+    expect(shownOf({ generated_at: '', total: 44, subset_of: 44 }, 44, 44))
+      .toEqual({ kind: 'complete', shown: 44, loaded: 44, total: 44 });
+  });
 });
 
 describe('состояние списка в URL', () => {

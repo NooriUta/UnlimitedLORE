@@ -16,14 +16,17 @@ import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, 
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
+import KitBadges from './KitBadges';
+import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'badges', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
+  badges: 'kitPage.sec.badges',
   states: 'kitPage.sec.states',
   charts: 'kitPage.sec.charts',
   shell: 'kitPage.sec.shell',
@@ -215,8 +218,14 @@ export default function KitPage() {
           </Toolbar>
         </section>
 
+        {/* Шильдики: статус, код, тип, приоритет, тег и фильтр рядом — материал для бренд-бука. */}
+        <KitBadges />
+
         <section id="kit-states" className="kitp__sec" aria-labelledby="kit-states-h">
           <h2 id="kit-states-h" className="kitp__h2">{t('kitPage.sec.states')}</h2>
+          {/* K4-SUMMARY-QUEUE: «прошло N из M» по видам; вид без проверок назван, а не выдан за ноль. */}
+          <h3 className="kitp__h3">{t('kitPage.st.vsum')}</h3>
+          <KitVerdictSummaryDemo />
           <div className="kitp__grid">
             <Skeleton lines={3} />
             <EmptyState compact />

@@ -7409,3 +7409,36 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
     height: min(max(100%, var(--hit)), calc(100% + var(--chiprow-gap)));
   }
 }
+
+/* ---------- Сводка по вердикту (K4-SUMMARY-QUEUE) ---------- */
+.sk-vsum { display: grid; gap: var(--gap); }
+.sk-vsum__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: var(--gap); }
+.sk-vsum__card {
+  --vsum-c: var(--t3);
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-left: 2px solid var(--vsum-c);
+  border-radius: var(--r-sm);
+  background: var(--bg1);
+}
+.sk-vsum__head { margin: 0; font-size: var(--fs-md); font-weight: 700; }
+.sk-vsum__kind { display: inline-flex; align-items: center; gap: 6px; color: var(--t1); text-decoration: none; }
+a.sk-vsum__kind:hover { color: var(--acc); }
+.sk-vsum__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-vsum__score { margin: 0; color: var(--t1); font-size: var(--fs-sm); }
+.sk-vsum__rest, .sk-vsum__none { color: var(--t3); }
+.sk-vsum__none { margin: 0; font-size: var(--fs-sm); }
+.sk-vsum__bar { display: block; height: 3px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--vsum-c) 22%, transparent); overflow: hidden; }
+.sk-vsum__fill { display: block; width: var(--vsum-w, 0%); height: 100%; background: var(--vsum-c); }
+.sk-vsum__group { --vsum-g: var(--t3); display: grid; gap: 2px; margin-top: 4px; }
+.sk-vsum__label { color: var(--vsum-g); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sk-vsum__checks { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.sk-vsum__check { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--gap); align-items: baseline; font-size: var(--fs-sm); }
+.sk-vsum__why { overflow: hidden; color: var(--t1); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
+.sk-vsum__n { color: var(--vsum-g); font-family: var(--mono); }
+.sk-vsum__note { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
+.sk-vsum__note--warn { color: var(--wrn); }

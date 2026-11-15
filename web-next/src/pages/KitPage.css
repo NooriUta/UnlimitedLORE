@@ -91,3 +91,27 @@
 
 /* S4-FIELD-EDITORS: витрина редакторов полей. */
 .kitp__fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 4px 16px; margin-bottom: 8px; }
+
+/* ---------- Шильдики (витрина, материал для бренд-бука) ---------- */
+.kitp__badges { border: 1px solid var(--bd); border-radius: var(--r-sm); background: var(--bg1); }
+.kitp__badge-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 130px) minmax(0, 230px) minmax(0, 1fr) minmax(72px, 110px);
+  gap: var(--gap);
+  align-items: center;
+  padding: 4px 10px;
+}
+.kitp__badge-row + .kitp__badge-row { border-top: 1px solid color-mix(in srgb, var(--bd) 55%, transparent); }
+.kitp__badge-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kitp__badge-none { color: var(--t3); }
+.kitp__badge-dict { display: grid; grid-template-columns: minmax(84px, 130px) minmax(0, 1fr); gap: var(--gap); align-items: center; padding: 3px 0; }
+.kitp__badge-dict-title { color: var(--t2); font-size: var(--fs-sm); }
+.kitp__badge-kinds { display: grid; gap: 6px; margin: 0; }
+.kitp__badge-kind { display: grid; grid-template-columns: minmax(84px, 130px) minmax(0, 1fr); gap: var(--gap); align-items: start; }
+.kitp__badge-kind dt { color: var(--t3); font-size: var(--fs-xs); letter-spacing: .08em; text-transform: uppercase; }
+.kitp__badge-kind dd { display: grid; gap: 2px; margin: 0; }
+.kitp__note { color: var(--t3); font-size: var(--fs-sm); }
+@media (max-width: 640px) {
+  .kitp__badge-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .kitp__badge-title { grid-column: 1 / -1; white-space: normal; }
+}
