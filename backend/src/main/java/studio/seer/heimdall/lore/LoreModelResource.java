@@ -94,7 +94,7 @@ public class LoreModelResource extends LoreResourceBase {
         }
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
-        if (ifNoneMatch != null && ifNoneMatch.replace("\"", "").trim().equals(version)) {
+        if (LoreEtag.matches(ifNoneMatch, version)) {
             return Response.notModified(tag).header("Cache-Control", "no-cache").build();
         }
         return Response.ok(doc).tag(tag).header("Cache-Control", "no-cache").build();
