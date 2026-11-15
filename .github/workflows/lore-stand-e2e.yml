@@ -51,9 +51,8 @@ jobs:
         working-directory: web-next
         run: bash ../.github/scripts/npm-retry.sh ci
 
-      # Chromium (~100 МБ) — из кеша по версии Playwright; без кеша — напрямую, без прокси:
-      # раннер lore-only подставляет HTTP(S)_PROXY через медленный VPN, а CDN Playwright и
-      # apt доступны напрямую (замер CICDGitHub 15.11.2026: 5 мин без прокси, 0,3–2 КБ/с с ним).
+      # Chromium (~100 МБ) — из кеша по версии Playwright; без кеша — загрузка по более
+      # быстрому из двух путей (прокси раннера или напрямую), см. шаг «Сеть» ниже.
       - name: Playwright version
         id: pw
         working-directory: web-next
@@ -66,13 +65,26 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ms-playwright-chromium-${{ steps.pw.outputs.version }}
 
-      - name: Install Chromium (без прокси)
+      # Владелица 15.11.2026: «поставь проверку и так и так и выбор быстрого варианта».
+      # Быстрее бывает то прокси, то прямой путь — зависит от источника (замер CICDGitHub:
+      # CDN Playwright через прокси 1018 КБ/с, напрямую 350; GitHub — наоборот). Скрипт
+      # меряет оба пути на файле CDN и при выигрыше прямого пишет пустые HTTP(S)_PROXY в
+      # $GITHUB_ENV до конца джобы. Копия AIDA/core-services scripts/pick-fastest-net.sh
+      # (7cb22d9). Билд 1148 = chromium-headless-shell Playwright 1.49.1 — при смене версии
+      # Playwright поменять PROBE_URL.
+      - name: Сеть — выбрать быстрый путь
+        if: steps.pwcache.outputs.cache-hit != 'true'
+        env:
+          PROBE_URL: https://playwright.azureedge.net/builds/chromium/1148/chromium-headless-shell-linux.zip
+        run: bash .github/scripts/pick-fastest-net.sh
+
+      - name: Install Chromium
         working-directory: web-next
         run: |
           if [ "${{ steps.pwcache.outputs.cache-hit }}" = "true" ]; then
-            env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx playwright install-deps chromium
+            npx playwright install-deps chromium
           else
-            env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx playwright install --with-deps chromium
+            npx playwright install --with-deps chromium
           fi
 
       - name: Автологин тестовых учёток
