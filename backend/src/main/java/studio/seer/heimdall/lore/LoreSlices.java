@@ -3441,6 +3441,23 @@ public final class LoreSlices {
     );
 
     /**
+     * AP-08 (SPRINT_LORE_ADMIN_POLISH/AP-08, автотест RBAC на препроде 15.11.2026, кейс AD-01):
+     * админские журналы — только admin/superadmin. До гейта их отдавали любому вошедшему: viewer
+     * открывал админку и видел «0 отказов» вместо «нет прав». Агентские профили несут роль admin
+     * (KcBridge), поэтому MCP-чтение журналов не ломается; служебный читатель miniLORE их не читает
+     * (requests_by_caller, 15.11). Сторож AdminOnlySlicesGateTest: новый срез из SCOPE_PENDING с
+     * пометкой «админский/журнал/телеметрия» без места здесь не проходит.
+     */
+    public static final Set<String> ADMIN_ONLY = Set.of(
+        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions",
+        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix");
+
+    /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
+    public static boolean adminOnlyDenied(String id, String role) {
+        return ADMIN_ONLY.contains(id) && !"admin".equals(role) && !"superadmin".equals(role);
+    }
+
+    /**
      * AL-SCOPE-HOLES: проектные по смыслу, но пока НЕ под скоупом — нужно решение владелицы
      * (общая это поверхность или проектная) либо путь до проекта нетривиален. Явный
      * список, а не умолчание: каждая запись — открытая дыра, видимая в коде.

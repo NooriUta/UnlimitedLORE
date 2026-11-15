@@ -985,6 +985,11 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
         }
+        // AP-08: админские журналы — только admin/superadmin, отказ словами, а не «0» в выдаче.
+        if (LoreSlices.adminOnlyDenied(id, role)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("ADMIN_ONLY", "срез " + id + " — админский журнал: читают только admin и superadmin"))));
+        }
 
         Map<String, String> given = new LinkedHashMap<>();
         uriInfo.getQueryParameters().forEach((k, v) -> {
@@ -1262,6 +1267,11 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
         }
+        // AP-08: админские журналы — только admin/superadmin, отказ словами, а не «0» в выдаче.
+        if (LoreSlices.adminOnlyDenied(id, role)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("ADMIN_ONLY", "срез " + id + " — админский журнал: читают только admin и superadmin"))));
+        }
         if (!LoreSectionCount.isCountable(id)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("NOT_COUNTABLE", "срез " + id + " не несёт статуса — открытых/закрытых "
@@ -1342,6 +1352,11 @@ public class AidaLoreResource extends LoreResourceBase {
         if (LoreSlices.get(id) == null) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
+        }
+        // AP-08: админские журналы — только admin/superadmin, отказ словами, а не «0» в выдаче.
+        if (LoreSlices.adminOnlyDenied(id, role)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("ADMIN_ONLY", "срез " + id + " — админский журнал: читают только admin и superadmin"))));
         }
         Map<String, String> given = new LinkedHashMap<>();
         uriInfo.getQueryParameters().forEach((k, v) -> {
