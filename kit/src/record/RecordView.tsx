@@ -21,6 +21,7 @@ import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
+import { publishRecordUpdate } from '../core/recordUpdates';
 import { asChip, isChipList } from '../core/chipValue';
 import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
@@ -195,7 +196,9 @@ type FieldSaver = ((field: string, from: unknown) => (to: unknown) => Promise<vo
 function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
   const onSave = ctx.config.hooks?.onSave;
   if (!onSave || !rolePerms(ctx.config, ctx.role).canEdit) return undefined;
-  return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to });
+  // K5-RECORD-UPDATED-EVENT: после ответа сервера — событие для всех мест, где видна запись.
+  return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to })
+    .then(() => publishRecordUpdate({ id: record.id, field, value: to }));
 }
 
 interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
