@@ -1666,8 +1666,102 @@ final class LoreSchemaMigrations {
         // lore.agent.sources.enabled, по умолчанию выкл): ребро SOURCED_FROM «опирался на» со свойствами
         // at, via. Аддитивно, major 17: новый тип ребра. Отдельным шагом — V86 уже влит (#1343),
         // его SQL менять нельзя (контрольная сумма). V87 — WK-05 (#1349), выше. DDL рядом с логикой (AgentSourceTrail).
-        new Step(88, 17, "source_trail_edge", AgentSourceTrail.DDL)
+        new Step(88, 17, "source_trail_edge", AgentSourceTrail.DDL),
+
+        // SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE (владелица 14.11.2026: «разметь в
+        // версионировании схемы как deprecated и удали»; по сверке с продом — «да, а+б+в»).
+        // DEPRECATED и снимаются: легаси-словари статусов Python-ingest StatusAdr / StatusDecision /
+        // StatusMilestone / StatusPhase / StatusSprint / StatusTask, словарь видов трека TrackType и
+        // рёбра к ним HAS_STATUS (строка истории → Status*) и OF_TYPE (PlanTrack → TrackType).
+        // Статусы давно живут в универсальном справочнике KnowDictEntry и в status_raw строки
+        // истории; Status* никто не пишет и не читает. Но перенос при переезде был неполным
+        // (прод 14.11): у 329 закрытых строк задач, 59 спринтов, 28 текущих фаз и 8 текущих вех
+        // статус был ТОЛЬКО в ребре, а TrackType читал срез plan_tracks. Поэтому порядок:
+        //   SQL (ниже) — словари milestone_status / phase_status, коды area research/business,
+        //     поля status_raw у историй вех и фаз, PlanTrack.area;
+        //   java — (а, б) status_raw из ребра у строк без статуса (legacyStatusRaw), сверка «не
+        //     осталось строки, чей статус только в ребре», снятие HAS_STATUS по @rid (как V51) и
+        //     историй-сирот KnowDecisionHist с HAS_STATUS (владельца нет); (в) PlanTrack.area из
+        //     OF_TYPE, сверка, снятие OF_TYPE; затем вершины Status*/TrackType и DROP TYPE.
+        // Идемпотентен: на чистой базе типов нет — всё no-op. Чистая установка их больше не
+        // создаёт (LoreSchemaInitializer), возврат сторожит RetiredLegacyStatusTypesTest.
+        // Убыль объявлена в scripts/migrate-live-check/declared-decrease.tsv.
+        new Step(89, 17, LoreSchemaMigrations.RETIRE_LEGACY_STATUS_STEP, List.of(
+            "CREATE PROPERTY KnowMilestoneHist.status_raw IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPhaseHist.status_raw IF NOT EXISTS STRING",
+            "CREATE PROPERTY PlanTrack.area IF NOT EXISTS STRING",
+            "UPDATE KnowDictEntry SET dict_type='milestone_status', code='upcoming', label_ru='Предстоит', label_en='Upcoming', icon='calendar', color='var(--t3)', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='milestone_status' AND code='upcoming'",
+            "UPDATE KnowDictEntry SET dict_type='milestone_status', code='active', label_ru='Активна', label_en='Active', icon='progression', color='var(--inf)', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='milestone_status' AND code='active'",
+            "UPDATE KnowDictEntry SET dict_type='milestone_status', code='reached', label_ru='Достигнута', label_en='Reached', icon='laurel-crown', color='var(--suc)', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='milestone_status' AND code='reached'",
+            "UPDATE KnowDictEntry SET dict_type='milestone_status', code='missed', label_ru='Пропущена', label_en='Missed', icon='cancel', color='var(--dng)', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='milestone_status' AND code='missed'",
+            "UPDATE KnowDictEntry SET dict_type='phase_status', code='backlog', label_ru='Бэклог', label_en='Backlog', icon='tied-scroll', color='var(--t3)', sort_order=15, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='backlog'",
+            "UPDATE KnowDictEntry SET dict_type='phase_status', code='planned', label_ru='Запланирована', label_en='Planned', icon='calendar', color='var(--wrn)', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='planned'",
+            "UPDATE KnowDictEntry SET dict_type='phase_status', code='active', label_ru='В работе', label_en='In Progress', icon='progression', color='var(--inf)', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='active'",
+            "UPDATE KnowDictEntry SET dict_type='phase_status', code='done', label_ru='Реализована', label_en='Done', icon='divided-spiral', color='var(--suc)', sort_order=60, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='done'",
+            "UPDATE KnowDictEntry SET dict_type='phase_status', code='moved', label_ru='Вынесена', label_en='Moved out', icon='pause-button', color='var(--t3)', sort_order=80, is_active=true, is_extensible=false UPSERT WHERE dict_type='phase_status' AND code='moved'",
+            "UPDATE KnowDictEntry SET dict_type='area', code='research', label_ru='Исследования', label_en='Research', color='color-mix(in srgb,var(--inf) 55%,var(--acc))', sort_order=160, is_active=true, is_extensible=true UPSERT WHERE dict_type='area' AND code='research'",
+            "UPDATE KnowDictEntry SET dict_type='area', code='business', label_ru='Бизнес', label_en='Business', color='color-mix(in srgb,var(--wrn) 55%,var(--acc))', sort_order=170, is_active=true, is_extensible=true UPSERT WHERE dict_type='area' AND code='business'")),
+
+        // SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE (находка CT-KIT-FIXTURES 14.11): десять
+        // базовых кодов task_status/sprint_status (todo…cancelled) не заводил ни один шаг — на проде их
+        // внесли руками, база с нуля жила без статусов. Java-шаг: вставляет ТОЛЬКО недостающее, прод-строки
+        // не переписывает (UPSERT, как в V85/V87, перекрасил бы их). Аддитивно, major 17. Номер V90 сверен
+        // с сессией «Обновление проекта» 14.11: V89 — снятие легаси-статусов (#1401), этот шаг после него.
+        new Step(90, 17, "java__status_dict_core_seed", List.of())
     );
+
+    /** V89: имя шага (сторож RetiredLegacyStatusTypesTest и JAVA_STEPS_REVIEWED держатся за него). */
+    static final String RETIRE_LEGACY_STATUS_STEP = "java__retire_legacy_status_types";
+
+    /** V89: снимаемые типы. Рёбра раньше вершин: DROP не упрётся в живое ребро. */
+    static final List<String> RETIRED_LEGACY_STATUS_TYPES = List.of(
+        "HAS_STATUS", "OF_TYPE",
+        "StatusAdr", "StatusDecision", "StatusMilestone", "StatusPhase", "StatusSprint", "StatusTask",
+        "TrackType");
+
+    /**
+     * V89: код легаси-словаря (StatusSprint/StatusTask/StatusPhase.status_id) → status_raw строки
+     * истории. Форма — канон SCD2 (значок + слово), её одинаково читают {@link LoreStatusVocabulary}
+     * (паспорт, слайсы) и {@link LoreStatusResource#rawToToken}. Слово сохраняет исходный код там,
+     * где своего канона нет (CLOSED → ✅ done, PAUSED → ⏸ deferred, RESEARCH → 🔬 design).
+     * {@code unknown} намеренно без значения: «неизвестно» — не статус, todo из него не выдумываем
+     * (ADR-LORE-039), поле остаётся пустым, как и было.
+     */
+    static final Map<String, String> LEGACY_PLAN_STATUS_RAW = Map.ofEntries(
+        Map.entry("todo",        "⬜ TODO"),
+        Map.entry("planned",     "📋 PLANNED"),
+        Map.entry("design",      "🔬 DESIGN"),
+        Map.entry("research",    "🔬 RESEARCH"),
+        Map.entry("in_progress", "🔄 IN PROGRESS"),
+        Map.entry("done",        "✅ DONE"),
+        Map.entry("closed",      "✅ CLOSED"),
+        Map.entry("paused",      "⏸ PAUSED"),
+        Map.entry("deferred",    "⏸ DEFERRED"),
+        Map.entry("backlog",     "🟣 BACKLOG"));
+    // draft / archived / dropped / moved тоже есть в легаси-словарях, но ни одна строка истории
+    // без status_raw на них не ссылается (прод 14.11). Канон для них был бы догадкой — встретятся,
+    // шаг упадёт до удаления (legacyStatusRaw), и перенос решается явно.
+
+    /** V89: легаси-коды без статуса — переносить нечего (см. {@link #LEGACY_PLAN_STATUS_RAW}). */
+    static final java.util.Set<String> LEGACY_STATUS_NO_VALUE = java.util.Set.of("unknown");
+
+    /**
+     * V89: что записать в status_raw строки истории {@code histType} вместо ребра HAS_STATUS
+     * на легаси-статус {@code code}. Вехи и решения — код своего справочника как есть
+     * (milestone_status / decision_status); план (задача, спринт, фаза) — канон SCD2.
+     *
+     * @return значение status_raw; null — переносить нечего (unknown)
+     * @throws IllegalArgumentException незнакомый код — шаг падает ДО удаления, статус не теряется
+     */
+    static String legacyStatusRaw(String histType, String code) {
+        String c = code == null ? "" : code.trim().toLowerCase(java.util.Locale.ROOT);
+        if (c.isEmpty()) throw new IllegalArgumentException("V89: пустой код статуса у " + histType);
+        if ("KnowMilestoneHist".equals(histType) || "KnowDecisionHist".equals(histType)) return c;
+        if (LEGACY_STATUS_NO_VALUE.contains(c)) return null;
+        String raw = LEGACY_PLAN_STATUS_RAW.get(c);
+        if (raw == null) throw new IllegalArgumentException("V89: нет переноса для статуса '" + code + "' у " + histType);
+        return raw;
+    }
 
     /** V82: опечатки machine_id у конкретных акторов (прод 13.11): actor_id → {было, стало}. */
     static final Map<String, List<String>> MACHINE_ID_TYPOS = Map.of(

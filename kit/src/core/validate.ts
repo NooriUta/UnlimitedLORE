@@ -54,8 +54,9 @@ function tokenName(v: string): string | null {
   const m = /^var\(--([A-Za-z][\w-]*)\)$/.exec(v);
   return m ? m[1] : null;
 }
-// Слаг game-icons или «lucide:имя» (второй набор v1, S4-25).
-const ICON_RE = /^(lucide:)?[a-z0-9]+(-[a-z0-9]+)*$/;
+// Слаг game-icons или «набор:имя»: lucide (второй набор v1, S4-25), material-symbols и tabler
+// (вшитые значки вне v1 по выбору владелицы, S4-32).
+const ICON_RE = /^((lucide|material-symbols|tabler):)?[a-z0-9]+(-[a-z0-9]+)*$/;
 const STATUS_CODE_RE = /^[A-Za-z0-9_-]+$/;
 // ISO 8601 дата или дата-время (с зоной или без) — того достаточно для
 // «дата, а не произвольная строка»; календарную корректность проверяет Date.
@@ -156,9 +157,9 @@ class Collector {
     // Токен не из темы kit — возможно, свой токен приложения (это законно), а
     // возможно, опечатка. Поэтому предупреждение, а не отказ.
     const name = tokenName(v);
-    // K4-MENTION-LOOK: --type-* — палитра цветов видов в теме kit; имена видов называет
+    // K4-MENTION-LOOK: --section-* — палитра цветов видов в теме kit; имена видов называет
     // приложение (K-14), поэтому валидатор знает семейство, а не перечень.
-    if (name && !(KIT_COLOR_TOKENS as readonly string[]).includes(name) && !name.startsWith('type-')) {
+    if (name && !(KIT_COLOR_TOKENS as readonly string[]).includes(name) && !name.startsWith('section-')) {
       this.warn(p, 'color-token-unknown',
         `${p}: токен «--${name}» не из темы kit — если это токен приложения, объявите его в своей теме; иначе проверьте опечатку`);
     }
@@ -167,7 +168,7 @@ class Collector {
     const p = join(base, key);
     const v = o[key];
     if (v === undefined) { if (required) this.err(p, 'required', `нет обязательного поля ${p}`); return; }
-    if (!isStr(v) || !ICON_RE.test(v)) { this.err(p, 'icon-slug', `${p}: нужен слаг game-icons (compass, scroll-quill…) или lucide:имя, получено «${String(v)}»`); return; }
+    if (!isStr(v) || !ICON_RE.test(v)) { this.err(p, 'icon-slug', `${p}: нужен слаг game-icons (compass, scroll-quill…) или набор:имя (lucide, material-symbols, tabler), получено «${String(v)}»`); return; }
     if (exists && !exists(v)) this.err(p, 'icon-missing', `${p}: иконки «${v}» нет в наборе game-icons`);
   }
   unknownKeys(o: Obj, known: readonly string[], base: string, hint: string): void {

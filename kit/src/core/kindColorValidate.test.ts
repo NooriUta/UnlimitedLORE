@@ -1,4 +1,4 @@
-// K4-MENTION-LOOK: цвет вида в конфиге — токен темы. Семейство `--type-*` — палитра
+// K4-MENTION-LOOK: цвет вида в конфиге — токен темы. Семейство `--section-*` — палитра
 // видов в теме kit: имена видов называет приложение (K-14), поэтому валидатор знает
 // семейство, а не перечень имён. Сырое значение — ошибка, чужой токен — предупреждение.
 import { describe, expect, it } from 'vitest';
@@ -13,11 +13,11 @@ const cfg = (color: unknown) => ({
 const at = (color: unknown) => (v => [...v.errors, ...v.warnings])(validateKitConfig(cfg(color))).filter(i => i.path === 'kinds.a.color');
 
 describe('валидатор: цвет вида', () => {
-  it('токен семейства --type-* — без замечаний', () => {
-    expect(at('var(--type-adrs)')).toEqual([]);
+  it('токен семейства --section-* — без замечаний', () => {
+    expect(at('var(--section-adrs)')).toEqual([]);
   });
   it('ключ color у вида известен контракту', () => {
-    expect((v => [...v.errors, ...v.warnings])(validateKitConfig(cfg('var(--type-adrs)'))).filter(i => i.code === 'unknown-key' && i.path.startsWith('kinds.a'))).toEqual([]);
+    expect((v => [...v.errors, ...v.warnings])(validateKitConfig(cfg('var(--section-adrs)'))).filter(i => i.code === 'unknown-key' && i.path.startsWith('kinds.a'))).toEqual([]);
   });
   it('сырой hex — ошибка', () => {
     expect(at('#B48EAD').map(i => i.level)).toEqual(['error']);

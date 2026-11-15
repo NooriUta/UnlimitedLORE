@@ -92,11 +92,11 @@ describe('S9-08 · кластер вместо сотни кружков', () =>
 });
 
 describe('S9-08 · честность числа кластера', () => {
-  it('выдача обрезана лимитом — сказано, что под кластером может быть больше', () => {
-    const data = hub(149);
-    const cut = { ...config, graph: { depth: 1 as const, limit: 40 } } as KitConfig;
+  it('выдача источника обрезана — сказано, что под кластером может быть больше', () => {
+    const full = hub(149);
+    const data = { ...full, meta: { ...full.meta, truncated: true } };
     const { container } = render(
-      <RecordGraph record={rec('ego')} ctx={{ ...ctxOf(data), config: cut } as KitCtx} lang="ru" narrow={false} />,
+      <RecordGraph record={rec('ego')} ctx={ctxOf(data)} lang="ru" narrow={false} />,
     );
     const c = clusters(container)[0];
     expect(c.getAttribute('data-at-least')).toBe('true');

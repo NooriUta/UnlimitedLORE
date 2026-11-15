@@ -69,7 +69,7 @@ describe('/kit — витрина Seiðr-kit', () => {
     expect(row).toBeTruthy();
     const adr = row.querySelector('[data-mention][data-kind="adr"]') as HTMLElement;
     expect(adr.tagName).toBe('A');
-    expect(adr.style.getPropertyValue('--mention-c')).toBe('var(--type-adrs)');
+    expect(adr.style.getPropertyValue('--mention-c')).toBe('var(--section-adrs)');
     expect(row.querySelector('[data-mention][data-kind="project"]')!.hasAttribute('data-tinted')).toBe(false);
     expect(row.querySelector('[data-mention][data-nolink]')).toBeTruthy();
   });

@@ -9,6 +9,7 @@ import type { CSSProperties } from 'react';
 import { addCollection, Icon } from '@iconify/react/offline';
 import type { IconifyJSON } from '@iconify/react/offline';
 import { LUCIDE_ICONS } from './lucideIcons';
+import { MATERIAL_SYMBOLS_ICONS, TABLER_ICONS } from './extraIcons';
 import { ICON_CANON } from './iconCanon';
 
 const known = new Set<string>();
@@ -20,6 +21,12 @@ const sets = new Map<string, IconifyJSON>();
 addCollection(LUCIDE_ICONS);
 sets.set('lucide:', LUCIDE_ICONS as IconifyJSON);
 for (const name of [...Object.keys(LUCIDE_ICONS.icons), ...Object.keys(LUCIDE_ICONS.aliases ?? {})]) known.add(`lucide:${name}`);
+
+// S4-32: четыре значка вне наборов v1 по выбору владелицы 14.11.2026 — тем же офлайн-способом.
+for (const set of [MATERIAL_SYMBOLS_ICONS, TABLER_ICONS]) {
+  addCollection(set);
+  for (const name of Object.keys(set.icons)) known.add(`${set.prefix}:${name}`);
+}
 
 /**
  * Зарегистрировать набор Iconify офлайн. game-icons (`@iconify-json/game-icons/icons.json`)

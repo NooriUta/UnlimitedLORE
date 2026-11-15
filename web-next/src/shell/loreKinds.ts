@@ -5,22 +5,22 @@
 // иконки и расцветку соответствующего канонического объекта и ссылку на него».
 // Цвет вида — канон v1 (`--section-*`), его же называет модель сервера
 // (`/lore/model` → types.<тип>.color, shared/model/lore-model.json `type_color`).
-// В теме kit канон живёт токенами `--type-*`: `section-adrs` модели ↔ `--type-adrs`
-// kit. Совпадение держит сторож `loreKinds.test.ts`. У вида без канона в модели
+// В теме kit канон живёт под ТЕМИ ЖЕ именами `--section-*`: `section-adrs` модели =
+// `--section-adrs` kit, без таблицы соответствий. Совпадение держит сторож `loreKinds.test.ts`. У вида без канона в модели
 // (`no_type_color`) цвета нет — упоминание нейтральное, цвет не выдумываем.
 import { ICON_CANON, SECTION_ICONS, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 
 /** Вид → токен цвета kit (канон v1). Только виды с каноном в модели. */
 export const LORE_KIND_COLOR: Readonly<Record<string, string>> = {
-  sprint: 'var(--type-sprints)',
-  adr: 'var(--type-adrs)',
-  decision: 'var(--type-decisions)',
-  milestone: 'var(--type-milestones)',
-  release: 'var(--type-releases)',
-  component: 'var(--type-components)',
-  tech: 'var(--type-tech)',
-  feature: 'var(--type-features)',
+  sprint: 'var(--section-sprints)',
+  adr: 'var(--section-adrs)',
+  decision: 'var(--section-decisions)',
+  milestone: 'var(--section-milestones)',
+  release: 'var(--section-releases)',
+  component: 'var(--section-components)',
+  tech: 'var(--section-tech)',
+  feature: 'var(--section-features)',
 };
 
 export function loreKinds(lang: KitLang): KitConfig['kinds'] {

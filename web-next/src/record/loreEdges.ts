@@ -71,7 +71,6 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   IN_AREA: { ru: 'в области', en: 'in area', color: '--inf' },
   SERVES: { ru: 'обслуживает', en: 'serves', color: '--inf' },
   USES: { ru: 'использует', en: 'uses', color: '--inf' },
-  OF_TYPE: { ru: 'вида', en: 'of type', color: '--t2' },
   FORMALIZED_AS: { ru: 'оформлено как', en: 'formalized as', color: '--acc' },
   // Планирование и поставка
   TARGETS_MILESTONE: { ru: 'к вехе', en: 'targets milestone', color: '--acc' },
@@ -110,7 +109,6 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   TARGETS_PAGE: { ru: 'на страницу', en: 'targets page', color: '--inf' },
   // Структурные: принадлежность и иерархия
   HAS_STATE: { ru: 'версия записи', en: 'has state', color: '--t3', layer: S },
-  HAS_STATUS: { ru: 'статус', en: 'has status', color: '--t3', layer: S },
   BELONGS_TO_PROJECT: { ru: 'в проекте', en: 'in project', color: '--t3', layer: S },
   BELONGS_TO: { ru: 'принадлежит', en: 'belongs to', color: '--t3', layer: S },
   PART_OF: { ru: 'входит в', en: 'part of', color: '--t3', layer: S },

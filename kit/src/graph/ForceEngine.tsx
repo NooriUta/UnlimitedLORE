@@ -4,6 +4,7 @@
 // 18 кадров/с на 7 354 узлах). Библиотека грузится лениво, при первом показе.
 import { useEffect, useRef } from 'react';
 import { gxForces } from './settings';
+import { LAYOUT_TIMEOUT_MS } from './graphContract';
 import { neighborsOf, resolveColor, type GxEngineProps } from './engineTypes';
 
 type FgNode = { id: string; type: string; title?: string; x?: number; y?: number };
@@ -11,6 +12,11 @@ type FgLink = { source: string | FgNode; target: string | FgNode; rel: string; k
 // Тип экземпляра force-graph — из его объявлений, но через typeof import, чтобы
 // не тянуть библиотеку в основной бандл.
 type Fg = InstanceType<typeof import('force-graph').default<FgNode, FgLink>>;
+
+/** Порог остывания физики: ниже — движок останавливается и сообщает «раскладка готова». */
+const FORCE_ALPHA_MIN = 0.005;
+/** Потолок физики по времени — внутри срока плашки GraphExplorer (LAYOUT_TIMEOUT_MS). */
+const FORCE_COOLDOWN_MS = LAYOUT_TIMEOUT_MS - 1500;
 
 const idOf = (v: string | FgNode) => (typeof v === 'string' ? v : v.id);
 
@@ -61,6 +67,12 @@ export default function ForceEngine(p: GxEngineProps) {
           ctx.fillText(n.title ?? n.id, n.x ?? 0, (n.y ?? 0) + rWorld + 4 / scale);
         });
       g.d3Force('x', d3.forceX()).d3Force('y', d3.forceY());
+      // S9-08 (препрод 14.11): у force-graph d3AlphaMin = 0 — по остыванию движок не
+      // останавливается никогда, только по cooldownTime = 15 с. Срок плашки — 8 с, поэтому
+      // «не уложилась» выходила на ЛЮБОМ графе, и на четырёх узлах. Порог остывания 0,005 —
+      // ≈230 тиков (≈4 с при 60 кадрах); потолок времени — внутри срока: после остановки узлы
+      // больше не двигаются, и «уложилась» — правда.
+      g.d3AlphaMin(FORCE_ALPHA_MIN).cooldownTime(FORCE_COOLDOWN_MS);
       let clicks = 0;
       g.onNodeClick(n => {
         // Двойной щелчок — открыть запись; одиночный — подсветить соседей.

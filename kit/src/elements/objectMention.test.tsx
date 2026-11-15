@@ -18,8 +18,8 @@ import { MartProse } from '../content/MartProse';
 registerGameIcons({ prefix: 'game-icons', icons: { 'scroll-quill': { body: '<path d="M0 0h1"/>' }, cog: { body: '<path d="M1 1h1"/>' }, 'open-folder': { body: '<path d="M2 2h1"/>' } }, width: 512, height: 512 });
 
 const kinds: KitConfig['kinds'] = {
-  adr: { title: 'ADR', icon: 'scroll-quill', color: 'var(--type-adrs)' },
-  component: { title: 'Компонент', icon: 'cog', color: 'var(--type-components)' },
+  adr: { title: 'ADR', icon: 'scroll-quill', color: 'var(--section-adrs)' },
+  component: { title: 'Компонент', icon: 'cog', color: 'var(--section-components)' },
   project: { title: 'Проект', icon: 'open-folder' },
 };
 const config: KitConfig = { modules: [], menu: { groups: [] }, kinds, statuses: { items: [] } };
@@ -48,7 +48,7 @@ describe('ObjectMention — один элемент упоминания', () =>
     const { container } = render(<ObjectMention id="ADR-LORE-050" kind="adr" title="Ссылки в MD" href="#ADR-LORE-050" kinds={kinds} />);
     const a = container.querySelector('a[data-mention]')!;
     expect(a.getAttribute('href')).toBe('#ADR-LORE-050');
-    expectLook(a, 'adr', 'var(--type-adrs)');
+    expectLook(a, 'adr', 'var(--section-adrs)');
     expect(a.textContent).toContain('Ссылки в MD');
     expect(a.getAttribute('title')).toBe('ADR: ADR-LORE-050');
   });
@@ -73,9 +73,9 @@ describe('ObjectMention — один элемент упоминания', () =>
     expect(container.querySelectorAll('.sk-pill--id').length).toBe(0);
   });
   it('цвет: токен как есть, имя токена — var()', () => {
-    expect(mentionColor('var(--type-adrs)')).toBe('var(--type-adrs)');
-    expect(mentionColor('--type-adrs')).toBe('var(--type-adrs)');
-    expect(mentionColor('type-adrs')).toBe('var(--type-adrs)');
+    expect(mentionColor('var(--section-adrs)')).toBe('var(--section-adrs)');
+    expect(mentionColor('--section-adrs')).toBe('var(--section-adrs)');
+    expect(mentionColor('section-adrs')).toBe('var(--section-adrs)');
     expect(mentionColor('')).toBeUndefined();
     expect(mentionLook(kinds, 'ADR')?.icon).toBe('scroll-quill');
   });
@@ -84,27 +84,27 @@ describe('ObjectMention — один элемент упоминания', () =>
 describe('места упоминаний идут через ObjectMention', () => {
   it('RecordRef (свойства, связи строкой)', () => {
     const { container } = render(<RecordRef id="ADR-LORE-050" ctx={ctxOf([adr])} />);
-    expectLook(container.querySelector('a'), 'adr', 'var(--type-adrs)');
+    expectLook(container.querySelector('a'), 'adr', 'var(--section-adrs)');
   });
   it('RecordLinks (вкладка «Связи» списком)', () => {
     const ctx = ctxOf([adr], {});
     ctx.data.edges = [{ from: 'D-1', to: 'ADR-LORE-050', type: 'DECIDED_IN' }];
     const { container } = render(<RecordLinks record={{ id: 'D-1', kind: 'decision', title: 'Д', status: '', fields: {} }} ctx={ctx} lang="ru" />);
-    expectLook(container.querySelector('.sk-rec-links__item a'), 'adr', 'var(--type-adrs)');
+    expectLook(container.querySelector('.sk-rec-links__item a'), 'adr', 'var(--section-adrs)');
   });
   it('ValueChips: вид поля (refKind) красит чипы', () => {
     const { container } = render(<ValueChips value={[{ id: 'FORSETI', label: 'Forseti' }]} href={id => `#${id}`} kind="component" kinds={kinds} />);
-    expectLook(container.querySelector('.sk-rec-chips__item a'), 'component', 'var(--type-components)');
+    expectLook(container.querySelector('.sk-rec-chips__item a'), 'component', 'var(--section-components)');
   });
   it('ValueChips: вид, названный самим чипом, главнее вида поля', () => {
     const { container } = render(<ValueChips value={[{ id: 'ADR-1', label: 'A', kind: 'adr' }]} href={id => `#${id}`} kind="component" kinds={kinds} />);
-    expectLook(container.querySelector('.sk-rec-chips__item a'), 'adr', 'var(--type-adrs)');
+    expectLook(container.querySelector('.sk-rec-chips__item a'), 'adr', 'var(--section-adrs)');
   });
   it('RelationField: чипы правимой связи', () => {
     const ctx = ctxOf([], { hooks: { onRelation: async () => {} }, roles: { reader: { canEdit: true, canStatus: false } } });
     const { container } = render(<RelationField record={{ id: 'T-1', kind: 'task', title: 'T', status: '', fields: {} }} ctx={ctx} lang="ru" label="Компоненты"
       value={[{ id: 'FORSETI', label: 'Forseti' }]} rel="BELONGS_TO" dir="out" refKind="component" view={null} />);
-    expectLook(container.querySelector('.sk-relfield__chip a'), 'component', 'var(--type-components)');
+    expectLook(container.querySelector('.sk-relfield__chip a'), 'component', 'var(--section-components)');
   });
   it('MD: [[тип:код]] в чтении получает значок и цвет вида', () => {
     const { container } = render(<MartProse text="см. [[adr:ADR-LORE-050]]" refHref={r => `#${r.id}`}
@@ -112,7 +112,7 @@ describe('места упоминаний идут через ObjectMention', ()
     const ref = container.querySelector('.sk-wref')!;
     expect(ref.tagName).toBe('A');
     expect(ref.getAttribute('data-kind')).toBe('adr');
-    expect((ref as HTMLElement).style.getPropertyValue('--mention-c')).toBe('var(--type-adrs)');
+    expect((ref as HTMLElement).style.getPropertyValue('--mention-c')).toBe('var(--section-adrs)');
     expect(ref.querySelector('svg.sk-mention__icon')).toBeTruthy();
     expect(ref.textContent).toContain('ADR-LORE-050');
   });
@@ -124,9 +124,9 @@ describe('места упоминаний идут через ObjectMention', ()
 
 describe('тема: токены цвета видов и правило упоминания', () => {
   const css = readFileSync(`${process.cwd()}/src/styles/seidr.css`, 'utf8');
-  it('токены --type-* канона объявлены темой', () => {
+  it('токены --section-* канона объявлены темой', () => {
     for (const t of ['adrs', 'components', 'decisions', 'features', 'milestones', 'releases', 'sprints', 'tech']) {
-      expect(css, `--type-${t}`).toMatch(new RegExp(`--type-${t}\\s*:`));
+      expect(css, `--section-${t}`).toMatch(new RegExp(`--section-${t}\\s*:`));
     }
   });
   it('значок упоминания окрашен цветом вида', () => {

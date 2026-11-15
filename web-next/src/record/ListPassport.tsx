@@ -15,7 +15,7 @@ import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
 import { loreRefHref, loreRefLook, mdEditorWithRefs } from './loreMdRefs';
 import { parentsOf } from './loreRefCreate';
-import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
+import { fetchLoreGraph, graphNotes, mergeGraph, relsOf, topUpOpen, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { loreListPeek, loreRefPeek } from './lorePeek';
 import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
@@ -236,6 +236,20 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       e => { if (alive) setGraph({ key: graphKey, error: e instanceof Error ? e.message : String(e) }); });
     return () => { alive = false; };
   }, [graphKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // S9-08 (препрод 14.11): раскрытый кластер (gopen) при выдаче, упёршейся в потолок сервера, —
+  // его тип догружается обходом строго по нему, а не остаётся обрезком.
+  const [gopenRaw] = useUrlParam('gopen');
+  const gopen = (gopenRaw ?? '').split(',').filter(Boolean).sort().join(',');
+  const [topUp, setTopUp] = useState<{ key: string; body: LoreGraphBody } | null>(null);
+  const graphBody = graph && graph.key === graphKey ? graph.body : undefined;
+  const topUpKey = graphKey && graphBody?.meta.truncated && gopen ? `${graphKey}|${gopen}` : null;
+  useEffect(() => {
+    if (!topUpKey || !graphBody || !view) return;
+    let alive = true;
+    topUpOpen(graphBody, gopen.split(','), { type, id: view.record.id, depth: gdepth }, fetchImpl)
+      .then(body => { if (alive) setTopUp({ key: topUpKey, body }); }, () => { /* догрузка не вышла — кластер остаётся «не меньше» */ });
+    return () => { alive = false; };
+  }, [topUpKey, graphBody]); // eslint-disable-line react-hooks/exhaustive-deps
   // Правка характеристик (S4-24): варианты enum-полей — из справочников сервера
   // (срез dictionary по dict_type поля схемы). Справочник не пришёл — поле не
   // правится (выбирать не из чего), а не показывает пустой список.
@@ -417,7 +431,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;
   const graphData = g?.body
-    ? (() => { const d = mergeGraph(view.data, g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
+    ? (() => { const d = mergeGraph(view.data, topUp && topUp.key === topUpKey ? topUp.body : g.body); return { ...d, meta: { ...d.meta, graphRels: (graphBase && graphRels.current.get(graphBase)) || d.meta.graphRels, graphNotes: graphNotes(g.body.meta, lang) } }; })()
     : g?.error
       ? { ...view.data, meta: { ...view.data.meta, graphNotes: [`${appT(lang, 'pp.graphFailed')}: ${g.error}`] } }
       : view.data;

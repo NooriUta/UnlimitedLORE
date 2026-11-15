@@ -3,7 +3,7 @@
 // давал только один шаг, и глубина 2–3 вкладки ничего не добавляла.
 import { describe, expect, it, vi } from 'vitest';
 import type { KitData } from '@seidr/kit';
-import { depthsOf, fetchLoreGraph, graphNotes, mergeGraph, relsOf, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
+import { depthsOf, fetchLoreGraph, graphNotes, mergeGraph, relsOf, topUpOpen, LORE_GRAPH_TYPES, type LoreGraphBody } from './loreGraph';
 import { LORE_KIND_COLOR } from '../shell/loreKinds';
 
 const BODY: LoreGraphBody = {
@@ -90,5 +90,36 @@ describe('GC-04 · клиент /lore/graph', () => {
   it('K4-MENTION-LOOK: узел графа — цветом вида, тем же, что упоминание (канон v1)', () => {
     const g = LORE_GRAPH_TYPES('ru');
     for (const [t, c] of Object.entries(LORE_KIND_COLOR)) expect(g[t]?.color, t).toBe(c);
+  });
+});
+
+// S9-08, препрод 14.11 (ADR-LORE-045): раскрытый кластер обязан показать узлы своего типа.
+// Сервер упёрся в потолок — тип догружается отдельным запросом (rels=тип), а не остаётся пустотой.
+describe('S9-08 · раскрытие кластера при обрезанной выдаче', () => {
+  const KD: KitData = { records: [], edges: [], journal: [], meta: { generated_at: 't' } };
+  it('счёт типов по обрезанной окрестности помечен — точным его не считать', () => {
+    expect(mergeGraph(KD, { ...BODY, meta: { ...BODY.meta, rels_available_truncated: true } }).meta.graphRelsCut).toBe(true);
+    expect(mergeGraph(KD, BODY).meta.graphRelsCut).toBeFalsy();
+  });
+  it('выдача целая — догружать нечего, запроса нет', async () => {
+    const f = ok(BODY);
+    const got = await topUpOpen(BODY, ['JUSTIFIED_BY'], { type: 'sprint', id: 'SPRINT_X', depth: 2 }, f);
+    expect(f).not.toHaveBeenCalled();
+    expect(got).toBe(BODY);
+  });
+  it('выдача обрезана — раскрытые типы догружаются rels и сливаются без дублей', async () => {
+    const cut: LoreGraphBody = { ...BODY, meta: { ...BODY.meta, truncated: true, capped_at: 3 } };
+    const more: LoreGraphBody = {
+      nodes: [BODY.nodes[0], { id: 'ADR-2', type: 'adr', title: 'Ещё', status: null, status_category: null, depth: 1 }],
+      edges: [{ from: 'SPRINT_X', rel: 'JUSTIFIED_BY', to: 'ADR-2' }],
+      meta: { complete: true, truncated: false },
+    };
+    const f = ok(more);
+    const got = await topUpOpen(cut, ['JUSTIFIED_BY'], { type: 'sprint', id: 'SPRINT_X', depth: 2 }, f);
+    expect(f.mock.calls[0][0]).toBe('/lore/graph?type=sprint&id=SPRINT_X&depth=2&rels=JUSTIFIED_BY');
+    expect(got.nodes.map(n => n.id)).toEqual(['SPRINT_X', 'SPRINT_X/T-1', 'ADR-1', 'ADR-2']);
+    expect(got.edges).toHaveLength(3);
+    // Мета — от основного ответа: неполнота окрестности в целом остаётся названной.
+    expect(got.meta.truncated).toBe(true);
   });
 });

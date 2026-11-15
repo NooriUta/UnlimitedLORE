@@ -330,13 +330,13 @@ function Samples() {
         {/* K4-MENTION-LOOK: значок и цвет вида + ссылка; вид без цвета — нейтральный;
             нет адреса — текст той же формы. */}
         <div className="bare__row">
-          <ObjectMention id="ADR-LORE-050" kind="adr" title="Ссылки в MD" href="#ADR-LORE-050" look={{ icon: 'scroll-quill', color: 'var(--type-adrs)', title: 'ADR' }} />
-          <ObjectMention id="SPRINT_UXR_S13_KIT4" kind="sprint" href="#s" look={{ icon: 'sprint', color: 'var(--type-sprints)', title: 'Спринт' }} />
+          <ObjectMention id="ADR-LORE-050" kind="adr" title="Ссылки в MD" href="#ADR-LORE-050" look={{ icon: 'scroll-quill', color: 'var(--section-adrs)', title: 'ADR' }} />
+          <ObjectMention id="SPRINT_UXR_S13_KIT4" kind="sprint" href="#s" look={{ icon: 'sprint', color: 'var(--section-sprints)', title: 'Спринт' }} />
           <ObjectMention id="NooriUta/UnlimitedLORE" kind="project" href="#p" look={{ icon: 'open-folder', title: 'Проект' }} />
-          <ObjectMention id="FORSETI" kind="component" look={{ icon: 'cog', color: 'var(--type-components)', title: 'Компонент' }} />
+          <ObjectMention id="FORSETI" kind="component" look={{ icon: 'cog', color: 'var(--section-components)', title: 'Компонент' }} />
         </div>
         <MartProse text="В тексте: [[adr:ADR-LORE-050]] и [[ADR-LORE-038]]." refHref={r => `#${r.id}`}
-          refLook={r => (r.type === 'adr' ? { icon: 'scroll-quill', color: 'var(--type-adrs)', title: 'ADR' } : null)} />
+          refLook={r => (r.type === 'adr' ? { icon: 'scroll-quill', color: 'var(--section-adrs)', title: 'ADR' } : null)} />
       </section>
       <section className="bare__sec" data-kit="fields">
         <h2 className="bare__h2">Редакторы полей</h2>

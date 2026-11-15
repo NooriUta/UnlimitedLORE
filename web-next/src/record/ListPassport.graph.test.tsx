@@ -92,4 +92,16 @@ describe('GC-04 · вкладка «Граф» на /lore/graph', () => {
       expect(urls.some(u => u.searchParams.get('rels') === 'HAS_TASK' && u.searchParams.get('depth') === '4')).toBe(true);
     }, { timeout: 8000 });
   }, 15000);
+
+  // S9-08, препрод 14.11: выдача упёрлась в потолок, человек раскрыл кластер (gopen) — его тип
+  // догружается с сервера отдельным запросом, а не остаётся обрезком.
+  it('обрезанная выдача + раскрытый кластер — запрос rels=этот тип', async () => {
+    window.history.replaceState(null, '', '/?tab=graph&gopen=JUSTIFIED_BY');
+    const f = net(() => json({ ...GRAPH, meta: { ...GRAPH.meta, truncated: true, complete: false, capped_at: 3 } }));
+    show(f);
+    await waitFor(() => {
+      const urls = f.mock.calls.map(c => new URL(String(c[0]), 'http://lore.test')).filter(u => u.pathname === '/lore/graph');
+      expect(urls.some(u => u.searchParams.get('rels') === 'JUSTIFIED_BY')).toBe(true);
+    }, { timeout: 8000 });
+  }, 15000);
 });

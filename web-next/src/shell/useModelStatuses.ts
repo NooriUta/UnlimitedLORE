@@ -19,6 +19,16 @@ import type { ModelNavGroup } from './v2Config';
 /** Словарь статусов LORE для задач, спринтов и ADR — один справочник. */
 export const LORE_STATUS_DICT = 'task_status';
 
+/**
+ * Ключ блока в `model.statuses`. Сервер (LoreModel) кладёт статусы ПО ТИПУ записи
+ * (`statuses.task = {dict: 'task_status', entries}`), а не по имени словаря.
+ * Прежде здесь искали `statuses.task_status` — блока с таким ключом сервер не
+ * отдаёт, и общий словарь оболочки v2 всегда оставался умолчанием приложения.
+ * Ручная фикстура теста была собрана по той же ошибке и её не ловила; поймал
+ * тест на снятом ответе сервера (CT-KIT-FIXTURES, 14.11.2026).
+ */
+export const LORE_STATUS_TYPE = 'task';
+
 export interface ModelStatuses {
   /** Статьи для `v2Config`; пусто — остаётся рукописное умолчание. */
   items: KitConfig['statuses']['items'];
@@ -67,7 +77,7 @@ export async function fetchModelStatuses(
   // Тип res.model допускает undefined у состояния error, а оно уже отсечено
   // выше возвратом: иначе пришлось бы молча подставлять пустой документ.
   if (!res.model) return { items: [], notes: [...notes, "модель прочитана, но документа в ответе нет"] };
-  const parsed = configFromModel(res.model, { statusDict: LORE_STATUS_DICT });
+  const parsed = configFromModel(res.model, { statusDict: LORE_STATUS_TYPE });
   // Берём замечания ТОЛЬКО про статусы: про виды записей этот потребитель не
   // спрашивал, и печатать человеку жалобу о том, чем сам не пользуешься, —
   // шум, а не честность.

@@ -2081,12 +2081,18 @@ export function ListView({
     body = emptyFilteredState;
   } else if (view === 'cards') {
     // Карточки (S4-22): сетка auto-fit; на карточке — название, ID, статус и поля колонок.
-    const extra = columns.filter(c0 => c0.startsWith('fields.'));
+    // Карточка показывает то же, что колонки списка (K4-PHONE-PEOPLE-CARDS): поля — все
+    // колонки, кроме служебных, с приставкой «fields.» или без (у экранов приложения её нет —
+    // раньше на карточку не попадало ни одно поле); код — только если колонкой его
+    // показывает и таблица (у человека код — kc_sub, ему на карточке не место).
+    const CARD_STRUCTURAL = new Set(['id', 'title', 'title+id', 'status', 'select', 'actions']);
+    const extra = columns.filter(c0 => !CARD_STRUCTURAL.has(c0));
+    const cardShowsId = columns.includes('id') || columns.includes('title+id');
     body = (
       <ul className="sk-cards">
         {filtered.map(r => (
           <li key={r.id} className={`sk-cards__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
-            <div className="sk-cards__head">{statusVisible(r) && cell('status', r)}<Pill variant="id">{r.id}</Pill></div>
+            <div className="sk-cards__head">{statusVisible(r) && cell('status', r)}{cardShowsId && <Pill variant="id">{r.id}</Pill>}</div>
             <div className="sk-cards__title"><Title r={r} href={href} onOpen={onOpen} /></div>
             {extra.length > 0 && (
               <dl className="sk-cards__fields">

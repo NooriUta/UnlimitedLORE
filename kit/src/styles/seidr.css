@@ -77,14 +77,14 @@
      (значок, рамка чипа) и узел графа — одинаково в обеих темах, как в v1.
      Какой вид каким токеном — называет приложение (KindConfig.color), kit
      держит только палитру. У вида без канона цвета нет: не выдумываем. */
-  --type-milestones: #E0A13D;
-  --type-sprints:    #7DBF78;
-  --type-adrs:       #B48EAD;
-  --type-decisions:  #D9A05B;
-  --type-releases:   #57C7D4;
-  --type-components: #88B8A8;
-  --type-tech:       #C0A36E;
-  --type-features:   #A8B860;
+  --section-milestones: #E0A13D;
+  --section-sprints:    #7DBF78;
+  --section-adrs:       #B48EAD;
+  --section-decisions:  #D9A05B;
+  --section-releases:   #57C7D4;
+  --section-components: #88B8A8;
+  --section-tech:       #C0A36E;
+  --section-features:   #A8B860;
 
   /* ── «бумага» диаграмм MartProse (S4-00d) ──
      Диаграммы mermaid/bpmn рисуются на светлой подложке при любой теме: их
@@ -4496,6 +4496,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-gx__canvas { position: absolute; inset: 0; }
 .sk-gx__loading { padding: 16px; color: var(--t3); font-size: var(--fs-sm); }
 .sk-gx__sel { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); font-size: var(--fs-sm); }
+/* S9-08 (препрод 14.11): панель кластера в карточке-peek — в потоке, а не absolute: иначе карточка схлопывалась в линию. */
+.sk-gx__csel { display: flex; align-items: center; gap: 8px; padding: 8px 32px 8px 8px; font-size: var(--fs-sm); }
 .sk-gx__peek { position: absolute; top: 8px; right: 8px; width: min(380px, calc(100% - 16px)); max-height: calc(100% - 16px); overflow: auto; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg2); box-shadow: 0 6px 20px color-mix(in srgb, var(--bg0) 60%, transparent); }
 .sk-gx__peek-close { position: absolute; top: 4px; right: 4px; z-index: 1; }
 .sk-gx__sel-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t1); }
@@ -4526,6 +4528,19 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
   .sk-gx__side { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--bd); }
 }
 .sk-rec-graph__depth { display: inline-flex; align-items: center; gap: 4px; }
+/* S9-08 (владелица 14.11): глубина и типы — выпадающими списками. */
+.sk-rec-graph__select { min-height: 24px; padding: 0 6px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); color: var(--t1); font: inherit; font-size: var(--fs-sm); }
+.sk-checkmenu { position: relative; display: inline-block; }
+.sk-checkmenu__sum { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; font-size: var(--fs-sm); }
+.sk-checkmenu__sum::-webkit-details-marker { display: none; }
+.sk-checkmenu__n { color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
+.sk-checkmenu__list { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; min-width: 220px; max-height: 320px; overflow: auto; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); box-shadow: 0 6px 20px color-mix(in srgb, var(--bg0) 60%, transparent); }
+.sk-checkmenu__list li { display: block; }
+.sk-checkmenu__row { display: flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 6px; border-radius: var(--r-md); color: var(--t1); font-size: var(--fs-sm); cursor: pointer; }
+.sk-checkmenu__row:hover { background: var(--bg3); }
+.sk-checkmenu__row input { accent-color: var(--acc); }
+.sk-checkmenu__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-checkmenu__count { margin-left: auto; color: var(--t3); font-family: var(--mono); font-size: var(--fs-xs); }
 .sk-rec-graph__ctl-label { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-graph__legend .sk-pill__main,
 .sk-rec-graph__layer .sk-pill__main { display: inline-flex; align-items: center; gap: 4px; }
