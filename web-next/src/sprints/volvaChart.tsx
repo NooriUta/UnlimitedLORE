@@ -26,8 +26,12 @@ export const VOLVA_SPRINTS_CHART = 'sprints_timeline';
 export const VOLVA_SOURCE = 'Völva';
 /** Иконка вида: провидица Völva — хрустальный шар (game-icons). */
 export const VOLVA_VIEW_ICON = 'crystal-ball';
-/** Ожидание первого сообщения встройки, мс; 0 — не ждать (VE-7: статическая встройка пока ничего не шлёт). */
-export const VOLVA_ANSWER_TIMEOUT_MS = 0;
+/**
+ * Ожидание первого сообщения встройки, мс. VE-7 (Völva 0.1.12 на стенде, 15.11.2026): статическая
+ * встройка шлёт metabase.frame сразу после отрисовки и metabase.error при ошибке — молчание 15 с
+ * значит «не ответила».
+ */
+export const VOLVA_ANSWER_TIMEOUT_MS = 15000;
 
 /** Слой графиков: volva — только явным значением; иначе echarts. */
 export function chartLayerOf(rows: readonly Pick<DictRow, 'code' | 'label_ru' | 'is_active'>[]): ChartLayer {
@@ -127,9 +131,8 @@ export function VolvaChart({ chart, title, projects, fetchImpl }: VolvaChartProp
     return () => ctrl.abort();
   }, [chart, key, fetchImpl, lang, attempt]);
   const retry = useCallback(() => setAttempt(n => n + 1), []);
-  // VE-7 (Völva, 14.11.2026): статическая встройка родителю пока не шлёт ничего — ни metabase.frame, ни
-  // ошибки. Ожидание первого frame (kit, «не ответила» через 15 с) подменяло бы рабочий график отказом,
-  // поэтому оно выключено (0) до релиза Völva с отправкой; тогда — включить и слушать type:"error".
+  // VE-7 (Völva 0.1.12): высота — metabase.frame, ошибка — metabase.error (рамка kit показывает
+  // «Völva: ошибка» с кодом); молчание 15 с — «не ответила».
   return <EmbedChartFrame source={VOLVA_SOURCE} title={title} state={state} minHeight={320} onRetry={retry} answerTimeoutMs={VOLVA_ANSWER_TIMEOUT_MS} />;
 }
 
