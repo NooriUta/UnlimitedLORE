@@ -72,6 +72,18 @@ jobs:
         working-directory: web-next
         run: npx playwright install --with-deps chromium
 
+      # Достижим ли стенд и KC из контейнера раннера — через прокси раннера и напрямую.
+      # Только диагностика: шаг не роняет джобу (прогон 7846 упал на входе без следа).
+      - name: Сеть — достижимость стенда и KC
+        continue-on-error: true
+        run: |
+          for u in "$LORE_STAND_URL/news" "https://odal.seidrstudio.pro/kc/realms/omilorePreprod/.well-known/openid-configuration"; do
+            echo "== $u"
+            getent hosts "$(echo "$u" | sed -E 's#https?://([^/]+).*#\1#')" || echo "DNS: не разрешается"
+            echo "через прокси (${HTTPS_PROXY:-нет}): $(curl -sS -o /dev/null --max-time 20 -w '%{http_code} %{remote_ip} %{time_total}s' "$u" 2>&1)"
+            echo "напрямую: $(env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy curl -sS -o /dev/null --max-time 20 -w '%{http_code} %{remote_ip} %{time_total}s' "$u" 2>&1)"
+          done
+
       - name: Автологин тестовых учёток
         working-directory: web-next
         run: npm run e2e:stand:login
