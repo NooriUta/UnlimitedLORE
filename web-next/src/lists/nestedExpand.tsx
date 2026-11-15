@@ -33,10 +33,15 @@ export function childScreenOf(kind: string | undefined): ListScreenId | undefine
 /** Типы, у которых клиент умеет сменить статус из списка (loreClient.setStatus). */
 const STATUS_KINDS = new Set(['task', 'sprint']);
 
-function NestedChildren({ parent, kind, rows, config, client, lang }: {
+function NestedChildren({ parent, kind, rows, config, client, lang, childHref }: {
   parent: KitRecord; kind: string; rows: ListExpandRows; config: KitConfig; client: LoreClient; lang: KitLang;
+  childHref?: BuildExpandArgs['childHref'];
 }) {
-  const href = recordHref(kind, '_') ? (id: string) => recordHref(kind, id) ?? '' : undefined;
+  // PU-29 (владелица 14.11.2026): паспорт ребёнка — В ТОМ ЖЕ разделе, левая часть остаётся
+  // двухуровневой. Ссылку «на месте» строит экран; без неё — адрес раздела ребёнка, как раньше.
+  // Окна адреса нет (urlState=false) — «на месте» не построить: прежний адрес раздела ребёнка, ссылка не пропадает.
+  const inPlace = (id: string) => childHref?.(kind, id) ?? recordHref(kind, id) ?? '';
+  const href = childHref || recordHref(kind, '_') ? inPlace : undefined;
   // Приёмка препрода 14.11.2026: колонка, указывающая на саму раскрытую строку («Спринт» внутри
   // спринта), — повтор родителя; во вложенной таблице её нет.
   // Владелица 14.11.2026: «статус можно было бы в начало передвинуть» — статус первой колонкой.
@@ -67,10 +72,12 @@ export interface BuildExpandArgs {
   /** Конфиг экрана дочернего типа (со статусами модели, если загружены). */
   childConfigOf: (kind: string) => KitConfig | undefined;
   lang: KitLang;
+  /** PU-29: адрес паспорта ребёнка в ТОМ ЖЕ разделе (экран знает своё окно адреса). Нет — раздел ребёнка. */
+  childHref?: (kind: string, id: string) => string | undefined;
 }
 
 /** Раскрытие строки экрана по правилу PU-23. */
-export function buildExpand({ nested, client, childRows, childConfigOf, lang }: BuildExpandArgs): ListExpand {
+export function buildExpand({ nested, client, childRows, childConfigOf, lang, childHref }: BuildExpandArgs): ListExpand {
   const children = nested.children;
   // Как рисовать детей этой строки: таблица своего типа, строки той же таблицы или (детей не
   // объявлено) прежнее содержимое nested.render.
@@ -88,7 +95,7 @@ export function buildExpand({ nested, client, childRows, childConfigOf, lang }: 
     render: r => {
       const p = plan(r);
       if (p?.mode === 'table' && p.kind && p.config) {
-        return <NestedChildren parent={r} kind={p.kind} rows={p.rows ?? { state: 'loading', records: [] }} config={p.config} client={client} lang={lang} />;
+        return <NestedChildren parent={r} kind={p.kind} rows={p.rows ?? { state: 'loading', records: [] }} config={p.config} client={client} lang={lang} childHref={childHref} />;
       }
       return nested.render(r.id, client);
     },

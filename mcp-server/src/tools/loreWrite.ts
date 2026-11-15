@@ -1119,15 +1119,25 @@ export function registerLoreWrite(rawServer: McpServer): void {
     name: 'status_set_batch',
     description: 'Set the same status on multiple LORE entities in one call. ' +
       'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +
-      'Errors are collected per-item without aborting the rest. ' +
-      'Returns {ok, updated, errors[]}.',
+      'Errors are collected per-item without aborting the rest; each error names the server refusal ' +
+      '(code and text, e.g. "HTTP 400 REASON_REQUIRED — …"), not a bare HTTP status. ' +
+      'Carries the same reason and proof as status_set (WK-BATCH-EVIDENCE): reason is REQUIRED for blocked; ' +
+      'an AGENT sets done only with evidence_type=owner_word and evidence_ref holding the time and the verbatim quote. ' +
+      'Returns {ok, updated, unchanged, failed, errors[]}.',
     schema: {
       entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       ids:         z.array(z.string()).describe('list of entity ids'),
       status:      LORE_STATUS,
+      reason:        z.string().optional().describe('WHY, applied to every item: required for blocked (any entity) and for a task returned from review to active'),
+      evidence_type: z.string().optional().describe('task: proof of done for every item — pr | release | lore | probe | doc | url; owner_word — the owner said it is done (the only evidence that lets an AGENT set done)'),
+      evidence_ref:  z.string().optional().describe('task: the proof itself; for owner_word — REQUIRED: the time it was said and the verbatim quote in «…»'),
     },
     path: '/lore/status/batch',
-    body: ({ entity_type, ids, status }) => ({ entity_type, ids, status }),
+    body: ({ entity_type, ids, status, reason, evidence_type, evidence_ref }) => ({
+      entity_type, ids, status, reason: reason ?? null,
+      ...(evidence_type === undefined ? {} : { evidence_type }),
+      ...(evidence_ref === undefined ? {} : { evidence_ref }),
+    }),
   });
 
   definePostTool(server, {
