@@ -38,13 +38,13 @@ const OWN_META: Record<string, { icon: string; color: string }> = {
   deprecated: { icon: ICON_CANON.statusDeprecated, color: 'var(--st-cancelled)' },
 };
 
-function statusItems(lang: KitLang, codes: [code: string, category: Category][]): KitConfig['statuses']['items'] {
+function statusItems(lang: KitLang, codes: [code: string, category: Category][], titlePrefix = 'lists.status'): KitConfig['statuses']['items'] {
   return codes.map(([code, category]) => {
     const own = OWN_META[code];
     const m = statusMeta(code);
     return {
       code,
-      title: appT(lang, `lists.status.${code}` as AppKey),
+      title: appT(lang, `${titlePrefix}.${code}` as AppKey),
       category,
       icon: own?.icon ?? m.icon,
       color: own?.color ?? m.color,
@@ -388,6 +388,11 @@ interface SectionSpec {
   icon: string;
   fields: [key: string, type: 'text' | 'ref' | 'number' | 'date'][];
   statuses?: [code: string, category: Category][];
+  /**
+   * Свой набор подписей статуса: тот же код значит у типа другое («active» у гейта — «Работает»,
+   * у задачи — «В работе»). Не задан — общие `lists.status.*`.
+   */
+  statusTitlePrefix?: string;
   views?: NonNullable<KitConfig['list']>['views'];
   showClosed?: NonNullable<KitConfig['list']>['showClosed'];
   quick?: [id: string, titleKey: AppKey, filter: Record<string, string>][];
@@ -412,7 +417,7 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
         fields: spec.fields.map(([key, type]) => ({ key, title: f(lang, key), type })),
       },
     },
-    statuses: { items: statusItems(lang, spec.statuses ?? []) },
+    statuses: { items: statusItems(lang, spec.statuses ?? [], spec.statusTitlePrefix) },
     list: {
       views: spec.views ?? ['list', 'cards'],
       ...(spec.showClosed ? { showClosed: spec.showClosed } : {}),
@@ -484,13 +489,15 @@ const docsSpec: SectionSpec = {
 /** MD-04, второй заход по QG: гейты качества — состояние, итог прогона, компонент, проект-владелец. */
 const qualityGatesSpec: SectionSpec = {
   kind: 'quality_gate', titleKey: 'lists.qualityGates.title', icon: 'checkered-flag',
-  fields: [['state', 'text'], ['lastRun', 'text'], ['component', 'ref'], ['components', 'ref'], ['project', 'ref'], ['sprint', 'text']],
-  statuses: [],
+  fields: [['lastRun', 'text'], ['component', 'ref'], ['components', 'ref'], ['project', 'ref'], ['sprint', 'text']],
+  // Категории kit: «работает» и «молчит» — открыты (гейт действует), «выведен» — снят.
+  statuses: [['draft', 'todo'], ['active', 'active'], ['stale', 'active'], ['retired', 'cancelled']],
+  statusTitlePrefix: 'lists.qgStatus',
   views: ['list', 'cards'],
-  quick: [['no-project', 'lists.quick.noProjects', { project: '' }]],
-  filters: ['fields.state', 'fields.lastRun', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
-  groupings: ['fields.state', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
-  columns: ['id', 'title', 'state', 'lastRun', 'component', 'project'],
+  quick: [['no-status', 'lists.quick.noStatus', { status: '' }], ['no-project', 'lists.quick.noProjects', { project: '' }]],
+  filters: [STATUS_FACET, 'fields.lastRun', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  groupings: ['status', LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+  columns: ['id', 'title', 'status', 'lastRun', 'component', 'project'],
 };
 
 /** MD-04: ранбуки — область, ADR и проекты; статуса в срезе нет. */
@@ -808,6 +815,7 @@ export const LIST_SCREENS = {
   },
   // MD-04, второй заход по QG: гейты качества — раздел «Работа» и паспорт (только чтение).
   quality_gates: {
+    modelType: 'quality_gate',
     slice: 'quality_gates', titleKey: 'lists.qualityGates.title', icon: 'checkered-flag',
     map: qualityGateRecord, config: lang => sectionConfig(lang, qualityGatesSpec), quickIcons: {},
   },

@@ -5,7 +5,7 @@
 // через #hash адреса. Отправитель шлёт на "*", а в адресе лежит JWT, поэтому
 // доверять сообщению можно ТОЛЬКО с origin подписанного адреса.
 import { describe, expect, it } from 'vitest';
-import { embedOrigin, embedSrc, embedThemeFromAttrs, frameHeightFromMessage } from './embedFrame';
+import { embedOrigin, embedSrc, embedThemeFromAttrs, frameErrorFromMessage, frameHeightFromMessage } from './embedFrame';
 
 const SIGNED = 'https://volva.example.org/embed/question/eyJhbGciOi.payload.sig';
 
@@ -71,5 +71,21 @@ describe('рамка встройки: origin в обе стороны', () => {
     expect(frameHeightFromMessage(msg(origin, { metabase: { type: 'frame', frame: { height: -5 } } }), origin)).toBeNull();
     expect(frameHeightFromMessage(msg(origin, 'строка'), origin)).toBeNull();
     expect(frameHeightFromMessage(msg(origin, { metabase: { type: 'frame', frame: { height: 300 } } }), null)).toBeNull();
+  });
+
+  // VE-7 (Völva 0.1.12, 15.11.2026): при ошибке встройка шлёт
+  // {metabase:{type:"error", error:{code, message}}}, code ∈ FORBIDDEN | NOT_FOUND | QUERY_FAILED.
+  // Код берём только из известного набора, только с origin встройки; текст Völva не показываем.
+  it('ошибка — только с origin встройки и только из известного кода', () => {
+    const origin = 'https://volva.example.org';
+    const msg = (o: string, data: unknown) => ({ origin: o, data });
+    const err = (code: unknown) => ({ metabase: { type: 'error', error: { code, message: 'текст Völva' } } });
+    expect(frameErrorFromMessage(msg(origin, err('FORBIDDEN')), origin)).toBe('FORBIDDEN');
+    expect(frameErrorFromMessage(msg(origin, err('NOT_FOUND')), origin)).toBe('NOT_FOUND');
+    expect(frameErrorFromMessage(msg(origin, err('QUERY_FAILED')), origin)).toBe('QUERY_FAILED');
+    expect(frameErrorFromMessage(msg(origin, err('ЧТО-ТО')), origin)).toBe('UNKNOWN');
+    expect(frameErrorFromMessage(msg('https://evil.example', err('FORBIDDEN')), origin)).toBeNull();
+    expect(frameErrorFromMessage(msg(origin, { metabase: { type: 'frame', frame: { height: 300 } } }), origin)).toBeNull();
+    expect(frameErrorFromMessage(msg(origin, err('FORBIDDEN')), null)).toBeNull();
   });
 });

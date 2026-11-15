@@ -138,6 +138,26 @@ public class LoreRecordResource extends LoreResourceBase {
         return noStore(Response.ok(out));
     }
 
+    /** Тело записи для выгрузки: HTTP-код как у паспорта, значения основной строки и схема. */
+    record Body(int http, Map<String, Object> values, Map<String, Object> schema) {}
+
+    /**
+     * SPRINT_LORE_MD_ARCHIVE/MDA-02, скорость выгрузки (15.11.2026, прод: 7,8 с до первого байта на
+     * 712 записях проекта). Выгрузке нужны только шапка и поля группы body, а полный паспорт
+     * ({@link #existing}) на каждую запись заново резолвит скоуп вызывающего и читает чипы, части,
+     * вкладки связей и версию — около десятка запросов к базе. Здесь — один запрос основного
+     * среза, а значения — той же функцией {@link LoreRecordValues#values}, что у паспорта: тело
+     * в выгрузке и в паспорте одно. Скоуп резолвит вызывающий один раз на всю выгрузку.
+     */
+    Body body(String type, String id, Set<String> scope) {
+        Source src = sourceOf(type);
+        Read main = read(src.slice(), Map.of(src.param(), id), scope);
+        if ("denied".equals(main.state())) return new Body(403, null, null);
+        if (!main.ok()) return new Body(502, null, null);
+        if (main.rows().isEmpty()) return new Body(404, null, null);
+        return new Body(200, LoreRecordValues.values(type, main.rows().get(0)), recordSchema(type));
+    }
+
     private Response existing(String type, String id, String role, boolean identified, Set<String> scope) {
         Source src = sourceOf(type);
         Read main = read(src.slice(), Map.of(src.param(), id), scope);
