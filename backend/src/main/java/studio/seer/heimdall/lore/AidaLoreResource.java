@@ -121,6 +121,54 @@ public class AidaLoreResource extends LoreResourceBase {
     @ConfigProperty(name = "lore.volva.embed.ttl-seconds", defaultValue = "600")
     long volvaTtlSeconds;
 
+    // ── SPRINT_VIZ_EMBED/EMB-L6: подпись ES256 ключом LORE (ADR-LORE-055-D7) ──
+    // Закрытый ключ — секрет (SecretProvider: env | Infisical), открытый — тоже через него
+    // (не секрет, но лежит рядом с парой). Есть оба и издатель — подпись ES256; нет —
+    // временный HS256 по LORE_VOLVA_EMBED_SECRET (слово владелицы: «менее безопасный как временный»).
+    static final String VOLVA_EMBED_ES256_PRIVATE = "LORE_VOLVA_EMBED_ES256_PRIVATE_KEY";
+    static final String VOLVA_EMBED_ES256_PUBLIC = "LORE_VOLVA_EMBED_ES256_PUBLIC_KEY";
+
+    /** Издатель (iss) — origin бэкенда LORE своей среды, как в настройке Völva MB_EMBEDDING_JWT_ISSUERS. */
+    @ConfigProperty(name = "lore.volva.embed.issuer")
+    java.util.Optional<String> volvaIssuer;
+
+    /** Пара ES256 или пусто (не настроено / не разобрано — причина в журнале один раз). */
+    private volatile java.util.Optional<VolvaEmbedEs256.Keys> es256Keys;
+
+    java.util.Optional<VolvaEmbedEs256.Keys> es256Keys() {
+        java.util.Optional<VolvaEmbedEs256.Keys> k = es256Keys;
+        if (k != null) return k;
+        java.util.Optional<String> priv = secrets.get(VOLVA_EMBED_ES256_PRIVATE);
+        java.util.Optional<String> pub = secrets.get(VOLVA_EMBED_ES256_PUBLIC);
+        if (priv.isEmpty() || priv.get().isBlank() || pub.isEmpty() || pub.get().isBlank()) {
+            LOG.warn("[LORE EMBED] ключ ES256 не задан — встройка Völva подписывается ВРЕМЕННЫМ HS256 (ADR-LORE-055-D7)");
+            k = java.util.Optional.empty();
+        } else {
+            try {
+                k = java.util.Optional.of(VolvaEmbedEs256.Keys.of(priv.get(), pub.get()));
+                LOG.infof("[LORE EMBED] подпись встройки ES256, kid=%s", k.get().kid());
+            } catch (IllegalArgumentException e) {
+                LOG.warnf("[LORE EMBED] ключ ES256 не принят (%s) — подпись ES256 выключена", e.getMessage());
+                k = java.util.Optional.empty();
+            }
+        }
+        es256Keys = k;
+        return k;
+    }
+
+    /**
+     * JWKS встройки — открытый (SeerRoleFromTokenFilter.EMBED_JWKS_PATH): Völva проверяет по нему
+     * подпись токенов LORE. Только открытые ключи; ключа нет — пустой список, а не ошибка.
+     */
+    @GET
+    @Path("embed/jwks")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response volvaEmbedJwks() {
+        String body = es256Keys().map(VolvaEmbedEs256::jwks).orElse("{\"keys\":[]}");
+        return Response.ok(body).header("Cache-Control", "public, max-age=300").build();
+    }
+
     /**
      * Подписанный адрес встройки графика Völva для ПОЛЬЗОВАТЕЛЯ: проект берётся
      * из запроса, но выдаётся только в пределах проектов вызывающего; служебный
@@ -134,7 +182,9 @@ public class AidaLoreResource extends LoreResourceBase {
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         java.util.Optional<String> secret = secrets.get(VOLVA_EMBED_SECRET_KEY);
-        boolean configured = secret.isPresent() && !secret.get().isBlank()
+        java.util.Optional<VolvaEmbedEs256.Keys> es = es256Keys();
+        boolean es256 = es.isPresent() && volvaIssuer.isPresent() && !volvaIssuer.get().isBlank();
+        boolean configured = (es256 || (secret.isPresent() && !secret.get().isBlank()))
             && volvaSiteUrl.isPresent() && !volvaSiteUrl.get().isBlank();
         boolean agent = callerClientId() != null;
         java.util.Set<String> allowed = agent ? null : callerAllowedProjects(role);
@@ -150,8 +200,18 @@ public class AidaLoreResource extends LoreResourceBase {
             };
             return noStore(Response.status(st).entity(new LoreError(d.code().toUpperCase(java.util.Locale.ROOT), d.message())));
         }
-        long exp = java.time.Instant.now().getEpochSecond() + volvaTtlSeconds;
-        String jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
+        long iat = java.time.Instant.now().getEpochSecond();
+        long exp = iat + Math.min(volvaTtlSeconds, VolvaEmbedEs256.MAX_LIFETIME_SECONDS);
+        String jwt;
+        if (es256) {
+            String jti = java.util.UUID.randomUUID().toString();
+            jwt = VolvaEmbedEs256.sign(VolvaEmbedEs256.claims(d.chart(), project, volvaIssuer.get(),
+                callerKcSub(), jti, iat, exp), es.get());
+            // Журнал подписи (ADR-LORE-055-D7 п.7): кто, что, jti — без адреса (в нём JWT) и без значений параметров.
+            LOG.infof("[LORE EMBED] подпись ES256 chart=%s sub=%s jti=%s", chart, callerKcSub(), jti);
+        } else {
+            jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
+        }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("chart", chart);
         // S0-04: project — ВСЕГДА массив, ровно то, что заперто в подписи
