@@ -6,24 +6,83 @@
 // Учётка и пароль В seerPreprod — из LORE_STAND_BROKER_ACCOUNTS_JSON (тот же формат, что
 // LORE_STAND_ACCOUNTS_JSON; только TEST*; берётся первая по алфавиту). Нет секрета —
 // «не выполнен». Сохранённые входы здесь не годятся: они сделаны прямым входом.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { authFileFor, jwtPayload } from '../../src/standSmoke/rbac.ts';
 import { parseStandAccounts } from './accounts.ts';
 import { requireStandUrl, shot } from './stand.ts';
+import { storedAccessToken } from './tokens.ts';
 
+const where = (page: Page): string => { try { const u = new URL(page.url()); return `${u.host}${u.pathname}`; } catch { return '?'; } };
+
+/**
+ * Вход через провайдера seer. Возвращает null при успехе или текст стопа (экран KC / причина).
+ * Кнопка — #social-seer (замер KC omilorePreprod 15.11.2026: <a id="social-seer">«Войти через
+ * AIDA»</a>). Признак успеха — сессия oidc.user:* на домене стенда, как у автологина: строк
+ * ленты у учётки без проектов нет, а «Новости» живут без оболочки (прогоны 7847/7853).
+ */
 async function brokerLogin(page: Page, login: string, password: string): Promise<string | null> {
-  await page.goto('/news');
-  const provider = page.locator('a[id^="social-"], a:has-text("AIDA")').first();
-  await provider.waitFor({ timeout: 45_000 });
-  await provider.click();
-  await page.locator('#username').waitFor({ timeout: 45_000 });
-  await page.locator('#username').fill(login);
-  await page.locator('#password').fill(password);
-  await page.locator('#kc-login').click();
-  const app = page.locator('[data-testid^="news-row-"]');
-  const kcTitle = page.locator('#kc-page-title, .kc-feedback-text, #input-error');
-  await app.or(kcTitle).first().waitFor({ timeout: 45_000 });
-  if (await app.first().isVisible().catch(() => false)) return null;
-  return ((await kcTitle.first().textContent()) ?? '').trim().replace(/\s+/g, ' ').slice(0, 160);
+  const stand = new URL(process.env.LORE_STAND_URL!.trim()).host;
+  // Шаг со временем — в журнал прогона: прогон 34799 простоял 3 мин без следа, где.
+  const t0 = Date.now();
+  const step = (s: string) => console.log(`[BR] +${Math.round((Date.now() - t0) / 1000)}с ${s} — ${where(page)}`);
+  step('открыть стенд');
+  await page.goto('/news', { timeout: 30_000 });
+  const provider = page.locator('#social-seer');
+  try { await provider.waitFor({ timeout: 30_000 }); } catch {
+    return `кнопки «Войти через AIDA» (#social-seer) нет; страница ${where(page)} «${(await page.title().catch(() => '')).slice(0, 60)}»`;
+  }
+  step('нажать «Войти через AIDA»');
+  await provider.click({ timeout: 15_000 });
+  // На странице omilorePreprod ТОЖЕ есть #username — ждать формы по полю нельзя: ожидание
+  // срабатывает ещё до ухода со страницы, и ввод идёт в исчезающую форму (гипотеза 34799).
+  // Ждём адрес realm seerPreprod.
+  try { await page.waitForURL(/\/realms\/seerPreprod\//, { timeout: 30_000 }); } catch {
+    return `перехода в seerPreprod нет; страница ${where(page)}`;
+  }
+  try { await page.locator('#username').waitFor({ timeout: 30_000 }); } catch {
+    return `формы входа seerPreprod нет; страница ${where(page)}`;
+  }
+  // Вход seerPreprod — ДВУХШАГОВЫЙ (замер 15.11.2026: на первой странице только #username и
+  // «Войти», #password — на следующей). Прогон 34823 падал на fill(#password): поля ещё нет.
+  step('ввести логин seerPreprod');
+  await page.locator('#username').fill(login, { timeout: 15_000 });
+  await page.locator('#kc-login').click({ timeout: 15_000 });
+  const pass = page.locator('#password');
+  const kcErr = page.locator('#input-error, .kc-feedback-text, [id^="input-error"]');
+  try { await pass.or(kcErr).first().waitFor({ timeout: 30_000 }); } catch {
+    return `после логина нет ни поля пароля, ни ошибки KC; страница ${where(page)}`;
+  }
+  if (!(await pass.isVisible().catch(() => false))) {
+    return `KC отказал на логине: «${((await kcErr.first().textContent()) ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)}»`;
+  }
+  step('ввести пароль seerPreprod');
+  await pass.fill(password, { timeout: 15_000 });
+  await page.locator('#kc-login').click({ timeout: 15_000 });
+  step('ждать сессию на стенде');
+  // Прогон 34848: после пароля страница …/broker/seer/endpoint 45 с без экрана и без сессии.
+  // Чтобы понять, ждёт ли KC обмена кодом с seerPreprod (серверный вызов) или рисует экран
+  // без #kc-page-title, пишем коды ответов брокера (без query: там code/state) и при таймауте
+  // — заголовок и начало текста страницы.
+  page.on('response', r => {
+    try { const u = new URL(r.url()); if (u.pathname.includes('/broker/') || u.pathname.includes('/login-actions/')) console.log(`[BR] ответ ${r.status()} ${u.host}${u.pathname}`); } catch { /* */ }
+  });
+  page.on('requestfailed', r => {
+    try { const u = new URL(r.url()); console.log(`[BR] запрос не прошёл ${u.host}${u.pathname}: ${r.failure()?.errorText ?? '?'}`); } catch { /* */ }
+  });
+  const kcStop = page.locator('#kc-page-title, .kc-feedback-text, #input-error, #kc-error-message, .pf-c-alert__title, .pf-v5-c-alert__title');
+  const deadline = Date.now() + 45_000;
+  while (Date.now() < deadline) {
+    const onStand = (() => { try { return new URL(page.url()).host === stand; } catch { return false; } })();
+    if (onStand && await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('oidc.user:'))).catch(() => false)) return null;
+    if (!onStand && await kcStop.first().isVisible().catch(() => false)) {
+      return `экран KC: «${((await kcStop.first().textContent()) ?? '').trim().replace(/\s+/g, ' ').slice(0, 120)}» (${where(page)})`;
+    }
+    await page.waitForTimeout(500);
+  }
+  const title = (await page.title().catch(() => '')).slice(0, 60);
+  const text = ((await page.locator('body').innerText({ timeout: 5_000 }).catch(() => '')) || '').trim().replace(/s+/g, ' ').slice(0, 200);
+  return `за 45 с сессии на стенде нет; страница ${where(page)} «${title}»; текст: «${text || 'пусто'}»`;
 }
 
 async function whoami(page: Page): Promise<Record<string, unknown>> {
@@ -45,9 +104,22 @@ const pickAccount = () => {
 test.beforeEach(() => requireStandUrl());
 
 for (const [id, title] of [['BR-01', 'первый вход'], ['BR-02', 'повторный вход']] as const) {
-  test(`${id} Брокеринг «Войти через AIDA» (${title}): сразу лента, та же учётка с ролями`, async ({ browser }, info) => {
+  test(`${id} Брокеринг «Войти через AIDA» (${title}): без экранов KC, та же учётка (тот же sub), что при прямом входе`, async ({ browser }, info) => {
+    // Три шага по 45 с (кнопка, форма seer, сессия) не влезают в общие 60 с (прогон 34775).
+    test.setTimeout(180_000);
     const acc = pickAccount();
-    const ctx = await browser.newContext({ baseURL: process.env.LORE_STAND_URL!.trim() });
+    // «Та же учётка» — тот же sub пользователя omilorePreprod, что у прямого входа (файл
+    // автологина <логин>.json). Имя из графа LORE не годится: на препроде test-* в графе нет.
+    let directSub: string | null = null;
+    try {
+      const raw = readFileSync(authFileFor(process.env.LORE_STAND_AUTH_DIR?.trim() || 'e2e/stand/.auth', acc.login), 'utf8');
+      const tok = storedAccessToken(JSON.parse(raw));
+      const sub = tok ? jwtPayload(tok)?.sub : null;
+      directSub = typeof sub === 'string' ? sub : null;
+    } catch { /* нет прямого входа — сравнить не с чем, скажет проверка ниже */ }
+    // Пустое состояние ЯВНО: Playwright подставляет use.storageState (stand.json = test-sa) и в
+    // browser.newContext() — прогон 7861: «чистый» контекст уже был залогинен, в KC не уходил.
+    const ctx = await browser.newContext({ baseURL: process.env.LORE_STAND_URL!.trim(), storageState: { cookies: [], origins: [] } });
     const page = await ctx.newPage();
     try {
       const stop = await brokerLogin(page, acc.login, acc.password);
@@ -55,9 +127,8 @@ for (const [id, title] of [['BR-01', 'первый вход'], ['BR-02', 'пов
       const me = await whoami(page);
       info.annotations.push({ type: 'account', description: acc.login });
       expect(me.kind, 'вошёл человек').toBe('human');
-      const identity = (me.identity ?? {}) as { name?: string; display_name?: string };
-      expect([identity.name, identity.display_name], 'та же тестовая учётка, а не новый пользователь').toContain(acc.login);
-      expect(((me.project_roles ?? []) as unknown[]).length, 'прежние проектные роли на месте').toBeGreaterThan(0);
+      expect(directSub, `нет прямого входа ${acc.login} — сравнить sub не с чем`).not.toBeNull();
+      expect(me.sub, 'та же учётка omilorePreprod (тот же sub), а не новый пользователь').toBe(directSub);
     } finally {
       await shot(page, info);
       await ctx.close();

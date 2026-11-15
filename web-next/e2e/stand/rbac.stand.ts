@@ -89,10 +89,19 @@ test('RB-04 viewer не пишет: POST /lore/task → 403 со словами'
   expect(String(r.body?.detail ?? r.body?.message ?? r.body?.error ?? ''), 'причина отказа словами').not.toBe('');
 });
 
-test('RB-05 viewer читает: GET /lore/slice/sprints → 200', async ({ login }) => {
+test('RB-05 viewer читает в пределах скоупа: есть проекты → 200, нет проектов → 403 SCOPE_EMPTY словами', async ({ login }) => {
+  // Контракт сервера (проектный скоуп): пустой скоуп — не «200 и пусто», а честный отказ
+  // SCOPE_EMPTY со словами (прогон 7856: у test-viewer на препроде проектов нет).
   const page = await login(RBAC_ACCOUNTS.viewer);
+  const roles = ((await whoami(page)).project_roles ?? []) as unknown[];
   const r = await api(page, 'GET', '/lore/slice/sprints');
-  expect(r.status, `ответ: ${r.text}`).toBe(200);
+  if (roles.length > 0) {
+    expect(r.status, `есть проекты — чтение открыто: ${r.text}`).toBe(200);
+  } else {
+    expect(r.status, `нет проектов — честный отказ, не пустой список: ${r.text}`).toBe(403);
+    expect(String(r.body?.error), 'код отказа').toBe('SCOPE_EMPTY');
+    expect(String(r.body?.detail ?? ''), 'причина словами').not.toBe('');
+  }
 });
 
 test('RB-06 Заголовок X-Seer-Role: superadmin роль не повышает', async ({ login }) => {

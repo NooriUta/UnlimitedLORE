@@ -4,8 +4,8 @@
 //   LORE_STAND_ACCOUNTS_JSON='{"test-sa":"…",…}' \
 //   npm run e2e:stand:login
 //
-// Пишет e2e/stand/.auth/<логин>.json (папка в .gitignore) и stand.json = вход test-admin
-// (или test-sa) для смоука. Прод отвергается так же, как смоуком. Пароли не печатаются.
+// Пишет e2e/stand/.auth/<логин>.json (папка в .gitignore) и stand.json = вход test-sa (super-admin: у admin без проектов лента пуста)
+// (или test-admin, если test-sa не вошла) для смоука. Прод отвергается так же, как смоуком. Пароли не печатаются.
 // Код выхода: 0 — все вошли; 1 — хоть одна не вошла или учёток нет.
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -33,7 +33,7 @@ for (const a of accounts) {
   else { failed++; console.log(`НЕ вошла: ${a.login} — ${r.reason}`); }
 }
 await browser.close();
-for (const admin of ['test-admin', 'test-sa']) {
+for (const admin of ['test-sa', 'test-admin']) {
   const f = authFileFor(dir, admin);
   if (existsSync(f)) { copyFileSync(f, resolve(dir, 'stand.json')); console.log(`stand.json = ${admin}`); break; }
 }
