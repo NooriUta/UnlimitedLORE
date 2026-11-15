@@ -9,19 +9,17 @@
 // подписано и нарисована иконка, а не пустой кружок или «?».
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { GameIcon } from '../elements/GameIcon';
 import { kitT, useKitLang } from '../i18n';
+import { PersonFace } from './PersonFace';
 import { Sheet } from './Sheet';
 
-/** Инициалы: первые буквы двух первых слов имени, заглавные; пусто — ''. */
-export function avatarInitials(name: string | null | undefined): string {
-  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  return words.slice(0, 2).map(w => Array.from(w)[0] ?? '').join('').toLocaleUpperCase();
-}
+export { avatarInitials } from './PersonFace';
 
 export interface AvatarMenuProps {
   /** Отображаемое имя пользователя; не задано — «пользователь не опознан». */
   name?: string | null;
+  /** AP-07: готовый адрес своего аватара (приложение получает картинку с токеном); нет — инициалы. */
+  avatarSrc?: string | null;
   /** Строка под именем в шапке листа: роль, скоуп, сессия. */
   subtitle?: ReactNode;
   /** Заголовок листа; по умолчанию «Личные настройки». */
@@ -32,7 +30,7 @@ export interface AvatarMenuProps {
   children?: ReactNode;
 }
 
-export function AvatarMenu({ name, subtitle, title, open: openProp, onOpenChange, children }: AvatarMenuProps) {
+export function AvatarMenu({ name, avatarSrc, subtitle, title, open: openProp, onOpenChange, children }: AvatarMenuProps) {
   const lang = useKitLang();
   const [openState, setOpenState] = useState(false);
   const open = openProp ?? openState;
@@ -41,17 +39,15 @@ export function AvatarMenu({ name, subtitle, title, open: openProp, onOpenChange
     onOpenChange?.(v);
   };
   const who = name?.trim() || '';
-  const initials = avatarInitials(who);
   const sheetTitle = title ?? kitT(lang, 'kit.avatar.title');
   const label = who
     ? kitT(lang, 'kit.avatar.open', { name: who })
     : kitT(lang, 'kit.avatar.openAnon');
 
+  // Подпись у кнопки и листа уже есть — лицо только украшает (decorative).
   const face = (big: boolean) => (
     <span className={['sk-avatar__face', big ? 'sk-avatar__face--big' : ''].filter(Boolean).join(' ')} aria-hidden="true">
-      {initials
-        ? <span className="sk-avatar__initials">{initials}</span>
-        : <GameIcon slug="person" size={big ? 18 : 14} />}
+      <PersonFace name={who} src={avatarSrc ?? null} size={big ? 'lg' : 'md'} decorative />
     </span>
   );
 
