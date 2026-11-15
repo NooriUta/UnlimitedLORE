@@ -72,4 +72,22 @@ class QgActionsProjectsResolveTest {
         assertEquals(List.of("мусор"), r.rejected());
         assertEquals(LoreQgActionsPoller.SOURCE_SETTING, r.source());
     }
+
+    /**
+     * 15.11.2026: на проде настройку задали, а за два захода в журнале не появилось
+     * ни строчки — молчат и успешный проход, и проход, не увидевший настройку.
+     * Строка захода называет источник списка и итог по каждому проекту.
+     */
+    @Test
+    void строка_захода_называет_источник_и_итог() {
+        String line = LoreQgActionsPoller.passLine(resolve("NooriUta/UnlimitedLORE", ""),
+            List.of("NooriUta/UnlimitedLORE: записано прогонов 7 из 30"));
+        assertTrue(line.contains(LoreQgActionsPoller.SOURCE_SETTING), line);
+        assertTrue(line.contains("проектов 1"), line);
+        assertTrue(line.contains("записано прогонов 7 из 30"), line);
+
+        String empty = LoreQgActionsPoller.passLine(resolve(null, ""), List.of());
+        assertTrue(empty.contains(LoreQgActionsPoller.SOURCE_NONE), empty);
+        assertTrue(empty.contains("записей канала 1 не будет"), empty);
+    }
 }
