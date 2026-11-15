@@ -64,11 +64,16 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
         // Единственное исключение — настройка входа своей среды (LoreAuthConfigResource): она нужна ДО входа
         // и отдаёт только публичное (issuer, клиент фронта). Ровно этот путь, не поддерево.
         if (p.equals(AUTH_CONFIG_PATH)) return false;
+        // EMB-L6: открытый ключ подписи встройки (JWKS) — Völva читает его без токена; только открытые ключи.
+        if (p.equals(EMBED_JWKS_PATH)) return false;
         return p.equals("lore") || p.startsWith("lore/");
     }
 
     /** Открытый путь настройки входа (без ведущего «/»). */
     static final String AUTH_CONFIG_PATH = "lore/auth/config";
+
+    /** Открытый путь JWKS встройки Völva (без ведущего «/»), SPRINT_VIZ_EMBED/EMB-L6. */
+    static final String EMBED_JWKS_PATH = "lore/embed/jwks";
 
     @Override
     public void filter(ContainerRequestContext ctx) {
