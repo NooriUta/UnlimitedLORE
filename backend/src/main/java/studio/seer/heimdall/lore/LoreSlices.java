@@ -2510,7 +2510,8 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, sprint_id, content_md " +
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, sprint_id, content_md, " +
+            "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -2518,7 +2519,12 @@ public final class LoreSlices {
             " ORDER BY qg_id");
 
         slice("quality_gate_by_id",
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id " +
+            // MD-04 (второй заход по QG): паспорт гейта. Владелец — проект ребром BELONGS_TO_PROJECT
+            // (ADR-LORE-053 D7), компонент — связью списком; retired_at и retired_reason пишет путь
+            // записи при переходе в retired. component_id (первый) оставлен прежним читателям.
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id, " +
+            "retired_at, retired_reason, " +
+            "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -3439,6 +3445,23 @@ public final class LoreSlices {
         Map.entry("role_profile_coverage", "AO-06: агрегат покрытия ролей профилем — числа по корпусу, без записей проектов"),
         Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая")
     );
+
+    /**
+     * AP-08 (SPRINT_LORE_ADMIN_POLISH/AP-08, автотест RBAC на препроде 15.11.2026, кейс AD-01):
+     * админские журналы — только admin/superadmin. До гейта их отдавали любому вошедшему: viewer
+     * открывал админку и видел «0 отказов» вместо «нет прав». Агентские профили несут роль admin
+     * (KcBridge), поэтому MCP-чтение журналов не ломается; служебный читатель miniLORE их не читает
+     * (requests_by_caller, 15.11). Сторож AdminOnlySlicesGateTest: новый срез из SCOPE_PENDING с
+     * пометкой «админский/журнал/телеметрия» без места здесь не проходит.
+     */
+    public static final Set<String> ADMIN_ONLY = Set.of(
+        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions",
+        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix");
+
+    /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
+    public static boolean adminOnlyDenied(String id, String role) {
+        return ADMIN_ONLY.contains(id) && !"admin".equals(role) && !"superadmin".equals(role);
+    }
 
     /**
      * AL-SCOPE-HOLES: проектные по смыслу, но пока НЕ под скоупом — нужно решение владелицы

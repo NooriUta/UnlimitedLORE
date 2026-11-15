@@ -29,6 +29,8 @@ export const V2_SECTIONS = [
   'adr', 'decision', 'spec', 'doc', 'question',
   // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: ранбуки — раздел «Знания» с паспортом.
   'runbook',
+  // MD-04, второй заход по QG: гейты качества — раздел «Работа» с паспортом (только чтение).
+  'quality_gate',
   'component', 'tech', 'feature', 'project',
   // S9-05 A: люди и агенты — паспорта «шапка + таблица детей».
   'user', 'agent',
@@ -160,7 +162,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
         {
           id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',
-          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book')],
+          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book'), item('quality_gate', 'checkered-flag')],
         },
         // «Знание» — почему так: ADR, решения, спеки, вопросы.
         {

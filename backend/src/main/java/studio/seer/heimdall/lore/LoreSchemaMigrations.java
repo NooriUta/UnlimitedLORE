@@ -1787,7 +1787,13 @@ final class LoreSchemaMigrations {
         // новые назначения ролей пишут login сами. avatar_ref — ключ файла аватара в хранилище ассетов. Аддитивно, major 17. Номер V92 сверен с сессией модели (V91 — её).
         new Step(92, 17, "user_profile_login_avatar", List.of(
             "CREATE PROPERTY KnowUser.login      IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowUser.avatar_ref IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowUser.avatar_ref IF NOT EXISTS STRING")),
+
+        // SPRINT_QG_REBUILD/QG-09, ADR-LORE-053-D7: словарь состояний гейта qg_status (draft/active/stale/retired).
+        // Справочник правит только человек, а база с нуля должна знать состояния сама — Java-шаг как V90: только
+        // INSERT недостающих строк, существующие не переписываются; DDL нет. Разрешение владелицы менять модель
+        // данных QG в спринте — 15.11.2026. Номер сверен с сессией модели (V91 — её, V92 — профиль). Аддитивно, major 17.
+        new Step(93, 17, QgStatusDictSeed.STEP, List.of())
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */

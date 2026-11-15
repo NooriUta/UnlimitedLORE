@@ -3940,6 +3940,134 @@
       "place" : "link_tab"
     } ]
   }, {
+    "type" : "quality_gate",
+    "label" : "Гейт качества",
+    "labelKey" : "pp.kind.quality_gate",
+    "icon" : "checkered-flag",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Состояние",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "qg_status"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true
+    }, {
+      "key" : "last_run_status",
+      "label" : "Итог последнего прогона",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "projects",
+      "label" : "Проект-владелец",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.field.components",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "component",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "relation" : "attribute"
+    }, {
+      "key" : "sprint",
+      "label" : "Спринт",
+      "labelKey" : "pp.field.sprint",
+      "kind" : "text",
+      "group" : "props"
+    }, {
+      "key" : "date",
+      "label" : "Создан",
+      "labelKey" : "pp.field.date",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "retired_at",
+      "label" : "Выведен из работы",
+      "kind" : "date",
+      "group" : "props"
+    }, {
+      "key" : "retired_reason",
+      "label" : "Причина вывода из работы",
+      "kind" : "text",
+      "group" : "props"
+    } ],
+    "body" : [ {
+      "key" : "description",
+      "label" : "Что проверяет"
+    }, {
+      "key" : "content_md",
+      "label" : "Текст",
+      "labelKey" : "pp.field.body"
+    } ],
+    "props" : [ {
+      "fields" : [ "projects", "components", "sprint", "date" ]
+    }, {
+      "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "refs",
+      "label" : "Ссылки",
+      "rels" : [ {
+        "rel" : "REFERENCES",
+        "dir" : "out",
+        "label" : "ссылается",
+        "relation" : "association"
+      }, {
+        "rel" : "REFERENCES",
+        "dir" : "in",
+        "label" : "на него ссылаются",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проект-владелец",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "rel" : "BELONGS_TO",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "refsOut",
+      "label" : "Ссылается",
+      "rel" : "REFERENCES",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "refsIn",
+      "label" : "На него ссылаются",
+      "rel" : "REFERENCES",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ]
+  }, {
     "type" : "project",
     "label" : "Проект",
     "labelKey" : "pp.kind.project",
@@ -4201,7 +4329,7 @@
       "group" : "props"
     } ]
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "pain", "product", "project", "question", "release", "runbook", "tech", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "pain", "product", "project", "quality_gate", "question", "release", "runbook", "tech", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -4258,6 +4386,10 @@
     "project" : {
       "vertex" : "KnowGitProject",
       "key" : "slug"
+    },
+    "quality_gate" : {
+      "vertex" : "QualityGate",
+      "key" : "qg_id"
     },
     "question" : {
       "vertex" : "KnowQuestion",
@@ -4349,6 +4481,11 @@
       "code" : "slug",
       "title" : "name"
     },
+    "quality_gate" : {
+      "date" : "date_created",
+      "sprint" : "sprint_id",
+      "title" : "name"
+    },
     "question" : {
       "closed" : "closed_date",
       "code" : "question_id",
@@ -4403,7 +4540,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "product", "project", "question", "runbook", "spec", "task", "user" ],
+  "no_type_color" : [ "agent", "doc", "product", "project", "quality_gate", "question", "runbook", "spec", "task", "user" ],
   "precision" : {
     "adr.date" : "date",
     "decision.date" : "date",
@@ -4412,6 +4549,8 @@
     "gain.date" : "date",
     "job.date" : "date",
     "pain.date" : "date",
+    "quality_gate.date" : "date",
+    "quality_gate.retired_at" : "date",
     "question.closed" : "date",
     "question.due_date" : "date",
     "question.opened" : "date",
@@ -4575,6 +4714,17 @@
       "history" : "none",
       "created" : [ ],
       "changed" : [ ]
+    },
+    "quality_gate" : {
+      "history" : "none",
+      "created" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ],
+      "changed" : [ {
+        "source" : "date_created",
+        "precision" : "date"
+      } ]
     },
     "question" : {
       "history" : "none",
@@ -5199,6 +5349,16 @@
       "key" : "prs",
       "slot" : "own"
     } ],
+    "quality_gate" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
+      "key" : "refsOut",
+      "slot" : "own"
+    }, {
+      "key" : "refsIn",
+      "slot" : "own"
+    } ],
     "question" : [ {
       "key" : "content",
       "slot" : "own"
@@ -5371,6 +5531,9 @@
     }, {
       "section" : "release",
       "icon" : "open-book"
+    }, {
+      "section" : "quality_gate",
+      "icon" : "checkered-flag"
     } ]
   }, {
     "id" : "knowledge",
@@ -5459,6 +5622,7 @@
     "people" : "admin",
     "product" : "everywhere",
     "project" : "everywhere",
+    "quality_gate" : "everywhere",
     "question" : "everywhere",
     "release" : "everywhere",
     "runbook" : "everywhere",

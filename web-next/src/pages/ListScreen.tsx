@@ -78,7 +78,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   products: 'product',
   // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роли, боли, выгоды и работы пришли в v2 раньше паспорта —
   // теперь у каждого свой паспорт (только чтение); ранбук — раздел и паспорт.
-  actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job', runbooks: 'runbook',
+  actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job', runbooks: 'runbook', quality_gates: 'quality_gate',
 };
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];

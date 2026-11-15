@@ -21,6 +21,7 @@ import { appliedPeekHover } from '../settings/applied';
 import { fetchSlice } from '../api/loreClient';
 import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
+import { ProjectExportButton } from './ProjectExportButton';
 import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
@@ -471,6 +472,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
       {/* PU-27: у вехи — сгорание по задачам её спринтов (строка BURN-DOWN и
           «Цель к сроку»), той же строкой, что у спринта; срок — «Когда» вехи. */}
+      {/* MDA-04: у git-проекта — выгрузка в папку .md (Obsidian) zip-архивом. */}
+      {type === 'project' && <ProjectExportButton slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'milestone' && (
         <MilestoneBurnLine
           milestoneId={view.record.id}

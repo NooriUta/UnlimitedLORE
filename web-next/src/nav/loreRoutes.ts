@@ -64,6 +64,8 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   gain: 'gain',
   job: 'job',
   runbook: 'runbook',
+  // MD-04, второй заход по QG: у гейта качества появились раздел и паспорт.
+  quality_gate: 'quality_gate',
 };
 
 /** Модуль оболочки по умолчанию: адрес записи без модуля открывал бы «Новости». */

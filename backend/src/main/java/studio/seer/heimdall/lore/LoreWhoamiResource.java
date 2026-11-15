@@ -45,7 +45,8 @@ public class LoreWhoamiResource extends LoreResourceBase {
         Set<String> roles = new LinkedHashSet<>(identity.getRoles());
         long exp = jwt.getExpirationTime();
         Whoami.Token t = new Whoami.Token(true, callerKcSub() != null ? callerKcSub() : jwt.getSubject(),
-            callerClientId(), AgentScopeFilter.agentScopeOf(identity), roles, exp > 0 ? exp : null);
+            callerClientId(), AgentScopeFilter.agentScopeOf(identity), roles, exp > 0 ? exp : null, null,
+            claimText(jwt.getClaim("preferred_username")));
         try {
             String machine = Whoami.machineOf(t, machineHeader);
             Whoami.Graph g = graph(t);
@@ -107,5 +108,12 @@ public class LoreWhoamiResource extends LoreResourceBase {
             out.add(m);
         }
         return out;
+    }
+
+    /** Строковый claim токена: String или JsonString (без кавычек), иначе null. */
+    static String claimText(Object c) {
+        if (c instanceof jakarta.json.JsonString js) return js.getString();
+        if (c instanceof String str && !str.isBlank()) return str;
+        return null;
     }
 }

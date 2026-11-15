@@ -133,4 +133,22 @@ class WhoamiTest {
         assertEquals("admin", b.get("seer_role"));
         assertNull(b.get("client_id"));
     }
+
+    // AP-09 (SPRINT_LORE_ADMIN_POLISH/AP-09, автотест RBAC 15.11.2026, кейс AD-02): человека нет в графе —
+    // шапка админки печатала сырой kc_sub. Ответ несёт логин из токена (preferred_username), UUID остаётся в sub.
+    @Test
+    void ap09_логинИзТокенаВОтвете_иУНеопознанного() {
+        Whoami.Token t = new Whoami.Token(true, "b0f766da-9b45", "lore-app", null, Set.of("admin"), EXP, null, "test-admin");
+        Map<String, Object> b = Whoami.body(t, Whoami.Graph.EMPTY);
+        assertEquals("unknown", ((Map<?, ?>) b.get("identity")).get("state"));
+        assertEquals("test-admin", b.get("username"));
+        assertEquals("b0f766da-9b45", b.get("sub"));
+    }
+
+    @Test
+    void ap09_логинаВТокенеНет_полеЧестноNull() {
+        Map<String, Object> b = Whoami.body(human(), Whoami.Graph.EMPTY);
+        assertTrue(b.containsKey("username"));
+        assertNull(b.get("username"));
+    }
 }

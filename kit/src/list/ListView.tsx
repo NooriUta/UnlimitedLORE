@@ -1581,6 +1581,20 @@ export function ListView({
   // не рисуем, а «∅» обещало бы значение, которого не существует. Лента и
   // карточки держат один признак, а не две копии условия.
   const statusVisible = (r: KitRecord): boolean => r.status !== '' && config.statuses.items.length > 0;
+  // PU-29 (правило владелицы 14.11.2026): составной код «РОДИТЕЛЬ/КОД» рядом с родителем —
+  // только последняя часть; родитель «рядом», если его значение стоит в другой колонке той же
+  // строки (у задачи — «Спринт»). Без родителя — полный путь. Полный путь всегда в подсказке.
+  const idText = (r: KitRecord): string => {
+    const cut = r.id.lastIndexOf('/');
+    if (cut <= 0 || cut === r.id.length - 1) return r.id;
+    const parent = r.id.slice(0, cut);
+    const nearby = columns.some(c => c !== 'id' && c !== 'title+id' && valuesOf(r, c).some(v => String(v) === parent));
+    return nearby ? r.id.slice(cut + 1) : r.id;
+  };
+  const idPill = (r: KitRecord): ReactNode => {
+    const text = idText(r);
+    return text === r.id ? <Pill variant="id">{r.id}</Pill> : <span title={r.id}><Pill variant="id">{text}</Pill></span>;
+  };
   const cell = (col: string, r: KitRecord): ReactNode => {
     const own = cellOf?.(col, r);
     if (own !== undefined) return own;
@@ -1590,10 +1604,10 @@ export function ListView({
       case 'title': return <Title r={r} href={href} onOpen={onOpen} />;
       // Владелица 14.11.2026: «щелчок по коду тоже открывает паспорт» — код ведёт туда же, куда название.
       case 'id': return href
-        ? <a className="sk-list__idlink" href={href(r.id)} onClick={onOpen ? () => onOpen(r.id) : undefined}><Pill variant="id">{r.id}</Pill></a>
+        ? <a className="sk-list__idlink" href={href(r.id)} onClick={onOpen ? () => onOpen(r.id) : undefined}>{idPill(r)}</a>
         : onOpen
-          ? <button type="button" className="sk-list__idlink" onClick={() => onOpen(r.id)}><Pill variant="id">{r.id}</Pill></button>
-          : <Pill variant="id">{r.id}</Pill>;
+          ? <button type="button" className="sk-list__idlink" onClick={() => onOpen(r.id)}>{idPill(r)}</button>
+          : idPill(r);
       case 'status': return <StatusCell code={r.status} kind={r.kind} labels={labels} />;
       case 'kind': return labels.valueTitle('kind', r.kind);
       case 'verdict': return <VerdictCell r={r} ctx={ctx} lang={lang} />;

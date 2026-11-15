@@ -31,6 +31,7 @@
     "metric_get",
     "metric_log",
     "milestone_sprints",
+    "project_export",
     "project_role_set",
     "qg_job_new",
     "qg_new",

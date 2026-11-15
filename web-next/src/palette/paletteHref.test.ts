@@ -19,7 +19,7 @@ describe('ссылка на запись из палитры — адрес ра
 
   it('тип записи неизвестен — переданная ссылка, без выдумывания раздела', () => {
     expect(paletteHref('X-1', [], id => `custom:${id}`)).toBe('custom:X-1');
-    // MD-04: у ранбука раздел появился — тип без раздела теперь гейт качества.
-    expect(paletteHref('QG-1', [rec('QG-1', 'quality_gate')], id => `custom:${id}`)).toBe('custom:QG-1');
+    // MD-04: раздел появился у ранбука, потом у гейта качества — тип без раздела теперь сценарий.
+    expect(paletteHref('UC-1', [rec('UC-1', 'use_case')], id => `custom:${id}`)).toBe('custom:UC-1');
   });
 });

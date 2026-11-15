@@ -23,8 +23,10 @@ public class LoreQgResource extends LoreResourceBase {
     private static final Logger LOG = Logger.getLogger(LoreQgResource.class);
 
     // ── QualityGate write ────────────────────────────────────────────────────
+    /** ADR-LORE-053-D7: project — slug проекта-владельца (ребро BELONGS_TO_PROJECT); retired_reason — причина отмены. */
     public record QGUpsertRequest(String qg_id, String name, String description,
-        String component_id, String status, String content_md, String sprint_id) {}
+        String component_id, String status, String content_md, String sprint_id,
+        String project, String retired_reason) {}
 
     @POST
     @Path("quality-gate")
@@ -39,6 +41,18 @@ public class LoreQgResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.qg_id()).matches())
             return badParams("qg_id contains illegal characters");
         try {
+            // ADR-LORE-053-D7: жизненный цикл гейта — словарь qg_status, владелец для active, причина для retired.
+            boolean exists = !ingestService.queryPublic(
+                "SELECT qg_id FROM QualityGate WHERE qg_id = :id", Map.of("id", req.qg_id())).isEmpty();
+            String status = exists ? req.status() : QgGateLifecycle.initialStatus(req.status());
+            String project = req.project() == null || req.project().isBlank() ? null : req.project().trim();
+            if (project != null && !registeredSlugs().contains(project))
+                return noStore(Response.status(422).entity(new LoreError("QG_LIFECYCLE",
+                    "проект «" + project + "» не зарегистрирован (KnowGitProject.slug)")));
+            boolean hasOwner = project != null || anyEdgeFrom("BELONGS_TO_PROJECT", "qg_id", req.qg_id());
+            String lifecycleError = QgGateLifecycle.check(status, hasOwner, req.retired_reason());
+            if (lifecycleError != null)
+                return noStore(Response.status(422).entity(new LoreError("QG_LIFECYCLE", lifecycleError)));
             // LH-44: only SET provided fields — a status-only call (e.g. deprecate a gate)
             // must not wipe curated content_md/description/routine links.
             StringBuilder qsql = new StringBuilder("UPDATE QualityGate SET qg_id=:id");
@@ -47,7 +61,12 @@ public class LoreQgResource extends LoreResourceBase {
             if (req.name() != null)         { qsql.append(", name=:nm");          p.put("nm",  req.name()); }
             if (req.description() != null)  { qsql.append(", description=:dsc");  p.put("dsc", req.description()); }
             if (req.component_id() != null) { qsql.append(", component_id=:cid"); p.put("cid", req.component_id()); }
-            if (req.status() != null)       { qsql.append(", status=:st");        p.put("st",  req.status()); }
+            if (status != null)             { qsql.append(", status=:st");        p.put("st",  status); }
+            if ("retired".equals(status)) {
+                qsql.append(", retired_reason=:rr, retired_at=:ra");
+                p.put("rr", req.retired_reason().trim());
+                p.put("ra", java.time.Instant.now().toString());
+            }
             if (req.content_md() != null)   { qsql.append(", content_md=:cnt");   p.put("cnt", req.content_md()); }
             if (req.sprint_id() != null)    { qsql.append(", sprint_id=:sid");    p.put("sid", req.sprint_id()); }
             qsql.append(" UPSERT WHERE qg_id=:id");
@@ -60,6 +79,14 @@ public class LoreQgResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("qg_id", req.qg_id());
             linkComponentEdge("QualityGate", "qg_id", req.qg_id(), req.component_id(), out);
+            if (project != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM QualityGate WHERE qg_id=:id) "
+                        + "TO (SELECT FROM KnowGitProject WHERE slug=:s) IF NOT EXISTS",
+                    Map.of("id", req.qg_id(), "s", project))).await().indefinitely();
+                out.put("project", project);
+            }
+            if (status != null) out.put("status", status);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
