@@ -22,7 +22,7 @@ describe('qg_new: владелец и причина отмены доходят
 
   it('схема объявляет project и retired_reason', () => {
     expect(tool).toBeDefined();
-    expect(Object.keys(tool!.schema)).toEqual(expect.arrayContaining(['project', 'retired_reason']));
+    expect(Object.keys(tool!.schema)).toEqual(expect.arrayContaining(['project', 'retired_reason', 'qg_type']));
   });
 
   it('project и retired_reason уходят в тело /lore/quality-gate', async () => {
@@ -31,5 +31,12 @@ describe('qg_new: владелец и причина отмены доходят
     expect(sent).toHaveLength(1);
     expect(sent[0].path).toBe('/lore/quality-gate');
     expect(sent[0].body).toMatchObject({ project: 'NooriUta/UnlimitedLORE', retired_reason: 'отмерла', status: 'retired' });
+  });
+
+  // SPRINT_QG_REBUILD/QG-04: тип гейта по словарю qg_type
+  it('qg_type уходит в тело /lore/quality-gate', async () => {
+    sent.length = 0;
+    await tool!.handler({ qg_id: 'QG-X', name: 'x', qg_type: 'perf' });
+    expect(sent[0].body).toMatchObject({ qg_type: 'perf' });
   });
 });
