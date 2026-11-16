@@ -434,7 +434,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   const kindTabs = kind?.tabs ?? [];
   // Связи по видам UML: композиция и агрегация — своя вкладка; зависимости (и ассоциация) —
   // одна вкладка; реализация — одна; обобщение — строкой в шапке.
-  const rels: KitRelationDef[] = kind?.relations ?? [];
+  // Связь модели, чей ключ совпадает со служебной вкладкой, которую kit рисует сам (история при
+  // источнике, связи, граф, журнал), своей вкладкой не становится: при склейке по ключу побеждала первая —
+  // вкладка связи — и паспорт показывал «◆История 0» при «правок: 1» в панели (препрод 16.11, веха и
+  // ранбук). Место такой вкладки по-прежнему задаёт модель — по тому же ключу.
+  const ownService = (key: string) => key === RECORD_TABS.links || key === RECORD_TABS.graph || key === RECORD_TABS.journal || (key === RECORD_TABS.history && !!history);
+  const rels: KitRelationDef[] = (kind?.relations ?? []).filter(d => !ownService(d.key));
   // Решил ли порядок разделов сервер. `false` — всё как прежде: группировка
   // связей, порядок по данным, и это ПОМЕЧЕНО как умолчание, а не выдано за
   // решение модели (D-2026-LORE-MODEL-COLUMN-LAYERS, честные состояния).
