@@ -1973,6 +1973,7 @@
   "pp.field.jobKind": "Вид работы",
   "pp.field.importance": "Важность",
   "pp.field.state": "Состояние",
+  "pp.field.qgType": "Тип",
   "pp.field.lastRunStatus": "Итог последнего прогона",
   "pp.field.ownerProject": "Проект-владелец",
   "pp.field.retiredAt": "Выведен из работы",

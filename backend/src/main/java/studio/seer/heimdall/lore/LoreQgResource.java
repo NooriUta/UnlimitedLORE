@@ -26,7 +26,7 @@ public class LoreQgResource extends LoreResourceBase {
     /** ADR-LORE-053-D7: project — slug проекта-владельца (ребро BELONGS_TO_PROJECT); retired_reason — причина отмены. */
     public record QGUpsertRequest(String qg_id, String name, String description,
         String component_id, String status, String content_md, String sprint_id,
-        String project, String retired_reason) {}
+        String project, String retired_reason, String qg_type) {}
 
     @POST
     @Path("quality-gate")
@@ -51,6 +51,12 @@ public class LoreQgResource extends LoreResourceBase {
                     "проект «" + project + "» не зарегистрирован (KnowGitProject.slug)")));
             boolean hasOwner = project != null || anyEdgeFrom("BELONGS_TO_PROJECT", "qg_id", req.qg_id());
             String lifecycleError = QgGateLifecycle.check(status, hasOwner, req.retired_reason());
+            if (lifecycleError == null && req.qg_type() != null) {
+                java.util.List<String> types = ingestService.queryPublic(
+                    "SELECT code FROM KnowDictEntry WHERE dict_type = 'qg_type' AND is_active = true", Map.of())
+                    .stream().map(r -> String.valueOf(r.get("code"))).toList();
+                lifecycleError = QgGateLifecycle.checkType(req.qg_type(), types);
+            }
             if (lifecycleError != null)
                 return noStore(Response.status(422).entity(new LoreError("QG_LIFECYCLE", lifecycleError)));
             // LH-44: only SET provided fields — a status-only call (e.g. deprecate a gate)
@@ -69,6 +75,7 @@ public class LoreQgResource extends LoreResourceBase {
             }
             if (req.content_md() != null)   { qsql.append(", content_md=:cnt");   p.put("cnt", req.content_md()); }
             if (req.sprint_id() != null)    { qsql.append(", sprint_id=:sid");    p.put("sid", req.sprint_id()); }
+            if (req.qg_type() != null)      { qsql.append(", qg_type=:qt");       p.put("qt",  req.qg_type()); }
             qsql.append(" UPSERT WHERE qg_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 qsql.toString(), p)).await().indefinitely();

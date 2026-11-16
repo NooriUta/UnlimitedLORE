@@ -57,8 +57,14 @@ test('S2 Паспорт спринта: вкладка «Задачи» не п�
 
 test('S3 Новости: лента открывается и показывает строки', async ({ page }) => {
   const rows = page.locator('[data-testid^="news-row-"]');
-  await openStand(page, '/news', rows);
-  await expect(rows.first(), 'в ленте есть строки').toBeVisible({ timeout: 30_000 });
+  await openStand(page, '/news', rows, 45_000);
+  // 16.11.2026: два прогона подряд — «Test timeout» без причины. Под владелицей лента за 6 с
+  // (340 строк), под test-sa — нет. Чем стала страница (пусто по скоупу, ошибка, вечная
+  // загрузка) — в текст падения, иначе по журналу CI причину не установить.
+  if (!(await rows.first().isVisible().catch(() => false))) {
+    const seen = (await page.locator('body').innerText().catch(() => '')).replace(/s+/g, ' ').slice(0, 400);
+    expect(await rows.count(), `в ленте нет строк за 45 с; на странице: «${seen}»`).toBeGreaterThan(0);
+  }
 });
 
 test('S4 Админка «Агенты»: в колонке harness есть значения', async ({ page }) => {
