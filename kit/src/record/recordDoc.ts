@@ -36,6 +36,10 @@ export interface KitDocField {
   write?: unknown;
   /** Поле kv: подписи ключей значения (как props у связи). Нет — ключи как есть. */
   keys?: { key: string; label: string }[];
+  /** MDL-07: что это за поле — одной фразой (модель). Подсказкой у подписи. */
+  definition?: string;
+  /** MDL-07: подробнее — как ставится, когда меняется. Подсказкой у подписи. */
+  description?: string;
 }
 
 /** Вкладка схемы. `rel`/`dir` — ребро, которое она показывает. */
@@ -299,6 +303,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
         ...(f.required ? { required: 'block' as const } : {}),
         ...(f.kind === 'ref' ? { ...edgeOf(f.key), ...refKindOf(f.key) } : {}),
         ...(f.kind === 'kv' && f.keys?.length ? { keyLabels: Object.fromEntries(f.keys.map(k => [k.key, k.label])) } : {}),
+        ...(f.definition || f.description ? { hint: { ...(f.definition ? { definition: f.definition } : {}), ...(f.description ? { description: f.description } : {}) } } : {}),
       })),
       ...propFields,
       ...extra.map(x => x.field),

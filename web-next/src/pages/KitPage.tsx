@@ -6,7 +6,7 @@
 import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
-  CommandPalette, EmptyState, Ear, Lanes, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
+  ApprovalQueue, CommandPalette, EmptyState, Ear, Lanes, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
   BatchUndo, CalendarMonth, ControlBar, KvValue, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   BurnChart, BurnSpark, burnSum, type BurnPoint,
   DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
@@ -106,6 +106,24 @@ export default function KitPage() {
   const kitLang = useKitLang();
   const mentionKinds = useMemo(() => loreKinds(kitLang), [kitLang]);
   const mentionMdLook = useMemo(() => loreRefLook(kitLang), [kitLang]);
+  // K4-SUMMARY-QUEUE: витрина очереди — две правки (одна своя) и запись на согласовании.
+  const queueCtx = useMemo<KitCtx>(() => ({
+    data: {
+      records: [
+        { id: 'Q-DEMO-1', kind: 'task', title: 'Квиз о времени', status: 'review', fields: {} },
+        { id: 'Q-DEMO-2', kind: 'task', title: 'Квиз о снах', status: 'active', fields: {} },
+        { id: 'Q-DEMO-3', kind: 'task', title: 'Квиз о тропах', status: 'active', fields: {} },
+      ],
+      edges: [],
+      journal: [
+        { at: '2026-11-16T09:00:00Z', who: 'boris', record_id: 'Q-DEMO-2', field: 'hint', from: 'Подумай о сне', to: 'Вспомни, что снилось' },
+        { at: '2026-11-16T10:00:00Z', who: 'anna', record_id: 'Q-DEMO-3', field: 'title', from: 'Тропы', to: 'Квиз о тропах' },
+      ],
+      meta: { generated_at: '2026-11-16T12:00:00Z' },
+    },
+    config: { modules: [], menu: { groups: [] }, kinds: {}, statuses: { selfApprove: false, items: [] } },
+    user: 'anna', href: () => '#', esc: x => x, md: x => x,
+  }), []);
   const paletteCtx = useMemo<KitCtx>(() => ({
     data: PALETTE_DEMO_DATA,
     config: {
@@ -566,6 +584,11 @@ export default function KitPage() {
             { key: 'now', title: t('kitPage.lanes.now'), accent: true, items: [{ id: 'SPRINT_UXR_S13_KIT4/K4-LANES', kind: 'task', badge: '×2' }] },
             { key: 'next', title: t('kitPage.lanes.next'), items: [] },
           ]} />
+          {/* K4-SUMMARY-QUEUE: очередь согласования — решения владелицы 16.11 (Q4–Q6). Вы — «anna»: своя правка видна, согласовать её нельзя. */}
+          <h3 className="kitp__h3">{t('kitPage.queue.title')}</h3>
+          <p>{t('kitPage.queue.lead')}</p>
+          <ApprovalQueue ctx={queueCtx} reviewStatuses={['review']}
+            onApprove={async () => ({ failed: [] })} onReturn={async () => ({ failed: [] })} />
           <h3 className="kitp__h3">{t('kitPage.merge.title')}</h3>
           <p>{t('kitPage.merge.lead')}</p>
           <MdMergePanel

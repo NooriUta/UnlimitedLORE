@@ -32,6 +32,9 @@ export interface LoreField {
   dict?: string;
   /** Варианты enum из среза сервера (S4-24, #1241): автор / исполнитель / принимающий — task_identities. */
   options?: OptionsSpec;
+  /** MDL-07: определение и описание поля из модели (сервер шлёт с MDL-02) — подсказкой у подписи в kit. */
+  definition?: string;
+  description?: string;
 }
 /** Откуда брать варианты: срез, его параметр (id записи) и имена полей строки. */
 export interface OptionsSpec { slice: string; param?: string; value: string; label: string; group?: string }
