@@ -52,6 +52,8 @@ import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
 export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
+/** Служебные вкладки конструктора — не разделы записи (порядок: applySections). */
+const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -605,7 +607,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // экране вслепую — сервер не знал ни ширины, ни того, сколько вкладок у
   // записи набралось вместе со служебными.
   const row = mergeTabs(aside ? recordItems : [...recordItems, ...aroundItems]);
-  const ordered: TabItem[] = applySections(row, order);
+  // Не названные моделью разделы записи — до служебных вкладок (пилот 16.11).
+  const ordered: TabItem[] = applySections(row, order, SERVICE_TABS);
   // ГРУППЫ: несколько родственных разделов — ОДНА вкладка с подписью группы
   // (шестой ключ модели). Склеиваются только разделы-связи: их рисует kit, и
   // внутри вкладки они становятся подзаголовками. Раздел, который kit внутри
