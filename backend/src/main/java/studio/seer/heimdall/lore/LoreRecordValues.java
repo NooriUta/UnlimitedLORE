@@ -57,7 +57,23 @@ final class LoreRecordValues {
     static Map<String, Object> values(String type, Map<String, Object> r) {
         // S4-MODEL-RECORD: все типы — общим сборщиком по описаниям from; неизвестный тип — как спека (как раньше).
         List<LoreRecordFrom.Val> d = LoreRecordFrom.VALUES.get(type);
-        return LoreRecordFrom.assemble(d != null ? d : LoreRecordFrom.VALUES.get("spec"), r);
+        Map<String, Object> v = LoreRecordFrom.assemble(d != null ? d : LoreRecordFrom.VALUES.get("spec"), r);
+        if ("task".equals(type)) dropLeftoversOfOtherStatuses(v);
+        return v;
+    }
+
+    /** Статусы, у которых причина — смысл самого статуса. */
+    static final java.util.Set<String> REASON_STATUSES = java.util.Set.of("blocked", "waiting", "failed", "cancelled", "partial");
+
+    /**
+     * Новая версия задачи копирует waiting_for и status_reason из прошлой (прод 16.11.2026: у 33 открытых
+     * версий не в WAITING — прежний адресат). «Ждём» показывается только у ждущей задачи, причина — только у
+     * статусов {@link #REASON_STATUSES}; иначе это остаток прошлого статуса, а не правда о нынешнем.
+     */
+    static void dropLeftoversOfOtherStatuses(Map<String, Object> v) {
+        String st = str(v.get("status"));
+        if (!"waiting".equals(st)) v.remove("waiting_for");
+        if (st == null || !REASON_STATUSES.contains(st)) v.remove("status_reason");
     }
 
     /** Строка ребёнка → item части (кроме фазы: её «x/y» считается по задачам, {@link #phaseItem}). */

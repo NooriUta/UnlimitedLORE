@@ -517,6 +517,22 @@
       "labelEn" : "Status",
       "labelPl" : "Status"
     }, {
+      "key" : "waiting_for",
+      "label" : "Ждём",
+      "labelKey" : "pp.field.waiting_for",
+      "kind" : "text",
+      "group" : "head",
+      "labelEn" : "Waiting for",
+      "labelPl" : "Czekamy na"
+    }, {
+      "key" : "status_reason",
+      "label" : "Причина статуса",
+      "labelKey" : "pp.field.status_reason",
+      "kind" : "text",
+      "group" : "head",
+      "labelEn" : "Status reason",
+      "labelPl" : "Powód statusu"
+    }, {
       "key" : "code",
       "label" : "Код",
       "labelKey" : "pp.field.code",
