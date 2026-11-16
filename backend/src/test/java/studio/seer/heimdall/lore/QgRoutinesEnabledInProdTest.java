@@ -22,7 +22,8 @@ class QgRoutinesEnabledInProdTest {
     /** Имена рутин канала 2 (NAME у реализаций QgRoutine). */
     private static final List<String> ROUTINES = List.of(
         QgKnowHygieneRoutine.NAME, QgDocLinksRoutine.NAME, QgSupervisorRoutine.NAME,
-        QgLoreBlockedReasonRoutine.NAME, QgLoreProjectBindingRoutine.NAME, QgLoreProjectRolesRoutine.NAME);
+        QgLoreBlockedReasonRoutine.NAME, QgLoreProjectBindingRoutine.NAME, QgLoreProjectRolesRoutine.NAME,
+        QgBranchTaskStatusRoutine.NAME);
 
     @Test
     void everyRoutineIsEnabledInProdProfile() throws Exception {
