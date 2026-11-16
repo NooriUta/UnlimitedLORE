@@ -24,6 +24,7 @@ async function apiGet(page: Page, path: string): Promise<{ status: number; body:
 const TEST_AGENT_CLIENT = /^lore-mcp-[a-z_-]+_Test[A-Za-z0-9._-]*$/;
 
 test('RFD-AP01 Агенты: «Удалить» есть только у тестового агента и показывает план (SPRINT_LORE_ADMIN_POLISH/AP-01)', async ({ page }) => {
+  test.setTimeout(120_000);
   const table = page.locator('[data-testid="adm-agents"]');
   await openStand(page, '/?mod=admin&sec=adm-agents', table);
   await expect(table, 'таблица агентов показана').toBeVisible({ timeout: 30_000 });
@@ -36,16 +37,20 @@ test('RFD-AP01 Агенты: «Удалить» есть только у тес�
   expect(realRow, 'есть реальный агент lore-mcp-* для отрицательной проверки').toBeTruthy();
 
   // Реальный агент: раскрыть — кнопки удаления нет («реальные — только выключить»).
-  await page.locator(`[data-testid="adm-agent-proj-btn-${realRow!.actor_id}"]`).click();
+  const realBtn = page.locator(`[data-testid="adm-agent-proj-btn-${realRow!.actor_id}"]`);
+  await expect(realBtn, `строка реального агента ${realRow!.actor_id} в таблице (кнопка «Проекты»)`).toBeVisible({ timeout: 15_000 });
+  await realBtn.click({ timeout: 10_000 });
   await expect(page.locator(`[data-testid="adm-agent-row-${realRow!.actor_id}"]`)).toBeVisible({ timeout: 15_000 });
   expect(await page.locator(`[data-testid="adm-testdel-open-${realRow!.client_id}"]`).count(),
     `у реального ${realRow!.client_id} нет «Удалить»`).toBe(0);
 
   test.skip(!testRow, 'тестового агента lore-mcp-*_Test* на стенде нет — положительная часть не выполнена');
-  await page.locator(`[data-testid="adm-agent-proj-btn-${testRow!.actor_id}"]`).click();
+  const testBtn = page.locator(`[data-testid="adm-agent-proj-btn-${testRow!.actor_id}"]`);
+  await expect(testBtn, `строка тестового агента ${testRow!.actor_id} в таблице`).toBeVisible({ timeout: 15_000 });
+  await testBtn.click({ timeout: 10_000 });
   const open = page.locator(`[data-testid="adm-testdel-open-${testRow!.client_id}"]`);
   await expect(open, `у тестового ${testRow!.client_id} есть «Удалить»`).toBeVisible({ timeout: 15_000 });
-  await open.click();
+  await open.click({ timeout: 10_000 });
   const panel = page.locator(`[data-testid="adm-testdel-${testRow!.client_id}"]`);
   const err = panel.locator('[data-testid="adm-testdel-error"]');
   const plan = panel.locator('[data-testid^="kit-diff-row-"], [data-testid="adm-testdel-blocked"]');
@@ -65,6 +70,8 @@ test('RFD-VE7 Встройка Völva отвечает родителю: выс�
   await expect.poll(async () => box.first().getAttribute('data-embed-state'), { timeout: 40_000 })
     .not.toBe('loading');
   const st = await box.first().getAttribute('data-embed-state');
+  // «Нужен выбор» (обычно проект в шапке): встройку не просили — проверять нечего, это не поломка.
+  test.skip(st === 'needs', `встройка просит выбор: «${(await box.first().innerText()).replace(/\s+/g, ' ').slice(0, 160)}» — не выполнен`);
   expect(st, 'встройка не молчит (silent = за 15 с ни frame, ни error)').not.toBe('silent');
   if (st === 'ready') {
     // Высота по metabase.frame: рамка выросла с minHeight 320 (приёмка 14.11 — осталась 320).

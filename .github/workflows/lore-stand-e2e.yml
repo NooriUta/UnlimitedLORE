@@ -137,14 +137,20 @@ jobs:
         run: cat e2e/.stand-report/summary.md 2>/dev/null || echo "отчёта нет"
 
       # Скрины сценариев — артефактом (v3: v4 на Forgejo не работает, см. db-regression.yml).
+      # Папка отчёта скрытая (.stand-report) — upload-artifact её не видит (прогон 8832: «No files
+      # were found»); копируем в видимую.
+      - name: Отчёт — в видимую папку
+        if: always()
+        run: mkdir -p stand-report && cp -r web-next/e2e/.stand-report/. stand-report/ 2>/dev/null; ls stand-report | head -50 || true
+
       - name: Скрины и отчёт — артефакт
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: stand-report
           path: |
-            web-next/e2e/.stand-report/*.md
-            web-next/e2e/.stand-report/*.json
-            web-next/e2e/.stand-report/*.png
+            stand-report/*.md
+            stand-report/*.json
+            stand-report/*.png
           if-no-files-found: ignore
           retention-days: 14

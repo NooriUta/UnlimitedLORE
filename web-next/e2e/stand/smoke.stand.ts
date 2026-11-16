@@ -62,7 +62,7 @@ test('S3 Новости: лента открывается и показывае
   // (340 строк), под test-sa — нет. Чем стала страница (пусто по скоупу, ошибка, вечная
   // загрузка) — в текст падения, иначе по журналу CI причину не установить.
   if (!(await rows.first().isVisible().catch(() => false))) {
-    const seen = (await page.locator('body').innerText().catch(() => '')).replace(/s+/g, ' ').slice(0, 400);
+    const seen = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 400);
     expect(await rows.count(), `в ленте нет строк за 45 с; на странице: «${seen}»`).toBeGreaterThan(0);
   }
 });
