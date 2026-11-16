@@ -17,7 +17,7 @@
 //   • телефон — высота фиксирована, ширина по контейнеру (урок BurnChart: пропорциональный
 //     график вырастал до 400 px).
 // Граница K-14: что считать сериями и откуда данные — приложение; kit только рисует.
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { kitT, useKitLang, type KitLang } from '../i18n';
 import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 
@@ -25,7 +25,28 @@ import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 export const CHART_TONES = ['--acc', '--inf', '--suc', '--wrn', '--dng', '--t2'] as const;
 const tone = (i: number) => `var(${CHART_TONES[i % CHART_TONES.length]})`;
 
-const W = 640;
+/** Ширина до первого замера (и в среде без ResizeObserver). */
+const W0 = 640;
+
+/**
+ * Ширина рисунка — ширина контейнера, а не растяжение (препрод 16.11: с preserveAspectRatio="none"
+ * в узкой колонке текст делений сжимался и точки вытягивались). viewBox совпадает с пикселями.
+ */
+function useChartWidth(): [RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [w, setW] = useState(W0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(entries => {
+      const cw = Math.round(entries[0]?.contentRect.width ?? 0);
+      if (cw > 0) setW(cw);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
 const H = 200;
 const PAD = { l: 36, r: 12, t: 10, b: 24 };
 
@@ -125,7 +146,7 @@ function summaryText(lang: KitLang, values: number[], last: number | undefined, 
   );
 }
 
-function YAxis({ ticks, y }: { ticks: number[]; y: (v: number) => number }) {
+function YAxis({ ticks, y, w: W }: { ticks: number[]; y: (v: number) => number; w: number }) {
   return (
     <g className="sk-chart__axis">
       {ticks.map(v => (
@@ -142,8 +163,8 @@ function scale(d0: number, d1: number, r0: number, r1: number) {
   return (v: number) => (d1 === d0 ? (r0 + r1) / 2 : r0 + ((v - d0) / (d1 - d0)) * (r1 - r0));
 }
 
-function Svg({ label, children }: { label: string; children: ReactNode }) {
-  return <svg className="sk-chart__svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label} height={H}>{children}</svg>;
+function Svg({ label, plot, w, children }: { label: string; plot: RefObject<HTMLDivElement | null>; w: number; children: ReactNode }) {
+  return <div ref={plot} className="sk-chart__plot"><svg className="sk-chart__svg" viewBox={`0 0 ${w} ${H}`} width="100%" role="img" aria-label={label} height={H}>{children}</svg></div>;
 }
 
 // ── line ───────────────────────────────────────────────────────────────────
@@ -151,6 +172,7 @@ export interface LineSeries { key: string; label: string; points: { x: number; y
 export interface LineChartProps extends ChartCommon { series: LineSeries[]; /** Подпись момента x (по умолчанию — дата локалью kit). */ xLabel?: (x: number) => string }
 
 export function LineChart(p: LineChartProps) {
+  const [plot, W] = useChartWidth();
   const lang = useKitLang();
   const fmt = p.xLabel ?? ((x: number) => new Date(x).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { day: '2-digit', month: '2-digit' }));
   const all = p.series.flatMap(s => s.points);
@@ -182,8 +204,8 @@ export function LineChart(p: LineChartProps) {
           ))}</tbody>
         </table>
       )}>
-      <Svg label={p.title}>
-        <YAxis ticks={ticks} y={y} />
+      <Svg label={p.title} plot={plot} w={W}>
+        <YAxis ticks={ticks} y={y} w={W} />
         {p.series.flatMap(s => s.points.map((q, i) => {
           if (q.y !== null) return null;
           const prev = s.points[i - 1]?.x ?? q.x;
@@ -213,6 +235,7 @@ export interface ScatterPoint { x: number; y: number; label?: string; group?: st
 export interface ScatterChartProps extends ChartCommon { points: ScatterPoint[]; xTitle?: string; groups?: { key: string; label: string }[] }
 
 export function ScatterChart(p: ScatterChartProps) {
+  const [plot, W] = useChartWidth();
   const lang = useKitLang();
   const xs = p.points.map(q => q.x), ys = p.points.map(q => q.y);
   const yt = ys.length ? niceTicks(Math.min(...ys), Math.max(...ys)) : [];
@@ -229,8 +252,8 @@ export function ScatterChart(p: ScatterChartProps) {
           <tbody>{p.points.map((q, i) => <tr key={i}><td>{q.label ?? i + 1}</td><td>{num(q.x)}</td><td>{num(q.y)}</td></tr>)}</tbody>
         </table>
       )}>
-      <Svg label={p.title}>
-        <YAxis ticks={yt} y={y} />
+      <Svg label={p.title} plot={plot} w={W}>
+        <YAxis ticks={yt} y={y} w={W} />
         {p.points.map((q, i) => (
           <g key={i} data-point="">
             <circle cx={x(q.x)} cy={y(q.y)} r={4} fill={tone(gi(q.group))} />
@@ -250,6 +273,7 @@ export interface BarChartProps extends ChartCommon {
 }
 
 export function BarChart(p: BarChartProps) {
+  const [plot, W] = useChartWidth();
   const lang = useKitLang();
   const vals = p.data.flatMap(d => p.groups.map(g => d.values[g.key])).filter((v): v is number => typeof v === 'number');
   // Рекомендация 4: у столбиков ось Y всегда от нуля — иначе высота врёт о доле.
@@ -275,8 +299,8 @@ export function BarChart(p: BarChartProps) {
           ))}</tbody>
         </table>
       )}>
-      <Svg label={p.title}>
-        <YAxis ticks={ticks} y={y} />
+      <Svg label={p.title} plot={plot} w={W}>
+        <YAxis ticks={ticks} y={y} w={W} />
         {p.data.map((d, ci) => {
           const x0 = PAD.l + ci * band + (band - bw * p.groups.length) / 2;
           return (
