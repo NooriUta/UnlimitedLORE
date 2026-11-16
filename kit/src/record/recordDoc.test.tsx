@@ -213,3 +213,21 @@ describe('passportFromDoc · колонки части — значения и �
     expect(document.body.textContent).toContain('0.15');
   });
 });
+
+// Методика §7.8, шаг 1 (слово сессии модели 16.11): явное место стороны побеждает OWN_TAB — ТОЛЬКО
+// при объектной форме place {out, in}. Строка и «не задано» — как раньше (LORE не меняется).
+describe('passportFromDoc · место стороны побеждает OWN_TAB только при {out,in}', () => {
+  const agg = (place: KitDocRelation['place']) => ({ key: 'trails', label: 'Лежит на тропах', relation: 'aggregation' as const, rel: 'ON_TRAIL', dir: 'in' as const, count: 0, place });
+
+  it('{out: part, in: link_tab}, запись на стороне in — связь помечена в общую вкладку', () => {
+    const p = passportFromDoc(doc({ schema: { ...doc().schema, relations: [agg({ out: 'part', in: 'link_tab' })] } }), { lang: 'ru' });
+    expect(p.kinds.trail.relations?.find(r => r.key === 'trails')?.shared).toBe(true);
+  });
+
+  it('строка link_tab и «не задано» — без пометки, своя вкладка как раньше', () => {
+    for (const place of ['link_tab', undefined] as const) {
+      const p = passportFromDoc(doc({ schema: { ...doc().schema, relations: [agg(place)] } }), { lang: 'ru' });
+      expect(p.kinds.trail.relations?.find(r => r.key === 'trails')?.shared, String(place)).toBeUndefined();
+    }
+  });
+});

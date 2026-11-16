@@ -453,7 +453,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
     // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
     // отключается: что считать разделом, решает приложение, а не конструктор.
-    if ((named && namedKeys.has(d.key)) || OWN_TAB.includes(d.relation)) {
+    if ((named && namedKeys.has(d.key)) || (OWN_TAB.includes(d.relation) && !d.shared)) {
       // Ключ связи — ключ вкладки, и две связи с одним ключом дали бы два
       // одинаковых раздела (B13: «дублирующиеся вкладки»). Совпал — связи
       // идут в одну вкладку, а не во вторую такую же.
@@ -461,7 +461,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
       if (same) same.defs.push(d); else relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] });
       continue;
     }
-    const sh = SHARED_TAB[d.relation];
+    // §7.8 шаг 1: сторона состава/агрегации с явным местом «вкладка связей» — в общую вкладку ассоциаций.
+    const sh = SHARED_TAB[d.shared ? 'association' : d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
     // Методика §7.8: подпись группы — из вида приложения (документа), иначе подпись kit.
