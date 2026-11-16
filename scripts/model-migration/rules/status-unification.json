@@ -6,14 +6,14 @@
     "en",
     "pl"
   ],
-  "code_case": "lower",
-  "_code_case": "Регистр кода в приёмнике. lower — решение владелицы в карте переноса («код из справочника строчными латиницей»); 16.11.2026 владелица назвала вариантом заглавные — ждёт её слова. Сведение от регистра не зависит.",
+  "code_case": "upper",
+  "_code_case": "Регистр кода в приёмнике. upper — слово владелицы 16.11.2026 («uppercase»); заменяет прежнее «код из справочника строчными латиницей». Сведение от регистра не зависит.",
   "dictionaries": {
     "plan_status": {
       "_about": "Спринт и задача — один справочник вместо двух одинаковых копий (sprint_status, task_status).",
       "codes": [
         {
-          "code": "todo",
+          "code": "TODO",
           "labels": {
             "ru": "К выполнению",
             "en": "To Do",
@@ -22,7 +22,7 @@
           "icon": "checkbox-tree"
         },
         {
-          "code": "backlog",
+          "code": "BACKLOG",
           "labels": {
             "ru": "Бэклог",
             "en": "Backlog",
@@ -31,7 +31,7 @@
           "icon": "tied-scroll"
         },
         {
-          "code": "planned",
+          "code": "PLANNED",
           "labels": {
             "ru": "Запланировано",
             "en": "Planned",
@@ -40,7 +40,7 @@
           "icon": "calendar"
         },
         {
-          "code": "design",
+          "code": "DESIGN",
           "labels": {
             "ru": "Проектирование",
             "en": "Design",
@@ -49,7 +49,7 @@
           "icon": "magic-swirl"
         },
         {
-          "code": "active",
+          "code": "ACTIVE",
           "labels": {
             "ru": "В работе",
             "en": "In Progress",
@@ -58,7 +58,7 @@
           "icon": "progression"
         },
         {
-          "code": "waiting",
+          "code": "WAITING",
           "labels": {
             "ru": "Ждём ответа",
             "en": "Waiting",
@@ -67,7 +67,7 @@
           "icon": "hourglass"
         },
         {
-          "code": "partial",
+          "code": "PARTIAL",
           "labels": {
             "ru": "Частично",
             "en": "Partial",
@@ -76,7 +76,7 @@
           "icon": "battery-50"
         },
         {
-          "code": "review",
+          "code": "REVIEW",
           "labels": {
             "ru": "На приёмке",
             "en": "Review",
@@ -85,7 +85,7 @@
           "icon": "magnifying-glass"
         },
         {
-          "code": "ready_for_deploy",
+          "code": "READY_FOR_DEPLOY",
           "labels": {
             "ru": "Готово к деплою",
             "en": "Ready for Deploy",
@@ -94,7 +94,7 @@
           "icon": "wave-crest"
         },
         {
-          "code": "uat",
+          "code": "UAT",
           "labels": {
             "ru": "UAT — приёмка",
             "en": "UAT Testing",
@@ -103,7 +103,7 @@
           "icon": "stamper"
         },
         {
-          "code": "done",
+          "code": "DONE",
           "labels": {
             "ru": "Готово",
             "en": "Done",
@@ -112,7 +112,7 @@
           "icon": "divided-spiral"
         },
         {
-          "code": "failed",
+          "code": "FAILED",
           "labels": {
             "ru": "Неуспех",
             "en": "Failed",
@@ -121,7 +121,7 @@
           "icon": "cancel"
         },
         {
-          "code": "blocked",
+          "code": "BLOCKED",
           "labels": {
             "ru": "Заблокировано",
             "en": "Blocked",
@@ -130,7 +130,7 @@
           "icon": "handcuffed"
         },
         {
-          "code": "cancelled",
+          "code": "CANCELLED",
           "labels": {
             "ru": "Отменено",
             "en": "Cancelled",
@@ -140,15 +140,15 @@
         }
       ],
       "synonyms": {
-        "IN PROGRESS": "active",
-        "UAT TESTING": "uat",
-        "CANCELED": "cancelled"
+        "IN PROGRESS": "ACTIVE",
+        "UAT TESTING": "UAT",
+        "CANCELED": "CANCELLED"
       }
     },
     "phase_status": {
       "codes": [
         {
-          "code": "backlog",
+          "code": "BACKLOG",
           "labels": {
             "ru": "Бэклог",
             "en": "Backlog",
@@ -156,7 +156,7 @@
           }
         },
         {
-          "code": "planned",
+          "code": "PLANNED",
           "labels": {
             "ru": "Запланирована",
             "en": "Planned",
@@ -164,7 +164,7 @@
           }
         },
         {
-          "code": "active",
+          "code": "ACTIVE",
           "labels": {
             "ru": "В работе",
             "en": "In Progress",
@@ -172,7 +172,7 @@
           }
         },
         {
-          "code": "done",
+          "code": "DONE",
           "labels": {
             "ru": "Реализована",
             "en": "Done",
@@ -180,7 +180,7 @@
           }
         },
         {
-          "code": "moved",
+          "code": "MOVED",
           "labels": {
             "ru": "Вынесена",
             "en": "Moved out",
@@ -189,13 +189,13 @@
         }
       ],
       "synonyms": {
-        "IN PROGRESS": "active"
+        "IN PROGRESS": "ACTIVE"
       }
     },
     "adr_status": {
       "codes": [
         {
-          "code": "draft",
+          "code": "DRAFT",
           "labels": {
             "ru": "Черновик",
             "en": "Draft",
@@ -203,7 +203,7 @@
           }
         },
         {
-          "code": "proposed",
+          "code": "PROPOSED",
           "labels": {
             "ru": "Предложен",
             "en": "Proposed",
@@ -211,7 +211,7 @@
           }
         },
         {
-          "code": "accepted",
+          "code": "ACCEPTED",
           "labels": {
             "ru": "Принят",
             "en": "Accepted",
@@ -219,7 +219,7 @@
           }
         },
         {
-          "code": "deferred",
+          "code": "DEFERRED",
           "labels": {
             "ru": "Отложен",
             "en": "Deferred",
@@ -227,7 +227,7 @@
           }
         },
         {
-          "code": "deprecated",
+          "code": "DEPRECATED",
           "labels": {
             "ru": "Устарел",
             "en": "Deprecated",
@@ -235,7 +235,7 @@
           }
         },
         {
-          "code": "superseded",
+          "code": "SUPERSEDED",
           "labels": {
             "ru": "Заменён",
             "en": "Superseded",
@@ -249,7 +249,7 @@
       "_about": "Коды fixed и done из справочника источника сюда не вписаны: в источнике они помечены «легаси сида — к ревизии», их судьба — решение человека в диалоге.",
       "codes": [
         {
-          "code": "proposed",
+          "code": "PROPOSED",
           "labels": {
             "ru": "Предложено",
             "en": "Proposed",
@@ -257,7 +257,7 @@
           }
         },
         {
-          "code": "accepted",
+          "code": "ACCEPTED",
           "labels": {
             "ru": "Принято",
             "en": "Accepted",
@@ -265,7 +265,7 @@
           }
         },
         {
-          "code": "deferred",
+          "code": "DEFERRED",
           "labels": {
             "ru": "Отложено",
             "en": "Deferred",
@@ -273,7 +273,7 @@
           }
         },
         {
-          "code": "superseded",
+          "code": "SUPERSEDED",
           "labels": {
             "ru": "Вытеснено",
             "en": "Superseded",
@@ -286,7 +286,7 @@
     "spec_status": {
       "codes": [
         {
-          "code": "proposed",
+          "code": "PROPOSED",
           "labels": {
             "ru": "Предложение",
             "en": "Proposed",
@@ -294,7 +294,7 @@
           }
         },
         {
-          "code": "accepted",
+          "code": "ACCEPTED",
           "labels": {
             "ru": "Принята",
             "en": "Accepted",
@@ -302,7 +302,7 @@
           }
         },
         {
-          "code": "deprecated",
+          "code": "DEPRECATED",
           "labels": {
             "ru": "Устарела",
             "en": "Deprecated",
@@ -310,7 +310,7 @@
           }
         },
         {
-          "code": "superseded",
+          "code": "SUPERSEDED",
           "labels": {
             "ru": "Вытеснена",
             "en": "Superseded",
@@ -323,7 +323,7 @@
     "milestone_status": {
       "codes": [
         {
-          "code": "upcoming",
+          "code": "UPCOMING",
           "labels": {
             "ru": "Предстоит",
             "en": "Upcoming",
@@ -331,7 +331,7 @@
           }
         },
         {
-          "code": "active",
+          "code": "ACTIVE",
           "labels": {
             "ru": "Активна",
             "en": "Active",
@@ -339,7 +339,7 @@
           }
         },
         {
-          "code": "reached",
+          "code": "REACHED",
           "labels": {
             "ru": "Достигнута",
             "en": "Reached",
@@ -347,7 +347,7 @@
           }
         },
         {
-          "code": "missed",
+          "code": "MISSED",
           "labels": {
             "ru": "Пропущена",
             "en": "Missed",
@@ -360,7 +360,7 @@
     "question_status": {
       "codes": [
         {
-          "code": "open",
+          "code": "OPEN",
           "labels": {
             "ru": "Открыт",
             "en": "Open",
@@ -369,7 +369,7 @@
           "icon": "calendar"
         },
         {
-          "code": "closed",
+          "code": "CLOSED",
           "labels": {
             "ru": "Закрыт",
             "en": "Closed",
@@ -378,7 +378,7 @@
           "icon": "laurel-crown"
         },
         {
-          "code": "deferred",
+          "code": "DEFERRED",
           "labels": {
             "ru": "Отложен",
             "en": "Deferred",
@@ -387,7 +387,7 @@
           "icon": "pause-button"
         },
         {
-          "code": "dropped",
+          "code": "DROPPED",
           "labels": {
             "ru": "Снят",
             "en": "Dropped",
@@ -401,7 +401,7 @@
     "feature_status": {
       "codes": [
         {
-          "code": "proposed",
+          "code": "PROPOSED",
           "labels": {
             "ru": "Предложена",
             "en": "Proposed",
@@ -410,7 +410,7 @@
           "icon": "calendar"
         },
         {
-          "code": "active",
+          "code": "ACTIVE",
           "labels": {
             "ru": "В работе",
             "en": "In progress",
@@ -419,7 +419,7 @@
           "icon": "progression"
         },
         {
-          "code": "shipped",
+          "code": "SHIPPED",
           "labels": {
             "ru": "Поставлена",
             "en": "Shipped",
@@ -428,7 +428,7 @@
           "icon": "laurel-crown"
         },
         {
-          "code": "in_rework",
+          "code": "IN_REWORK",
           "labels": {
             "ru": "В переработке",
             "en": "In rework",
@@ -437,7 +437,7 @@
           "icon": "battery-50"
         },
         {
-          "code": "dropped",
+          "code": "DROPPED",
           "labels": {
             "ru": "Снята",
             "en": "Dropped",
@@ -451,7 +451,7 @@
     "qg_status": {
       "codes": [
         {
-          "code": "draft",
+          "code": "DRAFT",
           "labels": {
             "ru": "Задуман",
             "en": "Draft",
@@ -460,7 +460,7 @@
           "icon": "quill-ink"
         },
         {
-          "code": "active",
+          "code": "ACTIVE",
           "labels": {
             "ru": "Работает",
             "en": "Active",
@@ -469,7 +469,7 @@
           "icon": "play-button"
         },
         {
-          "code": "stale",
+          "code": "STALE",
           "labels": {
             "ru": "Молчит",
             "en": "Stale",
@@ -478,7 +478,7 @@
           "icon": "hourglass"
         },
         {
-          "code": "retired",
+          "code": "RETIRED",
           "labels": {
             "ru": "Выведен",
             "en": "Retired",

@@ -25,6 +25,7 @@ const J = p => JSON.parse(fs.readFileSync(p, 'utf8'));
 const MAP = J(here('./map/sprint-phase-task.json')).types;
 const SCHEMA = J(here('./schema/sprint-phase-task.json')).types;
 const VOCAB = J(here('../../shared/lore-statuses.json')).statusMatch;
+const CODE_CASE = JSON.parse(fs.readFileSync(new URL('./rules/status-unification.json', import.meta.url), 'utf8')).code_case;
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
 const SERVICE = ['MigLeftover'], EDGE = 'HAS_STATE';
@@ -44,7 +45,7 @@ for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
 const calc = {}; // T → [{ rid, res }]
 for (const T of Object.keys(MAP)) {
   calc[T] = [];
-  for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS }) });
+  for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE }) });
 }
 const parentOf = {}; // rid версии → rid записи
 const orphans = {};

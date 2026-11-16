@@ -15,6 +15,7 @@ import { applyMap } from './apply-map.mjs';
 const here = p => new URL(p, import.meta.url);
 const MAP = JSON.parse(fs.readFileSync(here('./map/sprint-phase-task.json'), 'utf8')).types;
 const VOCAB = JSON.parse(fs.readFileSync(here('../../shared/lore-statuses.json'), 'utf8')).statusMatch;
+const CODE_CASE = JSON.parse(fs.readFileSync(here('./rules/status-unification.json'), 'utf8')).code_case;
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 
 const db = connect();
@@ -31,7 +32,7 @@ for (const T of Object.keys(MAP)) {
     t.records++;
     const clean = {};
     for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
-    const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS });
+    const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE });
     for (const f of Object.keys(r.out)) bump(t.outFields, f);
     for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
     for (const f of r.dropped) bump(t.dropped, f);

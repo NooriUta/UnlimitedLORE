@@ -97,7 +97,7 @@ function asStatus(f, v, r, ctx, phase) {
   const codes = (ctx.statusCodes || {})[ctx.statusDict];
   if (!codes) throw new Error(`для ${f} не задан справочник статусов (ctx.statusDict)`);
   const st = ctx.statusVocab ? classifyStatus(v, { vocab: ctx.statusVocab, codes, canonToCode: ctx.canonToCode, strict: phase }) : splitStatus(v, codes);
-  r.out.status = st.code;
+  r.out.status = st.code !== null && ctx.codeCase === 'upper' ? st.code.toUpperCase() : st.code;
   if (st.code === null) { if (phase && !st.known) r.titleFallback = st.note; else reject(r, f, v, 'статус вне справочника', { bucket: 'out', field: 'status', note: 'status_note' }); }
   else if (st.note) r.out.status_note = st.note;
 }

@@ -163,3 +163,10 @@ test('служебные моменты версии приводятся к н�
   const bad = applyMap('KnowSprintHist', MAP.KnowSprintHist, { valid_from: 'давно' }, c);
   assert.deepEqual(bad.rejects, [{ field: 'valid_from', value: 'давно', why: 'не момент времени' }]);
 });
+
+test('код статуса пишется в регистре правил: codeCase upper — заглавными, без него — как в справочнике', () => {
+  const base = { statusCodes: STATUS, statusDict: 'sprint' };
+  const row = { status_raw: '✅ DONE — PROD v1.4.6', valid_from: '2026-06-04T10:00:00Z' };
+  assert.equal(applyMap('KnowSprintHist', MAP.KnowSprintHist, row, { ...base, codeCase: 'upper' }).out.status, 'DONE');
+  assert.equal(applyMap('KnowSprintHist', MAP.KnowSprintHist, row, base).out.status, 'done');
+});

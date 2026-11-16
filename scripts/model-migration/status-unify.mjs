@@ -25,6 +25,7 @@ export function checkRules(rules) {
   if (!rules || rules.format !== FORMAT) return [`формат файла правил «${rules && rules.format}», ждали «${FORMAT}»`];
   const bad = [];
   const langs = rules.languages || [];
+  if (rules.code_case !== 'upper' && rules.code_case !== 'lower') bad.push(`регистр кода «${rules.code_case}», бывает upper или lower`);
   for (const l of LANGS) if (!langs.includes(l)) bad.push(`в правилах не назван язык ${l}`);
   for (const [name, d] of Object.entries(rules.dictionaries || {})) {
     const codes = new Set();
@@ -32,6 +33,8 @@ export function checkRules(rules) {
       if (blank(c.code)) { bad.push(`${name}: значение без кода`); continue; }
       if (codes.has(head(c.code))) bad.push(`${name}: код ${c.code} назван дважды`);
       codes.add(head(c.code));
+      const want = rules.code_case === 'upper' ? String(c.code).toUpperCase() : String(c.code).toLowerCase();
+      if (c.code !== want) bad.push(`${name}: код ${c.code} не в регистре правил (${rules.code_case}), ждали ${want}`);
       for (const l of langs) if (blank((c.labels || {})[l])) bad.push(`${name}.${c.code}: нет подписи на языке ${l}`);
     }
     if (!codes.size) bad.push(`${name}: справочник без значений`);

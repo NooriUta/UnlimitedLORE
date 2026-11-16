@@ -36,13 +36,13 @@ test('источник правил ссылается только на сущ�
 });
 
 test('наши написания статуса сводятся к коду: значок, регистр, пробел, приписка', () => {
-  assert.deepEqual(classify('✅ DONE', plan), { kind: 'known', code: 'done' });
-  assert.deepEqual(classify('🚀 READY FOR DEPLOY', plan), { kind: 'known', code: 'ready_for_deploy' });
-  assert.deepEqual(classify('ready_for_deploy', plan), { kind: 'known', code: 'ready_for_deploy' });
-  assert.deepEqual(classify('🔄 IN PROGRESS', plan), { kind: 'known', code: 'active' });
-  assert.deepEqual(classify('🧪 UAT TESTING', plan), { kind: 'known', code: 'uat' });
-  assert.deepEqual(classify('✅ DONE — PROD v1.4.6', plan), { kind: 'known', code: 'done' });
-  assert.deepEqual(classify('Accepted', RULES.dictionaries.adr_status), { kind: 'known', code: 'accepted' });
+  assert.deepEqual(classify('✅ DONE', plan), { kind: 'known', code: 'DONE' });
+  assert.deepEqual(classify('🚀 READY FOR DEPLOY', plan), { kind: 'known', code: 'READY_FOR_DEPLOY' });
+  assert.deepEqual(classify('ready_for_deploy', plan), { kind: 'known', code: 'READY_FOR_DEPLOY' });
+  assert.deepEqual(classify('🔄 IN PROGRESS', plan), { kind: 'known', code: 'ACTIVE' });
+  assert.deepEqual(classify('🧪 UAT TESTING', plan), { kind: 'known', code: 'UAT' });
+  assert.deepEqual(classify('✅ DONE — PROD v1.4.6', plan), { kind: 'known', code: 'DONE' });
+  assert.deepEqual(classify('Accepted', RULES.dictionaries.adr_status), { kind: 'known', code: 'ACCEPTED' });
 });
 
 test('пустое и незнакомое — разные исходы; незнакомое не превращается в первый попавшийся код', () => {
@@ -68,16 +68,16 @@ test('диалог: знакомое сведено, незнакомое и п�
   assert.equal(d.rows.length, counts.length);
   const by = v => d.rows.find(r => r.value === v);
   assert.equal(by('✅ DONE').state, 'unified');
-  assert.equal(by('✅ DONE').code, 'done');
-  assert.equal(by('🔄 IN PROGRESS').code, 'active');
+  assert.equal(by('✅ DONE').code, 'DONE');
+  assert.equal(by('🔄 IN PROGRESS').code, 'ACTIVE');
   const hold = by('🟠 ON HOLD');
   assert.equal(hold.state, 'needs_decision');
   assert.deepEqual(hold.options.map(o => o.action), ['map_to', 'add_code', 'defer']);
-  assert.ok(hold.options[0].codes.includes('waiting'), 'привязать можно к любому коду справочника типа');
+  assert.ok(hold.options[0].codes.includes('WAITING'), 'привязать можно к любому коду справочника типа');
   const empty = by(null);
   assert.equal(empty.state, 'needs_decision');
   assert.equal(empty.why, 'пусто');
-  assert.equal(empty.suggest, 'proposed', 'предложение — первый статус справочника');
+  assert.equal(empty.suggest, 'PROPOSED', 'предложение — первый статус справочника');
   assert.equal(by('REJECTED').state, 'needs_decision');
   assert.equal(d.summary.needs_decision, 4);
   assert.equal(d.summary.records_waiting, 4 + 413 + 1 + 114);
@@ -86,18 +86,18 @@ test('диалог: знакомое сведено, незнакомое и п�
 
 test('диалог: решение человека закрывает строку; добавленный код обязан прийти с тремя подписями', () => {
   const dec = { format: 'mig-decisions/1', decisions: [
-    { id: 'S1', scope: { type: 'KnowTaskHist', field: 'status_raw', value: '🟠 ON HOLD' }, action: 'map_to', to: 'waiting', by: 'владелица', at: '2026-11-16T12:00:00Z' },
-    { id: 'S2', scope: { type: 'KnowSpecHist', field: 'status', why: 'пусто' }, action: 'map_to', to: 'proposed', by: 'владелица', at: '2026-11-16T12:00:00Z' },
-    { id: 'S3', scope: { type: 'KnowADRHist', field: 'status_raw', value: 'REJECTED' }, action: 'add_code', to: 'rejected',
+    { id: 'S1', scope: { type: 'KnowTaskHist', field: 'status_raw', value: '🟠 ON HOLD' }, action: 'map_to', to: 'WAITING', by: 'владелица', at: '2026-11-16T12:00:00Z' },
+    { id: 'S2', scope: { type: 'KnowSpecHist', field: 'status', why: 'пусто' }, action: 'map_to', to: 'PROPOSED', by: 'владелица', at: '2026-11-16T12:00:00Z' },
+    { id: 'S3', scope: { type: 'KnowADRHist', field: 'status_raw', value: 'REJECTED' }, action: 'add_code', to: 'REJECTED',
       labels: { ru: 'Отклонён', en: 'Rejected', pl: 'Odrzucony' }, by: 'владелица', at: '2026-11-16T12:00:00Z' },
-    { id: 'S4', scope: { type: 'KnowDecisionHist', field: 'status_raw', value: 'fixed' }, action: 'map_to', to: 'accepted', by: 'владелица', at: '2026-11-16T12:00:00Z' },
+    { id: 'S4', scope: { type: 'KnowDecisionHist', field: 'status_raw', value: 'fixed' }, action: 'map_to', to: 'ACCEPTED', by: 'владелица', at: '2026-11-16T12:00:00Z' },
   ] };
   const d = buildDialog(counts, RULES, dec);
   assert.equal(d.summary.needs_decision, 0);
   assert.equal(d.ready, true);
-  assert.equal(d.rows.find(r => r.value === '🟠 ON HOLD').code, 'waiting');
-  assert.equal(d.rows.find(r => r.value === 'REJECTED').code, 'rejected');
-  assert.deepEqual(d.added, [{ dict: 'adr_status', code: 'rejected', labels: { ru: 'Отклонён', en: 'Rejected', pl: 'Odrzucony' } }]);
+  assert.equal(d.rows.find(r => r.value === '🟠 ON HOLD').code, 'WAITING');
+  assert.equal(d.rows.find(r => r.value === 'REJECTED').code, 'REJECTED');
+  assert.deepEqual(d.added, [{ dict: 'adr_status', code: 'REJECTED', labels: { ru: 'Отклонён', en: 'Rejected', pl: 'Odrzucony' } }]);
 
   const noPl = structuredClone(dec);
   delete noPl.decisions[2].labels.pl;
@@ -111,4 +111,12 @@ test('тип и поле, которых нет в правилах, выход�
   const d = buildDialog([{ type: 'KnowFooHist', field: 'status', value: 'ok', n: 2 }], RULES, NONE);
   assert.equal(d.rows[0].state, 'no_rule');
   assert.equal(d.ready, false);
+});
+
+test('регистр кода — правило: владелица 16.11.2026 «uppercase»; код не в регистре правил не принимается', () => {
+  assert.equal(RULES.code_case, 'upper');
+  for (const d of Object.values(RULES.dictionaries)) for (const c of d.codes) assert.equal(c.code, c.code.toUpperCase());
+  const broken = structuredClone(RULES);
+  broken.dictionaries.plan_status.codes[0].code = 'todo';
+  assert.match(checkRules(broken).join('; '), /todo.*TODO/);
 });
