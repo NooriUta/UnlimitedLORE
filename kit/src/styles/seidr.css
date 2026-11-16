@@ -917,6 +917,24 @@ code, pre, kbd, samp { font-family: var(--mono); }
   .sk-kbd { display: none; }
 }
 
+/* ---------- Подсказка у подписи поля (MDL-07, «аналог peek») ---------- */
+.sk-fhint { position: relative; display: inline-flex; }
+.sk-fhint__label { cursor: help; border-bottom: 1px dashed var(--t3); outline-offset: 2px; }
+.sk-fhint__label:focus-visible { outline: 2px solid var(--acc); }
+.sk-fhint__mark { margin-left: 3px; color: var(--t3); font-size: var(--fs-2xs); }
+.sk-fhint__card {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 60;
+  display: flex; flex-direction: column; gap: 4px;
+  width: max-content; max-width: min(320px, calc(100vw - 24px));
+  padding: 8px 10px; border: 1px solid var(--bdh); border-radius: var(--r-sm);
+  background: var(--bg3); color: var(--t1); font-size: var(--fs-xs); font-weight: 400;
+  text-transform: none; letter-spacing: normal; white-space: normal;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
+}
+.sk-fhint__title { font-weight: 700; }
+.sk-fhint__def { color: var(--t1); }
+.sk-fhint__desc { color: var(--t2); }
+
 /* ---------- Tooltip ---------- */
 .sk-tip-wrap { position: relative; display: inline-flex; }
 .sk-tip {
