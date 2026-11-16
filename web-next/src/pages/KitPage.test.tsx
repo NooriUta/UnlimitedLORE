@@ -51,7 +51,8 @@ describe('/kit — витрина Seiðr-kit', () => {
     for (const id of ['tokens', 'elements', 'states', 'shell', 'content']) {
       expect(document.getElementById(`kit-${id}`), id).toBeTruthy();
     }
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Seiðr-kit/);
+    // Паспорт-образец (K5-PASSPORT-FROM-MODEL, шаг 7) несёт свой h1 записи — заголовок витрины ищем среди них.
+    expect(screen.getAllByRole('heading', { level: 1 }).some(h => /Seiðr-kit/.test(h.textContent ?? ''))).toBe(true);
   });
 
   it('K2-VIEW-TARGET: «Цель к сроку» — срок, план, прогноз, вердикт словами и мини-сгорание в строку', () => {
