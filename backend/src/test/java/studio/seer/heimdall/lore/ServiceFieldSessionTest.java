@@ -36,7 +36,7 @@ class ServiceFieldSessionTest {
     /** 16.11.2026, слова владелицы: «просить каждый mcp писать harness … указать его константой»; «и машину что уж то же». */
     @Test
     void harnessAndMachineAreServiceFieldsToo() {
-        for (String f : java.util.List.of("changed_by_harness", "changed_by_machine")) {
+        for (String f : java.util.List.of("changed_by_harness", "changed_by_harness_note", "changed_by_machine")) {
             assertTrue(LoreRecordUnmodeled.SERVICE.contains(f), "SERVICE: " + f);
             assertTrue(StatusHistoryService.VERSION_FIELDS.contains(f), "VERSION_FIELDS: " + f);
         }
@@ -45,7 +45,7 @@ class ServiceFieldSessionTest {
     /** Общее правило: служебные поля автора правки ходят вместе — где есть changed_by, там и сессия. */
     @Test
     void authorFieldsTravelTogether() {
-        for (String f : java.util.List.of("changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_machine")) {
+        for (String f : java.util.List.of("changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine")) {
             assertTrue(LoreRecordUnmodeled.SERVICE.contains(f), "SERVICE: " + f);
             assertTrue(LoreModelTypes.isInternal(f, "task_uid"), "isInternal: " + f);
             assertTrue(StatusHistoryService.VERSION_FIELDS.contains(f), "VERSION_FIELDS: " + f);

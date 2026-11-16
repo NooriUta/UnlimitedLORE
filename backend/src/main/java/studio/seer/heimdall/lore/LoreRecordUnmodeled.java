@@ -36,7 +36,7 @@ final class LoreRecordUnmodeled {
      * здесь перечень назван целиком, чтобы правило не зависело от чужих списков.
      */
     static final Set<String> SERVICE = Set.of("valid_from", "valid_to", "state_uid", "content_hash", "changed_by",
-        "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_machine", "status_category", "status_known_from", "status_backfilled", "source_commit", "hist_for",
+        "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine", "status_category", "status_known_from", "status_backfilled", "source_commit", "hist_for",
         "created_at", "updated_at", "origin");
 
     static boolean reads(String type) {
