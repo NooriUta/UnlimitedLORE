@@ -228,3 +228,21 @@ describe('S5-11 · RecordView: вкладка «История»', () => {
     expect(screen.getAllByTestId('kit-history-row')).toHaveLength(3);
   });
 });
+
+// Препрод 16.11 (веха M-LORE-W6-NEXT, ранбук): модель объявляет связь «История» с ключом `history`
+// (вид связи — состав). Её вкладка совпадала по ключу со служебной вкладкой истории, при склейке
+// побеждала первая — вкладка связи: «◆История 0», хотя в панели «правок: 1». Служебная история главнее.
+describe('RecordView: связь модели с ключом history не перебивает вкладку истории', () => {
+  it('число — версий истории, без значка состава', () => {
+    const kinds = { Task: { title: 'Задачи', icon: 'scroll-quill', relations: [{ key: 'history', label: 'История', relation: 'composition' as const, rel: 'HAS_STATE', dir: 'out' as const }] } };
+    const ctx2: KitCtx = {
+      data: { records: [REC], edges: [], journal: [], meta: { generated_at: '2026-11-07T12:00:00Z' } },
+      config: { modules: [], menu: { groups: [] }, kinds, statuses: { items: [] } }, href: id => `#${id}`, esc: s => s, md: s => <div>{s}</div>,
+    };
+    render(<RecordView record={REC} ctx={ctx2} tab="overview" onTab={() => {}} history={ok()} />);
+    const tabs = screen.getAllByRole('tab', { name: /История/ });
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].textContent).toContain('3');
+    expect(tabs[0].textContent).not.toContain('◆');
+  });
+});
