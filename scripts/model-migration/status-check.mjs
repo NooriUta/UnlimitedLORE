@@ -31,7 +31,7 @@ const outArg = process.argv.indexOf('--out');
 if (outArg > 0) fs.writeFileSync(process.argv[outArg + 1], JSON.stringify(dialog, null, 1));
 
 const s = dialog.summary;
-console.log(`источник ${dialog.source}: значений ${dialog.rows.length}, записей ${s.records}`);
+console.log(`источник ${dialog.source}${dialog.unread.length ? ' (ПРОЧИТАН НЕ ВЕСЬ)' : ''}: значений ${dialog.rows.length}, записей ${s.records}`);
 console.log(`  свелось само: ${s.unified} · закрыто решением: ${s.decided} · ждёт решения: ${s.needs_decision} · без правила: ${s.no_rule} · записей ждёт: ${s.records_waiting}`);
 for (const u of dialog.unread) console.log(`  НЕ ПРОЧИТАНО ${u.type}.${u.field}: ${u.error}`);
 const short = v => v === null ? '(пусто)' : String(v).replace(/\s+/g, ' ').slice(0, 50);
@@ -42,5 +42,7 @@ for (const [k, rows] of Object.entries(byType)) {
   console.log(`  ${k} [${rows[0].dict || 'правила нет'}]: ${rows.length} значений, ${rows.reduce((a, r) => a + r.n, 0)} записей — ` +
     rows.slice(0, 12).map(r => `«${short(r.value)}»×${r.n}${r.suggest ? ` → ${r.suggest}?` : ''}`).join(', ') + (rows.length > 12 ? ` … и ещё ${rows.length - 12}` : ''));
 }
-console.log(dialog.ready ? 'ГОТОВО: статусы сведены, перенос можно начинать' : 'СТОП: есть статусы без решения — перенос не начинается');
+// «Не смогли прочитать» — не «ждёт решения»: причина стопа называется своя.
+console.log(dialog.unread.length ? `СТОП: источник прочитан не весь (${dialog.unread.length} полей) — проверка не выполнена, перенос не начинается`
+  : dialog.ready ? 'ГОТОВО: статусы сведены, перенос можно начинать' : 'СТОП: есть статусы без решения — перенос не начинается');
 process.exit(dialog.ready ? 0 : 1);
