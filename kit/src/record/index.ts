@@ -25,6 +25,7 @@ export { egoGraph, edgeColor, toCssColor, typesAround, verdictTone, type EgoGrap
 export * from './graphState';
 // Место паспорта: справа / снизу / на весь экран (S4-33).
 export * from './RecordDock';
+export * from './ListWithRecord';
 export * from './RecordPlace';
 export * from './ModelNotes';
 export * from './PeekLoader';
