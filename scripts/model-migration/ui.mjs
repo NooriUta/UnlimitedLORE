@@ -64,8 +64,8 @@ const PAGE = String.raw`<!doctype html><html lang="ru"><head><meta charset="utf-
 <title>LORE · перенос на новую модель</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light;--bg0:#faf6ee;--bg1:#ffffff;--bg2:#f1eadc;--bd:#dccfb8;--t1:#2a2218;--t2:#5f5343;--t3:#7a6d5a;--acc:#a8660a;--suc:#3f7a2c;--wrn:#a8660a;--inf:#2f6a94;--dng:#b23a26;--mono:'IBM Plex Mono',ui-monospace,monospace;--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:20px;--fs-2xl:24px}
-:root[data-theme=dark]{color-scheme:dark;--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bd:#42382a;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#d4a24a;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e}
+:root{color-scheme:light;--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#677528;--suc:#3d7a38;--wrn:#a06010;--inf:#3a7060;--dng:#c03030;--mono:'IBM Plex Mono',ui-monospace,monospace;--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:20px;--fs-2xl:24px}
+:root[data-theme=dark]{color-scheme:dark;--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bd:#42382a;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e}
 *{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-sm)/1.45 Manrope,system-ui,sans-serif}
 .wrap{max-width:1200px;margin:0 auto;padding:10px 12px 60px}h1,h2,h3{font-family:Unbounded,Manrope,sans-serif;font-weight:800;margin:14px 0 6px}h1{font-size:var(--fs-2xl);color:var(--acc)}h2{font-size:var(--fs-lg);border-bottom:1px solid var(--bd);padding-bottom:4px}h3{font-size:var(--fs-md);margin:10px 0 4px}
 .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sub{color:var(--t3);font-size:var(--fs-xs)}code,.mono{font-family:var(--mono);font-size:var(--fs-xs)}
