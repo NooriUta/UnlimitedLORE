@@ -147,6 +147,8 @@ final class LoreModel {
         content.put("workflow", LoreModelWorkflow.surface(LoreModelFile.content().workflow()));
         content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
         content.put("dictionaries", dictionaries);
+        // MDL-02: счётчик текстов полей — сколько полей в модели и у скольких нет определения.
+        content.put("field_texts", LoreModelFile.fieldTextsCount(LoreModelFile.content()));
         content.put("warnings", warnings);
 
         Map<String, Object> doc = new LinkedHashMap<>();
