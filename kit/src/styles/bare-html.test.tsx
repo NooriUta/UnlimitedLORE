@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, Lanes, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -287,6 +287,15 @@ function Samples() {
         <HeatChart title="Матрица" rows={['ru-wiki', 'code']} cols={['L1', 'L2']} values={[[92, 88], [84, null]]} />
         <ScatterChart title="Парето" xTitle="токенов" points={[{ x: 800, y: 74, label: 'gemini' }, { x: 2300, y: 86, label: 'claude' }]} />
         <BarChart title="Доля" groups={[{ key: 'a', label: 'статьи' }]} data={[{ category: 'Хабр', values: { a: 34 } }, { category: 'LinkedIn', values: { a: null } }]} />
+      </section>
+      <section className="bare__sec" data-kit="lanes">
+        <h2 className="bare__h2">Дорожки</h2>
+        {/* K4-LANES: полосы, ссылки на записи с бейджем, выделенный стык, пустая полоса словами. */}
+        <Lanes label="Тропа" href={id => '#' + id} lanes={[
+          { key: 'A', title: 'У сна А', items: [{ id: 'S-1', title: 'Свиток времени', badge: '×2' }] },
+          { key: 'AB', title: 'Стык', accent: true, items: [{ id: 'Q-1', title: 'Квиз о времени' }] },
+          { key: 'B', title: 'У сна Б', items: [] },
+        ]} />
       </section>
       <section className="bare__sec" data-kit="passport-doc">
         <h2 className="bare__h2">Паспорт из документа приложения</h2>

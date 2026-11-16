@@ -19,7 +19,7 @@
 //   • меню оболочки убирается на время чтения, если человек так выбрал, и возвращается при закрытии
 //     (D-2026-UXR-READ-COLLAPSE): выбор человека kit не затирает.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { pushUrlState, readUrlState, urlStateHref, type UrlWindow } from '../resilience/urlState';
+import { onUrlStateWrite, pushUrlState, readUrlState, urlStateHref, type UrlWindow } from '../resilience/urlState';
 import { useOptionalKitShell } from '../shell/KitShell';
 import { RecordDock, isRecordPlacement, type RecordPlacement } from './RecordDock';
 
@@ -57,9 +57,11 @@ export function useRecordOpen({ win, defaultPlace }: { win?: UrlWindow; defaultP
     const w = win as (UrlWindow & Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>>) | undefined;
     if (!w?.addEventListener || !w.removeEventListener) return;
     const sync = () => setOpenState(fromUrl(w));
+    // Запись адреса через kit (меню оболочки, setUrlParams) — тоже: pushState событий не шлёт.
+    const off = onUrlStateWrite(sync);
     w.addEventListener('popstate', sync);
     w.addEventListener('hashchange', sync);
-    return () => { w.removeEventListener!('popstate', sync); w.removeEventListener!('hashchange', sync); };
+    return () => { off(); w.removeEventListener!('popstate', sync); w.removeEventListener!('hashchange', sync); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [win]);
   const setOpen = (next: OpenRecord) => {

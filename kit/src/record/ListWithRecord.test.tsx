@@ -86,3 +86,18 @@ describe('ListWithRecord — раскладка', () => {
     expect(seen).toEqual([{ id: 'A-2', place: 'right' }, { id: null, place: 'right' }]);
   });
 });
+
+// Пилот 16.11: меню KitShell снимало ?open из адреса (pushUrlState), а хук оставался «открытым» —
+// он слушал только popstate/hashchange. Любая запись адреса через kit оповещает хук.
+describe('useRecordOpen — запись адреса через kit видна сразу', () => {
+  it('pushUrlState снял open — запись закрыта; поставил — открыта', async () => {
+    const { pushUrlState } = await import('../resilience/urlState');
+    window.history.replaceState(null, '', '/?sec=adr&open=A-1');
+    const { result } = renderHook(() => useRecordOpen({ win: window, defaultPlace: () => 'right' }));
+    expect(result.current.open.id).toBe('A-1');
+    act(() => { pushUrlState({ open: null }); });
+    expect(result.current.open.id).toBeNull();
+    act(() => { pushUrlState({ open: 'A-2', place: 'bottom' }); });
+    expect(result.current.open).toMatchObject({ id: 'A-2', place: 'bottom' });
+  });
+});

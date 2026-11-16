@@ -145,6 +145,7 @@ final class TaskRoleWriter {
         if (executor == null || executor.isBlank()) missing.add(TaskRole.EXECUTOR);
         if (!missing.isEmpty()) {
             return "задача не создана: не указаны роли " + String.join(", ", missing)
+                + " (ключи запроса: author_agent, executor_agent)"
                 + ". Агент обязан называть автора и исполнителя при создании — "
                 + "роль, оставленная на потом, не проставляется никогда. "
                 + (known.isEmpty()

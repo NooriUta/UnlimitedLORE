@@ -396,6 +396,8 @@ export function registerLoreWrite(rawServer: McpServer): void {
       sprint_id: z.string(),
       task_id: z.string().describe('short task id, unique within the sprint'),
       title: z.string(),
+      status: z.enum(['planned', 'todo', 'backlog', 'design', 'active']).optional()
+        .describe('MDL-11: the status the task is born in. Omitted → the first status, backlog (owner rule 16.11.2026); the answer says status and status_defaulted. Only statuses that need no reason or evidence are allowed at creation; done / uat / ready_for_deploy / review / blocked / waiting / cancelled / failed are set afterwards via status_set (400 STATUS_NOT_FOR_CREATE).'),
       note_md: z.string().optional().describe('optional Markdown note'),
       effort_days: z.number().nonnegative().optional().describe('estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125) — same field task_set writes, set at creation so the task is born with its estimate'),
       actual_days: z.number().nonnegative().optional().describe('actual effort already spent, person-days — for tasks recorded after the work was done (bookkeeping); same field task_set writes (MT-CAL-ACTUAL)'),
@@ -410,8 +412,8 @@ export function registerLoreWrite(rawServer: McpServer): void {
       uc_id: z.string().optional().describe('D16: the use case this task realizes. Creates the REALIZES edge ATOMICALLY with the task — no second call, no window where the task exists unlinked. A non-existent uc_id is a 400, not a silent no-op.'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, effort_days, actual_days, bookkeeping, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
-          sprint_id, task_id, title,
+    body: ({ sprint_id, task_id, title, status, note_md, effort_days, actual_days, bookkeeping, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
+          sprint_id, task_id, title, status: status ?? null,
           note_md: note_md ?? null, effort_days: effort_days ?? null, phase_uid: phase_uid ?? null, actual_days: actual_days ?? null, bookkeeping: bookkeeping ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
           reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
