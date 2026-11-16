@@ -52,6 +52,8 @@ import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
 export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
+/** Служебные вкладки конструктора — не разделы записи (порядок: applySections). */
+const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -451,7 +453,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
     // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
     // отключается: что считать разделом, решает приложение, а не конструктор.
-    if ((named && namedKeys.has(d.key)) || OWN_TAB.includes(d.relation)) {
+    if ((named && namedKeys.has(d.key)) || (OWN_TAB.includes(d.relation) && !d.shared)) {
       // Ключ связи — ключ вкладки, и две связи с одним ключом дали бы два
       // одинаковых раздела (B13: «дублирующиеся вкладки»). Совпал — связи
       // идут в одну вкладку, а не во вторую такую же.
@@ -459,7 +461,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
       if (same) same.defs.push(d); else relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] });
       continue;
     }
-    const sh = SHARED_TAB[d.relation];
+    // §7.8 шаг 1: сторона состава/агрегации с явным местом «вкладка связей» — в общую вкладку ассоциаций.
+    const sh = SHARED_TAB[d.shared ? 'association' : d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
     // Методика §7.8: подпись группы — из вида приложения (документа), иначе подпись kit.
@@ -605,7 +608,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // экране вслепую — сервер не знал ни ширины, ни того, сколько вкладок у
   // записи набралось вместе со служебными.
   const row = mergeTabs(aside ? recordItems : [...recordItems, ...aroundItems]);
-  const ordered: TabItem[] = applySections(row, order);
+  // Не названные моделью разделы записи — до служебных вкладок (пилот 16.11).
+  const ordered: TabItem[] = applySections(row, order, SERVICE_TABS);
   // ГРУППЫ: несколько родственных разделов — ОДНА вкладка с подписью группы
   // (шестой ключ модели). Склеиваются только разделы-связи: их рисует kit, и
   // внутри вкладки они становятся подзаголовками. Раздел, который kit внутри

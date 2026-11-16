@@ -262,6 +262,12 @@ function assertGroupRuns(sections: readonly PassportSection[], type: string): vo
 export function applySections<T extends { id: string }>(
   items: readonly T[],
   order?: PassportOrder | null,
+  /**
+   * Служебные вкладки экрана (связи, граф, журнал, история). Задан — разделы записи, которых модель
+   * не назвала, встают ПЕРЕД первой названной служебной, а не после неё (пилот 16.11: «По смыслу»
+   * стояла после «Связей» и «Журнала»). Не задан — прежний порядок.
+   */
+  service?: ReadonlySet<string>,
 ): T[] {
   if (!order?.decided || order.sections.length === 0) return [...items];
   const at = new Map(order.sections.map((s, i) => [s.key, i]));
@@ -277,7 +283,14 @@ export function applySections<T extends { id: string }>(
     named.push({ item, i });
   }
   named.sort((a, b) => a.i - b.i);
-  return [...named.map(n => n.item), ...rest];
+  const seq = named.map(n => n.item);
+  if (!service) return [...seq, ...rest];
+  const restOwn = rest.filter(x => !service.has(x.id));
+  const restService = rest.filter(x => service.has(x.id));
+  const at2 = seq.findIndex(x => service.has(x.id));
+  const head = at2 < 0 ? seq : seq.slice(0, at2);
+  const tail = at2 < 0 ? [] : seq.slice(at2);
+  return [...head, ...restOwn, ...tail, ...restService];
 }
 
 /**

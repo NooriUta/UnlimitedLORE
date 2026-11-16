@@ -57,3 +57,17 @@ describe('порядок из модели и общая вкладка ассо
     expect(t.some(x => x.includes('По смыслу'))).toBe(true);
   });
 });
+
+describe('связь с пометкой shared — в общей вкладке, а не своей (§7.8 шаг 1)', () => {
+  it('агрегация shared идёт во вкладку группы ассоциаций; без пометки — своя вкладка', () => {
+    const k: KindConfig = { title: 'Квиз', icon: 'checkbox-tree', relationGroups: { association: 'По смыслу' }, relations: [
+      { key: 'topic', label: 'Квиз руны', relation: 'association', rel: 'QUIZ_OF', dir: 'out' },
+      { key: 'trails', label: 'Лежит на тропах', relation: 'aggregation', rel: 'QUIZ_OF', dir: 'out', shared: true },
+    ] };
+    const ctx = ctxOf(k);
+    render(<RecordView record={ctx.data.records[0]} ctx={ctx} tab="" onTab={() => {}} />);
+    const t = tabs();
+    expect(t.some(x => x.includes('По смыслу'))).toBe(true);
+    expect(t.some(x => x.includes('Лежит на тропах'))).toBe(false);
+  });
+});

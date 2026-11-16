@@ -40,7 +40,9 @@ export interface KitRelationDef { key:string; label:string; relation:KitRelation
   /** Вид записи на другом конце (kind; не путать с `target` у onRelation — там id). Одно ребро бывает в нескольких связях вида (у компонента BELONGS_TO:in — ADR, спринты, решения…): без цели вкладка «ADR» показала бы и спринты. Не задан — любые записи. */
   targetKind?:string;
   /** S9-05 / D14: колонки таблицы этой связи (ключи колонок списка: 'status', 'id', 'fields.<поле>', 'progress:<поле>'…) — их называет приложение по виду ребёнка. Нет — общие колонки (Статус · Вид · Код · Запись). */
-  columns?:string[] }
+  columns?:string[];
+  /** Методика §7.8 (шаг 1): сторона связи по явному месту идёт в ОБЩУЮ вкладку связей, а не в свою (OWN_TAB у состава и агрегации). Ставит сборщик документа только при place {out, in}. */
+  shared?:boolean }
 export interface KindConfig { title:string; icon:string;
   /** K4-MENTION-LOOK: цвет вида — ТОКЕН темы (`var(--section-adrs)` или имя токена). Им окрашено каждое упоминание записи этого вида (значок, рамка чипа) и узел графа. Нет — упоминание нейтральное: цвет не выдумываем. */
   color?:string; relations?:KitRelationDef[];
