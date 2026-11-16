@@ -1913,6 +1913,11 @@
       "labelKey" : "pp.field.projects",
       "kind" : "ref",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
       "multi" : true,
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
@@ -2163,6 +2168,11 @@
       "labelKey" : "pp.field.projects",
       "kind" : "ref",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
       "multi" : true,
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
@@ -4549,6 +4559,11 @@
       "labelKey" : "pp.field.projects",
       "kind" : "ref",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "BELONGS_TO_PROJECT"
+      },
       "multi" : true,
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
