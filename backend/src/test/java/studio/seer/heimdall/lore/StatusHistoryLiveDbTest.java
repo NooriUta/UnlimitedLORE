@@ -117,7 +117,8 @@ class StatusHistoryLiveDbTest {
         post("/lore/adr", "{\"adr_id\":\"" + id + "\",\"name\":\"s213\",\"context_md\":\"контекст\"}");
         List<Map<String, Object>> v1 = hist("KnowADRHist", "adr_id", id);
         assertEquals(1, v1.size(), "создание — одна версия, и в ней статус: " + v1);
-        versionSchema(v1.get(0), "PROPOSED", "in_progress", "ADR при создании");
+        // 16.11.2026, слово владелицы «для остальных по аналогии выбирать первый статус»: первый статус adr_status — DRAFT
+        versionSchema(v1.get(0), "DRAFT", "not_started", "ADR при создании");
         assertEquals("контекст", v1.get(0).get("context_md"));
 
         post("/lore/status", "{\"entity_type\":\"adr\",\"id\":\"" + id + "\",\"status\":\"accepted\"}");
@@ -230,6 +231,27 @@ class StatusHistoryLiveDbTest {
         versionSchema(open(v2), "accepted", "in_force", "решение после accepted");
         assertEquals("accepted", query("SELECT status_raw FROM KnowDecision WHERE decision_id=:id", Map.of("id", id))
             .get(0).get("status_raw"));
+    }
+
+    // ── Без статуса при создании — первый статус справочника ──
+    // Слово владелицы 16.11.2026: «для остальных по аналогии выбирать первый статус и делать статусом по
+    // умолчанию». До правки решение и спека без статуса рождались вовсе без версии статуса.
+
+    @Test
+    @TestSecurity(user = "s213", roles = {"admin"})
+    @JwtSecurity(claims = {@Claim(key = "sub", value = SUB)})
+    void decisionAndSpecWithoutStatusStartAtTheFirstStatus() {
+        String did = "D-2026-S213-NOSTATUS", sid = "SPEC-S213-NOSTATUS";
+        post("/lore/decision", "{\"decision_id\":\"" + did + "\",\"title\":\"s213\"}");
+        List<Map<String, Object>> d = hist("KnowDecisionHist", "decision_id", did);
+        assertEquals(1, d.size(), "у нового решения без статуса есть версия статуса: " + d);
+        versionSchema(d.get(0), "proposed", "in_progress", "решение без статуса");
+        post("/lore/spec", "{\"spec_id\":\"" + sid + "\",\"title\":\"s213\",\"content_md\":\"тело\"}");
+        Map<String, Object> s = open(hist("KnowSpecHist", "spec_id", sid));
+        assertEquals("proposed", s.get("status"), "новая спека без статуса — первый статус: " + s);
+        // правка существующей без статуса статус не трогает
+        post("/lore/decision", "{\"decision_id\":\"" + did + "\",\"title\":\"s213 правка\"}");
+        assertEquals(1, hist("KnowDecisionHist", "decision_id", did).size(), "правка без статуса новой версии не открывает");
     }
 
     // ── Задача/спринт/фаза: тот же сервис, единая схема ──
