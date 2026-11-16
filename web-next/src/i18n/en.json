@@ -275,8 +275,6 @@
   "pp.lead": "Real LORE records in the passport layout (decision of 08.11). The passport is drawn only from the lore.record/1 contract object (ADR-LORE-047, proposed); for now the facade is assembled on the client from existing slices. Read-only.",
   "pp.type": "Record type",
   "pp.record": "Record",
-  "pp.full.enter": "Full screen",
-  "pp.full.exit": "Back to its place",
   "pp.notFoundHint": "Record «{id}» does not exist: deleted, renamed or in another database. This is the server answer, not a load failure.",
   "pp.close": "Close record",
   "pp.place": "Opened as",

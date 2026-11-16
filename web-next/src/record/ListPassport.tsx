@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   EmptyState, LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
-  HISTORY_QUERY_ALL, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
+  HISTORY_QUERY_ALL, RecordPlace, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
 import { appT } from '../i18n';
 import { loreRefHref, loreRefLook, mdEditorWithRefs } from './loreMdRefs';
@@ -40,7 +40,6 @@ import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
 import { ModelNotes } from './ModelNotes';
-import { PassportPlace } from './PassportPlace';
 import { loreQueryRun } from './loreQueryBlock';
 import { loreGraphRun } from './loreGraphBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
@@ -311,7 +310,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   const barPager = onGo && ids.length > 0 ? <RecordPager ids={ids} current={view?.record.id ?? id} onGo={onGo} hotkeys={placement === 'full'} /> : undefined;
   const barTools = (
     <>
-      <PassportPlace value={placement} onPlace={setPlace} back={backPlace} />
+      <RecordPlace value={placement} onPlace={setPlace} back={backPlace} />
       {onClose && (
         <button type="button" className="sk-iconbtn sk-place__btn" onClick={onClose}
           aria-label={t('pp.close')} title={`${t('pp.close')} (Esc)`}>×</button>
