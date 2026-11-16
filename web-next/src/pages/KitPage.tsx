@@ -17,6 +17,7 @@ import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 import KitBadges from './KitBadges';
+import { KitChartsDemo } from './KitChartsDemo';
 import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
@@ -243,6 +244,8 @@ export default function KitPage() {
           <div className="kitp__grid">
             {TARGET_PARTS.map(p => <span key={p.id}>{p.id} <BurnSpark points={p.points} /></span>)}
           </div>
+          {/* K4-CHARTS: графики одним семейством — line · scatter · bar · heat. */}
+          <KitChartsDemo lang={kitLang} />
         </section>
 
         <section id="kit-shell" className="kitp__sec" aria-labelledby="kit-shell-h">
