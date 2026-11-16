@@ -75,6 +75,7 @@ tr.grp td{background:var(--bg2);font-weight:700}tr.done td{opacity:.6}
 .dec{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}.dec select{flex:1;min-width:160px}.newf{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.newf[hidden]{display:none}.chip.ok{margin-bottom:4px}td:last-child{width:300px}td:nth-child(3){width:260px}
 .steps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.steps a{text-decoration:none;color:var(--t2);border:1px solid var(--bd);border-radius:999px;padding:4px 12px;font-size:var(--fs-xs);background:var(--bg1)}.steps a b{color:var(--acc);margin-right:4px}.steps a.on{background:var(--acc);border-color:var(--acc);color:var(--bg0)}.steps a.on b{color:var(--bg0)}
 .guide{border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:6px;background:var(--bg1);padding:6px 12px;margin:10px 0}.guide summary{cursor:pointer;padding:4px 0}.guide p,.guide li{color:var(--t1);margin:4px 0}.guide ol,.guide ul{padding-left:20px}
+.cfg{min-width:0}.cfg td,.cfg th{border:0;padding:3px 6px}.cfg input{width:100%;border-radius:6px}
 select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:999px;padding:3px 8px;font:400 var(--fs-xs) Manrope,sans-serif}input.lbl{width:110px}
 .chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 7px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}.chip.ok{color:var(--suc);border-color:var(--suc)}
 .themesw{display:inline-flex;border:1px solid var(--acc);border-radius:999px;overflow:hidden}.themesw button{background:transparent;border:0;color:var(--acc);font:700 var(--fs-xs) Manrope,sans-serif;padding:3px 10px;cursor:pointer}.themesw button[aria-pressed=true]{background:var(--acc);color:var(--bg0)}
@@ -124,6 +125,15 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 </details></section>
 <section data-page="1" hidden><h2>Шаг 1. Подключение и базы</h2>
 <p class="sub">Что установщик видит: сервер и базу-источник (только чтение) и сервер новой базы. Адреса и учётки — в файле доступа этой установки; значения учёток не показываются.</p>
+<div class="tw" style="padding:8px"><form id="cf" autocomplete="off">
+<table class="cfg"><tr><th></th><th>Источник (только чтение)</th><th>Новая база</th></tr>
+<tr><td>Сервер ArcadeDB</td><td><input name="MIG_DB_URL" size="34"></td><td><input name="MIG_DST_URL" size="34" placeholder="пусто — тот же сервер"></td></tr>
+<tr><td>База</td><td><input name="MIG_SRC_DB" size="34"></td><td><input name="MIG_DST_DB" size="34" placeholder="migration_dst…"></td></tr>
+<tr><td>Пользователь</td><td><input name="MIG_SRC_USER"></td><td><input name="MIG_DST_USER"></td></tr>
+<tr><td>Пароль</td><td><input name="MIG_SRC_PASSWORD" type="password" autocomplete="new-password"></td><td><input name="MIG_DST_PASSWORD" type="password" autocomplete="new-password"></td></tr></table>
+<p class="sub">Пароль не показывается. Пустое поле пароля — оставить прежний. Сохраняется в файл доступа <span class="mono" id="envfile"></span>.</p>
+<div class="top"><button type="button" class="btn" id="ctest">Проверить подключение</button><button type="button" class="btn pri" id="csave">Сохранить</button><button type="button" class="btn" id="ccreate">Создать новую базу</button></div>
+<div id="cres" class="sub"></div></form></div>
 <div id="s1">загрузка…</div></section>
 <section data-page="2" hidden><h2>Шаг 2. Унификация статусов</h2>
 <p class="sub">В записи — код справочника (статусы заглавными); подписи на трёх языках — в справочнике. Предложение конвейера принимается кнопкой; группа — кнопкой в её заголовке. Пока есть строка без решения, перенос не начинается.</p>
@@ -182,6 +192,12 @@ if(stepFromHash()!=='0')location.hash='#step-0'})}
 function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}}
 function stepFromHash(){var m=/^#step-(\d)$/.exec(location.hash);return m?m[1]:'0'}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
+function cform(){var f=document.getElementById('cf'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
+function cfill(v){var f=document.getElementById('cf');Object.keys(v).forEach(function(k){var x=f.elements[k];if(!x)return;if(x.type==='password'){x.value='';x.placeholder=v[k]==='задан'?'задан — пусто, чтобы не менять':'не задан'}else x.value=v[k]})}
+function cshow(d){var p=[];if(d.errors&&d.errors.length)p.push('<b style="color:var(--dng)">'+d.errors.map(esc).join('; ')+'</b>');if(d.src)p.push('источник: '+(d.src.ok?'<span class="chip ok">отвечает, типов '+d.src.types+'</span>':'<span class="chip">'+esc(d.src.why)+'</span>'));if(d.dst)p.push('новая база: '+(d.dst.ok?(d.dst.exists?'<span class="chip ok">есть</span>':'<span class="chip">сервер отвечает, базы ещё нет — «Создать новую базу»</span>'):'<span class="chip">'+esc(d.dst.why)+'</span>'));if(d.saved)p.unshift('<span class="chip ok">сохранено</span>');if(d.created)p.unshift('<span class="chip ok">создана '+esc(d.created)+'</span>');document.getElementById('cres').innerHTML=p.join(' · ')}
+function cpost(u,b){document.getElementById('cres').textContent='…';return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(function(r){return r.json()}).then(function(d){if(d.error){msg(d.error,true);document.getElementById('cres').textContent=d.error;return}if(d.values)cfill(d.values);cshow(d);if(d.saved||d.created){step.c1=0;conn();load()}})}
+fetch('api/settings').then(function(r){return r.json()}).then(function(d){if(d.values){cfill(d.values);document.getElementById('envfile').textContent=d.file||''}}).catch(function(){});
+document.addEventListener('click',function(e){var id=e.target.id;if(id==='ctest')cpost('api/settings/test',cform());if(id==='csave')cpost('api/settings/save',cform());if(id==='ccreate')cpost('api/settings/create-dst')});
 function conn(){fetch('api/connect').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);
 var h='<div class="tw"><table><tbody><tr><td>Сервер источника</td><td class="mono">'+esc(d.srcUrl)+'</td></tr><tr><td>База-источник</td><td class="mono">'+esc(d.srcDb)+' <span class="chip">только чтение</span></td></tr><tr><td>Сервер новой базы</td><td class="mono">'+esc(d.dstUrl)+'</td></tr><tr><td>Новая база</td><td class="mono">'+esc(d.dstDb)+' '+(d.dstError?'<span class="chip">не прочитана: '+esc(d.dstError)+'</span>':'<span class="chip ok">есть, типов '+d.dstTypes+'</span>')+'</td></tr></tbody></table></div>';
 h+='<h3>Источник: записей по типам</h3><div class="tw"><table><thead><tr><th>Тип</th><th>Записей</th></tr></thead><tbody>'+d.src.map(function(t){return '<tr><td class="mono">'+esc(t.name)+'</td><td class="num">'+t.records+'</td></tr>'}).join('')+'</tbody></table></div>';
@@ -221,7 +237,8 @@ function forPage(dialog, rules) {
 }
 
 export async function serve({ port = 2499 } = {}) {
-  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
+  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl, updateEnvText, parseEnv, checkEnv, publicView }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
+  const envFile = process.env.MIG_ENV_FILE;
   // Одно задание за раз: перенос (записи → связи → отпечаток) или только отпечаток. Ход — строками, итог — объектом.
   let J = { running: false, lines: [], result: null, error: null };
   const runJob = async (what, decisionsDoc, who) => {
@@ -258,8 +275,27 @@ export async function serve({ port = 2499 } = {}) {
   const file = process.env.MIG_DECISIONS_FILE;
   if (!file) throw new Error('не указан файл решений: --decisions <файл> (создастся, если его нет)');
   const readDoc = () => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { format: DECISIONS_FORMAT, decisions: [] });
-  const db = connect();
+  let db = connect();
   let cache = null;
+  // Форма подключения: значения из формы поверх файла доступа; пустой пароль — прежний.
+  const FORM_KEYS = ['MIG_DB_URL', 'MIG_SRC_DB', 'MIG_SRC_USER', 'MIG_SRC_PASSWORD', 'MIG_DST_URL', 'MIG_DST_DB', 'MIG_DST_USER', 'MIG_DST_PASSWORD'];
+  const pickForm = b => Object.fromEntries(FORM_KEYS.filter(k => b[k] !== undefined).map(k => [k, String(b[k])]));
+  const candidate = form => { const e = { ...db.env }; for (const [k, v] of Object.entries(form)) if (!(/PASSWORD/.test(k) && v === '')) e[k] = v.trim(); return e; };
+  const basic = (u, p) => 'Basic ' + Buffer.from(`${u}:${p}`).toString('base64');
+  const probe = async e => {
+    const out = { src: null, dst: null };
+    try {
+      const r = await fetch(e.MIG_DB_URL.replace(/\/+$/, '') + '/api/v1/query/' + encodeURIComponent(e.MIG_SRC_DB), { method: 'POST', signal: AbortSignal.timeout(15000),
+        headers: { Authorization: basic(e.MIG_SRC_USER, e.MIG_SRC_PASSWORD), 'Content-Type': 'application/json' }, body: JSON.stringify({ language: 'sql', command: 'SELECT count(*) AS n FROM schema:types' }) });
+      out.src = r.ok ? { ok: true, types: (await r.json()).result[0].n } : { ok: false, why: 'сервер ответил ' + r.status };
+    } catch (x) { out.src = { ok: false, why: 'нет ответа: ' + (x.cause && x.cause.code || x.name) }; }
+    try {
+      const r = await fetch(dstUrl(e).replace(/\/+$/, '') + '/api/v1/databases', { signal: AbortSignal.timeout(15000), headers: { Authorization: basic(e.MIG_DST_USER, e.MIG_DST_PASSWORD) } });
+      out.dst = r.ok ? { ok: true, exists: (await r.json()).result.includes(e.MIG_DST_DB) } : { ok: false, why: 'сервер ответил ' + r.status };
+    } catch (x) { out.dst = { ok: false, why: 'нет ответа: ' + (x.cause && x.cause.code || x.name) }; }
+    return out;
+  };
+  const readBody = async req => { let b = ''; for await (const ch of req) { b += ch; if (b.length > 1e5) throw new Error('слишком большой запрос'); } return JSON.parse(b || '{}'); };
   const dialog = async (fresh) => {
     if (!cache || fresh) cache = forPage(await collectStatusDialog(db, RULES, readDoc()), RULES);
     return cache;
@@ -312,6 +348,29 @@ export async function serve({ port = 2499 } = {}) {
         let dstTypes = null, dstError = null;
         try { dstTypes = (await db.dstQuery('SELECT count(*) AS n FROM schema:types'))[0].n; } catch (e) { dstError = e.message.slice(0, 120); }
         return json(res, 200, { srcUrl: db.env.MIG_DB_URL, srcDb: db.env.MIG_SRC_DB, dstUrl: dstUrl(db.env), dstDb: db.env.MIG_DST_DB, dstTypes, dstError, src });
+      }
+      if (req.method === 'GET' && req.url === '/api/settings') return json(res, 200, { file: envFile, values: publicView(db.env) });
+      if (req.method === 'POST' && req.url === '/api/settings/test') {
+        const e = candidate(pickForm(await readBody(req)));
+        const errs = checkEnv(e);
+        return json(res, 200, { errors: errs, ...(await probe(e)) });
+      }
+      if (req.method === 'POST' && req.url === '/api/settings/save') {
+        if (!envFile) return json(res, 400, { error: 'файл доступа не указан (--env)' });
+        if (J.running) return json(res, 409, { error: 'идёт перенос — подключение не меняется' });
+        const text = updateEnvText(fs.readFileSync(envFile, 'utf8'), pickForm(await readBody(req)));
+        const errs = checkEnv(parseEnv(text));
+        if (errs.length) return json(res, 400, { error: 'не сохранено: ' + errs.join('; ') });
+        fs.writeFileSync(envFile, text, { mode: 0o600 });
+        db = connect(parseEnv(text)); cache = null;
+        return json(res, 200, { saved: envFile, values: publicView(db.env), ...(await probe(db.env)) });
+      }
+      if (req.method === 'POST' && req.url === '/api/settings/create-dst') {
+        const e = db.env;
+        if (!/^migration_dst/.test(e.MIG_DST_DB)) return json(res, 400, { error: 'новая база должна называться migration_dst…' });
+        const r = await fetch(dstUrl(e).replace(/\/+$/, '') + '/api/v1/server', { method: 'POST', signal: AbortSignal.timeout(30000),
+          headers: { Authorization: basic(e.MIG_DST_USER, e.MIG_DST_PASSWORD), 'Content-Type': 'application/json' }, body: JSON.stringify({ command: 'create database ' + e.MIG_DST_DB }) });
+        return json(res, r.ok ? 200 : 400, r.ok ? { created: e.MIG_DST_DB, ...(await probe(e)) } : { error: 'сервер новой базы ответил ' + r.status });
       }
       if (req.method === 'GET' && req.url === '/api/job') { const { reportHtml, ...rest } = J; return json(res, 200, { ...rest, hasReport: Boolean(reportHtml) }); }
       if (req.method === 'GET' && req.url === '/report.html') {

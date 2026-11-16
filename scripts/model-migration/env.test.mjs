@@ -47,3 +47,21 @@ test('приёмник на другом сервере: MIG_DST_URL необя�
   assert.equal(summary({ ...ok, MIG_DST_URL: 'http://127.0.0.1:2490' }).MIG_DST_URL, 'http://127.0.0.1:2490');
   assert.equal(summary(ok).MIG_DST_URL, 'тот же, что MIG_DB_URL');
 });
+
+test('форма подключения: правка файла доступа сохраняет чужие ключи и комментарии, пароль без ввода не трогает', async () => {
+  const { updateEnvText, parseEnv, publicView } = await import('./env.mjs');
+  const text = '# доступ к базам\nMIG_DB_URL=http://a:2480\nMIG_SRC_PASSWORD=old\nMIG_KC_URL=https://kc\n';
+  const out = updateEnvText(text, { MIG_DB_URL: 'http://b:2480', MIG_SRC_PASSWORD: '', MIG_DST_DB: 'migration_dst_x' });
+  const e = parseEnv(out);
+  assert.equal(e.MIG_DB_URL, 'http://b:2480');
+  assert.equal(e.MIG_SRC_PASSWORD, 'old', 'пустое поле пароля — пароль прежний');
+  assert.equal(e.MIG_DST_DB, 'migration_dst_x', 'нового ключа не было — дописан');
+  assert.equal(e.MIG_KC_URL, 'https://kc', 'ключи вне формы не теряются');
+  assert.ok(out.startsWith('# доступ к базам'), 'комментарий на месте');
+  assert.throws(() => updateEnvText(text, { MIG_DB_URL: 'a\nMIG_X=1' }), /перевод строки/);
+  // наружу — без паролей: только «задан» / «пусто»
+  const v = publicView(e);
+  assert.equal(v.MIG_SRC_PASSWORD, 'задан');
+  assert.equal(v.MIG_DST_PASSWORD, 'пусто');
+  assert.ok(!JSON.stringify(v).includes('old'));
+});

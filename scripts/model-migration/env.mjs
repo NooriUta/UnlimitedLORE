@@ -53,3 +53,28 @@ export function loadEnv(file = process.env.MIG_ENV_FILE) {
 if (process.argv[1] && process.argv[1].endsWith('env.mjs')) {
   try { console.log(JSON.stringify(summary(loadEnv()), null, 2)); } catch (e) { console.error(e.message); process.exit(1); }
 }
+
+/**
+ * Правка текста файла доступа из формы подключения (шаг 1 установщика): ключи из updates заменяются на
+ * месте или дописываются в конец; комментарии и ключи вне формы не трогаются. Пустой пароль — «не менять».
+ * Значение с переводом строки отвергается: иначе им можно дописать в файл чужой ключ.
+ */
+export function updateEnvText(text, updates) {
+  const lines = String(text).split(/\r?\n/);
+  if (lines.length && lines[lines.length - 1] === '') lines.pop();
+  for (const [k, raw] of Object.entries(updates)) {
+    if (!/^MIG_[A-Z_]+$/.test(k)) throw new Error(`ключ «${k}» в файл доступа не пишется`);
+    const v = raw === undefined || raw === null ? '' : String(raw);
+    if (/[\r\n]/.test(v)) throw new Error(`значение ${k} содержит перевод строки`);
+    if (/PASSWORD/.test(k) && v === '') continue;
+    const i = lines.findIndex(l => l.trim().startsWith(k + '='));
+    if (i >= 0) lines[i] = `${k}=${v.trim()}`; else lines.push(`${k}=${v.trim()}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
+/** Что показать в форме: значения без паролей (пароль — «задан» или «пусто»). */
+export function publicView(env) {
+  const keys = [...KEYS, ...OPTIONAL, 'MIG_KC_URL', 'MIG_KC_REALM', 'MIG_KC_CLIENT', 'MIG_OWNER_PROJECT'];
+  return Object.fromEntries(keys.map(k => [k, /PASSWORD/.test(k) ? (env[k] ? 'задан' : 'пусто') : (env[k] || '')]));
+}
