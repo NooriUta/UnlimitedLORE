@@ -8,7 +8,7 @@
 import { RecordNotFound } from '../api/liveRecord';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  EmptyState, LoadError, RecordBar, RecordCrumbs, RecordPager, RecordReader, Skeleton, WarningsProvider, pushUrlState,
+  RecordCrumbs, RecordPager, RecordReader, RecordScreen, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
   HISTORY_QUERY_ALL, RecordPlace, type KitConfig, type KitCtx, type KitHistoryQuery, type KitLang, type PassportOrder, type RecordPlacement, type UrlWindow, useUrlParam } from '@seidr/kit';
 import { MartProse, type LiveBlocks } from '@seidr/kit/content';
@@ -39,7 +39,6 @@ import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
-import { RecordModelNotes as ModelNotes } from '@seidr/kit';
 import { loreQueryRun } from './loreQueryBlock';
 import { loreGraphRun } from './loreGraphBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
@@ -321,27 +320,17 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Бар стоит на одном и том же месте во всех трёх ветках, поэтому React
   // сохраняет его узлы (и фокус, и раскрытое меню) при переходе
   // загрузка → чтение → сбой: строка не пересобирается и не «скачет».
+  // Рамка экрана — в kit (RecordScreen, K5-PASSPORT-FROM-MODEL шаг 4): сборщик предупреждений,
+  // оговорки модели, полоса и состояние под ней; здесь — только что считать «записи нет».
+  const screenBar = { crumbs: barCrumbs, pager: barPager, tools: barTools };
+  const screenNotes = [...order.notes, ...statuses.notes];
   if (pp.state === 'error') {
     return (
-      <WarningsProvider>
-        <ModelNotes notes={[...order.notes, ...statuses.notes]} />
-        <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
-        {/* «Записи нет» (404) — ответ, а не сбой: данные получены, и запись отсутствует (находка preprod 14.11). */}
-        {pp.error instanceof RecordNotFound
-          ? <EmptyState title={t('pp.notFound', { id })} hint={t('pp.notFoundHint', { id })} />
-          : <LoadError error={pp.error} onRetry={pp.reload} />}
-      </WarningsProvider>
+      <RecordScreen bar={screenBar} notes={screenNotes}
+        state={pp.error instanceof RecordNotFound ? { kind: 'notFound', id } : { kind: 'error', error: pp.error, onRetry: pp.reload }} />
     );
   }
-  if (!view) {
-    return (
-      <WarningsProvider>
-        <ModelNotes notes={[...order.notes, ...statuses.notes]} />
-        <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
-        <Skeleton lines={8} label={t('pp.loading')} />
-      </WarningsProvider>
-    );
-  }
+  if (!view) return <RecordScreen bar={screenBar} notes={screenNotes} state={{ kind: 'loading' }} />;
   // Правка на месте (S4-24, ADR-LORE-047 п. 14.1): сохраняем существующим путём записи и перечитываем
   // паспорт с сервера — показываем записанное, а не то, что набрали.
   const onSave = async ({ field, from, to }: { field: string; from?: unknown; to: unknown }) => {
@@ -457,18 +446,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // MP2-08: один сборщик технических сообщений на экран — оговорки модели
     // (рядом с паспортом) и состояние данных (внутри паспорта) попадают в
     // один значок «⚠ N» в строке над записью, а не полосами в компоновке.
-    <WarningsProvider>
-      {/*
-        Оговорки разбора модели (B14 ревью 10.11.2026, MP2-08 13.11.2026).
-        Говорить о них по-прежнему обязаны (S4-29: молчаливый откат хуже
-        отсутствия порядка); теперь их место — общий значок warnings с
-        попапом, а не полоса/чип над шапкой паспорта.
-      */}
-      <ModelNotes notes={[...order.notes, ...statuses.notes]} />
-      {/* Бар — здесь, а не внутри RecordReader: тот же узел, что в ветках
-          загрузки и сбоя (MP2-09/10). RecordReader свою строку не рисует,
-          когда крошки/листалка/инструменты не переданы. */}
-      <RecordBar crumbs={barCrumbs} pager={barPager} tools={barTools} />
+    // Оговорки модели (S4-29, MP2-08) и полоса над записью (MP2-09/10) — рамкой kit RecordScreen:
+    // тот же узел, что в ветках загрузки и сбоя.
+    <RecordScreen bar={screenBar} notes={screenNotes} state={{ kind: 'ready' }}>
       {/* PU-27: у вехи — сгорание по задачам её спринтов (строка BURN-DOWN и
           «Цель к сроку»), той же строкой, что у спринта; срок — «Когда» вехи. */}
       {/* MDA-04: у git-проекта — выгрузка в папку .md (Obsidian) zip-архивом. */}
@@ -512,6 +492,6 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       className="list-passport"
       asideOpen={false} onAside={() => {}}
       {...(rightColumn === 'auto' ? {} : { defaultPropsOpen: rightColumn === 'open' })} />
-    </WarningsProvider>
+    </RecordScreen>
   );
 }
