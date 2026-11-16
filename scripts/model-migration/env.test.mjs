@@ -35,3 +35,15 @@ test('секреты не попадают ни в ошибки, ни в сво�
   assert.doesNotMatch(text, /SECRET/);
   assert.equal(summary(ok).MIG_SRC_PASSWORD, 'задан');
 });
+
+test('приёмник на другом сервере: MIG_DST_URL необязателен, без него — тот же сервер', async () => {
+  const { dstUrl } = await import('./env.mjs');
+  assert.equal(dstUrl(ok), ok.MIG_DB_URL);
+  assert.equal(dstUrl({ ...ok, MIG_DST_URL: 'http://127.0.0.1:2490' }), 'http://127.0.0.1:2490');
+  assert.deepEqual(checkEnv({ ...ok, MIG_DST_URL: 'http://127.0.0.1:2490' }), []);
+  // одно имя базы на разных серверах — разные базы, не совпадение
+  assert.deepEqual(checkEnv({ ...ok, MIG_DST_URL: 'http://127.0.0.1:2490', MIG_DST_DB: ok.MIG_SRC_DB }), []);
+  assert.match(checkEnv({ ...ok, MIG_DST_URL: ok.MIG_DB_URL + '/', MIG_DST_DB: ok.MIG_SRC_DB }).join(' '), /совпада/);
+  assert.equal(summary({ ...ok, MIG_DST_URL: 'http://127.0.0.1:2490' }).MIG_DST_URL, 'http://127.0.0.1:2490');
+  assert.equal(summary(ok).MIG_DST_URL, 'тот же, что MIG_DB_URL');
+});

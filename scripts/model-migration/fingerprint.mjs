@@ -13,3 +13,24 @@ export function canonical(v) {
 }
 
 export const fingerprint = v => crypto.createHash('sha256').update(canonical(v)).digest('hex').slice(0, 16);
+
+const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
+const own = r => Object.fromEntries(Object.entries(r).filter(([k]) => !k.startsWith('@')));
+
+/**
+ * Отпечаток содержимого базы для сверки двух переносов: записи — по своим полям (без @rid и прочих
+ * служебных @), связи — по содержимому концов и своим полям. Адреса записей у двух баз разные, порядок
+ * выборки тоже; отпечаток от них не зависит. Вход: { vertices: {тип: [запись]}, edges: {тип: [связь]} }.
+ */
+export function contentFingerprint({ vertices = {}, edges = {} }) {
+  const byRid = new Map(), types = {};
+  for (const [T, rows] of Object.entries(vertices)) {
+    const hs = rows.map(r => { const h = hash(canonical(own(r))); byRid.set(r['@rid'], h); return h; }).sort();
+    types[T] = { n: hs.length, fp: hash(hs.join(',')) };
+  }
+  for (const [T, rows] of Object.entries(edges)) {
+    const hs = rows.map(e => hash(canonical({ out: byRid.get(e['@out']) ?? '?', in: byRid.get(e['@in']) ?? '?', p: own(e) }))).sort();
+    types[T] = { n: hs.length, fp: hash(hs.join(',')) };
+  }
+  return { types, total: hash(canonical(types)) };
+}

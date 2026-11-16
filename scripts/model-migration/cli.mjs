@@ -17,6 +17,7 @@ export const COMMANDS = [
   { name: 'dry-run', module: () => import('./dry-run.mjs'), write: false, about: 'пробный расчёт без записи: что не привелось, что удержано, поля вне карты (--out отчёт.json)' },
   { name: 'transfer', module: () => import('./transfer.mjs'), write: true, about: 'перенос записей с историей в новую базу и сверка (--out отчёт.json)' },
   { name: 'edges', module: () => import('./transfer-edges.mjs'), write: true, about: 'перенос связей в новую базу и сверка; после transfer (--out отчёт.json)' },
+  { name: 'dst-fingerprint', module: () => import('./dst-fingerprint.mjs'), write: false, about: 'отпечаток содержимого новой базы — сверка двух переносов: одинаковые настройки и источник → одинаковый отпечаток (--out файл.json)' },
 ];
 
 export function help() {
@@ -30,7 +31,8 @@ export function help() {
     ...COMMANDS.map(c => `  ${c.name.padEnd(w)}  ${c.write ? '[пишет в новую базу] ' : ''}${c.about}`),
     '',
     'Файл доступа: строки КЛЮЧ=значение — MIG_DB_URL, MIG_SRC_DB, MIG_SRC_USER, MIG_SRC_PASSWORD,',
-    '  MIG_DST_DB, MIG_DST_USER, MIG_DST_PASSWORD. Значения нигде не печатаются.',
+    '  MIG_DST_DB, MIG_DST_USER, MIG_DST_PASSWORD; необязательный MIG_DST_URL — сервер приёмника, если он другой.',
+    '  Значения учёток нигде не печатаются.',
     'Источник только читается. Новая база не может быть рабочей и не может совпадать с источником.',
   ].join('\n');
 }

@@ -1,13 +1,13 @@
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Доступ к базам переезда: источник — только чтение, приёмник — запись.
 // Учётки из файла доступа (env.mjs); значения секретов не печатаются и в тексты ошибок не попадают.
-import { loadEnv } from './env.mjs';
+import { loadEnv, dstUrl } from './env.mjs';
 
 const basic = (u, p) => 'Basic ' + Buffer.from(`${u}:${p}`).toString('base64');
 const READ_ONLY = /^\s*(select|match|traverse)\b/i;
 
 export function connect(env = loadEnv()) {
-  const call = async (path, authz, body) => {
-    const res = await fetch(env.MIG_DB_URL + path, { method: 'POST', headers: { Authorization: authz, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(300000) });
+  const call = async (path, authz, body, base = env.MIG_DB_URL) => {
+    const res = await fetch(base + path, { method: 'POST', headers: { Authorization: authz, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(300000) });
     const text = await res.text();
     if (!res.ok) throw new Error(`база ответила ${res.status}: ${text.slice(0, 300)}`);
     return JSON.parse(text).result;
@@ -20,7 +20,7 @@ export function connect(env = loadEnv()) {
       if (!READ_ONLY.test(command)) throw new Error('источник только читается: ' + command.slice(0, 60));
       return call(`/api/v1/query/${env.MIG_SRC_DB}`, srcAuth, { language: 'sql', command, params });
     },
-    dstQuery: (command, params) => call(`/api/v1/query/${env.MIG_DST_DB}`, dstAuth, { language: 'sql', command, params }),
+    dstQuery: (command, params) => call(`/api/v1/query/${env.MIG_DST_DB}`, dstAuth, { language: 'sql', command, params }, dstUrl(env)),
     /**
      * Запись в приёмник. Две связи, которые одновременно пишутся в одну запись, база отвергает
      * (ConcurrentModificationException) и просит повторить — повторяем с растущей паузой, до 10 раз.
@@ -28,7 +28,7 @@ export function connect(env = loadEnv()) {
      */
     async dstCommand(command, params, language = 'sql') {
       for (let attempt = 0; ; attempt++) {
-        try { return await call(`/api/v1/command/${env.MIG_DST_DB}`, dstAuth, { language, command, params }); }
+        try { return await call(`/api/v1/command/${env.MIG_DST_DB}`, dstAuth, { language, command, params }, dstUrl(env)); }
         catch (e) {
           if (attempt >= 10 || !/ConcurrentModificationException/.test(e.message)) throw e;
           await new Promise(r => setTimeout(r, 20 * (attempt + 1) + Math.floor(Math.random() * 30)));

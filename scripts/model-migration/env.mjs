@@ -10,6 +10,11 @@ import fs from 'node:fs';
 
 export const KEYS = ['MIG_DB_URL', 'MIG_SRC_DB', 'MIG_SRC_USER', 'MIG_SRC_PASSWORD', 'MIG_DST_DB', 'MIG_DST_USER', 'MIG_DST_PASSWORD'];
 const WORKING = new Set(['system_aida_lore']);
+// Необязательный: приёмник на другом сервере (16.11.2026, приёмка на ryzenai: «базу относим в сторону»).
+export const OPTIONAL = ['MIG_DST_URL'];
+const norm = u => String(u || '').trim().replace(/\/+$/, '').toLowerCase();
+/** Адрес сервера приёмника: MIG_DST_URL, иначе тот же сервер, что у источника. */
+export const dstUrl = env => (env.MIG_DST_URL && env.MIG_DST_URL.trim()) || env.MIG_DB_URL;
 
 export function parseEnv(text) {
   const out = {};
@@ -27,13 +32,13 @@ export function checkEnv(env) {
   const errs = KEYS.filter(k => !env[k]).map(k => `${k} не заполнен`);
   const src = (env.MIG_SRC_DB || '').toLowerCase(), dst = (env.MIG_DST_DB || '').toLowerCase();
   if (dst && WORKING.has(dst)) errs.push('MIG_DST_DB указывает на рабочую базу — перенос пишет только в отдельную пустую базу');
-  if (dst && src && dst === src) errs.push('MIG_DST_DB совпадает с MIG_SRC_DB — источник только читается');
+  if (dst && src && dst === src && norm(dstUrl(env)) === norm(env.MIG_DB_URL)) errs.push('MIG_DST_DB совпадает с MIG_SRC_DB на том же сервере — источник только читается');
   return errs;
 }
 
 /** Что задано — без значений секретов. */
 export function summary(env) {
-  return Object.fromEntries(KEYS.map(k => [k, !env[k] ? 'пусто' : /PASSWORD/.test(k) ? 'задан' : env[k]]));
+  return { ...Object.fromEntries(KEYS.map(k => [k, !env[k] ? 'пусто' : /PASSWORD/.test(k) ? 'задан' : env[k]])), MIG_DST_URL: env.MIG_DST_URL || 'тот же, что MIG_DB_URL' };
 }
 
 export function loadEnv(file = process.env.MIG_ENV_FILE) {

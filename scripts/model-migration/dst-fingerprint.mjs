@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+// SPRINT_LORE_MODEL_DOCS_TIDY/MIG-02 · Отпечаток содержимого новой базы — сверка двух переносов.
+// Слова владелицы 16.11.2026: «принимаем на этой машине и на razenai должно сойтись с одинаковыми настройками».
+// Читает только приёмник: все записи и связи его типов; печатает по каждому типу число и отпечаток и общий
+// отпечаток. Две новые базы, собранные с одинаковыми настройками из одного источника, обязаны совпасть.
+// Запуск: lore-migrate dst-fingerprint --env <файл доступа> [--out отпечаток.json]
+import fs from 'node:fs';
+import { connect } from './db.mjs';
+import { contentFingerprint } from './fingerprint.mjs';
+
+const db = connect();
+const types = (await db.dstQuery("SELECT name, type FROM schema:types")).filter(t => t.type === 'vertex' || t.type === 'edge');
+const vertices = {}, edges = {};
+for (const t of types.sort((a, b) => a.name.localeCompare(b.name))) {
+  const all = [];
+  let last = '#-1:-1';
+  for (;;) {
+    const rows = await db.dstQuery(`SELECT FROM ${t.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
+    all.push(...rows.filter(r => r['@type'] === t.name)); // без записей подтипов: они посчитаны у своего типа
+    if (rows.length < 5000) break;
+    last = rows[rows.length - 1]['@rid'];
+  }
+  (t.type === 'vertex' ? vertices : edges)[t.name] = all;
+}
+const fp = contentFingerprint({ vertices, edges });
+const outArg = process.argv.indexOf('--out');
+if (outArg > 0) fs.writeFileSync(process.argv[outArg + 1], JSON.stringify(fp, null, 1));
+console.log(`новая база ${db.env.MIG_DST_DB}: типов ${Object.keys(fp.types).length}`);
+for (const [T, x] of Object.entries(fp.types)) console.log(`  ${T}: ${x.n} · ${x.fp}`);
+console.log(`отпечаток содержимого: ${fp.total}`);
