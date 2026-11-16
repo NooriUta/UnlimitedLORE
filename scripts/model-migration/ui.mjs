@@ -74,6 +74,7 @@ const PAGE = String.raw`<!doctype html><html lang="ru"><head><meta charset="utf-
 tr.grp td{background:var(--bg2);font-weight:700}tr.done td{opacity:.6}
 .dec{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}.dec select{flex:1;min-width:160px}.newf{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.newf[hidden]{display:none}.chip.ok{margin-bottom:4px}td:last-child{width:300px}td:nth-child(3){width:260px}
 .steps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.steps a{text-decoration:none;color:var(--t2);border:1px solid var(--bd);border-radius:999px;padding:4px 12px;font-size:var(--fs-xs);background:var(--bg1)}.steps a b{color:var(--acc);margin-right:4px}.steps a.on{background:var(--acc);border-color:var(--acc);color:var(--bg0)}.steps a.on b{color:var(--bg0)}
+.guide{border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:6px;background:var(--bg1);padding:6px 12px;margin:10px 0}.guide summary{cursor:pointer;padding:4px 0}.guide p,.guide li{color:var(--t1);margin:4px 0}.guide ol,.guide ul{padding-left:20px}
 select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:999px;padding:3px 8px;font:400 var(--fs-xs) Manrope,sans-serif}input.lbl{width:110px}
 .chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 7px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}.chip.ok{color:var(--suc);border-color:var(--suc)}
 .themesw{display:inline-flex;border:1px solid var(--acc);border-radius:999px;overflow:hidden}.themesw button{background:transparent;border:0;color:var(--acc);font:700 var(--fs-xs) Manrope,sans-serif;padding:3px 10px;cursor:pointer}.themesw button[aria-pressed=true]{background:var(--acc);color:var(--bg0)}
@@ -93,7 +94,34 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 </nav>
 <section data-page="0" hidden><h2>Шаг 0. Вход и проверка владельца</h2>
 <p class="sub">Укажите сервер Keycloak и область входа, затем войдите. Дальше пускает, только если сошлись обе проверки: в токене есть роль владельца, и в базе этой установки у вашей учётки роль владельца проекта.</p>
-<div id="s0">загрузка…</div></section>
+<div id="s0">загрузка…</div>
+<details class="guide" open><summary><b>Инструкция: как проходит перенос и что делать на каждом шаге</b></summary>
+<h3>Что делает установщик</h3>
+<p>Переносит данные LORE в новую базу по новой модели. Действующая база не меняется: установщик читает её копию (снимок из бэкапа) и собирает рядом новую. Старая база остаётся откатом; сколько её хранить, решает владелец установки.</p>
+<h3>Что подготовить до запуска</h3>
+<ol>
+<li><b>Файл доступа</b> — текстовый файл <code>КЛЮЧ=значение</code>, его путь передаётся ключом <code>--env</code>. Нужны: <code>MIG_DB_URL</code> (сервер ArcadeDB), <code>MIG_SRC_DB</code> (база-источник — снимок), <code>MIG_SRC_USER</code>/<code>MIG_SRC_PASSWORD</code>, <code>MIG_DST_DB</code> (новая база, имя начинается с <code>migration_dst</code>), <code>MIG_DST_USER</code>/<code>MIG_DST_PASSWORD</code>. Если новая база на другом сервере — <code>MIG_DST_URL</code>. Для входа: <code>MIG_KC_URL</code>, <code>MIG_KC_REALM</code>, <code>MIG_KC_CLIENT</code>, <code>MIG_OWNER_PROJECT</code>. Пароли установщик нигде не показывает и не пишет.</li>
+<li><b>Файл решений</b> — путь ключом <code>--decisions</code>. Если файла нет, он создастся; в него пишутся ваши решения, и при повторном переносе они применяются сами.</li>
+<li><b>Место на сервере</b> — на снимок и на новую базу, примерно два размера действующей базы.</li>
+</ol>
+<h3>Шаги</h3>
+<ol start="0">
+<li><b>Вход.</b> Укажите сервер Keycloak и область, нажмите «Войти». Пускает дальше, только если сошлись обе проверки: в токене есть роль владельца, и в базе этой установки ваша учётка — владелец проекта. Если не сошлось — страница скажет, что именно.</li>
+<li><b>Подключение.</b> Посмотрите, что установщик видит: сервер, база-источник (только чтение), новая база и сколько записей каждого типа в источнике. Если чего-то нет — поправьте файл доступа и перезапустите установщик.</li>
+<li><b>Статусы.</b> Главная работа человека. Каждое значение статуса из старой базы, которое установщик не узнал сам, — строка. У многих строк есть предложение с причиной: «принять» берёт его, «Принять группу» — сразу всю группу. В списке можно выбрать другой код, добавить новый (подписи на русском, английском и польском обязательны) или «решу позже». Пока есть строка без решения, перенос не начинается.</li>
+<li><b>Пробный расчёт.</b> «Посчитать» — каждая запись проходит через карту переноса, но в новую базу ничего не пишется. Смотрите, что не привелось, что удержано до решения и какие поля карта не знает.</li>
+<li><b>Перенос.</b> Откроется, когда на шаге 2 не осталось строк без решения. Поставьте галочку «понимаю: новая база будет очищена» и нажмите «Перенести». Ход виден на странице; занимает несколько минут.</li>
+<li><b>Сверка и отчёт.</b> Итог сверки записей, связей и справочников и отпечаток новой базы. Отчёт сохраняется файлом рядом с файлом решений и открывается ссылкой. Если сверка не сошлась — перенос считается не выполненным: смотрите отчёт, возвращайтесь к шагам 2–3.</li>
+</ol>
+<h3>Как сверить две установки</h3>
+<p>Два переноса из одного снимка с одним файлом решений дают один и тот же отпечаток новой базы — на Windows и на Linux. Разные решения дают разный отпечаток.</p>
+<h3>Если что-то пошло не так</h3>
+<ul>
+<li>«Источник прочитан не весь» — сервер не ответил или отказал: проверьте адрес и учётку в файле доступа.</li>
+<li>«Нужен вход» — сессия входа истекла: вернитесь на шаг 0.</li>
+<li>Перенос можно запускать повторно: новая база очищается и собирается заново, источник не меняется.</li>
+</ul>
+</details></section>
 <section data-page="1" hidden><h2>Шаг 1. Подключение и базы</h2>
 <p class="sub">Что установщик видит: сервер и базу-источник (только чтение) и сервер новой базы. Адреса и учётки — в файле доступа этой установки; значения учёток не показываются.</p>
 <div id="s1">загрузка…</div></section>
