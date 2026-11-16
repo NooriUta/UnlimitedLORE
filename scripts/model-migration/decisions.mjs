@@ -10,12 +10,14 @@
 // scope: значение (точное совпадение без крайних пробелов) ЛИБО причина (why) — тогда решение на всё поле.
 // Действия:
 //   map_to  — свести к значению `to`;
+//   add_code — статус: добавить в справочник код `to` с подписями `labels` на всех языках правил и свести к нему
+//              (status-unify.mjs; на другой установке статусы свои, их вводят решением, а не правкой правил);
 //   to_note — поле пустое, исходное значение уходит в заметку поля (если заметка у поля есть);
 //   drop    — не переносить (значение названо в принятых, молча не пропадает);
 //   defer   — решу позже: несоответствие остаётся и помечается кодом решения.
 
 export const FORMAT = 'mig-decisions/1';
-export const ACTIONS = ['map_to', 'to_note', 'drop', 'defer'];
+export const ACTIONS = ['map_to', 'add_code', 'to_note', 'drop', 'defer'];
 
 const norm = v => String(v).trim();
 const scopeKey = s => `${s.type}.${s.field}|${s.value !== undefined ? 'v:' + norm(s.value) : 'w:' + s.why}`;
@@ -32,7 +34,8 @@ export function checkDecisions(doc) {
     if (!s.type || !s.field) bad.push(`${at}: не названы тип и поле`);
     if ((s.value === undefined) === (s.why === undefined)) bad.push(`${at}: в области нужно одно из двух — значение или причина`);
     if (!ACTIONS.includes(d.action)) bad.push(`${at}: действие «${d.action}», бывают ${ACTIONS.join(', ')}`);
-    if (d.action === 'map_to' && (d.to === undefined || d.to === null || d.to === '')) bad.push(`${at}: не сказано, к какому значению свести`);
+    if ((d.action === 'map_to' || d.action === 'add_code') && (d.to === undefined || d.to === null || d.to === '')) bad.push(`${at}: не сказано, к какому значению свести`);
+    if (d.action === 'add_code' && (!d.labels || typeof d.labels !== 'object' || !Object.keys(d.labels).length)) bad.push(`${at}: у добавляемого кода нет подписей`);
     if (!d.by || !String(d.by).trim()) bad.push(`${at}: не сказано, кто принял`);
     if (!d.at || Number.isNaN(Date.parse(d.at))) bad.push(`${at}: не сказано, когда принято`);
     if (s.type && s.field) {
@@ -71,7 +74,7 @@ export function resolveRejects(T, r, doc) {
     const t = x.target;
     if (d.action !== 'drop') {
       if (!t) throw new Error(`${T}.${x.field}: у несоответствия не названо, куда писать значение, — решение ${d.id} применить нельзя`);
-      if (d.action === 'map_to') r[t.bucket][t.field] = d.to;
+      if (d.action === 'map_to' || d.action === 'add_code') r[t.bucket][t.field] = d.to;
       else if (!t.note) throw new Error(`${T}.${x.field}: у поля нет заметки — «текст в заметку» (решение ${d.id}) потерял бы значение`);
       else r[t.bucket][t.note] = String(x.value);
     }

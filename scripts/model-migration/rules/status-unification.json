@@ -1,0 +1,556 @@
+{
+  "format": "mig-status-rules/1",
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-02. Правило переноса статусов: в записи одно поле status с кодом справочника; подпись, значок и цвет — только в справочнике; подписи обязательны на всех языках из languages. Значение источника сводится к коду по написанию (без значка и приписки, регистр и пробел/подчёркивание не важны) и по synonyms. Что не свелось — строка диалога унификации перед переносом; решение человека хранится в файле решений (decisions.mjs) и переживает повторный перенос. Сюда вписаны только статусы нашей установки; статусы другой установки добавляются решениями, а не правкой этого файла.",
+  "languages": [
+    "ru",
+    "en",
+    "pl"
+  ],
+  "code_case": "lower",
+  "_code_case": "Регистр кода в приёмнике. lower — решение владелицы в карте переноса («код из справочника строчными латиницей»); 16.11.2026 владелица назвала вариантом заглавные — ждёт её слова. Сведение от регистра не зависит.",
+  "dictionaries": {
+    "plan_status": {
+      "_about": "Спринт и задача — один справочник вместо двух одинаковых копий (sprint_status, task_status).",
+      "codes": [
+        {
+          "code": "todo",
+          "labels": {
+            "ru": "К выполнению",
+            "en": "To Do",
+            "pl": "Do zrobienia"
+          },
+          "icon": "checkbox-tree"
+        },
+        {
+          "code": "backlog",
+          "labels": {
+            "ru": "Бэклог",
+            "en": "Backlog",
+            "pl": "Backlog"
+          },
+          "icon": "tied-scroll"
+        },
+        {
+          "code": "planned",
+          "labels": {
+            "ru": "Запланировано",
+            "en": "Planned",
+            "pl": "Zaplanowane"
+          },
+          "icon": "calendar"
+        },
+        {
+          "code": "design",
+          "labels": {
+            "ru": "Проектирование",
+            "en": "Design",
+            "pl": "Projektowanie"
+          },
+          "icon": "magic-swirl"
+        },
+        {
+          "code": "active",
+          "labels": {
+            "ru": "В работе",
+            "en": "In Progress",
+            "pl": "W toku"
+          },
+          "icon": "progression"
+        },
+        {
+          "code": "waiting",
+          "labels": {
+            "ru": "Ждём ответа",
+            "en": "Waiting",
+            "pl": "Oczekuje na odpowiedź"
+          },
+          "icon": "hourglass"
+        },
+        {
+          "code": "partial",
+          "labels": {
+            "ru": "Частично",
+            "en": "Partial",
+            "pl": "Częściowo"
+          },
+          "icon": "battery-50"
+        },
+        {
+          "code": "review",
+          "labels": {
+            "ru": "На приёмке",
+            "en": "Review",
+            "pl": "W przeglądzie"
+          },
+          "icon": "magnifying-glass"
+        },
+        {
+          "code": "ready_for_deploy",
+          "labels": {
+            "ru": "Готово к деплою",
+            "en": "Ready for Deploy",
+            "pl": "Gotowe do wdrożenia"
+          },
+          "icon": "wave-crest"
+        },
+        {
+          "code": "uat",
+          "labels": {
+            "ru": "UAT — приёмка",
+            "en": "UAT Testing",
+            "pl": "Testy akceptacyjne (UAT)"
+          },
+          "icon": "stamper"
+        },
+        {
+          "code": "done",
+          "labels": {
+            "ru": "Готово",
+            "en": "Done",
+            "pl": "Gotowe"
+          },
+          "icon": "divided-spiral"
+        },
+        {
+          "code": "failed",
+          "labels": {
+            "ru": "Неуспех",
+            "en": "Failed",
+            "pl": "Niepowodzenie"
+          },
+          "icon": "cancel"
+        },
+        {
+          "code": "blocked",
+          "labels": {
+            "ru": "Заблокировано",
+            "en": "Blocked",
+            "pl": "Zablokowane"
+          },
+          "icon": "handcuffed"
+        },
+        {
+          "code": "cancelled",
+          "labels": {
+            "ru": "Отменено",
+            "en": "Cancelled",
+            "pl": "Anulowane"
+          },
+          "icon": "cross-mark"
+        }
+      ],
+      "synonyms": {
+        "IN PROGRESS": "active",
+        "UAT TESTING": "uat",
+        "CANCELED": "cancelled"
+      }
+    },
+    "phase_status": {
+      "codes": [
+        {
+          "code": "backlog",
+          "labels": {
+            "ru": "Бэклог",
+            "en": "Backlog",
+            "pl": "Backlog"
+          }
+        },
+        {
+          "code": "planned",
+          "labels": {
+            "ru": "Запланирована",
+            "en": "Planned",
+            "pl": "Zaplanowana"
+          }
+        },
+        {
+          "code": "active",
+          "labels": {
+            "ru": "В работе",
+            "en": "In Progress",
+            "pl": "W toku"
+          }
+        },
+        {
+          "code": "done",
+          "labels": {
+            "ru": "Реализована",
+            "en": "Done",
+            "pl": "Zrealizowana"
+          }
+        },
+        {
+          "code": "moved",
+          "labels": {
+            "ru": "Вынесена",
+            "en": "Moved out",
+            "pl": "Przeniesiona"
+          }
+        }
+      ],
+      "synonyms": {
+        "IN PROGRESS": "active"
+      }
+    },
+    "adr_status": {
+      "codes": [
+        {
+          "code": "draft",
+          "labels": {
+            "ru": "Черновик",
+            "en": "Draft",
+            "pl": "Szkic"
+          }
+        },
+        {
+          "code": "proposed",
+          "labels": {
+            "ru": "Предложен",
+            "en": "Proposed",
+            "pl": "Zaproponowany"
+          }
+        },
+        {
+          "code": "accepted",
+          "labels": {
+            "ru": "Принят",
+            "en": "Accepted",
+            "pl": "Przyjęty"
+          }
+        },
+        {
+          "code": "deferred",
+          "labels": {
+            "ru": "Отложен",
+            "en": "Deferred",
+            "pl": "Odłożony"
+          }
+        },
+        {
+          "code": "deprecated",
+          "labels": {
+            "ru": "Устарел",
+            "en": "Deprecated",
+            "pl": "Przestarzały"
+          }
+        },
+        {
+          "code": "superseded",
+          "labels": {
+            "ru": "Заменён",
+            "en": "Superseded",
+            "pl": "Zastąpiony"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "decision_status": {
+      "_about": "Коды fixed и done из справочника источника сюда не вписаны: в источнике они помечены «легаси сида — к ревизии», их судьба — решение человека в диалоге.",
+      "codes": [
+        {
+          "code": "proposed",
+          "labels": {
+            "ru": "Предложено",
+            "en": "Proposed",
+            "pl": "Zaproponowane"
+          }
+        },
+        {
+          "code": "accepted",
+          "labels": {
+            "ru": "Принято",
+            "en": "Accepted",
+            "pl": "Przyjęte"
+          }
+        },
+        {
+          "code": "deferred",
+          "labels": {
+            "ru": "Отложено",
+            "en": "Deferred",
+            "pl": "Odłożone"
+          }
+        },
+        {
+          "code": "superseded",
+          "labels": {
+            "ru": "Вытеснено",
+            "en": "Superseded",
+            "pl": "Zastąpione"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "spec_status": {
+      "codes": [
+        {
+          "code": "proposed",
+          "labels": {
+            "ru": "Предложение",
+            "en": "Proposed",
+            "pl": "Propozycja"
+          }
+        },
+        {
+          "code": "accepted",
+          "labels": {
+            "ru": "Принята",
+            "en": "Accepted",
+            "pl": "Przyjęta"
+          }
+        },
+        {
+          "code": "deprecated",
+          "labels": {
+            "ru": "Устарела",
+            "en": "Deprecated",
+            "pl": "Przestarzała"
+          }
+        },
+        {
+          "code": "superseded",
+          "labels": {
+            "ru": "Вытеснена",
+            "en": "Superseded",
+            "pl": "Zastąpiona"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "milestone_status": {
+      "codes": [
+        {
+          "code": "upcoming",
+          "labels": {
+            "ru": "Предстоит",
+            "en": "Upcoming",
+            "pl": "Nadchodzi"
+          }
+        },
+        {
+          "code": "active",
+          "labels": {
+            "ru": "Активна",
+            "en": "Active",
+            "pl": "Aktywny"
+          }
+        },
+        {
+          "code": "reached",
+          "labels": {
+            "ru": "Достигнута",
+            "en": "Reached",
+            "pl": "Osiągnięty"
+          }
+        },
+        {
+          "code": "missed",
+          "labels": {
+            "ru": "Пропущена",
+            "en": "Missed",
+            "pl": "Niedotrzymany"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "question_status": {
+      "codes": [
+        {
+          "code": "open",
+          "labels": {
+            "ru": "Открыт",
+            "en": "Open",
+            "pl": "Otwarte"
+          },
+          "icon": "calendar"
+        },
+        {
+          "code": "closed",
+          "labels": {
+            "ru": "Закрыт",
+            "en": "Closed",
+            "pl": "Zamknięte"
+          },
+          "icon": "laurel-crown"
+        },
+        {
+          "code": "deferred",
+          "labels": {
+            "ru": "Отложен",
+            "en": "Deferred",
+            "pl": "Odłożone"
+          },
+          "icon": "pause-button"
+        },
+        {
+          "code": "dropped",
+          "labels": {
+            "ru": "Снят",
+            "en": "Dropped",
+            "pl": "Wycofane"
+          },
+          "icon": "cancel"
+        }
+      ],
+      "synonyms": {}
+    },
+    "feature_status": {
+      "codes": [
+        {
+          "code": "proposed",
+          "labels": {
+            "ru": "Предложена",
+            "en": "Proposed",
+            "pl": "Zaproponowana"
+          },
+          "icon": "calendar"
+        },
+        {
+          "code": "active",
+          "labels": {
+            "ru": "В работе",
+            "en": "In progress",
+            "pl": "W toku"
+          },
+          "icon": "progression"
+        },
+        {
+          "code": "shipped",
+          "labels": {
+            "ru": "Поставлена",
+            "en": "Shipped",
+            "pl": "Dostarczona"
+          },
+          "icon": "laurel-crown"
+        },
+        {
+          "code": "in_rework",
+          "labels": {
+            "ru": "В переработке",
+            "en": "In rework",
+            "pl": "W przeróbce"
+          },
+          "icon": "battery-50"
+        },
+        {
+          "code": "dropped",
+          "labels": {
+            "ru": "Снята",
+            "en": "Dropped",
+            "pl": "Wycofana"
+          },
+          "icon": "cancel"
+        }
+      ],
+      "synonyms": {}
+    },
+    "qg_status": {
+      "codes": [
+        {
+          "code": "draft",
+          "labels": {
+            "ru": "Задуман",
+            "en": "Draft",
+            "pl": "Szkic"
+          },
+          "icon": "quill-ink"
+        },
+        {
+          "code": "active",
+          "labels": {
+            "ru": "Работает",
+            "en": "Active",
+            "pl": "Działa"
+          },
+          "icon": "play-button"
+        },
+        {
+          "code": "stale",
+          "labels": {
+            "ru": "Молчит",
+            "en": "Stale",
+            "pl": "Milczy"
+          },
+          "icon": "hourglass"
+        },
+        {
+          "code": "retired",
+          "labels": {
+            "ru": "Выведен",
+            "en": "Retired",
+            "pl": "Wycofany"
+          },
+          "icon": "tombstone"
+        }
+      ],
+      "synonyms": {}
+    }
+  },
+  "_sources": "Где в источнике лежит статус. required: пустое значение — строка диалога (правило владелицы 16.11.2026: пустого статуса нет, предложение — первый статус справочника).",
+  "sources": [
+    {
+      "type": "KnowSprintHist",
+      "field": "status_raw",
+      "dict": "plan_status",
+      "required": true
+    },
+    {
+      "type": "KnowTaskHist",
+      "field": "status_raw",
+      "dict": "plan_status",
+      "required": true
+    },
+    {
+      "type": "KnowPhaseHist",
+      "field": "status_raw",
+      "dict": "phase_status",
+      "required": true
+    },
+    {
+      "type": "KnowADRHist",
+      "field": "status_raw",
+      "dict": "adr_status",
+      "required": true
+    },
+    {
+      "type": "KnowDecisionHist",
+      "field": "status_raw",
+      "dict": "decision_status",
+      "required": true
+    },
+    {
+      "type": "KnowSpecHist",
+      "field": "status",
+      "dict": "spec_status",
+      "required": true
+    },
+    {
+      "type": "KnowMilestoneHist",
+      "field": "status_raw",
+      "dict": "milestone_status",
+      "required": true
+    },
+    {
+      "type": "KnowQuestion",
+      "field": "status",
+      "dict": "question_status",
+      "required": true
+    },
+    {
+      "type": "KnowUseCase",
+      "field": "status",
+      "dict": "feature_status",
+      "required": true
+    },
+    {
+      "type": "QualityGate",
+      "field": "status",
+      "dict": "qg_status",
+      "required": true
+    }
+  ]
+}

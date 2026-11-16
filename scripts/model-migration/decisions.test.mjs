@@ -84,3 +84,12 @@ test('файла решений нет — решений нет; негодны
   const bad = path.join(dir, 'bad.json'); fs.writeFileSync(bad, JSON.stringify(doc(D({ action: 'угадать' }))));
   assert.throws(() => loadDecisions(bad), /не принят/);
 });
+
+test('add_code: добавляемый код статуса — действие файла решений; без подписей файл не принимается', () => {
+  const ok = { format: FORMAT, decisions: [{ id: 'A1', scope: { type: 'KnowADRHist', field: 'status_raw', value: 'REJECTED' }, action: 'add_code', to: 'rejected',
+    labels: { ru: 'Отклонён', en: 'Rejected', pl: 'Odrzucony' }, by: 'владелица', at: '2026-11-16T12:00:00Z' }] };
+  assert.deepEqual(checkDecisions(ok), []);
+  const bad = structuredClone(ok);
+  delete bad.decisions[0].labels;
+  assert.match(checkDecisions(bad).join('; '), /A1.*нет подписей/);
+});
