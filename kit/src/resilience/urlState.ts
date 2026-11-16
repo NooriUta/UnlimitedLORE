@@ -63,9 +63,30 @@ export function urlStateHref(
  * #SPRINT_…». Оставшийся якорь — не косметика: по такому адресу запись
  * откроется снова.
  */
+// ── оповещение о записи адреса через kit ──────────────────────────────────
+// pushState не шлёт popstate, поэтому свою запись адреса kit объявляет сам — всем, кто читает
+// адрес (useUrlParam, useRecordOpen). Раньше оповещал только setUrlParams, и запись меню KitShell
+// (pushUrlState) хук записи не видел: меню снимало ?open, а запись оставалась открытой (пилот 16.11).
+const urlListeners = new Set<() => void>();
+
+/** Подписаться на запись адреса через kit (pushUrlState / setUrlParams). Возвращает отписку. */
+export function onUrlStateWrite(cb: () => void): () => void {
+  urlListeners.add(cb);
+  return () => { urlListeners.delete(cb); };
+}
+
 export function pushUrlState(
   patch: Record<string, string | null | undefined>,
   opts: { replace?: boolean; win?: UrlWindow; anchor?: string | null } = {},
+): 'history' | 'hash' {
+  const mode = writeUrlState(patch, opts);
+  urlListeners.forEach(cb => cb());
+  return mode;
+}
+
+function writeUrlState(
+  patch: Record<string, string | null | undefined>,
+  opts: { replace?: boolean; win?: UrlWindow; anchor?: string | null },
 ): 'history' | 'hash' {
   const win = opts.win ?? window;
   const params = readUrlState(win);
