@@ -58,6 +58,11 @@ export interface KitDocRelation {
   place?: KitDocPlace | { out?: KitDocPlace; in?: KitDocPlace };
   /** Вид записей на другом конце; `any` — любой. */
   target_type?: string;
+  /**
+   * Свойства ребра с подписями (место на тропе, сторона): во вкладке связей — колонками, значения —
+   * из `values` каждой ссылки. Нет — общие колонки, как раньше.
+   */
+  props?: { key: string; label: string }[];
 }
 
 export interface KitDocLink {
@@ -175,7 +180,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => partRecord(p, i)));
   const edges: KitEdge[] = [
     ...c.links.map(l => ({ ...(l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel }),
-      ...kinds(l.fromKind, l.toKind) })),
+      ...kinds(l.fromKind, l.toKind), ...(l.values ? { values: l.values } : {}) })),
     ...partEdges,
   ];
   const linkRecords: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)
@@ -256,12 +261,18 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
     return { columns: [...DOC_NESTED_COLUMNS, ...spec.columns] };
   };
   const relDefs: KitRelationDef[] = kitRels.map(r => {
-    const { count: _n, place: _p, target_type: t, ...d } = r;
+    const { count: _n, place: _p, target_type: t, props: rp, ...d } = r;
     // §7.8 шаг 1: явное место стороны побеждает OWN_TAB — только при объектной форме {out, in};
     // строка и «не задано» — как раньше (LORE не меняется).
     const sideShared = typeof r.place === 'object' && r.place !== null && docPlaceOf(r) === 'link_tab'
       && (r.relation === 'composition' || r.relation === 'aggregation');
-    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...childColumnsOf(r), ...(sideShared ? { shared: true } : {}) };
+    // Свойства ребра — колонками после колонок вида ребёнка (или общих), подписи — из props.
+    const child = childColumnsOf(r);
+    const propCols = rp?.length ? {
+      columns: [...(child.columns ?? DOC_NESTED_COLUMNS), ...rp.map(x => `fields.${x.key}`)],
+      fieldLabels: Object.fromEntries(rp.map(x => [`fields.${x.key}`, x.label])),
+    } : child;
+    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...propCols, ...(sideShared ? { shared: true } : {}) };
   });
   const kind: KindConfig = {
     title: c.schema.label, icon: c.schema.icon,

@@ -42,7 +42,9 @@ export interface KitRelationDef { key:string; label:string; relation:KitRelation
   /** S9-05 / D14: колонки таблицы этой связи (ключи колонок списка: 'status', 'id', 'fields.<поле>', 'progress:<поле>'…) — их называет приложение по виду ребёнка. Нет — общие колонки (Статус · Вид · Код · Запись). */
   columns?:string[];
   /** Методика §7.8 (шаг 1): сторона связи по явному месту идёт в ОБЩУЮ вкладку связей, а не в свою (OWN_TAB у состава и агрегации). Ставит сборщик документа только при place {out, in}. */
-  shared?:boolean }
+  shared?:boolean;
+  /** Подписи колонок-свойств ребра (`fields.<ключ>` → подпись) — из props связи в документе. Колонки при этом — в `columns`. */
+  fieldLabels?:Record<string,string> }
 export interface KindConfig { title:string; icon:string;
   /** K4-MENTION-LOOK: цвет вида — ТОКЕН темы (`var(--section-adrs)` или имя токена). Им окрашено каждое упоминание записи этого вида (значок, рамка чипа) и узел графа. Нет — упоминание нейтральное: цвет не выдумываем. */
   color?:string; relations?:KitRelationDef[];
@@ -63,6 +65,8 @@ export interface KindConfig { title:string; icon:string;
   overview?:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string; tabs?:{key:string; title:string; /** Сколько элементов (B13): число — счёт, `null` — «не смогли посчитать», поля нет — считать нечего. Рисуется тем же TabCount, что у вкладок связей. */ count?:number|null; render:(r:KitRecord, ctx:KitCtx)=>React.ReactNode|string}[]; fields?:{key:string; title:string; /** `sum` (S4-09) — сумма с охватом (KitSumInput), та же ячейка, что `sum:` в списке. */ type:'text'|'md'|'enum'|'ref'|'date'|'number'|'bool'|'sum'|'list'|'kv'; /** Подзаголовок раздела в «Свойствах» (S4-36, как блоки v1 «Планирование», «Модули»). */ section?:string; /** S4-24: поле правится на месте (✎ → FieldEditor). Право и путь записи называет приложение; без него — только чтение. */ editable?:boolean; /** Варианты для enum (значение или пара «значение + подпись»). Нет вариантов — enum не правится: выбирать не из чего. */ options?:(string|{value:string; label:string; /** S4-24: подпись группы варианта («Люди» / «Агенты») — от приложения. */ group?:string})[]; /** S4-24: варианты не загрузились — причина словами; поле не правится, свободного ввода нет. */ optionsError?:string; /** Повторить загрузку вариантов. */ onOptionsRetry?:()=>void; /** Обязательность (D-2026-LORE-RECORD-FIELD-REQUIRED). */ required?:'block'|'warn'; /** S4-24: поле-связь (компоненты, проекты) — правится привязкой/отвязкой через hooks.onRelation; добавить — выбором с поиском (hooks.relationOptions). */ relation?:{rel:string; dir:'out'|'in'}; /** K4-MENTION-LOOK: вид записей на другом конце поля-ссылки — облик их упоминаний (значок, цвет). Нет — чип нейтральный. */ refKind?:string}[] }
 export interface KitRecord { id:string; kind:string; title:string; status:string; fields:Record<string,unknown>; body_md?:string; updated_at?:string; /** S7B-28: доп. текст для поиска списка (логин, проекты, агенты…) — называет приложение; kit ищет по id, названию и ему. */ search?:string }
 export interface KitEdge { from:string; to:string; type:string;
+  /** Свойства САМОГО ребра (место на тропе, сторона): у двух рёбер к одной записи они разные, поэтому живут на ребре, а не в полях записи (пилот 16.11). */
+  values?:Record<string,unknown>;
   /** Вид записи на концах (kind), если его знает источник ребра. Нужен, когда записи конца нет среди загруженных: без него связь с `targetKind` не на что отобрать. */
   fromKind?:string; toKind?:string }
 export interface KitJournalEntry { at:string; who:string; is_agent?:boolean; record_id:string; field:string; from:unknown; to:unknown; approved_by?:string }

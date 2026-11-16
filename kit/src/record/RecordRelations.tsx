@@ -10,7 +10,7 @@
 //  generalization — строкой в шапке («Заменяет X»), не вкладкой.
 // Управление — только через hooks.onRelation и только при праве править: запись идёт путём приложения.
 import { useState } from 'react';
-import type { KitCtx, KitRecord, KitRelation, KitRelationDef } from '../core/contract';
+import type { KitCtx, KitEdge, KitRecord, KitRelation, KitRelationDef } from '../core/contract';
 import { kitT, type KitLang } from '../i18n';
 import { RecordRef } from './fmt';
 import { RelationTable } from './RelationTable';
@@ -57,19 +57,22 @@ export function relationTargets(record: KitRecord, ctx: KitCtx, def: KitRelation
  * чем связано, хуже): она остаётся во вкладке с тем же ребром и стороной и идёт в `unknown`,
  * чтобы вкладка сказала об этом словами. Таких вкладок несколько — во всех, с той же пометкой.
  */
-export function relationTargetsWithKind(record: KitRecord, ctx: KitCtx, def: KitRelationDef): { ids: string[]; unknown: string[] } {
+export function relationTargetsWithKind(record: KitRecord, ctx: KitCtx, def: KitRelationDef): { ids: string[]; unknown: string[]; values: (Record<string, unknown> | undefined)[] } {
   const kind = def.targetKind ? new Map(ctx.data.records.map(r => [r.id, r.kind] as const)) : null;
   const ids: string[] = [];
   const unknown: string[] = [];
+  // Свойства ребра — параллельно ids: у двух рёбер к одной записи они разные.
+  const values: (Record<string, unknown> | undefined)[] = [];
+  const push = (id: string, e: KitEdge) => { ids.push(id); values.push(e.values); };
   for (const e of ctx.data.edges) {
     if (e.type !== def.rel || (def.dir === 'out' ? e.from !== record.id : e.to !== record.id)) continue;
     const id = def.dir === 'out' ? e.to : e.from;
-    if (!kind) { ids.push(id); continue; }
+    if (!kind) { push(id, e); continue; }
     const k = (def.dir === 'out' ? e.toKind : e.fromKind) ?? kind.get(id);
-    if (k === undefined) { ids.push(id); unknown.push(id); }
-    else if (k === def.targetKind) ids.push(id);
+    if (k === undefined) { push(id, e); unknown.push(id); }
+    else if (k === def.targetKind) push(id, e);
   }
-  return { ids, unknown };
+  return { ids, unknown, values };
 }
 
 /**
@@ -95,7 +98,7 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
-  const { ids, unknown } = relationTargetsWithKind(record, ctx, def);
+  const { ids, unknown, values } = relationTargetsWithKind(record, ctx, def);
   const manage = onRelation && canManage(def);
   /**
    * Привязать или отвязать. Возвращает, получилось ли.
@@ -137,6 +140,8 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
         onUnlink={manage ? (target: string) => void call(target, 'remove') : undefined}
         testId={single ? 'kit-relation-list' : undefined}
         columns={def.columns}
+        values={values}
+        fieldLabels={def.fieldLabels}
       />
     );
   // S4-24: приложение дало варианты — выбор с поиском, свободного ввода кода нет.
