@@ -57,6 +57,23 @@ class LoreEntityHistoryTest {
         assertThrows(IllegalArgumentException.class, () -> LoreEntityHistory.sql(null));
     }
 
+    /**
+     * Препрод 16.11.2026: паспорт релиза приходит с ключом «проект#тег» (release_uid), а история
+     * отвечала 400 — «#» не проходил общий шаблон id, и версии искались только по release_id.
+     */
+    @Test
+    void releaseHistoryIsReadByItsPassportKey() {
+        assertTrue(LoreEntityHistory.idAccepted("release", "AIDA/miniLORE#minilore-v1.12.33"));
+        assertTrue(LoreEntityHistory.idAccepted("release", "minilore-v1.12.33"));
+        assertFalse(LoreEntityHistory.idAccepted("release", "a#b' OR 1=1"));
+        assertFalse(LoreEntityHistory.idAccepted("task", "AIDA/miniLORE#minilore-v1.12.33"));
+        assertTrue(LoreEntityHistory.idAccepted("task", "SPRINT_X/CO-11"));
+        assertTrue(LoreEntityHistory.sql("release").contains("in('HAS_STATE').release_uid CONTAINS :id"));
+        assertTrue(LoreEntityHistory.sql("release").contains("in('HAS_STATE').release_id CONTAINS :id"));
+        assertTrue(LoreEntityHistory.titleSql("release").contains("release_uid = :id"));
+        assertFalse(LoreEntityHistory.sql("task").contains("release_uid"));
+    }
+
     @Test
     void taskProjectGoesThroughItsSprintAndDecisionAlsoThroughItsAdr() {
         assertTrue(LoreEntityHistory.sql("task").contains("out('PART_OF').out('BELONGS_TO_PROJECT')"));

@@ -56,7 +56,7 @@ public class LoreHistoryResource extends LoreResourceBase {
         if (!LoreEntityHistory.types().contains(type))
             return badParams("unknown history type: " + type + " (known: " + LoreEntityHistory.types() + ")");
         if (id == null || id.isBlank()) return badParams("id required");
-        if (!SAFE_READ_ID.matcher(id).matches()) return badParams("id contains illegal characters");
+        if (!LoreEntityHistory.idAccepted(type, id)) return badParams("id contains illegal characters");
 
         Set<String> allowed = LoreEntityHistory.isGlobal(type) ? null : slices.allowedProjectsOrNull(role);
         if (allowed != null && allowed.isEmpty()) {
