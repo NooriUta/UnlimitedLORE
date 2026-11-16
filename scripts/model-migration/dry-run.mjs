@@ -13,8 +13,10 @@ import { connect } from './db.mjs';
 import { fingerprint } from './fingerprint.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, VOCAB, CODE_CASE } from './resources.mjs';
+import { MAP, VOCAB, CODE_CASE, RULES } from './resources.mjs';
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
+// Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
+const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
 
 /** Пробный расчёт без записи: отчёт по типам карты. Общий для команды dry-run и интерфейса установщика. */
 export async function dryRun(db, DECISIONS) {
@@ -31,7 +33,7 @@ export async function dryRun(db, DECISIONS) {
       t.records++;
       const clean = {};
       for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
-      const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE });
+      const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T] });
       for (const f of Object.keys(r.out)) bump(t.outFields, f);
       for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
       for (const f of r.dropped) bump(t.dropped, f);

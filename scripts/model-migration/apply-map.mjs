@@ -83,7 +83,7 @@ export function classifyStatus(v, { vocab, codes, canonToCode = {}, strict = fal
   }
   const code = canon ? (canonToCode[canon] || canon) : null;
   // known: написание опознано как статус, но такого кода в справочнике типа нет — это не заголовок.
-  if (!code || !codes.includes(code)) return canon ? { code: null, note: s, known: true } : { code: null, note: s };
+  if (!code || !codes.includes(code)) return canon ? { code: null, note: s, known: true, canon: code || canon } : { code: null, note: s };
   return { code, note: exact[phrase] === canon ? tail(cut < 0 ? "" : s.slice(cut)) : s };
 }
 
@@ -97,6 +97,12 @@ function asStatus(f, v, r, ctx, phase) {
   const codes = (ctx.statusCodes || {})[ctx.statusDict];
   if (!codes) throw new Error(`для ${f} не задан справочник статусов (ctx.statusDict)`);
   const st = ctx.statusVocab ? classifyStatus(v, { vocab: ctx.statusVocab, codes, canonToCode: ctx.canonToCode, strict: phase }) : splitStatus(v, codes);
+  // Фаза: в истории лежат статусы задач (PARTIAL, READY FOR DEPLOY…). Сводим их к коду фазы тем же правилом,
+  // что «статус фазы по задачам» (слово владелицы 16.11.2026; derive.map справочника фаз); прежний — в приписку.
+  if (phase && st.code === null && st.known && ctx.phaseStatusMap) {
+    const to = ctx.phaseStatusMap[String(st.canon).toUpperCase()];
+    if (to) { r.out.status = ctx.codeCase === 'upper' ? to.toUpperCase() : to.toLowerCase(); r.out.status_note = st.note; return; }
+  }
   r.out.status = st.code !== null && ctx.codeCase === 'upper' ? st.code.toUpperCase() : st.code;
   if (st.code === null) { if (phase && !st.known) r.titleFallback = st.note; else reject(r, f, v, 'статус вне справочника', { bucket: 'out', field: 'status', note: 'status_note' }); }
   else if (st.note) r.out.status_note = st.note;

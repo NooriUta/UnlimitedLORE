@@ -134,7 +134,7 @@ test('словарь приложения: нестандартное напис
 test('словарь приложения: неузнанное и канон без кода в справочнике — без кода, текст в приписке', async () => {
   const { classifyStatus } = await import('./apply-map.mjs');
   assert.deepEqual(classifyStatus('STUB', sv), { code: null, note: 'STUB' });
-  assert.deepEqual(classifyStatus('⏸ DEFERRED', sv), { code: null, note: 'DEFERRED', known: true }); // статус опознан, но кода deferred в справочнике нет
+  assert.deepEqual(classifyStatus('⏸ DEFERRED', sv), { code: null, note: 'DEFERRED', known: true, canon: 'deferred' }); // статус опознан, но кода deferred в справочнике нет
   assert.deepEqual(classifyStatus('P0', sv), { code: null, note: 'P0' });
 });
 
@@ -172,4 +172,18 @@ test('код статуса пишется в регистре правил: cod
   const row = { status_raw: '✅ DONE — PROD v1.4.6', valid_from: '2026-06-04T10:00:00Z' };
   assert.equal(applyMap('KnowSprintHist', MAP.KnowSprintHist, row, { ...base, codeCase: 'upper' }).out.status, 'DONE');
   assert.equal(applyMap('KnowSprintHist', MAP.KnowSprintHist, row, base).out.status, 'done');
+});
+
+test('фаза: статус задачи в истории фазы сводится к коду фазы по правилу «статус фазы по задачам» (16.11.2026)', () => {
+  const phaseStatusMap = { PARTIAL: 'ACTIVE', READY_FOR_DEPLOY: 'ACTIVE', BLOCKED: 'ACTIVE', DONE: 'DONE' };
+  const c = { statusCodes: { phase_status: ['ACTIVE', 'BACKLOG', 'DONE', 'MOVED', 'PLANNED'] }, statusDict: 'phase_status', statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, codeCase: 'upper', phaseStatusMap };
+  const partial = applyMap('KnowPhaseHist', MAP.KnowPhaseHist, { status_raw: '🟡 PARTIAL' }, c);
+  assert.equal(partial.out.status, 'ACTIVE');
+  assert.match(partial.out.status_note, /PARTIAL/, 'прежний статус не теряется — в приписке');
+  assert.deepEqual(partial.rejects, []);
+  const rfd = applyMap('KnowPhaseHist', MAP.KnowPhaseHist, { status_raw: '🚀 READY FOR DEPLOY' }, c);
+  assert.equal(rfd.out.status, 'ACTIVE');
+  // отменённой фазы в правиле нет — остаётся на решение человека, молча не сводится
+  const cancelled = applyMap('KnowPhaseHist', MAP.KnowPhaseHist, { status_raw: '🚫 CANCELLED' }, c);
+  assert.deepEqual(cancelled.rejects, [{ field: 'status_raw', value: '🚫 CANCELLED', why: 'статус вне справочника' }]);
 });
