@@ -158,7 +158,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // kit рисуются выше групп, и до новостей приходилось проскроллить
         // личное. `pinTop` поднимает ИМЕННО эту группу — что важнее, решает
         // приложение, kit предметных имён не знает.
-        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', pinTop: true, items: [item('news', ICON_CANON.sectionNews), item('analytics', 'histogram')] },
+        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', pinTop: true, items: [item('news', ICON_CANON.sectionNews), item('analytics', 'lucide:chart-column')] },
         // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
         {
           id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',
