@@ -262,3 +262,22 @@ describe('passportFromDoc · свойства ребра колонками во
     expect(p.kinds.trail.relations?.find(r => r.key === 'quizzes')?.fieldLabels).toBeUndefined();
   });
 });
+
+// Пилот 16.11 (вопрос владелицы «по свободным полям — почему до сих пор нет?»): блок «Числа» вида kv
+// выводил сырые ключи (cap, gain). Подписи ключей — у поля документа (`keys`), как props у связи.
+describe('passportFromDoc · подписи ключей поля kv', () => {
+  it('ключ с подписью — подписью; без подписи — ключом, как раньше', async () => {
+    const { RecordView } = await import('./RecordView');
+    const p = passportFromDoc(doc({
+      schema: { ...doc().schema, fields: [...doc().schema.fields,
+        { key: 'numbers', label: 'Числа', kind: 'kv', required: false, editable: false, group: 'props', keys: [{ key: 'cap', label: 'Потолок' }, { key: 'gain', label: 'Прирост' }] }] },
+      values: { ...doc().values, numbers: { cap: 10, gain: 2, stability_days: 3 } },
+    }), { lang: 'ru' });
+    const ctx = { config: { modules: [], menu: { groups: [] }, kinds: p.kinds, statuses: { items: [] } },
+      data: p.data, href: (id: string) => '#' + id, esc: (s: string) => s, md: (s: string) => s } as unknown as KitCtx;
+    render(<KitLangProvider lang="ru"><RecordView record={p.record} ctx={ctx} tab="" onTab={() => {}} propsOpen /></KitLangProvider>);
+    const keys = [...document.querySelectorAll('[data-testid="kit-kv"] .sk-kv__key')].map(k => k.textContent);
+    expect(keys).toEqual(expect.arrayContaining(['Потолок', 'Прирост', 'stability_days']));
+    expect(keys).not.toContain('cap');
+  });
+});

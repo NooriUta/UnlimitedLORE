@@ -34,6 +34,8 @@ export interface KitDocField {
   section?: string;
   /** Путь записи поля. Нет (или null) — поле только для чтения, даже если `editable`. */
   write?: unknown;
+  /** Поле kv: подписи ключей значения (как props у связи). Нет — ключи как есть. */
+  keys?: { key: string; label: string }[];
 }
 
 /** Вкладка схемы. `rel`/`dir` — ребро, которое она показывает. */
@@ -286,6 +288,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
         ...(f.editable && f.write ? { editable: true } : {}),
         ...(f.required ? { required: 'block' as const } : {}),
         ...(f.kind === 'ref' ? { ...edgeOf(f.key), ...refKindOf(f.key) } : {}),
+        ...(f.kind === 'kv' && f.keys?.length ? { keyLabels: Object.fromEntries(f.keys.map(k => [k.key, k.label])) } : {}),
       })),
       ...propFields,
       ...extra.map(x => x.field),
