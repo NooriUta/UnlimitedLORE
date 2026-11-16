@@ -11,6 +11,8 @@ import http from 'node:http';
 import { checkDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 import { EMPTY, groupBySuggestion } from './status-unify.mjs';
 import { fingerprint } from './fingerprint.mjs';
+import path from 'node:path';
+import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
 
@@ -170,8 +172,8 @@ function gate(){if(!D)return;var g=document.getElementById('s4gate'),b=document.
 g.className='state '+(stop?'stop':'go');g.textContent=stop?'СТОП: '+stop+' — перенос не начинается':'Можно переносить: статусы сведены';b.disabled=!!stop||!document.getElementById('ack').checked}
 document.addEventListener('change',function(e){if(e.target.id==='ack')gate()});
 function job(){fetch('api/job').then(function(r){return r.json()}).then(function(j){var l=document.getElementById('log');if(j.lines&&j.lines.length){l.hidden=false;l.textContent=j.lines.join('\n');l.scrollTop=l.scrollHeight}
-if(j.running){setTimeout(job,2000);return}if(j.result)res5(j.result);if(j.error)msg(j.error,true)})}
-function res5(r){var el=document.getElementById('s5');var only=r.what!=='transfer';el.className='state '+(only?'':(r.ok?'go':'stop'));el.innerHTML=(only?'Посчитан только отпечаток: переноса и сверки в этот раз не было':(r.ok?'Сошлось':'НЕ сошлось')+': записи — '+(r.records?'сверка прошла':'расхождение')+', связи — '+(r.edges?'сверка прошла':'расхождение'))+(r.fingerprint?' · отпечаток содержимого <b class="mono">'+esc(r.fingerprint)+'</b>':'')+(r.types?'<div class="sub">'+Object.keys(r.types).map(function(k){return esc(k)+' '+r.types[k].n}).join(' · ')+'</div>':'')}
+if(j.running){var s5=document.getElementById('s5');s5.className='state';s5.textContent='идёт '+(j.what==='transfer'?'перенос':'подсчёт отпечатка')+' — строк хода: '+j.lines.length+'; итог появится здесь';setTimeout(job,2000);return}if(j.result)res5(j.result);if(j.error)msg(j.error,true)})}
+function res5(r){var el=document.getElementById('s5');var only=r.what!=='transfer';el.className='state '+(only?'':(r.ok?'go':'stop'));el.innerHTML=(only?'Посчитан только отпечаток: переноса и сверки в этот раз не было':(r.ok?'Сошлось':'НЕ сошлось')+': записи — '+(r.records?'сверка прошла':'расхождение')+', связи — '+(r.edges?'сверка прошла':'расхождение'))+(r.fingerprint?' · отпечаток содержимого <b class="mono">'+esc(r.fingerprint)+'</b>':'')+(r.reportFile?' · <a href="report.html" target="_blank">открыть отчёт</a> <span class="sub">'+esc(r.reportFile)+'</span>':'')+(r.types?'<div class="sub">'+Object.keys(r.types).map(function(k){return esc(k)+' '+r.types[k].n}).join(' · ')+'</div>':'')}
 document.addEventListener('click',function(e){if(e.target.id==='run4'){fetch('api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'transfer'})}).then(function(r){return r.json()}).then(function(d){if(d.error)return msg(d.error,true);msg('Перенос начат');job()})}
 if(e.target.id==='run5'){fetch('api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'fingerprint'})}).then(function(r){return r.json()}).then(function(d){if(d.error)return msg(d.error,true);location.hash='#step-5';job()})}});
 auth();step(stepFromHash());load();job();fetch('api/connect').then(function(r){return r.json()}).then(function(c){if(c.dstDb)document.getElementById('dstname').textContent=c.dstDb}).catch(function(){})})();
@@ -194,23 +196,34 @@ export async function serve({ port = 2499 } = {}) {
   const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
   // Одно задание за раз: перенос (записи → связи → отпечаток) или только отпечаток. Ход — строками, итог — объектом.
   let J = { running: false, lines: [], result: null, error: null };
-  const runJob = async (what, decisionsDoc) => {
+  const runJob = async (what, decisionsDoc, who) => {
     J = { running: true, lines: [], result: null, error: null, what, started: new Date().toISOString() };
     const log = (...a) => J.lines.push(a.map(x => (typeof x === 'string' ? x : JSON.stringify(x))).join(' '));
     try {
-      let records = null, edges = null;
+      let records = null, edges = null, r = null, e = null;
+      const dlg = what === 'transfer' ? await dialog(true) : null;
       if (what === 'transfer') {
         log('— записи и версии —');
-        const r = await transfer(db, decisionsDoc, { reset: true, log });
+        r = await transfer(db, decisionsDoc, { reset: true, log });
         records = r.stages.verify.ok;
         log('— связи —');
-        const e = await transferEdges(db, { log });
+        e = await transferEdges(db, { log });
         edges = e.ok;
       }
       log('— отпечаток новой базы —');
       const fp = await dstFingerprint(db);
       log('отпечаток содержимого: ' + fp.total);
       J.result = { what, ok: what === 'transfer' ? records && edges : null, records, edges, fingerprint: fp.total, types: fp.types };
+      if (what === 'transfer') {
+        // Отчёт документом: в память для страницы и файлом рядом с файлом решений.
+        const when = new Date().toISOString();
+        J.reportHtml = buildReport({ when, who: who || 'не вошли (режим разработки)', source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB,
+          dialog: { summary: dlg.summary, fingerprint: dlg.fingerprint }, decisions: (decisionsDoc && decisionsDoc.decisions) || [], transfer: r, edges: e, fingerprint: fp });
+        const out = path.join(path.dirname(file), `report-${db.env.MIG_DST_DB}-${when.slice(0, 19).replace(/[:T]/g, '-')}.html`);
+        fs.writeFileSync(out, J.reportHtml, 'utf8');
+        J.result.reportFile = out;
+        log('отчёт: ' + out);
+      }
     } catch (e) { J.error = e.message; log('ОШИБКА: ' + e.message); }
     J.running = false;
   };
@@ -272,7 +285,12 @@ export async function serve({ port = 2499 } = {}) {
         try { dstTypes = (await db.dstQuery('SELECT count(*) AS n FROM schema:types'))[0].n; } catch (e) { dstError = e.message.slice(0, 120); }
         return json(res, 200, { srcUrl: db.env.MIG_DB_URL, srcDb: db.env.MIG_SRC_DB, dstUrl: dstUrl(db.env), dstDb: db.env.MIG_DST_DB, dstTypes, dstError, src });
       }
-      if (req.method === 'GET' && req.url === '/api/job') return json(res, 200, J);
+      if (req.method === 'GET' && req.url === '/api/job') { const { reportHtml, ...rest } = J; return json(res, 200, { ...rest, hasReport: Boolean(reportHtml) }); }
+      if (req.method === 'GET' && req.url === '/report.html') {
+        if (kc.configured && !me(req)) return json(res, 401, { error: 'нужен вход: шаг 0' });
+        if (!J.reportHtml) return json(res, 404, { error: 'отчёта ещё нет: перенос в этом запуске не выполнялся' });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(J.reportHtml);
+      }
       if (req.method === 'POST' && req.url === '/api/run') {
         let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e4) throw new Error('слишком большой запрос'); }
         const what = JSON.parse(body || '{}').what;
@@ -280,7 +298,7 @@ export async function serve({ port = 2499 } = {}) {
         if (what === 'transfer') {
           const d = await dialog(true);
           if (!d.ready) return json(res, 409, { error: 'перенос не начинается: на шаге 2 ждут решения ' + d.summary.needs_decision + ' значений' });
-          runJob('transfer', readDoc());
+          runJob('transfer', readDoc(), (me(req) || {}).login);
         } else if (what === 'fingerprint') runJob('fingerprint');
         else return json(res, 400, { error: 'неизвестное задание' });
         return json(res, 202, { started: what });

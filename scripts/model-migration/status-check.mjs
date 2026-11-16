@@ -7,26 +7,14 @@
 import fs from 'node:fs';
 import { connect } from './db.mjs';
 import { loadDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
-import { buildDialog } from './status-unify.mjs';
-import { fingerprint } from './fingerprint.mjs';
+import { collectStatusDialog } from './status-run.mjs';
 
 import { RULES } from './resources.mjs';
 const decisions = loadDecisions() || { format: DECISIONS_FORMAT, decisions: [] };
 const db = connect();
 
-// Типы источника, у которых есть история версий, читаются по версиям — так статус переносится; остальные — по записи.
-const counts = [];
-for (const s of RULES.sources) {
-  let rows;
-  try { rows = await db.src(`SELECT ${s.field} AS v, count(*) AS n FROM ${s.type} GROUP BY ${s.field}`); }
-  catch (e) { counts.push({ type: s.type, field: s.field, value: null, n: 0, error: e.message.slice(0, 120) }); continue; }
-  for (const r of rows) counts.push({ type: s.type, field: s.field, value: r.v ?? null, n: r.n });
-}
-const failed = counts.filter(c => c.error);
-const dialog = buildDialog(counts.filter(c => !c.error), RULES, decisions);
-dialog.source = db.env.MIG_SRC_DB;
-dialog.unread = failed.map(c => ({ type: c.type, field: c.field, error: c.error }));
-if (failed.length) dialog.ready = false; // «не смогли прочитать» — не «чисто»
+// Сбор диалога — общий с интерфейсом установщика (status-run.mjs): один и тот же отпечаток в команде и в отчёте.
+const dialog = await collectStatusDialog(db, RULES, decisions);
 
 const outArg = process.argv.indexOf('--out');
 if (outArg > 0) fs.writeFileSync(process.argv[outArg + 1], JSON.stringify(dialog, null, 1));
@@ -44,7 +32,7 @@ for (const [k, rows] of Object.entries(byType)) {
     rows.slice(0, 12).map(r => `«${short(r.value)}»×${r.n}${r.suggest ? ` → ${r.suggest}?` : ''}`).join(', ') + (rows.length > 12 ? ` … и ещё ${rows.length - 12}` : ''));
 }
 // Отпечаток для приёмки на двух машинах: одинаковые настройки и источник → одинаковый отпечаток.
-console.log(`отпечаток итога: ${fingerprint(dialog)}`);
+console.log(`отпечаток итога: ${dialog.fingerprint}`);
 // «Не смогли прочитать» — не «ждёт решения»: причина стопа называется своя.
 console.log(dialog.unread.length ? `СТОП: источник прочитан не весь (${dialog.unread.length} полей) — проверка не выполнена, перенос не начинается`
   : dialog.ready ? 'ГОТОВО: статусы сведены, перенос можно начинать' : 'СТОП: есть статусы без решения — перенос не начинается');
