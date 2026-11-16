@@ -46,6 +46,8 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreSprintTaskResource sprintTask;
     @Inject LoreAdrResource adrResource;
     @Inject LoreQuestionResource questionResource;
+    @Inject LoreDecisionResource decisionResource;
+    @Inject LoreRunbookResource runbookResource;
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
@@ -609,6 +611,10 @@ public class LoreRecordResource extends LoreResourceBase {
             case SPEC_PROJECT -> specResource.linkSpec(new LoreSpecResource.SpecLinkRequest(a, "project", b, action), role);
             case DOC_COMPONENT -> docResource.linkDocComponent(new LoreDocResource.DocComponentLinkRequest(a, b, action), role);
             case DOC_PROJECT -> docResource.linkDocProject(new LoreDocResource.DocProjectLinkRequest(a, b, action), role);
+            case DECISION_PROJECT -> decisionResource.linkProject(new LoreDecisionResource.DProjectRequest(a, b, action), role);
+            case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
+            case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
+                new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
         };
     }
 }
