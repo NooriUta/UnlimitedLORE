@@ -22,7 +22,8 @@ import { NestedList } from '../list/NestedList';
 type FieldDef = NonNullable<KindConfig['fields']>[number];
 
 /** Вид поля документа (MC-08: bool — флаг «Да»/«Нет»). */
-export type KitDocFieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number' | 'bool';
+/** list — значения списком (K5-FIELD-LIST), kv — вложенный объект (K4-FIELD-KV): пилот передавал их «как есть», вне контракта. */
+export type KitDocFieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number' | 'bool' | 'list' | 'kv';
 
 /** Поле схемы документа. Куда писать (`write`) — понятие приложения: kit проверяет только наличие. */
 export interface KitDocField {
@@ -61,7 +62,11 @@ export interface KitDocLink {
   values?: Record<string, unknown>;
 }
 
-export interface KitDocPartItem { id: string; title: string; status: string; values?: Record<string, unknown> }
+/**
+ * Элемент части. `type` — свой вид элемента: часть бывает смешанной (у тропы ON_TRAIL — свитки и квизы,
+ * пилот 16.11). Нет — вид части. `values` — значения колонок, в том числе свойства ребра (сторона, t).
+ */
+export interface KitDocPartItem { id: string; title: string; status: string; type?: string; values?: Record<string, unknown> }
 
 /** Часть записи. `count` — число при `state: 'ok'`, иначе null («не посчитали» ≠ 0). */
 export interface KitDocPart {
@@ -101,6 +106,12 @@ export interface PassportFromDocOptions {
   childColumns?: (targetKind: string) => { columns: string[]; kind: KindConfig } | undefined;
   /** Вычисляемые поля вида (итоги и т. п.): поле в «Свойства» и значение в запись. */
   extraFields?: (doc: KitRecordDoc) => { field: FieldDef; value: unknown }[];
+  /**
+   * Колонки таблицы части — по СВЯЗИ, а не по виду ребёнка: свойства ребра (у ON_TRAIL — сторона и t)
+   * принадлежат связи. Без них одна запись на двух отрезках выглядела двумя одинаковыми строками
+   * (пилот 16.11). Нет — общие колонки списка.
+   */
+  partColumns?: (part: KitDocPart) => string[] | undefined;
 }
 
 export interface PassportFromDoc {
@@ -142,9 +153,9 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const parts = c.parts ?? [];
   const kinds = (fromKind?: string, toKind?: string) => ({ ...(fromKind ? { fromKind } : {}), ...(toKind ? { toKind } : {}) });
   const partEdges: KitEdge[] = parts.flatMap(p => p.items.map(i =>
-    p.dir === 'in' ? { from: i.id, to: id, type: p.rel, ...kinds(p.type, type) } : { from: id, to: i.id, type: p.rel, ...kinds(type, p.type) }));
+    p.dir === 'in' ? { from: i.id, to: id, type: p.rel, ...kinds(i.type ?? p.type, type) } : { from: id, to: i.id, type: p.rel, ...kinds(type, i.type ?? p.type) }));
   const partRecord = (p: KitDocPart, i: KitDocPartItem): KitRecord => ({
-    id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
+    id: i.id, kind: i.type ?? p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
   });
   const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => partRecord(p, i)));
   const edges: KitEdge[] = [
@@ -201,7 +212,8 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
       : undefined;
   const partBody = (p: KitDocPart, ctx: KitCtx): ReactNode => {
     if (p.items.length === 0) return noLinks;
-    return createElement(NestedList, { ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p) });
+    const extra = opts.partColumns?.(p);
+    return createElement(NestedList, { ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p), ...(extra ? { columns: [...DOC_NESTED_COLUMNS, ...extra] } : {}) });
   };
   const partTabs = parts.map(p => ({
     key: p.key, title: p.label,
