@@ -27,6 +27,8 @@ final class LoreRecordPerms {
 
     static final String NO_RIGHTS = "нет прав: правка и смена статуса требуют роли admin или superadmin";
     static final String READ_ONLY_REASON = "только чтение: путей записи у этого типа в паспорте пока нет";
+    /** AP-PROJECT-LINK-UI: тип только-для-чтения, но у него есть правимые поля (связи с путём записи). */
+    static final String STATUS_READ_ONLY_REASON = "статус и создание в паспорте не меняются: правятся только поля с путём записи";
     static final String NOT_IDENTIFIED =
         "не опознан: запрос без проверенной учётки и без роли — права вычислить не из чего";
 
@@ -45,6 +47,14 @@ final class LoreRecordPerms {
         };
     }
 
+    /** У типа есть поле, которое правится: editable и с путём записи в модели. */
+    static boolean hasWritableField(String type) {
+        LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+        if (d == null) return false;
+        for (LoreRecordRegistry.Field f : d.fields()) if (f.editable() && f.write() != null) return true;
+        return false;
+    }
+
     static Map<String, Object> of(String type, String role, boolean identified, String currentStatus, int openTasks) {
         return of(type, role, identified, currentStatus, openTasks, null);
     }
@@ -57,12 +67,17 @@ final class LoreRecordPerms {
                                   int openTasks, List<String> specStatuses) {
         if (LoreRecordRegistry.READ_ONLY.contains(type)) {
             // Kit 09.11: путей записи у типа в фасаде нет — ничего не обещаем, причину называем.
+            // AP-PROJECT-LINK-UI (16.11.2026): «только чтение» — про статус и создание. Если у типа
+            // есть поле с путём записи (проекты решения, вопроса, ранбука через /relation), правка
+            // даётся по роли; прочие поля и так editable=false в модели.
             Map<String, Object> ro = new LinkedHashMap<>();
-            ro.put("can_edit", false);
+            boolean writable = hasWritableField(type);
+            boolean can = writable && ("admin".equals(role) || "superadmin".equals(role));
+            ro.put("can_edit", can);
             ro.put("can_status", false);
             ro.put("can_create", false);
             ro.put("status_next", List.of());
-            ro.put("reason", READ_ONLY_REASON);
+            ro.put("reason", !writable ? READ_ONLY_REASON : can ? STATUS_READ_ONLY_REASON : identified ? NO_RIGHTS : NOT_IDENTIFIED);
             return ro;
         }
         boolean can = "admin".equals(role) || "superadmin".equals(role);
