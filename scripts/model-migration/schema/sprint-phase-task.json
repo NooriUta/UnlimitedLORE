@@ -359,6 +359,16 @@
           "of": 2148,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 2148,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "from_record_to_current_version": [],
@@ -556,6 +566,16 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
           "from": [],
           "filled": 0,
           "of": 356,
@@ -929,6 +949,16 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 15940,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
           "from": [],
           "filled": 0,
           "of": 15940,

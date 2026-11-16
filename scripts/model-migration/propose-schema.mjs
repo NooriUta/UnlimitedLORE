@@ -54,7 +54,7 @@ for (const [T, t] of Object.entries(types)) {
 // Служебные поля, которые новая схема объявляет сама, даже если в данных источника их ещё нет (общий перечень
 // служебных полей; сессия, harness и машина, записавшие версию: слова владелицы 16.11.2026 «в истории … пишет идентификатор
 // сессии», «просить каждый mcp писать harness … константой», «и машину что уж то же», «при настройках MCP ещё две константы»).
-const DECLARED_SERVICE = { changed_by_session: { kind: 'text', db_type: 'STRING', name: 'Сессия правки' }, changed_by_harness: { kind: 'text', db_type: 'STRING', name: 'Harness правки' }, changed_by_machine: { kind: 'text', db_type: 'STRING', name: 'Машина правки' } };
+const DECLARED_SERVICE = { changed_by_session: { kind: 'text', db_type: 'STRING', name: 'Сессия правки' }, changed_by_harness: { kind: 'text', db_type: 'STRING', name: 'Harness правки' }, changed_by_harness_note: { kind: 'text', db_type: 'STRING', name: 'Сверка harness' }, changed_by_machine: { kind: 'text', db_type: 'STRING', name: 'Машина правки' } };
 for (const [T, t] of Object.entries(types)) {
   if (!T.endsWith('Hist')) continue;
   for (const [f, d] of Object.entries(DECLARED_SERVICE)) if (!t.fields[f]) t.fields[f] = { ...d, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };

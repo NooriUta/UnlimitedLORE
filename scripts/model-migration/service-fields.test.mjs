@@ -12,7 +12,7 @@ test('у каждого типа версий в новой схеме есть 
   const hist = Object.keys(SCHEMA).filter(T => T.endsWith('Hist'));
   assert.ok(hist.length >= 3, 'типы версий найдены');
   for (const T of hist) {
-    for (const k of ['changed_by_session', 'changed_by_harness', 'changed_by_machine']) {
+    for (const k of ['changed_by_session', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine']) {
       const f = SCHEMA[T].fields[k];
       assert.ok(f, T + '.' + k + ': поле объявлено');
       assert.equal(f.service, true, T + '.' + k + ': служебное');
