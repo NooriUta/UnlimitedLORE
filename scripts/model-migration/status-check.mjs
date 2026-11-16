@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import { connect } from './db.mjs';
 import { loadDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 import { buildDialog } from './status-unify.mjs';
+import { fingerprint } from './fingerprint.mjs';
 
 import { RULES } from './resources.mjs';
 const decisions = loadDecisions() || { format: DECISIONS_FORMAT, decisions: [] };
@@ -42,6 +43,8 @@ for (const [k, rows] of Object.entries(byType)) {
   console.log(`  ${k} [${rows[0].dict || 'правила нет'}]: ${rows.length} значений, ${rows.reduce((a, r) => a + r.n, 0)} записей — ` +
     rows.slice(0, 12).map(r => `«${short(r.value)}»×${r.n}${r.suggest ? ` → ${r.suggest}?` : ''}`).join(', ') + (rows.length > 12 ? ` … и ещё ${rows.length - 12}` : ''));
 }
+// Отпечаток для приёмки на двух машинах: одинаковые настройки и источник → одинаковый отпечаток.
+console.log(`отпечаток итога: ${fingerprint(dialog)}`);
 // «Не смогли прочитать» — не «ждёт решения»: причина стопа называется своя.
 console.log(dialog.unread.length ? `СТОП: источник прочитан не весь (${dialog.unread.length} полей) — проверка не выполнена, перенос не начинается`
   : dialog.ready ? 'ГОТОВО: статусы сведены, перенос можно начинать' : 'СТОП: есть статусы без решения — перенос не начинается');

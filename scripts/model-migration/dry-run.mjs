@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import { loadDecisions } from './decisions.mjs';
 const DECISIONS = loadDecisions(); // решения человека из раздела «Перенос»; файла нет — решений нет
 import { connect } from './db.mjs';
+import { fingerprint } from './fingerprint.mjs';
 import { applyMap } from './apply-map.mjs';
 
 import { MAP, VOCAB, CODE_CASE } from './resources.mjs';
@@ -57,3 +58,5 @@ for (const [T, t] of Object.entries(report.types)) {
   if (Object.keys(t.statusCodes).length) console.log('   статусы:', JSON.stringify(t.statusCodes), t.titleFallback ? `· не-статус → название: ${t.titleFallback}` : '');
   for (const [k, e] of Object.entries(t.rejects)) console.log(`   ОТКАЗ ${k}: ${e.n} — ` + Object.entries(e.samples).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([s, n]) => `«${s}»×${n}`).join(', '));
 }
+// Отпечаток для приёмки на двух машинах: одинаковые настройки и источник → одинаковый отпечаток.
+console.log(`отпечаток итога: ${fingerprint(report)}`);
