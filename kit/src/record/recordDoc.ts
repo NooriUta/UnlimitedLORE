@@ -50,7 +50,12 @@ export interface KitDocRelation {
   /** Есть ли у сервера путь привязки для этой связи. */
   manageable?: boolean;
   /** Не прислали — вкладка связей. */
-  place?: KitDocPlace;
+  /**
+   * Место показа: строкой — одинаково с обеих сторон (как было); объектом {out, in} — по сторонам связи
+   * (методика §7.8: «обратная сторона состава у части — строкой во вкладке связей»). Для записи берётся
+   * её сторона — `dir`. Не задано — вкладка связей (умолчание прежнее).
+   */
+  place?: KitDocPlace | { out?: KitDocPlace; in?: KitDocPlace };
   /** Вид записей на другом конце; `any` — любой. */
   target_type?: string;
 }
@@ -87,7 +92,11 @@ export interface KitDocSource {
 export interface KitRecordDoc {
   contract: string;
   record: { type: string; id: string; title: string; status: string; version: string | null; updated_at: string | null; updated_by: string | null };
-  schema: { type: string; label: string; icon: string; fields: KitDocField[]; tabs: KitDocTab[]; relations: KitDocRelation[] };
+  schema: {
+    type: string; label: string; icon: string; fields: KitDocField[]; tabs: KitDocTab[]; relations: KitDocRelation[];
+    /** Подписи общих вкладок по виду связи (методика §7.8: «вкладка связей — одна на группу, подпись группы — из документа»). Нет — подпись kit («Зависимости»). */
+    relation_groups?: Partial<Record<KitRelation, string>>;
+  };
   values: Record<string, unknown>;
   links: KitDocLink[];
   parts?: KitDocPart[];
@@ -138,6 +147,12 @@ export function bodyMdIsOwnSection(c: Pick<KitRecordDoc, 'values' | 'schema'>): 
   return !bodyFields.some(f => f.key !== 'body_md' && c.values[f.key] === body);
 }
 
+/** Место связи для ЭТОЙ записи: строка — как есть; объект — сторона записи (`dir`); нет — вкладка связей. */
+export function docPlaceOf(r: Pick<KitDocRelation, 'place' | 'dir'>): KitDocPlace {
+  if (typeof r.place === 'string') return r.place;
+  return r.place?.[r.dir] ?? 'link_tab';
+}
+
 export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): PassportFromDoc {
   const { lang } = opts;
   const { type, id } = c.record;
@@ -183,9 +198,9 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   for (const x of extra) record.fields[x.field.key] = x.value;
   // Связь-свойство без поля в схеме — поле-ссылка: иначе значение не показалось бы вовсе,
   // а в блоке связей стояло бы «Проекты 0».
-  const propRels = c.schema.relations.filter(r => r.place === 'prop' && !props.some(f => f.key === r.key));
+  const propRels = c.schema.relations.filter(r => docPlaceOf(r) === 'prop' && !props.some(f => f.key === r.key));
   const edgeOf = (key: string) => {
-    const r = c.schema.relations.find(x => x.place === 'prop' && x.key === key && x.manageable);
+    const r = c.schema.relations.find(x => docPlaceOf(x) === 'prop' && x.key === key && x.manageable);
     return r ? { relation: { rel: r.rel, dir: r.dir } } : {};
   };
   const refKindOf = (key: string) => {
@@ -198,7 +213,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const sections = c.schema.fields.filter(f => f.group === 'body' && (f.key !== 'body_md' || bodyIsOwn));
   const bodySections = sections.map(s => ({ key: s.key, title: s.label, editable: s.editable !== false }));
   // Связи, которые рисует сам kit (по видам UML); своей вкладки на тот же ключ не отдаём.
-  const kitRels = c.schema.relations.filter(r => (r.place ?? 'link_tab') === 'link_tab');
+  const kitRels = c.schema.relations.filter(r => docPlaceOf(r) === 'link_tab');
   const kitRelKeys = new Set(kitRels.map(r => r.key));
   const noLinks = kitT(lang, 'kit.record.links.empty');
   const linkTabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
@@ -242,6 +257,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
     title: c.schema.label, icon: c.schema.icon,
     ...(bodySections.length ? { bodySections } : {}),
     relations: relDefs,
+    ...(c.schema.relation_groups ? { relationGroups: c.schema.relation_groups } : {}),
     fields: [
       ...props.map(f => ({
         key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),

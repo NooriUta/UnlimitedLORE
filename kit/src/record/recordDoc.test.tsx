@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { KitCtx } from '../core/contract';
 import { KitLangProvider } from '../i18n';
-import { bodyMdIsOwnSection, passportFromDoc, type KitRecordDoc } from './recordDoc';
+import { bodyMdIsOwnSection, passportFromDoc, type KitDocRelation, type KitRecordDoc } from './recordDoc';
 
 const doc = (over: Partial<KitRecordDoc> = {}): KitRecordDoc => ({
   contract: 'dw.record/1',
@@ -166,5 +166,32 @@ describe('passportFromDoc · находки пилота 16.11', () => {
     const p = passportFromDoc(d, { lang: 'ru' });
     expect(p.kinds.trail.fields?.find(f => f.key === 'dreams_list')?.type).toBe('list');
     expect(p.kinds.trail.fields?.find(f => f.key === 'numbers')?.type).toBe('kv');
+  });
+});
+
+// Методика §7.8 (SPEC-LORE-MODEL-PASSPORT-METHOD, «предложено»): место показа по сторонам связи и
+// подпись группы ассоциаций — обратно-совместимым расширением, без смены поведения по умолчанию.
+describe('passportFromDoc · место по сторонам и подпись группы (§7.8)', () => {
+  const rel = (place: KitDocRelation['place'], dir: 'out' | 'in') =>
+    ({ key: 'next', label: 'Следующая', relation: 'association' as const, rel: 'NEXT', dir, count: 0, place });
+
+  it('place объектом {out,in}: для записи берётся СВОЯ сторона', () => {
+    const asOut = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel({ out: 'prop', in: 'link_tab' }, 'out')] } }), { lang: 'ru' });
+    expect(asOut.kinds.trail.fields?.some(f => f.key === 'next')).toBe(true); // prop — поле
+    const asIn = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel({ out: 'prop', in: 'link_tab' }, 'in')] } }), { lang: 'ru' });
+    expect(asIn.kinds.trail.relations?.map(r => r.key)).toEqual(['next']); // link_tab — связь kit
+  });
+
+  it('place строкой — как раньше; не задан — вкладка связей (умолчание не меняется)', () => {
+    const s = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel('prop', 'out')] } }), { lang: 'ru' });
+    expect(s.kinds.trail.fields?.some(f => f.key === 'next')).toBe(true);
+    const none = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel(undefined, 'out')] } }), { lang: 'ru' });
+    expect(none.kinds.trail.relations?.map(r => r.key)).toEqual(['next']);
+  });
+
+  it('подпись группы ассоциаций из документа доходит до вида; нет — подписи нет (запасное «Зависимости» у kit)', () => {
+    const p = passportFromDoc(doc({ schema: { ...doc().schema, relation_groups: { association: 'По смыслу' } } }), { lang: 'ru' });
+    expect(p.kinds.trail.relationGroups).toEqual({ association: 'По смыслу' });
+    expect(passportFromDoc(doc(), { lang: 'ru' }).kinds.trail.relationGroups).toBeUndefined();
   });
 });
