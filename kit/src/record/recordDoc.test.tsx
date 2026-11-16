@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { KitCtx } from '../core/contract';
 import { KitLangProvider } from '../i18n';
-import { bodyMdIsOwnSection, passportFromDoc, type KitRecordDoc } from './recordDoc';
+import { bodyMdIsOwnSection, passportFromDoc, type KitDocRelation, type KitRecordDoc } from './recordDoc';
 
 const doc = (over: Partial<KitRecordDoc> = {}): KitRecordDoc => ({
   contract: 'dw.record/1',
@@ -136,5 +136,62 @@ describe('bodyMdIsOwnSection', () => {
     d.schema.fields.push({ key: 'note_md', label: 'Заметка', kind: 'md', required: false, editable: true, group: 'body' });
     d.values.note_md = d.values.body_md;
     expect(bodyMdIsOwnSection(d)).toBe(false);
+  });
+});
+
+// Пилот «Дата-странники», перевод Методологии на passportFromDoc (их PR #31, 16.11): где упёрлись.
+describe('passportFromDoc · находки пилота 16.11', () => {
+  it('элемент части несёт СВОЙ вид: смешанная часть (свитки и квизы) — не «any»', () => {
+    const p = passportFromDoc(doc({ parts: [{ key: 'on', label: 'На тропе', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 2,
+      items: [{ id: 'S-1', title: 'Свиток', status: 'open', type: 'scroll' }, { id: 'Q-1', title: 'Квиз', status: 'open', type: 'quiz' }] }] }), { lang: 'ru' });
+    const kinds = Object.fromEntries(p.data.records.map(r => [r.id, r.kind]));
+    expect(kinds['S-1']).toBe('scroll');
+    expect(kinds['Q-1']).toBe('quiz');
+  });
+
+  it('колонки части — по связи (свойства ребра: сторона, t), а не по виду ребёнка', () => {
+    const p = passportFromDoc(doc({ parts: [{ key: 'on', label: 'На тропе', type: 'quiz', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 2,
+      items: [{ id: 'Q-1', title: 'Квиз', status: 'open', values: { side: 'A', t: 1 } }, { id: 'Q-1b', title: 'Квиз', status: 'open', values: { side: 'B', t: 2 } }] }] }),
+    { lang: 'ru', partColumns: part => (part.rel === 'ON_TRAIL' ? ['fields.side', 'fields.t'] : undefined) });
+    const ctx = { config: { modules: [], menu: { groups: [] }, kinds: p.kinds, statuses: { items: [] } }, data: p.data, href: (id: string) => '#' + id, esc: (s: string) => s, md: (s: string) => s } as unknown as KitCtx;
+    render(<KitLangProvider lang="ru">{p.kinds.trail.tabs!.find(t => t.key === 'on')!.render(p.record, ctx)}</KitLangProvider>);
+    const heads = [...document.querySelectorAll('th')].map(th => th.textContent?.toLowerCase() ?? '');
+    expect(heads.some(h => h.includes('side'))).toBe(true);
+  });
+
+  it('виды полей документа list и kv — часть контракта и доходят до поля вида', () => {
+    const d = doc();
+    d.schema.fields.push({ key: 'dreams_list', label: 'Сны', kind: 'list', required: false, editable: false, group: 'props' });
+    d.schema.fields.push({ key: 'numbers', label: 'Числа', kind: 'kv', required: false, editable: false, group: 'props' });
+    const p = passportFromDoc(d, { lang: 'ru' });
+    expect(p.kinds.trail.fields?.find(f => f.key === 'dreams_list')?.type).toBe('list');
+    expect(p.kinds.trail.fields?.find(f => f.key === 'numbers')?.type).toBe('kv');
+  });
+});
+
+// Методика §7.8 (SPEC-LORE-MODEL-PASSPORT-METHOD, «предложено»): место показа по сторонам связи и
+// подпись группы ассоциаций — обратно-совместимым расширением, без смены поведения по умолчанию.
+describe('passportFromDoc · место по сторонам и подпись группы (§7.8)', () => {
+  const rel = (place: KitDocRelation['place'], dir: 'out' | 'in') =>
+    ({ key: 'next', label: 'Следующая', relation: 'association' as const, rel: 'NEXT', dir, count: 0, place });
+
+  it('place объектом {out,in}: для записи берётся СВОЯ сторона', () => {
+    const asOut = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel({ out: 'prop', in: 'link_tab' }, 'out')] } }), { lang: 'ru' });
+    expect(asOut.kinds.trail.fields?.some(f => f.key === 'next')).toBe(true); // prop — поле
+    const asIn = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel({ out: 'prop', in: 'link_tab' }, 'in')] } }), { lang: 'ru' });
+    expect(asIn.kinds.trail.relations?.map(r => r.key)).toEqual(['next']); // link_tab — связь kit
+  });
+
+  it('place строкой — как раньше; не задан — вкладка связей (умолчание не меняется)', () => {
+    const s = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel('prop', 'out')] } }), { lang: 'ru' });
+    expect(s.kinds.trail.fields?.some(f => f.key === 'next')).toBe(true);
+    const none = passportFromDoc(doc({ schema: { ...doc().schema, relations: [rel(undefined, 'out')] } }), { lang: 'ru' });
+    expect(none.kinds.trail.relations?.map(r => r.key)).toEqual(['next']);
+  });
+
+  it('подпись группы ассоциаций из документа доходит до вида; нет — подписи нет (запасное «Зависимости» у kit)', () => {
+    const p = passportFromDoc(doc({ schema: { ...doc().schema, relation_groups: { association: 'По смыслу' } } }), { lang: 'ru' });
+    expect(p.kinds.trail.relationGroups).toEqual({ association: 'По смыслу' });
+    expect(passportFromDoc(doc(), { lang: 'ru' }).kinds.trail.relationGroups).toBeUndefined();
   });
 });

@@ -22,7 +22,8 @@ import { NestedList } from '../list/NestedList';
 type FieldDef = NonNullable<KindConfig['fields']>[number];
 
 /** Вид поля документа (MC-08: bool — флаг «Да»/«Нет»). */
-export type KitDocFieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number' | 'bool';
+/** list — значения списком (K5-FIELD-LIST), kv — вложенный объект (K4-FIELD-KV): пилот передавал их «как есть», вне контракта. */
+export type KitDocFieldKind = 'text' | 'md' | 'enum' | 'ref' | 'date' | 'number' | 'bool' | 'list' | 'kv';
 
 /** Поле схемы документа. Куда писать (`write`) — понятие приложения: kit проверяет только наличие. */
 export interface KitDocField {
@@ -49,7 +50,12 @@ export interface KitDocRelation {
   /** Есть ли у сервера путь привязки для этой связи. */
   manageable?: boolean;
   /** Не прислали — вкладка связей. */
-  place?: KitDocPlace;
+  /**
+   * Место показа: строкой — одинаково с обеих сторон (как было); объектом {out, in} — по сторонам связи
+   * (методика §7.8: «обратная сторона состава у части — строкой во вкладке связей»). Для записи берётся
+   * её сторона — `dir`. Не задано — вкладка связей (умолчание прежнее).
+   */
+  place?: KitDocPlace | { out?: KitDocPlace; in?: KitDocPlace };
   /** Вид записей на другом конце; `any` — любой. */
   target_type?: string;
 }
@@ -61,7 +67,11 @@ export interface KitDocLink {
   values?: Record<string, unknown>;
 }
 
-export interface KitDocPartItem { id: string; title: string; status: string; values?: Record<string, unknown> }
+/**
+ * Элемент части. `type` — свой вид элемента: часть бывает смешанной (у тропы ON_TRAIL — свитки и квизы,
+ * пилот 16.11). Нет — вид части. `values` — значения колонок, в том числе свойства ребра (сторона, t).
+ */
+export interface KitDocPartItem { id: string; title: string; status: string; type?: string; values?: Record<string, unknown> }
 
 /** Часть записи. `count` — число при `state: 'ok'`, иначе null («не посчитали» ≠ 0). */
 export interface KitDocPart {
@@ -82,7 +92,11 @@ export interface KitDocSource {
 export interface KitRecordDoc {
   contract: string;
   record: { type: string; id: string; title: string; status: string; version: string | null; updated_at: string | null; updated_by: string | null };
-  schema: { type: string; label: string; icon: string; fields: KitDocField[]; tabs: KitDocTab[]; relations: KitDocRelation[] };
+  schema: {
+    type: string; label: string; icon: string; fields: KitDocField[]; tabs: KitDocTab[]; relations: KitDocRelation[];
+    /** Подписи общих вкладок по виду связи (методика §7.8: «вкладка связей — одна на группу, подпись группы — из документа»). Нет — подпись kit («Зависимости»). */
+    relation_groups?: Partial<Record<KitRelation, string>>;
+  };
   values: Record<string, unknown>;
   links: KitDocLink[];
   parts?: KitDocPart[];
@@ -101,6 +115,12 @@ export interface PassportFromDocOptions {
   childColumns?: (targetKind: string) => { columns: string[]; kind: KindConfig } | undefined;
   /** Вычисляемые поля вида (итоги и т. п.): поле в «Свойства» и значение в запись. */
   extraFields?: (doc: KitRecordDoc) => { field: FieldDef; value: unknown }[];
+  /**
+   * Колонки таблицы части — по СВЯЗИ, а не по виду ребёнка: свойства ребра (у ON_TRAIL — сторона и t)
+   * принадлежат связи. Без них одна запись на двух отрезках выглядела двумя одинаковыми строками
+   * (пилот 16.11). Нет — общие колонки списка.
+   */
+  partColumns?: (part: KitDocPart) => string[] | undefined;
 }
 
 export interface PassportFromDoc {
@@ -127,6 +147,12 @@ export function bodyMdIsOwnSection(c: Pick<KitRecordDoc, 'values' | 'schema'>): 
   return !bodyFields.some(f => f.key !== 'body_md' && c.values[f.key] === body);
 }
 
+/** Место связи для ЭТОЙ записи: строка — как есть; объект — сторона записи (`dir`); нет — вкладка связей. */
+export function docPlaceOf(r: Pick<KitDocRelation, 'place' | 'dir'>): KitDocPlace {
+  if (typeof r.place === 'string') return r.place;
+  return r.place?.[r.dir] ?? 'link_tab';
+}
+
 export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): PassportFromDoc {
   const { lang } = opts;
   const { type, id } = c.record;
@@ -142,9 +168,9 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const parts = c.parts ?? [];
   const kinds = (fromKind?: string, toKind?: string) => ({ ...(fromKind ? { fromKind } : {}), ...(toKind ? { toKind } : {}) });
   const partEdges: KitEdge[] = parts.flatMap(p => p.items.map(i =>
-    p.dir === 'in' ? { from: i.id, to: id, type: p.rel, ...kinds(p.type, type) } : { from: id, to: i.id, type: p.rel, ...kinds(type, p.type) }));
+    p.dir === 'in' ? { from: i.id, to: id, type: p.rel, ...kinds(i.type ?? p.type, type) } : { from: id, to: i.id, type: p.rel, ...kinds(type, i.type ?? p.type) }));
   const partRecord = (p: KitDocPart, i: KitDocPartItem): KitRecord => ({
-    id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
+    id: i.id, kind: i.type ?? p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
   });
   const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => partRecord(p, i)));
   const edges: KitEdge[] = [
@@ -172,9 +198,9 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   for (const x of extra) record.fields[x.field.key] = x.value;
   // Связь-свойство без поля в схеме — поле-ссылка: иначе значение не показалось бы вовсе,
   // а в блоке связей стояло бы «Проекты 0».
-  const propRels = c.schema.relations.filter(r => r.place === 'prop' && !props.some(f => f.key === r.key));
+  const propRels = c.schema.relations.filter(r => docPlaceOf(r) === 'prop' && !props.some(f => f.key === r.key));
   const edgeOf = (key: string) => {
-    const r = c.schema.relations.find(x => x.place === 'prop' && x.key === key && x.manageable);
+    const r = c.schema.relations.find(x => docPlaceOf(x) === 'prop' && x.key === key && x.manageable);
     return r ? { relation: { rel: r.rel, dir: r.dir } } : {};
   };
   const refKindOf = (key: string) => {
@@ -187,7 +213,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const sections = c.schema.fields.filter(f => f.group === 'body' && (f.key !== 'body_md' || bodyIsOwn));
   const bodySections = sections.map(s => ({ key: s.key, title: s.label, editable: s.editable !== false }));
   // Связи, которые рисует сам kit (по видам UML); своей вкладки на тот же ключ не отдаём.
-  const kitRels = c.schema.relations.filter(r => (r.place ?? 'link_tab') === 'link_tab');
+  const kitRels = c.schema.relations.filter(r => docPlaceOf(r) === 'link_tab');
   const kitRelKeys = new Set(kitRels.map(r => r.key));
   const noLinks = kitT(lang, 'kit.record.links.empty');
   const linkTabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
@@ -201,7 +227,8 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
       : undefined;
   const partBody = (p: KitDocPart, ctx: KitCtx): ReactNode => {
     if (p.items.length === 0) return noLinks;
-    return createElement(NestedList, { ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p) });
+    const extra = opts.partColumns?.(p);
+    return createElement(NestedList, { ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p), ...(extra ? { columns: [...DOC_NESTED_COLUMNS, ...extra] } : {}) });
   };
   const partTabs = parts.map(p => ({
     key: p.key, title: p.label,
@@ -230,6 +257,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
     title: c.schema.label, icon: c.schema.icon,
     ...(bodySections.length ? { bodySections } : {}),
     relations: relDefs,
+    ...(c.schema.relation_groups ? { relationGroups: c.schema.relation_groups } : {}),
     fields: [
       ...props.map(f => ({
         key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),

@@ -46,3 +46,11 @@ describe('RecordScreen', () => {
     expect(screen.getByText('тело')).toBeTruthy();
   });
 });
+
+describe('RecordScreen · действие у «записи нет» (пилот 16.11)', () => {
+  it('«← к разделу» стоит в самом пустом состоянии, а не в полосе над ним', () => {
+    wrap(<RecordScreen bar={{}} state={{ kind: 'notFound', id: 'X-1', action: <a href="#list">← к разделу</a> }} />);
+    const empty = document.querySelector('[data-state="empty"]')!;
+    expect(empty.textContent).toContain('← к разделу');
+  });
+});

@@ -44,6 +44,8 @@ export interface KitRelationDef { key:string; label:string; relation:KitRelation
 export interface KindConfig { title:string; icon:string;
   /** K4-MENTION-LOOK: цвет вида — ТОКЕН темы (`var(--section-adrs)` или имя токена). Им окрашено каждое упоминание записи этого вида (значок, рамка чипа) и узел графа. Нет — упоминание нейтральное: цвет не выдумываем. */
   color?:string; relations?:KitRelationDef[];
+  /** Методика §7.8: подписи общих вкладок связей по виду UML (у пилота ассоциации — «По смыслу»). Нет — подпись kit («Зависимости»). */
+  relationGroups?:Partial<Record<KitRelation,string>>;
   /** K-14: подпись значения, унаследованного от записи ЭТОГО вида, словом приложения («от спринта»). Нет — kit говорит нейтрально «унаследовано (вид)». */
   inherited?:string;
   /**
