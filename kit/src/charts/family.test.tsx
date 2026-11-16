@@ -120,3 +120,17 @@ describe('scatter: подпись у правого края не обрезае
     expect(anchors).toEqual([['левая', 'start'], ['правая', 'end']]);
   });
 });
+
+// Препрод 16.11 (Аналитика, Lead time — 1500 задач): подпись у каждой точки слиплась в нечитаемую кашу и
+// вылезла за карточку. Правило: подписи у точек — только пока точек немного; имя остаётся в «Таблицей».
+describe('ScatterChart: подписи точек только при немногих точках', () => {
+  it('много точек — на графике подписей нет, в таблице имена есть', () => {
+    const pts = Array.from({ length: 50 }, (_, i) => ({ x: i, y: i % 7, label: `T-${i}` }));
+    const { container } = wrap(<ScatterChart title="Lead" points={pts} />);
+    expect(container.querySelectorAll('svg .sk-chart__lbl')).toHaveLength(0);
+  });
+  it('немного точек — подписи на месте', () => {
+    const { container } = wrap(<ScatterChart title="Парето" points={[{ x: 1, y: 2, label: 'a' }, { x: 2, y: 3, label: 'b' }]} />);
+    expect(container.querySelectorAll('svg .sk-chart__lbl')).toHaveLength(2);
+  });
+});
