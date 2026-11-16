@@ -37,6 +37,8 @@
   "kitPage.sec.shell": "Shells",
   "kitPage.sec.content": "MD and HTML",
   "kitPage.sec.charts": "Charts",
+  "kitPage.sec.passport": "Passport from an app document",
+  "kitPage.passport.lead": "A “Datawanderers” trail: scrolls are a part, dreams a property, quizzes an association. Not a line of own rendering: record document → passportFromDoc → RecordScreen and RecordReader.",
   "kitPage.chf.drift": "Quality drift by generation",
   "kitPage.chf.score": "pts",
   "kitPage.chf.pareto": "Pareto: quality × tokens",

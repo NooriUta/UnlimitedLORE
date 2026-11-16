@@ -18,6 +18,7 @@ import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 import KitBadges from './KitBadges';
 import { KitChartsDemo } from './KitChartsDemo';
+import { KitPassportDemo } from './KitPassportDemo';
 import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
@@ -246,6 +247,13 @@ export default function KitPage() {
           </div>
           {/* K4-CHARTS: графики одним семейством — line · scatter · bar · heat. */}
           <KitChartsDemo lang={kitLang} />
+        </section>
+
+        {/* K5-PASSPORT-FROM-MODEL, шаг 7: паспорт из документа чужого приложения — без своего рендера. */}
+        <section id="kit-passport" className="kitp__sec" aria-labelledby="kit-passport-h">
+          <h2 id="kit-passport-h" className="kitp__h2">{t('kitPage.sec.passport')}</h2>
+          <p>{t('kitPage.passport.lead')}</p>
+          <KitPassportDemo lang={kitLang} />
         </section>
 
         <section id="kit-shell" className="kitp__sec" aria-labelledby="kit-shell-h">

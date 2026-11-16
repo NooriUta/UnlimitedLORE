@@ -32,12 +32,13 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
 import { ObjectMention } from '../elements/ObjectMention';
 import type { KitConfig, KitCtx } from '../core/contract';
+import type { KitRecordDoc } from '../record/recordDoc';
 
 const SNAPSHOT = '../../demo/seidr-bare.html';
 // В jsdom-окружении import.meta.url не file:// — пути от корня пакета kit
@@ -287,6 +288,11 @@ function Samples() {
         <ScatterChart title="Парето" xTitle="токенов" points={[{ x: 800, y: 74, label: 'gemini' }, { x: 2300, y: 86, label: 'claude' }]} />
         <BarChart title="Доля" groups={[{ key: 'a', label: 'статьи' }]} data={[{ category: 'Хабр', values: { a: 34 } }, { category: 'LinkedIn', values: { a: null } }]} />
       </section>
+      <section className="bare__sec" data-kit="passport-doc">
+        <h2 className="bare__h2">Паспорт из документа приложения</h2>
+        {/* K5-PASSPORT-FROM-MODEL, шаг 7: документ чужого приложения → passportFromDoc → рамка и чтение kit. */}
+        <BarePassport />
+      </section>
       <section className="bare__sec" data-kit="library">
         <h2 className="bare__h2">Библиотека</h2>
         {/* K2-VIEW-LIBRARY: группы слева, чтение справа; «ещё N» и «показаны N из M»; устаревший помечен. */}
@@ -496,3 +502,58 @@ describe('S4-00e · голый HTML на одном seidr.css', () => {
     expect(used.filter(c => !defined.has(c)).sort()).toEqual([]);
   });
 });
+
+const PASSPORT_DOC: KitRecordDoc = {
+  contract: 'dw.record/1',
+  record: { type: 'trail', id: 'TR-1', title: 'Время — Непрерывность', status: 'open', version: 'v1', updated_at: '2026-11-15T20:00:00Z', updated_by: null },
+  schema: {
+    type: 'trail', label: 'Тропа', icon: 'path-distance',
+    fields: [
+      { key: 'title', label: 'Название', kind: 'text', required: true, editable: false, group: 'head' },
+      { key: 'body_md', label: 'Описание', kind: 'md', required: false, editable: false, group: 'body' },
+      { key: 'frozen', label: 'Перегон замёрз', kind: 'bool', required: false, editable: false, group: 'props' },
+      { key: 'length', label: 'Длина, шагов', kind: 'number', required: false, editable: false, group: 'props' },
+      { key: 'rules', label: 'Правила перегона', kind: 'text', required: false, editable: false, group: 'props' },
+    ],
+    tabs: [],
+    relations: [
+      { key: 'scrolls', label: 'Свитки', relation: 'composition', rel: 'ON_TRAIL', dir: 'in', count: 3, place: 'part', target_type: 'scroll' },
+      { key: 'dreams', label: 'Сны', relation: 'attribute', rel: 'IN_DREAM', dir: 'out', count: 2, place: 'prop', target_type: 'dream' },
+      { key: 'quizzes', label: 'Квизы', relation: 'association', rel: 'QUIZ_OF', dir: 'in', count: 2, target_type: 'quiz' },
+    ],
+  },
+  values: { title: 'Время — Непрерывность', body_md: 'Тропа через два сна: у сна А — свитки времени, на стыке — квизы.', frozen: true, length: 7, dreams: ['D-A', 'D-B'] },
+  links: [
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-1', type: 'quiz', title: 'Квиз о времени', status: 'open' },
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-2', type: 'quiz', title: 'Квиз о непрерывности', status: 'done' },
+  ],
+  parts: [{
+    key: 'scrolls', label: 'Свитки', type: 'scroll', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 3,
+    items: [{ id: 'S-1', title: 'Свиток I', status: 'open' }, { id: 'S-2', title: 'Свиток II', status: 'done' }],
+  }],
+  perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: null },
+  meta: { loaded_at: '2026-11-16T00:00:00Z', facade: 'server', sources: [{ block: 'record', state: 'ok' }] },
+};
+
+
+/** Тот же паспорт, что на витрине /kit (KitPassportDemo), — для паритета классов. */
+function BarePassport() {
+  const p = passportFromDoc(PASSPORT_DOC, { lang: 'ru' });
+  const ctx: KitCtx = {
+    config: {
+      modules: [], menu: { groups: [] },
+      kinds: { ...p.kinds, scroll: { title: 'Свиток', icon: 'scroll-unfurled' }, quiz: { title: 'Квиз', icon: 'checkbox-tree' }, dream: { title: 'Сон', icon: 'night-sleep' } },
+      statuses: { items: [
+        { code: 'open', title: 'Открыто', category: 'in_progress', icon: 'progression', color: 'var(--acc)' },
+        { code: 'done', title: 'Пройдено', category: 'done', icon: 'check-mark', color: 'var(--suc)' },
+      ] },
+      roles: { reader: p.reader },
+    },
+    data: p.data, href: id => '#' + id, esc: s => s, md: s => <p>{s}</p>,
+  };
+  return (
+    <RecordScreen bar={{}} state={{ kind: 'ready' }}>
+      <RecordReader record={ctx.data.records[0]} ctx={ctx} tab="" onTab={noop} asideOpen={false} onAside={noop} placement="right" />
+    </RecordScreen>
+  );
+}

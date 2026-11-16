@@ -37,6 +37,8 @@
   "kitPage.sec.shell": "Оболочки",
   "kitPage.sec.content": "MD и HTML",
   "kitPage.sec.charts": "Графики",
+  "kitPage.sec.passport": "Паспорт из документа приложения",
+  "kitPage.passport.lead": "Тропа «Дата-странников»: свитки — часть записи, сны — свойство, квизы — ассоциация. Ни строки своего рендера: документ записи → passportFromDoc → RecordScreen и RecordReader.",
   "kitPage.chf.drift": "Дрейф качества по поколениям",
   "kitPage.chf.score": "балл",
   "kitPage.chf.pareto": "Парето: качество × токены",
