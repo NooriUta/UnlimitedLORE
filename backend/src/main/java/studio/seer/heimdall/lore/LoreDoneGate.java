@@ -71,6 +71,9 @@ final class LoreDoneGate {
         // PU-29 (14.11.2026): «учётка не агента, а человека — тоже подтверждение; просто проверяй, что
         // перенесено человеком, и не проси с человека доп. работы». Человек закрывает из любого статуса.
         if (!f.agent()) return null;
+        // MDL-11: задача уже закрыта — так и сказать, а не посылать в review.
+        if ("done".equals(LoreWorkflowCore.core(f.currentToken())))
+            return new Verdict(409, "ALREADY_DONE", "задача уже закрыта (done) — менять нечего; запись не сделана");
         boolean ownerWord = OWNER_WORD.equals(f.evidenceType());
         if (!ownerWord)
             return new Verdict(409, "DONE_BY_HUMAN_ONLY", "агент не ставит done — переведите задачу в review "

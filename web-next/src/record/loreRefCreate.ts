@@ -99,7 +99,8 @@ function bodyOf(type: Creatable, v: Record<string, string>, me: string): { path:
     case 'task':
       return {
         path: '/lore/task', id: `${v.sprint}/${v.code}`,
-        body: { sprint_id: v.sprint, task_id: v.code, title: v.title, author_agent: me, executor_agent: v.executor || me },
+        // MDL-11: статус при создании обязателен — создание по ссылке заводит задачу «запланирована».
+        body: { sprint_id: v.sprint, task_id: v.code, title: v.title, status: 'planned', author_agent: me, executor_agent: v.executor || me },
       };
     case 'spec': return { path: '/lore/spec?mode=create', id: v.code, body: { spec_id: v.code, title: v.title } };
     case 'adr': return { path: '/lore/adr?mode=create', id: v.code, body: { adr_id: v.code, name: v.title } };

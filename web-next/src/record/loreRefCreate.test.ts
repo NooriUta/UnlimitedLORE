@@ -92,7 +92,8 @@ describe('MD-WINDOW · заведение записи на сервере', () 
     const r = await createLoreRecord('task', { title: 'Новая', code: 'T-9', sprint: 'SPRINT_X', executor: 'vasilisk' }, ctx, f);
     expect(posts(f)[0][0]).toBe('/lore/task');
     expect(JSON.parse(String(posts(f)[0][1]!.body))).toEqual({
-      sprint_id: 'SPRINT_X', task_id: 'T-9', title: 'Новая', author_agent: 'arharaga', executor_agent: 'vasilisk',
+      // MDL-11: статус при создании обязателен — создание по ссылке шлёт «запланирована» явно.
+      sprint_id: 'SPRINT_X', task_id: 'T-9', title: 'Новая', status: 'planned', author_agent: 'arharaga', executor_agent: 'vasilisk',
     });
     expect(r).toEqual({ ok: true, item: { id: 'SPRINT_X/T-9', type: 'task', title: 'Новая' } });
   });
