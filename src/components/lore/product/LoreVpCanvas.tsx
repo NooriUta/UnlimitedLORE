@@ -143,6 +143,7 @@ function StickerNode({ data }: NodeProps) {
     title: string; code: string; color: string; w: number; h: number;
     dim: boolean; ghost?: boolean; rank?: string | null;
     add?: boolean; count?: number; onAdd?: () => void;
+    badge?: StickerBadge;
   };
   if (d.add) {
     return (
@@ -206,6 +207,16 @@ function StickerNode({ data }: NodeProps) {
           наведении: постоянно видимые восемь точек на карточку превратили бы
           канву в схему электропроводки. Что с чем соединимо, решает
           `isValidConnection` — рука не дотянется до несовместимого. */}
+      {/* FIT-04: отметка состава сегментов — «общая» у ценности, «разные
+          сегменты» у сценария. Сидит на верхней кромке, чтобы не съедать
+          строки формулировки; кого именно касается — в подсказке. */}
+      {d.badge && (
+        <span title={d.badge.title} style={{
+          position: 'absolute', top: -8, right: 4, padding: '0 6px', borderRadius: 999,
+          fontSize: 'var(--fs-2xs)', lineHeight: 1.4, whiteSpace: 'nowrap',
+          border: `1px solid ${d.badge.tone}`, color: d.badge.tone, background: 'var(--bg1)',
+        }}>{d.badge.text}</span>
+      )}
       {!d.ghost && (
         <>
           <Handle
@@ -243,13 +254,17 @@ export function buildStickerNode(params: {
   id: string; parentId: string; width: number; height: number;
   position: { x: number; y: number }; title: string; code: string;
   color: string; rank: string | null; dim: boolean;
+  badge?: StickerBadge;
 }): Node {
-  const { id, parentId, width, height, position, title, code, color, rank, dim } = params;
+  const { id, parentId, width, height, position, title, code, color, rank, dim, badge } = params;
   return {
     id, type: 'sticker', parentId, width, height, extent: 'parent', position,
-    data: { title, code, color, w: width, h: height, rank, dim },
+    data: { title, code, color, w: width, h: height, rank, dim, ...(badge ? { badge } : {}) },
   };
 }
+
+/** FIT-04: отметка на карточке — короткий текст, подсказка с составом, цвет-токен. */
+export interface StickerBadge { text: string; title: string; tone: string }
 
 const S = {
   wrap: { padding: 14, width: '100%' } as CSSProperties,
@@ -295,6 +310,62 @@ export function vpConnection(
   if (s.kind === 'pain' && t.kind === 'job') return { scope: 'vp', rel: 'blocks', source: s.bare, target: t.bare };
   if (s.kind === 'gain' && t.kind === 'job') return { scope: 'vp', rel: 'success_of', source: s.bare, target: t.bare };
   return null;
+}
+
+/**
+ * FIT-04: какие ценности выбранного сегмента ОБЩИЕ с другими сегментами.
+ *
+ * Отметка «сегментов N» отвечала «сколько», но не «стоит ли делить фичу» —
+ * а вопрос был именно второй. Ответ на него — состав: что принадлежит одному
+ * сегменту, а что разделено с другими. Значение карты — ДРУГИЕ сегменты
+ * ценности (выбранный в них не входит): их и называют в подсказке.
+ *
+ * Без выбранного сегмента («все акторы вместе») сравнивать не с чем — пусто.
+ */
+export function sharedValues(
+  ids: string[], actorOf: Map<string, string[]>, actorId: string,
+): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  if (!actorId) return out;
+  for (const id of ids) {
+    const own = actorOf.get(id) ?? [];
+    if (!own.includes(actorId)) continue;
+    const others = own.filter(a => a !== actorId);
+    if (others.length) out.set(id, others);
+  }
+  return out;
+}
+
+/**
+ * FIT-04: сценарии, служащие РАЗНЫМ сегментам сразу.
+ *
+ * Сценарий отмечается, если среди закрытых им ценностей этой канвы (с
+ * заданными акторами) их не меньше двух и НЕТ сегмента, которому служат все
+ * они. Такой сценарий либо слишком общий, либо на самом деле два. Общая
+ * ценность сама по себе не повод: если есть сегмент, обслуженный сценарием
+ * целиком, делить нечего. Значение — все затронутые сегменты по порядку
+ * появления.
+ */
+export function crossSegmentScenarios(
+  ucs: Pick<LoreUcRow, 'uc_id' | 'relieves_pain_ids' | 'delivers_gain_ids' | 'performs_job_ids'>[],
+  canvasIds: string[],
+  actorOf: Map<string, string[]>,
+): Map<string, string[]> {
+  const onCanvas = new Set(canvasIds);
+  const out = new Map<string, string[]>();
+  for (const uc of ucs) {
+    const sets = [...asArray(uc.relieves_pain_ids), ...asArray(uc.delivers_gain_ids), ...asArray(uc.performs_job_ids)]
+      .filter(id => onCanvas.has(id))
+      .map(id => actorOf.get(id) ?? [])
+      .filter(s => s.length > 0);
+    if (sets.length < 2) continue;
+    const common = sets.reduce((acc, s) => acc.filter(a => s.includes(a)));
+    if (common.length) continue;
+    const all: string[] = [];
+    sets.forEach(s => s.forEach(a => { if (!all.includes(a)) all.push(a); }));
+    out.set(uc.uc_id, all);
+  }
+  return out;
 }
 
 // `onNavigate` больше не нужен: единственное место, где канва уводила на
@@ -506,6 +577,29 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     };
   }, [painIds, gainIds, jobIds, doneBy, levelOf, rankOf, relievers, creators, canvasActors]);
 
+  /**
+   * FIT-04: состав сегментов на карточках. Общие ценности — только при
+   * выбранном сегменте (сравнивать есть с кем); сценарий «на разные сегменты»
+   * — всегда: это свойство самого сценария, а не выбранного круга, поэтому
+   * считается по ВСЕМ ценностям канвы, а не по отфильтрованным.
+   */
+  const names = useCallback((ids: string[]) => ids.map(a => actorName.get(a) ?? a).join(', '), [actorName]);
+  const badges = useMemo(() => {
+    const m = new Map<string, StickerBadge>();
+    sharedValues([...painIds, ...gainIds, ...jobIds], actorOf, actorId).forEach((others, id) => m.set(id, {
+      text: t('lore.product.canvas.sharedMark', 'общая'),
+      title: `${t('lore.product.canvas.sharedHint', 'Эта ценность есть и у других сегментов:')} ${names(others)}`,
+      tone: 'var(--inf)',
+    }));
+    const all = [...asArray(feature?.pain_ids), ...asArray(feature?.gain_ids), ...asArray(feature?.job_ids)];
+    crossSegmentScenarios(ucs, all, actorOf).forEach((segs, uc) => m.set(uc, {
+      text: t('lore.product.canvas.splitMark', 'разные сегменты'),
+      title: `${t('lore.product.canvas.splitHint', 'Сценарий служит сегментам, у которых нет общего, — он либо слишком общий, либо на самом деле два:')} ${names(segs)}`,
+      tone: 'var(--wrn)',
+    }));
+    return m;
+  }, [t, painIds, gainIds, jobIds, actorOf, actorId, feature, ucs, names]);
+
   // ── раскладка: сохранённые позиции поверх сетки по умолчанию ──
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>(() => {
     try { return JSON.parse(localStorage.getItem('lore.vp.pos') ?? '{}'); } catch { return {}; }
@@ -608,6 +702,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           id, parentId: key, width: size.w, height: size.h, position: pos[id] ?? grid,
           title: titleOf.get(bare) ?? bare, code: bare, color,
           rank: rankOf.get(bare)?.label ?? null,
+          badge: badges.get(bare),
           dim: !!hover && hover !== id && !links.some(l => (l.from === hover || l.to === hover) && (l.from === id || l.to === id)),
         }));
       });
@@ -687,7 +782,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
       });
     }
     return out;
-  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName, openPicker]);
+  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName, openPicker, badges]);
 
   const edges: Edge[] = useMemo(() => {
     const dim = (a: string | null, b: string) => hover && a !== hover && b !== hover;
