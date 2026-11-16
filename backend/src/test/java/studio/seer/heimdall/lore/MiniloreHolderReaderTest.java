@@ -64,10 +64,12 @@ class MiniloreHolderReaderTest {
     }
 
     @Test
-    void notFoundMeansNobodyTouchedTheRecord() {
+    void notFoundMeansTheDoorIsMissingNotThatNobodyWorked() {
+        // Дверь miniLORE на пустое отвечает 200 и []; 404 она не отдаёт. Значит 404 — старый сервер без двери
+        // или неверный адрес: принять его за «никто не работал» значило бы спрятать поломку.
         MiniloreHolderReader.Result r = MiniloreHolderReader.fromResponse(404, "");
-        assertEquals("ok", r.state());
-        assertEquals(List.of(), r.items());
+        assertEquals("error", r.state());
+        assertTrue(r.reason().contains("404"), r.reason());
     }
 
     @Test

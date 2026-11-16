@@ -78,9 +78,13 @@ public class MiniloreHolderReader {
         return sb.append("?view=holder").toString();
     }
 
-    /** Ответ сервера miniLORE → итог. 404 — запись никто не трогал: честное «никого». */
+    /**
+     * Ответ сервера miniLORE → итог. «С записью никто не работал» — это 200 и пустой массив; 404 дверь
+     * не отдаёт, поэтому 404 значит «двери нет» (сервер miniLORE старше формата или адрес не тот) — сбой,
+     * а не «никого».
+     */
     static Result fromResponse(int status, String body) {
-        if (status == 404) return new Result("ok", List.of(), null);
+        if (status == 404) return Result.error("у сервера miniLORE нет двери «сессия у записи» (404): сервер старше формата или адрес не тот");
         if (status == 401 || status == 403) return new Result("denied", List.of(), "сервер miniLORE отказал: " + status);
         if (status != 200) return Result.error("сервер miniLORE ответил " + status);
         JsonArray arr;
