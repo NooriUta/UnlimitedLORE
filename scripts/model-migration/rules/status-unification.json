@@ -6,11 +6,15 @@
     "en",
     "pl"
   ],
-  "code_case": "upper",
-  "_code_case": "Регистр кода в приёмнике. upper — слово владелицы 16.11.2026 («uppercase»); заменяет прежнее «код из справочника строчными латиницей». Сведение от регистра не зависит.",
+  "code_case": {
+    "status": "upper",
+    "other": "lower"
+  },
+  "_code_case": "Регистр кода в приёмнике — слово владелицы 16.11.2026: «статусная модель uppercase остальные в lower». kind справочника: status — статусы, other — остальные (приоритет и следующие).",
   "dictionaries": {
     "plan_status": {
       "_about": "Спринт и задача — один справочник вместо двух одинаковых копий (sprint_status, task_status).",
+      "kind": "status",
       "codes": [
         {
           "code": "TODO",
@@ -146,6 +150,7 @@
       }
     },
     "phase_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "BACKLOG",
@@ -193,6 +198,7 @@
       }
     },
     "adr_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "DRAFT",
@@ -247,6 +253,7 @@
     },
     "decision_status": {
       "_about": "Коды fixed и done из справочника источника сюда не вписаны: в источнике они помечены «легаси сида — к ревизии», их судьба — решение человека в диалоге.",
+      "kind": "status",
       "codes": [
         {
           "code": "PROPOSED",
@@ -284,6 +291,7 @@
       "synonyms": {}
     },
     "spec_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "PROPOSED",
@@ -321,6 +329,7 @@
       "synonyms": {}
     },
     "milestone_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "UPCOMING",
@@ -358,6 +367,7 @@
       "synonyms": {}
     },
     "question_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "OPEN",
@@ -399,6 +409,7 @@
       "synonyms": {}
     },
     "feature_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "PROPOSED",
@@ -449,6 +460,7 @@
       "synonyms": {}
     },
     "qg_status": {
+      "kind": "status",
       "codes": [
         {
           "code": "DRAFT",
@@ -488,6 +500,51 @@
         }
       ],
       "synonyms": {}
+    },
+    "priority": {
+      "_about": "Владелица 16.11.2026: «приоритет такой же справочник по факту как и все остальные». Словесная шкала — её прежнее решение в карте переноса; P0–P3 и blocker сводятся к ней. medium и вольный текст — решение человека в диалоге.",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "critical",
+          "labels": {
+            "ru": "Критический",
+            "en": "Critical",
+            "pl": "Krytyczny"
+          }
+        },
+        {
+          "code": "high",
+          "labels": {
+            "ru": "Высокий",
+            "en": "High",
+            "pl": "Wysoki"
+          }
+        },
+        {
+          "code": "normal",
+          "labels": {
+            "ru": "Средний",
+            "en": "Normal",
+            "pl": "Średni"
+          }
+        },
+        {
+          "code": "low",
+          "labels": {
+            "ru": "Низкий",
+            "en": "Low",
+            "pl": "Niski"
+          }
+        }
+      ],
+      "synonyms": {
+        "P0": "critical",
+        "P1": "high",
+        "P2": "normal",
+        "P3": "low",
+        "BLOCKER": "critical"
+      }
     }
   },
   "_sources": "Где в источнике лежит статус. required: пустое значение — строка диалога (правило владелицы 16.11.2026: пустого статуса нет, предложение — первый статус справочника).",
@@ -551,6 +608,18 @@
       "field": "status",
       "dict": "qg_status",
       "required": true
+    },
+    {
+      "type": "KnowSprintHist",
+      "field": "priority",
+      "dict": "priority",
+      "required": false
+    },
+    {
+      "type": "KnowQuestion",
+      "field": "priority",
+      "dict": "priority",
+      "required": false
     }
   ]
 }

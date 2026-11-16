@@ -15,7 +15,7 @@ import { applyMap } from './apply-map.mjs';
 const here = p => new URL(p, import.meta.url);
 const MAP = JSON.parse(fs.readFileSync(here('./map/sprint-phase-task.json'), 'utf8')).types;
 const VOCAB = JSON.parse(fs.readFileSync(here('../../shared/lore-statuses.json'), 'utf8')).statusMatch;
-const CODE_CASE = JSON.parse(fs.readFileSync(here('./rules/status-unification.json'), 'utf8')).code_case;
+const CODE_CASE = JSON.parse(fs.readFileSync(here('./rules/status-unification.json'), 'utf8')).code_case.status;
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 
 const db = connect();

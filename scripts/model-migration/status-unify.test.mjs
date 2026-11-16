@@ -114,9 +114,32 @@ test('тип и поле, которых нет в правилах, выход�
 });
 
 test('регистр кода — правило: владелица 16.11.2026 «uppercase»; код не в регистре правил не принимается', () => {
-  assert.equal(RULES.code_case, 'upper');
-  for (const d of Object.values(RULES.dictionaries)) for (const c of d.codes) assert.equal(c.code, c.code.toUpperCase());
+  assert.equal(RULES.code_case.status, 'upper');
+  for (const d of Object.values(RULES.dictionaries)) if (d.kind === 'status') for (const c of d.codes) assert.equal(c.code, c.code.toUpperCase());
   const broken = structuredClone(RULES);
   broken.dictionaries.plan_status.codes[0].code = 'todo';
   assert.match(checkRules(broken).join('; '), /todo.*TODO/);
+});
+
+test('владелица 16.11.2026: «статусная модель uppercase остальные в lower»; приоритет — такой же справочник', () => {
+  assert.deepEqual(RULES.code_case, { status: 'upper', other: 'lower' });
+  const p = RULES.dictionaries.priority;
+  assert.equal(p.kind, 'other');
+  assert.deepEqual(p.codes.map(c => c.code), ['critical', 'high', 'normal', 'low']);
+  for (const [name, d] of Object.entries(RULES.dictionaries)) if (name !== 'priority') assert.equal(d.kind, 'status', name);
+  assert.deepEqual(classify('P1', p), { kind: 'known', code: 'high' });
+  assert.deepEqual(classify('🔴 HIGH', p), { kind: 'known', code: 'high' });
+  assert.deepEqual(classify('blocker', p), { kind: 'known', code: 'critical' });
+  assert.deepEqual(classify('medium', p), { kind: 'unknown', code: null });
+  // приоритет необязателен: пустое сведено без решения, незнакомое — строка диалога
+  const d = buildDialog([
+    { type: 'KnowSprintHist', field: 'priority', value: null, n: 400 },
+    { type: 'KnowSprintHist', field: 'priority', value: 'medium', n: 6 },
+    { type: 'KnowQuestion', field: 'priority', value: 'normal', n: 208 },
+  ], RULES, NONE);
+  assert.deepEqual(d.rows.map(r => r.state), ['unified', 'needs_decision', 'unified']);
+  // справочник не статусов с заглавным кодом не принимается
+  const broken = structuredClone(RULES);
+  broken.dictionaries.priority.codes[0].code = 'CRITICAL';
+  assert.match(checkRules(broken).join('; '), /priority.*CRITICAL.*critical/);
 });

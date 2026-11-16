@@ -8,6 +8,7 @@ import { FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 
 export const FORMAT = 'mig-status-rules/1';
 export const LANGS = ['ru', 'en', 'pl'];
+export const KINDS = ['status', 'other'];
 export const EMPTY = 'пусто';
 export const UNKNOWN = 'статус вне справочника';
 
@@ -25,16 +26,18 @@ export function checkRules(rules) {
   if (!rules || rules.format !== FORMAT) return [`формат файла правил «${rules && rules.format}», ждали «${FORMAT}»`];
   const bad = [];
   const langs = rules.languages || [];
-  if (rules.code_case !== 'upper' && rules.code_case !== 'lower') bad.push(`регистр кода «${rules.code_case}», бывает upper или lower`);
+  const cc = rules.code_case || {};
+  for (const k of KINDS) if (cc[k] !== 'upper' && cc[k] !== 'lower') bad.push(`регистр кода для «${k}» — «${cc[k]}», бывает upper или lower`);
   for (const l of LANGS) if (!langs.includes(l)) bad.push(`в правилах не назван язык ${l}`);
   for (const [name, d] of Object.entries(rules.dictionaries || {})) {
     const codes = new Set();
+    if (!KINDS.includes(d.kind)) bad.push(`${name}: вид справочника «${d.kind}», бывает ${KINDS.join(' или ')}`);
     for (const c of d.codes || []) {
       if (blank(c.code)) { bad.push(`${name}: значение без кода`); continue; }
       if (codes.has(head(c.code))) bad.push(`${name}: код ${c.code} назван дважды`);
       codes.add(head(c.code));
-      const want = rules.code_case === 'upper' ? String(c.code).toUpperCase() : String(c.code).toLowerCase();
-      if (c.code !== want) bad.push(`${name}: код ${c.code} не в регистре правил (${rules.code_case}), ждали ${want}`);
+      const want = cc[d.kind] === 'upper' ? String(c.code).toUpperCase() : String(c.code).toLowerCase();
+      if (c.code !== want) bad.push(`${name}: код ${c.code} не в регистре правил (${cc[d.kind]}), ждали ${want}`);
       for (const l of langs) if (blank((c.labels || {})[l])) bad.push(`${name}.${c.code}: нет подписи на языке ${l}`);
     }
     if (!codes.size) bad.push(`${name}: справочник без значений`);
@@ -94,7 +97,7 @@ export function buildDialog(counts, rules, decisionsDoc) {
     row.dict = src.dict;
     if (st.kind === 'known') { rows.push({ ...row, state: 'unified', code: st.code }); continue; }
     if (st.kind === 'empty' && !src.required) { rows.push({ ...row, state: 'unified', code: null }); continue; }
-    const why = st.kind === 'empty' ? EMPTY : UNKNOWN;
+    const why = st.kind === 'empty' ? EMPTY : dict.kind === 'status' ? UNKNOWN : 'значение вне справочника';
     const d = findDecision(decisions, row, why);
     if (d && d.action !== 'defer') {
       const at = `решение ${d.id}`;
