@@ -51,7 +51,7 @@ describe('MP2-08 · технические сообщения паспорта �
   it('оговорок модели и блока состояния нет в компоновке: ни полосы, ни чипа «тех.»', async () => {
     render(<ListPassport type="sprint" id="S_A" placement="bottom" fetchImpl={fake() as unknown as typeof fetch} />);
     await screen.findByRole('heading', { level: 1, name: 'Альфа' }, { timeout: 8000 });
-    expect(document.querySelector('.pp-model-note'), 'полоса оговорок убрана').toBeNull();
+    expect(document.querySelector('.sk-model-note'), 'полоса оговорок убрана').toBeNull();
     expect(document.querySelector('.sk-ds'), 'блок состояния данных убран из потока').toBeNull();
     expect(document.querySelector('.sk-tech__btn'), 'чипов «тех.» в компоновке нет').toBeNull();
   });

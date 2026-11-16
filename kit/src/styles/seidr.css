@@ -7494,3 +7494,66 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-chart__heat th { color: var(--t3); font-weight: 400; font-size: var(--fs-2xs); text-transform: uppercase; padding: 2px 6px; text-align: left; }
 .sk-chart__heat td { font-family: var(--mono); text-align: center; color: var(--t1); padding: 4px 6px; border: 2px solid var(--bg1); }
 .sk-chart__heat td[data-none] { color: var(--t3); background: var(--bg2); }
+
+/* K5-PASSPORT-FROM-MODEL (шаг 4): оговорки модели — шеврон «⚠ N»; перенесено из web-next ListPassport.css. */
+/* Причина, по которой порядок разделов остался клиентским (S4-29).
+   Приглушённо и одной строкой: это не ошибка, а honest-состояние — «модель
+   порядка не задаёт» или «модель не прочиталась». Молчать нельзя: иначе
+   перегруженность примут за замысел.
+
+   B14 ревью 10.11.2026: панель висела под плавающей «×» дока. Сама она в
+   потоке — ни position, ни z-index тут нет; поверх её правого верхнего угла
+   ложится кнопка закрытия `.sk-dock__close` (`position: sticky; float: right;
+   z-index: 1`, kit/src/styles/seidr.css). Флоат вынут из потока, поэтому
+   следующие БЛОЧНЫЕ боксы — сначала эта полоса, за ней шапка записи —
+   верстаются как будто его нет, и он закрывает им угол. Лечение: угол отдан
+   кнопке явно (margin-right от того же токена --tap, которым задана её
+   ширина: на телефоне палец берёт 44px, и подобранные «на глаз» px снова дали
+   бы наложение), а список оговорок свёрнут в шеврон «⚠ N» (kit/src/record/ModelNotes.tsx) —
+   на месте шапки остаётся одна строка, и ничего не спрятано. */
+.sk-model-note {
+  margin: 0;
+  margin-right: calc(max(var(--tap), 28px) + 8px);
+  padding: 6px 12px;
+  list-style: none;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+}
+
+/* Свёртка: одна строка «⚠ N», раскрытие щелчком. Шеврон — предупреждающего
+   цвета, текст оговорок — приглушённый: заметность нужна метке, а не стене. */
+.sk-model-note__box {
+  min-width: 0;
+}
+
+.sk-model-note__sum {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 20px);
+  color: var(--wrn);
+  cursor: pointer;
+}
+
+.sk-model-note__sum:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Текст приходит ИЗ ДАННЫХ (имена срезов, коды записей, сообщения сервера) —
+   строки без пробелов и без предела длины, поэтому перенос по любому месту:
+   тот же урок, что у оговорок раздела (B4). */
+.sk-model-note__list {
+  margin: 4px 0 0;
+  padding: 0;
+  min-width: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+
+/* Обёртка TechGate шеврона оговорок: своей вёрстки нет, сжимается в колонке. */
+.sk-model-note__tech { min-width: 0; }
