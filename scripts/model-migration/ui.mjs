@@ -102,9 +102,14 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <p class="sub">Каждая запись источника проходит через карту переноса; в новую базу ничего не пишется. Здесь — что не привелось, что удержано до решения и поля, которых карта не знает. Пока описаны спринт, фаза и задача.</p>
 <div id="s3"><button class="btn pri" id="run3">Посчитать</button> <span class="sub">чтение всего источника, около минуты</span></div></section>
 <section data-page="4" hidden><h2>Шаг 4. Перенос</h2>
-<div id="s4" class="state stop">Перенос начинается, когда на шаге 2 не осталось строк без решения. Запуск переноса из интерфейса — следующим шагом разработки; сейчас — командой <code>lore-migrate transfer</code>, затем <code>lore-migrate edges</code>.</div></section>
+<p class="sub">Записи с версиями, затем связи — в новую базу; сразу за ними сверка. Источник только читается. Новая база перед переносом очищается: удаляются только типы этого переноса.</p>
+<div id="s4gate" class="state">проверяю, можно ли начинать…</div>
+<div class="top"><label class="sub"><input type="checkbox" id="ack"> понимаю: новая база <span class="mono" id="dstname">…</span> будет очищена и собрана заново</label> <button class="btn pri" id="run4" disabled>Перенести</button></div>
+<pre id="log" class="tw" style="padding:8px;max-height:360px;overflow:auto;font:var(--fs-xs) var(--mono);white-space:pre-wrap" hidden></pre></section>
 <section data-page="5" hidden><h2>Шаг 5. Сверка и отчёт</h2>
-<div class="state">После переноса — сверка источника с новой базой (записи и связи, поле в поле) и отпечаток содержимого новой базы: <code>lore-migrate dst-fingerprint</code>. Две новые базы, собранные с одинаковыми настройками, дают один отпечаток. Отчёт документом — следующим шагом разработки.</div></section>
+<p class="sub">Сверка источника с новой базой (записи и связи) и отпечаток содержимого новой базы. Две новые базы, собранные с одинаковыми настройками из одного источника, дают один отпечаток — так сверяются прогоны на разных машинах.</p>
+<div id="s5" class="state">переноса в этом запуске ещё не было</div>
+<div class="top"><button class="btn" id="run5">Посчитать отпечаток новой базы</button></div></section>
 </div><div id="msg"></div>
 <script>
 (function(){
@@ -113,7 +118,7 @@ function theme(t){document.documentElement.dataset.theme=t;document.querySelecto
 try{theme(localStorage.getItem(K)||'light');document.getElementById('by').value=localStorage.getItem(B)||''}catch(e){theme('light')}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
 function msg(t,err){var m=document.getElementById('msg');m.textContent=t;m.className=err?'err':'';m.style.display='block';clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display='none'},err?8000:3000)}
-function load(){document.getElementById('state').textContent='читаю источник…';fetch('api/dialog').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);D=d;draw()}).catch(function(e){document.getElementById('state').className='state stop';document.getElementById('state').textContent='не смогли прочитать: '+e.message})}
+function load(){document.getElementById('state').textContent='читаю источник…';fetch('api/dialog').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);D=d;draw();gate()}).catch(function(e){document.getElementById('state').className='state stop';document.getElementById('state').textContent='не смогли прочитать: '+e.message})}
 function draw(){var s=D.summary;document.getElementById('src').textContent=D.source;document.getElementById('fp').textContent='отпечаток итога '+D.fingerprint;
 var st=document.getElementById('state');if(D.unread&&D.unread.length){st.className='state stop';st.textContent='СТОП: источник прочитан не весь ('+D.unread.length+' полей) — проверка не выполнена'}else if(D.ready){st.className='state go';st.textContent='ГОТОВО: статусы сведены, перенос можно начинать'}else{st.className='state stop';st.textContent='СТОП: ждут решения '+s.needs_decision+' значений ('+s.records_waiting+' записей) — перенос не начинается'}
 document.getElementById('kpis').innerHTML=[[D.rows.length,'разных значений'],[s.unified,'свелось само'],[s.decided,'закрыто решением'],[s.needs_decision,'ждут решения'],[s.records_waiting,'записей за ними']].map(function(k){return '<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>'}).join('');
@@ -161,7 +166,15 @@ held.forEach(function(k){h+='<tr><td>удержано</td><td>'+esc(k)+' — п�
 unk.forEach(function(k){h+='<tr><td>вне карты</td><td>'+esc(k)+'</td><td class="num">'+t.unknown[k]+'</td><td></td></tr>'});h+='</tbody></table></div>'}});
 el.innerHTML=h}).catch(function(e){el.innerHTML='<div class="state stop">не посчитано: '+esc(e.message)+'</div><button class="btn pri" id="run3">Посчитать</button>'})}
 document.addEventListener('click',function(e){if(e.target.id==='run3')dry()});
-auth();step(stepFromHash());load()})();
+function gate(){if(!D)return;var g=document.getElementById('s4gate'),b=document.getElementById('run4');var stop=D.unread&&D.unread.length?'источник прочитан не весь':(!D.ready?'на шаге 2 ждут решения '+D.summary.needs_decision+' значений ('+D.summary.records_waiting+' записей)':'');
+g.className='state '+(stop?'stop':'go');g.textContent=stop?'СТОП: '+stop+' — перенос не начинается':'Можно переносить: статусы сведены';b.disabled=!!stop||!document.getElementById('ack').checked}
+document.addEventListener('change',function(e){if(e.target.id==='ack')gate()});
+function job(){fetch('api/job').then(function(r){return r.json()}).then(function(j){var l=document.getElementById('log');if(j.lines&&j.lines.length){l.hidden=false;l.textContent=j.lines.join('\n');l.scrollTop=l.scrollHeight}
+if(j.running){setTimeout(job,2000);return}if(j.result)res5(j.result);if(j.error)msg(j.error,true)})}
+function res5(r){var el=document.getElementById('s5');var only=r.what!=='transfer';el.className='state '+(only?'':(r.ok?'go':'stop'));el.innerHTML=(only?'Посчитан только отпечаток: переноса и сверки в этот раз не было':(r.ok?'Сошлось':'НЕ сошлось')+': записи — '+(r.records?'сверка прошла':'расхождение')+', связи — '+(r.edges?'сверка прошла':'расхождение'))+(r.fingerprint?' · отпечаток содержимого <b class="mono">'+esc(r.fingerprint)+'</b>':'')+(r.types?'<div class="sub">'+Object.keys(r.types).map(function(k){return esc(k)+' '+r.types[k].n}).join(' · ')+'</div>':'')}
+document.addEventListener('click',function(e){if(e.target.id==='run4'){fetch('api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'transfer'})}).then(function(r){return r.json()}).then(function(d){if(d.error)return msg(d.error,true);msg('Перенос начат');job()})}
+if(e.target.id==='run5'){fetch('api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'fingerprint'})}).then(function(r){return r.json()}).then(function(d){if(d.error)return msg(d.error,true);location.hash='#step-5';job()})}});
+auth();step(stepFromHash());load();job();fetch('api/connect').then(function(r){return r.json()}).then(function(c){if(c.dstDb)document.getElementById('dstname').textContent=c.dstDb}).catch(function(){})})();
 </script></body></html>`;
 
 /** Диалог для страницы: строки с номерами, сгруппированные по типу и по предложению. */
@@ -178,7 +191,29 @@ function forPage(dialog, rules) {
 }
 
 export async function serve({ port = 2499 } = {}) {
-  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs')]);
+  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
+  // Одно задание за раз: перенос (записи → связи → отпечаток) или только отпечаток. Ход — строками, итог — объектом.
+  let J = { running: false, lines: [], result: null, error: null };
+  const runJob = async (what, decisionsDoc) => {
+    J = { running: true, lines: [], result: null, error: null, what, started: new Date().toISOString() };
+    const log = (...a) => J.lines.push(a.map(x => (typeof x === 'string' ? x : JSON.stringify(x))).join(' '));
+    try {
+      let records = null, edges = null;
+      if (what === 'transfer') {
+        log('— записи и версии —');
+        const r = await transfer(db, decisionsDoc, { reset: true, log });
+        records = r.stages.verify.ok;
+        log('— связи —');
+        const e = await transferEdges(db, { log });
+        edges = e.ok;
+      }
+      log('— отпечаток новой базы —');
+      const fp = await dstFingerprint(db);
+      log('отпечаток содержимого: ' + fp.total);
+      J.result = { what, ok: what === 'transfer' ? records && edges : null, records, edges, fingerprint: fp.total, types: fp.types };
+    } catch (e) { J.error = e.message; log('ОШИБКА: ' + e.message); }
+    J.running = false;
+  };
   const file = process.env.MIG_DECISIONS_FILE;
   if (!file) throw new Error('не указан файл решений: --decisions <файл> (создастся, если его нет)');
   const readDoc = () => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { format: DECISIONS_FORMAT, decisions: [] });
@@ -236,6 +271,19 @@ export async function serve({ port = 2499 } = {}) {
         let dstTypes = null, dstError = null;
         try { dstTypes = (await db.dstQuery('SELECT count(*) AS n FROM schema:types'))[0].n; } catch (e) { dstError = e.message.slice(0, 120); }
         return json(res, 200, { srcUrl: db.env.MIG_DB_URL, srcDb: db.env.MIG_SRC_DB, dstUrl: dstUrl(db.env), dstDb: db.env.MIG_DST_DB, dstTypes, dstError, src });
+      }
+      if (req.method === 'GET' && req.url === '/api/job') return json(res, 200, J);
+      if (req.method === 'POST' && req.url === '/api/run') {
+        let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e4) throw new Error('слишком большой запрос'); }
+        const what = JSON.parse(body || '{}').what;
+        if (J.running) return json(res, 409, { error: 'уже идёт: ' + J.what });
+        if (what === 'transfer') {
+          const d = await dialog(true);
+          if (!d.ready) return json(res, 409, { error: 'перенос не начинается: на шаге 2 ждут решения ' + d.summary.needs_decision + ' значений' });
+          runJob('transfer', readDoc());
+        } else if (what === 'fingerprint') runJob('fingerprint');
+        else return json(res, 400, { error: 'неизвестное задание' });
+        return json(res, 202, { started: what });
       }
       if (req.method === 'GET' && req.url === '/api/dryrun') {
         const report = await dryRun(db, readDoc());
