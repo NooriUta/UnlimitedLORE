@@ -37,7 +37,10 @@ export function registerGameIcons(data: unknown): void {
   const set = data as IconifyJSON;
   addCollection(set);
   const pre = set.prefix && set.prefix !== 'game-icons' ? `${set.prefix}:` : '';
-  sets.set(pre, set);
+  // Набор приложения ДОПОЛНЯЕТ набор kit с той же приставкой, а не вытесняет его (K4-MENTION-LOOK,
+  // препрод 16.11: LORE регистрирует свой lucide, и [[task:…]] в тексте терял значок kit lucide:list-checks).
+  const had = sets.get(pre);
+  sets.set(pre, had ? { ...set, ...had, icons: { ...had.icons, ...set.icons }, aliases: { ...(had.aliases ?? {}), ...(set.aliases ?? {}) } } : set);
   for (const name of Object.keys(set.icons ?? {})) known.add(pre + name);
   for (const name of Object.keys(set.aliases ?? {})) known.add(pre + name);
 }
