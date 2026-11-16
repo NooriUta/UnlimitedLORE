@@ -68,6 +68,11 @@ export interface PrefsSources {
   keys?: StorageKeys;
   /** Имя общей cookie приложения; нет — PREFS_COOKIE. */
   cookieName?: string;
+  /**
+   * Умолчание ПРИЛОЖЕНИЯ, пока человек ничего не выбрал (K5-LAYOUT-PREFS: пилоту — светлая по просьбе
+   * владелицы 16.11). Выбор человека и общая cookie главнее. Нет — умолчание kit (тёмная, amber).
+   */
+  defaults?: Partial<ThemePrefs>;
 }
 
 /** Разбор общей cookie платформы; битая cookie = пусто, а не исключение. */
@@ -97,15 +102,17 @@ export function resolvePrefs(src: PrefsSources): ThemePrefs {
 
   const palette = normalizePalette(local(keys.palette) ?? local(keys.legacy))
     ?? normalizePalette(shared.palette)
+    ?? src.defaults?.palette
     ?? DEFAULT_PREFS.palette;
 
   const savedMode = local(keys.mode) ?? local(keys.legacy);
   const mode: Mode = savedMode === 'light' || savedMode === 'dark'
     ? savedMode
-    : shared.theme === 'light' ? 'light' : 'dark';
+    : shared.theme === 'light' || shared.theme === 'dark' ? shared.theme
+    : src.defaults?.mode ?? 'dark';
 
   const savedDensity = local(keys.density);
-  const density = DENSITIES.find(d => d === savedDensity) ?? DEFAULT_PREFS.density;
+  const density = DENSITIES.find(d => d === savedDensity) ?? src.defaults?.density ?? DEFAULT_PREFS.density;
 
   return { palette, mode, density };
 }
