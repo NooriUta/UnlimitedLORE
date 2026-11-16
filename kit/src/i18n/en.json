@@ -1249,5 +1249,10 @@
   "kit.queue.proposed": "proposed by {who} · {when}",
   "kit.queue.empty": "Nothing awaits a decision (checked)",
   "kit.queue.emptyHint": "No records under review and no unapproved edits.",
-  "kit.queue.noneInFilter": "No items under this filter"
+  "kit.queue.noneInFilter": "No items under this filter",
+  "kit.attn.title": "Needs attention",
+  "kit.attn.approx": "Counted over loaded records — the result is truncated, the real number may be higher",
+  "kit.attn.more": "{n} more",
+  "kit.attn.noGroups": "No groups",
+  "kit.attn.noGroupsHint": "Summary groups are the list's quick filters; none are named for this section."
 }

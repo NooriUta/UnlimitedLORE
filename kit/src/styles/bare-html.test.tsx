@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  ApprovalQueue, BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, Lanes, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  ApprovalQueue, AttentionSummary, BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, Lanes, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -122,6 +122,8 @@ function Samples() {
           <StatusChip record={{ id: 'compact', kind: 'demo', title: 'compact', status: 'accepted', fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" compact />
         </div>
         {/* Сводка по вердикту: карточки видов, причины со счётом, вид без проверок, плашка «итоги неполные». */}
+        {/* Сводка «требует внимания»: группы — быстрые фильтры, счёт с «≈» при обрезке, первые записи и «ещё N». */}
+        <AttentionSummary records={(BARE_QUEUE_CTX.data.records)} ctx={{ ...BARE_QUEUE_CTX, config: { ...BARE_QUEUE_CTX.config, list: { views: ['list'], quick: [{ id: 'review', title: 'На согласовании', filter: { status: 'review' } }, { id: 'open', title: 'Открыто', filter: { status: 'open' } }] } } }} narrow={false} truncated hrefOf={q => '#lq=' + q} />
         {/* Очередь согласования: чипы вида дела, выбор, правка «было → стало», своя правка выключена с причиной. */}
         <ApprovalQueue ctx={BARE_QUEUE_CTX} reviewStatuses={['review']} onApprove={async () => ({ failed: [] })} onReturn={async () => ({ failed: [] })} />
         <VerdictSummary records={BARE_VSUM_RECORDS} ctx={BARE_VSUM_CTX} lang="ru" hrefOf={(kind, check) => `#${kind}${check ? `?lck=${check}` : ''}`} truncated />

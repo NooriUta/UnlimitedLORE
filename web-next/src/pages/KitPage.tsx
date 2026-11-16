@@ -6,7 +6,7 @@
 import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
-  ApprovalQueue, CommandPalette, EmptyState, Ear, Lanes, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
+  ApprovalQueue, AttentionSummary, CommandPalette, EmptyState, Ear, Lanes, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
   BatchUndo, CalendarMonth, ControlBar, KvValue, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   BurnChart, BurnSpark, burnSum, type BurnPoint,
   DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
@@ -584,6 +584,13 @@ export default function KitPage() {
             { key: 'now', title: t('kitPage.lanes.now'), accent: true, items: [{ id: 'SPRINT_UXR_S13_KIT4/K4-LANES', kind: 'task', badge: '×2' }] },
             { key: 'next', title: t('kitPage.lanes.next'), items: [] },
           ]} />
+          {/* K4-SUMMARY-QUEUE (Q1–Q3): сводка «требует внимания» — группы из быстрых фильтров, «≈» при обрезке, первые записи. */}
+          <h3 className="kitp__h3">{t('kitPage.attn.title')}</h3>
+          <p>{t('kitPage.attn.lead')}</p>
+          <AttentionSummary records={queueCtx.data.records} ctx={{ ...queueCtx, config: { ...queueCtx.config, list: { views: ['list'], quick: [
+            { id: 'review', title: t('kitPage.attn.review'), filter: { status: 'review' } },
+            { id: 'active', title: t('kitPage.attn.active'), filter: { status: 'active' } },
+          ] } } }} truncated hrefOf={() => '#'} />
           {/* K4-SUMMARY-QUEUE: очередь согласования — решения владелицы 16.11 (Q4–Q6). Вы — «anna»: своя правка видна, согласовать её нельзя. */}
           <h3 className="kitp__h3">{t('kitPage.queue.title')}</h3>
           <p>{t('kitPage.queue.lead')}</p>
