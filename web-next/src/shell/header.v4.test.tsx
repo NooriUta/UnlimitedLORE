@@ -29,7 +29,8 @@ describe('меню и приложения', () => {
     expect(v2Config('ru').modules.map(m => m.id)).toEqual(['forseti', 'bragi', 'muninn', 'tyr']);
   });
   it('«Новости» — первой группой меню', () => {
-    expect(v2Config('ru').menu.groups[0].items.map(i => i.id)).toEqual(['news']);
+    // K4-CHARTS (16.11): рядом с «Новостями» — «Аналитика»; «Новости» по-прежнему первыми.
+    expect(v2Config('ru').menu.groups[0].items.map(i => i.id)).toEqual(['news', 'analytics']);
   });
 });
 
