@@ -6512,17 +6512,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 [data-mode='light'] .sk-auth__art { --illustration-secondary: color-mix(in srgb, var(--acc) 32%, var(--bg0)); }
 .sk-auth__note { color: var(--t1); }
+/* Корень AP-SESSION-BANNER-NARROW (замер 16.11): при left: 50% ширина фиксированной плашки по
+   содержимому ограничена ПОЛОВИНОЙ окна — на 360px это ~150px, и текст шёл столбцом по 2–3 буквы.
+   Центр — полями слева и справа и auto-отступами, без сдвига на половину. */
 .sk-auth-expired {
   position: fixed;
-  left: 50%;
+  left: 12px;
+  right: 12px;
+  margin-inline: auto;
+  width: fit-content;
   bottom: 16px;
   z-index: 1000;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--gap);
-  max-width: min(640px, calc(100vw - 24px));
+  max-width: 640px;
   padding: 8px 12px;
   border: 1px solid color-mix(in srgb, var(--wrn) 55%, transparent);
   border-radius: var(--r-lg);
@@ -6530,9 +6535,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   color: var(--t1);
   font-size: var(--fs-sm);
 }
-.sk-auth .sk-auth-expired { position: static; transform: none; }
+.sk-auth .sk-auth-expired { position: static; margin-inline: 0; width: auto; }
 .sk-auth-expired__icon { color: var(--wrn); }
-.sk-auth-expired__text { min-width: 0; flex: 1; }
+/* AP-SESSION-BANNER-NARROW (телефон, 15.11): с flex: 1 (основа 0) текст на узком экране сжимался
+   в столбец по 2–3 буквы, а кнопка оставалась в той же строке. Основа 20em — тексту нужна строка
+   нормальной длины; не влезает — кнопка уходит под текст. */
+.sk-auth-expired__text { min-width: 0; flex: 1 1 20em; }
 
 /* ---------- Паспорт по зонам (S4-33): запись справа, вычисляемое — колонкой слева ---------- */
 .sk-rec--zones { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
