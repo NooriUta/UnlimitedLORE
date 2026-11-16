@@ -3,13 +3,19 @@
 # (smoke.stand.ts) против ПРЕПРОДА. Владелица 15.11.2026: «доработай тесты, чтобы он
 # сам подставлял тестовые учётки и вы могли проверять».
 #
-# Запуск — по кнопке (workflow_dispatch), чтобы проверять выкатку, когда она встала.
+# Запуск — по кнопке (workflow_dispatch) и сам после каждого push в preprod (E2E-STAND,
+# владелица 16.11.2026: «это же можно сделать — есть тесты для тестовых пользователей на
+# препрод с секретами»). На push смоук сначала ждёт, пока стенд отдаст ТОТ ЖЕ коммит
+# (/lore/version, e2e:stand:wait): выкатка lore-cd.yml идёт параллельно, без ожидания
+# проверилась бы прошлая сборка.
 # Нужен секрет LORE_STAND_ACCOUNTS_JSON ({"test-sa":"…",…}; только TEST-логины —
 # остальные отвергает сам скрипт). Заводит его CICDGitHub из Infisical. Пароли в журнал
 # не попадают. Прод отвергается и автологином, и смоуком (isForbiddenStandUrl).
 name: LORE stand e2e (preprod, test accounts)
 
 on:
+  push:
+    branches: [preprod]
   workflow_dispatch:
     inputs:
       stand_url:
@@ -24,9 +30,9 @@ concurrency:
 jobs:
   stand-e2e:
     runs-on: lore-only
-    timeout-minutes: 30
+    timeout-minutes: 75
     env:
-      LORE_STAND_URL: ${{ inputs.stand_url }}
+      LORE_STAND_URL: ${{ inputs.stand_url || 'https://preprod.new.lore.odal.seidrstudio.pro' }}
       LORE_STAND_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_ACCOUNTS_JSON }}
       # Проба брокеринга seer → omilore (BR-01/02): пароль test-* в seerPreprod.
       LORE_STAND_BROKER_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_BROKER_ACCOUNTS_JSON }}
@@ -104,6 +110,20 @@ jobs:
           done
 
       - name: Автологин тестовых учёток
+        working-directory: web-next
+        run: npm run e2e:stand:login
+
+      - name: Ждать выкатку этого коммита (только push в preprod)
+        if: github.event_name == 'push'
+        working-directory: web-next
+        env:
+          LORE_STAND_EXPECT_COMMIT: ${{ github.sha }}
+          LORE_STAND_WAIT_MIN: '40'
+        run: npm run e2e:stand:wait
+
+      # Ожидание длится до 40 мин — токен первого входа к смоуку истёк бы; входим заново.
+      - name: Автологин заново (после ожидания)
+        if: github.event_name == 'push'
         working-directory: web-next
         run: npm run e2e:stand:login
 
