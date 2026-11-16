@@ -20,10 +20,13 @@
       "required" : true,
       "definition" : "Название спринта: код и короткая формулировка цели; по нему спринт ищут и показывают в списках.",
       "description" : "Название спринта — первое, что видно в списках, на плане и в поиске. Пишите так, чтобы цель читалась без открытия паспорта: что будет сделано и для чего. Код спринта в название не дублируйте — он показан отдельно. Хорошо использовать для отчётов владельцу и описаний релиза: название спринта попадает туда как есть.",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
       "dict" : "sprint_status",
@@ -35,7 +38,9 @@
       "definition" : "Статус спринта",
       "description" : "Состояние спринта: в планах, в работе, готов, отменён и другие. Выбирается из списка статусов спринта. Меняйте статус, когда меняется положение дел, а не «для порядка»: по статусу считается, что сейчас в работе, и строится план.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -51,7 +56,9 @@
       "definition" : "Приоритет спринта на вершине (из ингеста, свободной строкой); правка через sprint_plan_set идёт в KnowSprintHist.priority.",
       "description" : "Насколько спринт важен относительно других. Выбирается из списка приоритетов; пояснение, почему приоритет такой, пишется в отдельное поле «Заметка к приоритету». Используется для порядка в списках и при выборе, что брать следующим.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Priority",
+      "labelPl" : "Priorytet"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -67,7 +74,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "releases",
       "label" : "Релизы",
@@ -78,7 +87,9 @@
       "refType" : "release",
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Releases",
+      "labelPl" : "Wydania"
     }, {
       "key" : "created",
       "label" : "Создан",
@@ -87,7 +98,9 @@
       "group" : "props",
       "definition" : "Когда спринт заведён в LORE. У спринтов, заведённых до введения отметки, пусто или стоит момент массовой загрузки.",
       "description" : "Когда спринт заведён. Ставится системой, вручную не вводится. Нужен для подсчёта, сколько спринт живёт от заведения до закрытия.",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Created",
+      "labelPl" : "Utworzono"
     }, {
       "key" : "milestones",
       "label" : "Вехи",
@@ -103,7 +116,9 @@
       "refType" : "milestone",
       "rel" : "TARGETS_MILESTONE",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Milestones",
+      "labelPl" : "Kamienie milowe"
     }, {
       "key" : "planned_start",
       "label" : "Начало по плану",
@@ -119,7 +134,9 @@
       "definition" : "Плановая дата начала спринта.",
       "description" : "Когда спринт планируется начать. Указывается дата. Вместе с плановым окончанием ставит спринт на шкалу плана; без дат спринт на плане не виден.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Planned start",
+      "labelPl" : "Planowany początek"
     }, {
       "key" : "planned_end_date",
       "label" : "Конец по плану",
@@ -134,7 +151,9 @@
       "definition" : "Плановая дата окончания спринта; по ней спринт ставится на шкалу плана.",
       "description" : "Когда спринт планируется закончить. Указывается дата не раньше планового начала. По ней видно, какие спринты опаздывают, и считается «цель к сроку».",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Planned end",
+      "labelPl" : "Planowany koniec"
     }, {
       "key" : "no_release",
       "label" : "Не требует релиза",
@@ -149,10 +168,13 @@
       "shortLabel" : "Без релиза",
       "definition" : "Признак: результат спринта не выпускается релизом (исследование, документация, инфраструктура) — такой спринт не считается «забытым без релиза».",
       "description" : "Отметьте «да», если результат спринта не выпускается релизом: исследование, документация, настройка инфраструктуры. Тогда спринт без релиза не попадает в список «забыли выпустить». По умолчанию — «нет».",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "No release required",
+      "labelPl" : "Nie wymaga wydania"
     }, {
       "key" : "track",
       "label" : "Трек",
+      "labelKey" : "pp.field.track",
       "kind" : "enum",
       "group" : "props",
       "editable" : true,
@@ -168,7 +190,9 @@
       "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
       "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Track",
+      "labelPl" : "Ścieżka"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -184,7 +208,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     } ],
     "body" : [ {
       "key" : "context_md",
@@ -199,10 +225,13 @@
       "definition" : "Зачем спринт заведён: повод, исходное состояние, ограничения. Пишется при заведении и уточняется по ходу.",
       "description" : "Зачем этот спринт: какая боль или повод, что уже известно, какие ограничения. Заполняется при заведении и дополняется, когда меняется понимание задачи. Нужен тому, кто придёт в спринт позже — человеку или агенту: по контексту он понимает, что уже решено и чего делать не надо.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Context",
+      "labelPl" : "Kontekst"
     }, {
       "key" : "outcome_md",
       "label" : "Итог",
+      "labelKey" : "pp.field.outcome",
       "editable" : true,
       "write" : {
         "endpoint" : "/lore/sprint/update",
@@ -211,7 +240,9 @@
       "definition" : "Итог / ретроспектива спринта (Markdown).",
       "description" : "Итог спринта: что сделано, что не вошло и почему, что проверено. Заполняется при закрытии. Используется для описания релиза и для ретроспективы: из итогов видно, сколько обещанного дошло до пользователя.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Outcome",
+      "labelPl" : "Wynik"
     } ],
     "props" : [ {
       "fields" : [ "priority", "projects", "releases" ]
@@ -442,7 +473,9 @@
       "targetType" : "asset",
       "relation" : "composition",
       "place" : "body"
-    } ]
+    } ],
+    "labelEn" : "Sprint",
+    "labelPl" : "Sprint"
   }, {
     "type" : "task",
     "label" : "Задача",
@@ -462,10 +495,13 @@
       "required" : true,
       "definition" : "Формулировка задачи одной строкой: что должно быть сделано.",
       "description" : "Формулировка задачи одной строкой: что должно быть сделано. Пишите результат, а не действие: «Паспорт вехи показывает сгорание», а не «Поработать над вехой». Заголовок виден в списках, отчётах и описании релиза.",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
       "dict" : "task_status",
@@ -477,12 +513,17 @@
       "definition" : "Статус задачи",
       "description" : "Состояние задачи. Выбирается из списка статусов задачи. Меняйте статус, когда меняется положение дел, а не «для порядка»: по статусу считается, что сейчас в работе, и строится план.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "sprint",
       "label" : "Спринт",
@@ -493,10 +534,13 @@
       "refType" : "sprint",
       "rel" : "PART_OF",
       "dir" : "out",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Sprint",
+      "labelPl" : "Sprint"
     }, {
       "key" : "phase",
       "label" : "Фаза",
+      "labelKey" : "pp.field.phase",
       "kind" : "ref",
       "group" : "props",
       "editable" : true,
@@ -507,7 +551,9 @@
       "refType" : "phase",
       "rel" : "IN_PHASE",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Phase",
+      "labelPl" : "Faza"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -523,7 +569,9 @@
       "refType" : "component",
       "rel" : "TAGGED_WITH",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -532,7 +580,9 @@
       "group" : "props",
       "multi" : true,
       "refType" : "project",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "author",
       "label" : "Автор",
@@ -552,7 +602,9 @@
         "group" : "kind"
       },
       "definition" : "Кто поставил задачу: агент или человек.",
-      "description" : "Кто поставил задачу: агент или человек. Выбирается из списка; свободный текст не вводится. Правится прямо в паспорте."
+      "description" : "Кто поставил задачу: агент или человек. Выбирается из списка; свободный текст не вводится. Правится прямо в паспорте.",
+      "labelEn" : "Author",
+      "labelPl" : "Autor"
     }, {
       "key" : "executor",
       "label" : "Исполнитель",
@@ -572,7 +624,9 @@
         "group" : "kind"
       },
       "definition" : "Кто выполняет задачу.",
-      "description" : "Кто выполняет задачу. Выбирается из списка; свободный текст не вводится. Правится прямо в паспорте."
+      "description" : "Кто выполняет задачу. Выбирается из списка; свободный текст не вводится. Правится прямо в паспорте.",
+      "labelEn" : "Executor",
+      "labelPl" : "Wykonawca"
     }, {
       "key" : "reviewer",
       "label" : "Принимающий",
@@ -592,7 +646,9 @@
         "group" : "kind"
       },
       "definition" : "Кто принимает работу; не может совпадать с исполнителем.",
-      "description" : "Кто принимает работу; не может совпадать с исполнителем. Выбирается из списка; свободный текст не вводится. Правится прямо в паспорте."
+      "description" : "Кто принимает работу; не может совпадать с исполнителем. Выбирается из списка; свободный текст не вводится. Правится прямо в паспорте.",
+      "labelEn" : "Reviewer",
+      "labelPl" : "Odbierający"
     }, {
       "key" : "effort",
       "label" : "Оценка, чел.-дн",
@@ -608,7 +664,9 @@
       "definition" : "Оценка трудозатрат в человеко-днях (1 день = 8 ч).",
       "description" : "Оценка: сколько человеко-дней займёт задача (день — восемь часов, можно дробью: 0,5). Ставится при заведении и уточняется до начала работы. По сумме оценок считается объём спринта и сгорание.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Estimate, person-days",
+      "labelPl" : "Szacunek, osobodni"
     }, {
       "key" : "actual",
       "label" : "Факт, чел.-дн",
@@ -622,7 +680,9 @@
       },
       "definition" : "Сколько человеко-дней ушло на задачу на самом деле; ставится при закрытии и сверяется с оценкой.",
       "description" : "Факт: сколько человеко-дней ушло на задачу. Вводится числом при закрытии. Без факта нельзя понять, насколько точны оценки, поэтому заполняйте его у каждой закрытой задачи.",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Actual, person-days",
+      "labelPl" : "Faktycznie, osobodni"
     }, {
       "key" : "task_type",
       "label" : "Тип задачи",
@@ -637,7 +697,9 @@
       },
       "definition" : "Вид работы по задаче: проектирование, разработка, тест, исследование, документация и другие — из справочника видов задач.",
       "description" : "Вид работы: проектирование, разработка, тест, исследование, документация, эксплуатация и другие. Выбирается из списка. Нужен для разбора, на что уходит время, и для подбора исполнителя.",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Task type",
+      "labelPl" : "Typ zadania"
     }, {
       "key" : "work_class",
       "label" : "Класс работы",
@@ -652,10 +714,13 @@
       },
       "definition" : "Зачем задача: сценарий пользователя, работа пользователя или обеспечивающая работа — из справочника классов.",
       "description" : "Зачем задача: сценарий пользователя, работа пользователя или обеспечивающая работа. Выбирается из списка. Задача класса «сценарий» должна быть привязана к сценарию, обеспечивающая — к архитектурному решению.",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Work class",
+      "labelPl" : "Klasa pracy"
     }, {
       "key" : "realizes_uc",
       "label" : "Сценарий (UC)",
+      "labelKey" : "pp.field.useCase",
       "kind" : "ref",
       "group" : "props",
       "editable" : true,
@@ -667,7 +732,9 @@
       "refType" : "use_case",
       "rel" : "REALIZES",
       "dir" : "out",
-      "relation" : "realization"
+      "relation" : "realization",
+      "labelEn" : "Use case",
+      "labelPl" : "Scenariusz (UC)"
     }, {
       "key" : "prs",
       "label" : "PR",
@@ -683,17 +750,22 @@
       "refType" : "pr",
       "rel" : "CLOSED_BY",
       "dir" : "out",
-      "relation" : "realization"
+      "relation" : "realization",
+      "labelEn" : "PRs",
+      "labelPl" : "PR"
     }, {
       "key" : "files",
       "label" : "Файлы",
+      "labelKey" : "pp.field.files",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "file",
       "rel" : "EDITED_IN",
       "dir" : "in",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Files",
+      "labelPl" : "Pliki"
     } ],
     "body" : [ {
       "key" : "note_md",
@@ -707,7 +779,9 @@
       "definition" : "Описание задачи в Markdown (заменяется task_set; note_append — дописывает).",
       "description" : "Заметка к задаче: почему задача нужна, что входит, шаги, как проверить, что сделано. Свободный текст с разметкой; ссылки на другие записи пишутся как [[тип:ID]]. Дописывайте ход работы в конец, не стирая прежнее: заметка — память задачи для следующей сессии.",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Text",
+      "labelPl" : "Notatka"
     } ],
     "props" : [ {
       "fields" : [ "sprint", "phase", "components", "projects", "prs", "files" ]
@@ -924,7 +998,9 @@
       "targetType" : "asset",
       "relation" : "composition",
       "place" : "body"
-    } ]
+    } ],
+    "labelEn" : "Task",
+    "labelPl" : "Zadanie"
   }, {
     "type" : "adr",
     "label" : "ADR",
@@ -942,10 +1018,13 @@
         "field" : "name"
       },
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
       "dict" : "adr_status",
@@ -953,7 +1032,9 @@
       "write" : {
         "endpoint" : "/lore/status",
         "field" : "status"
-      }
+      },
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "date",
       "label" : "Дата",
@@ -965,7 +1046,9 @@
         "endpoint" : "/lore/adr",
         "field" : "date_created"
       },
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Data"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -981,7 +1064,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -997,7 +1082,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "tags",
       "label" : "Теги",
@@ -1013,7 +1100,9 @@
       "refType" : "tag",
       "rel" : "TAGGED_WITH",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Tags",
+      "labelPl" : "Tagi"
     }, {
       "key" : "file_path",
       "label" : "Файл",
@@ -1024,7 +1113,9 @@
       "write" : {
         "endpoint" : "/lore/adr",
         "field" : "file_path"
-      }
+      },
+      "labelEn" : "File",
+      "labelPl" : "Plik"
     } ],
     "body" : [ {
       "key" : "context_md",
@@ -1036,7 +1127,9 @@
         "field" : "context_md"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Context",
+      "labelPl" : "Kontekst"
     }, {
       "key" : "decision_md",
       "label" : "Решение",
@@ -1047,7 +1140,9 @@
         "field" : "decision_md"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Decision",
+      "labelPl" : "Decyzja"
     }, {
       "key" : "consequences_md",
       "label" : "Следствия",
@@ -1058,7 +1153,9 @@
         "field" : "consequences_md"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Consequences",
+      "labelPl" : "Konsekwencje"
     } ],
     "props" : [ {
       "fields" : [ "date", "components", "projects", "tags", "file_path" ]
@@ -1294,7 +1391,9 @@
       "targetType" : "asset",
       "relation" : "composition",
       "place" : "body"
-    } ]
+    } ],
+    "labelEn" : "ADR",
+    "labelPl" : "ADR"
   }, {
     "type" : "spec",
     "label" : "Спека",
@@ -1312,10 +1411,13 @@
         "field" : "title"
       },
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
       "dict" : "spec_status",
@@ -1325,7 +1427,9 @@
         "field" : "status"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "version",
       "label" : "Версия",
@@ -1338,7 +1442,9 @@
         "field" : "version"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Version",
+      "labelPl" : "Wersja"
     }, {
       "key" : "summary",
       "label" : "Кратко",
@@ -1351,7 +1457,9 @@
         "field" : "summary"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Summary",
+      "labelPl" : "W skrócie"
     }, {
       "key" : "component",
       "label" : "Компонент",
@@ -1366,7 +1474,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -1382,7 +1492,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "file_path",
       "label" : "Файл",
@@ -1394,7 +1506,9 @@
         "endpoint" : "/lore/spec",
         "field" : "file_path"
       },
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "File",
+      "labelPl" : "Plik"
     } ],
     "body" : [ {
       "key" : "content_md",
@@ -1406,7 +1520,9 @@
         "field" : "content_md"
       },
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Text",
+      "labelPl" : "Tekst"
     } ],
     "props" : [ {
       "fields" : [ "version", "summary", "component", "projects", "file_path" ]
@@ -1484,7 +1600,9 @@
       "targetType" : "asset",
       "relation" : "composition",
       "place" : "body"
-    } ]
+    } ],
+    "labelEn" : "Spec",
+    "labelPl" : "Specyfikacja"
   }, {
     "type" : "doc",
     "label" : "Документ",
@@ -1502,7 +1620,9 @@
         "field" : "title"
       },
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "kind",
       "label" : "Вид",
@@ -1514,7 +1634,9 @@
         "endpoint" : "/lore/doc",
         "field" : "kind"
       },
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Kind",
+      "labelPl" : "Rodzaj"
     }, {
       "key" : "component",
       "label" : "Компонент",
@@ -1529,7 +1651,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -1545,7 +1669,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "parent",
       "label" : "Родительский документ",
@@ -1560,7 +1686,9 @@
       "refType" : "doc",
       "rel" : "DOC_CHILD_OF",
       "dir" : "out",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Parent document",
+      "labelPl" : "Dokument nadrzędny"
     }, {
       "key" : "sprints",
       "label" : "Спринты",
@@ -1571,7 +1699,9 @@
       "refType" : "sprint",
       "rel" : "IMPLEMENTED_IN",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty"
     }, {
       "key" : "file_path",
       "label" : "Файл",
@@ -1583,7 +1713,9 @@
         "endpoint" : "/lore/doc",
         "field" : "file_path"
       },
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "File",
+      "labelPl" : "Plik"
     } ],
     "body" : [ {
       "key" : "content_md_ru",
@@ -1594,7 +1726,9 @@
         "endpoint" : "/lore/doc",
         "field" : "content_md_ru"
       },
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Tekst"
     }, {
       "key" : "content_md_en",
       "label" : "Текст (EN)",
@@ -1604,7 +1738,9 @@
         "endpoint" : "/lore/doc",
         "field" : "content_md_en"
       },
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text (EN)",
+      "labelPl" : "Tekst (EN)"
     } ],
     "props" : [ {
       "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
@@ -1699,7 +1835,9 @@
       "targetType" : "asset",
       "relation" : "composition",
       "place" : "body"
-    } ]
+    } ],
+    "labelEn" : "Document",
+    "labelPl" : "Dokument"
   }, {
     "type" : "decision",
     "label" : "Решение",
@@ -1712,37 +1850,50 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
       "dict" : "decision_status",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "date",
       "label" : "Дата",
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Data"
     }, {
       "key" : "adr",
       "label" : "ADR",
+      "labelKey" : "pp.field.adr",
       "kind" : "ref",
       "group" : "props",
       "refType" : "adr",
       "rel" : "DECIDED_IN",
       "dir" : "out",
-      "relation" : "aggregation"
+      "relation" : "aggregation",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -1753,7 +1904,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -1764,7 +1917,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "tags",
       "label" : "Теги",
@@ -1775,16 +1930,23 @@
       "refType" : "tag",
       "rel" : "TAGGED_WITH",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Tags",
+      "labelPl" : "Tagi"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Решение",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Decyzja"
     }, {
       "key" : "rationale_md",
-      "label" : "Обоснование"
+      "label" : "Обоснование",
+      "labelKey" : "pp.field.rationale",
+      "labelEn" : "Rationale",
+      "labelPl" : "Uzasadnienie"
     } ],
     "props" : [ {
       "fields" : [ "date", "adr", "components", "projects", "tags" ]
@@ -1884,7 +2046,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Decision",
+    "labelPl" : "Decyzja"
   }, {
     "type" : "question",
     "label" : "Вопрос",
@@ -1897,19 +2061,27 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -1917,35 +2089,52 @@
       "kind" : "enum",
       "group" : "props",
       "dict" : "priority",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Priority",
+      "labelPl" : "Priorytet"
     }, {
       "key" : "due_date",
       "label" : "Срок",
+      "labelKey" : "pp.field.dueDate",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Due date",
+      "labelPl" : "Termin"
     }, {
       "key" : "owner",
       "label" : "Ответственный",
+      "labelKey" : "pp.field.responsible",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Responsible",
+      "labelPl" : "Odpowiedzialny"
     }, {
       "key" : "raised_by",
       "label" : "Поднял",
+      "labelKey" : "pp.field.raisedBy",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Raised by",
+      "labelPl" : "Zgłosił"
     }, {
       "key" : "opened",
       "label" : "Открыт",
+      "labelKey" : "pp.field.opened",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Opened",
+      "labelPl" : "Otwarto"
     }, {
       "key" : "closed",
       "label" : "Закрыт",
+      "labelKey" : "pp.field.closed",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Closed",
+      "labelPl" : "Zamknięto"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -1956,7 +2145,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -1967,13 +2158,17 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Суть",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Istota"
     } ],
     "props" : [ {
       "fields" : [ "priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects" ]
@@ -2049,7 +2244,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Question",
+    "labelPl" : "Pytanie"
   }, {
     "type" : "milestone",
     "label" : "Веха",
@@ -2062,25 +2259,35 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "week",
       "label" : "Неделя",
+      "labelKey" : "pp.field.week",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Week",
+      "labelPl" : "Tydzień"
     }, {
       "key" : "date",
       "label" : "Срок",
       "labelKey" : "pp.field.date",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Termin"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -2088,12 +2295,17 @@
       "kind" : "enum",
       "group" : "props",
       "dict" : "priority",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Priority",
+      "labelPl" : "Priorytet"
     }, {
       "key" : "products",
       "label" : "Продукты",
+      "labelKey" : "pp.field.products",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Products",
+      "labelPl" : "Produkty"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -2102,7 +2314,9 @@
       "group" : "props",
       "multi" : true,
       "refType" : "project",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -2111,16 +2325,24 @@
       "group" : "props",
       "multi" : true,
       "refType" : "component",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     } ],
     "body" : [ {
       "key" : "goal_md",
       "label" : "Цель",
+      "labelKey" : "pp.field.goal",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Goal",
+      "labelPl" : "Cel"
     }, {
       "key" : "decisions_md",
-      "label" : "Решения"
+      "label" : "Решения",
+      "labelKey" : "pp.field.decisions",
+      "labelEn" : "Decisions",
+      "labelPl" : "Decyzje"
     } ],
     "props" : [ {
       "fields" : [ "week", "date", "priority", "products", "projects", "components" ]
@@ -2149,7 +2371,9 @@
       "targetType" : "product",
       "relation" : "attribute",
       "place" : "prop"
-    } ]
+    } ],
+    "labelEn" : "Milestone",
+    "labelPl" : "Kamień milowy"
   }, {
     "type" : "release",
     "label" : "Релиз",
@@ -2161,34 +2385,50 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "code",
       "label" : "Тег",
+      "labelKey" : "pp.field.tag",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Tag",
+      "labelPl" : "Tag"
     }, {
       "key" : "type",
       "label" : "Вид",
+      "labelKey" : "pp.field.kind",
       "kind" : "enum",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Kind",
+      "labelPl" : "Rodzaj"
     }, {
       "key" : "date",
       "label" : "Дата",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Date",
+      "labelPl" : "Data"
     }, {
       "key" : "is_current",
       "label" : "Текущий",
+      "labelKey" : "pp.field.isCurrent",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Current",
+      "labelPl" : "Bieżący"
     }, {
       "key" : "week",
       "label" : "Неделя",
+      "labelKey" : "pp.field.week",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Week",
+      "labelPl" : "Tydzień"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -2199,7 +2439,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -2208,14 +2450,18 @@
       "group" : "props",
       "multi" : true,
       "refType" : "component",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     } ],
     "body" : [ {
       "key" : "description_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Text",
+      "labelPl" : "Opis"
     } ],
     "props" : [ {
       "fields" : [ "type", "date", "is_current", "week", "projects", "components" ]
@@ -2291,7 +2537,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Release",
+    "labelPl" : "Wydanie"
   }, {
     "type" : "component",
     "label" : "Компонент",
@@ -2304,81 +2552,113 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "area",
       "label" : "Область",
+      "labelKey" : "pp.field.area",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Area",
+      "labelPl" : "Obszar"
     }, {
       "key" : "parent",
       "label" : "Родитель",
+      "labelKey" : "pp.field.parent",
       "kind" : "ref",
       "group" : "props",
       "refType" : "component",
       "rel" : "PARENT_OF",
       "dir" : "out",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Parent",
+      "labelPl" : "Nadrzędny"
     }, {
       "key" : "owner",
       "label" : "Владелец",
+      "labelKey" : "pp.field.ownerPerson",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Owner",
+      "labelPl" : "Właściciel"
     }, {
       "key" : "team",
       "label" : "Команда",
+      "labelKey" : "pp.field.team",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Team",
+      "labelPl" : "Zespół"
     }, {
       "key" : "icon",
       "label" : "Иконка",
+      "labelKey" : "pp.field.icon",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Icon",
+      "labelPl" : "Ikona"
     }, {
       "key" : "children",
       "label" : "Подкомпоненты",
+      "labelKey" : "pp.field.subcomponents",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "component",
       "rel" : "PARENT_OF",
       "dir" : "in",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Subcomponents",
+      "labelPl" : "Podkomponenty"
     }, {
       "key" : "tech",
       "label" : "Технологии",
+      "labelKey" : "pp.field.technologies",
       "kind" : "text",
       "group" : "props",
-      "multi" : true
+      "multi" : true,
+      "labelEn" : "Technologies",
+      "labelPl" : "Technologie"
     }, {
       "key" : "adrs",
       "label" : "ADR",
+      "labelKey" : "pp.field.adr",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "adr",
       "rel" : "BELONGS_TO",
       "dir" : "in",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR"
     }, {
       "key" : "specs",
       "label" : "Спеки",
+      "labelKey" : "pp.field.specs",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "spec",
       "rel" : "DOCUMENTED_IN",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Specs",
+      "labelPl" : "Specyfikacje"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -2387,17 +2667,22 @@
       "group" : "props",
       "multi" : true,
       "refType" : "project",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "products",
       "label" : "Продукты",
+      "labelKey" : "pp.field.products",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "product",
       "rel" : "IN_PRODUCT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Products",
+      "labelPl" : "Produkty"
     } ],
     "props" : [ {
       "fields" : [ "area", "parent", "owner", "team", "icon", "projects", "products" ]
@@ -2556,7 +2841,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Component",
+    "labelPl" : "Komponent"
   }, {
     "type" : "tech",
     "label" : "Технология",
@@ -2569,14 +2856,19 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "version",
       "label" : "Версия",
@@ -2584,12 +2876,17 @@
       "kind" : "text",
       "group" : "props",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Version",
+      "labelPl" : "Wersja"
     }, {
       "key" : "checked_at",
       "label" : "Проверено",
+      "labelKey" : "pp.field.checkedAt",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Checked",
+      "labelPl" : "Sprawdzono"
     }, {
       "key" : "component",
       "label" : "Компонент",
@@ -2599,14 +2896,18 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent"
     } ],
     "body" : [ {
       "key" : "content_md",
       "label" : "Сведения",
       "labelKey" : "pp.field.body",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Text",
+      "labelPl" : "Informacje"
     } ],
     "props" : [ {
       "fields" : [ "version", "checked_at", "component" ]
@@ -2658,7 +2959,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Technology",
+    "labelPl" : "Technologia"
   }, {
     "type" : "feature",
     "label" : "Фича",
@@ -2671,71 +2974,98 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "goal_level",
       "label" : "Уровень цели",
+      "labelKey" : "pp.field.goalLevel",
       "kind" : "enum",
       "group" : "props",
       "dict" : "uc_goal_level",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Goal level",
+      "labelPl" : "Poziom celu"
     }, {
       "key" : "rigor",
       "label" : "Оформление",
+      "labelKey" : "pp.field.rigor",
       "kind" : "enum",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Rigor",
+      "labelPl" : "Stopień opracowania"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
       "labelKey" : "pp.field.priority",
       "kind" : "enum",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Priority",
+      "labelPl" : "Priorytet"
     }, {
       "key" : "date",
       "label" : "Создан",
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Utworzono"
     }, {
       "key" : "shipped_at",
       "label" : "Выпущен",
+      "labelKey" : "pp.field.shippedAt",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Shipped",
+      "labelPl" : "Wydano"
     }, {
       "key" : "parent",
       "label" : "Родитель",
+      "labelKey" : "pp.field.parent",
       "kind" : "ref",
       "group" : "props",
       "refType" : "feature",
       "rel" : "DECOMPOSES_INTO",
       "dir" : "in",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Parent",
+      "labelPl" : "Nadrzędny"
     }, {
       "key" : "children",
       "label" : "Сценарии",
+      "labelKey" : "pp.field.scenarios",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "feature",
       "rel" : "DECOMPOSES_INTO",
       "dir" : "out",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Scenarios",
+      "labelPl" : "Scenariusze"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -2746,7 +3076,9 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -2757,36 +3089,51 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.field.tasks",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "task",
       "rel" : "REALIZES",
       "dir" : "in",
-      "relation" : "realization"
+      "relation" : "realization",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Opis"
     }, {
       "key" : "context_md",
       "label" : "Контекст",
       "labelKey" : "pp.adr.context",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Context",
+      "labelPl" : "Kontekst"
     }, {
       "key" : "scenario_md",
       "label" : "Сценарий",
-      "layer" : "stable"
+      "labelKey" : "pp.field.scenario",
+      "layer" : "stable",
+      "labelEn" : "Scenario",
+      "labelPl" : "Scenariusz"
     }, {
       "key" : "acceptance_md",
       "label" : "Критерии приёмки",
-      "layer" : "stable"
+      "labelKey" : "pp.field.acceptance",
+      "layer" : "stable",
+      "labelEn" : "Acceptance criteria",
+      "labelPl" : "Kryteria akceptacji"
     } ],
     "props" : [ {
       "fields" : [ "goal_level", "rigor", "priority", "date", "shipped_at", "parent", "components", "projects" ]
@@ -3075,7 +3422,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Feature",
+    "labelPl" : "Funkcja"
   }, {
     "type" : "product",
     "label" : "Продукт",
@@ -3089,63 +3438,89 @@
       "group" : "head",
       "required" : true,
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "color",
       "label" : "Цвет",
+      "labelKey" : "pp.field.color",
       "kind" : "text",
       "group" : "head",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Color",
+      "labelPl" : "Kolor"
     }, {
       "key" : "label_en",
       "label" : "Название (en)",
+      "labelKey" : "pp.field.labelEn",
       "kind" : "text",
       "group" : "props",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Name (en)",
+      "labelPl" : "Nazwa (en)"
     }, {
       "key" : "icon",
       "label" : "Иконка",
+      "labelKey" : "pp.field.icon",
       "kind" : "text",
       "group" : "props",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Icon",
+      "labelPl" : "Ikona"
     }, {
       "key" : "sort_order",
       "label" : "Порядок",
+      "labelKey" : "pp.field.sortOrder",
       "kind" : "number",
       "group" : "props",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Order",
+      "labelPl" : "Kolejność"
     }, {
       "key" : "kind",
       "label" : "Вид",
+      "labelKey" : "pp.field.kind",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Kind",
+      "labelPl" : "Rodzaj"
     }, {
       "key" : "is_active",
       "label" : "Активен",
+      "labelKey" : "pp.field.isActive",
       "kind" : "bool",
       "group" : "props",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Active",
+      "labelPl" : "Aktywny"
     }, {
       "key" : "parent",
       "label" : "Родитель",
+      "labelKey" : "pp.field.parent",
       "kind" : "ref",
       "group" : "props",
       "refType" : "product",
       "rel" : "PARENT_PRODUCT",
       "dir" : "out",
-      "relation" : "composition"
+      "relation" : "composition",
+      "labelEn" : "Parent",
+      "labelPl" : "Nadrzędny"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3156,7 +3531,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -3167,7 +3544,9 @@
       "refType" : "component",
       "rel" : "IN_PRODUCT",
       "dir" : "in",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     } ],
     "props" : [ {
       "fields" : [ "label_en", "icon", "sort_order", "is_active", "parent", "projects", "components" ]
@@ -3268,7 +3647,9 @@
       "targetType" : "milestone",
       "relation" : "attribute",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Product",
+    "labelPl" : "Produkt"
   }, {
     "type" : "user",
     "label" : "Человек",
@@ -3281,7 +3662,9 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Imię"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3292,19 +3675,27 @@
       "refType" : "project",
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     }, {
       "key" : "login",
       "label" : "Логин",
+      "labelKey" : "pp.field.login",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Login",
+      "labelPl" : "Login"
     }, {
       "key" : "avatar",
       "label" : "Аватар",
+      "labelKey" : "pp.field.avatar",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Avatar",
+      "labelPl" : "Awatar"
     } ],
     "props" : [ {
       "fields" : [ "projects", "login", "avatar" ]
@@ -3352,7 +3743,9 @@
       "targetType" : "agent",
       "relation" : "aggregation",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Person",
+    "labelPl" : "Osoba"
   }, {
     "type" : "agent",
     "label" : "Агент",
@@ -3365,28 +3758,36 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Imię"
     }, {
       "key" : "client_id",
       "label" : "Учётка",
       "labelKey" : "pp.field.clientId",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Account",
+      "labelPl" : "Konto"
     }, {
       "key" : "agent_role",
       "label" : "Профиль",
       "labelKey" : "pp.field.agentRole",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Profile",
+      "labelPl" : "Profil"
     }, {
       "key" : "harness",
       "label" : "Оболочка",
       "labelKey" : "pp.field.harness",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Harness",
+      "labelPl" : "Powłoka"
     }, {
       "key" : "owner",
       "label" : "Владелец",
@@ -3396,7 +3797,9 @@
       "refType" : "user",
       "rel" : "OWNED_BY",
       "dir" : "out",
-      "relation" : "aggregation"
+      "relation" : "aggregation",
+      "labelEn" : "Owner",
+      "labelPl" : "Właściciel"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3407,7 +3810,9 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     } ],
     "props" : [ {
       "fields" : [ "client_id", "agent_role", "harness", "owner", "projects" ]
@@ -3480,7 +3885,9 @@
       "targetType" : "actor",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Agent",
+    "labelPl" : "Agent"
   }, {
     "type" : "actor",
     "label" : "Роль продукта",
@@ -3493,13 +3900,18 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "kind",
       "label" : "Вид роли",
+      "labelKey" : "pp.field.roleKind",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Role kind",
+      "labelPl" : "Rodzaj roli"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3510,13 +3922,17 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Opis"
     } ],
     "props" : [ {
       "fields" : [ "kind", "projects" ]
@@ -3619,7 +4035,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Product role",
+    "labelPl" : "Rola produktu"
   }, {
     "type" : "pain",
     "label" : "Боль",
@@ -3632,26 +4050,35 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "severity",
       "label" : "Острота",
+      "labelKey" : "pp.field.severity",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Severity",
+      "labelPl" : "Dotkliwość"
     }, {
       "key" : "date",
       "label" : "Создана",
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Utworzono"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Opis"
     } ],
     "props" : [ {
       "fields" : [ "severity", "date" ]
@@ -3747,7 +4174,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Pain",
+    "labelPl" : "Ból"
   }, {
     "type" : "gain",
     "label" : "Выгода",
@@ -3760,30 +4189,42 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "rank",
       "label" : "Ранг",
+      "labelKey" : "pp.field.rank",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Rank",
+      "labelPl" : "Ranga"
     }, {
       "key" : "date",
       "label" : "Создана",
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Utworzono"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Opis"
     }, {
       "key" : "metric_md",
       "label" : "Метрика",
-      "layer" : "stable"
+      "labelKey" : "pp.field.metric",
+      "layer" : "stable",
+      "labelEn" : "Metric",
+      "labelPl" : "Metryka"
     } ],
     "props" : [ {
       "fields" : [ "rank", "date" ]
@@ -3879,7 +4320,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Gain",
+    "labelPl" : "Korzyść"
   }, {
     "type" : "job",
     "label" : "Работа",
@@ -3892,32 +4335,44 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "kind",
       "label" : "Вид работы",
+      "labelKey" : "pp.field.jobKind",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Job kind",
+      "labelPl" : "Rodzaj pracy"
     }, {
       "key" : "importance",
       "label" : "Важность",
+      "labelKey" : "pp.field.importance",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Importance",
+      "labelPl" : "Ważność"
     }, {
       "key" : "date",
       "label" : "Создана",
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Utworzono"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Opis"
     } ],
     "props" : [ {
       "fields" : [ "kind", "importance", "date" ]
@@ -4026,7 +4481,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Job",
+    "labelPl" : "Praca"
   }, {
     "type" : "runbook",
     "label" : "Ранбук",
@@ -4039,20 +4496,27 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "area",
       "label" : "Область",
+      "labelKey" : "pp.field.area",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Area",
+      "labelPl" : "Obszar"
     }, {
       "key" : "date",
       "label" : "Создан",
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Date",
+      "labelPl" : "Utworzono"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -4063,14 +4527,18 @@
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
     } ],
     "body" : [ {
       "key" : "content_md",
       "label" : "Текст",
       "labelKey" : "pp.field.body",
       "layer" : "stable",
-      "historic" : true
+      "historic" : true,
+      "labelEn" : "Text",
+      "labelPl" : "Tekst"
     } ],
     "props" : [ {
       "fields" : [ "area", "date", "projects" ]
@@ -4122,7 +4590,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Runbook",
+    "labelPl" : "Runbook"
   }, {
     "type" : "quality_gate",
     "label" : "Гейт качества",
@@ -4131,31 +4601,42 @@
     "fields" : [ {
       "key" : "status",
       "label" : "Состояние",
+      "labelKey" : "pp.field.state",
       "kind" : "enum",
       "group" : "head",
-      "dict" : "qg_status"
+      "dict" : "qg_status",
+      "labelEn" : "State",
+      "labelPl" : "Stan"
     }, {
       "key" : "title",
       "label" : "Название",
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "last_run_status",
       "label" : "Итог последнего прогона",
+      "labelKey" : "pp.field.lastRunStatus",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Last run result",
+      "labelPl" : "Wynik ostatniego przebiegu"
     }, {
       "key" : "projects",
       "label" : "Проект-владелец",
+      "labelKey" : "pp.field.ownerProject",
       "kind" : "ref",
       "group" : "props",
       "multi" : true,
       "refType" : "project",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Owner project",
+      "labelPl" : "Projekt-właściciel"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -4166,37 +4647,54 @@
       "refType" : "component",
       "rel" : "BELONGS_TO",
       "dir" : "out",
-      "relation" : "attribute"
+      "relation" : "attribute",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty"
     }, {
       "key" : "sprint",
       "label" : "Спринт",
       "labelKey" : "pp.field.sprint",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Sprint",
+      "labelPl" : "Sprint"
     }, {
       "key" : "date",
       "label" : "Создан",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Date",
+      "labelPl" : "Utworzono"
     }, {
       "key" : "retired_at",
       "label" : "Выведен из работы",
+      "labelKey" : "pp.field.retiredAt",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Retired",
+      "labelPl" : "Wycofano"
     }, {
       "key" : "retired_reason",
       "label" : "Причина вывода из работы",
+      "labelKey" : "pp.field.retiredReason",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Retirement reason",
+      "labelPl" : "Powód wycofania"
     } ],
     "body" : [ {
       "key" : "description",
-      "label" : "Что проверяет"
+      "label" : "Что проверяет",
+      "labelKey" : "pp.field.whatChecks",
+      "labelEn" : "What it checks",
+      "labelPl" : "Co sprawdza"
     }, {
       "key" : "content_md",
       "label" : "Текст",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "labelEn" : "Text",
+      "labelPl" : "Tekst"
     } ],
     "props" : [ {
       "fields" : [ "projects", "components", "sprint", "date" ]
@@ -4250,7 +4748,9 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Quality gate",
+    "labelPl" : "Bramka jakości"
   }, {
     "type" : "project",
     "label" : "Проект",
@@ -4263,25 +4763,36 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "default_branch",
       "label" : "Основная ветка",
+      "labelKey" : "pp.field.defaultBranch",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Default branch",
+      "labelPl" : "Gałąź główna"
     }, {
       "key" : "is_private",
       "label" : "Приватный",
+      "labelKey" : "pp.field.isPrivate",
       "kind" : "text",
       "group" : "props",
-      "layer" : "stable"
+      "layer" : "stable",
+      "labelEn" : "Private",
+      "labelPl" : "Prywatny"
     } ],
     "props" : [ {
       "fields" : [ "default_branch", "is_private" ]
@@ -4425,7 +4936,9 @@
       "targetType" : "pr",
       "relation" : "attribute",
       "place" : "link_tab"
-    } ]
+    } ],
+    "labelEn" : "Project",
+    "labelPl" : "Projekt"
   } ],
   "child_only" : [ {
     "type" : "phase",
@@ -4433,9 +4946,12 @@
     "fields" : [ {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
-      "dict" : "task_status"
+      "dict" : "task_status",
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "title",
       "label" : "Название",
@@ -4444,80 +4960,116 @@
       "group" : "head",
       "required" : true,
       "definition" : "Название фазы; у фаз из phase_new название лежит в name — срез берёт coalesce(title, name).",
-      "description" : "Название фазы у ранних записей, загруженных из файлов. У новых фаз название пишется в основное поле названия; при переносе оба поля объединяются."
+      "description" : "Название фазы у ранних записей, загруженных из файлов. У новых фаз название пишется в основное поле названия; при переносе оба поля объединяются.",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "progress",
       "label" : "Готово",
+      "labelKey" : "pp.field.progress",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "labelEn" : "Progress",
+      "labelPl" : "Gotowe"
     }, {
       "key" : "valid_from",
       "label" : "Дата",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
-    } ]
+      "group" : "props",
+      "labelEn" : "Date",
+      "labelPl" : "Data"
+    } ],
+    "labelEn" : "Phase",
+    "labelPl" : "Faza"
   }, {
     "type" : "question",
     "label" : "Вопрос",
     "fields" : [ {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
-      "group" : "head"
+      "group" : "head",
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "title",
       "label" : "Название",
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
       "labelKey" : "pp.field.priority",
       "kind" : "enum",
       "group" : "props",
-      "dict" : "priority"
+      "dict" : "priority",
+      "labelEn" : "Priority",
+      "labelPl" : "Priorytet"
     }, {
       "key" : "due_date",
       "label" : "Срок",
+      "labelKey" : "pp.field.dueDate",
       "kind" : "date",
-      "group" : "props"
-    } ]
+      "group" : "props",
+      "labelEn" : "Due date",
+      "labelPl" : "Termin"
+    } ],
+    "labelEn" : "Question",
+    "labelPl" : "Pytanie"
   }, {
     "type" : "decision",
     "label" : "Решение",
     "fields" : [ {
       "key" : "status",
       "label" : "Статус",
+      "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
-      "dict" : "decision_status"
+      "dict" : "decision_status",
+      "labelEn" : "Status",
+      "labelPl" : "Status"
     }, {
       "key" : "code",
       "label" : "Код",
+      "labelKey" : "pp.field.code",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
     }, {
       "key" : "title",
       "label" : "Название",
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
     }, {
       "key" : "date",
       "label" : "Дата",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
-    } ]
+      "group" : "props",
+      "labelEn" : "Date",
+      "labelPl" : "Data"
+    } ],
+    "labelEn" : "Decision",
+    "labelPl" : "Decyzja"
   } ],
   "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "pain", "product", "project", "quality_gate", "question", "release", "runbook", "tech", "user" ],
   "graph" : {
