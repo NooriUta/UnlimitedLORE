@@ -4,6 +4,7 @@
 // Версия kit: приложение должно уметь сказать, на чём оно работает (K-08 п. 1).
 export * from './version';
 export * from './tokens/prefs';
+export * from './tokens/layoutPrefs';
 export * from './elements';
 export * from './i18n';
 export * from './states';
