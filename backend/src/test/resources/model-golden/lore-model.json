@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "ba94de81125cdb4f",
+  "version" : "13113a190b628095",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate" ],
@@ -4586,7 +4586,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "tags",
         "label" : "Теги",
@@ -5204,7 +5204,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -10218,7 +10218,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "adrs",
         "label" : "ADR",

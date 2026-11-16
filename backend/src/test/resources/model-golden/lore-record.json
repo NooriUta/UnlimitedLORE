@@ -7352,7 +7352,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "tags",
         "label" : "Теги",
@@ -7849,7 +7849,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "tags",
         "label" : "Теги",
@@ -8421,7 +8421,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -8880,7 +8880,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -18102,7 +18102,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "adrs",
         "label" : "ADR",
@@ -18319,7 +18319,7 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : true
       }, {
         "key" : "adrs",
         "label" : "ADR",
