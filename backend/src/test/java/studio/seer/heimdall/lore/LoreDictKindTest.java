@@ -28,6 +28,16 @@ class LoreDictKindTest {
         assertTrue(bad.contains("tech") && bad.contains("service"), "отказ называет допустимые: " + bad);
     }
 
+    /** SPRINT_QG_REBUILD/QG-04 (ADR-LORE-053-D3, слово владелицы 16.11.2026): тип гейта — универсальный или проектный. */
+    @Test
+    void qgTypeKindIsUniversalOrProject() {
+        assertNull(LoreDictResource.kindRefusal("qg_type", "universal"));
+        assertNull(LoreDictResource.kindRefusal("qg_type", "project"));
+        String bad = LoreDictResource.kindRefusal("qg_type", "tech");
+        assertNotNull(bad);
+        assertTrue(bad.contains("universal") && bad.contains("project"), bad);
+    }
+
     @Test
     void kindIsRefusedForDictionaryWithoutKinds() {
         String r = LoreDictResource.kindRefusal("priority", "tech");
