@@ -17,7 +17,8 @@
         "endpoint" : "/lore/sprint/update",
         "field" : "name"
       },
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
@@ -28,7 +29,9 @@
       "write" : {
         "endpoint" : "/lore/status",
         "field" : "status"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -40,7 +43,9 @@
       "write" : {
         "endpoint" : "/lore/sprint/plan",
         "field" : "priority"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -73,7 +78,8 @@
       "label" : "Создан",
       "labelKey" : "pp.field.created",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "milestones",
       "label" : "Вехи",
@@ -100,7 +106,9 @@
       "write" : {
         "endpoint" : "/lore/sprint/plan",
         "field" : "planned_start_date"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "planned_end_date",
       "label" : "Конец по плану",
@@ -111,7 +119,9 @@
       "write" : {
         "endpoint" : "/lore/sprint/plan",
         "field" : "planned_end_date"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "no_release",
       "label" : "Не требует релиза",
@@ -122,7 +132,8 @@
       "write" : {
         "endpoint" : "/lore/sprint/update",
         "field" : "no_release_required"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "track",
       "label" : "Трек",
@@ -137,7 +148,9 @@
         "slice" : "track_options",
         "value" : "code",
         "label" : "title"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -163,7 +176,9 @@
       "write" : {
         "endpoint" : "/lore/sprint/update",
         "field" : "context_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "outcome_md",
       "label" : "Итог",
@@ -171,7 +186,9 @@
       "write" : {
         "endpoint" : "/lore/sprint/update",
         "field" : "outcome_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "priority", "projects", "releases" ]
@@ -419,7 +436,8 @@
         "endpoint" : "/lore/task/edit",
         "field" : "title"
       },
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
@@ -430,7 +448,9 @@
       "write" : {
         "endpoint" : "/lore/status",
         "field" : "status"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "code",
       "label" : "Код",
@@ -550,7 +570,9 @@
       "write" : {
         "endpoint" : "/lore/task/edit",
         "field" : "effort_days"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "actual",
       "label" : "Факт, чел.-дн",
@@ -561,7 +583,8 @@
       "write" : {
         "endpoint" : "/lore/task/edit",
         "field" : "actual_days"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "task_type",
       "label" : "Тип задачи",
@@ -573,7 +596,8 @@
       "write" : {
         "endpoint" : "/lore/task/edit",
         "field" : "task_type"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "work_class",
       "label" : "Класс работы",
@@ -585,7 +609,8 @@
       "write" : {
         "endpoint" : "/lore/task/edit",
         "field" : "work_class"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "realizes_uc",
       "label" : "Сценарий (UC)",
@@ -636,7 +661,9 @@
       "write" : {
         "endpoint" : "/lore/task/edit",
         "field" : "note_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "sprint", "phase", "components", "projects", "prs", "files" ]
@@ -870,7 +897,8 @@
         "endpoint" : "/lore/adr",
         "field" : "name"
       },
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
@@ -892,7 +920,8 @@
       "write" : {
         "endpoint" : "/lore/adr",
         "field" : "date_created"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -961,7 +990,9 @@
       "write" : {
         "endpoint" : "/lore/adr",
         "field" : "context_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "decision_md",
       "label" : "Решение",
@@ -970,7 +1001,9 @@
       "write" : {
         "endpoint" : "/lore/adr",
         "field" : "decision_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "consequences_md",
       "label" : "Следствия",
@@ -979,7 +1012,9 @@
       "write" : {
         "endpoint" : "/lore/adr",
         "field" : "consequences_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "date", "components", "projects", "tags", "file_path" ]
@@ -1232,7 +1267,8 @@
         "endpoint" : "/lore/spec",
         "field" : "title"
       },
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
@@ -1243,7 +1279,9 @@
       "write" : {
         "endpoint" : "/lore/spec",
         "field" : "status"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "version",
       "label" : "Версия",
@@ -1254,7 +1292,9 @@
       "write" : {
         "endpoint" : "/lore/spec",
         "field" : "version"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "summary",
       "label" : "Кратко",
@@ -1265,7 +1305,9 @@
       "write" : {
         "endpoint" : "/lore/spec",
         "field" : "summary"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "component",
       "label" : "Компонент",
@@ -1307,7 +1349,8 @@
       "write" : {
         "endpoint" : "/lore/spec",
         "field" : "file_path"
-      }
+      },
+      "layer" : "stable"
     } ],
     "body" : [ {
       "key" : "content_md",
@@ -1317,7 +1360,9 @@
       "write" : {
         "endpoint" : "/lore/spec",
         "field" : "content_md"
-      }
+      },
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "version", "summary", "component", "projects", "file_path" ]
@@ -1412,7 +1457,8 @@
         "endpoint" : "/lore/doc",
         "field" : "title"
       },
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "kind",
       "label" : "Вид",
@@ -1423,7 +1469,8 @@
       "write" : {
         "endpoint" : "/lore/doc",
         "field" : "kind"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "component",
       "label" : "Компонент",
@@ -1491,7 +1538,8 @@
       "write" : {
         "endpoint" : "/lore/doc",
         "field" : "file_path"
-      }
+      },
+      "layer" : "stable"
     } ],
     "body" : [ {
       "key" : "content_md_ru",
@@ -1501,7 +1549,8 @@
       "write" : {
         "endpoint" : "/lore/doc",
         "field" : "content_md_ru"
-      }
+      },
+      "layer" : "stable"
     }, {
       "key" : "content_md_en",
       "label" : "Текст (EN)",
@@ -1510,7 +1559,8 @@
       "write" : {
         "endpoint" : "/lore/doc",
         "field" : "content_md_en"
-      }
+      },
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
@@ -1617,24 +1667,29 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
       "kind" : "enum",
       "group" : "head",
-      "dict" : "decision_status"
+      "dict" : "decision_status",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "date",
       "label" : "Дата",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "adr",
       "label" : "ADR",
@@ -1681,7 +1736,8 @@
     "body" : [ {
       "key" : "body_md",
       "label" : "Решение",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     }, {
       "key" : "rationale_md",
       "label" : "Обоснование"
@@ -1796,29 +1852,34 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
       "kind" : "enum",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
       "labelKey" : "pp.field.priority",
       "kind" : "enum",
       "group" : "props",
-      "dict" : "priority"
+      "dict" : "priority",
+      "layer" : "stable"
     }, {
       "key" : "due_date",
       "label" : "Срок",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "owner",
       "label" : "Ответственный",
@@ -1833,12 +1894,14 @@
       "key" : "opened",
       "label" : "Открыт",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "closed",
       "label" : "Закрыт",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -1865,7 +1928,8 @@
     "body" : [ {
       "key" : "body_md",
       "label" : "Суть",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects" ]
@@ -1953,12 +2017,14 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "week",
       "label" : "Неделя",
@@ -1969,14 +2035,16 @@
       "label" : "Срок",
       "labelKey" : "pp.field.date",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
       "labelKey" : "pp.field.priority",
       "kind" : "enum",
       "group" : "props",
-      "dict" : "priority"
+      "dict" : "priority",
+      "layer" : "stable"
     }, {
       "key" : "products",
       "label" : "Продукты",
@@ -2003,7 +2071,9 @@
     } ],
     "body" : [ {
       "key" : "goal_md",
-      "label" : "Цель"
+      "label" : "Цель",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "decisions_md",
       "label" : "Решения"
@@ -2052,7 +2122,8 @@
       "key" : "code",
       "label" : "Тег",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "type",
       "label" : "Вид",
@@ -2098,7 +2169,9 @@
     "body" : [ {
       "key" : "description_md",
       "label" : "Описание",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "type", "date", "is_current", "week", "projects", "components" ]
@@ -2186,17 +2259,20 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "area",
       "label" : "Область",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "parent",
       "label" : "Родитель",
@@ -2215,12 +2291,14 @@
       "key" : "team",
       "label" : "Команда",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "icon",
       "label" : "Иконка",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "children",
       "label" : "Подкомпоненты",
@@ -2446,18 +2524,23 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "version",
       "label" : "Версия",
       "labelKey" : "pp.field.version",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "checked_at",
       "label" : "Проверено",
@@ -2477,7 +2560,9 @@
     "body" : [ {
       "key" : "content_md",
       "label" : "Сведения",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "version", "checked_at", "component" ]
@@ -2541,45 +2626,53 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "status",
       "label" : "Статус",
       "kind" : "enum",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "goal_level",
       "label" : "Уровень цели",
       "kind" : "enum",
       "group" : "props",
-      "dict" : "uc_goal_level"
+      "dict" : "uc_goal_level",
+      "layer" : "stable"
     }, {
       "key" : "rigor",
       "label" : "Оформление",
       "kind" : "enum",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
       "labelKey" : "pp.field.priority",
       "kind" : "enum",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "date",
       "label" : "Создан",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "shipped_at",
       "label" : "Выпущен",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "parent",
       "label" : "Родитель",
@@ -2635,17 +2728,21 @@
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     }, {
       "key" : "context_md",
       "label" : "Контекст",
-      "labelKey" : "pp.adr.context"
+      "labelKey" : "pp.adr.context",
+      "layer" : "stable"
     }, {
       "key" : "scenario_md",
-      "label" : "Сценарий"
+      "label" : "Сценарий",
+      "layer" : "stable"
     }, {
       "key" : "acceptance_md",
-      "label" : "Критерии приёмки"
+      "label" : "Критерии приёмки",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "goal_level", "rigor", "priority", "date", "shipped_at", "parent", "components", "projects" ]
@@ -2946,32 +3043,44 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "color",
       "label" : "Цвет",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "label_en",
       "label" : "Название (en)",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "icon",
       "label" : "Иконка",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "sort_order",
       "label" : "Порядок",
       "kind" : "number",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "kind",
       "label" : "Вид",
@@ -2981,7 +3090,9 @@
       "key" : "is_active",
       "label" : "Активен",
       "kind" : "bool",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable",
+      "historic" : true
     }, {
       "key" : "parent",
       "label" : "Родитель",
@@ -3125,7 +3236,8 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3141,12 +3253,14 @@
       "key" : "login",
       "label" : "Логин",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "avatar",
       "label" : "Аватар",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "projects", "login", "avatar" ]
@@ -3206,25 +3320,29 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "client_id",
       "label" : "Учётка",
       "labelKey" : "pp.field.clientId",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "agent_role",
       "label" : "Профиль",
       "labelKey" : "pp.field.agentRole",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "harness",
       "label" : "Оболочка",
       "labelKey" : "pp.field.harness",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "owner",
       "label" : "Владелец",
@@ -3330,12 +3448,14 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "kind",
       "label" : "Вид роли",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3351,7 +3471,8 @@
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "kind", "projects" ]
@@ -3466,23 +3587,27 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "severity",
       "label" : "Острота",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "date",
       "label" : "Создана",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "severity", "date" ]
@@ -3590,26 +3715,31 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "rank",
       "label" : "Ранг",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "date",
       "label" : "Создана",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     }, {
       "key" : "metric_md",
-      "label" : "Метрика"
+      "label" : "Метрика",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "rank", "date" ]
@@ -3717,28 +3847,33 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "kind",
       "label" : "Вид работы",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "importance",
       "label" : "Важность",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "date",
       "label" : "Создана",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     } ],
     "body" : [ {
       "key" : "body_md",
       "label" : "Описание",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "kind", "importance", "date" ]
@@ -3859,18 +3994,21 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "area",
       "label" : "Область",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "date",
       "label" : "Создан",
       "labelKey" : "pp.field.date",
       "kind" : "date",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "projects",
       "label" : "Проекты",
@@ -3886,7 +4024,9 @@
     "body" : [ {
       "key" : "content_md",
       "label" : "Текст",
-      "labelKey" : "pp.field.body"
+      "labelKey" : "pp.field.body",
+      "layer" : "stable",
+      "historic" : true
     } ],
     "props" : [ {
       "fields" : [ "area", "date", "projects" ]
@@ -4078,22 +4218,26 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
-      "required" : true
+      "required" : true,
+      "layer" : "stable"
     }, {
       "key" : "code",
       "label" : "Код",
       "kind" : "text",
-      "group" : "head"
+      "group" : "head",
+      "layer" : "stable"
     }, {
       "key" : "default_branch",
       "label" : "Основная ветка",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     }, {
       "key" : "is_private",
       "label" : "Приватный",
       "kind" : "text",
-      "group" : "props"
+      "group" : "props",
+      "layer" : "stable"
     } ],
     "props" : [ {
       "fields" : [ "default_branch", "is_private" ]

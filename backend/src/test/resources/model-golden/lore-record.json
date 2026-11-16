@@ -13,6 +13,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "name"
@@ -28,6 +33,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "sprint_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/status",
           "field" : "status"
@@ -49,6 +59,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "priority",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "priority"
@@ -70,6 +85,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -97,6 +117,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -109,6 +134,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -128,6 +158,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "TARGETS_MILESTONE"
@@ -143,6 +178,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "planned_start_date"
@@ -164,6 +204,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "planned_end_date"
@@ -185,6 +230,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "no_release_required"
@@ -205,6 +255,11 @@
           "value" : "code",
           "label" : "title"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "track_id"
@@ -227,6 +282,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -247,6 +307,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "context_md"
@@ -261,6 +326,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "outcome_md"
@@ -592,6 +662,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "name"
@@ -607,6 +682,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "sprint_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/status",
           "field" : "status"
@@ -628,6 +708,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "priority",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "priority"
@@ -649,6 +734,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -676,6 +766,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -688,6 +783,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -707,6 +807,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "TARGETS_MILESTONE"
@@ -722,6 +827,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "planned_start_date"
@@ -743,6 +853,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "planned_end_date"
@@ -764,6 +879,11 @@
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "no_release_required"
@@ -784,6 +904,11 @@
           "value" : "code",
           "label" : "title"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/plan",
           "field" : "track_id"
@@ -806,6 +931,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -826,6 +956,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "context_md"
@@ -840,6 +975,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/sprint/update",
           "field" : "outcome_md"
@@ -1285,6 +1425,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "title"
@@ -1300,6 +1445,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "task_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/status",
           "field" : "status"
@@ -1320,6 +1470,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -1337,6 +1492,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -1354,6 +1514,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "IN_PHASE"
@@ -1375,6 +1540,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "TAGGED_WITH"
@@ -1402,6 +1572,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -1421,6 +1596,11 @@
           "label" : "title",
           "group" : "kind"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "author_agent"
@@ -1443,6 +1623,11 @@
           "label" : "title",
           "group" : "kind"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "executor_agent"
@@ -1465,6 +1650,11 @@
           "label" : "title",
           "group" : "kind"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "reviewer_agent"
@@ -1480,6 +1670,11 @@
         "section" : "Оценка",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "effort_days"
@@ -1501,6 +1696,11 @@
         "section" : "Оценка",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "actual_days"
@@ -1517,6 +1717,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "task_type",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "task_type"
@@ -1533,6 +1738,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "work_class",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "work_class"
@@ -1561,6 +1771,11 @@
           "dir" : "out"
         },
         "relation" : "realization",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "uc_id"
@@ -1592,6 +1807,11 @@
           "dir" : "out"
         },
         "relation" : "realization",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "CLOSED_BY"
@@ -1613,6 +1833,11 @@
           "dir" : "in"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -1624,6 +1849,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "note_md"
@@ -1971,6 +2201,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "title"
@@ -1986,6 +2221,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "task_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/status",
           "field" : "status"
@@ -2006,6 +2246,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -2023,6 +2268,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -2040,6 +2290,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "IN_PHASE"
@@ -2061,6 +2316,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "TAGGED_WITH"
@@ -2088,6 +2348,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -2107,6 +2372,11 @@
           "label" : "title",
           "group" : "kind"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "author_agent"
@@ -2129,6 +2399,11 @@
           "label" : "title",
           "group" : "kind"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "executor_agent"
@@ -2151,6 +2426,11 @@
           "label" : "title",
           "group" : "kind"
         },
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "reviewer_agent"
@@ -2166,6 +2446,11 @@
         "section" : "Оценка",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "effort_days"
@@ -2187,6 +2472,11 @@
         "section" : "Оценка",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "actual_days"
@@ -2203,6 +2493,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "task_type",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "task_type"
@@ -2219,6 +2514,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "work_class",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "work_class"
@@ -2247,6 +2547,11 @@
           "dir" : "out"
         },
         "relation" : "realization",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "uc_id"
@@ -2278,6 +2583,11 @@
           "dir" : "out"
         },
         "relation" : "realization",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "CLOSED_BY"
@@ -2299,6 +2609,11 @@
           "dir" : "in"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -2310,6 +2625,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/task/edit",
           "field" : "note_md"
@@ -2745,6 +3065,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "name"
@@ -2760,6 +3085,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "adr_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/status",
           "field" : "status"
@@ -2780,6 +3110,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "date_created"
@@ -2801,6 +3136,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -2828,6 +3168,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -2855,6 +3200,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "TAGGED_WITH"
@@ -2869,6 +3219,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "file_path"
@@ -2883,6 +3238,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "context_md"
@@ -2913,6 +3273,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "decision_md"
@@ -2953,6 +3318,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "consequences_md"
@@ -3402,6 +3772,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "name"
@@ -3417,6 +3792,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "adr_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/status",
           "field" : "status"
@@ -3437,6 +3817,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "date_created"
@@ -3458,6 +3843,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -3485,6 +3875,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -3512,6 +3907,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "TAGGED_WITH"
@@ -3526,6 +3926,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "file_path"
@@ -3540,6 +3945,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "context_md"
@@ -3570,6 +3980,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "decision_md"
@@ -3610,6 +4025,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/adr",
           "field" : "consequences_md"
@@ -4201,6 +4621,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "title"
@@ -4222,6 +4647,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "spec_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "status"
@@ -4236,6 +4666,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "version"
@@ -4250,6 +4685,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "summary"
@@ -4270,6 +4710,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -4297,6 +4742,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -4317,6 +4767,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "file_path"
@@ -4331,6 +4786,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "content_md"
@@ -4500,6 +4960,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "title"
@@ -4521,6 +4986,11 @@
         "required" : false,
         "editable" : true,
         "dict" : "spec_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "status"
@@ -4535,6 +5005,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "version"
@@ -4549,6 +5024,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "summary"
@@ -4569,6 +5049,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -4596,6 +5081,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -4616,6 +5106,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "file_path"
@@ -4630,6 +5125,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : {
           "endpoint" : "/lore/spec",
           "field" : "content_md"
@@ -4839,6 +5339,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "title"
@@ -4853,6 +5358,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "kind"
@@ -4873,6 +5383,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -4894,6 +5409,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -4914,6 +5434,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "parent_doc_id"
@@ -4935,6 +5460,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -4946,6 +5476,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "file_path"
@@ -4960,6 +5495,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "content_md_ru"
@@ -4974,6 +5514,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "content_md_en"
@@ -5124,6 +5669,11 @@
         "group" : "head",
         "required" : true,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "title"
@@ -5138,6 +5688,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "kind"
@@ -5158,6 +5713,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
@@ -5179,6 +5739,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO_PROJECT"
@@ -5199,6 +5764,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "parent_doc_id"
@@ -5220,6 +5790,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5231,6 +5806,11 @@
         "group" : "props",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "file_path"
@@ -5245,6 +5825,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "content_md_ru"
@@ -5259,6 +5844,11 @@
         "group" : "body",
         "required" : false,
         "editable" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : {
           "endpoint" : "/lore/doc",
           "field" : "content_md_en"
@@ -5423,6 +6013,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5435,6 +6030,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "decision_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5452,6 +6052,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5463,6 +6068,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5480,6 +6090,11 @@
           "dir" : "out"
         },
         "relation" : "aggregation",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5504,6 +6119,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5522,6 +6142,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5546,6 +6171,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5557,6 +6187,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5580,6 +6215,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5779,6 +6419,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5791,6 +6436,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "decision_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5808,6 +6458,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5819,6 +6474,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5836,6 +6496,11 @@
           "dir" : "out"
         },
         "relation" : "aggregation",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5860,6 +6525,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5878,6 +6548,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5902,6 +6577,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -5913,6 +6593,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -5936,6 +6621,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6192,6 +6882,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6209,6 +6904,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6226,6 +6926,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6238,6 +6943,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "priority",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6249,6 +6959,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6260,6 +6975,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6277,6 +6997,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6288,6 +7013,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6299,6 +7029,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6317,6 +7052,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6335,6 +7075,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6346,6 +7091,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6493,6 +7243,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6510,6 +7265,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6527,6 +7287,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6539,6 +7304,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "priority",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6550,6 +7320,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6561,6 +7336,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6578,6 +7358,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6589,6 +7374,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6600,6 +7390,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6618,6 +7413,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6636,6 +7436,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6647,6 +7452,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6855,6 +7665,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6872,6 +7687,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6883,6 +7703,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6894,6 +7719,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6912,6 +7742,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "priority",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6923,6 +7758,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -6947,6 +7787,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6965,6 +7810,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6976,6 +7826,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -6987,6 +7842,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7087,6 +7947,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7104,6 +7969,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7115,6 +7985,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7126,6 +8001,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7144,6 +8024,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "priority",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7155,6 +8040,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7179,6 +8069,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7197,6 +8092,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7208,6 +8108,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7219,6 +8124,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7359,6 +8269,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7370,6 +8285,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7387,6 +8307,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7398,6 +8323,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7409,6 +8339,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7420,6 +8355,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7438,6 +8378,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7462,6 +8407,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7473,6 +8423,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7646,6 +8601,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7657,6 +8617,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7674,6 +8639,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7685,6 +8655,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7696,6 +8671,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7707,6 +8687,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7725,6 +8710,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7749,6 +8739,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -7760,6 +8755,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7982,6 +8982,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -7999,6 +9004,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8010,6 +9020,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -8033,6 +9048,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8044,6 +9064,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8055,6 +9080,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8066,6 +9096,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8085,6 +9120,11 @@
           "dir" : "in"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8098,6 +9138,11 @@
         "required" : false,
         "editable" : false,
         "multi" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8117,6 +9162,11 @@
           "dir" : "in"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8136,6 +9186,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8154,6 +9209,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8172,6 +9232,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8397,6 +9462,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -8414,6 +9484,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8425,6 +9500,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : "warn",
         "required_rules" : [ {
@@ -8448,6 +9528,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8459,6 +9544,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8470,6 +9560,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8481,6 +9576,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8500,6 +9600,11 @@
           "dir" : "in"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8513,6 +9618,11 @@
         "required" : false,
         "editable" : false,
         "multi" : true,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8532,6 +9642,11 @@
           "dir" : "in"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8551,6 +9666,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8569,6 +9689,11 @@
           "dir" : null
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8587,6 +9712,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8902,6 +10032,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8913,6 +10048,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8924,6 +10064,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8935,6 +10080,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8952,6 +10102,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -8963,6 +10118,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9053,6 +10213,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9064,6 +10229,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9075,6 +10245,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9086,6 +10261,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9103,6 +10283,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9114,6 +10299,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9239,6 +10429,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9250,6 +10445,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9261,6 +10461,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9273,6 +10478,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "uc_goal_level",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9284,6 +10494,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9295,6 +10510,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9306,6 +10526,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9317,6 +10542,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9334,6 +10564,11 @@
           "dir" : "in"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9353,6 +10588,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9371,6 +10611,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9389,6 +10634,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9408,6 +10658,11 @@
           "dir" : "in"
         },
         "relation" : "realization",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9419,6 +10674,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9430,6 +10690,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9441,6 +10706,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9452,6 +10722,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9827,6 +11102,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9838,6 +11118,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9849,6 +11134,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9861,6 +11151,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "uc_goal_level",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9872,6 +11167,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9883,6 +11183,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9894,6 +11199,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9905,6 +11215,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9922,6 +11237,11 @@
           "dir" : "in"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9941,6 +11261,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9959,6 +11284,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9977,6 +11307,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -9996,6 +11331,11 @@
           "dir" : "in"
         },
         "relation" : "realization",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10007,6 +11347,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10018,6 +11363,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10029,6 +11379,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10040,6 +11395,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10522,6 +11882,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10533,6 +11898,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10544,6 +11914,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10555,6 +11930,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10566,6 +11946,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10577,6 +11962,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10588,6 +11978,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10599,6 +11994,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10616,6 +12016,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10634,6 +12039,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10652,6 +12062,11 @@
           "dir" : "in"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10793,6 +12208,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10804,6 +12224,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10815,6 +12240,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10826,6 +12256,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10837,6 +12272,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10848,6 +12288,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10859,6 +12304,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10870,6 +12320,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10887,6 +12342,11 @@
           "dir" : "out"
         },
         "relation" : "composition",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10905,6 +12365,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -10923,6 +12388,11 @@
           "dir" : "in"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11074,6 +12544,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11092,6 +12567,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11103,6 +12583,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11114,6 +12599,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11194,6 +12684,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11212,6 +12707,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11223,6 +12723,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11234,6 +12739,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11326,6 +12836,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11337,6 +12852,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11348,6 +12868,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11359,6 +12884,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11376,6 +12906,11 @@
           "dir" : "out"
         },
         "relation" : "aggregation",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11394,6 +12929,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11502,6 +13042,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11513,6 +13058,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11524,6 +13074,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11535,6 +13090,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11552,6 +13112,11 @@
           "dir" : "out"
         },
         "relation" : "aggregation",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11570,6 +13135,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11691,6 +13261,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11702,6 +13277,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11720,6 +13300,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11731,6 +13316,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11879,6 +13469,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11890,6 +13485,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11908,6 +13508,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -11919,6 +13524,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12085,6 +13695,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12096,6 +13711,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12107,6 +13727,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12118,6 +13743,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12258,6 +13888,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12269,6 +13904,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12280,6 +13920,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12291,6 +13936,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12448,6 +14098,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12459,6 +14114,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12470,6 +14130,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12481,6 +14146,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12492,6 +14162,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12637,6 +14312,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12648,6 +14328,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12659,6 +14344,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12670,6 +14360,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12681,6 +14376,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12843,6 +14543,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12854,6 +14559,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12865,6 +14575,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12876,6 +14591,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -12887,6 +14607,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13042,6 +14767,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13053,6 +14783,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13064,6 +14799,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13075,6 +14815,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13086,6 +14831,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13259,6 +15009,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13270,6 +15025,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13281,6 +15041,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13299,6 +15064,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13310,6 +15080,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13400,6 +15175,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13411,6 +15191,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13422,6 +15207,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13440,6 +15230,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13451,6 +15246,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : true,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13556,6 +15356,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "qg_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13567,6 +15372,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13578,6 +15388,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13596,6 +15411,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13614,6 +15434,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13625,6 +15450,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13636,6 +15466,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13647,6 +15482,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13658,6 +15498,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13669,6 +15514,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13680,6 +15530,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13779,6 +15634,11 @@
         "required" : false,
         "editable" : false,
         "dict" : "qg_status",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13790,6 +15650,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13801,6 +15666,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13819,6 +15689,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13837,6 +15712,11 @@
           "dir" : "out"
         },
         "relation" : "attribute",
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13848,6 +15728,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13859,6 +15744,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13870,6 +15760,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13881,6 +15776,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13892,6 +15792,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -13903,6 +15808,11 @@
         "group" : "body",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14014,6 +15924,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14025,6 +15940,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14036,6 +15956,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14047,6 +15972,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14234,6 +16164,11 @@
         "group" : "head",
         "required" : true,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14245,6 +16180,11 @@
         "group" : "head",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14256,6 +16196,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
@@ -14267,6 +16212,11 @@
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]

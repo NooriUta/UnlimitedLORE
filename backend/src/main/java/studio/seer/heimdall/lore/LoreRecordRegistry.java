@@ -53,13 +53,34 @@ final class LoreRecordRegistry {
      */
     record Field(String key, String label, String labelKey, String kind, String group, String dict,
                  boolean editable, Write write, boolean multi, boolean required,
-                 String refType, String rel, String dir, String relation, Options options) {
+                 String refType, String rel, String dir, String relation, Options options,
+                 String shortLabel, String definition, String description, String layer, boolean historic) {
         Field(String key, String label, String labelKey, String kind, String group, String dict,
               boolean editable, Write write, boolean multi, boolean required,
               String refType, String rel, String dir, String relation) {
             this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
-                refType, rel, dir, relation, null);
+                refType, rel, dir, relation, null, null, null, null, null, false);
         }
+    }
+
+    /**
+     * MDL-02: слой поля (решение «два слоя модели»). {@code stable} — приложение читает или пишет
+     * поле в своей логике, оно объявлено в схеме базы; {@code optional} — только показывается или
+     * хранит необязательное сведение, живёт в модели. Не задано — слой ещё не решён.
+     */
+    static final List<String> LAYERS = List.of("stable", "optional");
+
+    /**
+     * MDL-02: тексты и признаки поля, одинаковые у поля и у раздела текста. Ключи есть всегда:
+     * {@code null} — «не задано», отсутствие ключа — «сервер старше формата».
+     */
+    private static void textsJson(Map<String, Object> m, String shortLabel, String definition, String description,
+                                  String layer, boolean historic) {
+        m.put("short_label", shortLabel);
+        m.put("definition", definition);
+        m.put("description", description);
+        m.put("layer", layer);
+        m.put("historic", historic);
     }
 
     /**
@@ -70,7 +91,8 @@ final class LoreRecordRegistry {
     record Options(String slice, String param, String value, String label, String group) {}
 
     /** Раздел текста записи; каждый пишется своим полем (у ADR — три поля adr_set). */
-    record Body(String key, String label, String labelKey, boolean editable, Write write) {}
+    record Body(String key, String label, String labelKey, boolean editable, Write write,
+                String shortLabel, String definition, String description, String layer, boolean historic) {}
 
     /** Раздел «Свойств»; {@code section == null} — общий блок сверху. */
     record PropSection(String section, List<String> fields) {}
@@ -152,6 +174,7 @@ final class LoreRecordRegistry {
             m.put("group", "body");
             m.put("required", false);
             m.put("editable", b.editable());
+            textsJson(m, b.shortLabel(), b.definition(), b.description(), b.layer(), b.historic());
             m.put("write", writeJson(b.write()));
             fields.add(m);
         }
@@ -209,6 +232,7 @@ final class LoreRecordRegistry {
             if (f.options().group() != null) o.put("group", f.options().group());
             m.put("options", o);
         }
+        textsJson(m, f.shortLabel(), f.definition(), f.description(), f.layer(), f.historic());
         m.put("write", writeJson(f.write()));
         return m;
     }
