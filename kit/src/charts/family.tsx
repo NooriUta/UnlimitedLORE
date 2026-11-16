@@ -232,6 +232,9 @@ export function LineChart(p: LineChartProps) {
 
 // ── scatter ────────────────────────────────────────────────────────────────
 export interface ScatterPoint { x: number; y: number; label?: string; group?: string }
+/** Больше точек — подписи у точек не рисуются (имена — в таблице). */
+export const SCATTER_LABELS_MAX = 20;
+
 export interface ScatterChartProps extends ChartCommon { points: ScatterPoint[]; xTitle?: string; groups?: { key: string; label: string }[] }
 
 export function ScatterChart(p: ScatterChartProps) {
@@ -242,6 +245,9 @@ export function ScatterChart(p: ScatterChartProps) {
   const x = scale(Math.min(...xs), Math.max(...xs), PAD.l + 8, W - PAD.r - 8);
   const y = scale(Math.min(...ys, ...yt), Math.max(...ys, ...yt), H - PAD.b, PAD.t + 6);
   const gi = (g?: string) => Math.max(0, (p.groups ?? []).findIndex(x2 => x2.key === g));
+  // Подписи у точек — пока точек немного: на сотнях они сливаются в кашу и вылезают за карточку
+  // (препрод 16.11, Lead time — 1500 задач). Имена остаются в «Таблицей».
+  const showLabels = p.points.length <= SCATTER_LABELS_MAX;
   return (
     <ChartFrame {...p} kind="scatter" empty={p.points.length === 0}
       summary={summaryText(lang, ys, undefined, p.unit)}
@@ -257,7 +263,7 @@ export function ScatterChart(p: ScatterChartProps) {
         {p.points.map((q, i) => (
           <g key={i} data-point="">
             <circle cx={x(q.x)} cy={y(q.y)} r={4} fill={tone(gi(q.group))} />
-            {q.label && (x(q.x) > W * 0.75
+            {showLabels && q.label && (x(q.x) > W * 0.75
               ? <text x={x(q.x) - 6} y={y(q.y) - 6} textAnchor="end" className="sk-chart__lbl">{q.label}</text>
               : <text x={x(q.x) + 6} y={y(q.y) - 6} textAnchor="start" className="sk-chart__lbl">{q.label}</text>)}
           </g>
