@@ -447,3 +447,20 @@ describe('группа: несколько разделов — ОДНА вкл�
     expect(out.map(i => i.id)).toEqual(['content', 'dependsOn', 'blocks', 'phases', 'journal']);
   });
 });
+
+// Пилот 16.11: модель назвала служебные «Связи» и «Журнал», а вкладки связей, которых модель не
+// назвала, вставали ПОСЛЕ них: «Обзор · Пройти как игрок · Связи · Журнал · По смыслу · Граф».
+describe('applySections: не названные разделы записи — до служебных вкладок', () => {
+  const sec = (key: string, i: number) => ({ key, source: 'relation' as const, ref: key, order: i, slot: 'own' as const });
+  const order = { decided: true, sections: [sec('overview', 0), sec('play', 1), sec('links', 2), sec('journal', 3)], notes: [] } as never;
+  const items = ['overview', 'play', 'rel:association', 'links', 'graph', 'journal'].map(id => ({ id }));
+  const SERVICE = new Set(['links', 'graph', 'journal', 'history']);
+
+  it('со служебным набором — «По смыслу» перед «Связями», служебные не названные — в хвосте', () => {
+    expect(applySections(items, order, SERVICE).map(i => i.id)).toEqual(['overview', 'play', 'rel:association', 'links', 'journal', 'graph']);
+  });
+
+  it('без набора — прежний порядок (положительный контроль: правка не тронула умолчание)', () => {
+    expect(applySections(items, order).map(i => i.id)).toEqual(['overview', 'play', 'links', 'journal', 'rel:association', 'graph']);
+  });
+});
