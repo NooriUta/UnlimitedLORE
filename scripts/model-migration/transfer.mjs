@@ -22,6 +22,7 @@ import { applyMap } from './apply-map.mjs';
 
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
+import { derivePhaseStatus } from './status-unify.mjs';
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
 const SERVICE = ['MigLeftover'], EDGE = 'HAS_STATE';
@@ -82,6 +83,40 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
         const fb = own.map(v => v.res.titleFallback).filter(Boolean);
         if (fb.length) { if (given(b.res.out.title)) merge.phase_title_already_set++; else { b.res.out.title = fb[0]; merge.phase_title_from_status++; } }
       }
+    }
+  }
+  // Статус фазы без кода — минимальный по задачам фазы (слово владелицы 16.11.2026). Задача → фаза по связи
+  // IN_PHASE источника, статус задачи — её текущей версии после решений. Несведённое значение статуса фазы
+  // уходит из остатка: оно решено правилом, исходный текст остаётся в status_note.
+  const derive = RULES.dictionaries.phase_status && RULES.dictionaries.phase_status.derive;
+  merge.phase_status_from_tasks = 0;
+  if (derive) {
+    const curOf = new Map(); // rid задачи → код текущей версии
+    for (const v of calc.KnowTaskHist) {
+      const p = parentOf[v.rid];
+      if (!p || given(v.res.out.valid_to)) continue;
+      const prev = curOf.get(p);
+      if (!prev || String(v.res.out.valid_from || '') > prev.at) curOf.set(p, { at: String(v.res.out.valid_from || ''), code: v.res.out.status });
+    }
+    const tasksOf = new Map(); // rid фазы → коды задач
+    let last = '#-1:-1';
+    for (;;) {
+      const rows = await db.src(`SELECT @rid AS t, out('IN_PHASE').@rid AS ph FROM KnowTask WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
+      if (!rows.length) break;
+      for (const x of rows) for (const ph of (x.ph || []).filter(Boolean)) {
+        const c = curOf.get(x.t);
+        (tasksOf.get(ph) || tasksOf.set(ph, []).get(ph)).push(c && c.code ? c.code : 'НЕТ_СТАТУСА');
+      }
+      last = rows[rows.length - 1].t; if (rows.length < 5000) break;
+    }
+    for (const v of calc.KnowPhaseHist) {
+      if (given(v.res.out.status)) continue;
+      const ph = parentOf[v.rid];
+      const codes = [...(tasksOf.get(ph) || [])].sort();
+      const d = derivePhaseStatus(codes, derive);
+      v.res.out.status = d.code;
+      v.res.rejects = v.res.rejects.filter(x => x.field !== 'status_raw');
+      merge.phase_status_from_tasks++;
     }
   }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {

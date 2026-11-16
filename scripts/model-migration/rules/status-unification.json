@@ -198,7 +198,36 @@
       "synonyms": {
         "IN PROGRESS": "ACTIVE"
       },
-      "unrecognized_why": "похоже на название фазы, а не на статус: по правилу карты переноса текст уходит в название фазы, если оно пусто"
+      "unrecognized_why": "похоже на название фазы, а не на статус: по правилу карты переноса текст уходит в название фазы, если оно пусто",
+      "derive": {
+        "_about": "Слово владелицы 16.11.2026: «статус ставишь минимальный по задачам входящим в фазу». Фаза, у версии которой статус не свёлся к коду (в поле лежит название или статус задачи, которого у фазы нет, или пусто), получает самый ранний этап пути среди своих задач (связь IN_PHASE, текущая версия задачи). Отменённые задачи не учитываются; задач нет — empty.",
+        "from": "tasks_min",
+        "order": [
+          "BACKLOG",
+          "PLANNED",
+          "ACTIVE",
+          "DONE"
+        ],
+        "map": {
+          "TODO": "BACKLOG",
+          "BACKLOG": "BACKLOG",
+          "PLANNED": "PLANNED",
+          "DESIGN": "PLANNED",
+          "ACTIVE": "ACTIVE",
+          "WAITING": "ACTIVE",
+          "PARTIAL": "ACTIVE",
+          "REVIEW": "ACTIVE",
+          "READY_FOR_DEPLOY": "ACTIVE",
+          "UAT": "ACTIVE",
+          "BLOCKED": "ACTIVE",
+          "FAILED": "ACTIVE",
+          "DONE": "DONE"
+        },
+        "skip": [
+          "CANCELLED"
+        ],
+        "empty": "BACKLOG"
+      }
     },
     "adr_status": {
       "kind": "status",

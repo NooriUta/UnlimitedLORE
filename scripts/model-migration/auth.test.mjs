@@ -53,4 +53,8 @@ test('настройки входа из файла доступа: без ад�
   assert.equal(c.configured, true);
   assert.equal(c.role, 'superadmin', 'роль владельца по умолчанию — как в LORE (BYPASS_REALM_ROLES)');
   assert.equal(kcConfig({ MIG_KC_URL: 'u', MIG_KC_REALM: 'r', MIG_KC_CLIENT: 'c' }).configured, false, 'без проекта-владельца проверку по базе не сделать');
+  // слово владелицы 16.11.2026: «нового клиента не надо ставь лоровского клиента»
+  const d = kcConfig({ MIG_KC_URL: 'u', MIG_KC_REALM: 'omilore', MIG_OWNER_PROJECT: 'P' });
+  assert.equal(d.client, 'lore-app');
+  assert.equal(d.configured, true);
 });

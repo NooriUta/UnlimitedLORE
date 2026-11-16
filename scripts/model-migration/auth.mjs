@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 /** Настройки входа из файла доступа. Без адреса, области, клиента или проекта-владельца вход не настроен. */
 export function kcConfig(env) {
   const c = {
-    url: (env.MIG_KC_URL || '').trim(), realm: (env.MIG_KC_REALM || '').trim(), client: (env.MIG_KC_CLIENT || '').trim(),
+    url: (env.MIG_KC_URL || '').trim(), realm: (env.MIG_KC_REALM || '').trim(), client: (env.MIG_KC_CLIENT || 'lore-app').trim(), // клиент веба LORE — слово владелицы 16.11.2026: «нового клиента не надо, ставь лоровского клиента»
     project: (env.MIG_OWNER_PROJECT || '').trim(), role: (env.MIG_OWNER_ROLE || 'superadmin').trim(),
   };
   c.configured = Boolean(c.url && c.realm && c.client && c.project);

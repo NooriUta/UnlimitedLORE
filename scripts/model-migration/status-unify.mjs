@@ -42,6 +42,11 @@ export function checkRules(rules) {
       for (const l of langs) if (blank((c.labels || {})[l])) bad.push(`${name}.${c.code}: нет подписи на языке ${l}`);
     }
     if (!codes.size) bad.push(`${name}: справочник без значений`);
+    if (d.derive) {
+      const dv = d.derive;
+      if (dv.from !== 'tasks_min') bad.push(`${name}: способ вывода «${dv.from}» неизвестен`);
+      for (const c of [...(dv.order || []), ...Object.values(dv.map || {}), dv.empty]) if (!codes.has(head(c))) bad.push(`${name}: вывод по задачам ведёт к коду ${c}, которого в справочнике нет`);
+    }
     for (const [from, to] of Object.entries(d.synonyms || {})) if (!codes.has(head(to))) bad.push(`${name}: синоним «${from}» ведёт к коду ${to}, которого в справочнике нет`);
   }
   const allCodes = new Set(Object.values(rules.dictionaries || {}).flatMap(d => (d.codes || []).map(c => c.code)));
@@ -146,6 +151,8 @@ export function buildDialog(counts, rules, decisionsDoc) {
     row.dict = src.dict;
     if (st.kind === 'known') { rows.push({ ...row, state: 'unified', code: st.code }); continue; }
     if (st.kind === 'empty' && !src.required) { rows.push({ ...row, state: 'unified', code: null }); continue; }
+    // Справочник с правилом вывода (фаза — по задачам): код считается при переносе, решения человека не ждёт.
+    if (dict.derive) { rows.push({ ...row, state: 'unified', code: null, derived: dict.derive.from }); continue; }
     const why = st.kind === 'empty' ? EMPTY : dict.kind === 'status' ? UNKNOWN : 'значение вне справочника';
     const d = findDecision(decisions, row, why);
     if (d && d.action !== 'defer') {
@@ -186,4 +193,21 @@ export function buildDialog(counts, rules, decisionsDoc) {
 export function statusDictOf(rules, scope) {
   const s = (rules.sources || []).find(x => x.type === scope.type && x.field === scope.field);
   return s ? s.dict : null;
+}
+
+/** Статус фазы по задачам: самый ранний этап пути среди неотменённых задач (правило derive справочника). */
+export function derivePhaseStatus(taskCodes, derive) {
+  const odd = [], stages = [];
+  let skipped = 0;
+  for (const t of taskCodes) {
+    if ((derive.skip || []).includes(t)) { skipped++; continue; }
+    const m = derive.map[t];
+    if (m) stages.push(m); else odd.push(t);
+  }
+  if (!stages.length) {
+    const why = taskCodes.length ? `все ${skipped} задач отменены` + (odd.length ? `, незнакомые статусы: ${odd.join(', ')}` : '') : 'задач нет';
+    return { code: derive.empty, why: `${why} — статус по умолчанию ${derive.empty}` };
+  }
+  const code = derive.order.find(o => stages.includes(o));
+  return { code, why: `минимальный по ${stages.length} задач фазы` + (skipped ? `, отменённых не считали: ${skipped}` : '') + (odd.length ? `; незнакомые статусы задач: ${odd.join(', ')}` : '') };
 }
