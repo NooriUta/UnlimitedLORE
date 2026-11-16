@@ -94,6 +94,13 @@ public class LoreSpecResource extends LoreResourceBase {
             // exists (164 KnowSpecHist rows do). A vertex-only write is therefore invisible
             // for every ingested spec. Body fields go to the open hist row (created here
             // when missing); the vertex keeps title/file_path/component_id + a fallback copy.
+            // Новая спека без статуса — первый статус справочника (слово владелицы 16.11.2026).
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> had = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql", "SELECT count(*) AS n FROM KnowSpec WHERE spec_id=:id",
+                    Map.of("id", req.spec_id()))).await().indefinitely().result();
+            boolean isNewSpec = had == null || had.isEmpty() || !(had.get(0).get("n") instanceof Number hn) || hn.intValue() == 0;
+            final String st = isNewSpec ? CreateDefaultStatus.forNew("spec", req.status()) : req.status();
             StringBuilder sql = new StringBuilder("UPDATE KnowSpec SET spec_id=:id");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("id", req.spec_id());
@@ -110,12 +117,12 @@ public class LoreSpecResource extends LoreResourceBase {
                 sql.toString(), p)).await().indefinitely();
 
             boolean bodyProvided = req.content_md() != null || req.version() != null
-                || req.summary() != null || req.status() != null;
+                || req.summary() != null || st != null;
             boolean histWritten = false;
             // S2-13: смена статуса спеки — новая версия истории через единый сервис
             // (раньше статус правился на открытой строке на месте, и прежний терялся).
             // Тела ниже лягут в открытую версию — уже со свежим статусом.
-            if (req.status() != null && !req.status().isBlank()) {
+            if (st != null && !st.isBlank()) {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> cur = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -125,9 +132,9 @@ public class LoreSpecResource extends LoreResourceBase {
                     .await().indefinitely().result();
                 String was = cur == null || cur.isEmpty() ? null
                     : StatusHistoryService.statusOf(StatusHistoryService.KINDS.get("spec"), cur.get(0), null);
-                if (was == null || !was.equals(req.status())) {
+                if (was == null || !was.equals(st)) {
                     StatusHistoryService.Outcome so = StatusHistoryService.transition(
-                        statusDb(), "spec", req.spec_id(), null, req.status(), changeAuthor());
+                        statusDb(), "spec", req.spec_id(), null, st, changeAuthor());
                     if (so instanceof StatusHistoryService.Outcome.Conflict c)
                         throw new Scd2Guard.ConflictException(c.detail(), c.current());
                 }
