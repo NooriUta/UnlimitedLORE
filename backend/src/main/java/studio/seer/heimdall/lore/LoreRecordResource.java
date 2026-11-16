@@ -269,6 +269,16 @@ public class LoreRecordResource extends LoreResourceBase {
             facts.put("version_error", versionError);
         }
         dataState.add(LoreRecordDataState.version(versionError));
+        // MDL-10 (D-2026-LORE-FREE-FIELDS-SHOWN): значения вершины вне модели — отдельным блоком, только чтение.
+        // Не прочиталось — блока нет, а причина названа в facts: «нет» и «не читали» различимы.
+        Map<String, Object> unmodeled = null;
+        if (LoreRecordUnmodeled.reads(type)) try {
+            List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordUnmodeled.sql(type), Map.of("id", id));
+            if (v.isEmpty()) facts.put("unmodeled_state", "not_read");
+            else unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+        } catch (RuntimeException e) {
+            facts.put("unmodeled_error", e.getMessage());
+        }
         Map<String, Object> rec = recordHead(type, id, (String) values.get("title"), status, version);
         // Вид обоих концов в каждой связи (fromKind/toKind) — клиент не угадывает его по записям.
         LoreRecordValues.withKinds(type, links);
@@ -277,6 +287,7 @@ public class LoreRecordResource extends LoreResourceBase {
             dataState);
         out.put("schema", recordSchema(type));
         out.put("computed", computed);
+        if (unmodeled != null && !unmodeled.isEmpty()) out.put("unmodeled", unmodeled);
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());
