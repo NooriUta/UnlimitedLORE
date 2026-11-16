@@ -2005,7 +2005,8 @@
       "dir" : "out",
       "targetType" : "project",
       "relation" : "attribute",
-      "place" : "prop"
+      "place" : "prop",
+      "manageable" : true
     }, {
       "key" : "tags",
       "label" : "Теги",
@@ -2235,7 +2236,8 @@
       "dir" : "out",
       "targetType" : "project",
       "relation" : "attribute",
-      "place" : "prop"
+      "place" : "prop",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -4589,7 +4591,8 @@
       "dir" : "out",
       "targetType" : "project",
       "relation" : "attribute",
-      "place" : "prop"
+      "place" : "prop",
+      "manageable" : true
     }, {
       "key" : "adrs",
       "label" : "ADR",

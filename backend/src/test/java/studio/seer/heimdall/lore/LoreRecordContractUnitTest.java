@@ -214,7 +214,37 @@ class LoreRecordContractUnitTest {
     void unknownRelationListsAllowedOnesForType() {
         List<String> allowed = LoreRecordRelationRoutes.allowed("adr");
         assertTrue(allowed.contains("DEPENDS_ON:out") && allowed.contains("SUPERSEDES:in"), allowed.toString());
-        assertEquals(List.of(), LoreRecordRelationRoutes.allowed("decision"));
+        assertEquals(List.of(), LoreRecordRelationRoutes.allowed("feature"));
+    }
+
+    /**
+     * AP-PROJECT-LINK-UI: у типа есть дверь бэкенда {@code <type>/project} — значит, в паспорте
+     * поле «Проекты» обязано быть управляемым (маршрут BELONGS_TO_PROJECT:out). Раньше двери
+     * решения, вопроса и ранбука были, а маршрута не было: в паспорте поле только для чтения,
+     * привязать второй проект можно было лишь через MCP.
+     */
+    @Test
+    void everyProjectDoorHasPassportRoute() {
+        List<String> doors = new java.util.ArrayList<>();
+        java.util.regex.Pattern door = java.util.regex.Pattern.compile("([a-z]+)/project");
+        for (Class<?> c : List.of(LoreSprintTaskResource.class, LoreAdrResource.class, LoreSpecResource.class,
+                LoreDocResource.class, LoreDecisionResource.class, LoreQuestionResource.class, LoreRunbookResource.class))
+            for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                jakarta.ws.rs.Path p = m.getAnnotation(jakarta.ws.rs.Path.class);
+                if (p == null) continue;
+                java.util.regex.Matcher x = door.matcher(p.value());
+                if (x.matches()) doors.add(x.group(1));
+            }
+        assertTrue(doors.containsAll(List.of("sprint", "adr", "doc", "decision", "question", "runbook")), doors.toString());
+        for (String t : doors)
+            assertNotNull(LoreRecordRelationRoutes.find(t, "BELONGS_TO_PROJECT", "out"),
+                "дверь " + t + "/project есть, а маршрута паспорта нет — поле «Проекты» не редактируется");
+        assertEquals(LoreRecordRelationRoutes.Handler.DECISION_PROJECT,
+            LoreRecordRelationRoutes.find("decision", "BELONGS_TO_PROJECT", "out").handler());
+        assertEquals(LoreRecordRelationRoutes.Handler.QUESTION_PROJECT,
+            LoreRecordRelationRoutes.find("question", "BELONGS_TO_PROJECT", "out").handler());
+        assertEquals(LoreRecordRelationRoutes.Handler.RUNBOOK_PROJECT,
+            LoreRecordRelationRoutes.find("runbook", "BELONGS_TO_PROJECT", "out").handler());
     }
 
     @Test

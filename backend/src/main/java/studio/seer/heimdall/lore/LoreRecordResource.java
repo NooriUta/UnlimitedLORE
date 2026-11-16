@@ -44,8 +44,11 @@ public class LoreRecordResource extends LoreResourceBase {
 
     @Inject AidaLoreResource sliceResource;      // проектный скоуп вызывающего — тем же резолвером, что у /lore/slice
     @Inject LoreSprintTaskResource sprintTask;
+    @Inject MiniloreHolderReader holderReader;
     @Inject LoreAdrResource adrResource;
     @Inject LoreQuestionResource questionResource;
+    @Inject LoreDecisionResource decisionResource;
+    @Inject LoreRunbookResource runbookResource;
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
@@ -105,6 +108,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     @io.smallrye.common.annotation.Blocking
     public Response record(@PathParam("type") String type, @PathParam("id") String id,
+                           @jakarta.ws.rs.QueryParam("with") String with,
                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         if (!LoreRecordRegistry.TYPES.contains(type))
@@ -122,7 +126,21 @@ public class LoreRecordResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
         boolean identified = role != null && !role.isBlank();
-        return NEW_ID.equals(id) ? newRecord(type, role, identified) : existing(type, id, role, identified, scope);
+        if (NEW_ID.equals(id)) return newRecord(type, role, identified);
+        Response found = existing(type, id, role, identified, scope);
+        // LINKS-VIEW-HOLDER: «сессия у записи» — только по просьбе (?with=holders) и только у найденной записи:
+        // скоуп уже проверен выше, а лишний поход к серверу miniLORE не ложится на каждое открытие паспорта.
+        if (found.getStatus() == 200 && with != null && java.util.Arrays.asList(with.split(",")).contains("holders")
+            && found.getEntity() instanceof Map<?, ?> body) {
+            @SuppressWarnings("unchecked") Map<String, Object> out = (Map<String, Object>) body;
+            out.put("holders", holderReader.read(id).toJson());
+        }
+        return found;
+    }
+
+    /** Паспорт без дополнительных блоков — прежняя форма вызова (тесты и внутренние вызывающие). */
+    Response record(String type, String id, String role) {
+        return record(type, id, null, role);
     }
 
     private Response newRecord(String type, String role, boolean identified) {
@@ -609,6 +627,10 @@ public class LoreRecordResource extends LoreResourceBase {
             case SPEC_PROJECT -> specResource.linkSpec(new LoreSpecResource.SpecLinkRequest(a, "project", b, action), role);
             case DOC_COMPONENT -> docResource.linkDocComponent(new LoreDocResource.DocComponentLinkRequest(a, b, action), role);
             case DOC_PROJECT -> docResource.linkDocProject(new LoreDocResource.DocProjectLinkRequest(a, b, action), role);
+            case DECISION_PROJECT -> decisionResource.linkProject(new LoreDecisionResource.DProjectRequest(a, b, action), role);
+            case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
+            case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
+                new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
         };
     }
 }

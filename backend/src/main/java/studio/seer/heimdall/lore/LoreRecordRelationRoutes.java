@@ -30,7 +30,9 @@ final class LoreRecordRelationRoutes {
         ADR_DEPENDS_ON, ADR_SUPERSEDES, ADR_COMPONENT, ADR_PROJECT, ADR_TAG,
         SPEC_COMPONENT, SPEC_PROJECT,
         // S5-DOC-PASSPORT: компонент и проекты документа — штатные doc/component, doc/project.
-        DOC_COMPONENT, DOC_PROJECT
+        DOC_COMPONENT, DOC_PROJECT,
+        // AP-PROJECT-LINK-UI: проекты решения, вопроса и ранбука — штатные decision/project, question/project, runbook/project.
+        DECISION_PROJECT, QUESTION_PROJECT, RUNBOOK_PROJECT
     }
 
     record Route(String type, String rel, String dir, Handler handler, boolean reversed) {}
@@ -71,7 +73,11 @@ final class LoreRecordRelationRoutes {
         r("spec", "BELONGS_TO_PROJECT", "out", Handler.SPEC_PROJECT, false),
         // документ (S5-DOC-PASSPORT)
         r("doc", "BELONGS_TO", "out", Handler.DOC_COMPONENT, false),
-        r("doc", "BELONGS_TO_PROJECT", "out", Handler.DOC_PROJECT, false)
+        r("doc", "BELONGS_TO_PROJECT", "out", Handler.DOC_PROJECT, false),
+        // решение, вопрос, ранбук (AP-PROJECT-LINK-UI) — добавить и снять по одному проекту, набор не заменяется
+        r("decision", "BELONGS_TO_PROJECT", "out", Handler.DECISION_PROJECT, false),
+        r("question", "BELONGS_TO_PROJECT", "out", Handler.QUESTION_PROJECT, false),
+        r("runbook", "BELONGS_TO_PROJECT", "out", Handler.RUNBOOK_PROJECT, false)
     );
 
     /** Маршрут или {@code null}: ребра у типа нет либо путь привязки для него не заведён. */
