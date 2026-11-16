@@ -2046,6 +2046,14 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Decision",
     "labelPl" : "Decyzja"
@@ -2371,6 +2379,14 @@
       "targetType" : "product",
       "relation" : "attribute",
       "place" : "prop"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Milestone",
     "labelPl" : "Kamień milowy"
@@ -2537,6 +2553,14 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Release",
     "labelPl" : "Wydanie"
@@ -4590,6 +4614,14 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Runbook",
     "labelPl" : "Runbook"

@@ -7398,6 +7398,15 @@
         "target_type" : "any",
         "place" : "link_tab",
         "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -7885,6 +7894,15 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
         "manageable" : false
       } ],
       "requirements" : [ {
@@ -9306,6 +9324,15 @@
         "target_type" : "product",
         "place" : "prop",
         "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -9669,6 +9696,15 @@
         "dir" : "out",
         "target_type" : "product",
         "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
         "manageable" : false
       } ],
       "requirements" : [ {
@@ -10096,6 +10132,15 @@
         "target_type" : "any",
         "place" : "link_tab",
         "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -10501,6 +10546,15 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
         "manageable" : false
       } ],
       "requirements" : [ {
@@ -18076,6 +18130,15 @@
         "target_type" : "any",
         "place" : "link_tab",
         "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false
       } ],
       "requirements" : [ ],
       "requirements_block" : "unknown"
@@ -18283,6 +18346,15 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
         "manageable" : false
       } ],
       "requirements" : [ ],

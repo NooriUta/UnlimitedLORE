@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "5f52f2195018d9d3",
+  "version" : "ba94de81125cdb4f",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate" ],
@@ -4632,6 +4632,15 @@
         "target_type" : "any",
         "place" : "link_tab",
         "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -5666,6 +5675,15 @@
         "target_type" : "product",
         "place" : "prop",
         "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -6144,6 +6162,15 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
         "manageable" : false
       } ],
       "requirements" : [ {
@@ -10218,6 +10245,15 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
         "manageable" : false
       } ],
       "requirements" : [ ],

@@ -43,6 +43,16 @@ class LoreRecordUnmodeledTest {
     }
 
     @Test
+    void serviceFieldsOfTheApprovedListNeverAppear() {
+        // Находка со стенда 16.11.2026: у любого спринта на вершине есть updated_at — блок показал бы его
+        // у каждой записи. По решению служебные поля в блок не попадают.
+        Map<String, Object> props = vertex("sprint_id", "SPRINT_X", "branch_ref", "feature/x");
+        for (String s : LoreRecordUnmodeled.SERVICE) props.put(s, "2026-11-16T00:00:00Z");
+        assertEquals(14, LoreRecordUnmodeled.SERVICE.size(), "перечень служебных полей — четырнадцать");
+        assertEquals(List.of("branch_ref"), List.copyOf(LoreRecordUnmodeled.of("sprint", props).keySet()));
+    }
+
+    @Test
     void emptyValuesAreSkippedAndKeysAreSorted() {
         Map<String, Object> u = LoreRecordUnmodeled.of("sprint", vertex(
             "zeta", "z", "alpha", "a", "empty_text", "  ", "empty_list", List.of(), "nothing", null));
