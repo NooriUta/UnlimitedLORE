@@ -112,3 +112,11 @@ describe('ширина по контейнеру без растяжения (п
     } finally { globalThis.ResizeObserver = RO; }
   });
 });
+
+describe('scatter: подпись у правого края не обрезается (препрод 16.11: «claude-so…»)', () => {
+  it('точка в правой четверти — подпись слева от неё (text-anchor end)', () => {
+    const { container } = wrap(<ScatterChart title="Парето" points={[{ x: 100, y: 1, label: 'левая' }, { x: 1000, y: 2, label: 'правая' }]} />);
+    const anchors = [...container.querySelectorAll('[data-point] text')].map(t => [t.textContent, t.getAttribute('text-anchor')]);
+    expect(anchors).toEqual([['левая', 'start'], ['правая', 'end']]);
+  });
+});

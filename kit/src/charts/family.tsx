@@ -257,7 +257,9 @@ export function ScatterChart(p: ScatterChartProps) {
         {p.points.map((q, i) => (
           <g key={i} data-point="">
             <circle cx={x(q.x)} cy={y(q.y)} r={4} fill={tone(gi(q.group))} />
-            {q.label && <text x={x(q.x) + 6} y={y(q.y) - 6} className="sk-chart__lbl">{q.label}</text>}
+            {q.label && (x(q.x) > W * 0.75
+              ? <text x={x(q.x) - 6} y={y(q.y) - 6} textAnchor="end" className="sk-chart__lbl">{q.label}</text>
+              : <text x={x(q.x) + 6} y={y(q.y) - 6} textAnchor="start" className="sk-chart__lbl">{q.label}</text>)}
           </g>
         ))}
         {p.xTitle && <text x={W - PAD.r} y={H - 6} textAnchor="end" className="sk-chart__tick">{p.xTitle} →</text>}
