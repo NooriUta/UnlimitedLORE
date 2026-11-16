@@ -135,3 +135,16 @@ jobs:
         if: always()
         working-directory: web-next
         run: cat e2e/.stand-report/summary.md 2>/dev/null || echo "отчёта нет"
+
+      # Скрины сценариев — артефактом (v3: v4 на Forgejo не работает, см. db-regression.yml).
+      - name: Скрины и отчёт — артефакт
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: stand-report
+          path: |
+            web-next/e2e/.stand-report/*.md
+            web-next/e2e/.stand-report/*.json
+            web-next/e2e/.stand-report/*.png
+          if-no-files-found: ignore
+          retention-days: 14
