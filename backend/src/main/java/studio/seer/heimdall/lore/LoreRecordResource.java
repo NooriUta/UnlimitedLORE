@@ -288,6 +288,8 @@ public class LoreRecordResource extends LoreResourceBase {
         out.put("schema", recordSchema(type));
         out.put("computed", computed);
         if (unmodeled != null && !unmodeled.isEmpty()) out.put("unmodeled", unmodeled);
+        // LORE-DOOR-HISTORY-ALL-PASSPORTS: есть ли у записи история и каким типом звать /lore/history.
+        out.put("history", LoreRecordHistory.flag(type));
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());
