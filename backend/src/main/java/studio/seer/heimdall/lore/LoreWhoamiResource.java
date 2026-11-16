@@ -52,6 +52,9 @@ public class LoreWhoamiResource extends LoreResourceBase {
             Whoami.Graph g = graph(t);
             Map<String, Object> body = Whoami.body(t, t.agentScope() != null ? Whoami.withCallMachine(g, machine) : g);
             body.put("machine", machine);
+            // AO-SESSION-LOG: код сессии, который запишется в историю правок этого вызова (агенту;
+            // человеку — null). Проверка «пришёл ли заголовок» — одним вызовом whoami.
+            body.put("session", changeAuthor().session());
             return noStore(Response.ok(body));
         } catch (Exception e) {
             LOG.warnf("[LORE WHOAMI] граф не прочитан: %s", e.getMessage());

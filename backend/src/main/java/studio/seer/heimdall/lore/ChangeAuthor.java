@@ -33,7 +33,28 @@ import java.util.Map;
  * <p>Старые версии без поля остаются без автора; читатели отдают их как «неизвестно»
  * и ничего не выдумывают.
  */
-record ChangeAuthor(String by, String kind) {
+record ChangeAuthor(String by, String kind, String session) {
+
+    /** Автор без сессии (человек, неизвестный, семя модели). */
+    ChangeAuthor(String by, String kind) {
+        this(by, kind, null);
+    }
+
+    /** Заголовок MCP с кодом сессии Claude Code (AO-SESSION-LOG). */
+    static final String SESSION_HEADER = "X-Lore-Session-Id";
+
+    /** Код сессии: то, что MCP шлёт после чистки ([A-Za-z0-9_.-], до 64). Иное — не пишем, не угадываем. */
+    private static final java.util.regex.Pattern SESSION_CANON = java.util.regex.Pattern.compile("[A-Za-z0-9_.-]{1,64}");
+
+    /**
+     * AO-SESSION-LOG: код сессии — только у агента (его шлёт MCP). У человека и неизвестного —
+     * пусто: правка из веба сессии Claude Code не несёт (отрицательный контроль владелицы).
+     */
+    ChangeAuthor withSession(String rawHeader) {
+        if (!KIND_AGENT.equals(kind) || rawHeader == null) return new ChangeAuthor(by, kind, null);
+        String v = rawHeader.trim();
+        return new ChangeAuthor(by, kind, SESSION_CANON.matcher(v).matches() ? v : null);
+    }
 
     static final String KIND_AGENT   = "agent";
     static final String KIND_HUMAN   = "human";
@@ -46,12 +67,14 @@ record ChangeAuthor(String by, String kind) {
      * Хвост {@code SET}-списка вставки версии: {@code INSERT INTO KnowXHist SET …}{@value}.
      * Параметры кладёт {@link #bind(Map)}.
      */
-    static final String SET_SQL = ", changed_by = :changed_by, changed_by_kind = :changed_by_kind";
+    static final String SET_SQL = ", changed_by = :changed_by, changed_by_kind = :changed_by_kind"
+        + ", changed_by_session = :changed_by_session";
 
     /** Положить параметры {@link #SET_SQL} в карту (изменяемую; null-значение допустимо). */
     Map<String, Object> bind(Map<String, Object> params) {
         params.put("changed_by", by);
         params.put("changed_by_kind", kind);
+        params.put("changed_by_session", session);
         return params;
     }
 

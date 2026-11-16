@@ -251,6 +251,17 @@ export function machineHeader(
   return { 'X-Lore-Machine': raw.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64) };
 }
 
+/**
+ * SPRINT_LORE_AGENT_OBSERVABILITY/AO-SESSION-LOG: код сессии Claude Code — заголовком
+ * X-Lore-Session-Id на каждом вызове. CLAUDE_CODE_SESSION_ID Claude Code ставит stdio-серверам
+ * MCP сам (docs: env-vars); на /clear код процесса не меняется. Нет переменной — нет заголовка.
+ */
+export function sessionHeader(env: Record<string, string | undefined>): Record<string, string> {
+  const raw = (env.CLAUDE_CODE_SESSION_ID ?? '').trim();
+  if (!raw) return {};
+  return { 'X-Lore-Session-Id': raw.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64) };
+}
+
 function safeHostname(hostname: () => string): string {
   try {
     return hostname();
@@ -262,12 +273,14 @@ function safeHostname(hostname: () => string): string {
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   const actAs = actAsHeader(process.env);
   const machine = machineHeader(process.env);
-  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs, ...machine };
+  const session = sessionHeader(process.env);
+  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs, ...machine, ...session };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,
     'X-Seer-Role': ROLE,
     ...actAs,
     ...machine,
+    ...session,
   };
 }
 
