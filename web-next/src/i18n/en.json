@@ -1980,5 +1980,7 @@
   "pp.field.whatChecks": "What it checks",
   "pp.field.defaultBranch": "Default branch",
   "pp.field.isPrivate": "Private",
-  "pp.field.progress": "Progress"
+  "pp.field.progress": "Progress",
+  "kitPage.queue.title": "Approval queue",
+  "kitPage.queue.lead": "One feed: records under review and proposed edits, kind of item as chips. Approve or return for changes one by one or in a batch; a return takes a common reason and an own reason per record. You are “anna” here: your own edit is visible but cannot be approved, and in a batch it lands in “not passed”."
 }
