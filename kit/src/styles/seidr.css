@@ -7638,3 +7638,8 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-attn__count { font-family: var(--mono); font-size: var(--fs-md); color: var(--acc); }
 .sk-attn__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
 .sk-attn__more { font-size: var(--fs-2xs); color: var(--t3); }
+/* Пилот 16.11: в узкой карточке группы код записи («quiz:0.4/1») обрезался и съедал место у названия.
+   Под группой сводки код не показываем — он в подсказке упоминания (title), а название — в одну строку с «…». */
+.sk-attn__list .sk-pill--id { display: none; }
+.sk-attn__list .sk-mention { max-width: 100%; }
+.sk-attn__list .sk-mention__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
