@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import { checkDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 import { EMPTY, groupBySuggestion } from './status-unify.mjs';
+import { fingerprint } from './fingerprint.mjs';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -68,6 +69,7 @@ const PAGE = String.raw`<!doctype html><html lang="ru"><head><meta charset="utf-
 .num{font-family:var(--mono);color:var(--wrn);text-align:right;width:60px}.val{font-family:var(--mono);font-size:var(--fs-xs)}.why{color:var(--t3);font-size:var(--fs-2xs)}
 tr.grp td{background:var(--bg2);font-weight:700}tr.done td{opacity:.6}
 .dec{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}.dec select{flex:1;min-width:160px}.newf{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.newf[hidden]{display:none}.chip.ok{margin-bottom:4px}td:last-child{width:300px}td:nth-child(3){width:260px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.steps a{text-decoration:none;color:var(--t2);border:1px solid var(--bd);border-radius:999px;padding:4px 12px;font-size:var(--fs-xs);background:var(--bg1)}.steps a b{color:var(--acc);margin-right:4px}.steps a.on{background:var(--acc);border-color:var(--acc);color:var(--bg0)}.steps a.on b{color:var(--bg0)}
 select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:999px;padding:3px 8px;font:400 var(--fs-xs) Manrope,sans-serif}input.lbl{width:110px}
 .chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 7px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}.chip.ok{color:var(--suc);border-color:var(--suc)}
 .themesw{display:inline-flex;border:1px solid var(--acc);border-radius:999px;overflow:hidden}.themesw button{background:transparent;border:0;color:var(--acc);font:700 var(--fs-xs) Manrope,sans-serif;padding:3px 10px;cursor:pointer}.themesw button[aria-pressed=true]{background:var(--acc);color:var(--bg0)}
@@ -77,13 +79,30 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <div class="top"><span class="sub">источник <span class="mono" id="src">…</span> · только чтение · решения пишутся в файл решений этой установки</span>
 <label class="sub">кто принимает решения <input id="by" placeholder="логин"></label>
 <button class="btn" id="reload">Перепроверить</button><span class="sub" id="fp"></span></div>
-<h2>Шаг 2. Унификация статусов</h2>
+<nav class="steps" id="steps">
+<a href="#step-1" data-step="1"><b>1</b> Подключение</a>
+<a href="#step-2" data-step="2"><b>2</b> Статусы</a>
+<a href="#step-3" data-step="3"><b>3</b> Пробный расчёт</a>
+<a href="#step-4" data-step="4"><b>4</b> Перенос</a>
+<a href="#step-5" data-step="5"><b>5</b> Сверка и отчёт</a>
+</nav>
+<section data-page="1" hidden><h2>Шаг 1. Подключение и базы</h2>
+<p class="sub">Что установщик видит: сервер и базу-источник (только чтение) и сервер новой базы. Адреса и учётки — в файле доступа этой установки; значения учёток не показываются.</p>
+<div id="s1">загрузка…</div></section>
+<section data-page="2" hidden><h2>Шаг 2. Унификация статусов</h2>
 <p class="sub">В записи — код справочника (статусы заглавными); подписи на трёх языках — в справочнике. Предложение конвейера принимается кнопкой; группа — кнопкой в её заголовке. Пока есть строка без решения, перенос не начинается.</p>
-<div id="state" class="state">загрузка…</div><div class="kpis" id="kpis"></div><div id="body"></div>
+<div id="state" class="state">загрузка…</div><div class="kpis" id="kpis"></div><div id="body"></div></section>
+<section data-page="3" hidden><h2>Шаг 3. Пробный расчёт без записи</h2>
+<p class="sub">Каждая запись источника проходит через карту переноса; в новую базу ничего не пишется. Здесь — что не привелось, что удержано до решения и поля, которых карта не знает. Пока описаны спринт, фаза и задача.</p>
+<div id="s3"><button class="btn pri" id="run3">Посчитать</button> <span class="sub">чтение всего источника, около минуты</span></div></section>
+<section data-page="4" hidden><h2>Шаг 4. Перенос</h2>
+<div id="s4" class="state stop">Перенос начинается, когда на шаге 2 не осталось строк без решения. Запуск переноса из интерфейса — следующим шагом разработки; сейчас — командой <code>lore-migrate transfer</code>, затем <code>lore-migrate edges</code>.</div></section>
+<section data-page="5" hidden><h2>Шаг 5. Сверка и отчёт</h2>
+<div class="state">После переноса — сверка источника с новой базой (записи и связи, поле в поле) и отпечаток содержимого новой базы: <code>lore-migrate dst-fingerprint</code>. Две новые базы, собранные с одинаковыми настройками, дают один отпечаток. Отчёт документом — следующим шагом разработки.</div></section>
 </div><div id="msg"></div>
 <script>
 (function(){
-var K='lore-migrate-theme',B='lore-migrate-by',D=null,NAME={KnowSprintHist:'Спринт',KnowTaskHist:'Задача',KnowPhaseHist:'Фаза',KnowADRHist:'ADR',KnowDecisionHist:'Решение',KnowSpecHist:'Спека',KnowMilestoneHist:'Веха',KnowQuestion:'Вопрос',KnowUseCase:'Фича',QualityGate:'Гейт качества'};
+var K='lore-migrate-theme',B='lore-migrate-decider',D=null,NAME={KnowSprintHist:'Спринт',KnowTaskHist:'Задача',KnowPhaseHist:'Фаза',KnowADRHist:'ADR',KnowDecisionHist:'Решение',KnowSpecHist:'Спека',KnowMilestoneHist:'Веха',KnowQuestion:'Вопрос',KnowUseCase:'Фича',QualityGate:'Гейт качества'};
 function theme(t){document.documentElement.dataset.theme=t;document.querySelectorAll('[data-theme-set]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.themeSet===t))});try{localStorage.setItem(K,t)}catch(e){}}
 try{theme(localStorage.getItem(K)||'light');document.getElementById('by').value=localStorage.getItem(B)||''}catch(e){theme('light')}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -112,7 +131,24 @@ if(v==='@defer')return send([form(+i,'defer')]);if(v==='@new'){document.querySel
 return send([form(+i,'map_to',v)])}
 if(b.dataset.addcode){var i=b.dataset.addcode,q=function(s){return document.querySelector(s).value};return send([form(+i,'add_code',q('[data-nc="'+i+'"]'),{ru:q('[data-l="ru'+i+'"]'),en:q('[data-l="en'+i+'"]'),pl:q('[data-l="pl'+i+'"]')})])}
 });
-load()})();
+function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}}
+function stepFromHash(){var m=/^#step-(\d)$/.exec(location.hash);return m?m[1]:'2'}
+window.addEventListener('hashchange',function(){step(stepFromHash())});
+function conn(){fetch('api/connect').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);
+var h='<div class="tw"><table><tbody><tr><td>Сервер источника</td><td class="mono">'+esc(d.srcUrl)+'</td></tr><tr><td>База-источник</td><td class="mono">'+esc(d.srcDb)+' <span class="chip">только чтение</span></td></tr><tr><td>Сервер новой базы</td><td class="mono">'+esc(d.dstUrl)+'</td></tr><tr><td>Новая база</td><td class="mono">'+esc(d.dstDb)+' '+(d.dstError?'<span class="chip">не прочитана: '+esc(d.dstError)+'</span>':'<span class="chip ok">есть, типов '+d.dstTypes+'</span>')+'</td></tr></tbody></table></div>';
+h+='<h3>Источник: записей по типам</h3><div class="tw"><table><thead><tr><th>Тип</th><th>Записей</th></tr></thead><tbody>'+d.src.map(function(t){return '<tr><td class="mono">'+esc(t.name)+'</td><td class="num">'+t.records+'</td></tr>'}).join('')+'</tbody></table></div>';
+document.getElementById('s1').innerHTML=h}).catch(function(e){document.getElementById('s1').innerHTML='<div class="state stop">не смогли прочитать: '+esc(e.message)+'</div>'})}
+function dry(){var el=document.getElementById('s3');el.innerHTML='<div class="state">считаю…</div>';fetch('api/dryrun').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);
+var h='<div class="sub">отпечаток итога '+esc(d.fingerprint)+' · <button class="btn" id="run3">Посчитать заново</button></div>';
+Object.keys(d.types).forEach(function(T){var t=d.types[T],rej=Object.keys(t.rejects),held=Object.keys(t.held),unk=Object.keys(t.unknown);
+h+='<h3>'+esc(T)+' <span class="sub">записей '+t.records+' · не привелось '+rej.reduce(function(a,k){return a+t.rejects[k].n},0)+' · удержано '+held.reduce(function(a,k){return a+t.held[k]},0)+' · полей вне карты '+unk.length+'</span></h3>';
+if(rej.length||held.length||unk.length){h+='<div class="tw"><table><thead><tr><th>Что</th><th>Поле и причина</th><th>Записей</th><th>Примеры</th></tr></thead><tbody>';
+rej.forEach(function(k){var e=t.rejects[k];h+='<tr><td>не привелось</td><td>'+esc(k)+'</td><td class="num">'+e.n+'</td><td class="why">'+Object.keys(e.samples).slice(0,4).map(function(s){return '«'+esc(s)+'»'}).join(', ')+'</td></tr>'});
+held.forEach(function(k){h+='<tr><td>удержано</td><td>'+esc(k)+' — по полю нет решения</td><td class="num">'+t.held[k]+'</td><td></td></tr>'});
+unk.forEach(function(k){h+='<tr><td>вне карты</td><td>'+esc(k)+'</td><td class="num">'+t.unknown[k]+'</td><td></td></tr>'});h+='</tbody></table></div>'}});
+el.innerHTML=h}).catch(function(e){el.innerHTML='<div class="state stop">не посчитано: '+esc(e.message)+'</div><button class="btn pri" id="run3">Посчитать</button>'})}
+document.addEventListener('click',function(e){if(e.target.id==='run3')dry()});
+step(stepFromHash());load()})();
 </script></body></html>`;
 
 /** Диалог для страницы: строки с номерами, сгруппированные по типу и по предложению. */
@@ -129,7 +165,7 @@ function forPage(dialog, rules) {
 }
 
 export async function serve({ port = 2499 } = {}) {
-  const [{ connect }, { RULES }, { collectStatusDialog }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs')]);
+  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs')]);
   const file = process.env.MIG_DECISIONS_FILE;
   if (!file) throw new Error('не указан файл решений: --decisions <файл> (создастся, если его нет)');
   const readDoc = () => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { format: DECISIONS_FORMAT, decisions: [] });
@@ -142,8 +178,19 @@ export async function serve({ port = 2499 } = {}) {
   const json = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); };
   const server = http.createServer(async (req, res) => {
     try {
+      req.url = req.url.split('?')[0]; // путь без строки запроса: ?… не должен давать «нет такой страницы»
       if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(PAGE); }
       if (req.method === 'GET' && req.url === '/api/dialog') return json(res, 200, await dialog(true));
+      if (req.method === 'GET' && req.url === '/api/connect') {
+        const src = (await db.src('SELECT name, type, records FROM schema:types')).filter(t => t.type === 'vertex' && t.records > 0).map(t => ({ name: t.name, records: t.records })).sort((a, b) => a.name.localeCompare(b.name));
+        let dstTypes = null, dstError = null;
+        try { dstTypes = (await db.dstQuery('SELECT count(*) AS n FROM schema:types'))[0].n; } catch (e) { dstError = e.message.slice(0, 120); }
+        return json(res, 200, { srcUrl: db.env.MIG_DB_URL, srcDb: db.env.MIG_SRC_DB, dstUrl: dstUrl(db.env), dstDb: db.env.MIG_DST_DB, dstTypes, dstError, src });
+      }
+      if (req.method === 'GET' && req.url === '/api/dryrun') {
+        const report = await dryRun(db, readDoc());
+        return json(res, 200, { ...report, fingerprint: fingerprint(report) });
+      }
       if (req.method === 'POST' && req.url === '/api/decisions') {
         let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }
         const forms = JSON.parse(body);

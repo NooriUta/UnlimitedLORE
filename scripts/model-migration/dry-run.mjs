@@ -16,38 +16,45 @@ import { applyMap } from './apply-map.mjs';
 import { MAP, VOCAB, CODE_CASE } from './resources.mjs';
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 
-const db = connect();
-const dictRows = await db.src("SELECT dict_type, code FROM KnowDictEntry WHERE dict_type IN ['sprint_status','task_status','phase_status']");
-const statusCodes = {};
-for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
+/** Пробный расчёт без записи: отчёт по типам карты. Общий для команды dry-run и интерфейса установщика. */
+export async function dryRun(db, DECISIONS) {
+  const dictRows = await db.src("SELECT dict_type, code FROM KnowDictEntry WHERE dict_type IN ['sprint_status','task_status','phase_status']");
+  const statusCodes = {};
+  for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
 
-const bump = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; };
-const report = { source: db.env.MIG_SRC_DB, types: {} };
-for (const T of Object.keys(MAP)) {
-  const t = { records: 0, outFields: {}, toVersion: {}, dropped: {}, held: {}, unknown: {}, rejects: {}, titleFallback: 0, statusCodes: {} };
-  const known = new Set(Object.keys(MAP[T]));
-  for await (const rec of db.scan(T)) {
-    t.records++;
-    const clean = {};
-    for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
-    const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE });
-    for (const f of Object.keys(r.out)) bump(t.outFields, f);
-    for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
-    for (const f of r.dropped) bump(t.dropped, f);
-    for (const f of Object.keys(r.held)) bump(t.held, f);
-    if (r.titleFallback) t.titleFallback++;
-    if ('status' in r.out) bump(t.statusCodes, r.out.status === null ? '(без кода)' : r.out.status);
-    for (const x of r.rejects) {
-      const k = `${x.field} · ${x.why}`;
-      const e = (t.rejects[k] ||= { n: 0, samples: {} });
-      e.n++;
-      const s = String(x.value).replace(/\s+/g, ' ').slice(0, 60);
-      if (Object.keys(e.samples).length < 12 || e.samples[s]) bump(e.samples, s);
+  const bump = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; };
+  const report = { source: db.env.MIG_SRC_DB, types: {} };
+  for (const T of Object.keys(MAP)) {
+    const t = { records: 0, outFields: {}, toVersion: {}, dropped: {}, held: {}, unknown: {}, rejects: {}, titleFallback: 0, statusCodes: {} };
+    const known = new Set(Object.keys(MAP[T]));
+    for await (const rec of db.scan(T)) {
+      t.records++;
+      const clean = {};
+      for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
+      const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE });
+      for (const f of Object.keys(r.out)) bump(t.outFields, f);
+      for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
+      for (const f of r.dropped) bump(t.dropped, f);
+      for (const f of Object.keys(r.held)) bump(t.held, f);
+      if (r.titleFallback) t.titleFallback++;
+      if ('status' in r.out) bump(t.statusCodes, r.out.status === null ? '(без кода)' : r.out.status);
+      for (const x of r.rejects) {
+        const k = `${x.field} · ${x.why}`;
+        const e = (t.rejects[k] ||= { n: 0, samples: {} });
+        e.n++;
+        const s = String(x.value).replace(/\s+/g, ' ').slice(0, 60);
+        if (Object.keys(e.samples).length < 12 || e.samples[s]) bump(e.samples, s);
+      }
     }
+    report.types[T] = t;
   }
-  report.types[T] = t;
+
+  return report;
 }
 
+if (process.argv[1] === 'dry-run') {
+const db = connect();
+const report = await dryRun(db, DECISIONS);
 const outArg = process.argv.indexOf('--out');
 if (outArg > 0) fs.writeFileSync(process.argv[outArg + 1], JSON.stringify(report, null, 1));
 for (const [T, t] of Object.entries(report.types)) {
@@ -60,3 +67,4 @@ for (const [T, t] of Object.entries(report.types)) {
 }
 // Отпечаток для приёмки на двух машинах: одинаковые настройки и источник → одинаковый отпечаток.
 console.log(`отпечаток итога: ${fingerprint(report)}`);
+}
