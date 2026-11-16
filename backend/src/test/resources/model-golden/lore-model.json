@@ -1,9 +1,9 @@
 {
   "format" : "model/0",
-  "version" : "44a51ec3a5cf6153",
+  "version" : "396ce95b64c8be00",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
-  "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate" ],
+  "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
   "statuses" : {
     "task" : {
       "dict" : "task_status",
@@ -553,6 +553,18 @@
     },
     "quality_gate" : {
       "dict" : "qg_status",
+      "allow_scope" : "type",
+      "lifecycle_known" : false,
+      "entries" : [ ]
+    },
+    "feature" : {
+      "dict" : "feature_status",
+      "allow_scope" : "type",
+      "lifecycle_known" : false,
+      "entries" : [ ]
+    },
+    "question" : {
+      "dict" : "question_status",
       "allow_scope" : "type",
       "lifecycle_known" : false,
       "entries" : [ ]

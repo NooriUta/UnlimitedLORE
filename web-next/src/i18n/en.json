@@ -1982,5 +1982,9 @@
   "pp.field.isPrivate": "Private",
   "pp.field.progress": "Progress",
   "kitPage.queue.title": "Approval queue",
-  "kitPage.queue.lead": "One feed: records under review and proposed edits, kind of item as chips. Approve or return for changes one by one or in a batch; a return takes a common reason and an own reason per record. You are “anna” here: your own edit is visible but cannot be approved, and in a batch it lands in “not passed”."
+  "kitPage.queue.lead": "One feed: records under review and proposed edits, kind of item as chips. Approve or return for changes one by one or in a batch; a return takes a common reason and an own reason per record. You are “anna” here: your own edit is visible but cannot be approved, and in a batch it lands in “not passed”.",
+  "kitPage.attn.title": "“Needs attention” summary",
+  "kitPage.attn.lead": "Groups are the list's quick filters: one filter counts both the number and the list. The app's server gives the number; if it doesn't, kit counts loaded records and marks “≈” when truncated. Under a group — the first records (5 on wide screens, 3 on a phone) and “N more”.",
+  "kitPage.attn.review": "Under review",
+  "kitPage.attn.active": "In progress"
 }
