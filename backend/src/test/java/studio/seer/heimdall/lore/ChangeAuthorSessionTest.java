@@ -45,4 +45,15 @@ class ChangeAuthorSessionTest {
         Map<String, Object> q = new ChangeAuthor("c", ChangeAuthor.KIND_AGENT).withSession("s-1").bind(new HashMap<>());
         assertEquals("s-1", q.get("changed_by_session"));
     }
+
+    @Test
+    void agentMachineIsCanonHumanEmpty() {
+        ChangeAuthor a = new ChangeAuthor("lore-mcp-full", ChangeAuthor.KIND_AGENT);
+        assertEquals("lorcetus", a.withMachine(" LorCetus ").machine());
+        assertNull(a.withMachine("my box; x").machine());
+        assertNull(a.withMachine("  ").machine());
+        assertNull(new ChangeAuthor("sub", ChangeAuthor.KIND_HUMAN).withMachine("lorcetus").machine());
+        assertTrue(ChangeAuthor.SET_SQL.contains("changed_by_machine = :changed_by_machine"));
+        assertEquals("lorcetus", a.withMachine("lorcetus").bind(new java.util.HashMap<>()).get("changed_by_machine"));
+    }
 }

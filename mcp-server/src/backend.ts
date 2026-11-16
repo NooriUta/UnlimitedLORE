@@ -262,6 +262,17 @@ export function sessionHeader(env: Record<string, string | undefined>): Record<s
   return { 'X-Lore-Session-Id': raw.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64) };
 }
 
+/**
+ * AO-SESSION-LOG (владелица 16.11.2026): harness — константой в настройках MCP у каждого
+ * harness (LORE_HARNESS, код из справочника harness). Сервер сверяет его со справочником и с
+ * harness клиента KC; расхождение помечает. Не задан — заголовка нет (сервер: «не прислан»).
+ */
+export function harnessHeader(env: Record<string, string | undefined>): Record<string, string> {
+  const raw = (env.LORE_HARNESS ?? '').trim();
+  if (!raw) return {};
+  return { 'X-Lore-Harness': raw.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 64) };
+}
+
 function safeHostname(hostname: () => string): string {
   try {
     return hostname();
@@ -273,7 +284,7 @@ function safeHostname(hostname: () => string): string {
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   const actAs = actAsHeader(process.env);
   const machine = machineHeader(process.env);
-  const session = sessionHeader(process.env);
+  const session = { ...sessionHeader(process.env), ...harnessHeader(process.env) };
   if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE, ...actAs, ...machine, ...session };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,

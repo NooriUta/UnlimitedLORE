@@ -54,7 +54,12 @@ public class LoreWhoamiResource extends LoreResourceBase {
             body.put("machine", machine);
             // AO-SESSION-LOG: код сессии, который запишется в историю правок этого вызова (агенту;
             // человеку — null). Проверка «пришёл ли заголовок» — одним вызовом whoami.
-            body.put("session", changeAuthor().session());
+            ChangeAuthor author = changeAuthor();
+            body.put("session", author.session());
+            Map<String, Object> harness = new LinkedHashMap<>();
+            harness.put("code", author.harness());
+            harness.put("note", author.harnessNote());
+            body.put("harness_check", harness);
             return noStore(Response.ok(body));
         } catch (Exception e) {
             LOG.warnf("[LORE WHOAMI] граф не прочитан: %s", e.getMessage());

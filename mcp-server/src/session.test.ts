@@ -16,3 +16,18 @@ describe('sessionHeader: код сессии из CLAUDE_CODE_SESSION_ID', () =>
     expect(sessionHeader({ CLAUDE_CODE_SESSION_ID: 'a'.repeat(200) })['X-Lore-Session-Id']).toHaveLength(64);
   });
 });
+
+import { harnessHeader } from './backend.js';
+
+describe('harnessHeader: код harness константой из настроек MCP (LORE_HARNESS)', () => {
+  it('задан — X-Lore-Harness', () => {
+    expect(harnessHeader({ LORE_HARNESS: 'claude-code' })).toEqual({ 'X-Lore-Harness': 'claude-code' });
+  });
+  it('не задан — заголовка нет (сервер пометит «не прислан»)', () => {
+    expect(harnessHeader({})).toEqual({});
+    expect(harnessHeader({ LORE_HARNESS: ' ' })).toEqual({});
+  });
+  it('мусор вычищается, до 64', () => {
+    expect(harnessHeader({ LORE_HARNESS: 'Claude Code!' })['X-Lore-Harness']).toMatch(/^[A-Za-z0-9_.-]{1,64}$/);
+  });
+});
