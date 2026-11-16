@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "396ce95b64c8be00",
+  "version" : "fe6e4789b3c18a4e",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -1506,6 +1506,72 @@
           "priority" : 1,
           "width" : "s",
           "overflow" : "none"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "waiting_for",
+        "label" : "Ждём",
+        "label_key" : "pp.field.waiting_for",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Waiting for",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Czekamy na",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "status_reason",
+        "label" : "Причина статуса",
+        "label_key" : "pp.field.status_reason",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Status reason",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Powód statusu",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
         },
         "property" : null,
         "property_type" : null,
@@ -13377,11 +13443,11 @@
     } ]
   },
   "field_texts" : {
-    "fields" : 195,
-    "without_definition" : 175,
+    "fields" : 197,
+    "without_definition" : 177,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 195
+    "without_definition_en" : 197
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }
