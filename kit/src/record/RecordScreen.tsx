@@ -14,7 +14,8 @@ import { WarningsProvider } from './warnings';
 
 export type RecordScreenState =
   | { kind: 'loading' }
-  | { kind: 'notFound'; id: string }
+  /** action — что делать дальше («← к разделу»): в самом пустом состоянии, а не в полосе над ним (пилот 16.11). */
+  | { kind: 'notFound'; id: string; action?: ReactNode }
   | { kind: 'error'; error: unknown; onRetry?: () => void }
   | { kind: 'ready' };
 
@@ -32,7 +33,7 @@ export function RecordScreen({ state, bar, notes = [], children }: RecordScreenP
   const lang = useKitLang();
   let body: ReactNode;
   if (state.kind === 'loading') body = <Skeleton lines={8} label={kitT(lang, 'kit.record.screen.loading')} />;
-  else if (state.kind === 'notFound') body = <EmptyState title={kitT(lang, 'kit.record.screen.notFound', { id: state.id })} hint={kitT(lang, 'kit.record.screen.notFoundHint', { id: state.id })} />;
+  else if (state.kind === 'notFound') body = <EmptyState title={kitT(lang, 'kit.record.screen.notFound', { id: state.id })} hint={kitT(lang, 'kit.record.screen.notFoundHint', { id: state.id })} action={state.action} />;
   else if (state.kind === 'error') body = <LoadError error={state.error} onRetry={state.onRetry} />;
   else body = children;
   return (

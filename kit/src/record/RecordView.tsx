@@ -458,7 +458,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     const sh = SHARED_TAB[d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
-    if (ex) ex.defs.push(d); else relTabs.push({ id: sh.id, label: kitT(lang, sh.label), relation: d.relation, defs: [d] });
+    // Методика §7.8: подпись группы — из вида приложения (документа), иначе подпись kit.
+    if (ex) ex.defs.push(d); else relTabs.push({ id: sh.id, label: kind?.relationGroups?.[d.relation] ?? kitT(lang, sh.label), relation: d.relation, defs: [d] });
   }
   const relCount = (defs: KitRelationDef[]) => defs.reduce((n, d) => n + relationTargets(record, ctx, d).length, 0);
   // Счётчик раздела — ОДНИМ правилом (B13: «счётчики то есть, то нет»).
