@@ -279,6 +279,9 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // S4-24 (#1241): варианты из среза сервера — {slice, param, value, label, group?}.
       ...(optionsSpecOf(f.options) ? { options: optionsSpecOf(f.options)! } : {}),
       ...(section ? { section } : {}),
+      // MDL-07: тексты модели о поле — kit покажет подсказкой у подписи («аналог peek»).
+      ...(str(f.definition) ? { definition: str(f.definition) } : {}),
+      ...(str(f.description) ? { description: str(f.description) } : {}),
     };
   });
 

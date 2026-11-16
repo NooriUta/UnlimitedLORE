@@ -47,6 +47,7 @@ import { RecordRef, renderOut, valueText } from './fmt';
 import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
 import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
+import { FieldHint, hasFieldHint } from './FieldHint';
 import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, relationName, relationTargets } from './RecordRelations';
 import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
@@ -272,7 +273,7 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
   if (fields.length === 0) return null;
   const row = (f: (typeof fields)[number]) => (
     <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
-      <dt>{f.title}</dt>
+      <dt>{hasFieldHint(f.hint) ? <FieldHint fieldKey={f.key} label={f.title} hint={f.hint} /> : f.title}</dt>
       <dd>{(() => {
         const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} refKind={f.refKind} keyLabels={f.keyLabels} />;
         // S4-24: поле-связь (компоненты, проекты) — чипы с «Отвязать» и выбор с поиском.

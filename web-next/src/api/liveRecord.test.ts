@@ -100,6 +100,14 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect('unmodeled' in recordFromServer({ ...(sprintBody() as Record<string, unknown>), unmodeled: ['не объект'] }, LOADED)).toBe(false);
   });
 
+  it('MDL-07: определение и описание поля доходят до контракта — kit покажет их подсказкой у подписи', () => {
+    const body = sprintBody() as { schema: { fields: Record<string, unknown>[] } };
+    body.schema.fields = body.schema.fields.map(f => f.key === 'no_release' ? { ...f, definition: 'Спринт не ведёт к релизу.', description: 'Ставится у служебных спринтов.' } : f);
+    const fs = recordFromServer(body, LOADED).schema.fields;
+    expect(fs.find(f => f.key === 'no_release')).toMatchObject({ definition: 'Спринт не ведёт к релизу.', description: 'Ставится у служебных спринтов.' });
+    expect('definition' in (fs.find(f => f.key !== 'no_release') ?? {})).toBe(false);
+  });
+
   it('MC-08: вид bool доходит до kit как bool, а не сваливается в text', () => {
     const c = recordFromServer(sprintBody(), LOADED);
     expect(c.schema.fields.find(f => f.key === 'no_release')?.kind).toBe('bool');
