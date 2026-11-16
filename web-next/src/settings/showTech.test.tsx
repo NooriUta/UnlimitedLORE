@@ -16,7 +16,7 @@ import { appliedShowTech } from './applied';
 import { ShowTechFromSettings } from './ShowTech';
 import { PersonalSettings } from './PersonalSettings';
 import { MESSAGES } from '../i18n/messages';
-import { ModelNotes } from '../record/ModelNotes';
+import { RecordModelNotes as ModelNotes } from '@seidr/kit';
 import type { CookieJar } from '../storage/storage';
 
 const ru = MESSAGES.ru;
