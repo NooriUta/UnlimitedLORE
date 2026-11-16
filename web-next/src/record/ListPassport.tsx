@@ -30,7 +30,7 @@ import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } 
 import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
 import { savePassportField } from './passportSave';
-import { saveMerging, type FieldState } from './passportMerge';
+import { saveMerging, type MdFieldState as FieldState } from '@seidr/kit/content';
 import { fetchLoreRecord } from '../api/liveRecord';
 import { saveRelation } from './relationSave';
 import { relationOptionsHook } from './relationOptions';
