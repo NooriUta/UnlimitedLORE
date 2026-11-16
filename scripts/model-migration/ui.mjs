@@ -11,6 +11,8 @@ import http from 'node:http';
 import { checkDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 import { EMPTY, groupBySuggestion } from './status-unify.mjs';
 import { fingerprint } from './fingerprint.mjs';
+import crypto from 'node:crypto';
+import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -78,14 +80,18 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <div class="top"><h1>Перенос на новую модель</h1><span class="themesw"><button data-theme-set="light">Светлая</button><button data-theme-set="dark">Тёмная</button></span></div>
 <div class="top"><span class="sub">источник <span class="mono" id="src">…</span> · только чтение · решения пишутся в файл решений этой установки</span>
 <label class="sub">кто принимает решения <input id="by" placeholder="логин"></label>
-<button class="btn" id="reload">Перепроверить</button><span class="sub" id="fp"></span></div>
+<span class="sub" id="who"></span> <button class="btn" id="reload">Перепроверить</button><span class="sub" id="fp"></span></div>
 <nav class="steps" id="steps">
+<a href="#step-0" data-step="0"><b>0</b> Вход</a>
 <a href="#step-1" data-step="1"><b>1</b> Подключение</a>
 <a href="#step-2" data-step="2"><b>2</b> Статусы</a>
 <a href="#step-3" data-step="3"><b>3</b> Пробный расчёт</a>
 <a href="#step-4" data-step="4"><b>4</b> Перенос</a>
 <a href="#step-5" data-step="5"><b>5</b> Сверка и отчёт</a>
 </nav>
+<section data-page="0" hidden><h2>Шаг 0. Вход и проверка владельца</h2>
+<p class="sub">Укажите сервер Keycloak и область входа, затем войдите. Дальше пускает, только если сошлись обе проверки: в токене есть роль владельца, и в базе этой установки у вашей учётки роль владельца проекта.</p>
+<div id="s0">загрузка…</div></section>
 <section data-page="1" hidden><h2>Шаг 1. Подключение и базы</h2>
 <p class="sub">Что установщик видит: сервер и базу-источник (только чтение) и сервер новой базы. Адреса и учётки — в файле доступа этой установки; значения учёток не показываются.</p>
 <div id="s1">загрузка…</div></section>
@@ -131,8 +137,15 @@ if(v==='@defer')return send([form(+i,'defer')]);if(v==='@new'){document.querySel
 return send([form(+i,'map_to',v)])}
 if(b.dataset.addcode){var i=b.dataset.addcode,q=function(s){return document.querySelector(s).value};return send([form(+i,'add_code',q('[data-nc="'+i+'"]'),{ru:q('[data-l="ru'+i+'"]'),en:q('[data-l="en'+i+'"]'),pl:q('[data-l="pl'+i+'"]')})])}
 });
+var ME=null;
+function auth(){fetch('api/me').then(function(r){return r.json()}).then(function(d){ME=d;var el=document.getElementById('s0'),byl=document.getElementById('by').closest('label');
+if(!d.configured){el.innerHTML='<div class="state stop">Вход не настроен: в файле доступа нет адреса Keycloak, области, клиента или проекта-владельца (MIG_KC_URL, MIG_KC_REALM, MIG_KC_CLIENT, MIG_OWNER_PROJECT). Режим разработки: решения подписываются полем «кто принимает решения».</div>';return}
+byl.hidden=true;
+if(d.me){el.innerHTML='<div class="state go">Вы вошли как <b>'+esc(d.me.login)+'</b> через '+esc(d.me.kc)+' · область '+esc(d.me.realm)+'. Владелец проекта '+esc(d.me.project)+' — проверено по Keycloak и по базе.</div>';document.getElementById('who').textContent='вошли: '+d.me.login;return}
+el.innerHTML='<form action="auth/start" method="get" class="tw" style="padding:8px"><label class="sub">сервер Keycloak <input name="url" size="40" value="'+esc(d.kc.url)+'"></label> <label class="sub">область <input name="realm" value="'+esc(d.kc.realm)+'"></label> <button class="btn pri">Войти</button><div class="sub">клиент '+esc(d.kc.client)+' · проект-владелец '+esc(d.kc.project)+' · роль '+esc(d.kc.role)+'</div></form>';
+if(stepFromHash()!=='0')location.hash='#step-0'})}
 function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}}
-function stepFromHash(){var m=/^#step-(\d)$/.exec(location.hash);return m?m[1]:'2'}
+function stepFromHash(){var m=/^#step-(\d)$/.exec(location.hash);return m?m[1]:'0'}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
 function conn(){fetch('api/connect').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);
 var h='<div class="tw"><table><tbody><tr><td>Сервер источника</td><td class="mono">'+esc(d.srcUrl)+'</td></tr><tr><td>База-источник</td><td class="mono">'+esc(d.srcDb)+' <span class="chip">только чтение</span></td></tr><tr><td>Сервер новой базы</td><td class="mono">'+esc(d.dstUrl)+'</td></tr><tr><td>Новая база</td><td class="mono">'+esc(d.dstDb)+' '+(d.dstError?'<span class="chip">не прочитана: '+esc(d.dstError)+'</span>':'<span class="chip ok">есть, типов '+d.dstTypes+'</span>')+'</td></tr></tbody></table></div>';
@@ -148,7 +161,7 @@ held.forEach(function(k){h+='<tr><td>удержано</td><td>'+esc(k)+' — п�
 unk.forEach(function(k){h+='<tr><td>вне карты</td><td>'+esc(k)+'</td><td class="num">'+t.unknown[k]+'</td><td></td></tr>'});h+='</tbody></table></div>'}});
 el.innerHTML=h}).catch(function(e){el.innerHTML='<div class="state stop">не посчитано: '+esc(e.message)+'</div><button class="btn pri" id="run3">Посчитать</button>'})}
 document.addEventListener('click',function(e){if(e.target.id==='run3')dry()});
-step(stepFromHash());load()})();
+auth();step(stepFromHash());load()})();
 </script></body></html>`;
 
 /** Диалог для страницы: строки с номерами, сгруппированные по типу и по предложению. */
@@ -176,10 +189,47 @@ export async function serve({ port = 2499 } = {}) {
     return cache;
   };
   const json = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); };
+  // Шаг 0: вход через Keycloak и проверка владельца (auth.mjs). Не настроен в файле доступа — режим
+  // разработки: страница так и пишет, решения подписываются полем «кто принимает решения».
+  const kc = kcConfig(db.env);
+  const pending = new Map(), sessions = new Map();
+  const redirect = `http://127.0.0.1:${port}/auth/callback`;
+  const sid = req => (/(?:^|;\s*)lmsid=([A-Za-z0-9_-]+)/.exec(req.headers.cookie || '') || [])[1];
+  const me = req => sessions.get(sid(req)) || null;
   const server = http.createServer(async (req, res) => {
     try {
-      req.url = req.url.split('?')[0]; // путь без строки запроса: ?… не должен давать «нет такой страницы»
+      const full = new URL(req.url, 'http://127.0.0.1');
+      req.url = full.pathname; // путь без строки запроса: ?… не должен давать «нет такой страницы»
       if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(PAGE); }
+      if (req.method === 'GET' && req.url === '/api/me') {
+        return json(res, 200, { configured: kc.configured, kc: { url: kc.url, realm: kc.realm, client: kc.client, project: kc.project, role: kc.role }, me: me(req) });
+      }
+      if (req.method === 'GET' && req.url === '/auth/start') {
+        if (!kc.configured) return json(res, 400, { error: 'вход не настроен: в файле доступа нет MIG_KC_URL, MIG_KC_REALM, MIG_KC_CLIENT, MIG_OWNER_PROJECT' });
+        // «в начале дать указать kc сервер»: адрес и область можно поправить на шаге 0; проект и роль — из файла.
+        const use = { ...kc, url: full.searchParams.get('url') || kc.url, realm: full.searchParams.get('realm') || kc.realm };
+        const p = pkce(), state = crypto.randomBytes(16).toString('base64url');
+        pending.set(state, { verifier: p.verifier, kc: use, at: Date.now() });
+        res.writeHead(302, { Location: authUrl(use, redirect, state, p.challenge) });
+        return res.end();
+      }
+      if (req.method === 'GET' && req.url === '/auth/callback') {
+        const st = pending.get(full.searchParams.get('state') || '');
+        pending.delete(full.searchParams.get('state') || '');
+        const page = (title, lines) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(`<!doctype html><meta charset="utf-8"><body style="font:14px Manrope,system-ui;background:#faf6ee;color:#2a2218;padding:24px"><h2 style="color:#a8660a">${title}</h2>${lines.map(l => `<p>${String(l).replace(/</g, '&lt;')}</p>`).join('')}<p><a href="/#step-0">к шагу 0</a></p>`); };
+        if (!st || Date.now() - st.at > 600000) return page('Вход не выполнен', ['состояние входа не найдено или устарело — начните вход заново']);
+        if (full.searchParams.get('error')) return page('Вход не выполнен', [`Keycloak ответил: ${full.searchParams.get('error')}`]);
+        const claims = tokenClaims(await exchange(st.kc, full.searchParams.get('code') || '', redirect, st.verifier));
+        let owner = null;
+        try { owner = await ownerInDb(db, claims.sub, kc.project); } catch { owner = null; }
+        const v = verdict(claims, kc.role, owner, kc.project);
+        if (!v.ok) return page('Дальше нельзя', [`Вошли как ${claims.login}.`, ...v.reasons]);
+        const id = crypto.randomBytes(24).toString('base64url');
+        sessions.set(id, { login: claims.login, sub: claims.sub, kc: st.kc.url, realm: st.kc.realm, project: kc.project });
+        res.writeHead(302, { 'Set-Cookie': `lmsid=${id}; HttpOnly; SameSite=Strict; Path=/`, Location: '/#step-1' });
+        return res.end();
+      }
+      if (kc.configured && req.url.startsWith('/api/') && !me(req)) return json(res, 401, { error: 'нужен вход: шаг 0' });
       if (req.method === 'GET' && req.url === '/api/dialog') return json(res, 200, await dialog(true));
       if (req.method === 'GET' && req.url === '/api/connect') {
         const src = (await db.src('SELECT name, type, records FROM schema:types')).filter(t => t.type === 'vertex' && t.records > 0).map(t => ({ name: t.name, records: t.records })).sort((a, b) => a.name.localeCompare(b.name));
@@ -195,7 +245,9 @@ export async function serve({ port = 2499 } = {}) {
         let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }
         const forms = JSON.parse(body);
         let doc = readDoc();
-        for (const f of Array.isArray(forms) ? forms : [forms]) doc = addDecision(doc, f);
+        // со входом «кто принял» — логин из токена, а не из поля страницы
+        const who = me(req);
+        for (const f of Array.isArray(forms) ? forms : [forms]) doc = addDecision(doc, who ? { ...f, by: who.login } : f);
         fs.writeFileSync(file, JSON.stringify(doc, null, 2) + '\n');
         return json(res, 200, await dialog(true));
       }
