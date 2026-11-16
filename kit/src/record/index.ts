@@ -28,6 +28,7 @@ export * from './RecordDock';
 export * from './RecordPlace';
 export * from './ModelNotes';
 export * from './PeekLoader';
+export * from './RecordScreen';
 export * from './RecordRelations';
 export * from './KvValue';
 export * from './recordDoc';
