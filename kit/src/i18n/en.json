@@ -300,6 +300,7 @@
   "kit.record.screen.loading": "Loading the record",
   "kit.record.screen.notFound": "Record {id} not found",
   "kit.record.screen.notFoundHint": "Record «{id}» does not exist: deleted, renamed or in another database. This is the server answer, not a load failure.",
+  "kit.lanes.empty": "empty",
   "kit.record.unmodeled": "Not described in the model",
   "kit.record.part.shown": "showing {shown} of {total}",
   "kit.record.links.failed": "Links failed to load",
