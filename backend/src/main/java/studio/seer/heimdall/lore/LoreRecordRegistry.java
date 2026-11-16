@@ -55,12 +55,13 @@ final class LoreRecordRegistry {
                  boolean editable, Write write, boolean multi, boolean required,
                  String refType, String rel, String dir, String relation, Options options,
                  String shortLabel, String definition, String description, String layer, boolean historic,
-                 String labelEn, String shortLabelEn, String definitionEn, String descriptionEn) {
+                 String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
+                 String labelPl, String shortLabelPl, String definitionPl, String descriptionPl) {
         Field(String key, String label, String labelKey, String kind, String group, String dict,
               boolean editable, Write write, boolean multi, boolean required,
               String refType, String rel, String dir, String relation) {
             this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
-                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null);
+                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null);
         }
     }
 
@@ -77,13 +78,18 @@ final class LoreRecordRegistry {
      */
     private static void textsJson(Map<String, Object> m, String shortLabel, String definition, String description,
                                   String layer, boolean historic,
-                                  String labelEn, String shortLabelEn, String definitionEn, String descriptionEn) {
+                                  String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
+                                  String labelPl, String shortLabelPl, String definitionPl, String descriptionPl) {
         // MDL-09 (D-2026-LORE-FIELD-LABELS-FROM-SERVER): английская пара к каждому тексту; null — пары нет,
         // клиент показывает русское.
         m.put("label_en", labelEn);
         m.put("short_label_en", shortLabelEn);
         m.put("definition_en", definitionEn);
         m.put("description_en", descriptionEn);
+        m.put("label_pl", labelPl);
+        m.put("short_label_pl", shortLabelPl);
+        m.put("definition_pl", definitionPl);
+        m.put("description_pl", descriptionPl);
         m.put("short_label", shortLabel);
         m.put("definition", definition);
         m.put("description", description);
@@ -101,7 +107,8 @@ final class LoreRecordRegistry {
     /** Раздел текста записи; каждый пишется своим полем (у ADR — три поля adr_set). */
     record Body(String key, String label, String labelKey, boolean editable, Write write,
                 String shortLabel, String definition, String description, String layer, boolean historic,
-                String labelEn, String shortLabelEn, String definitionEn, String descriptionEn) {}
+                String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
+                String labelPl, String shortLabelPl, String definitionPl, String descriptionPl) {}
 
     /** Раздел «Свойств»; {@code section == null} — общий блок сверху. */
     record PropSection(String section, List<String> fields) {}
@@ -131,7 +138,7 @@ final class LoreRecordRegistry {
     record TypeDef(String type, String label, String labelKey, String icon,
                    List<Field> fields, List<Body> body, List<PropSection> props,
                    List<Part> parts, List<LinkTab> linkTabs, List<TreeNode> tree,
-                   List<Relation> relations, String labelEn) {
+                   List<Relation> relations, String labelEn, String labelPl) {
         Field field(String key) {
             for (Field f : fields) if (f.key().equals(key)) return f;
             return null;
@@ -172,6 +179,7 @@ final class LoreRecordRegistry {
         out.put("label", d.label());
         out.put("label_key", d.labelKey());
         out.put("label_en", d.labelEn());
+        out.put("label_pl", d.labelPl());
         out.put("icon", d.icon());
         List<Map<String, Object>> fields = new ArrayList<>();
         for (Field f : d.fields()) fields.add(fieldJson(d, f));
@@ -185,7 +193,8 @@ final class LoreRecordRegistry {
             m.put("required", false);
             m.put("editable", b.editable());
             textsJson(m, b.shortLabel(), b.definition(), b.description(), b.layer(), b.historic(),
-                b.labelEn(), b.shortLabelEn(), b.definitionEn(), b.descriptionEn());
+                b.labelEn(), b.shortLabelEn(), b.definitionEn(), b.descriptionEn(),
+                b.labelPl(), b.shortLabelPl(), b.definitionPl(), b.descriptionPl());
             m.put("write", writeJson(b.write()));
             fields.add(m);
         }
@@ -244,7 +253,8 @@ final class LoreRecordRegistry {
             m.put("options", o);
         }
         textsJson(m, f.shortLabel(), f.definition(), f.description(), f.layer(), f.historic(),
-            f.labelEn(), f.shortLabelEn(), f.definitionEn(), f.descriptionEn());
+            f.labelEn(), f.shortLabelEn(), f.definitionEn(), f.descriptionEn(),
+            f.labelPl(), f.shortLabelPl(), f.definitionPl(), f.descriptionPl());
         m.put("write", writeJson(f.write()));
         return m;
     }

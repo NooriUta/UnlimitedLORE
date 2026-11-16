@@ -208,19 +208,21 @@ final class LoreModelFile {
      * рекомендуется, а не обязательно: модель принимается, счётчик виден в ответе.
      */
     static Map<String, Object> fieldTextsCount(Content c) {
-        int fields = 0, noDefinition = 0, noLabelEn = 0, noDefinitionEn = 0;
+        int fields = 0, noDefinition = 0, noLabelEn = 0, noDefinitionEn = 0, noLabelPl = 0;
         for (String t : c.types()) {
             LoreRecordRegistry.TypeDef d = c.typeDefs().get(t);
             for (LoreRecordRegistry.Field f : d.fields()) {
                 fields++;
                 if (blank(f.definition())) noDefinition++;
                 if (blank(f.labelEn())) noLabelEn++;
+                if (blank(f.labelPl())) noLabelPl++;
                 if (blank(f.definitionEn())) noDefinitionEn++;
             }
             for (LoreRecordRegistry.Body b : d.body()) {
                 fields++;
                 if (blank(b.definition())) noDefinition++;
                 if (blank(b.labelEn())) noLabelEn++;
+                if (blank(b.labelPl())) noLabelPl++;
                 if (blank(b.definitionEn())) noDefinitionEn++;
             }
         }
@@ -228,6 +230,7 @@ final class LoreModelFile {
         m.put("fields", fields);
         m.put("without_definition", noDefinition);
         m.put("without_label_en", noLabelEn);
+        m.put("without_label_pl", noLabelPl);
         m.put("without_definition_en", noDefinitionEn);
         return m;
     }

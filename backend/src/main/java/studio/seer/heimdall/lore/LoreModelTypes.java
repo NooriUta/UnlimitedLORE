@@ -152,6 +152,7 @@ final class LoreModelTypes {
             type.put("label", contract.get("label"));
             type.put("label_key", contract.get("label_key"));
             type.put("label_en", contract.get("label_en"));
+            type.put("label_pl", contract.get("label_pl"));
             type.put("icon", contract.get("icon"));
             type.put("color", TYPE_COLOR.get(t));
             type.put("key", g.key());

@@ -133,6 +133,9 @@ class LoreModelFieldTextsTest {
                 String id = t + "." + f.get("key");
                 assertNotNull(f.get("label_key"), id + ": нет ключа локализации");
                 assertNotNull(f.get("label_en"), id + ": нет английской подписи");
+                assertNotNull(f.get("label_pl"), id + ": нет польской подписи");
+                for (String k : List.of("short_label_pl", "definition_pl", "description_pl"))
+                    assertTrue(f.containsKey(k), id + ": ключ «" + k + "» есть всегда");
                 for (String k : List.of("short_label_en", "definition_en", "description_en"))
                     assertTrue(f.containsKey(k), id + ": ключ «" + k + "» есть всегда");
                 checked++;
@@ -157,6 +160,7 @@ class LoreModelFieldTextsTest {
     void modelCountsFieldsWithoutEnglishLabel() {
         Map<String, Object> c = (Map<String, Object>) content(LoreModel.build(List.of())).get("field_texts");
         assertEquals(0, c.get("without_label_en"), "у канона английская подпись есть у каждого поля");
+        assertEquals(0, c.get("without_label_pl"), "у канона польская подпись есть у каждого поля");
         assertTrue((int) c.get("without_definition_en") > 0, "английских определений пока нет — счётчик это показывает");
     }
 
