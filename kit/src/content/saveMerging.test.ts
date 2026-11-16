@@ -3,9 +3,17 @@
 // записать слитое с НОВОЙ версией; со спором — отказ MdMergeConflict со
 // спорными блоками (их рисует поле правки kit).
 import { describe, expect, it, vi } from 'vitest';
-import { isMdMergeConflict } from '@seidr/kit/content';
-import { saveMerging } from './passportMerge';
-import { VersionConflict } from './passportSave';
+// Перенесено из web-next вместе с saveMerging (K5-PASSPORT-FROM-MODEL, шаг 4). Отказ приложения
+// здесь — своя ошибка с именем VersionConflict: kit знает только эту форму.
+import { isMdMergeConflict } from './blockMerge';
+import { saveMerging } from './saveMerging';
+
+class VersionConflict extends Error {
+  constructor(readonly currentVersion: string | null, readonly updatedBy: string | null, detail: string) {
+    super(detail);
+    this.name = 'VersionConflict';
+  }
+}
 
 const base = 'Первый.\n\nВторой.\n\nТретий.';
 

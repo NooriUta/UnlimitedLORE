@@ -25,6 +25,8 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
+import { usePatchedData } from '../core/recordUpdates';
+import { verdictText } from '../core/verdict';
 import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
 import { IconButton } from '../elements/IconButton';
@@ -74,6 +76,7 @@ import {
   quickCounts, quickIconOf, quickColorOf, readListState, shownOf, sortKeysOf, sortRecords, valueKey, valuesOf, writeListState,
   SHOW_CLOSED_MODES, showClosedOf, splitClosed,
 } from './listModel';
+import { applyCheck, checkTitle, parseCheck } from './listModel';
 import type { FilterOp, ListGroup, ListState, ListViewKind, QuickItem } from './listModel';
 import { hierarchyRows, type HierarchyRow } from './hierarchy';
 import { boardLanes, capGroups, groupBy, groupingOptions, multiGroupCount, parseGroupKey } from './grouping';
@@ -472,6 +475,8 @@ export function initialState(win: UrlWindow | null, initial: Partial<ListState> 
   if (params.has('lm')) s.month = parsed.month;
   if (params.has('lcd')) s.calDate = parsed.calDate;
   if (params.has('llf')) s.libFilter = parsed.libFilter;
+  // K4-VERDICT-FILTER: условие по проверке — тоже из адреса, иначе ссылка из сводки открывала бы раздел целиком.
+  if (params.has('lck')) s.check = parsed.check;
   return s;
 }
 
@@ -521,7 +526,7 @@ function DayCell({ iso, badTitle }: { iso?: string | null; badTitle?: string }) 
 function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLang }) {
   const fn = ctx.config.verdict;
   if (!fn) return <span className="sk-list__verdict" data-verdict="none">—</span>;
-  let v: KitVerdict;
+  let v: KitVerdict | undefined;
   try {
     v = fn(r, ctx);
   } catch (e) {
@@ -531,10 +536,11 @@ function VerdictCell({ r, ctx, lang }: { r: KitRecord; ctx: KitCtx; lang: KitLan
       </span>
     );
   }
-  if (!v.max) return <span className="sk-list__verdict" data-verdict="none">—</span>;
-  const state = v.failed.length ? 'fail' : 'ok';
+  const unknown = v?.unknown ?? [];
+  if (!v || (!v.max && unknown.length === 0)) return <span className="sk-list__verdict" data-verdict="none">—</span>;
+  const state = v.failed.length ? 'fail' : unknown.length ? 'unknown' : 'ok';
   return (
-    <span className="sk-list__verdict" data-verdict={state} title={[...v.failed, ...v.hints].join(', ') || undefined}>
+    <span className="sk-list__verdict" data-verdict={state} title={[...v.failed, ...v.hints, ...unknown].map(verdictText).join(', ') || undefined}>
       {v.score}/{v.max}
     </span>
   );
@@ -567,10 +573,13 @@ const DATE_SLOT = '@kit:date';
 const CELL_VALUES_INLINE = 1;
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data: dataIn, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
+  // K5-RECORD-UPDATED-EVENT: правка записи, принятая сервером где-то ещё (паспорт, статус), —
+  // сразу в строке, без перезагрузки списка.
+  const data = usePatchedData(dataIn);
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
   const narrow = useNarrow(narrowProp);
   // Сколько условий остаётся в строке: на телефоне меньше — три чипа «Поле:
@@ -794,7 +803,20 @@ export function ListView({
     [JSON.stringify(state.filters), JSON.stringify(state.ops), state.text]);
   const activeQuick = quick.find(q => q.id === state.quick) ?? null;
   const quickFilters: KitFilter[] = activeQuick ? [activeQuick.filter] : [];
-  const pool = useMemo(() => applyFilterSet(records, filterSet), [records, filterSet]);
+  // K4-VERDICT-FILTER: условие по проверке вердикта (адрес: lck=fail:<код>). Считает вердикт
+  // приложение; без config.verdict условие не действует и об этом сказано чипом ниже.
+  const checkCond = useMemo(() => parseCheck(state.check), [state.check]);
+  const verdictFn = config.verdict;
+  const pool = useMemo(() => {
+    const base = applyFilterSet(records, filterSet);
+    return checkCond && verdictFn ? applyCheck(base, checkCond, r => verdictFn(r, ctx)) : base;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, filterSet, checkCond, verdictFn]);
+  const checkWords = useMemo(
+    () => (checkCond ? (verdictFn ? checkTitle(records, checkCond, r => verdictFn(r, ctx)) : checkCond.code) : ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [records, checkCond, verdictFn],
+  );
 
   // PU-12: ряд фасетов в одну строку с «+N» — общий хук (facetFold.tsx), тот же у ControlBar.
   // Фильтр по дате — такое же место в ряду, как фасет оси: не влез и не задан — тоже в «+N».
@@ -1265,7 +1287,9 @@ export function ListView({
   const errors = feedGroupsList ? [] : (data.meta.errors ?? []).filter(e => e.block === 'records' || e.block === 'list');
   const shown = shownOf(data.meta, records.length, filtered.length);
   const shownText = shown.kind === 'complete'
-    ? t('kit.list.shown', { shown: shown.shown, total: shown.total })
+    ? (shown.of !== undefined
+      ? t('kit.list.shownSubset', { shown: shown.shown, total: shown.total, of: shown.of })
+      : t('kit.list.shown', { shown: shown.shown, total: shown.total }))
     : shown.kind === 'truncated'
       ? t('kit.list.shownTruncated', { shown: shown.shown, total: shown.total, loaded: shown.loaded })
       : t('kit.list.shownUnknown', { shown: shown.shown, loaded: shown.loaded });
@@ -1315,6 +1339,12 @@ export function ListView({
   }
   if (activeQuick) {
     chips.push({ id: 'q', text: `${t('kit.list.quick')}: ${activeQuick.title}`, remove: () => update({ quick: null }) });
+  }
+  // K4-VERDICT-FILTER: проверка — снимаемым чипом, подписью — её текст, а не код.
+  if (checkCond) {
+    const kindKey = checkCond.kind === 'fail' ? 'kit.list.check.fail' : checkCond.kind === 'hint' ? 'kit.list.check.hint' : 'kit.list.check.unknown';
+    const off = verdictFn ? '' : ` · ${t('kit.list.check.noVerdict')}`;
+    chips.push({ id: 'ck', text: `${t(kindKey)}: ${checkWords}${off}`, remove: () => update({ check: null }) });
   }
   // Диапазон снимается с сохранением зоны: зона — выбор человека, а не часть условия.
   const clearDate = () => dateFilter?.onChange({ ...NO_DATE_RANGE, zone: dateFilter.value.zone });
@@ -1627,8 +1657,10 @@ export function ListView({
         }
         // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
         // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
-        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем.
-        if (notApplicable(r.kind, col)) {
+        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем. И только когда у самой
+        // записи значения нет: свойство связи (сторона, место на тропе у части паспорта) поле вида не
+        // объявляет, но значение пришло — «нет у типа» было бы неправдой (пилот 16.11).
+        if (notApplicable(r.kind, col) && fieldValue(r, col.startsWith('fields.') ? col.slice(7) : col) === undefined) {
           const fieldTitle = fieldTitleOf(col);
           return <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[r.kind]?.title ?? r.kind, field: fieldTitle })}>{t('kit.list.cell.naShort')}</span>;
         }

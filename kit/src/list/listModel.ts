@@ -5,7 +5,8 @@
 // Бюджет — правила SPRINT_UXR_S9_SCALE_OPT: S9-01 «не больше 50 строк на
 // группу · ещё N», S9-02 «при >20 группах — топ-10 + Прочие, свёрнуто».
 import { asChip, chipId } from '../core/chipValue';
-import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed } from '../core/contract';
+import type { KitConfig, KitFilter, KitMeta, KitRecord, KitShowClosed, KitVerdict, KitVerdictEntry } from '../core/contract';
+import { verdictCode, verdictText } from '../core/verdict';
 import { isClosedCategory, normalizeAxisCategory } from '../core/statusAxis';
 import { progressOf } from './progress';
 import { colKey, sumOf } from './sum';
@@ -238,7 +239,7 @@ export function sortRecords(records: readonly KitRecord[], sort: ListSort | null
 }
 
 export type ShownLine =
-  | { kind: 'complete'; shown: number; loaded: number; total: number }
+  | { kind: 'complete'; shown: number; loaded: number; total: number; /** Вид — часть источника по выбору приложения: сколько записей в источнике. */ of?: number }
   | { kind: 'truncated'; shown: number; loaded: number; total: number }
   | { kind: 'unknown_total'; shown: number; loaded: number };
 
@@ -247,13 +248,95 @@ export type ShownLine =
  * загруженного; M — серверный итог. Выдача обрезана, если так сказал сервер или
  * итог больше загруженного (флаг потеряли — «полной» не верим). Обрезано без
  * итога — M неизвестен и не выдумывается.
+ *
+ * K5-LIST-TOTAL-TRUNCATED: приложение, которое само показывает часть общей выгрузки,
+ * называет размер источника в meta.subset_of. Это не обрезка — выдача полная, строка
+ * добавляет «это часть». Настоящую обрезку (флаг или total больше загруженного)
+ * subset_of не прячет.
  */
 export function shownOf(meta: KitMeta | null | undefined, loaded: number, shown: number): ShownLine {
   const total = typeof meta?.total === 'number' ? meta.total : undefined;
   const truncated = meta?.truncated === true || (total !== undefined && total > loaded);
-  if (!truncated) return { kind: 'complete', shown, loaded, total: total ?? loaded };
+  if (!truncated) {
+    const whole = total ?? loaded;
+    const of = typeof meta?.subset_of === 'number' && meta.subset_of > whole ? meta.subset_of : undefined;
+    return of === undefined ? { kind: 'complete', shown, loaded, total: whole } : { kind: 'complete', shown, loaded, total: whole, of };
+  }
   if (total === undefined) return { kind: 'unknown_total', shown, loaded };
   return { kind: 'truncated', shown, loaded, total };
+}
+
+/* ---------- условие по проверке вердикта (K4-VERDICT-FILTER) ---------- */
+
+export type CheckKind = 'fail' | 'hint' | 'unknown';
+export interface ListCheck { kind: CheckKind; code: string }
+/** Проверка со счётом — строка сводки; число равно числу записей под тем же условием. */
+export interface CheckCount extends ListCheck { n: number; title: string }
+
+const CHECK_KINDS: readonly CheckKind[] = ['fail', 'hint', 'unknown'];
+
+/** «fail:quiz» → {kind, code}; мусор — null (битый адрес не делает список пустым). */
+export function parseCheck(raw: string | null | undefined): ListCheck | null {
+  if (!raw) return null;
+  const i = raw.indexOf(':');
+  if (i <= 0) return null;
+  const kind = raw.slice(0, i) as CheckKind;
+  const code = raw.slice(i + 1);
+  return CHECK_KINDS.includes(kind) && code ? { kind, code } : null;
+}
+
+export function checkKey(c: ListCheck): string {
+  return `${c.kind}:${c.code}`;
+}
+
+type VerdictOf = (r: KitRecord) => KitVerdict | undefined;
+
+function entriesOf(v: KitVerdict | undefined, kind: CheckKind): readonly KitVerdictEntry[] {
+  if (!v) return [];
+  return kind === 'fail' ? v.failed : kind === 'hint' ? v.hints : v.unknown ?? [];
+}
+
+/** Вердикт записи; сбой расчёта — «вердикта нет»: одна запись не роняет список. */
+function safeVerdict(r: KitRecord, verdictOf: VerdictOf): KitVerdict | undefined {
+  try { return verdictOf(r); } catch { return undefined; }
+}
+
+/** Записи, у которых есть статья этой проверки. Условия нет — все записи. */
+export function applyCheck(records: readonly KitRecord[], check: ListCheck | null, verdictOf: VerdictOf): KitRecord[] {
+  if (!check) return [...records];
+  return records.filter(r => entriesOf(safeVerdict(r, verdictOf), check.kind).some(e => verdictCode(e) === check.code));
+}
+
+/** Подпись проверки — её текст (message) у первой записи, где он есть; иначе код. */
+export function checkTitle(records: readonly KitRecord[], check: ListCheck | null, verdictOf: VerdictOf): string {
+  if (!check) return '';
+  for (const r of records) {
+    const e = entriesOf(safeVerdict(r, verdictOf), check.kind).find(x => verdictCode(x) === check.code);
+    if (e && verdictText(e) !== check.code) return verdictText(e);
+  }
+  return check.code;
+}
+
+/** Счёт по проверкам: провалы, подсказки, «не смогли проверить»; внутри — по убыванию числа. */
+export function countChecks(records: readonly KitRecord[], verdictOf: VerdictOf): CheckCount[] {
+  const map = new Map<string, CheckCount>();
+  for (const r of records) {
+    const v = safeVerdict(r, verdictOf);
+    for (const kind of CHECK_KINDS) {
+      const seen = new Set<string>();
+      for (const e of entriesOf(v, kind)) {
+        const code = verdictCode(e);
+        if (seen.has(code)) continue;
+        seen.add(code);
+        const key = `${kind}:${code}`;
+        const cur = map.get(key) ?? { kind, code, n: 0, title: code };
+        cur.n++;
+        if (cur.title === code && verdictText(e) !== code) cur.title = verdictText(e);
+        map.set(key, cur);
+      }
+    }
+  }
+  return [...map.values()].sort((a, b) => CHECK_KINDS.indexOf(a.kind) - CHECK_KINDS.indexOf(b.kind) || b.n - a.n || a.code.localeCompare(b.code));
 }
 
 /* ---------- состояние в URL ---------- */
@@ -290,6 +373,11 @@ export interface ListState {
    * view; вида нет (выключен настройкой) — действует view.
    */
   appView?: string | null;
+  /**
+   * Условие по проверке вердикта (K4-VERDICT-FILTER): «fail:<код>», «hint:<код>» или
+   * «unknown:<код>». Живёт в адресе (lck), чтобы рабочий список открывался ссылкой.
+   */
+  check?: string | null;
 }
 
 export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group: null, sort: null, filters: {}, ops: {}, text: '' };
@@ -298,9 +386,9 @@ export const DEFAULT_LIST_STATE: ListState = { view: 'list', quick: null, group:
  * Ключи URL: lv (вид), lq (Быстро), lg (группа), ls (порядок, «-» — убывание),
  * lf (значения фильтров), lo (условия, кроме «есть»), lt (текст), lc (режим закрытых, S4-27),
  * lg2 (подгруппа, S4-26), lm (месяц календаря), lcd (поле даты календаря), llf (фильтр библиотеки),
- * lav (вид приложения).
+ * lav (вид приложения), lck (проверка вердикта, K4-VERDICT-FILTER).
  */
-export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf', 'lav'] as const;
+export const LIST_URL_KEYS = ['lv', 'lq', 'lg', 'ls', 'lf', 'lo', 'lt', 'lc', 'lg2', 'lm', 'lcd', 'llf', 'lav', 'lck'] as const;
 
 export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[number], string | null> {
   const f = Object.entries(s.filters).filter(([, v]) => v.length > 0);
@@ -320,6 +408,7 @@ export function writeListState(s: ListState): Record<(typeof LIST_URL_KEYS)[numb
     lcd: s.calDate ?? null,
     llf: s.libFilter && s.libFilter !== 'all' ? s.libFilter : null,
     lav: s.appView || null,
+    lck: parseCheck(s.check) ? s.check! : null,
   };
 }
 
@@ -367,6 +456,7 @@ export function readListState(p: URLSearchParams): ListState {
     calDate: p.get('lcd') ?? undefined,
     libFilter: p.get('llf') === 'fresh' || p.get('llf') === 'stale' ? (p.get('llf') as 'fresh' | 'stale') : undefined,
     appView: p.get('lav') || undefined,
+    check: parseCheck(p.get('lck')) ? p.get('lck')! : undefined,
   };
 }
 

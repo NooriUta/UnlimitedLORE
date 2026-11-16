@@ -112,8 +112,8 @@ describe('конфиги экранов списков', () => {
     // S4-PRODUCTS-NODE: продукты и профиль клиента — справочники, статусной оси нет.
     // S5-DOC-PASSPORT: у документа статуса нет вовсе (KnowDoc без статуса и SCD2).
     // S9-05 A: у человека и агента статуса нет.
-    // MD-04: у ранбука статуса в срезе нет.
-    const noAxis = ['docs', 'runbooks', 'quality_gates', 'users', 'agents', 'milestones', 'releases', 'components', 'projects', 'tech', 'products', 'actors', 'pains', 'gains', 'jobs'] as const;
+    // MD-04: у ранбука статуса в срезе нет. У гейта качества ось есть — состояние из словаря qg_status.
+    const noAxis = ['docs', 'runbooks', 'users', 'agents', 'milestones', 'releases', 'components', 'projects', 'tech', 'products', 'actors', 'pains', 'gains', 'jobs'] as const;
     for (const [id, s] of Object.entries(LIST_SCREENS)) {
       const c = s.config('ru');
       const hasAxis = c.statuses.items.length > 0;

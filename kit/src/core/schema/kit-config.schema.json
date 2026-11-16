@@ -93,7 +93,7 @@
               "properties": {
                 "key": { "type": "string", "minLength": 1 },
                 "title": { "$ref": "#/$defs/title" },
-                "type": { "enum": ["text", "md", "enum", "ref", "date", "number", "bool"] },
+                "type": { "enum": ["text", "md", "enum", "ref", "date", "number", "bool", "list", "kv"] },
                 "section": { "type": "string", "minLength": 1 }
               },
               "additionalProperties": false
@@ -168,7 +168,7 @@
         "additionalProperties": false
       }
     },
-    "verdict": { "description": "(r, ctx) => KitVerdict {score, max, failed[], hints[]}", "x-kit-type": "function" },
+    "verdict": { "description": "(r, ctx) => KitVerdict {score, max, failed[], hints[], unknown[]?} | undefined; статья — код строкой или {code, message}", "x-kit-type": "function" },
     "list": {
       "type": "object",
       "required": ["views"],

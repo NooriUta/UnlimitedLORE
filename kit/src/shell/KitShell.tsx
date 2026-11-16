@@ -176,8 +176,17 @@ export interface KitShellProps {
    * Глобальные параметры URL, которые переживают смену раздела/модуля
    * (S4-13, B-07). Остальное — q, фильтры, вкладка — принадлежит разделу и
    * снимается при переходе. Смена вида внутри раздела ничего не снимает.
+   *
+   * Сюда — только отбор, который должен пережить смену раздела (проект, язык). Параметры
+   * ОТКРЫТОЙ ЗАПИСИ (запись, её вкладка) класть нельзя: запись останется на экране при клике
+   * по меню (пилот 15.11, K5-KEEPPARAMS-GUARD). Сторож — {@link recordParams}.
    */
   keepParams?: readonly string[];
+  /**
+   * Какими параметрами адреса приложение открывает запись (`rec`, `tab`…). Нужны сторожу: если
+   * такой параметр попал в `keepParams`, в режиме разработки kit предупреждает словами.
+   */
+  recordParams?: readonly string[];
   children?: ReactNode;
 }
 
@@ -293,11 +302,25 @@ function resolveNav(config: KitConfig, params: URLSearchParams): KitNav {
   return { module, item: item?.id ?? null, view };
 }
 
+/** Параметры открытой записи, которые приложение просит сохранять при смене раздела. */
+export function keepParamsConflicts(keep: readonly string[] | undefined, record: readonly string[] | undefined): string[] {
+  if (!keep || !record) return [];
+  const own = new Set(record);
+  return keep.filter(k => own.has(k));
+}
+
 export function KitShell({
   config, data, brand, brandIcon, brandTag, storage: storageProp, storageKey = 'seidr-kit', win, narrow: narrowProp,
-  onNavigate, onOpenRecord, recordHref, topStart, topEnd, account, statusBar, keepParams, children,
+  onNavigate, onOpenRecord, recordHref, topStart, topEnd, account, statusBar, keepParams, recordParams, children,
 }: KitShellProps) {
   const lang = useKitLang();
+  // K5-KEEPPARAMS-GUARD: параметр открытой записи в keepParams — запись переживёт смену раздела.
+  const keepConflicts = keepParamsConflicts(keepParams, recordParams).join(', ');
+  useEffect(() => {
+    if (keepConflicts && import.meta.env.DEV) {
+      console.warn(`[kit] keepParams: параметр записи «${keepConflicts}» не снимется при смене раздела — открытая запись останется на экране. Уберите его из keepParams.`);
+    }
+  }, [keepConflicts]);
   const urlWin = win ?? (typeof window !== 'undefined' ? window : undefined);
   const storage = useMemo(() => storageProp ?? createSafeStorage(), [storageProp]);
   const narrow = useNarrow(narrowProp);

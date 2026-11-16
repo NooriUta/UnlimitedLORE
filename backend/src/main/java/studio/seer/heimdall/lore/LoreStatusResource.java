@@ -120,17 +120,23 @@ public class LoreStatusResource extends LoreResourceBase {
      */
     static String batchError(String id, Response r) {
         String head = id + ": HTTP " + r.getStatus();
-        if (r.getEntity() instanceof Map<?, ?> m) {
-            Object code = m.get("error");
-            Object detail = m.get("detail");
+        Object code = null;
+        Object detail = null;
+        // Отказ гейта (LoreDoneGate, REASON_REQUIRED и др.) — LoreError, а не Map: 15.11.2026 на проде
+        // пачка из-за этого отдавала голое «HTTP 409» вместо DONE_BY_HUMAN_ONLY с текстом.
+        if (r.getEntity() instanceof LoreError le) {
+            code = le.error();
+            detail = le.detail();
+        } else if (r.getEntity() instanceof Map<?, ?> m) {
+            code = m.get("error");
+            detail = m.get("detail");
             if (code == null) code = m.get("code");
             if (detail == null) detail = m.get("message");
-            StringBuilder s = new StringBuilder(head);
-            if (code != null) s.append(" ").append(code);
-            if (detail != null) s.append(" — ").append(detail);
-            return s.toString();
         }
-        return head;
+        StringBuilder s = new StringBuilder(head);
+        if (code != null) s.append(" ").append(code);
+        if (detail != null) s.append(" — ").append(detail);
+        return s.toString();
     }
 
     // ── Write-path: status update (SCD2) ────────────────────────────────────

@@ -21,10 +21,13 @@ import { ResizeBorder, zoneSize } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
 import type { WidthStore } from '../list/columnWidths';
 import { applySections, gluedSections, sectionGroups, type PassportOrder } from '../model/surfaces';
+import { publishRecordUpdate } from '../core/recordUpdates';
 import { asChip, isChipList } from '../core/chipValue';
 import { ValueChips } from './ValueChips';
 import { GluedBlock } from './GluedBlock';
 import { IconButton } from '../elements/IconButton';
+import { MiniList } from '../elements/MiniList';
+import { KvValue } from './KvValue';
 import { ICON_CANON } from '../elements/iconCanon';
 import { EmptyState } from '../states/StateViews';
 import { useKitLang, kitT, type KitLang } from '../i18n';
@@ -49,6 +52,8 @@ import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
 export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
+/** Служебные вкладки конструктора — не разделы записи (порядок: applySections). */
+const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -194,7 +199,9 @@ type FieldSaver = ((field: string, from: unknown) => (to: unknown) => Promise<vo
 function fieldSaver(record: KitRecord, ctx: KitCtx): FieldSaver {
   const onSave = ctx.config.hooks?.onSave;
   if (!onSave || !rolePerms(ctx.config, ctx.role).canEdit) return undefined;
-  return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to });
+  // K5-RECORD-UPDATED-EVENT: после ответа сервера — событие для всех мест, где видна запись.
+  return (field, from) => to => onSave({ type: record.kind, id: record.id, field, from, to })
+    .then(() => publishRecordUpdate({ id: record.id, field, value: to }));
 }
 
 interface EditSlot { Editor: ComponentType<MdEditorSlotProps>; save: NonNullable<FieldSaver>; drafts?: (field: string) => MdDraftSlot | undefined }
@@ -207,7 +214,19 @@ export function boolOf(v: unknown): boolean | null {
   return null;
 }
 
-function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
+/** Пункт списка: строка как есть; у объекта — text, title, name, label или id; иначе текст значения. */
+function listItemText(v: unknown): string {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    for (const k of ['text', 'title', 'name', 'label', 'id']) {
+      const x = o[k];
+      if (typeof x === 'string' && x.trim()) return x.trim();
+    }
+  }
+  return valueText(v).trim();
+}
+
+export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
   const lang = useKitLang();
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
@@ -218,6 +237,15 @@ function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type
   if (type === 'sum') return <SumCell value={value} />;
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
+  // K4-FIELD-KV: вложенный объект — таблицей «ключ → значение», а не сырым JSON.
+  if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} />;
+  // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
+  // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
+  if (type === 'list') {
+    const items = (Array.isArray(value) ? value : [value]).map(listItemText).filter(s => s !== '');
+    if (items.length === 0) return <span className="sk-rec-fields__none">—</span>;
+    return <MiniList kind="plain" label={title ?? ''} items={items.map((text, i) => ({ id: String(i), text }))} />;
+  }
   if (type === 'ref') {
     // Значения пришли чипами (S4-29) — ряд чипов со свёрткой; строки — прежний
     // путь. Проверяем форму ДАННЫХ, а не тип поля: сервер сменил форму у
@@ -411,6 +439,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // связей, порядок по данным, и это ПОМЕЧЕНО как умолчание, а не выдано за
   // решение модели (D-2026-LORE-MODEL-COLUMN-LAYERS, честные состояния).
   const named = sections?.decided === true;
+  // Какие связи модель назвала поимённо: у них своя вкладка (S4-29). Не названные ассоциации идут в
+  // общую вкладку группы — иначе при порядке из модели каждая становилась вкладкой (пилот 16.11,
+  // дефект приёмки ME-1: «квиз руны 1», «лежит на тропах 2»). В модели LORE все названы — экраны те же.
+  const namedKeys = new Set(named ? (sections?.sections ?? []).flatMap(x => [x.key, x.ref ?? '']) : []);
   const relTabs: { id: string; label: string; relation: string; defs: KitRelationDef[] }[] = [];
   for (const d of rels) {
     // Модель назвала разделы по отдельности — НЕ группируем (S4-29).
@@ -421,7 +453,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
     // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
     // отключается: что считать разделом, решает приложение, а не конструктор.
-    if (named || OWN_TAB.includes(d.relation)) {
+    if ((named && namedKeys.has(d.key)) || (OWN_TAB.includes(d.relation) && !d.shared)) {
       // Ключ связи — ключ вкладки, и две связи с одним ключом дали бы два
       // одинаковых раздела (B13: «дублирующиеся вкладки»). Совпал — связи
       // идут в одну вкладку, а не во вторую такую же.
@@ -429,10 +461,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
       if (same) same.defs.push(d); else relTabs.push({ id: d.key, label: d.label, relation: d.relation, defs: [d] });
       continue;
     }
-    const sh = SHARED_TAB[d.relation];
+    // §7.8 шаг 1: сторона состава/агрегации с явным местом «вкладка связей» — в общую вкладку ассоциаций.
+    const sh = SHARED_TAB[d.shared ? 'association' : d.relation];
     if (!sh) continue;
     const ex = relTabs.find(x => x.id === sh.id);
-    if (ex) ex.defs.push(d); else relTabs.push({ id: sh.id, label: kitT(lang, sh.label), relation: d.relation, defs: [d] });
+    // Методика §7.8: подпись группы — из вида приложения (документа), иначе подпись kit.
+    if (ex) ex.defs.push(d); else relTabs.push({ id: sh.id, label: kind?.relationGroups?.[d.relation] ?? kitT(lang, sh.label), relation: d.relation, defs: [d] });
   }
   const relCount = (defs: KitRelationDef[]) => defs.reduce((n, d) => n + relationTargets(record, ctx, d).length, 0);
   // Счётчик раздела — ОДНИМ правилом (B13: «счётчики то есть, то нет»).
@@ -574,7 +608,8 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // экране вслепую — сервер не знал ни ширины, ни того, сколько вкладок у
   // записи набралось вместе со служебными.
   const row = mergeTabs(aside ? recordItems : [...recordItems, ...aroundItems]);
-  const ordered: TabItem[] = applySections(row, order);
+  // Не названные моделью разделы записи — до служебных вкладок (пилот 16.11).
+  const ordered: TabItem[] = applySections(row, order, SERVICE_TABS);
   // ГРУППЫ: несколько родственных разделов — ОДНА вкладка с подписью группы
   // (шестой ключ модели). Склеиваются только разделы-связи: их рисует kit, и
   // внутри вкладки они становятся подзаголовками. Раздел, который kit внутри

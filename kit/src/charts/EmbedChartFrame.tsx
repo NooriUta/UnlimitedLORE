@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EmptyState, Forbidden, LoadError, NotBuilt, Skeleton } from '../states/StateViews';
 import { kitT, useKitLang } from '../i18n';
-import { embedOrigin, embedSrc, embedThemeOfDocument, frameHeightFromMessage, type EmbedTheme } from './embedFrame';
+import { embedOrigin, embedSrc, embedThemeOfDocument, frameErrorFromMessage, frameHeightFromMessage, type EmbedErrorCode, type EmbedTheme } from './embedFrame';
 
 export type EmbedFrameState =
   | { kind: 'loading' }
@@ -54,6 +54,8 @@ export function EmbedChartFrame({ state, source, title, minHeight = 240, product
   // Приёмка 14.11.2026: хост встройки не отвечает — своё состояние, а не страница браузера.
   const [answered, setAnswered] = useState(false);
   const [silent, setSilent] = useState(false);
+  // VE-7: встройка сообщила об ошибке (FORBIDDEN / NOT_FOUND / QUERY_FAILED) — своё состояние.
+  const [embedError, setEmbedError] = useState<EmbedErrorCode | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   // Тема страницы меняется атрибутами на <html> — перечитываем.
@@ -78,8 +80,11 @@ export function EmbedChartFrame({ state, source, title, minHeight = 240, product
     const onMessage = (e: MessageEvent) => {
       // Только наш фрейм и только origin подписанного адреса: отправитель шлёт на "*".
       if (!frameRef.current || e.source !== frameRef.current.contentWindow) return;
-      const h = frameHeightFromMessage({ origin: e.origin, data: e.data }, origin);
-      if (h !== null) { setAnswered(true); setHeight(Math.max(minHeight, h)); }
+      const msg = { origin: e.origin, data: e.data };
+      const h = frameHeightFromMessage(msg, origin);
+      if (h !== null) { setAnswered(true); setHeight(Math.max(minHeight, h)); return; }
+      const err = frameErrorFromMessage(msg, origin);
+      if (err !== null) { setAnswered(true); setEmbedError(err); }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -89,6 +94,7 @@ export function EmbedChartFrame({ state, source, title, minHeight = 240, product
   useEffect(() => {
     setAnswered(false);
     setSilent(false);
+    setEmbedError(null);
   }, [src, attempt]);
   useEffect(() => {
     if (!src || answered || answerTimeoutMs <= 0) return;
@@ -123,6 +129,18 @@ export function EmbedChartFrame({ state, source, title, minHeight = 240, product
       if (!src) {
         return wrap('unavailable', (
           <LoadError title={kitT(lang, 'kit.embed.unavailable', { source })} hint={kitT(lang, 'kit.embed.badUrl')} onRetry={onRetry} />
+        ));
+      }
+      if (embedError === 'FORBIDDEN') {
+        return wrap('forbidden', <Forbidden title={kitT(lang, 'kit.embed.forbidden')} reason={kitT(lang, 'kit.embed.errorForbiddenHint', { source })} />);
+      }
+      if (embedError) {
+        const hintKey = embedError === 'NOT_FOUND' ? 'kit.embed.errorNotFoundHint'
+          : embedError === 'QUERY_FAILED' ? 'kit.embed.errorQueryFailedHint' : 'kit.embed.errorUnknownHint';
+        return wrap('embed_error', (
+          <LoadError title={kitT(lang, 'kit.embed.error', { source })}
+            hint={<>{kitT(lang, hintKey, { source })} <code className="sk-embed__code">{embedError}</code></>}
+            onRetry={() => { setAttempt(n => n + 1); onRetry?.(); }} />
         ));
       }
       if (silent) {

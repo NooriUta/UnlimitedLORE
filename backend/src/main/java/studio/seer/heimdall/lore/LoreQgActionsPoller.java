@@ -271,7 +271,14 @@ public class LoreQgActionsPoller {
             return "Forgejo вернул " + resp.statusCode();
         }
         JsonObject body = new JsonObject(resp.body());
-        JsonArray runs = body.getJsonArray("workflow_runs", new JsonArray());
+        JsonArray all = body.getJsonArray("workflow_runs", new JsonArray());
+        // 15.11.2026 на проде Forgejo при limit=30 вернул 8068 прогонов: limit сервер не
+        // соблюдает. Заход разбирает не больше страницы — новые первыми, остальное уже записано.
+        JsonArray runs = pageOf(all, pageSize);
+        if (all.size() > runs.size()) {
+            LOG.debugf("[LORE QG] Forgejo вернул %d прогонов при limit=%d — взяты первые %d",
+                all.size(), pageSize, runs.size());
+        }
         int written = 0;
         for (int i = 0; i < runs.size(); i++) {
             if (recordRun(slug, runs.getJsonObject(i))) written++;
@@ -288,8 +295,8 @@ public class LoreQgActionsPoller {
 
         String workflow = run.getString("workflow_id", "unknown");
         String routine = "qg-ci-" + workflow.replaceAll("\\.ya?ml$", "").replaceAll("[^A-Za-z0-9_-]", "-");
-        String updated = run.getString("updated_at", run.getString("created_at", ""));
-        String runDate = updated.length() >= 10 ? updated.substring(0, 10) : null;
+        RunFields f = runFields(run);
+        String runDate = f.runDate();
         if (runDate == null) {
             // Без даты запись запрещена контрактом (QG-03), и обходить его здесь
             // было бы прямым воспроизведением разбираемого дефекта.
@@ -316,11 +323,11 @@ public class LoreQgActionsPoller {
             // строку, а не заведёт вторую. Опрос обязан быть идемпотентным —
             // он видит одно и то же окно много раз.
             "forgejo_run_" + run.getValue("id"),
-            run.getString("run_started_at", run.getString("created_at", null)),
-            run.getString("updated_at", null),
-            run.getString("url", null),
-            run.getString("head_sha", null),
-            prNumber(run));
+            f.startedAt(),
+            f.finishedAt(),
+            f.url(),
+            f.sha(),
+            f.pr());
 
         LoreQgRunWriter.Result r = writer.record(req);
         if (!r.ok()) {
@@ -337,10 +344,52 @@ public class LoreQgActionsPoller {
      * пустое поле честно означает «неизвестно», ноль означал бы «PR номер ноль».
      */
     static Integer prNumber(JsonObject run) {
-        String b = run.getString("head_branch", "");
+        String b = str(run, "prettyref", "head_branch");
+        if (b == null) b = "";
         if (b.startsWith("#")) {
             try { return Integer.valueOf(b.substring(1)); } catch (NumberFormatException ignored) { }
         }
         return null;
+    }
+
+    /**
+     * Поля прогона, которые идут в запись гейта. Forgejo отдаёт ActionRun в своей форме:
+     * {@code created/updated/started/stopped}, {@code commit_sha}, {@code html_url}, {@code prettyref}
+     * (swagger, схема ActionRun). Код читал форму GitHub ({@code *_at}, {@code head_sha}, {@code url}),
+     * и 15.11.2026 на проде каждый прогон уходил «без даты» — канал 1 не записал ни одного.
+     * Форма GitHub оставлена запасной: forgejo-mcp и старые фикстуры отдают её.
+     *
+     * @param runDate дата прогона (YYYY-MM-DD) по завершению → обновлению → созданию; нет ни одной — null
+     */
+    record RunFields(String runDate, String startedAt, String finishedAt, String url, String sha, Integer pr) {}
+
+    static RunFields runFields(JsonObject run) {
+        String finished = str(run, "stopped", "updated", "updated_at");
+        String dateSrc = finished != null ? finished : str(run, "created", "created_at");
+        String runDate = dateSrc != null && dateSrc.length() >= 10 ? dateSrc.substring(0, 10) : null;
+        return new RunFields(
+            runDate,
+            str(run, "started", "run_started_at", "created", "created_at"),
+            finished,
+            str(run, "html_url", "url"),
+            str(run, "commit_sha", "head_sha"),
+            prNumber(run));
+    }
+
+    /** Первое непустое строковое поле из перечисленных; нет — null. */
+    private static String str(JsonObject o, String... keys) {
+        for (String k : keys) {
+            Object v = o.getValue(k);
+            if (v instanceof String s && !s.isBlank()) return s;
+        }
+        return null;
+    }
+
+    /** Не больше {@code size} первых прогонов; {@code size ≤ 0} — без обрезки. */
+    static JsonArray pageOf(JsonArray runs, int size) {
+        if (size <= 0 || runs.size() <= size) return runs;
+        JsonArray out = new JsonArray();
+        for (int i = 0; i < size; i++) out.add(runs.getValue(i));
+        return out;
     }
 }

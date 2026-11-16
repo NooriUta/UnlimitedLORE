@@ -13,7 +13,6 @@ import { join, relative, sep } from 'node:path';
 const ALLOWED: Record<string, { n: number; why: string }> = {
   'list/ListView.tsx': { n: 2, why: 'название и код САМОЙ записи в строке списка — не упоминание чужой' },
   'record/KindBlock.tsx': { n: 1, why: 'название записи-строки вложенного блока — сама запись' },
-  'record/RecordGraph.tsx': { n: 1, why: 'узел SVG эго-графа: цвет — сектором ребра, это узел, а не упоминание в тексте' },
   'views/calendar/CalendarMonth.tsx': { n: 1, why: 'запись в своей ячейке календаря' },
   'views/library/LibraryView.tsx': { n: 1, why: 'кнопка «Открыть» у документа библиотеки' },
   'views/timeline/TimelineLanes.tsx': { n: 2, why: 'подпись полосы записи на таймлайне' },
@@ -52,7 +51,7 @@ describe('сторож: упоминание записи — только че�
     expect(stale, 'уберите строку эталона').toEqual([]);
   });
   it('места упоминаний зовут ObjectMention', () => {
-    for (const f of ['record/fmt.tsx', 'record/RecordLinks.tsx', 'record/RecordPeek.tsx', 'record/RelationField.tsx', 'record/ValueChips.tsx', 'record/RecordGraph.tsx', 'list/ListView.tsx']) {
+    for (const f of ['record/fmt.tsx', 'record/RecordLinks.tsx', 'record/RecordPeek.tsx', 'record/RelationField.tsx', 'record/ValueChips.tsx', 'list/ListView.tsx']) {
       expect(readFileSync(join(process.cwd(), 'src', f), 'utf8'), f).toMatch(/<ObjectMention\b/);
     }
   });

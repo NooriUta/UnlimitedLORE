@@ -158,19 +158,17 @@ describe('«Спринты» v2: вид Völva рядом с таймлайно�
   }, 15000);
 });
 
-// VE-7 (Völva, 14.11.2026): статическая встройка /embed/question родителю НЕ шлёт ничего — ни высоты, ни
-// ошибки (metabase.frame шлёт только интерактивная). Таймаут kit «не ответила» (ждёт первого frame)
-// подменял бы рабочий график отказом через 15 с. Пока Völva не шлёт frame, ожидание ответа выключено.
-describe('встройка Völva без сообщений родителю — рамка остаётся', () => {
-  it('готовая подпись → iframe и через 20 с всё ещё iframe, а не «не ответила»', async () => {
+// VE-7 (Völva 0.1.12 на стенде, 15.11.2026): статическая встройка шлёт родителю metabase.frame сразу
+// после отрисовки. Ожидание ответа возвращено (15 с): встройка молчит — «Völva не ответила».
+describe('встройка Völva молчит 15 с — «не ответила»', () => {
+  it('готовая подпись → iframe; без единого сообщения через 16 с — состояние silent', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       const impl = vi.fn(async () => json({ url: 'https://volva.example.org/embed/question/J', expires_at: 'x' })) as unknown as typeof fetch;
       const { container } = render(<VolvaChart chart={VOLVA_SPRINTS_CHART} title="t" projects={['A/B']} fetchImpl={impl} />);
       await waitFor(() => expect(container.querySelector('iframe')).not.toBeNull());
-      await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
-      expect(container.querySelector('[data-embed-state="silent"]')).toBeNull();
-      expect(container.querySelector('iframe')).not.toBeNull();
+      await act(async () => { await vi.advanceTimersByTimeAsync(16000); });
+      expect(container.querySelector('[data-embed-state="silent"]')).not.toBeNull();
     } finally {
       vi.useRealTimers();
     }

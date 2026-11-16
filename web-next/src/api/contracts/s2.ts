@@ -287,9 +287,11 @@ export interface UserSettings {
   status_confirm: boolean;
   /**
    * Вид вкладки «Граф» по умолчанию (GC-03, владелица 11.11.2026: «настройкой в
-   * настройках человека»). auto — не выбирал: решает экран (секторы / список на телефоне).
+   * настройках человека»). auto — не выбирал: прежний выбор на месте или Обсидиан. sectors и list
+   * сняты 16.11.2026 (владелица: «оставьте только последние 3») — приходят только из старых
+   * сохранённых настроек и читаются как auto.
    */
-  graph_view: 'auto' | 'sectors' | 'list' | 'force' | 'obsidian';
+  graph_view: 'auto' | 'sectors' | 'list' | 'force' | 'obsidian' | 'structure';
   /**
    * Где открывать запись и черновик новой (S4-24; одна настройка с S4-17): справа,
    * снизу или во весь экран. auto — не выбирал: решает экран (справа). Сервер
@@ -340,7 +342,7 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   stripes: bool,
   peek_hover: bool,
   status_confirm: bool,
-  graph_view: oneOf('auto', 'sectors', 'list', 'force', 'obsidian'),
+  graph_view: oneOf('auto', 'sectors', 'list', 'force', 'obsidian', 'structure'),
   passport_place: oneOf('auto', ...RECORD_PLACEMENTS),
   nav_version: oneOf('v1', 'v2'),
   show_tech: bool,

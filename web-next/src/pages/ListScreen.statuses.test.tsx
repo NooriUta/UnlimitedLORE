@@ -171,7 +171,7 @@ describe('MP2-08 · оговорки модели в списке — под з�
     const { impl } = net({ error: 'boom' }, 502);
     const { container } = render(<ListScreen screen="sprints" fetchImpl={impl} urlState={false} />);
     await waitFor(() => expect(chip(container)?.getAttribute('title')).toContain('В работе'));
-    await waitFor(() => expect(container.querySelector('.pp-model-note__tech, [data-testid="model-notes"]')).not.toBeNull());
+    await waitFor(() => expect(container.querySelector('.sk-model-note__tech, [data-testid="model-notes"]')).not.toBeNull());
     const strip = container.querySelector('.list-screen__warn');
     expect(strip?.textContent ?? '').not.toMatch(/умолчани[а-яё]* приложения/i);
   });

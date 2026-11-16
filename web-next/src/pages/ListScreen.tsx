@@ -3,7 +3,7 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
-import { ModelNotes } from '../record/ModelNotes';
+import { RecordModelNotes as ModelNotes } from '@seidr/kit';
 import { useChildRows } from '../lists/useChildRows';
 import { buildExpand, childScreenOf } from '../lists/nestedExpand';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';

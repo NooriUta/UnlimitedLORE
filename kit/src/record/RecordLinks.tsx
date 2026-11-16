@@ -23,6 +23,22 @@ export function recordLinks(id: string, edges: readonly KitEdge[]): RecordLink[]
     || (a.other < b.other ? -1 : a.other > b.other ? 1 : 0));
 }
 
+/**
+ * Подпись ребра словами (K5-MODEL-NAV-EDGE-LABELS): `config.edges` — главнее (у LORE подписи там
+ * выверены); нет — подпись связи вида записи, затем любого вида с этим ребром; нет нигде — код.
+ */
+export function linkGroupLabel(ctx: KitCtx, recordKind: string, type: string): string {
+  const own = ctx.config.edges?.[type]?.label;
+  if (own) return own;
+  const byKind = ctx.config.kinds[recordKind]?.relations?.find(r => r.rel === type)?.label;
+  if (byKind) return byKind;
+  for (const k of Object.values(ctx.config.kinds)) {
+    const l = k.relations?.find(r => r.rel === type)?.label;
+    if (l) return l;
+  }
+  return type;
+}
+
 /** Ошибка блока данных из meta.errors (block: 'edges' | 'journal' …). */
 export function blockError(ctx: KitCtx, block: string): string | undefined {
   return ctx.data.meta.errors?.find(e => e.block === block)?.reason;
@@ -44,10 +60,10 @@ export function RecordLinks({ record, ctx, lang }: { record: KitRecord; ctx: Kit
         const style = { '--edge-c': edgeColor(ctx.config, type) } as CSSProperties;
         return (
           <section key={type} className="sk-rec-links__group" data-testid="kit-link-group" data-type={type} style={style}
-            aria-label={ctx.config.edges?.[type]?.label ?? type}>
+            aria-label={linkGroupLabel(ctx, record.kind, type)}>
             <h2 className="sk-rec-links__title">
               <span className="sk-rec-dot" aria-hidden="true" />
-              <span>{ctx.config.edges?.[type]?.label ?? type}</span>
+              <span>{linkGroupLabel(ctx, record.kind, type)}</span>
               <code className="sk-rec-links__code">{type}</code>
               <span className="sk-rec-links__count">{items.length}</span>
             </h2>

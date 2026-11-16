@@ -7,7 +7,7 @@ import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
   CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  BatchUndo, CalendarMonth, ControlBar, KvValue, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   BurnChart, BurnSpark, burnSum, type BurnPoint,
   DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
@@ -16,14 +16,19 @@ import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, 
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
+import KitBadges from './KitBadges';
+import { KitChartsDemo } from './KitChartsDemo';
+import { KitPassportDemo } from './KitPassportDemo';
+import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
 
-const SECTIONS = ['tokens', 'elements', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
+const SECTIONS = ['tokens', 'elements', 'badges', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
+  badges: 'kitPage.sec.badges',
   states: 'kitPage.sec.states',
   charts: 'kitPage.sec.charts',
   shell: 'kitPage.sec.shell',
@@ -215,8 +220,14 @@ export default function KitPage() {
           </Toolbar>
         </section>
 
+        {/* Шильдики: статус, код, тип, приоритет, тег и фильтр рядом — материал для бренд-бука. */}
+        <KitBadges />
+
         <section id="kit-states" className="kitp__sec" aria-labelledby="kit-states-h">
           <h2 id="kit-states-h" className="kitp__h2">{t('kitPage.sec.states')}</h2>
+          {/* K4-SUMMARY-QUEUE: «прошло N из M» по видам; вид без проверок назван, а не выдан за ноль. */}
+          <h3 className="kitp__h3">{t('kitPage.st.vsum')}</h3>
+          <KitVerdictSummaryDemo />
           <div className="kitp__grid">
             <Skeleton lines={3} />
             <EmptyState compact />
@@ -234,6 +245,15 @@ export default function KitPage() {
           <div className="kitp__grid">
             {TARGET_PARTS.map(p => <span key={p.id}>{p.id} <BurnSpark points={p.points} /></span>)}
           </div>
+          {/* K4-CHARTS: графики одним семейством — line · scatter · bar · heat. */}
+          <KitChartsDemo lang={kitLang} />
+        </section>
+
+        {/* K5-PASSPORT-FROM-MODEL, шаг 7: паспорт из документа чужого приложения — без своего рендера. */}
+        <section id="kit-passport" className="kitp__sec" aria-labelledby="kit-passport-h">
+          <h2 id="kit-passport-h" className="kitp__h2">{t('kitPage.sec.passport')}</h2>
+          <p>{t('kitPage.passport.lead')}</p>
+          <KitPassportDemo lang={kitLang} />
         </section>
 
         <section id="kit-shell" className="kitp__sec" aria-labelledby="kit-shell-h">
@@ -438,6 +458,9 @@ export default function KitPage() {
           <h3 className="kitp__h3">{t('kitPage.mini.head')}</h3>
           <p>{t('kitPage.mini.lead')}</p>
           <MiniListDemo />
+          <h3 className="kitp__h3">{t('kitPage.kv.head')}</h3>
+          <p>{t('kitPage.kv.lead')}</p>
+          <KvValue label={t('kitPage.kv.head')} value={{ combat: { base_damage: 3, crit: { chance: 0.1, mult: 2 } }, economy: { start_gold: 50 }, runes: [{ rune: 'Fehu', heat: 2 }, { rune: 'Uruz', heat: 3, rare: true }], enabled: true }} />
           <h3 className="kitp__h3">{t('kitPage.lib.head')}</h3>
           <p>{t('kitPage.lib.lead')}</p>
           <LibraryView
