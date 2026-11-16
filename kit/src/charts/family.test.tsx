@@ -98,3 +98,17 @@ describe('честные состояния и цвета', () => {
     expect(container.innerHTML).toContain('var(--');
   });
 });
+
+describe('ширина по контейнеру без растяжения (препрод 16.11: текст делений сжимался в узкой колонке)', () => {
+  it('SVG не растягивают: нет preserveAspectRatio="none", ширина viewBox — ширина контейнера', () => {
+    const RO = globalThis.ResizeObserver;
+    let cb: ((e: { contentRect: { width: number } }[]) => void) | null = null;
+    globalThis.ResizeObserver = class { constructor(f: typeof cb) { cb = f; } observe() { cb?.([{ contentRect: { width: 300 } }]); } disconnect() {} unobserve() {} } as unknown as typeof ResizeObserver;
+    try {
+      const { container } = wrap(<LineChart title="Дрейф" series={[{ key: 'a', label: 'a', points: [{ x: T0, y: 1 }, { x: T0 + DAY, y: 2 }] }]} />);
+      const svg = container.querySelector('svg.sk-chart__svg')!;
+      expect(svg.getAttribute('preserveAspectRatio')).toBeNull();
+      expect(svg.getAttribute('viewBox')).toBe('0 0 300 200');
+    } finally { globalThis.ResizeObserver = RO; }
+  });
+});
