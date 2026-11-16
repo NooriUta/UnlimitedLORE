@@ -29,6 +29,15 @@ final class LoreRecordUnmodeled {
     /** Типы, у которых блок не отдаётся: человек, агент, роль продукта. */
     static final Set<String> PEOPLE = Set.of("user", "agent", "actor");
 
+    /**
+     * Служебные поля по перечню, утверждённому владелицей 15.11.2026: в блок не попадают
+     * (D-2026-LORE-FREE-FIELDS-SHOWN). Часть из них уже отсекают isSystem и isInternal модели;
+     * здесь перечень назван целиком, чтобы правило не зависело от чужих списков.
+     */
+    static final Set<String> SERVICE = Set.of("valid_from", "valid_to", "state_uid", "content_hash", "changed_by",
+        "changed_by_kind", "status_category", "status_known_from", "status_backfilled", "source_commit", "hist_for",
+        "created_at", "updated_at", "origin");
+
     static boolean reads(String type) {
         return type != null && !PEOPLE.contains(type) && LoreModelTypes.GRAPH.containsKey(type);
     }
@@ -49,7 +58,7 @@ final class LoreRecordUnmodeled {
         for (Map.Entry<String, Object> e : vertex.entrySet()) {
             String p = e.getKey();
             if (p.startsWith("@") || p.equals(g.key()) || modeled.contains(p)) continue;
-            if (LoreModelTypes.isSystem(p) || LoreModelTypes.isInternal(p, g.key())) continue;
+            if (SERVICE.contains(p) || LoreModelTypes.isSystem(p) || LoreModelTypes.isInternal(p, g.key())) continue;
             if ("task".equals(type) && LoreModelTypes.LEGACY_ROLE_STRINGS.contains(p)) continue;
             Object v = e.getValue();
             if (v == null || (v instanceof String s && s.isBlank()) || (v instanceof Collection<?> c && c.isEmpty())

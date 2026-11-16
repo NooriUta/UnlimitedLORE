@@ -87,6 +87,19 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.meta.facade).toBe('server');
   });
 
+  it('MDL-10: значения вне модели доходят до паспорта, а не теряются при разборе', () => {
+    // Находка со стенда 16.11.2026: сервер прислал unmodeled, разбор оставлял только известные ему ключи —
+    // блок «Не описано в модели» не появлялся ни у одной записи.
+    const c = recordFromServer({ ...(sprintBody() as Record<string, unknown>), unmodeled: { branch_ref: 'feature/x', plan_id: 'p1' } }, LOADED);
+    expect(c.unmodeled).toEqual({ branch_ref: 'feature/x', plan_id: 'p1' });
+  });
+
+  it('MDL-10: значений вне модели нет — ключа нет, а не пустого блока', () => {
+    expect('unmodeled' in recordFromServer(sprintBody(), LOADED)).toBe(false);
+    expect('unmodeled' in recordFromServer({ ...(sprintBody() as Record<string, unknown>), unmodeled: {} }, LOADED)).toBe(false);
+    expect('unmodeled' in recordFromServer({ ...(sprintBody() as Record<string, unknown>), unmodeled: ['не объект'] }, LOADED)).toBe(false);
+  });
+
   it('MC-08: вид bool доходит до kit как bool, а не сваливается в text', () => {
     const c = recordFromServer(sprintBody(), LOADED);
     expect(c.schema.fields.find(f => f.key === 'no_release')?.kind).toBe('bool');
