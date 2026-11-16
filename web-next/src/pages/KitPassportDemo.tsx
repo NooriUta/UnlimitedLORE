@@ -1,7 +1,8 @@
 // Витрина /kit: паспорт записи из документа ЧУЖОГО приложения (SPRINT_UXR_S14_KIT5/
 // K5-PASSPORT-FROM-MODEL, шаг 7 — «паспорт с составом на чужих данных; он же образец для методики
 // SPEC-LORE-MODEL-PASSPORT-METHOD»). Тропа «Дата-странников»: свитки — часть записи (composition),
-// сны — связь-свойство, квизы — ассоциация. Ни строчки рендера: документ → passportFromDoc →
+// сны — связь-свойство, квизы — ассоциация со свойствами ребра (место на тропе, сторона —
+// K5-EDGE-PROPS-COLUMNS: квиз Q-1 стоит на тропе дважды, строки различаются значениями ребра). Ни строчки рендера: документ → passportFromDoc →
 // RecordScreen + RecordReader. Всё, что приложение делает само, — даёт документ и словарь статусов.
 import { useMemo, useState } from 'react';
 import { RecordReader, RecordScreen, passportFromDoc, type KitConfig, type KitCtx, type KitLang, type KitRecordDoc } from '@seidr/kit';
@@ -22,13 +23,15 @@ const DOC: KitRecordDoc = {
     relations: [
       { key: 'scrolls', label: 'Свитки', relation: 'composition', rel: 'ON_TRAIL', dir: 'in', count: 3, place: 'part', target_type: 'scroll' },
       { key: 'dreams', label: 'Сны', relation: 'attribute', rel: 'IN_DREAM', dir: 'out', count: 2, place: 'prop', target_type: 'dream' },
-      { key: 'quizzes', label: 'Квизы', relation: 'association', rel: 'QUIZ_OF', dir: 'in', count: 2, target_type: 'quiz' },
+      { key: 'quizzes', label: 'Квизы', relation: 'association', rel: 'QUIZ_OF', dir: 'in', count: 3, target_type: 'quiz',
+        props: [{ key: 't', label: 'Место на тропе' }, { key: 'side', label: 'Сторона' }] },
     ],
   },
   values: { title: 'Время — Непрерывность', body_md: 'Тропа через два сна: у сна А — свитки времени, на стыке — квизы.', frozen: true, length: 7, dreams: ['D-A', 'D-B'] },
   links: [
-    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-1', type: 'quiz', title: 'Квиз о времени', status: 'open' },
-    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-2', type: 'quiz', title: 'Квиз о непрерывности', status: 'done' },
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-1', type: 'quiz', title: 'Квиз о времени', status: 'open', values: { t: 0.15, side: 'A' } },
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-1', type: 'quiz', title: 'Квиз о времени', status: 'open', values: { t: 0.75, side: 'B' } },
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-2', type: 'quiz', title: 'Квиз о непрерывности', status: 'done', values: { t: 0.5, side: 'A' } },
   ],
   parts: [{
     key: 'scrolls', label: 'Свитки', type: 'scroll', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 3,
