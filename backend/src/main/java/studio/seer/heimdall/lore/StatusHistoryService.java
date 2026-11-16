@@ -82,7 +82,7 @@ final class StatusHistoryService {
     /** Поля версии, которые сервис ставит сам и никогда не переносит из прежней строки. */
     static final Set<String> VERSION_FIELDS = Set.of(
         "state_uid", "valid_from", "valid_to", "status_raw", "status_category",
-        "changed_by", "changed_by_kind", "status_known_from", "status_backfilled", "rid",
+        "changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_machine", "status_known_from", "status_backfilled", "rid",
         // MT-NOTE-APPEND п.3: пометка «версия — правка текста» принадлежит своей версии;
         // смена статуса после правки — уже не правка текста.
         "version_kind");
