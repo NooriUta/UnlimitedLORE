@@ -24,6 +24,15 @@ test('новый код — только с подписями на трёх я�
   assert.equal(decisionFromForm({ type: 'T', field: 'f', value: 'v', action: 'defer', by: 'x' }, 'ST-2', AT).action, 'defer');
 });
 
+test('регистр кода — по виду справочника поля: статус заглавными, приоритет строчными (16.11: «NORMAL в priority нет»)', () => {
+  const caseOf = s => (s.field === 'priority' ? 'lower' : 'upper');
+  const p = decisionFromForm({ type: 'KnowSprintHist', field: 'priority', value: 'medium', action: 'map_to', to: 'normal', by: 'x' }, 'ST-74', AT, caseOf);
+  assert.equal(p.to, 'normal');
+  const s = decisionFromForm({ type: 'KnowSprintHist', field: 'plan_status', value: '🔴 P0', action: 'map_to', to: 'todo', by: 'x' }, 'ST-75', AT, caseOf);
+  assert.equal(s.to, 'TODO');
+  assert.equal(addDecision(empty(), { type: 'KnowSprintHist', field: 'priority', value: 'medium', action: 'map_to', to: 'normal', by: 'x' }, AT, caseOf).decisions[0].to, 'normal');
+});
+
 test('без «кто принял» решение не записывается', () => {
   assert.throws(() => decisionFromForm({ type: 'T', field: 'f', value: 'v', action: 'map_to', to: 'DONE', by: ' ' }, 'ST-3', AT), /кто принял/);
 });

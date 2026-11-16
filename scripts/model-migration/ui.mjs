@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import { checkDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
-import { EMPTY, groupBySuggestion } from './status-unify.mjs';
+import { EMPTY, groupBySuggestion, statusDictOf } from './status-unify.mjs';
 import { fingerprint } from './fingerprint.mjs';
 import path from 'node:path';
 import { buildReport } from './report.mjs';
@@ -24,15 +24,18 @@ export function nextId(doc) {
   return 'ST-' + String((n.length ? Math.max(...n) : 0) + 1).padStart(2, '0');
 }
 
-/** Решение из формы интерфейса. Новый код — только с подписями на трёх языках; код статуса — заглавными. */
-export function decisionFromForm(f, id, at) {
+/** Решение из формы интерфейса. Новый код — только с подписями на трёх языках. Регистр кода — по виду
+ *  справочника поля (caseOf(scope) → 'upper'|'lower'; правило владелицы 16.11.2026: «статусная модель uppercase,
+ *  остальные в lower»). Без caseOf — заглавными, как раньше. */
+export function decisionFromForm(f, id, at, caseOf = () => 'upper') {
   if (blank(f.by)) throw new Error('не сказано, кто принял решение');
   if (!f.type || !f.field) throw new Error('не названы тип и поле');
   const scope = blank(f.value) ? { type: f.type, field: f.field, why: EMPTY } : { type: f.type, field: f.field, value: f.value };
   const d = { id, scope, action: f.action, by: String(f.by).trim(), at, note: 'принято в интерфейсе установщика' };
   if (f.action === 'map_to' || f.action === 'add_code') {
     if (blank(f.to)) throw new Error('не выбран код');
-    d.to = String(f.to).trim().toUpperCase();
+    const t = String(f.to).trim();
+    d.to = caseOf(d.scope) === 'lower' ? t.toLowerCase() : t.toUpperCase();
   }
   if (f.action === 'add_code') {
     for (const l of ['ru', 'en', 'pl']) if (blank((f.labels || {})[l])) throw new Error(`у нового кода нет подписи на языке ${l}`);
@@ -45,11 +48,11 @@ export function decisionFromForm(f, id, at) {
 const sameScope = (a, b) => a.type === b.type && a.field === b.field && a.value === b.value && a.why === b.why;
 
 /** Добавить решение; решение по той же области заменяет прежнее (код прежнего сохраняется). */
-export function addDecision(doc, form, at = new Date().toISOString()) {
+export function addDecision(doc, form, at = new Date().toISOString(), caseOf) {
   const list = [...(doc.decisions || [])];
-  const probe = decisionFromForm(form, 'ST-00', at);
+  const probe = decisionFromForm(form, 'ST-00', at, caseOf);
   const i = list.findIndex(d => sameScope(d.scope, probe.scope));
-  const d = decisionFromForm(form, i >= 0 ? list[i].id : nextId(doc), at);
+  const d = decisionFromForm(form, i >= 0 ? list[i].id : nextId(doc), at, caseOf);
   if (i >= 0) list[i] = d; else list.push(d);
   const next = { ...doc, format: doc.format || DECISIONS_FORMAT, decisions: list };
   const bad = checkDecisions(next);
@@ -400,7 +403,9 @@ export async function serve({ port = 2499 } = {}) {
         let doc = readDoc();
         // со входом «кто принял» — логин из токена, а не из поля страницы
         const who = me(req);
-        for (const f of Array.isArray(forms) ? forms : [forms]) doc = addDecision(doc, who ? { ...f, by: who.login } : f);
+        // регистр кода — по виду справочника поля в правилах переноса
+        const caseOf = scope => { const dn = statusDictOf(RULES, scope); const dd = dn && (RULES.dictionaries || {})[dn]; return dd ? (RULES.code_case || {})[dd.kind] : 'upper'; };
+        for (const f of Array.isArray(forms) ? forms : [forms]) doc = addDecision(doc, who ? { ...f, by: who.login } : f, undefined, caseOf);
         fs.writeFileSync(file, JSON.stringify(doc, null, 2) + '\n');
         return json(res, 200, await dialog(true));
       }
