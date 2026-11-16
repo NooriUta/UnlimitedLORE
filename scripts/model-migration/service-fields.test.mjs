@@ -12,9 +12,11 @@ test('у каждого типа версий в новой схеме есть 
   const hist = Object.keys(SCHEMA).filter(T => T.endsWith('Hist'));
   assert.ok(hist.length >= 3, 'типы версий найдены');
   for (const T of hist) {
-    const f = SCHEMA[T].fields.changed_by_session;
-    assert.ok(f, T + ': поле объявлено');
-    assert.equal(f.service, true, T + ': служебное');
-    assert.equal(f.db_type, 'STRING');
+    for (const k of ['changed_by_session', 'changed_by_harness', 'changed_by_machine']) {
+      const f = SCHEMA[T].fields[k];
+      assert.ok(f, T + '.' + k + ': поле объявлено');
+      assert.equal(f.service, true, T + '.' + k + ': служебное');
+      assert.equal(f.db_type, 'STRING');
+    }
   }
 });

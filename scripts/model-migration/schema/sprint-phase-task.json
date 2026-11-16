@@ -339,6 +339,26 @@
           "of": 2148,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 2148,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 2148,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "from_record_to_current_version": [],
@@ -516,6 +536,26 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
           "from": [],
           "filled": 0,
           "of": 356,
@@ -869,6 +909,26 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 15940,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 15940,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
           "from": [],
           "filled": 0,
           "of": 15940,
