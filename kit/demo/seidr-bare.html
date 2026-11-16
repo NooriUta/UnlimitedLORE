@@ -958,7 +958,19 @@
 <span class="sk-burn__key sk-burn__key--deadline">срок 2026-11-30</span>
 <span class="sk-burn__key sk-burn__key--forecast">прогноз</span>
 </div>
+<div class="sk-burn__plot">
+<div class="sk-burn__yaxis" aria-hidden="true">
+<span class="sk-burn__tick" data-burn-tick="0" style="top: 95.83333333333334%;">0</span>
+<span class="sk-burn__tick" data-burn-tick="10" style="top: 54.166666666666664%;">10</span>
+<span class="sk-burn__tick" data-burn-tick="20" style="top: 12.5%;">20</span>
+</div>
 <svg class="sk-burn__svg" width="100%" height="96" viewBox="0 0 600 96" preserveAspectRatio="none" role="img" aria-label="Burnup: закрыто 16 из 22, остаток 6">
+<line class="sk-burn__grid" x1="0" x2="600" y1="92.0" y2="92.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="52.0" y2="52.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="12.0" y2="12.0">
+</line>
 <polyline data-series="scope" class="sk-burn__line sk-burn__line--scope" points="0.0,36.0 190.9,16.0 300.0,4.0">
 </polyline>
 <polyline data-series="done" class="sk-burn__line sk-burn__line--done" points="0.0,92.0 190.9,52.0 300.0,28.0">
@@ -970,6 +982,7 @@
 <line data-series="deadline" class="sk-burn__deadline" x1="559.1" x2="559.1" y1="0" y2="96">
 </line>
 </svg>
+</div>
 <div class="sk-burn__axis">
 <span>2026-10-20</span>
 <span>2026-12-03</span>
@@ -996,12 +1009,31 @@
 <span class="sk-burn__key">пик 4</span>
 </div>
 <p class="sk-burn__note" data-testid="kit-burn-no-deadline">Срок не задан — плана к сроку и отметки срока нет.</p>
+<div class="sk-burn__plot">
+<div class="sk-burn__yaxis" aria-hidden="true">
+<span class="sk-burn__tick" data-burn-tick="0" style="top: 95.83333333333334%;">0</span>
+<span class="sk-burn__tick" data-burn-tick="1" style="top: 72.91666666666666%;">1</span>
+<span class="sk-burn__tick" data-burn-tick="2" style="top: 50%;">2</span>
+<span class="sk-burn__tick" data-burn-tick="3" style="top: 27.083333333333332%;">3</span>
+<span class="sk-burn__tick" data-burn-tick="4" style="top: 4.166666666666666%;">4</span>
+</div>
 <svg class="sk-burn__svg" width="100%" height="96" viewBox="0 0 600 96" preserveAspectRatio="none" role="img" aria-label="Burndown: остаток 2 из 4, закрыто 2">
+<line class="sk-burn__grid" x1="0" x2="600" y1="92.0" y2="92.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="70.0" y2="70.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="48.0" y2="48.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="26.0" y2="26.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="4.0" y2="4.0">
+</line>
 <polyline data-series="ideal" class="sk-burn__line sk-burn__line--ideal" points="0.0,4.0 600.0,92.0">
 </polyline>
 <polyline data-series="remaining" class="sk-burn__line sk-burn__line--remaining" points="0.0,4.0 600.0,48.0">
 </polyline>
 </svg>
+</div>
 <div class="sk-burn__axis">
 <span>2026-11-01</span>
 <span>2026-11-05</span>
