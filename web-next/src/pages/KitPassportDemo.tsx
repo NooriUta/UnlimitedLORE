@@ -37,6 +37,8 @@ const DOC: KitRecordDoc = {
     key: 'scrolls', label: 'Свитки', type: 'scroll', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 3,
     items: [{ id: 'S-1', title: 'Свиток I', status: 'open' }, { id: 'S-2', title: 'Свиток II', status: 'done' }],
   }],
+  // D-2026-LORE-FREE-FIELDS-SHOWN: значения вне модели — блоком «Не описано в модели» в конце свойств.
+  unmodeled: { legacy_weight: 3, imported_from: 'v0-sheet' },
   perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: null },
   meta: { loaded_at: '2026-11-16T00:00:00Z', facade: 'server', sources: [{ block: 'record', state: 'ok' }] },
 };

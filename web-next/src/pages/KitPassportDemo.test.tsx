@@ -34,4 +34,15 @@ describe('KitPassportDemo', () => {
     expect(rows.some(r => r.includes('0.15') && r.includes('A'))).toBe(true);
     expect(rows.some(r => r.includes('0.75') && r.includes('B'))).toBe(true);
   });
+
+  it('D-2026-LORE-FREE-FIELDS-SHOWN: значения вне модели — блок «Не описано в модели» с ключами', () => {
+    render(<KitLangProvider lang="ru"><KitPassportDemo lang="ru" /></KitLangProvider>);
+    const box = screen.getByTestId('kit-passport-demo');
+    // В доке справа свойства — вид за значком «Свойства».
+    fireEvent.click([...box.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'Свойства')!);
+    const kv = [...box.querySelectorAll('[data-testid="kit-kv"]')].find(b => /Не описано в модели/.test(b.getAttribute('aria-label') ?? ''));
+    expect(kv).toBeTruthy();
+    expect(kv!.textContent).toContain('legacy_weight');
+    expect(kv!.textContent).toContain('v0-sheet');
+  });
 });
