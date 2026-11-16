@@ -17,7 +17,7 @@
 //   • телефон — высота фиксирована, ширина по контейнеру (урок BurnChart: пропорциональный
 //     график вырастал до 400 px).
 // Граница K-14: что считать сериями и откуда данные — приложение; kit только рисует.
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { kitT, useKitLang, type KitLang } from '../i18n';
 import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 
@@ -32,11 +32,14 @@ const W0 = 640;
  * Ширина рисунка — ширина контейнера, а не растяжение (препрод 16.11: с preserveAspectRatio="none"
  * в узкой колонке текст делений сжимался и точки вытягивались). viewBox совпадает с пикселями.
  */
-function useChartWidth(): [RefObject<HTMLDivElement | null>, number] {
-  const ref = useRef<HTMLDivElement | null>(null);
+// Ширина площадки — по контейнеру. Ссылка-функция, а не useRef + эффект при монтировании: пока график
+// «Загрузка…», площадки нет, и наблюдатель, подключённый один раз, её так и не видел — график оставался
+// шириной по умолчанию и растягивался (препрод 16.11, «Аналитика»).
+type PlotRef = (el: HTMLDivElement | null) => void;
+function useChartWidth(): [PlotRef, number] {
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
   const [w, setW] = useState(W0);
   useLayoutEffect(() => {
-    const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(entries => {
       const cw = Math.round(entries[0]?.contentRect.width ?? 0);
@@ -44,8 +47,8 @@ function useChartWidth(): [RefObject<HTMLDivElement | null>, number] {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return [ref, w];
+  }, [el]);
+  return [setEl, w];
 }
 const H = 200;
 const PAD = { l: 36, r: 12, t: 10, b: 24 };
@@ -163,7 +166,7 @@ function scale(d0: number, d1: number, r0: number, r1: number) {
   return (v: number) => (d1 === d0 ? (r0 + r1) / 2 : r0 + ((v - d0) / (d1 - d0)) * (r1 - r0));
 }
 
-function Svg({ label, plot, w, children }: { label: string; plot: RefObject<HTMLDivElement | null>; w: number; children: ReactNode }) {
+function Svg({ label, plot, w, children }: { label: string; plot: PlotRef; w: number; children: ReactNode }) {
   return <div ref={plot} className="sk-chart__plot"><svg className="sk-chart__svg" viewBox={`0 0 ${w} ${H}`} width="100%" role="img" aria-label={label} height={H}>{children}</svg></div>;
 }
 
