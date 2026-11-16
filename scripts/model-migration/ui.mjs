@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import { checkDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
-import { EMPTY, groupBySuggestion, statusDictOf } from './status-unify.mjs';
+import { EMPTY, groupBySuggestion, statusDictOf, decisionsAgainstRules } from './status-unify.mjs';
 import { fingerprint } from './fingerprint.mjs';
 import path from 'node:path';
 import { buildReport } from './report.mjs';
@@ -406,6 +406,9 @@ export async function serve({ port = 2499 } = {}) {
         // регистр кода — по виду справочника поля в правилах переноса
         const caseOf = scope => { const dn = statusDictOf(RULES, scope); const dd = dn && (RULES.dictionaries || {})[dn]; return dd ? (RULES.code_case || {})[dd.kind] : 'upper'; };
         for (const f of Array.isArray(forms) ? forms : [forms]) doc = addDecision(doc, who ? { ...f, by: who.login } : f, undefined, caseOf);
+        // проверка до записи: негодное решение не должно испортить файл решений
+        const bad = decisionsAgainstRules(RULES, doc);
+        if (bad.length) return json(res, 400, { error: 'не записано: ' + bad.join('; ') });
         fs.writeFileSync(file, JSON.stringify(doc, null, 2) + '\n');
         return json(res, 200, await dialog(true));
       }

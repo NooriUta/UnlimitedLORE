@@ -135,6 +135,20 @@ function findDecision(decisions, row, why) {
  * Строка: unified — свелось само; decided — закрыто решением; needs_decision — ждёт человека;
  * no_rule — у типа и поля нет правила (чужая установка). ready — переносить можно.
  */
+/** Решения, которые нельзя записать: «свести к коду», которого нет в справочнике поля (и он не добавлен решением).
+ *  Проверка ДО записи файла решений: 16.11.2026 такое решение записалось, и файл перестал читаться. */
+export function decisionsAgainstRules(rules, decisionsDoc) {
+  const bad = [], list = (decisionsDoc && decisionsDoc.decisions) || [];
+  const added = list.filter(d => d.action === 'add_code').map(d => ({ src: statusDictOf(rules, d.scope), code: d.to }));
+  for (const d of list) {
+    if (d.action !== 'map_to') continue;
+    const dn = statusDictOf(rules, d.scope), dict = dn && rules.dictionaries[dn];
+    if (!dict) continue;
+    if (!dict.codes.some(c => c.code === d.to) && !added.some(a => a.src === dn && a.code === d.to)) bad.push(`решение ${d.id}: кода ${d.to} в справочнике ${dn} нет`);
+  }
+  return bad;
+}
+
 export function buildDialog(counts, rules, decisionsDoc) {
   const problems = checkRules(rules);
   if (problems.length) throw new Error('файл правил не принят: ' + problems.join('; '));

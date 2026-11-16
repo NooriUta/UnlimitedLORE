@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { checkRules, classify, buildDialog, FORMAT, LANGS } from './status-unify.mjs';
+import { checkRules, classify, buildDialog, FORMAT, LANGS, decisionsAgainstRules } from './status-unify.mjs';
 
 const RULES = JSON.parse(fs.readFileSync(new URL('./rules/status-unification.json', import.meta.url), 'utf8'));
 const plan = RULES.dictionaries.plan_status;
@@ -142,4 +142,14 @@ test('владелица 16.11.2026: «статусная модель uppercase
   const broken = structuredClone(RULES);
   broken.dictionaries.priority.codes[0].code = 'CRITICAL';
   assert.match(checkRules(broken).join('; '), /priority.*CRITICAL.*critical/);
+});
+
+test('решение с кодом не из справочника поля отбивается до записи файла (16.11: ST-74 «NORMAL» испортил файл решений)', () => {
+  const doc = { format: 'mig-decisions/1', decisions: [
+    { id: 'ST-74', scope: { type: 'KnowSprintHist', field: 'priority', value: 'medium' }, action: 'map_to', to: 'NORMAL', by: 'x' },
+    { id: 'ST-75', scope: { type: 'KnowSprintHist', field: 'priority', value: 'med' }, action: 'map_to', to: 'normal', by: 'x' },
+  ] };
+  const bad = decisionsAgainstRules(RULES, doc);
+  assert.equal(bad.length, 1);
+  assert.match(bad[0], /ST-74: кода NORMAL в справочнике priority нет/);
 });
