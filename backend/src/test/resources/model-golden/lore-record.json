@@ -7148,7 +7148,7 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "project",
@@ -7169,7 +7169,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
         "required_level" : "warn",
         "required_rules" : [ {
           "level" : "warn",
@@ -7645,7 +7648,7 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "project",
@@ -7666,7 +7669,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
         "required_level" : "warn",
         "required_rules" : [ {
           "level" : "warn",
@@ -8295,7 +8301,7 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "project",
@@ -8316,7 +8322,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -8754,7 +8763,7 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "project",
@@ -8775,7 +8784,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -18012,7 +18024,7 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "project",
@@ -18033,7 +18045,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -18229,7 +18244,7 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "project",
@@ -18250,7 +18265,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "BELONGS_TO_PROJECT"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
