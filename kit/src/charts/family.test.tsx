@@ -134,3 +134,18 @@ describe('ScatterChart: подписи точек только при немно
     expect(container.querySelectorAll('svg .sk-chart__lbl')).toHaveLength(2);
   });
 });
+
+// Препрод 16.11 («Аналитика»): график рисовался шириной по умолчанию (640) и растягивался — при первом показе
+// «Загрузка…» площадки ещё нет, а наблюдатель ширины подключался один раз при монтировании и так и не узнавал её.
+describe('ширина графика — после загрузки тоже по контейнеру', () => {
+  it('площадка появилась после «Загрузка…» — наблюдатель ширины подключается к ней', () => {
+    const seen: Element[] = [];
+    const RO = globalThis.ResizeObserver;
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver = class { constructor(_: unknown) {} observe(el: Element) { seen.push(el); } disconnect() {} unobserve() {} };
+    try {
+      const { rerender } = wrap(<BarChart title="V" loading groups={[{ key: 'v', label: 'v' }]} data={[]} />);
+      rerender(<KitLangProvider lang="ru"><BarChart title="V" groups={[{ key: 'v', label: 'v' }]} data={[{ category: 'a', values: { v: 1 } }]} /></KitLangProvider>);
+      expect(seen.some(el => el.classList.contains('sk-chart__plot'))).toBe(true);
+    } finally { (globalThis as { ResizeObserver: unknown }).ResizeObserver = RO; }
+  });
+});
