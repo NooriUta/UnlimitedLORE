@@ -768,7 +768,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
-                            "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
+                            "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '" + CreateDefaultStatus.phaseRaw() + "', " + // первый статус (16.11.2026)
                             "valid_from = :now" + ChangeAuthor.SET_SQL + ";" +
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";

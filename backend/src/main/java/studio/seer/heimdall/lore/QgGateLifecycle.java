@@ -31,6 +31,6 @@ final class QgGateLifecycle {
 
     /** Статус нового гейта: не передан — draft. */
     static String initialStatus(String status) {
-        return status == null ? "draft" : status;
+        return CreateDefaultStatus.forNew("quality_gate", status); // первый статус справочника qg_status (16.11.2026)
     }
 }
