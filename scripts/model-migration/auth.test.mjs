@@ -58,3 +58,12 @@ test('настройки входа из файла доступа: без ад�
   assert.equal(d.client, 'lore-app');
   assert.equal(d.configured, true);
 });
+
+test('роли из токена lore-app: claim seer_roles, как читает бэкенд LORE (16.11: «написал что у меня нет роли superadmin, а это не так»)', () => {
+  const c = tokenClaims(jwt({ sub: 's-2', preferred_username: 'omiloreadmin', seer_roles: ['superadmin'] }));
+  assert.ok(c.roles.includes('superadmin'), 'роль из seer_roles видна');
+  const both = tokenClaims(jwt({ sub: 's-3', preferred_username: 'x', seer_roles: ['admin'], realm_access: { roles: ['superadmin'] } }));
+  assert.deepEqual([...both.roles].sort(), ['admin', 'superadmin'], 'оба источника объединяются');
+  const str = tokenClaims(jwt({ sub: 's-4', preferred_username: 'x', seer_roles: 'superadmin' }));
+  assert.ok(str.roles.includes('superadmin'), 'одна роль строкой тоже читается');
+});

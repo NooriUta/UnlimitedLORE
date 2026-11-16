@@ -45,7 +45,11 @@ export function tokenClaims(token) {
   let p;
   try { p = JSON.parse(Buffer.from(part, 'base64url').toString('utf8')); } catch { throw new Error('ответ Keycloak — не токен'); }
   if (!p || typeof p !== 'object' || !p.sub) throw new Error('ответ Keycloak — не токен');
-  return { sub: p.sub, login: p.preferred_username || p.sub, roles: (p.realm_access && p.realm_access.roles) || [] };
+  // Роли — как читает бэкенд LORE: claim seer_roles (маппер realm-ролей в токене lore-app); плюс realm_access.roles,
+  // если он есть. 16.11.2026: читали только realm_access, в токене lore-app его нет — владелице отказало «нет роли superadmin».
+  const list = v => (Array.isArray(v) ? v : typeof v === 'string' && v ? [v] : []);
+  const roles = [...new Set([...list(p.seer_roles), ...list(p.realm_access && p.realm_access.roles)])];
+  return { sub: p.sub, login: p.preferred_username || p.sub, roles };
 }
 
 /** Владелец ли учётка проекта этой установки — по базе-источнику (только чтение). */
