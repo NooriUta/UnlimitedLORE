@@ -27,6 +27,8 @@ services:
       - LORE_OIDC_ISSUER
       - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
       - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      # LINKS-VIEW-HOLDER: сервер miniLORE в общей сети lore-ygg-net (проба 16.11: /q/health 200 из бэкенда).
+      - lore.minilore.url=${LORE_MINILORE_URL:-http://minilore-srv:8080}
       - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
       - kc.admin.url=https://odal.seidrstudio.pro/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
