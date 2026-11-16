@@ -437,6 +437,10 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // связей, порядок по данным, и это ПОМЕЧЕНО как умолчание, а не выдано за
   // решение модели (D-2026-LORE-MODEL-COLUMN-LAYERS, честные состояния).
   const named = sections?.decided === true;
+  // Какие связи модель назвала поимённо: у них своя вкладка (S4-29). Не названные ассоциации идут в
+  // общую вкладку группы — иначе при порядке из модели каждая становилась вкладкой (пилот 16.11,
+  // дефект приёмки ME-1: «квиз руны 1», «лежит на тропах 2»). В модели LORE все названы — экраны те же.
+  const namedKeys = new Set(named ? (sections?.sections ?? []).flatMap(x => [x.key, x.ref ?? '']) : []);
   const relTabs: { id: string; label: string; relation: string; defs: KitRelationDef[] }[] = [];
   for (const d of rels) {
     // Модель назвала разделы по отдельности — НЕ группируем (S4-29).
@@ -447,7 +451,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     // ключи модели ни с чем не совпадут: раздел, которому велели быть в хвосте
     // тела, остался бы вкладкой — молча. Поэтому при `decided` группировка
     // отключается: что считать разделом, решает приложение, а не конструктор.
-    if (named || OWN_TAB.includes(d.relation)) {
+    if ((named && namedKeys.has(d.key)) || OWN_TAB.includes(d.relation)) {
       // Ключ связи — ключ вкладки, и две связи с одним ключом дали бы два
       // одинаковых раздела (B13: «дублирующиеся вкладки»). Совпал — связи
       // идут в одну вкладку, а не во вторую такую же.

@@ -30,3 +30,30 @@ describe('подпись группы связей (§7.8)', () => {
     expect(tabs().some(t => t.includes('Зависимости'))).toBe(true);
   });
 });
+
+// Пилот 16.11: при порядке разделов из модели (decided) kit не группировал связи вовсе, и каждая
+// ассоциация становилась своей вкладкой («квиз руны 1», «лежит на тропах 2» — дефект приёмки ME-1).
+// Правило: модель назвала связь поимённо — своя вкладка (S4-29); не назвала — общая вкладка группы.
+describe('порядок из модели и общая вкладка ассоциаций', () => {
+  const two: KindConfig = { title: 'Квиз', icon: 'checkbox-tree', relationGroups: { association: 'По смыслу' }, relations: [
+    { key: 'topic', label: 'Квиз руны', relation: 'association', rel: 'QUIZ_OF', dir: 'out' },
+    { key: 'trails', label: 'Лежит на тропах', relation: 'association', rel: 'ON_TRAIL', dir: 'out' },
+  ] };
+  const order = (keys: string[]) => ({ decided: true, sections: keys.map((k, i) => ({ key: k, source: 'relation' as const, ref: k, order: i, slot: 'own' as const })), notes: [] });
+
+  it('модель связи не назвала — одна вкладка «По смыслу», а не вкладка на каждую', () => {
+    const ctx = ctxOf(two);
+    render(<RecordView record={ctx.data.records[0]} ctx={ctx} tab="" onTab={() => {}} sections={order(['body']) as never} />);
+    const t = tabs();
+    expect(t.some(x => x.includes('По смыслу'))).toBe(true);
+    expect(t.some(x => x.includes('Квиз руны'))).toBe(false);
+  });
+
+  it('модель назвала связь поимённо — у неё своя вкладка (S4-29), остальные — в группе', () => {
+    const ctx = ctxOf(two);
+    render(<RecordView record={ctx.data.records[0]} ctx={ctx} tab="" onTab={() => {}} sections={order(['body', 'topic']) as never} />);
+    const t = tabs();
+    expect(t.some(x => x.includes('Квиз руны'))).toBe(true);
+    expect(t.some(x => x.includes('По смыслу'))).toBe(true);
+  });
+});
