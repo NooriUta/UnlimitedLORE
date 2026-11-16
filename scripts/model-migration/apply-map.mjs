@@ -43,11 +43,11 @@ export function toDateTime(v) {
 const lead = s => String(s).trim().replace(/^[^\p{L}\p{N}]+/u, ''); // значок и пробелы в начале
 const tail = s => s.replace(/^[\s—–\-:·,]+/, '').trim();
 
-const PRIORITY = { p0: 'critical', p1: 'high', p2: 'normal', p3: 'low', blocker: 'critical', critical: 'critical', high: 'high', normal: 'normal', low: 'low' };
+const PRIORITY = { p0: 'critical', p1: 'high', p2: 'normal', p3: 'low', blocker: 'critical', critical: 'critical', high: 'high', normal: 'normal', medium: 'normal', low: 'low' }; // medium = normal (16.11.2026, ST-74)
 /** Словесная шкала приоритета (решение владелицы). Значение вне шкалы не угадывается — целиком в заметку. */
 export function toPriority(v) {
   const s = lead(v);
-  const m = s.match(/^(P[0-3]|blocker|critical|high|normal|low)(?![\p{L}\p{N}_])/iu);
+  const m = s.match(/^(P[0-3]|blocker|critical|high|normal|medium|low)(?![\p{L}\p{N}_])/iu);
   if (!m) return { value: null, note: String(v).trim() };
   return { value: PRIORITY[m[1].toLowerCase()], note: tail(s.slice(m[0].length)) };
 }

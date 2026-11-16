@@ -10,46 +10,46 @@ import { checkDecisions, resolveRejects, FORMAT } from './decisions.mjs';
 
 const MAP = JSON.parse(fs.readFileSync(new URL('./map/sprint-phase-task.json', import.meta.url), 'utf8')).types;
 const ctx = { statusCodes: { sprint: ['planned', 'in_progress', 'done', 'cancelled', 'blocked'] }, statusDict: 'sprint' };
-const D = (over) => ({ id: 'd1', scope: { type: 'KnowSprintHist', field: 'priority', value: 'medium' }, action: 'map_to', to: 'normal', by: 'omiloreadmin', at: '2026-11-16T10:00:00Z', ...over });
+const D = (over) => ({ id: 'd1', scope: { type: 'KnowSprintHist', field: 'priority', value: 'средний' }, action: 'map_to', to: 'normal', by: 'omiloreadmin', at: '2026-11-16T10:00:00Z', ...over });
 const doc = (...decisions) => ({ format: FORMAT, decisions });
 const run = (record, decisions) => applyMap('KnowSprintHist', MAP.KnowSprintHist, record, { ...ctx, decisions: decisions ? doc(...decisions) : undefined });
 
 test('положительный контроль: без решений значение вне шкалы остаётся несоответствием', () => {
-  const r = run({ priority: 'medium' });
+  const r = run({ priority: 'средний' });
   assert.equal(r.rejects.length, 1);
   assert.equal(r.rejects[0].why, 'приоритет вне шкалы');
   assert.equal(r.out.priority, undefined);
 });
 
 test('«свести к коду»: значение записано, несоответствие снято и названо в принятых', () => {
-  const r = run({ priority: 'medium' }, [D()]);
+  const r = run({ priority: 'средний' }, [D()]);
   assert.equal(r.out.priority, 'normal');
   assert.deepEqual(r.rejects, []);
-  assert.deepEqual(r.decided, [{ field: 'priority', value: 'medium', decision: 'd1', action: 'map_to' }]);
+  assert.deepEqual(r.decided, [{ field: 'priority', value: 'средний', decision: 'd1', action: 'map_to' }]);
 });
 
 test('решение действует только на своё значение: соседнее остаётся несоответствием', () => {
-  const r = run({ priority: '🟡 MEDIUM' }, [D()]);
+  const r = run({ priority: '🟡 СРЕДНИЙ' }, [D()]);
   assert.equal(r.rejects.length, 1);
   assert.equal(r.out.priority, undefined);
 });
 
 test('«текст в заметку»: поле пустое, исходное значение не потеряно', () => {
-  const r = run({ priority: '🟡 MEDIUM (исследовательский)' }, [D({ scope: { type: 'KnowSprintHist', field: 'priority', value: '🟡 MEDIUM (исследовательский)' }, action: 'to_note', to: undefined })]);
+  const r = run({ priority: '🟡 СРЕДНИЙ (исследовательский)' }, [D({ scope: { type: 'KnowSprintHist', field: 'priority', value: '🟡 СРЕДНИЙ (исследовательский)' }, action: 'to_note', to: undefined })]);
   assert.equal(r.out.priority, undefined);
-  assert.equal(r.out.priority_note, '🟡 MEDIUM (исследовательский)');
+  assert.equal(r.out.priority_note, '🟡 СРЕДНИЙ (исследовательский)');
   assert.deepEqual(r.rejects, []);
 });
 
 test('«не переносить»: несоответствие снято, значение названо в принятых — молча не пропадает', () => {
-  const r = run({ priority: 'medium' }, [D({ action: 'drop', to: undefined })]);
+  const r = run({ priority: 'средний' }, [D({ action: 'drop', to: undefined })]);
   assert.equal(r.out.priority, undefined);
   assert.deepEqual(r.rejects, []);
   assert.equal(r.decided[0].action, 'drop');
 });
 
 test('«решу позже»: несоответствие остаётся, но помечено отложенным', () => {
-  const r = run({ priority: 'medium' }, [D({ action: 'defer', to: undefined })]);
+  const r = run({ priority: 'средний' }, [D({ action: 'defer', to: undefined })]);
   assert.equal(r.rejects.length, 1);
   assert.equal(r.rejects[0].deferred, 'd1');
 });

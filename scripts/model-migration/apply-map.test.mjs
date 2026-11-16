@@ -29,7 +29,10 @@ test('приоритет: шкала P0–P3 и blocker → словесная; 
   assert.deepEqual(toPriority('🔴 P0'), { value: 'critical', note: '' });
   assert.deepEqual(toPriority('blocker'), { value: 'critical', note: '' });
   assert.deepEqual(toPriority('high'), { value: 'high', note: '' });
-  assert.deepEqual(toPriority('🟡 MEDIUM (observability UX) / 🟢 LOW'), { value: null, note: '🟡 MEDIUM (observability UX) / 🟢 LOW' });
+  assert.deepEqual(toPriority('🟡 MEDIUM (observability UX) / 🟢 LOW'), { value: 'normal', note: '(observability UX) / 🟢 LOW' });
+  // 16.11.2026: medium — середина шкалы, то же, что normal (решение ST-74 на приёмке; «одна шкала приоритета»)
+  assert.deepEqual(toPriority('medium'), { value: 'normal', note: '' });
+  assert.deepEqual(toPriority('что угодно'), { value: null, note: 'что угодно' });
   assert.deepEqual(toPriority('P1 — после релиза'), { value: 'high', note: 'после релиза' });
 });
 
