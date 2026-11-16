@@ -262,3 +262,42 @@ describe('passportFromDoc · свойства ребра колонками во
     expect(p.kinds.trail.relations?.find(r => r.key === 'quizzes')?.fieldLabels).toBeUndefined();
   });
 });
+
+// Пилот 16.11 (вопрос владелицы «по свободным полям — почему до сих пор нет?»): блок «Числа» вида kv
+// выводил сырые ключи (cap, gain). Подписи ключей — у поля документа (`keys`), как props у связи.
+describe('passportFromDoc · подписи ключей поля kv', () => {
+  it('ключ с подписью — подписью; без подписи — ключом, как раньше', async () => {
+    const { RecordView } = await import('./RecordView');
+    const p = passportFromDoc(doc({
+      schema: { ...doc().schema, fields: [...doc().schema.fields,
+        { key: 'numbers', label: 'Числа', kind: 'kv', required: false, editable: false, group: 'props', keys: [{ key: 'cap', label: 'Потолок' }, { key: 'gain', label: 'Прирост' }] }] },
+      values: { ...doc().values, numbers: { cap: 10, gain: 2, stability_days: 3 } },
+    }), { lang: 'ru' });
+    const ctx = { config: { modules: [], menu: { groups: [] }, kinds: p.kinds, statuses: { items: [] } },
+      data: p.data, href: (id: string) => '#' + id, esc: (s: string) => s, md: (s: string) => s } as unknown as KitCtx;
+    render(<KitLangProvider lang="ru"><RecordView record={p.record} ctx={ctx} tab="" onTab={() => {}} propsOpen /></KitLangProvider>);
+    const keys = [...document.querySelectorAll('[data-testid="kit-kv"] .sk-kv__key')].map(k => k.textContent);
+    expect(keys).toEqual(expect.arrayContaining(['Потолок', 'Прирост', 'stability_days']));
+    expect(keys).not.toContain('cap');
+  });
+});
+
+// D-2026-LORE-FREE-FIELDS-SHOWN (владелица 16.11): значение вне модели не теряется и не прячется —
+// блок «ключ → значение» в конце свойств с пометкой «не описано в модели», только чтение.
+describe('passportFromDoc · значения вне модели (unmodeled)', () => {
+  it('блок последним в свойствах, вида kv, не правится, подпись с пометкой', () => {
+    const p = passportFromDoc(doc({ unmodeled: { cap: 10, legacy_note: 'старое' } }), { lang: 'ru' });
+    const fields = p.kinds.trail.fields!;
+    const last = fields[fields.length - 1];
+    expect(last.type).toBe('kv');
+    expect(last.title).toMatch(/не описано в модели/i);
+    expect(last.editable).toBeFalsy();
+    expect(p.record.fields[last.key]).toEqual({ cap: 10, legacy_note: 'старое' });
+  });
+  it('нет unmodeled или он пуст — блока нет', () => {
+    for (const u of [undefined, {}]) {
+      const fields = passportFromDoc(doc(u === undefined ? {} : { unmodeled: u }), { lang: 'ru' }).kinds.trail.fields!;
+      expect(fields.some(f => /не описано/i.test(f.title))).toBe(false);
+    }
+  });
+});

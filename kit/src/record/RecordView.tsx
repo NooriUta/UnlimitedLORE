@@ -226,7 +226,7 @@ function listItemText(v: unknown): string {
   return valueText(v).trim();
 }
 
-export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
+export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, keyLabels }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string; /** Подписи ключей поля kv. */ keyLabels?: Record<string, string> }): ReactNode {
   const lang = useKitLang();
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
@@ -238,7 +238,7 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }:
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
   // K4-FIELD-KV: вложенный объект — таблицей «ключ → значение», а не сырым JSON.
-  if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} />;
+  if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} labels={keyLabels} />;
   // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
   // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
   if (type === 'list') {
@@ -274,7 +274,7 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
     <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
       <dt>{f.title}</dt>
       <dd>{(() => {
-        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} refKind={f.refKind} />;
+        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} refKind={f.refKind} keyLabels={f.keyLabels} />;
         // S4-24: поле-связь (компоненты, проекты) — чипы с «Отвязать» и выбор с поиском.
         if (f.type === 'ref' && f.relation) return <RelationField record={record} ctx={ctx} lang={lang} label={f.title} value={record.fields[f.key]} rel={f.relation.rel} dir={f.relation.dir} refKind={f.refKind} view={view} />;
         // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
