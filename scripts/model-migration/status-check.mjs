@@ -9,7 +9,7 @@ import { connect } from './db.mjs';
 import { loadDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 import { buildDialog } from './status-unify.mjs';
 
-const RULES = JSON.parse(fs.readFileSync(new URL('./rules/status-unification.json', import.meta.url), 'utf8'));
+import { RULES } from './resources.mjs';
 const decisions = loadDecisions() || { format: DECISIONS_FORMAT, decisions: [] };
 const db = connect();
 

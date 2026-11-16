@@ -20,12 +20,7 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-const here = p => new URL(p, import.meta.url);
-const J = p => JSON.parse(fs.readFileSync(p, 'utf8'));
-const MAP = J(here('./map/sprint-phase-task.json')).types;
-const SCHEMA = J(here('./schema/sprint-phase-task.json')).types;
-const VOCAB = J(here('../../shared/lore-statuses.json')).statusMatch;
-const CODE_CASE = JSON.parse(fs.readFileSync(new URL('./rules/status-unification.json', import.meta.url), 'utf8')).code_case.status;
+import { MAP, SCHEMA, VOCAB, CODE_CASE } from './resources.mjs';
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
 const SERVICE = ['MigLeftover'], EDGE = 'HAS_STATE';

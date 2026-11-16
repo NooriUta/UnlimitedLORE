@@ -7,8 +7,7 @@
 import fs from 'node:fs';
 import { connect } from './db.mjs';
 
-const here = p => new URL(p, import.meta.url);
-const EDGES = JSON.parse(fs.readFileSync(here('./map/sprint-phase-task.edges.json'), 'utf8')).edges;
+import { EDGES } from './resources.mjs';
 const OWN = ['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHist', 'KnowTask', 'KnowTaskHist'];
 const db = connect();
 if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
