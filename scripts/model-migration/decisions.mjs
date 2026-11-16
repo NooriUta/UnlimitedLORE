@@ -90,7 +90,10 @@ import fs from 'node:fs';
  * Решения установки: файл `rules/decisions.json` рядом с конвейером либо путь из MIG_DECISIONS_FILE.
  * Файла нет — решений нет (`undefined`): несоответствия остаются несоответствиями. Негодный файл — отказ.
  */
-export function loadDecisions(file = process.env.MIG_DECISIONS_FILE || new URL('./rules/decisions.json', import.meta.url)) {
+// Файл решений задаётся путём (--decisions установщика или MIG_DECISIONS_FILE): установщик живёт и в исполняемом
+// файле, где рядом с модулем нет каталога rules/. Не задан — решений нет.
+export function loadDecisions(file = process.env.MIG_DECISIONS_FILE) {
+  if (!file) return undefined;
   if (!fs.existsSync(file)) return undefined;
   const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
   const problems = checkDecisions(doc);

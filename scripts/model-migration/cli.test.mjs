@@ -51,3 +51,12 @@ test('независимость от операционки: в коде уст
     for (const i of imports) assert.ok(i.startsWith('node:') || i.startsWith('.'), f + ': сторонний пакет ' + i);
   }
 });
+
+test('код установщика не ищет файлы рядом с собой: в исполняемом файле модуль живёт в памяти, import.meta.url — не путь', () => {
+  const dir = new URL('.', import.meta.url);
+  for (const f of ['cli.mjs', 'resources.mjs', 'env.mjs', 'db.mjs', 'apply-map.mjs', 'decisions.mjs', 'status-unify.mjs',
+    'probe.mjs', 'edge-census.mjs', 'orphan-census.mjs', 'status-check.mjs', 'dry-run.mjs', 'transfer.mjs', 'transfer-edges.mjs']) {
+    const s = fs.readFileSync(new URL(f, dir), 'utf8').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(!/import\.meta\.url/.test(s), f + ': поиск файла рядом с модулем');
+  }
+});
