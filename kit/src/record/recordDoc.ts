@@ -34,6 +34,8 @@ export interface KitDocField {
   section?: string;
   /** Путь записи поля. Нет (или null) — поле только для чтения, даже если `editable`. */
   write?: unknown;
+  /** Поле kv: подписи ключей значения (как props у связи). Нет — ключи как есть. */
+  keys?: { key: string; label: string }[];
 }
 
 /** Вкладка схемы. `rel`/`dir` — ребро, которое она показывает. */
@@ -106,6 +108,11 @@ export interface KitRecordDoc {
   links: KitDocLink[];
   parts?: KitDocPart[];
   computed?: Record<string, unknown>;
+  /**
+   * Значения записи ВНЕ модели (D-2026-LORE-FREE-FIELDS-SHOWN, владелица 16.11): не теряются и не
+   * прячутся — блок «ключ → значение» в конце свойств с пометкой «не описано в модели», только чтение.
+   */
+  unmodeled?: Record<string, unknown>;
   perms: { can_edit: boolean; can_status: boolean; can_create: boolean; status_next: string[]; reason: string | null };
   meta: { loaded_at: string; facade: string; sources: KitDocSource[] };
 }
@@ -139,6 +146,8 @@ export interface PassportFromDoc {
 
 /** Общие колонки таблицы связей (как у NestedList): Статус · Вид · Код · Запись. */
 export const DOC_NESTED_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
+/** Ключ блока «не описано в модели» в полях записи. */
+export const UNMODELED_KEY = '_unmodeled';
 
 /**
  * `body_md` — самостоятельный раздел тела, а не копия другого: схема называет его полем группы
@@ -201,6 +210,9 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const props = c.schema.fields.filter(f => f.group === 'props');
   const extra = opts.extraFields?.(c) ?? [];
   for (const x of extra) record.fields[x.field.key] = x.value;
+  // Вне модели — последним полем свойств, только чтение (ключ служебный, с полями модели не совпадёт).
+  const unmodeled = c.unmodeled && Object.keys(c.unmodeled).length ? c.unmodeled : null;
+  if (unmodeled) record.fields[UNMODELED_KEY] = unmodeled;
   // Связь-свойство без поля в схеме — поле-ссылка: иначе значение не показалось бы вовсе,
   // а в блоке связей стояло бы «Проекты 0».
   const propRels = c.schema.relations.filter(r => docPlaceOf(r) === 'prop' && !props.some(f => f.key === r.key));
@@ -286,9 +298,11 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
         ...(f.editable && f.write ? { editable: true } : {}),
         ...(f.required ? { required: 'block' as const } : {}),
         ...(f.kind === 'ref' ? { ...edgeOf(f.key), ...refKindOf(f.key) } : {}),
+        ...(f.kind === 'kv' && f.keys?.length ? { keyLabels: Object.fromEntries(f.keys.map(k => [k.key, k.label])) } : {}),
       })),
       ...propFields,
       ...extra.map(x => x.field),
+      ...(unmodeled ? [{ key: UNMODELED_KEY, title: kitT(lang, 'kit.record.unmodeled'), type: 'kv' as const }] : []),
     ],
     ...(tabs.length ? { tabs } : {}),
   };
