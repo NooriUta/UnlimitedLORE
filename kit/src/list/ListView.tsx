@@ -1657,8 +1657,10 @@ export function ListView({
         }
         // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
         // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
-        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем.
-        if (notApplicable(r.kind, col)) {
+        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем. И только когда у самой
+        // записи значения нет: свойство связи (сторона, место на тропе у части паспорта) поле вида не
+        // объявляет, но значение пришло — «нет у типа» было бы неправдой (пилот 16.11).
+        if (notApplicable(r.kind, col) && fieldValue(r, col.startsWith('fields.') ? col.slice(7) : col) === undefined) {
           const fieldTitle = fieldTitleOf(col);
           return <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[r.kind]?.title ?? r.kind, field: fieldTitle })}>{t('kit.list.cell.naShort')}</span>;
         }

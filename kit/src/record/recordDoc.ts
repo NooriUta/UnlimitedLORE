@@ -120,7 +120,7 @@ export interface PassportFromDocOptions {
    * принадлежат связи. Без них одна запись на двух отрезках выглядела двумя одинаковыми строками
    * (пилот 16.11). Нет — общие колонки списка.
    */
-  partColumns?: (part: KitDocPart) => string[] | undefined;
+  partColumns?: (part: KitDocPart) => (string | { key: string; label?: string })[] | undefined;
 }
 
 export interface PassportFromDoc {
@@ -227,8 +227,14 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
       : undefined;
   const partBody = (p: KitDocPart, ctx: KitCtx): ReactNode => {
     if (p.items.length === 0) return noLinks;
-    const extra = opts.partColumns?.(p);
-    return createElement(NestedList, { ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p), ...(extra ? { columns: [...DOC_NESTED_COLUMNS, ...extra] } : {}) });
+    // Колонки по связи: ключ и подпись приложения (подписи — list.fieldLabels, K4-FACET-LABELS: поля вне вида).
+    const extra = opts.partColumns?.(p)?.map(c => (typeof c === 'string' ? { key: c } : c));
+    const labels = Object.fromEntries((extra ?? []).filter(c => c.label).map(c => [c.key, c.label!]));
+    return createElement(NestedList, {
+      ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p),
+      ...(extra ? { columns: [...DOC_NESTED_COLUMNS, ...extra.map(c => c.key)] } : {}),
+      ...(Object.keys(labels).length ? { fieldLabels: labels } : {}),
+    });
   };
   const partTabs = parts.map(p => ({
     key: p.key, title: p.label,
