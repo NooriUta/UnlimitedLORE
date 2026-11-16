@@ -53,7 +53,8 @@ export function KitPassportDemo({ lang }: { lang: KitLang }) {
       statuses: { items: STATUSES },
       roles: { reader: p.reader },
     };
-    return { config, data: p.data, href: id => `#${id}`, esc: s => s, md: s => <p>{s}</p> };
+    // Записи образца никуда не ведут — ссылка на сам раздел витрины (сторож S4-13: «#код» вместо адреса нельзя).
+    return { config, data: p.data, href: () => "#kit-passport", esc: s => s, md: s => <p>{s}</p> };
   }, [lang]);
   const record = ctx.data.records[0];
   return (
