@@ -7472,6 +7472,7 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-chart__src { grid-column: 1 / -1; margin: 0; font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .04em; }
 .sk-chart__sum { margin: 0; font-size: var(--fs-xs); color: var(--t2); }
 .sk-chart__sum b { font-family: var(--mono); color: var(--t1); font-weight: 600; }
+.sk-chart__plot { min-width: 0; width: 100%; }
 .sk-chart__svg { display: block; width: 100%; height: 200px; overflow: visible; }
 .sk-chart__axis { pointer-events: none; }
 .sk-chart__grid { stroke: var(--bd); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
