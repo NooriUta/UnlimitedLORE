@@ -14,6 +14,7 @@ import { switchNavUrl } from '../nav/navVersion';
 import { ListScreen } from '../pages/ListScreen';
 import { newsSource } from '../news/source';
 import { NewsFeed } from '../news/feed';
+import { AnalyticsScreen } from '../analytics/AnalyticsScreen';
 import { planStatusOf } from '../sprints/taskStatus';
 import { newsHrefV2, newsRefHrefV2 } from '../news/newsLinks';
 import { NavSwitch } from '../settings/NavSwitch';
@@ -90,6 +91,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   job: () => <ListScreen screen="jobs" titleId={SECTION_TITLE_ID} />,
   // Лента новостей kit (SPRINT_UXR_S7A_NEWS/S7A-02); свой заголовок — у раздела.
   // Статусы в ленте читаются тем же planStatusOf, что у задач и спринтов (иконки совпадают).
+  // K4-CHARTS: «Аналитика» — блоки-графики kit во вкладках «Прогресс», «Поток» и в «Моей сводке».
+  analytics: () => <AnalyticsScreen />,
   news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} statusOf={planStatusOf} hrefOf={newsHrefV2} refHrefOf={newsRefHrefV2} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
   // раздел «Настройки» (S4-01). Сами личные настройки — под аватаром в шапке
