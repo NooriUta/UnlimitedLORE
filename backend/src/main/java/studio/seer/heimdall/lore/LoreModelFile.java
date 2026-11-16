@@ -174,9 +174,9 @@ final class LoreModelFile {
             // MDL-02: название обязательно; слой — из двух значений; историчному полю нужна история типа.
             boolean versions = c.time().containsKey(t) && "scd2".equals(c.time().get(t).get("history"));
             for (LoreRecordRegistry.Field f : d.fields())
-                fieldTexts(bad, t + "." + f.key(), f.label(), f.layer(), f.historic(), versions);
+                fieldTexts(bad, t + "." + f.key(), f.label(), f.labelKey(), f.layer(), f.historic(), versions);
             for (LoreRecordRegistry.Body b : d.body())
-                fieldTexts(bad, t + "." + b.key(), b.label(), b.layer(), b.historic(), versions);
+                fieldTexts(bad, t + "." + b.key(), b.label(), b.labelKey(), b.layer(), b.historic(), versions);
             for (LoreRecordRegistry.Relation r : d.relations()) keys.add(r.key());
             for (LoreRecordRegistry.PropSection s : d.props())
                 for (String f : s.fields()) if (!keys.contains(f)) bad.add(t + ": раздел свойств ссылается на неизвестное поле «" + f + "»");
@@ -194,8 +194,10 @@ final class LoreModelFile {
         if (!bad.isEmpty()) throw new IllegalStateException("файл модели несогласован: " + bad);
     }
 
-    private static void fieldTexts(List<String> bad, String id, String label, String layer, boolean historic, boolean versions) {
+    private static void fieldTexts(List<String> bad, String id, String label, String labelKey, String layer, boolean historic, boolean versions) {
         if (label == null || label.isBlank()) bad.add(id + ": у поля нет названия (label) — оно обязательно");
+        // MDL-09: ключ локализации — у каждого поля, это общий ключ веба и телефона.
+        if (blank(labelKey)) bad.add(id + ": у поля нет ключа локализации (labelKey)");
         if (layer != null && !LoreRecordRegistry.LAYERS.contains(layer))
             bad.add(id + ": слой «" + layer + "», бывают " + LoreRecordRegistry.LAYERS);
         if (historic && !versions) bad.add(id + ": поле помечено историчным, а у типа истории версий нет (time.history)");
@@ -206,15 +208,27 @@ final class LoreModelFile {
      * рекомендуется, а не обязательно: модель принимается, счётчик виден в ответе.
      */
     static Map<String, Object> fieldTextsCount(Content c) {
-        int fields = 0, noDefinition = 0;
+        int fields = 0, noDefinition = 0, noLabelEn = 0, noDefinitionEn = 0;
         for (String t : c.types()) {
             LoreRecordRegistry.TypeDef d = c.typeDefs().get(t);
-            for (LoreRecordRegistry.Field f : d.fields()) { fields++; if (blank(f.definition())) noDefinition++; }
-            for (LoreRecordRegistry.Body b : d.body()) { fields++; if (blank(b.definition())) noDefinition++; }
+            for (LoreRecordRegistry.Field f : d.fields()) {
+                fields++;
+                if (blank(f.definition())) noDefinition++;
+                if (blank(f.labelEn())) noLabelEn++;
+                if (blank(f.definitionEn())) noDefinitionEn++;
+            }
+            for (LoreRecordRegistry.Body b : d.body()) {
+                fields++;
+                if (blank(b.definition())) noDefinition++;
+                if (blank(b.labelEn())) noLabelEn++;
+                if (blank(b.definitionEn())) noDefinitionEn++;
+            }
         }
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("fields", fields);
         m.put("without_definition", noDefinition);
+        m.put("without_label_en", noLabelEn);
+        m.put("without_definition_en", noDefinitionEn);
         return m;
     }
 

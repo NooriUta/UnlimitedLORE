@@ -109,6 +109,57 @@ class LoreModelFieldTextsTest {
         assertEquals(without - 1, after.get("without_definition"));
     }
 
+    // ── MDL-09 (D-2026-LORE-FIELD-LABELS-FROM-SERVER): подписи на двух языках отдаёт сервер ──
+
+    @Test
+    void englishPairsTravelFromFileToContract() throws Exception {
+        LoreModelFile.replace(LoreModelFile.parse(canonWith(FIELD,
+            "\n      \"shortLabelEn\" : \"Reason\",\n      \"definitionEn\" : \"Why the gate no longer runs.\","
+                + "\n      \"descriptionEn\" : \"Filled in when the gate is retired.\",")));
+        Map<String, Object> f = fieldOf("quality_gate", "retired_reason");
+        assertEquals("Reason", f.get("short_label_en"));
+        assertEquals("Why the gate no longer runs.", f.get("definition_en"));
+        assertEquals("Filled in when the gate is retired.", f.get("description_en"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void everyFieldAndTypeOfCanonHasKeyAndEnglishLabel() {
+        int checked = 0;
+        for (String t : LoreRecordRegistry.TYPES) {
+            Map<String, Object> schema = LoreRecordRegistry.schemaJson(t);
+            assertNotNull(schema.get("label_en"), t + ": у типа нет английской подписи");
+            for (Map<String, Object> f : (List<Map<String, Object>>) schema.get("fields")) {
+                String id = t + "." + f.get("key");
+                assertNotNull(f.get("label_key"), id + ": нет ключа локализации");
+                assertNotNull(f.get("label_en"), id + ": нет английской подписи");
+                for (String k : List.of("short_label_en", "definition_en", "description_en"))
+                    assertTrue(f.containsKey(k), id + ": ключ «" + k + "» есть всегда");
+                checked++;
+            }
+        }
+        assertTrue(checked > 150, "положительный контроль: проверены поля всех типов — " + checked);
+    }
+
+    @Test
+    void fieldWithoutLocalizationKeyIsRefused() throws Exception {
+        String canon = LoreModelLiveReplaceTest.canon();
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("(\"key\" : \"retired_reason\",\\n\\s+\"label\" : \"[^\"]+\",)\\n\\s+\"labelKey\" : \"[^\"]+\",").matcher(canon);
+        assertTrue(m.find(), "положительный контроль: у поля канона есть ключ локализации");
+        String broken = canon.substring(0, m.start()) + m.group(1) + canon.substring(m.end());
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> LoreModelFile.parse(broken));
+        assertTrue(e.getMessage().contains("quality_gate.retired_reason") && e.getMessage().contains("labelKey"), e.getMessage());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void modelCountsFieldsWithoutEnglishLabel() {
+        Map<String, Object> c = (Map<String, Object>) content(LoreModel.build(List.of())).get("field_texts");
+        assertEquals(0, c.get("without_label_en"), "у канона английская подпись есть у каждого поля");
+        assertTrue((int) c.get("without_definition_en") > 0, "английских определений пока нет — счётчик это показывает");
+    }
+
     @SuppressWarnings("unchecked")
     static Map<String, Object> content(Map<String, Object> doc) {
         Object c = doc.get("content");
