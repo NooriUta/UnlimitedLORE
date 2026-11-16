@@ -36,6 +36,8 @@ test('фраза сильнее значка: «код готов, ждёт CI»
 test('идущие, отложенные, не начатые, исследование', () => {
   assert.equal(S('🔨 ОТКРЫТ (12.06.2026)').code, 'ACTIVE');
   assert.equal(S('🔄 В РАБОТЕ — 6/12 задач выполнено').code, 'ACTIVE');
+  // найдено в интерфейсе 16.11: слово «pending» в хвосте не должно перебивать «В РАБОТЕ» в начале
+  assert.equal(S('🔄 В РАБОТЕ — 6/12 задач выполнено (HK-1/2/4/6/8/9 ✅; HK-5/7/10/11/12/13 pending)').code, 'ACTIVE');
   assert.equal(S('⏸ PAUSED').code, 'WAITING'); // как решение владелицы ST-09
   assert.equal(S('⏳ Pending — старт Jun 8, 2026 (W7)').code, 'PLANNED');
   assert.equal(S('⬜ OPEN').code, 'TODO');

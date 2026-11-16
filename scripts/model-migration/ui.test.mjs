@@ -1,0 +1,43 @@
+// SPRINT_LORE_MODEL_DOCS_TIDY/MIG-02 — интерфейс установщика: диалог переноса в браузере.
+// Слова владелицы 16.11.2026: «интерактивно в chrome покажи диалог миграции»; «у всех в данных будет своё
+// и через HTML это странно» — диалог строится по данным своей установки, решения пишутся в её файл решений.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { addDecision, decisionFromForm, nextId } from './ui.mjs';
+import { checkDecisions } from './decisions.mjs';
+
+const empty = () => ({ format: 'mig-decisions/1', decisions: [] });
+const AT = '2026-11-16T20:00:00Z';
+
+test('решение из формы: свести к коду; область — значение или «пусто»', () => {
+  const d = decisionFromForm({ type: 'KnowSprintHist', field: 'status_raw', value: '✅ CLOSED', action: 'map_to', to: 'DONE', by: 'omiloreadmin' }, 'ST-12', AT);
+  assert.deepEqual(d.scope, { type: 'KnowSprintHist', field: 'status_raw', value: '✅ CLOSED' });
+  assert.equal(d.to, 'DONE');
+  const e = decisionFromForm({ type: 'KnowTaskHist', field: 'status_raw', value: null, action: 'map_to', to: 'BACKLOG', by: 'x' }, 'ST-13', AT);
+  assert.deepEqual(e.scope, { type: 'KnowTaskHist', field: 'status_raw', why: 'пусто' });
+});
+
+test('новый код — только с подписями на трёх языках; «решу позже» — defer', () => {
+  assert.throws(() => decisionFromForm({ type: 'KnowADRHist', field: 'status_raw', value: 'REJECTED', action: 'add_code', to: 'REJECTED', labels: { ru: 'Отклонён', en: 'Rejected' }, by: 'x' }, 'ST-1', AT), /pl/);
+  const d = decisionFromForm({ type: 'KnowADRHist', field: 'status_raw', value: 'REJECTED', action: 'add_code', to: 'rejected', labels: { ru: 'Отклонён', en: 'Rejected', pl: 'Odrzucony' }, by: 'x' }, 'ST-1', AT);
+  assert.equal(d.to, 'REJECTED', 'код статуса — заглавными');
+  assert.equal(decisionFromForm({ type: 'T', field: 'f', value: 'v', action: 'defer', by: 'x' }, 'ST-2', AT).action, 'defer');
+});
+
+test('без «кто принял» решение не записывается', () => {
+  assert.throws(() => decisionFromForm({ type: 'T', field: 'f', value: 'v', action: 'map_to', to: 'DONE', by: ' ' }, 'ST-3', AT), /кто принял/);
+});
+
+test('повторное решение по той же области заменяет прежнее; файл остаётся годным', () => {
+  let doc = empty();
+  doc = addDecision(doc, { type: 'KnowSprintHist', field: 'status_raw', value: '✅ CLOSED', action: 'map_to', to: 'DONE', by: 'a' }, AT);
+  doc = addDecision(doc, { type: 'KnowSprintHist', field: 'status_raw', value: '✅ CLOSED', action: 'map_to', to: 'ACTIVE', by: 'a' }, AT);
+  assert.equal(doc.decisions.length, 1);
+  assert.equal(doc.decisions[0].to, 'ACTIVE');
+  assert.deepEqual(checkDecisions(doc), []);
+});
+
+test('код решения — следующий свободный ST-NN', () => {
+  assert.equal(nextId(empty()), 'ST-01');
+  assert.equal(nextId({ decisions: [{ id: 'ST-01' }, { id: 'ST-11' }, { id: 'X-99' }] }), 'ST-12');
+});
