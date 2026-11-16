@@ -219,7 +219,9 @@ class Scd2OptimisticLockLiveDbTest {
 
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"task_uid\":\"" + sid + "/T1\",\"title\":\"v2\",\"note_md\":\"n2\","
-                + "\"expected\":{\"note_md\":\"n1\",\"status\":\"planned\"}}")
+                // MDL-11: задача создана без статуса — она рождается в первом статусе, «бэклог»
+                // (раньше всегда «запланирована»); «было» для правки называет его.
+                + "\"expected\":{\"note_md\":\"n1\",\"status\":\"backlog\"}}")
         .when().post("/lore/task/edit").then().statusCode(200);
     }
 }
