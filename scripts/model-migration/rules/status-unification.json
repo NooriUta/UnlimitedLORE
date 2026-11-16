@@ -147,7 +147,9 @@
         "IN PROGRESS": "ACTIVE",
         "UAT TESTING": "UAT",
         "CANCELED": "CANCELLED"
-      }
+      },
+      "empty_default": "BACKLOG",
+      "_empty_default": "Пустой статус спринта и задачи → BACKLOG: правило владелицы «если статус не указан при создании ставим первый статус в беклог» и её решение ST-08 от 16.11.2026."
     },
     "phase_status": {
       "kind": "status",
@@ -195,7 +197,8 @@
       ],
       "synonyms": {
         "IN PROGRESS": "ACTIVE"
-      }
+      },
+      "unrecognized_why": "похоже на название фазы, а не на статус: по правилу карты переноса текст уходит в название фазы, если оно пусто"
     },
     "adr_status": {
       "kind": "status",
@@ -620,6 +623,174 @@
       "field": "priority",
       "dict": "priority",
       "required": false
+    }
+  ],
+  "_hints": "Подсказки конвейера для значения, которое не свелось к коду само (слова владелицы 16.11.2026: «так предложение сразу кнопкой сделай», «по спринту хоть какой то алгоритм предложений и компоновки»). Порядок проверки: not_status → phrase → marker → word; внутри яруса — сверху вниз; побеждает первая подходящая, чей код есть в справочнике типа (dict — ограничить справочниками). phrase и not_status ищутся во всём тексте без разметки, marker — значок в начале, word — в «голове» до разделителя. Подсказка — предложение, решение принимает человек. Другая установка дописывает свои подсказки сюда же.",
+  "hints": [
+    {
+      "tier": "not_status",
+      "match": "^\\s*🔴\\s*P[0-3]\\b|^(P[0-3]|low|medium|normal|high|critical|blocker)$",
+      "to": null,
+      "why": "это приоритет, а не статус"
+    },
+    {
+      "tier": "phrase",
+      "match": "^(rejected)$|CANCELLED",
+      "to": "SUPERSEDED",
+      "why": "как в решениях владелицы ST-04, ST-05",
+      "dict": [
+        "decision_status"
+      ]
+    },
+    {
+      "tier": "phrase",
+      "match": "^(fixed|done)$",
+      "to": "ACCEPTED",
+      "why": "в справочнике источника помечено «легаси сида»; по смыслу — действующее правило",
+      "dict": [
+        "decision_status"
+      ]
+    },
+    {
+      "tier": "phrase",
+      "match": "PARTIAL|READY FOR DEPLOY",
+      "to": "ACTIVE",
+      "why": "у фазы нет такого статуса; фаза ещё идёт",
+      "dict": [
+        "phase_status"
+      ]
+    },
+    {
+      "tier": "phrase",
+      "match": "CODE COMPLETE|READY FOR REVIEW|ожида\\S* (CI|ревью|PR)",
+      "to": "REVIEW",
+      "why": "код готов, ждёт проверки"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\bpartial\\b|частично|В ОСНОВНОМ|(COMPLETE|DONE).*\\bpending\\b",
+      "to": "PARTIAL",
+      "why": "сделано не всё"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\b(PAUSED|DEFERRED)\\b|ОТЛОЖЕН",
+      "to": "WAITING",
+      "why": "отложено — как в решении владелицы ST-09 («⏸ DEFERRED» → WAITING)"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\b(Conditional|Stub|Proposed)\\b",
+      "to": "BACKLOG",
+      "why": "ещё не проработано"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\bPending\\b|\\bNEXT\\b",
+      "to": "PLANNED",
+      "why": "в очереди, не начато"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\bOPEN\\b|не начат",
+      "to": "TODO",
+      "why": "открыт, не начат"
+    },
+    {
+      "tier": "phrase",
+      "match": "ОТКРЫТ|IN PROGRESS|В РАБОТЕ",
+      "to": "ACTIVE",
+      "why": "в работе"
+    },
+    {
+      "tier": "phrase",
+      "match": "RESEARCH|ИССЛЕДОВАНИЕ",
+      "to": "DESIGN",
+      "why": "исследование и проектирование"
+    },
+    {
+      "tier": "marker",
+      "match": "✅",
+      "to": "DONE",
+      "why": "значок ✅"
+    },
+    {
+      "tier": "marker",
+      "match": "🔄|🔨|🚧",
+      "to": "ACTIVE",
+      "why": "значок работы"
+    },
+    {
+      "tier": "marker",
+      "match": "🟡",
+      "to": "PARTIAL",
+      "why": "значок 🟡 — частично"
+    },
+    {
+      "tier": "marker",
+      "match": "⏸",
+      "to": "WAITING",
+      "why": "значок паузы"
+    },
+    {
+      "tier": "marker",
+      "match": "⏳",
+      "to": "PLANNED",
+      "why": "значок ожидания старта"
+    },
+    {
+      "tier": "marker",
+      "match": "🚫|❌",
+      "to": "CANCELLED",
+      "why": "значок отмены"
+    },
+    {
+      "tier": "marker",
+      "match": "🔴",
+      "to": "BLOCKED",
+      "why": "значок 🔴"
+    },
+    {
+      "tier": "marker",
+      "match": "🚀",
+      "to": "READY_FOR_DEPLOY",
+      "why": "значок выкатки"
+    },
+    {
+      "tier": "marker",
+      "match": "📋|🔵",
+      "to": "PLANNED",
+      "why": "значок плана"
+    },
+    {
+      "tier": "marker",
+      "match": "⬜",
+      "to": "TODO",
+      "why": "значок ⬜"
+    },
+    {
+      "tier": "marker",
+      "match": "🔬",
+      "to": "DESIGN",
+      "why": "значок исследования"
+    },
+    {
+      "tier": "marker",
+      "match": "🟢",
+      "to": "REVIEW",
+      "why": "значок 🟢"
+    },
+    {
+      "tier": "word",
+      "match": "CLOSED|MERGED|DONE|COMPLETE|ЗАВЕРШ|ЗАКРЫТ|В ПРОДЕ",
+      "to": "DONE",
+      "why": "закрыт, влит или в проде"
+    },
+    {
+      "tier": "word",
+      "match": "PLANNING",
+      "to": "PLANNED",
+      "why": "планирование"
     }
   ]
 }

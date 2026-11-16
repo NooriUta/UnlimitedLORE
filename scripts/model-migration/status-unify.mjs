@@ -31,6 +31,7 @@ export function checkRules(rules) {
   for (const l of LANGS) if (!langs.includes(l)) bad.push(`в правилах не назван язык ${l}`);
   for (const [name, d] of Object.entries(rules.dictionaries || {})) {
     const codes = new Set();
+    if (d.empty_default !== undefined && !(d.codes || []).some(c => c.code === d.empty_default)) bad.push(`${name}: статус по умолчанию ${d.empty_default} не из справочника`);
     if (!KINDS.includes(d.kind)) bad.push(`${name}: вид справочника «${d.kind}», бывает ${KINDS.join(' или ')}`);
     for (const c of d.codes || []) {
       if (blank(c.code)) { bad.push(`${name}: значение без кода`); continue; }
@@ -42,6 +43,13 @@ export function checkRules(rules) {
     }
     if (!codes.size) bad.push(`${name}: справочник без значений`);
     for (const [from, to] of Object.entries(d.synonyms || {})) if (!codes.has(head(to))) bad.push(`${name}: синоним «${from}» ведёт к коду ${to}, которого в справочнике нет`);
+  }
+  const allCodes = new Set(Object.values(rules.dictionaries || {}).flatMap(d => (d.codes || []).map(c => c.code)));
+  for (const [i, h] of (rules.hints || []).entries()) {
+    if (!TIERS.includes(h.tier)) bad.push(`подсказка №${i + 1}: ярус «${h.tier}», бывают ${TIERS.join(', ')}`);
+    if (h.tier !== 'not_status' && !allCodes.has(h.to)) bad.push(`подсказка №${i + 1} ведёт к коду ${h.to}, которого нет ни в одном справочнике`);
+    try { rx(h); } catch (e) { bad.push(`подсказка №${i + 1}: шаблон не разбирается`); }
+    if (!h.why) bad.push(`подсказка №${i + 1}: не сказано почему`);
   }
   const seen = new Set();
   for (const s of rules.sources || []) {
@@ -61,6 +69,47 @@ export function classify(value, dict) {
   for (const c of dict.codes) if (head(c.code) === h) return { kind: 'known', code: c.code };
   for (const [from, to] of Object.entries(dict.synonyms || {})) if (head(from) === h) return { kind: 'known', code: to };
   return { kind: 'unknown', code: null };
+}
+
+export const TIERS = ['not_status', 'phrase', 'marker', 'word'];
+// Без разметки: **жирное**, `код`, [текст](ссылка) → текст.
+const plain = v => String(v).replace(/\*\*|`/gu, '').replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1').trim();
+const rx = h => new RegExp(h.tier === 'marker' ? '^\\s*(?:' + h.match + ')' : h.match, 'iu');
+
+/**
+ * Предложение для значения, которое само к коду не свелось: по подсказкам правил (ярусы TIERS по порядку,
+ * внутри — сверху вниз). Предлагается только код, который есть в справочнике типа. Ничего не подошло —
+ * кода нет, причина названа. Это подсказка: решение принимает человек.
+ */
+export function suggest(value, dict, hints = [], dictName) {
+  if (blank(value)) return { code: dict.empty_default || dict.codes[0].code, why: 'пустого статуса нет — статус по умолчанию справочника' };
+  const codes = dict.codes.map(c => c.code), text = plain(value);
+  const bare = text.replace(/^[^\p{L}\p{N}]+/u, ''), cut = bare.search(SEP);
+  const headText = cut < 0 ? bare : bare.slice(0, cut);
+  for (const tier of TIERS) {
+    for (const h of hints) {
+      if (h.tier !== tier || (h.dict && !h.dict.includes(dictName))) continue; // подсказка своего справочника без имени не применяется
+      const m = rx(h).exec(tier === 'word' ? headText : text);
+      if (!m) continue;
+      const why = h.why + ' («' + m[0].trim() + '»)';
+      if (tier === 'not_status') return { code: null, why };
+      if (codes.includes(h.to)) return { code: h.to, why };
+    }
+  }
+  return { code: null, why: dict.unrecognized_why || 'ни значок, ни слово не узнаны' };
+}
+
+/** Компоновка строк диалога: группы по предложенному коду в порядке справочника, без предложения — в конце. */
+export function groupBySuggestion(rows) {
+  const order = new Map();
+  const groups = new Map();
+  for (const r of rows) {
+    const k = r.suggest ?? null;
+    if (!groups.has(k)) groups.set(k, { code: k, rows: [], n: 0 });
+    const g = groups.get(k); g.rows.push(r); g.n += r.n;
+    if (k !== null && r.codes) r.codes.forEach((c, i) => order.set(c, i));
+  }
+  return [...groups.values()].sort((a, b) => (a.code === null) - (b.code === null) || (order.get(a.code) ?? 0) - (order.get(b.code) ?? 0));
 }
 
 const sameValue = (a, b) => (blank(a) && blank(b)) || (!blank(a) && !blank(b) && String(a).trim() === String(b).trim());
@@ -117,7 +166,7 @@ export function buildDialog(counts, rules, decisionsDoc) {
     }
     rows.push({
       ...row, state: 'needs_decision', why, ...(d ? { deferred: d.id } : {}),
-      ...(st.kind === 'empty' ? { suggest: codes[0] } : {}),
+      ...(() => { const sg = suggest(c.value, dict, rules.hints || [], src.dict); return { suggest: sg.code, suggestWhy: sg.why, codes }; })(),
       options: [{ action: 'map_to', codes }, { action: 'add_code', labels: rules.languages }, { action: 'defer' }],
     });
   }

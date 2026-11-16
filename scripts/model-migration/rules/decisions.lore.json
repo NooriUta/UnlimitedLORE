@@ -1,0 +1,149 @@
+{
+  "format": "mig-decisions/1",
+  "_about": "Решения владелицы для установки LORE (system_aida_lore), приняты в прототипе раздела «Перенос» 16.11.2026 и присланы в диалог списком «Решения по переносу (11)». Передаётся установщику ключом --decisions.",
+  "decisions": [
+    {
+      "id": "ST-01",
+      "scope": {
+        "type": "KnowADRHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "DRAFT",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 152"
+    },
+    {
+      "id": "ST-02",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "fixed"
+      },
+      "action": "map_to",
+      "to": "ACCEPTED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 114"
+    },
+    {
+      "id": "ST-03",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "done"
+      },
+      "action": "map_to",
+      "to": "ACCEPTED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 20"
+    },
+    {
+      "id": "ST-04",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "rejected"
+      },
+      "action": "map_to",
+      "to": "SUPERSEDED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 2"
+    },
+    {
+      "id": "ST-05",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "🚫 CANCELLED"
+      },
+      "action": "map_to",
+      "to": "SUPERSEDED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 1"
+    },
+    {
+      "id": "ST-06",
+      "scope": {
+        "type": "KnowMilestoneHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "UPCOMING",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 38"
+    },
+    {
+      "id": "ST-07",
+      "scope": {
+        "type": "KnowSpecHist",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "PROPOSED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 607"
+    },
+    {
+      "id": "ST-08",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "BACKLOG",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 108"
+    },
+    {
+      "id": "ST-09",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "⏸ DEFERRED"
+      },
+      "action": "map_to",
+      "to": "WAITING",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 10"
+    },
+    {
+      "id": "ST-10",
+      "scope": {
+        "type": "KnowUseCase",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "PROPOSED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 3"
+    },
+    {
+      "id": "ST-11",
+      "scope": {
+        "type": "QualityGate",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "DRAFT",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 1"
+    }
+  ]
+}

@@ -77,7 +77,7 @@ test('диалог: знакомое сведено, незнакомое и п�
   const empty = by(null);
   assert.equal(empty.state, 'needs_decision');
   assert.equal(empty.why, 'пусто');
-  assert.equal(empty.suggest, 'PROPOSED', 'предложение — первый статус справочника');
+  assert.equal(empty.suggest, 'PROPOSED', 'предложение — статус по умолчанию справочника (у спеки — первый)');
   assert.equal(by('REJECTED').state, 'needs_decision');
   assert.equal(d.summary.needs_decision, 4);
   assert.equal(d.summary.records_waiting, 4 + 413 + 1 + 114);
