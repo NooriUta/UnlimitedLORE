@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -277,6 +277,15 @@ function Samples() {
           points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }, { date: '2026-11-05', scope: 4, done: 2, remaining: 2 }]} />
         <BurnSpark points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }, { date: '2026-11-05', scope: 4, done: 2, remaining: 2 }]} />
         <BurnSpark points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }]} />
+      </section>
+      <section className="bare__sec" data-kit="charts">
+        <h2 className="bare__h2">Графики одним семейством</h2>
+        {/* K4-CHARTS: линия с пропуском (разрыв и полоса «нет данных», не ноль) и матрица с числами. */}
+        <LineChart title="Дрейф" source="MUNINN · bench drift" xLabel={x => String(x)}
+          series={[{ key: 'q', label: 'qwen3-32b', points: [{ x: 1, y: 71 }, { x: 2, y: 72 }, { x: 3, y: null }, { x: 4, y: 77 }] }]} />
+        <HeatChart title="Матрица" rows={['ru-wiki', 'code']} cols={['L1', 'L2']} values={[[92, 88], [84, null]]} />
+        <ScatterChart title="Парето" xTitle="токенов" points={[{ x: 800, y: 74, label: 'gemini' }, { x: 2300, y: 86, label: 'claude' }]} />
+        <BarChart title="Доля" groups={[{ key: 'a', label: 'статьи' }]} data={[{ category: 'Хабр', values: { a: 34 } }, { category: 'LinkedIn', values: { a: null } }]} />
       </section>
       <section className="bare__sec" data-kit="library">
         <h2 className="bare__h2">Библиотека</h2>
