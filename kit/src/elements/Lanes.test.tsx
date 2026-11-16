@@ -2,7 +2,8 @@
 // SPRINT_UXR_S13_KIT4/K4-LANES: «дорожки» — запись, разложенная по полосам (у сна А · стык · у сна Б),
 // элементы полосы — ссылки на записи с бейджем; стык — акцентом. Пилот 15.11: «пункты не кликаются».
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { KitLangProvider } from '../i18n';
 import { Lanes } from './Lanes';
 
@@ -33,5 +34,21 @@ describe('Lanes', () => {
     wrap(<Lanes lanes={lanes} href={() => null} label="Тропа" />);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
     expect(screen.getByText('Свиток времени')).toBeTruthy();
+  });
+});
+
+// Пилот 16.11: щелчок по упоминанию в полосе перезагружал страницу (~4 с). onOpen — как у ListView:
+// обычный щелчок — приложению, Ctrl/⌘/средняя кнопка — браузеру; ссылка остаётся ссылкой.
+describe('Lanes · onOpen', () => {
+  it('обычный щелчок уходит в onOpen без перехода, Ctrl-щелчок — браузеру', () => {
+    const onOpen = vi.fn();
+    wrap(<Lanes lanes={lanes} href={id => '#' + id} label="Тропа" onOpen={onOpen} />);
+    const link = screen.getByRole('link', { name: /Свиток времени/ });
+    expect(fireEvent.click(link)).toBe(false);
+    expect(onOpen).toHaveBeenCalledWith('S-1');
+    onOpen.mockClear();
+    fireEvent.click(link, { ctrlKey: true });
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(link.getAttribute('href')).toBe('#S-1');
   });
 });
