@@ -39,7 +39,7 @@ import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
 import { appliedRightColumn } from '../settings/applied';
 import './ListPassport.css';
-import { ModelNotes } from './ModelNotes';
+import { RecordModelNotes as ModelNotes } from '@seidr/kit';
 import { loreQueryRun } from './loreQueryBlock';
 import { loreGraphRun } from './loreGraphBlock';
 import { createDraftsApi, draftSlot } from '../api/drafts';
