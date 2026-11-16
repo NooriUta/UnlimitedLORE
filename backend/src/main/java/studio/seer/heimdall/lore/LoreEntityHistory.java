@@ -85,6 +85,17 @@ final class LoreEntityHistory {
     static Set<String> types() { return HIST_OF_TYPE.keySet(); }
 
     /**
+     * Принимается ли id у этого типа. Ключ релиза в паспорте — {@code release_uid} вида «проект#тег»
+     * (тот же шаблон, что у /lore/record); «#» общий шаблон чтения не пропускает, и история релиза
+     * отвечала 400 (препрод 16.11.2026). Голый {@code release_id} у релиза принимается по-прежнему.
+     */
+    static boolean idAccepted(String type, String id) {
+        if (id == null) return false;
+        if (LoreResourceBase.SAFE_READ_ID.matcher(id).matches()) return true;
+        return "release".equals(type) && LoreRecordResource.RELEASE_UID.matcher(id).matches();
+    }
+
+    /**
      * MINI-06: заголовок записи для ответа истории — с вершины-владельца цепочки (класс цепочки без «Hist»),
      * по тому же полю id. Поле имени у типов разное (title у задачи, name у спринта, label у вехи) —
      * берётся первое непустое. У строки справочника вершины-владельца нет — {@code null}.
@@ -95,8 +106,10 @@ final class LoreEntityHistory {
         if ("dict_entry".equals(type)) return null;
         LoreSlices.HistParent parent = LoreSlices.HIST_PARENT.get(hist);
         String vertex = hist.substring(0, hist.length() - "Hist".length());
+        String byKey = parent.idField() + " = :id";
+        if ("release".equals(type)) byKey = "(" + byKey + " OR release_uid = :id)";
         return "SELECT coalesce(title, name, label) AS title FROM " + vertex
-            + " WHERE " + parent.idField() + " = :id LIMIT 1";
+            + " WHERE " + byKey + " LIMIT 1";
     }
 
     /**
@@ -115,6 +128,8 @@ final class LoreEntityHistory {
         // иначе строки в истории второго владельца несли бы чужой ключ.
         String idExpr = dict ? "code" : ":id";
         String where = dict ? "code = :id" : "in('HAS_STATE')." + parent.idField() + " CONTAINS :id";
+        // Паспорт релиза приходит с release_uid («проект#тег»), а пара цепочки — release_id.
+        if ("release".equals(type)) where = "(" + where + " OR in('HAS_STATE').release_uid CONTAINS :id)";
         StringBuilder sb = new StringBuilder("SELECT '").append(type).append("' AS entity_type, '")
             .append(hist).append("' AS hist_type, ").append(idExpr).append(" AS ref_id, state_uid, ")
             .append("valid_from, valid_to, content_hash, source_commit, status_raw, changed_by, changed_by_kind");
