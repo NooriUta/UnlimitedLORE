@@ -8,6 +8,6 @@ import { ownTypes } from './transfer.mjs';
 
 test('свои типы новой базы: записи, служебный остаток, связь версий и связи с правилом keep', () => {
   const own = ownTypes();
-  for (const t of ['KnowSprint', 'KnowTaskHist', 'MigLeftover', 'HAS_STATE', 'PART_OF', 'IN_PHASE', 'DEPENDS_ON']) assert.ok(own.includes(t), t);
+  for (const t of ['KnowSprint', 'KnowTaskHist', 'MigLeftover', 'HAS_STATE', 'PART_OF', 'IN_PHASE', 'DEPENDS_ON', 'MigDictEntry', 'MigDictLabel']) assert.ok(own.includes(t), t);
   assert.ok(!own.includes('BELONGS_TO_PROJECT'), 'связь, ждущая своего объекта, не своя — её типа в новой базе быть не должно');
 });

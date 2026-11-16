@@ -20,13 +20,14 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES } from './resources.mjs';
+import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
+import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
 const SERVICE = ['MigLeftover'], EDGE = 'HAS_STATE';
 /** Типы новой базы, которые кладёт сам конвейер: записи, остаток, связь версий и связи с правилом keep (шаг связей). */
 export const keptEdges = () => Object.entries(EDGES).filter(([n, r]) => r.rule === 'keep' && n !== EDGE).map(([n]) => n);
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges()];
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), DICT_ENTRY, DICT_LABEL];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
@@ -153,6 +154,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   verify.links = { expected: links.length, target: (await db.dstQuery(`SELECT count(*) AS n FROM ${EDGE}`))[0].n };
   verify.leftovers = { expected: leftovers.length, target: (await db.dstQuery('SELECT count(*) AS n FROM MigLeftover'))[0].n };
   verify.ok = Object.values(verify.counts).every(c => c.source === c.target) && Object.values(verify.mismatched_records).every(b => b === 0) && verify.links.expected === verify.links.target && verify.leftovers.expected === verify.leftovers.target && Object.keys(undeclared).length === 0;
+  // справочники с подписями на всех языках правил (правило переноса 16.11.2026) — частью сверки
+  report.stages.dicts = await writeDictionaries(db, RULES, DECISIONS, { log });
+  if (!report.stages.dicts.ok) verify.ok = false;
   report.stages.verify = verify;
   log('5 сверка:', JSON.stringify({ ok: verify.ok, counts: verify.counts, mismatched: verify.mismatched_records, links: verify.links, leftovers: verify.leftovers }));
   if (verify.samples.length) log('  расхождения (образцы):', JSON.stringify(verify.samples, null, 1).slice(0, 1500));

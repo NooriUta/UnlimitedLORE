@@ -181,3 +181,9 @@ export function buildDialog(counts, rules, decisionsDoc) {
     ready: waiting.length === 0,
   };
 }
+
+/** Справочник, к которому относится область решения (тип и поле источника); нет правила — null. */
+export function statusDictOf(rules, scope) {
+  const s = (rules.sources || []).find(x => x.type === scope.type && x.field === scope.field);
+  return s ? s.dict : null;
+}

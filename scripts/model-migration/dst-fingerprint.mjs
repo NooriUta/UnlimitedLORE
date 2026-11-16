@@ -10,7 +10,7 @@ import { contentFingerprint } from './fingerprint.mjs';
 
 /** Отпечаток содержимого новой базы. */
 export async function dstFingerprint(db) {
-  const types = (await db.dstQuery("SELECT name, type FROM schema:types")).filter(t => t.type === 'vertex' || t.type === 'edge');
+  const types = (await db.dstQuery("SELECT name, type FROM schema:types")).filter(t => t.type === 'vertex' || t.type === 'edge' || t.type === 'document');
   const vertices = {}, edges = {};
   for (const t of types.sort((a, b) => a.name.localeCompare(b.name))) {
     const all = [];
@@ -21,7 +21,7 @@ export async function dstFingerprint(db) {
       if (rows.length < 5000) break;
       last = rows[rows.length - 1]['@rid'];
     }
-    (t.type === 'vertex' ? vertices : edges)[t.name] = all;
+    (t.type === 'edge' ? edges : vertices)[t.name] = all; // документы (справочники) — по содержимому, как записи
   }
   const fp = contentFingerprint({ vertices, edges });
   return fp;
