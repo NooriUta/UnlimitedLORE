@@ -43,6 +43,7 @@ export function toDateTime(v) {
 const lead = s => String(s).trim().replace(/^[^\p{L}\p{N}]+/u, ''); // значок и пробелы в начале
 const tail = s => s.replace(/^[\s—–\-:·,]+/, '').trim();
 
+const DECIDED = new Set(['owner', 'delegated']);
 const PRIORITY = { p0: 'critical', p1: 'high', p2: 'normal', p3: 'low', blocker: 'critical', critical: 'critical', high: 'high', normal: 'normal', medium: 'normal', low: 'low' }; // medium = normal (16.11.2026, ST-74)
 /** Словесная шкала приоритета (решение владелицы). Значение вне шкалы не угадывается — целиком в заметку. */
 export function toPriority(v) {
@@ -117,6 +118,7 @@ const TRANSFORMS = {
   'KnowSprintHist.planned_start_date': (f, v, r) => asDate(f, v, r, 'planned_start_date'),
   'KnowSprintHist.planned_end_date': (f, v, r) => asDate(f, v, r, 'planned_end_date'),
   'KnowSprintHist.priority': (f, v, r) => asPriority(f, v, r, 'out'),
+  'KnowTask.priority': (f, v, r) => asPriority(f, v, r, 'out'),
   'KnowSprintHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, false),
   'KnowTaskHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, false),
   'KnowPhaseHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, true),
@@ -139,7 +141,9 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     if (!given(v)) continue;
     // Смена только вида хранения (дата, момент) — общее решение владелицы, от согласованности самого поля не зависит.
     if (e.rule === 'transform' && TYPE_ONLY[e.how] && !TRANSFORMS[k]) { TYPE_ONLY[e.how](f, v, r, e.to || f); continue; }
-    if (e.rule === 'open' || (e.rule === 'transform' && e.basis !== 'owner')) { r.held[f] = v; continue; }
+    // delegated — владелица поручила решить исполнителю (16.11.2026: «по максимуму сама»): действует как её решение,
+    // но в карте остаётся различимым, чтобы его можно было переиграть.
+    if (e.rule === 'open' || (e.rule === 'transform' && !DECIDED.has(e.basis))) { r.held[f] = v; continue; }
     if (e.rule === 'keep') { r.out[f] = v; continue; }
     if (e.rule === 'rename') {
       const nv = RENAMES[k] ? RENAMES[k](v, record) : v;
@@ -163,6 +167,6 @@ export function applyMap(T, typeMap, record, ctx = {}) {
 /** Преобразования карты, для которых нет кода, — сторож полноты исполнителя. */
 export function missingTransforms(types) {
   const out = [];
-  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && e.basis === 'owner' && !TRANSFORMS[`${T}.${f}`] && !TYPE_ONLY[e.how]) out.push(`${T}.${f}`);
+  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && DECIDED.has(e.basis) && !TRANSFORMS[`${T}.${f}`] && !TYPE_ONLY[e.how]) out.push(`${T}.${f}`);
   return out;
 }

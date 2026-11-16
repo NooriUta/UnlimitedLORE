@@ -17,7 +17,7 @@ const RULES = {
   drop: ['why'],
   open: ['question'],
 };
-const BASIS = new Set(['owner', 'proposal']);
+const BASIS = new Set(['owner', 'delegated', 'proposal']);
 
 export function checkMap(map, census) {
   const errors = [];
@@ -33,7 +33,7 @@ export function checkMap(map, census) {
       const need = RULES[r.rule];
       if (!need) { errors.push(`${type}.${f.name}: неизвестное правило «${r.rule}»`); continue; }
       for (const k of need) if (!r[k]) errors.push(`${type}.${f.name}: у правила «${r.rule}» нет «${k}»`);
-      if (r.rule !== 'open' && !BASIS.has(r.basis)) errors.push(`${type}.${f.name}: не указано основание (owner | proposal)`);
+      if (r.rule !== 'open' && !BASIS.has(r.basis)) errors.push(`${type}.${f.name}: не указано основание (owner | delegated | proposal)`);
       stats.byRule[r.rule] = (stats.byRule[r.rule] ?? 0) + 1;
       const b = r.rule === 'open' ? 'open' : r.basis;
       stats.byBasis[b] = (stats.byBasis[b] ?? 0) + 1;

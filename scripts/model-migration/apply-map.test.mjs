@@ -85,10 +85,11 @@ test('снимаемое поле названо в dropped, а не исчез�
 });
 
 test('нерешённое поле и несогласованное преобразование удерживаются с исходным значением', () => {
+  // version решено 16.11 (delegated: keep); pr_refs — преобразование без согласованного кода, удерживается
   const r = applyMap('KnowSprint', MAP.KnowSprint, { sprint_id: 'S', version: '2', pr_refs: '#101, #102' }, ctx);
-  assert.equal(r.held.version, '2');
   assert.equal(r.held.pr_refs, '#101, #102');
-  assert.ok(!('version' in r.out) && !('pr_refs' in r.out));
+  assert.ok(!('pr_refs' in r.out));
+  assert.equal(r.out.version, '2', 'решённое поле переносится');
 });
 
 test('значение, которое не удалось привести, попадает в rejects, а не в null молча', () => {
@@ -186,4 +187,12 @@ test('фаза: статус задачи в истории фазы своди�
   // отменённой фазы в правиле нет — остаётся на решение человека, молча не сводится
   const cancelled = applyMap('KnowPhaseHist', MAP.KnowPhaseHist, { status_raw: '🚫 CANCELLED' }, c);
   assert.deepEqual(cancelled.rejects, [{ field: 'status_raw', value: '🚫 CANCELLED', why: 'статус вне справочника' }]);
+});
+
+test('основание «delegated» (владелица поручила решить, 16.11.2026) действует как её решение', () => {
+  const map = { priority: { rule: 'transform', to: 'priority', how: 'словесная шкала', basis: 'delegated' } };
+  const r = applyMap('KnowTask', map, { priority: 'Medium (не блокер)' }, { statusCodes: {}, statusDict: null });
+  assert.deepEqual(r.held, {}, 'решение «delegated» не держит поле');
+  assert.equal(r.out.priority, 'normal');
+  assert.equal(r.out.priority_note, '(не блокер)');
 });
