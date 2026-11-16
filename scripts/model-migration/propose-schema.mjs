@@ -51,6 +51,13 @@ for (const [T, t] of Object.entries(types)) {
     H.fields[f] = { kind, db_type: DB_TYPE[kind] || 'STRING', from: [`${T}.${f.replace(/_note$/, '')}`], filled: report.types[T].toVersion[f] || 0, of: H.records, note: 'приходит с записи в текущую версию' };
   }
 }
+// Служебные поля, которые новая схема объявляет сама, даже если в данных источника их ещё нет (общий перечень
+// служебных полей; changed_by_session — код сессии, записавшей версию: слово владелицы 16.11.2026, AO-SESSION-LOG).
+const DECLARED_SERVICE = { changed_by_session: { kind: 'text', db_type: 'STRING', name: 'Сессия правки' } };
+for (const [T, t] of Object.entries(types)) {
+  if (!T.endsWith('Hist')) continue;
+  for (const [f, d] of Object.entries(DECLARED_SERVICE)) if (!t.fields[f]) t.fields[f] = { ...d, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
+}
 const out = {
   _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы первого объекта (спринт, фаза, задача) — владелицей не утверждено. Выведено из карты переноса и сухого прогона по снимку прода: в схему попали только поля, которые перенос реально дал. Запись в базу-приёмник по этой схеме начинается после её слова.',
   _source: report.source,
