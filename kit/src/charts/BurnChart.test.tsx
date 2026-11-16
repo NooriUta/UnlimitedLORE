@@ -114,3 +114,17 @@ describe('BurnChart — честные состояния', () => {
     expect(screen.getByRole('button', { name: TOGGLE }).textContent).toMatch(/2 of 3 left/);
   });
 });
+
+// Владелица 16.11 («добавь посмотрим», K4-CHARTS): у сгорания не было делений по Y — объём читался
+// только из подписи. Деления — тем же расчётом, что у семейства графиков (niceTicks), от нуля до объёма.
+describe('BurnChart · деления по оси Y', () => {
+  it('подписи делений от нуля, тем же шагом, что у семейства; линии сетки — по делениям', async () => {
+    const { niceTicks } = await import('./family');
+    render(<BurnChart state="ok" points={POINTS} defaultExpanded />);
+    const ticks = [...document.querySelectorAll('[data-burn-tick]')].map(t => Number(t.getAttribute('data-burn-tick')));
+    const maxY = Math.max(...POINTS.map(p => p.scope));
+    expect(ticks).toEqual(niceTicks(0, maxY));
+    expect(ticks[0]).toBe(0);
+    expect(document.querySelectorAll('.sk-burn__grid')).toHaveLength(ticks.length);
+  });
+});

@@ -12,6 +12,7 @@
 // высота фиксирована — урок v1: пропорциональный график на широкой панели
 // вырастал до ~400px.
 import { useId, useState } from 'react';
+import { niceTicks } from './family';
 import type { Completeness, LoadState } from '../states/loadState';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
 import { Truncated } from '../states/Truncated';
@@ -69,7 +70,10 @@ function Plot({ points, mode, label, target }: { points: readonly BurnPoint[]; m
   const min = ms[0];
   const range = (Date.parse(lastDate(points, target)) - min) || 1;
   const scopeNow = points[points.length - 1].scope;
-  const maxY = Math.max(...points.map(p => p.scope), 1);
+  // Деления по Y (владелица 16.11, «добавь посмотрим»): тот же расчёт, что у семейства графиков,
+  // от нуля до объёма; верх шкалы — последнее деление, чтобы верхняя подпись стояла на линии.
+  const ticks = niceTicks(0, Math.max(...points.map(p => p.scope), 1));
+  const maxY = Math.max(...points.map(p => p.scope), 1, ticks[ticks.length - 1]);
   // Значение по режиму: burnup — закрыто, burndown — остаток от нынешнего объёма.
   const val = (done: number) => (mode === 'burnup' ? done : scopeNow - done);
   const x = (t: number) => (((t - min) / range) * W).toFixed(1);
@@ -86,7 +90,13 @@ function Plot({ points, mode, label, target }: { points: readonly BurnPoint[]; m
       .map(f => `${xd(f.date)},${y(val(f.done))}`).join(' ')
     : null;
   return (
+    <div className="sk-burn__plot">
+    {/* Подписи — HTML, а не svg-текст: svg растянут (preserveAspectRatio none), текст в нём расплылся бы. */}
+    <div className="sk-burn__yaxis" aria-hidden="true">
+      {ticks.map(t => <span key={t} className="sk-burn__tick" data-burn-tick={t} style={{ top: `${(Number(y(t)) / H) * 100}%` }}>{t}</span>)}
+    </div>
     <svg className="sk-burn__svg" width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={label}>
+      {ticks.map(t => <line key={t} className="sk-burn__grid" x1={0} x2={W} y1={y(t)} y2={y(t)} />)}
       {mode === 'burndown' ? (
         <>
           <polyline data-series="ideal" className="sk-burn__line sk-burn__line--ideal" points={ideal.map(p => `${x(Date.parse(p.date))},${y(p.value)}`).join(' ')} />
@@ -102,6 +112,7 @@ function Plot({ points, mode, label, target }: { points: readonly BurnPoint[]; m
       {fc && <polyline data-series="forecast" className="sk-burn__line sk-burn__line--forecast" points={fc} />}
       {target.deadline && <line data-series="deadline" className="sk-burn__deadline" x1={xd(target.deadline)} x2={xd(target.deadline)} y1={0} y2={H} />}
     </svg>
+    </div>
   );
 }
 

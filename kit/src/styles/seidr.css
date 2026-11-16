@@ -5395,6 +5395,11 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-burn__key--done, .sk-burn__key--done b { color: var(--suc); }
 .sk-burn__key--scope, .sk-burn__key--ideal { color: var(--t3); }
 .sk-burn__svg { display: block; }
+/* Деления по Y (K4-CHARTS, 16.11): подписи колонкой слева, сетка — пунктиром как у семейства графиков. */
+.sk-burn__plot { position: relative; padding-left: 28px; }
+.sk-burn__yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 24px; }
+.sk-burn__tick { position: absolute; right: 0; transform: translateY(-50%); color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1; }
+.sk-burn__grid { stroke: var(--bd); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
 .sk-burn__line { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .sk-burn__line--remaining { stroke: var(--acc); stroke-width: 1.6; }
 .sk-burn__line--done { stroke: var(--suc); stroke-width: 1.6; }
