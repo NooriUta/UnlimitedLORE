@@ -257,7 +257,11 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   };
   const relDefs: KitRelationDef[] = kitRels.map(r => {
     const { count: _n, place: _p, target_type: t, ...d } = r;
-    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...childColumnsOf(r) };
+    // §7.8 шаг 1: явное место стороны побеждает OWN_TAB — только при объектной форме {out, in};
+    // строка и «не задано» — как раньше (LORE не меняется).
+    const sideShared = typeof r.place === 'object' && r.place !== null && docPlaceOf(r) === 'link_tab'
+      && (r.relation === 'composition' || r.relation === 'aggregation');
+    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...childColumnsOf(r), ...(sideShared ? { shared: true } : {}) };
   });
   const kind: KindConfig = {
     title: c.schema.label, icon: c.schema.icon,
