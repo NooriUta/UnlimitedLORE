@@ -281,3 +281,23 @@ describe('passportFromDoc · подписи ключей поля kv', () => {
     expect(keys).not.toContain('cap');
   });
 });
+
+// D-2026-LORE-FREE-FIELDS-SHOWN (владелица 16.11): значение вне модели не теряется и не прячется —
+// блок «ключ → значение» в конце свойств с пометкой «не описано в модели», только чтение.
+describe('passportFromDoc · значения вне модели (unmodeled)', () => {
+  it('блок последним в свойствах, вида kv, не правится, подпись с пометкой', () => {
+    const p = passportFromDoc(doc({ unmodeled: { cap: 10, legacy_note: 'старое' } }), { lang: 'ru' });
+    const fields = p.kinds.trail.fields!;
+    const last = fields[fields.length - 1];
+    expect(last.type).toBe('kv');
+    expect(last.title).toMatch(/не описано в модели/i);
+    expect(last.editable).toBeFalsy();
+    expect(p.record.fields[last.key]).toEqual({ cap: 10, legacy_note: 'старое' });
+  });
+  it('нет unmodeled или он пуст — блока нет', () => {
+    for (const u of [undefined, {}]) {
+      const fields = passportFromDoc(doc(u === undefined ? {} : { unmodeled: u }), { lang: 'ru' }).kinds.trail.fields!;
+      expect(fields.some(f => /не описано/i.test(f.title))).toBe(false);
+    }
+  });
+});
