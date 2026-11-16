@@ -8,6 +8,7 @@
 //   rules/universal-fields.json     — общие поля, решённые один раз для всех объектов;
 //   shared/model/lore-model.json    — паспорта kit.
 // Запуск: node scripts/model-migration/render-result.mjs [--out <файл.html>]
+// Тема — светлая: владелица читает отчёты на светлом фоне (16.11.2026: «не забывай отдавать в светлом фоне»).
 // Самопроверка: каждое поле каждой карты обязано попасть на страницу ровно один раз, иначе код возврата 1.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,7 +22,8 @@ const outArg = process.argv.indexOf('--out');
 const OUT = outArg > 0 ? path.resolve(process.argv[outArg + 1]) : path.join(ROOT, 'build', 'model-result.html');
 
 const listJson = dir => (fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort() : []);
-const MAPS = listJson(path.join(HERE, 'map')).map(f => ({ id: f.replace(/\.json$/, ''), ...J(path.join(HERE, 'map', f)) }));
+// В map/ лежат и карты связей (*.edges.json: ключ edges, без types) — на странице полей они не участвуют.
+const MAPS = listJson(path.join(HERE, 'map')).filter(f => !f.endsWith('.edges.json')).map(f => ({ id: f.replace(/\.json$/, ''), ...J(path.join(HERE, 'map', f)) }));
 const TEXTS = Object.assign({}, ...listJson(path.join(HERE, 'texts')).map(f => J(path.join(HERE, 'texts', f)).types));
 const UNI = J(path.join(HERE, 'rules', 'universal-fields.json'));
 const M = J(path.join(ROOT, 'shared', 'model', 'lore-model.json'));
@@ -127,7 +129,7 @@ const expected = MAPS.reduce((n, m) => n + Object.values(m.types).reduce((k, t) 
 const uniRows = Object.entries(UNI.fields).map(([f, u]) => `<tr><td><code>${esc(f)}</code></td><td>${u.name ? `<b>${esc(u.name)}</b><div class="sub">${esc(u.def)}</div>` : '<span class="sub">тексты — у объекта</span>'}</td><td>${esc(u.rule)}</td><td>${chip((BASIS[u.basis] || [u.basis])[0], (BASIS[u.basis] || [])[1])}<div class="sub">${esc(u.words || '')}</div></td></tr>`).join('');
 const uniPage = `<section class="page" data-page="universal" hidden><h1>Общие поля</h1><p class="sub">${esc(UNI._about)}</p><div class="tw"><table><thead><tr><th>Поле</th><th>Название и определение</th><th>Правило</th><th>Основание</th></tr></thead><tbody>${uniRows}</tbody></table></div></section>`;
 
-const CSS = `:root{color-scheme:dark;--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;--mono:'IBM Plex Mono',ui-monospace,monospace;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--fs-2xl:24px}
+const CSS = `:root{color-scheme:light;--bg0:#faf6ee;--bg1:#ffffff;--bg2:#f1eadc;--bg3:#e8dfcc;--bd:#dccfb8;--t1:#2a2218;--t2:#5f5343;--t3:#7a6d5a;--acc:#a8660a;--suc:#3f7a2c;--wrn:#a8660a;--inf:#2f6a94;--dng:#b23a26;--mono:'IBM Plex Mono',ui-monospace,monospace;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--fs-2xl:24px}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.45 Manrope,system-ui,sans-serif}
 .top{position:sticky;top:0;z-index:5;background:var(--bg1);border-bottom:1px solid var(--bd);padding:6px 10px}.nav{display:flex;gap:6px;overflow-x:auto}.nav a{white-space:nowrap;text-decoration:none;color:var(--t2);border:1px solid var(--bd);border-radius:999px;padding:3px 10px;font-size:var(--fs-xs)}.nav a.on{color:var(--bg0);background:var(--acc);border-color:var(--acc);font-weight:700}
 .wrap{max-width:1400px;margin:0 auto;padding:10px 12px 60px}h1,h2,h3{font-family:Unbounded,Manrope,sans-serif;font-weight:800;margin:16px 0 6px}h1{font-size:var(--fs-2xl);color:var(--acc);margin-top:6px}h2{font-size:var(--fs-xl);border-bottom:1px solid var(--bd);padding-bottom:4px}h3{font-size:var(--fs-lg)}
