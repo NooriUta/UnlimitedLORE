@@ -195,3 +195,21 @@ describe('passportFromDoc · место по сторонам и подпись 
     expect(passportFromDoc(doc(), { lang: 'ru' }).kinds.trail.relationGroups).toBeUndefined();
   });
 });
+
+// Пилот 16.11, после #1496: колонки части по связи рисовали «нет у типа» (S4-35 смотрел в поля вида
+// ребёнка, а t и side — свойства связи) и сырые ключи T, SIDE в заголовке.
+describe('passportFromDoc · колонки части — значения и подписи (пилот 16.11)', () => {
+  it('значение свойства связи в ячейке, а не «нет у типа»; заголовок — подпись приложения', () => {
+    const p = passportFromDoc(doc({ parts: [{ key: 'on', label: 'На тропе', type: 'quiz', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 1,
+      items: [{ id: 'Q-1', title: 'Квиз', status: 'open', values: { side: 'A', t: 0.15 } }] }] }),
+    { lang: 'ru', partColumns: () => [{ key: 'fields.side', label: 'Сторона' }, { key: 'fields.t', label: 'Место на тропе' }] });
+    const ctx = { config: { modules: [], menu: { groups: [] }, kinds: { ...p.kinds, quiz: { title: 'Квиз', icon: 'checkbox-tree', fields: [{ key: 'q', title: 'Вопрос', type: 'text' }] } }, statuses: { items: [] } },
+      data: p.data, href: (id: string) => '#' + id, esc: (s: string) => s, md: (s: string) => s } as unknown as KitCtx;
+    render(<KitLangProvider lang="ru">{p.kinds.trail.tabs!.find(t => t.key === 'on')!.render(p.record, ctx)}</KitLangProvider>);
+    const heads = [...document.querySelectorAll('th')].map(th => th.textContent ?? '');
+    expect(heads.some(h => h.includes('Сторона'))).toBe(true);
+    expect(heads.some(h => h.includes('Место на тропе'))).toBe(true);
+    expect(document.querySelector('.sk-list__na')).toBeNull();
+    expect(document.body.textContent).toContain('0.15');
+  });
+});
