@@ -7,6 +7,8 @@
 //   · сколько значений удержано до решения владелицы («held»).
 // Запуск: MIG_ENV_FILE=… node scripts/model-migration/dry-run.mjs [--out отчёт.json]
 import fs from 'node:fs';
+import { loadDecisions } from './decisions.mjs';
+const DECISIONS = loadDecisions(); // решения человека из раздела «Перенос»; файла нет — решений нет
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
@@ -29,7 +31,7 @@ for (const T of Object.keys(MAP)) {
     t.records++;
     const clean = {};
     for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
-    const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' } });
+    const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS });
     for (const f of Object.keys(r.out)) bump(t.outFields, f);
     for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
     for (const f of r.dropped) bump(t.dropped, f);

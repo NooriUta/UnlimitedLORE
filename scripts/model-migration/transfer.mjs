@@ -14,6 +14,8 @@
 // (удаляются только типы этого переноса). Источник не меняется: db.src отвергает всё, кроме чтения.
 // Запуск: MIG_ENV_FILE=… node scripts/model-migration/transfer.mjs [--reset] [--out отчёт.json]
 import fs from 'node:fs';
+import { loadDecisions } from './decisions.mjs';
+const DECISIONS = loadDecisions(); // решения человека из раздела «Перенос»; файла нет — решений нет
 import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
@@ -42,7 +44,7 @@ for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
 const calc = {}; // T → [{ rid, res }]
 for (const T of Object.keys(MAP)) {
   calc[T] = [];
-  for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' } }) });
+  for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS }) });
 }
 const parentOf = {}; // rid версии → rid записи
 const orphans = {};

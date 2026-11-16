@@ -20,6 +20,8 @@ const valid = (y, m, d) => { const t = new Date(Date.UTC(y, m - 1, d)); return t
 const iso = (y, m, d) => `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
 /** Дата в виде ГГГГ-ММ-ДД из трёх форматов прода; иначе null — формат не угадывается. */
+import { resolveRejects } from './decisions.mjs';
+
 export function toDate(v) {
   const s = String(v).trim();
   let m;
@@ -85,15 +87,18 @@ export function classifyStatus(v, { vocab, codes, canonToCode = {}, strict = fal
   return { code, note: exact[phrase] === canon ? tail(cut < 0 ? "" : s.slice(cut)) : s };
 }
 
-const asDate = (f, v, r, to) => { const d = toDate(v); if (d === null) r.rejects.push({ field: f, value: v, why: 'не дата' }); else if (!given(r.out[to])) r.out[to] = d; };
-const asDateTime = (f, v, r, to) => { const d = toDateTime(v); if (d === null) r.rejects.push({ field: f, value: v, why: 'не момент времени' }); else r.out[to] = d; };
-const asPriority = (f, v, r, bucket) => { const p = toPriority(v); if (p.value === null) r.rejects.push({ field: f, value: v, why: 'приоритет вне шкалы' }); else { bucket.priority = p.value; if (p.note) bucket.priority_note = p.note; } };
+// Куда решение человека запишет значение (target) — служебная пометка: в отчёты и в приёмник она не идёт,
+// поэтому свойство неперечислимое и форма несоответствия {field, value, why} для читателей прежняя.
+const reject = (r, field, value, why, target) => r.rejects.push(Object.defineProperty({ field, value, why }, 'target', { value: target, enumerable: false }));
+const asDate = (f, v, r, to) => { const d = toDate(v); if (d === null) reject(r, f, v, 'не дата', { bucket: 'out', field: to }); else if (!given(r.out[to])) r.out[to] = d; };
+const asDateTime = (f, v, r, to) => { const d = toDateTime(v); if (d === null) reject(r, f, v, 'не момент времени', { bucket: 'out', field: to }); else r.out[to] = d; };
+const asPriority = (f, v, r, bucket) => { const p = toPriority(v); if (p.value === null) reject(r, f, v, 'приоритет вне шкалы', { bucket, field: 'priority', note: 'priority_note' }); else { r[bucket].priority = p.value; if (p.note) r[bucket].priority_note = p.note; } };
 function asStatus(f, v, r, ctx, phase) {
   const codes = (ctx.statusCodes || {})[ctx.statusDict];
   if (!codes) throw new Error(`для ${f} не задан справочник статусов (ctx.statusDict)`);
   const st = ctx.statusVocab ? classifyStatus(v, { vocab: ctx.statusVocab, codes, canonToCode: ctx.canonToCode, strict: phase }) : splitStatus(v, codes);
   r.out.status = st.code;
-  if (st.code === null) { if (phase && !st.known) r.titleFallback = st.note; else r.rejects.push({ field: f, value: v, why: 'статус вне справочника' }); }
+  if (st.code === null) { if (phase && !st.known) r.titleFallback = st.note; else reject(r, f, v, 'статус вне справочника', { bucket: 'out', field: 'status', note: 'status_note' }); }
   else if (st.note) r.out.status_note = st.note;
 }
 
@@ -105,14 +110,14 @@ const TRANSFORMS = {
   'KnowTask.updated_at': (f, v, r) => asDateTime(f, v, r, 'updated_at'),
   'KnowSprintHist.planned_start_date': (f, v, r) => asDate(f, v, r, 'planned_start_date'),
   'KnowSprintHist.planned_end_date': (f, v, r) => asDate(f, v, r, 'planned_end_date'),
-  'KnowSprintHist.priority': (f, v, r) => asPriority(f, v, r, r.out),
+  'KnowSprintHist.priority': (f, v, r) => asPriority(f, v, r, 'out'),
   'KnowSprintHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, false),
   'KnowTaskHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, false),
   'KnowPhaseHist.status_raw': (f, v, r, ctx) => asStatus(f, v, r, ctx, true),
   'KnowPhase.phase_id': (f, v, r) => { r.out.phase_id = String(v).trim().replace(/^Фаза\s+/u, ''); },
 };
 const TYPE_ONLY = { DATE: asDate, DATETIME: asDateTime };
-const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, r.toVersion) };
+const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, 'toVersion') };
 const RENAMES = {
   'KnowSprint.name': (v, rec) => (v === rec.sprint_id ? null : v),
 };
@@ -144,6 +149,8 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     }
     throw new Error(`${k}: неизвестное правило «${e.rule}»`);
   }
+  // MIG-02: решения человека о несоответствиях данных (раздел «Перенос») — после расчёта по карте.
+  if (ctx.decisions) resolveRejects(T, r, ctx.decisions);
   return r;
 }
 
