@@ -218,6 +218,8 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
         body: strip({
           sprint_id: text(values.sprint_id), task_id: text(values.id), title: text(values.title),
           note_md: opt(values.note_md) ?? null,
+          // MDL-11: статус при создании обязателен; форма без поля статуса создаёт «запланирована» явно.
+          status: opt(values.status) ?? 'planned',
         }),
       };
     // Имена тела — из блока create: title→title, projects→project, adr→adr_id, summary→summary.

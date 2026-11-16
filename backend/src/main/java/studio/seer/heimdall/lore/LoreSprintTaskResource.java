@@ -63,7 +63,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
         String phase_uid, String author_agent, String executor_agent, String reviewer_agent,
         String task_type, String work_class, String uc_id, Double effort_days, Double actual_days,
-        Boolean bookkeeping) {}
+        Boolean bookkeeping,
+        // MDL-11: статус при создании обязателен (TaskCreateStatus); раньше поля не было и статус выбрасывался.
+        String status) {}
     // effort_days: fractional, granular to the hour (1 day = 8 working hours,
     // so the smallest meaningful increment is 0.125). Was Integer — too coarse
     // to estimate sub-day tasks.
@@ -263,6 +265,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, task_id, title required"));
         }
+        // MDL-11: статус не назван — первый статус (бэклог); статус, требующий причины или доказательства, — через status_set.
+        final String statusRefusal = TaskCreateStatus.refuse(req.status());
+        if (statusRefusal != null)
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new LoreError("STATUS_NOT_FOR_CREATE", statusRefusal))));
+        final String createStatusRaw = TaskCreateStatus.raw(req.status());
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.task_id()).matches()) {
             return Uni.createFrom().item(badParams("sprint_id / task_id contain illegal characters"));
         }
@@ -346,7 +354,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .append("note_md = :note, effort_days = :eff, order_index = :oi, src = 'manual', task_type = :tt, work_class = :wc, actual_days = :act, bookkeeping = :bk;")
                     .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
-                    .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
+                    .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = :st0, ")
                     .append("valid_from = :now, note_md = :note, effort_days = :eff").append(ChangeAuthor.SET_SQL).append(";")
                     .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);");
@@ -354,6 +362,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType, "wc", workClass,
                     "eff", req.effort_days(), "act", req.actual_days(),
                     "bk", req.bookkeeping() != null && req.bookkeeping());
+                p.put("st0", createStatusRaw);
                 by.bind(p);
                 // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                 if (phase != null) {
@@ -389,6 +398,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             Map<String, Object> body = new LinkedHashMap<>();
                             body.put("ok", true);
                             body.put("task_uid", uid);
+                            // MDL-11: в каком статусе родилась задача и назвал ли его создающий.
+                            body.put("status", createStatusRaw);
+                            body.put("status_defaulted", TaskCreateStatus.defaulted(req.status()));
                             body.put("task_id", tid);
                             body.put("order_index", order);
                             body.put("quality", WorkQuality.compact(taskQuality(uid)));
@@ -756,7 +768,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
-                            "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
+                            "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '" + CreateDefaultStatus.phaseRaw() + "', " + // первый статус (16.11.2026)
                             "valid_from = :now" + ChangeAuthor.SET_SQL + ";" +
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";

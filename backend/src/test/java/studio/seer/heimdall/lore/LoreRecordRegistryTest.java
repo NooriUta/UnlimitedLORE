@@ -216,13 +216,37 @@ class LoreRecordRegistryTest {
     @Test
     @SuppressWarnings("unchecked")
     void decisionAndQuestionAreReadOnlyTypes() {
+        // AP-PROJECT-LINK-UI (16.11.2026): «только чтение» у типа — про статус и создание. Поле правится,
+        // только если у него есть путь записи (сейчас — проекты через /relation); прочие поля — нет.
         for (String t : List.of("decision", "question")) {
             assertTrue(LoreRecordRegistry.READ_ONLY.contains(t), t + " — только чтение");
             Map<String, Object> s = LoreRecordRegistry.schemaJson(t);
-            for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields"))
-                assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
+            for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields")) {
+                boolean editable = Boolean.TRUE.equals(f.get("editable"));
+                assertEquals(editable, f.get("write") != null, t + "." + f.get("key") + ": правится ровно тогда, когда есть путь записи");
+            }
         }
         assertFalse(LoreRecordRegistry.READ_ONLY.contains("adr"), "у ADR пути записи есть");
+    }
+
+    /**
+     * AP-PROJECT-LINK-UI, приёмка 16.11.2026: решение было в read_only, и права паспорта отдавали
+     * can_edit=false целиком — поле «Проекты» не правилось, хотя путь записи у него появился.
+     * Правило: у типа только-для-чтения с правимым полем правка есть по роли, а статус и создание — нет.
+     */
+    @Test
+    void readOnlyTypeWithWritableFieldGivesEditButNotStatusOrCreate() {
+        Map<String, Object> admin = LoreRecordPerms.of("decision", "admin", true, null, 0);
+        assertEquals(true, admin.get("can_edit"), "у решения правятся проекты");
+        assertEquals(false, admin.get("can_status"), "статус решения в паспорте не меняется");
+        assertEquals(false, admin.get("can_create"));
+        assertEquals(List.of(), admin.get("status_next"));
+        Map<String, Object> viewer = LoreRecordPerms.of("decision", "viewer", true, null, 0);
+        assertEquals(false, viewer.get("can_edit"));
+        assertEquals(LoreRecordPerms.NO_RIGHTS, viewer.get("reason"), "без роли — «нет прав», а не «только чтение»");
+        Map<String, Object> feature = LoreRecordPerms.of("feature", "admin", true, null, 0);
+        assertEquals(false, feature.get("can_edit"), "у фичи правимых полей нет");
+        assertEquals(LoreRecordPerms.READ_ONLY_REASON, feature.get("reason"));
     }
 
     /**

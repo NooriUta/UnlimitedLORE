@@ -126,7 +126,7 @@ describe('паспорт: причина видна человеку, а не т
     // иначе «свёрнуто» прочтётся как «оговорок нет».
     const btn = await screen.findByRole('button', { name: /Состояние данных:/ }, { timeout: 8000 });
     expect(btn.textContent ?? '').toMatch(/[1-9]/);
-    expect(document.querySelector('.pp-model-note'), 'полосы оговорок в компоновке нет').toBeNull();
+    expect(document.querySelector('.sk-model-note'), 'полосы оговорок в компоновке нет').toBeNull();
     fireEvent.click(btn);
     const pop = document.querySelector('.sk-warn__pop') as HTMLElement;
     expect(pop, 'поповер warnings открылся').toBeTruthy();
@@ -146,7 +146,7 @@ describe('паспорт: причина видна человеку, а не т
     // честно. Поэтому проверяем не отсутствие строки, а отсутствие утверждения
     // про порядок; прежняя форма требовала молчания и про статусы тоже.
     await waitFor(() => {
-      const note = document.querySelector('.pp-model-note')?.textContent ?? '';
+      const note = document.querySelector('.sk-model-note')?.textContent ?? '';
       expect(note).not.toMatch(/порядок разделов/);
     }, { timeout: 8000 });
   }, 15000);

@@ -222,12 +222,11 @@ describe('K-04 · Связи', () => {
 });
 
 describe('K-04 · локальный граф', () => {
-  it('ego в центре, узлы — ссылками, секторы подписаны типом ребра', () => {
+  // 16.11 владелица сняла «Секторы» и «Список»: вкладка — переключатель трёх видов графа знаний.
+  it('вкладка «Граф»: три вида, типы рёбер в легенде подписаны словами', () => {
     view('graph');
-    const svg = screen.getByRole('group', { name: /Q-1/ });
-    expect(svg.querySelector('[data-node="Q-1"][data-center="true"]')).toBeTruthy();
-    const links = within(screen.getByTestId('kit-graph')).getAllByRole('link');
-    expect(links.map(l => l.getAttribute('href')).sort()).toEqual(['#rec=GHOST', '#rec=R-9', '#rec=T-1']);
+    const views = screen.getByTestId('kit-graph-view');
+    expect([...views.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Force', 'Обсидиан', 'Структура']);
     const legend = screen.getByTestId('kit-graph-legend');
     expect(legend.textContent).toContain('требует');
     expect(legend.textContent).toContain('квиз темы');

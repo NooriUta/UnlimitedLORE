@@ -1784,6 +1784,10 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0])   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+            // Паспорт: «чьего ответа ждём» и причина статуса — с текущей версии (владелица 16.11.2026:
+            // «какого ответа и от кого ждёшь в карточке не написано»).
+            "out('HAS_STATE')[valid_to IS NULL].waiting_for[0]          AS waiting_for, " +
+            "out('HAS_STATE')[valid_to IS NULL].status_reason[0]        AS status_reason, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             ROLE_HOLDERS + ", task_type, work_class, actual_days, bookkeeping, " +
             "out('CLOSED_BY').pr_uid AS closed_by_prs, " +

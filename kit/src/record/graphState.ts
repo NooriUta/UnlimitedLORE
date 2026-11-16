@@ -16,13 +16,28 @@ const LAYER_ON = 'struct';
 /**
  * Вид вкладки «Граф» (S9-08): холст или список связей.
  *
- * null — «человек не выбирал», и тогда вид решает ширина: на телефоне первым
- * открывается СПИСОК, потому что граф там не читается. Это именно умолчание, а
- * не запрет: переключатель есть на обеих ширинах, выбор за человеком.
+ * null — «человек не выбирал», и тогда вид — настройка приложения или DEFAULT_GRAPH_VIEW.
+ *
+ * Владелица 16.11.2026: «уберите из раздела графиков связи списком и первый прототип, оставьте
+ * только последние 3». Секторы («graph») и список («links») сняты; старое значение в адресе или
+ * в настройке человека — «не выбирал», то есть открывается умолчание, а не ошибка.
  */
-export type GraphView = 'graph' | 'links' | 'force' | 'obsidian' | 'structure';
-/** GC-03: виды графа знаний (GraphExplorer) рядом с секторами и списком. */
-export const GRAPH_VIEWS: readonly GraphView[] = ['graph', 'links', 'force', 'obsidian', 'structure'];
+export type GraphView = 'force' | 'obsidian' | 'structure';
+/** GC-03: виды графа знаний (GraphExplorer). */
+export const GRAPH_VIEWS: readonly GraphView[] = ['force', 'obsidian', 'structure'];
+/** Вид, если человек ни разу не выбирал, а приложение не задало (владелица 16.11: «либо обсидиан либо предыдущий»). */
+export const DEFAULT_GRAPH_VIEW: GraphView = 'obsidian';
+/** Ключ хранения прежнего выбора вида — «предыдущий» из слова владелицы 16.11. */
+export const GRAPH_VIEW_STORAGE_KEY = 'seidr-kit.graph.view';
+
+/** Прежний выбор вида человеком; снятый или мусор — null. */
+export function rememberedGraphView(storage: Pick<Storage, 'getItem'> | undefined = safeLocalStorage()): GraphView | null {
+  try { return parseView(storage?.getItem(GRAPH_VIEW_STORAGE_KEY) ?? null); } catch { return null; }
+}
+
+function safeLocalStorage(): Storage | undefined {
+  try { return typeof localStorage === 'undefined' ? undefined : localStorage; } catch { return undefined; }
+}
 
 /** До 4 — владелица 11.11.2026: «показать связи 2, 3, 4 уровней глубины» (сервер /lore/graph). */
 export type GraphDepth = 1 | 2 | 3 | 4;
@@ -139,6 +154,9 @@ export function useGraphState(config: Pick<KitConfig, 'graph'>): GraphStateApi {
     setStructural: on => write({ ...state, structural: on }),
     reset: structural => write({ ...state, off: [], structural }),
     toggleOpen: type => write({ ...state, open: state.open.includes(type) ? state.open.filter(t => t !== type) : [...state.open, type] }),
-    setView: v => write({ ...state, view: v }),
+    setView: v => {
+      try { safeLocalStorage()?.setItem(GRAPH_VIEW_STORAGE_KEY, v); } catch { /* хранилище недоступно — выбор живёт в адресе */ }
+      write({ ...state, view: v });
+    },
   };
 }

@@ -6,8 +6,7 @@
 // записи. Нет ни одного — первые два заполненных из «Свойств»: новый тип не останется пустым.
 // ASSUMED до переноса в модель сервера (рядом с required): список живёт в приложении, сервер не трогали
 // — любой ./gradlew test мигрирует прод-схему.
-import { useCallback, useEffect, useState } from 'react';
-import { PeekCard, StatusStar, ValueChips, type KitLang, type ListPeek, type PeekCardData, type PeekState } from '@seidr/kit';
+import { PeekLoader, StatusStar, ValueChips, type KitLang, type ListPeek, type PeekCardData, type PeekState } from '@seidr/kit';
 import type { ReactNode } from 'react';
 import { passportHref } from './passportHref';
 import type { MartPeekRef, MartRefPeek } from '@seidr/kit/content';
@@ -98,18 +97,16 @@ export async function loadPeek(ref: MartPeekRef, lang: KitLang, opts: { fetchImp
   }
 }
 
-/** Карточка по ссылке: грузит запись и рисует PeekCard; «Повторить» — перезапрос. */
+/**
+ * Карточка по ссылке: цикл «загрузка → карточка или отказ → Повторить» — в kit (PeekLoader,
+ * K5-PASSPORT-FROM-MODEL шаг 5); здесь — только загрузчик LORE.
+ */
 export function LorePeek({ peekRef, lang, fetchImpl }: { peekRef: MartPeekRef; lang: KitLang; fetchImpl?: typeof fetch }) {
-  const [st, setSt] = useState<PeekState>({ state: 'loading' });
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    let live = true;
-    setSt({ state: 'loading' });
-    void loadPeek(peekRef, lang, { fetchImpl }).then(s => { if (live) setSt(s); });
-    return () => { live = false; };
-  }, [peekRef.id, peekRef.type, lang, fetchImpl, n]);
-  const retry = useCallback(() => setN(x => x + 1), []);
-  return <PeekCard peek={st} id={peekRef.id} onRetry={retry} absoluteHref={h => new URL(h, window.location.href).toString()} />;
+  return (
+    <PeekLoader id={peekRef.id} deps={[peekRef.type, lang, fetchImpl]}
+      load={() => loadPeek(peekRef, lang, { fetchImpl })}
+      absoluteHref={h => new URL(h, window.location.href).toString()} />
+  );
 }
 
 /** Источник Peek для MartProse: карточка LORE по ссылке [[…]]. */

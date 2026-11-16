@@ -139,10 +139,11 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
         v => onChange({ peek_hover: v === 'on' }), 'settings.peekHover.hint')}
       {row('status_confirm', 'settings.statusConfirm.label', onOff(s.status_confirm), onOffOpts,
         v => onChange({ status_confirm: v === 'on' }), 'settings.statusConfirm.hint')}
-      {row('graph_view', 'settings.graphView.label', s.graph_view,
+      {/* 16.11 владелица сняла «Секторы» и «Список»: сохранённые sectors/list показываются как «авто». */}
+      {row('graph_view', 'settings.graphView.label', s.graph_view === 'sectors' || s.graph_view === 'list' ? 'auto' : s.graph_view,
         opts(lang, [
-          ['auto', 'settings.graphView.auto'], ['sectors', 'settings.graphView.sectors'], ['list', 'settings.graphView.list'],
-          ['force', 'settings.graphView.force'], ['obsidian', 'settings.graphView.obsidian'],
+          ['auto', 'settings.graphView.auto'], ['force', 'settings.graphView.force'],
+          ['obsidian', 'settings.graphView.obsidian'], ['structure', 'settings.graphView.structure'],
         ] as const),
         v => onChange({ graph_view: v }), 'settings.graphView.hint')}
       {row('passport_place', 'settings.passportPlace.label', s.passport_place,

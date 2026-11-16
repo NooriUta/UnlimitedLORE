@@ -8,6 +8,19 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons, TechVisibilityProvider } from '@seidr/kit';
 import ListPassport from './ListPassport';
 
+// 16.11.2026 владелица сняла «Секторы» и «Список» («оставьте только последние 3»): узлы вкладки
+// теперь получает движок графа знаний — здесь заглушка, отдающая их id атрибутами data-node.
+const { engine } = vi.hoisted(() => ({
+  engine: async () => {
+    const { createElement } = await import('react');
+    return { default: (p: { nodes: { id: string }[] }) => createElement('div', { 'data-testid': 'eng' },
+      ...p.nodes.map(n => createElement('span', { key: n.id, 'data-node': n.id }))) };
+  },
+}));
+vi.mock('../../../kit/src/graph/ForceEngine', engine);
+vi.mock('../../../kit/src/graph/ObsidianEngine', engine);
+vi.mock('../../../kit/src/graph/ReactFlowEngine', engine);
+
 beforeAll(() => { registerGameIcons(gameIcons); });
 beforeEach(() => window.history.replaceState(null, '', '/?tab=graph&gdepth=2'));
 afterEach(() => window.history.replaceState(null, '', '/'));
@@ -64,7 +77,7 @@ describe('GC-04 · вкладка «Граф» на /lore/graph', () => {
     const f = net(() => json(GRAPH));
     show(f);
     await waitFor(() => expect(f.mock.calls.some(c => String(c[0]).startsWith('/lore/graph?type=sprint&id=SP&depth=2'))).toBe(true), { timeout: 8000 });
-    // Узел второго шага — в секторах вкладки (data-node), его не было в фасаде.
+    // Узел второго шага — на холсте вкладки (data-node), его не было в фасаде.
     await waitFor(() => expect(document.querySelector('[data-node="ADR-DEEP"]')).not.toBeNull(), { timeout: 8000 });
   }, 15000);
 

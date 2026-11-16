@@ -64,7 +64,11 @@ final class LoreModel {
         "spec", "spec_status",
         "decision", "decision_status",
         // MD-04: состояние гейта качества — словарь qg_status (V93); цикл правится путём записи гейта.
-        "quality_gate", "qg_status");
+        "quality_gate", "qg_status",
+        // Владелица 16.11.2026: у каждого типа со статусом — справочник, иначе подписи не локализуются.
+        // Справочники заведены тогда же; цикла переходов у этих типов нет (статус фичи вычисляется).
+        "feature", "feature_status",
+        "question", "question_status");
 
     /** Не перечни значений, а настройки приложения — в модель не едут (palette едет в блок palettes). */
     static final Set<String> NOT_ENUM_DICTS = Set.of("app_setting", "palette");
@@ -147,6 +151,8 @@ final class LoreModel {
         content.put("workflow", LoreModelWorkflow.surface(LoreModelFile.content().workflow()));
         content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
         content.put("dictionaries", dictionaries);
+        // MDL-02: счётчик текстов полей — сколько полей в модели и у скольких нет определения.
+        content.put("field_texts", LoreModelFile.fieldTextsCount(LoreModelFile.content()));
         content.put("warnings", warnings);
 
         Map<String, Object> doc = new LinkedHashMap<>();

@@ -214,7 +214,37 @@ class LoreRecordContractUnitTest {
     void unknownRelationListsAllowedOnesForType() {
         List<String> allowed = LoreRecordRelationRoutes.allowed("adr");
         assertTrue(allowed.contains("DEPENDS_ON:out") && allowed.contains("SUPERSEDES:in"), allowed.toString());
-        assertEquals(List.of(), LoreRecordRelationRoutes.allowed("decision"));
+        assertEquals(List.of(), LoreRecordRelationRoutes.allowed("feature"));
+    }
+
+    /**
+     * AP-PROJECT-LINK-UI: у типа есть дверь бэкенда {@code <type>/project} — значит, в паспорте
+     * поле «Проекты» обязано быть управляемым (маршрут BELONGS_TO_PROJECT:out). Раньше двери
+     * решения, вопроса и ранбука были, а маршрута не было: в паспорте поле только для чтения,
+     * привязать второй проект можно было лишь через MCP.
+     */
+    @Test
+    void everyProjectDoorHasPassportRoute() {
+        List<String> doors = new java.util.ArrayList<>();
+        java.util.regex.Pattern door = java.util.regex.Pattern.compile("([a-z]+)/project");
+        for (Class<?> c : List.of(LoreSprintTaskResource.class, LoreAdrResource.class, LoreSpecResource.class,
+                LoreDocResource.class, LoreDecisionResource.class, LoreQuestionResource.class, LoreRunbookResource.class))
+            for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                jakarta.ws.rs.Path p = m.getAnnotation(jakarta.ws.rs.Path.class);
+                if (p == null) continue;
+                java.util.regex.Matcher x = door.matcher(p.value());
+                if (x.matches()) doors.add(x.group(1));
+            }
+        assertTrue(doors.containsAll(List.of("sprint", "adr", "doc", "decision", "question", "runbook")), doors.toString());
+        for (String t : doors)
+            assertNotNull(LoreRecordRelationRoutes.find(t, "BELONGS_TO_PROJECT", "out"),
+                "дверь " + t + "/project есть, а маршрута паспорта нет — поле «Проекты» не редактируется");
+        assertEquals(LoreRecordRelationRoutes.Handler.DECISION_PROJECT,
+            LoreRecordRelationRoutes.find("decision", "BELONGS_TO_PROJECT", "out").handler());
+        assertEquals(LoreRecordRelationRoutes.Handler.QUESTION_PROJECT,
+            LoreRecordRelationRoutes.find("question", "BELONGS_TO_PROJECT", "out").handler());
+        assertEquals(LoreRecordRelationRoutes.Handler.RUNBOOK_PROJECT,
+            LoreRecordRelationRoutes.find("runbook", "BELONGS_TO_PROJECT", "out").handler());
     }
 
     @Test
@@ -230,6 +260,33 @@ class LoreRecordContractUnitTest {
             for (LoreRecordRegistry.Relation x : LoreRecordRegistry.get(t).relations())
                 if (x.manageable())
                     assertNotNull(LoreRecordRelationRoutes.find(t, x.rel(), x.dir()), t + " " + x);
+    }
+
+    /**
+     * AP-PROJECT-LINK-UI, приёмка на препроде 16.11.2026: у связи два признака, и оба обязаны
+     * совпадать. #1526 сделал связь projects решения, вопроса и ранбука manageable, но поле
+     * осталось editable=false без пути записи — паспорт показывал «Проекты» только для чтения,
+     * а сторож маршрутов (выше) этого не видел. Правило: управляемая связь, у которой есть
+     * поле-ссылка, даёт полю правку через единый путь relation; и наоборот.
+     */
+    @Test
+    void manageableRelationFieldIsEditableThroughRelationPath() {
+        List<String> bad = new java.util.ArrayList<>();
+        for (String t : LoreRecordRegistry.TYPES) {
+            LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(t);
+            for (LoreRecordRegistry.Relation r : d.relations()) {
+                LoreRecordRegistry.Field f = d.fields().stream()
+                    .filter(x -> r.key().equals(x.key()) && "ref".equals(x.kind())).findFirst().orElse(null);
+                if (f == null) continue;
+                boolean viaRelation = f.write() != null && f.write().endpoint() != null
+                    && f.write().endpoint().endsWith("/relation");
+                if (r.manageable() && !(f.editable() && viaRelation))
+                    bad.add(t + "." + f.key() + ": связь manageable, а поле editable=" + f.editable() + ", write=" + f.write());
+                if (!r.manageable() && f.editable() && viaRelation)
+                    bad.add(t + "." + f.key() + ": поле пишется через relation, а связь не manageable");
+            }
+        }
+        assertTrue(bad.isEmpty(), String.join("\n", bad));
     }
 
     // ── Часть 5: недостающие срезы ──────────────────────────────────────────

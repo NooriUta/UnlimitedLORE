@@ -25,6 +25,7 @@ import { ICON_CANON } from '../elements/iconCanon';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { KitConfig, KitCtx, KitData, KitFilter, KitRecord, KitVerdict } from '../core/contract';
+import { usePatchedData } from '../core/recordUpdates';
 import { verdictText } from '../core/verdict';
 import { statusItemFor } from '../core/statusModel';
 import { GameIcon } from '../elements/GameIcon';
@@ -572,10 +573,27 @@ const DATE_SLOT = '@kit:date';
 const CELL_VALUES_INLINE = 1;
 
 export function ListView({
-  config, data, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
+  config, data: dataIn, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp,
 }: ListViewProps) {
+  // K5-RECORD-UPDATED-EVENT: правка записи, принятая сервером где-то ещё (паспорт, статус), —
+  // сразу в строке, без перезагрузки списка.
+  const data = usePatchedData(dataIn);
+  // Ключ строки: id, а при повторе id — с номером повтора. Одна запись бывает в списке дважды (два
+  // ребра к ней — квиз на тропе в двух местах, пилот 16.11); одинаковые ключи React — поведение не
+  // определено. Объект строки — тот же, что в data.records, поэтому ключ ищется по нему.
+  const rowKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    const m = new WeakMap<KitRecord, string>();
+    for (const r of data.records) {
+      const n = seen.get(r.id) ?? 0;
+      seen.set(r.id, n + 1);
+      m.set(r, n ? `${r.id}#${n}` : r.id);
+    }
+    return m;
+  }, [data.records]);
+  const rowKey = (r: KitRecord): string => rowKeys.get(r) ?? r.id;
   // Узкий экран — для порогов, а не для вида: один порог kit (useNarrow).
   const narrow = useNarrow(narrowProp);
   // Сколько условий остаётся в строке: на телефоне меньше — три чипа «Поле:
@@ -1653,8 +1671,10 @@ export function ListView({
         }
         // Колонка, которой у типа нет (S4-35): в смешанном списке «—» читалось
         // бы как «значения нет», хотя поля у типа не бывает вовсе. Говорим это
-        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем.
-        if (notApplicable(r.kind, col)) {
+        // только когда тип ОБЪЯВИЛ свои поля — иначе утверждать нечем. И только когда у самой
+        // записи значения нет: свойство связи (сторона, место на тропе у части паспорта) поле вида не
+        // объявляет, но значение пришло — «нет у типа» было бы неправдой (пилот 16.11).
+        if (notApplicable(r.kind, col) && fieldValue(r, col.startsWith('fields.') ? col.slice(7) : col) === undefined) {
           const fieldTitle = fieldTitleOf(col);
           return <span className="sk-list__na" title={t('kit.list.cell.na', { kind: config.kinds[r.kind]?.title ?? r.kind, field: fieldTitle })}>{t('kit.list.cell.naShort')}</span>;
         }
@@ -2003,7 +2023,7 @@ export function ListView({
     const withStatus = statusVisible(r);
     return (
       <li
-        key={r.id}
+        key={rowKey(r)}
         className={`sk-feed__item${selected.has(r.id) ? ' is-selected' : ''}`}
         /* Уровень — ПРИЗНАКОМ, а не классом и не своей вёрсткой: форма строки
            на обоих уровнях одна, иначе нижний уровень поехал бы своим видом. */
@@ -2131,7 +2151,7 @@ export function ListView({
     body = (
       <ul className="sk-cards">
         {filtered.map(r => (
-          <li key={r.id} className={`sk-cards__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
+          <li key={rowKey(r)} className={`sk-cards__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
             <div className="sk-cards__head">{statusVisible(r) && cell('status', r)}{cardShowsId && <Pill variant="id">{r.id}</Pill>}</div>
             <div className="sk-cards__title"><Title r={r} href={href} onOpen={onOpen} /></div>
             {extra.length > 0 && (
@@ -2194,7 +2214,7 @@ export function ListView({
               </Head>
               <ul className="sk-board__cards">
                 {g.records.slice(0, limit).map(r => (
-                  <li key={r.id} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
+                  <li key={rowKey(r)} className={`sk-board__card${selected.has(r.id) ? ' is-selected' : ''}`} data-record-id={r.id} {...rowProps(r)} onClick={e => onRecordClick(e, r.id)}>
                     {selectable && checkbox(r)}
                     <span className="sk-board__body">
                       <Title r={r} href={href} onOpen={onOpen} />
@@ -2338,7 +2358,7 @@ export function ListView({
       );
     };
     const rowOf = (r: KitRecord, h?: HierarchyRow) => (
-      <Fragment key={r.id}>
+      <Fragment key={rowKey(r)}>
                     <tr
                       className={`sk-list__row${selected.has(r.id) ? ' is-selected' : ''}${h?.path ? ' sk-list__row--path' : ''}`}
                       data-record-id={r.id}

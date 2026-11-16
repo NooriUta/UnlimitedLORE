@@ -31,7 +31,7 @@ afterEach(() => { window.history.replaceState(null, '', '/r'); localStorage.clea
 const rec = (id: string, kind: string): KitRecord => ({ id, kind, title: `Запись ${id}`, status: 'ok', fields: {} });
 const CENTER = rec('ADR-1', 'adr');
 
-const cfg = (view?: 'graph' | 'links' | 'force' | 'obsidian'): KitConfig => ({
+const cfg = (view?: 'force' | 'obsidian' | 'structure'): KitConfig => ({
   modules: [], menu: { groups: [] },
   kinds: { adr: { title: 'ADR', icon: 'scroll-quill' }, task: { title: 'Задачи', icon: 'quill' } },
   edges: { DECIDED_IN: { label: 'решено в', color: '--acc' }, REFERENCES: { label: 'упоминает', color: '--inf' } },
@@ -46,12 +46,31 @@ const data: KitData = {
 const ctxOf = (config: KitConfig): KitCtx => ({ data, config, href: id => `#rec=${encodeURIComponent(id)}`, esc: s => s, md: s => <div>{s}</div> });
 const show = (config = cfg()) => render(<RecordView record={CENTER} ctx={ctxOf(config)} tab="graph" onTab={() => {}} />);
 
-describe('GC-03 · вкладка «Граф»: Секторы / Список / Force / Обсидиан', () => {
-  it('пять видов в переключателе (GC-02 добавил «Структуру»); по умолчанию — секторы, как было', () => {
+describe('GC-03 · вкладка «Граф»: Force / Обсидиан / Структура', () => {
+  // Владелица 16.11.2026: «уберите из раздела графиков связи списком и первый прототип оставьте
+  // только последние 3»; первым — «либо обсидиан либо предыдущий».
+  it('три вида в переключателе — Force · Обсидиан · Структура; «Секторов» и «Списка» нет', async () => {
     show();
     const views = screen.getByTestId('kit-graph-view');
-    expect([...views.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Секторы', 'Список', 'Force', 'Обсидиан', 'Структура']);
-    expect(screen.queryByTestId('gx')).toBeNull();
+    expect([...views.querySelectorAll('button')].map(b => b.textContent)).toEqual(['Force', 'Обсидиан', 'Структура']);
+    expect(await screen.findByTestId('eng-obsidian')).toBeTruthy();
+  });
+
+  it('по умолчанию — прежний выбор человека, если он был', async () => {
+    const first = show();
+    fireEvent.click(screen.getByRole('button', { name: 'Структура' }));
+    expect(await screen.findByTestId('eng-structure')).toBeTruthy();
+    first.unmount();
+    window.history.replaceState(null, '', '/r');
+    show();
+    expect(await screen.findByTestId('eng-structure')).toBeTruthy();
+  });
+
+  it('снятые виды в адресе, в настройке и в памяти не открываются — открывается Обсидиан', async () => {
+    window.history.replaceState(null, '', '/r?gview=links');
+    localStorage.setItem('seidr-kit.graph.view', 'graph');
+    show(cfg('graph' as never));
+    expect(await screen.findByTestId('eng-obsidian')).toBeTruthy();
   });
 
   it('Force: тот же круг записей и связей — в GraphExplorer; выбор пишется в адрес', async () => {

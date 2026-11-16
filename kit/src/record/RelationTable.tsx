@@ -35,21 +35,26 @@ export interface RelationTableProps {
   testId?: string;
   /** S9-05 / D14: колонки, названные приложением для этой связи; нет — общие. */
   columns?: readonly string[];
+  /** Свойства ребра параллельно `ids` — ложатся в поля строки (у каждого ребра свои). */
+  values?: readonly (Record<string, unknown> | undefined)[];
+  /** Подписи колонок-свойств ребра. */
+  fieldLabels?: Record<string, string>;
 }
 
 /** Иконка «отвязать» — из вшитого набора lucide (как прочие управляющие иконки). */
 const UNLINK_ICON = 'lucide:circle-x';
 
-export function RelationTable({ ctx, lang, ids, onUnlink, testId, columns }: RelationTableProps) {
+export function RelationTable({ ctx, lang, ids, onUnlink, testId, columns, values, fieldLabels }: RelationTableProps) {
   const { found, missing } = useMemo(() => {
     const f: KitRecord[] = [];
     const m: string[] = [];
-    for (const id of ids) {
+    ids.forEach((id, i) => {
       const r = findRecord(ctx, id);
-      if (r) f.push(r); else m.push(id);
-    }
+      const v = values?.[i];
+      if (r) f.push(v ? { ...r, fields: { ...r.fields, ...v } } : r); else m.push(id);
+    });
     return { found: f, missing: m };
-  }, [ctx, ids]);
+  }, [ctx, ids, values]);
   const rowActions: ListRowAction[] | undefined = onUnlink
     ? [{
       id: 'unlink',
@@ -60,5 +65,5 @@ export function RelationTable({ ctx, lang, ids, onUnlink, testId, columns }: Rel
     }]
     : undefined;
   return <NestedList ctx={ctx} records={found} missing={missing} rowActions={rowActions} testId={testId} className="sk-rel__table"
-    columns={columns ? [...columns] : undefined} />;
+    columns={columns ? [...columns] : undefined} fieldLabels={fieldLabels} />;
 }

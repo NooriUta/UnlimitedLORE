@@ -2,7 +2,7 @@
 // 10.11.2026: «Панель предупреждений перекрывает шапку паспорта… перенести в
 // поток или в шеврон „⚠ N“ с выпадением; показывать владельцам модели»).
 //
-// Что перекрывало. Полоса оговорок (`<ul className="pp-model-note">`) —
+// Что перекрывало. Полоса оговорок (`<ul className="sk-model-note">`) —
 // ПЕРВЫЙ блок внутри `.sk-dock__panel`, и сама она в потоке: ни position, ни
 // z-index у неё нет. Поверх её правого верхнего угла ложится кнопка закрытия
 // дока `.sk-dock__close` — `position: sticky; float: right; z-index: 1`
@@ -27,24 +27,29 @@
 // свёрнутом виде. Свёрнутая она НЕ МОЛЧИТ: число оговорок и слово о том, что
 // это оговорки модели, стоят в самом шевроне — «свёрнуто» не должно читаться
 // как «предупреждений нет».
+//
+// Перенесено из web-next в kit (SPRINT_UXR_S14_KIT5/K5-PASSPORT-FROM-MODEL, шаг 4): экран
+// «список + паспорт» переезжает в kit по частям; классы — sk-model-note*, строки — kit.record.modelNotes.*.
 import { useMemo } from 'react';
-import { TechGate, useWarningsSource, type WarningItem } from '@seidr/kit';
-import { useAppT } from '../i18n';
+import { TechGate } from '../resilience/techGate';
+import { kitT, useKitLang } from '../i18n';
+import { useWarningsSource, type WarningItem } from './warnings';
 
-export interface ModelNotesProps {
+export interface RecordModelNotesProps {
   /** Оговорки разбора модели: порядок разделов, словарь статусов, причины отката. */
   notes: string[];
 }
 
-export function ModelNotes({ notes }: ModelNotesProps) {
-  const t = useAppT();
+export function RecordModelNotes({ notes }: RecordModelNotesProps) {
+  const lang = useKitLang();
+  const t = (k: Parameters<typeof kitT>[1], v?: Record<string, string | number>) => kitT(lang, k, v);
   // MP2-08 (владелица 13.11.2026): оговорки модели — технические сообщения,
   // их место под общим значком warnings, а не полосой/чипом в компоновке.
   // Сборщик экрана собирает их вместе с состоянием данных и замечаниями
   // графа в один список; без сборщика (витрина, тесты) — прежний шеврон.
   const items = useMemo<WarningItem[]>(
-    () => notes.map(n => ({ source: t('pp.modelNotes.kind'), label: t('pp.modelNotes.kind'), text: n, tone: 'wrn' })),
-    [notes, t],
+    () => notes.map(n => ({ source: t('kit.record.modelNotes.kind'), label: t('kit.record.modelNotes.kind'), text: n, tone: 'wrn' })),
+    [notes, lang],
   );
   const collected = useWarningsSource('model', items);
   if (collected) return null;
@@ -64,17 +69,17 @@ export function ModelNotes({ notes }: ModelNotesProps) {
     // чисто». Подпись «тех. модели» отличает кнопку от одноимённой у блока
     // «Состояние данных» (kit), иначе два чипа «тех.» неотличимы.
     <TechGate
-      className="pp-model-note__tech"
-      label={t('pp.modelNotes.tech')}
-      hiddenNote={t('pp.modelNotes.badge', { n: notes.length })}
+      className="sk-model-note__tech"
+      label={t('kit.record.modelNotes.tech')}
+      hiddenNote={t('kit.record.modelNotes.badge', { n: notes.length })}
     >
-      <div className="pp-model-note" role="status">
-        <details className="pp-model-note__box">
-          <summary className="pp-model-note__sum">
+      <div className="sk-model-note" role="status">
+        <details className="sk-model-note__box">
+          <summary className="sk-model-note__sum">
             <span aria-hidden="true">⚠</span>{' '}
-            {t('pp.modelNotes', { n: notes.length })}
+            {t('kit.record.modelNotes.count', { n: notes.length })}
           </summary>
-          <ul className="pp-model-note__list">
+          <ul className="sk-model-note__list">
             {notes.map(n => <li key={n}>{n}</li>)}
           </ul>
         </details>
@@ -83,4 +88,3 @@ export function ModelNotes({ notes }: ModelNotesProps) {
   );
 }
 
-export default ModelNotes;

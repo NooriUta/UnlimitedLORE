@@ -2,7 +2,7 @@
 // что у v1 (localStorage `lore-palette`/`lore-mode`, общая cookie `seer-prefs`),
 // — иначе пользователь, переключивший тему в v1, открыл бы v2 в другой.
 import { describe, expect, it } from 'vitest';
-import { PALETTES, applyTheme, resolvePrefs as resolveRaw, themeAttrs, type PrefsSources } from './prefs';
+import { PALETTES, PREFS_COOKIE, STORAGE_KEYS, applyTheme, resolvePrefs as resolveRaw, themeAttrs, type PrefsSources } from './prefs';
 
 const store = (m: Record<string, string>) => (k: string) => m[k] ?? null;
 // Ключи хранения — от приложения (K-14). Здесь — как у LORE (общие с v1).
@@ -58,5 +58,26 @@ describe('themeAttrs / applyTheme', () => {
 
   it('список палитр — пять из v1 и приглушённая mono (S4-19, только v2)', () => {
     expect(PALETTES.map(p => p.id)).toEqual(['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark', 'mono']);
+  });
+});
+
+// K5-LAYOUT-PREFS, шаг 1: умолчание темы — у приложения (пилоту светлая по просьбе владелицы, 16.11).
+// Выбор человека главнее умолчания; без умолчания — прежнее поведение (тёмная).
+describe('resolvePrefs · умолчание приложения', () => {
+  it('ничего не сохранено — режим и палитра из defaults', () => {
+    const p = resolveRaw({ local: () => null, defaults: { mode: 'light', palette: 'slate' } });
+    expect(p.mode).toBe('light');
+    expect(p.palette).toBe('slate');
+  });
+  it('человек выбрал тёмную — выбор главнее умолчания', () => {
+    const p = resolveRaw({ local: k => (k === STORAGE_KEYS.mode ? 'dark' : null), defaults: { mode: 'light' } });
+    expect(p.mode).toBe('dark');
+  });
+  it('общая cookie главнее умолчания приложения', () => {
+    const p = resolveRaw({ local: () => null, cookie: `${PREFS_COOKIE}=${encodeURIComponent('{"theme":"dark"}')}`, defaults: { mode: 'light' } });
+    expect(p.mode).toBe('dark');
+  });
+  it('без defaults — тёмная, как раньше', () => {
+    expect(resolveRaw({ local: () => null }).mode).toBe('dark');
   });
 });

@@ -6,13 +6,17 @@
 // Меню — общий поповер kit (.sk-pop) в языке поповеров фильтров: те же фон,
 // рамка, скругление, высота тапа и отметка выбранного. Пункты — три места
 // контракта kit: панелью справа, снизу, на весь экран.
+//
+// Перенесено из web-next в kit (SPRINT_UXR_S14_KIT5/K5-PASSPORT-FROM-MODEL, шаг 4: экран
+// «список + паспорт» переезжает в kit по частям): знает только места контракта kit.
 import { useId, useState } from 'react';
-import { Popover, RECORD_PLACEMENTS, type RecordPlacement } from '@seidr/kit';
-import { useAppT } from '../i18n';
+import { Popover } from '../shell/Popover';
+import { kitT, useKitLang } from '../i18n';
+import { RECORD_PLACEMENTS, type RecordPlacement } from './RecordDock';
 
 const PLACES = RECORD_PLACEMENTS;
 
-export interface PassportPlaceProps {
+export interface RecordPlaceProps {
   /** Где паспорт открыт сейчас — отметка выбранного пункта. */
   value: RecordPlacement;
   /** Выбрать место. Экран решает, как его применить (адрес/состояние). */
@@ -24,15 +28,16 @@ export interface PassportPlaceProps {
   back?: RecordPlacement;
 }
 
-export function PassportPlace({ value, onPlace, back }: PassportPlaceProps) {
-  const t = useAppT();
+export function RecordPlace({ value, onPlace, back }: RecordPlaceProps) {
+  const lang = useKitLang();
+  const t = (k: Parameters<typeof kitT>[1]) => kitT(lang, k);
   const [open, setOpen] = useState(false);
   const id = useId();
   // MP2-11 (владелица 13.11): «кнопка раздвинуть должна раздвигать, а не показывать меню; нужно
   // меню — делай ещё одну кнопку». ⤢ — одним нажатием во весь экран и обратно, в место входа;
   // меню мест — своя кнопка рядом.
   const full = value === 'full';
-  const toggleLabel = full ? t('pp.full.exit') : t('pp.full.enter');
+  const toggleLabel = full ? t('kit.record.place.exit') : t('kit.record.place.enter');
   return (
     <span className="sk-place">
       <button
@@ -50,15 +55,15 @@ export function PassportPlace({ value, onPlace, back }: PassportPlaceProps) {
         className="sk-iconbtn sk-place__btn"
         aria-expanded={open}
         aria-controls={id}
-        aria-label={t('pp.place')}
-        title={t('pp.place')}
+        aria-label={t('kit.record.place.menu')}
+        title={t('kit.record.place.menu')}
         onClick={() => setOpen(v => !v)}
       >
         {/* Владелица 14.11: «сделай кнопку три черты, переведи на неё меню». */}
         ☰
       </button>
       {open && (
-        <Popover id={id} role="menu" label={t('pp.place')} align="end" onClose={() => setOpen(false)} className="sk-place__pop">
+        <Popover id={id} role="menu" label={t('kit.record.place.menu')} align="end" onClose={() => setOpen(false)} className="sk-place__pop">
           {PLACES.map(p => (
             <button
               key={p}
@@ -68,7 +73,7 @@ export function PassportPlace({ value, onPlace, back }: PassportPlaceProps) {
               className="sk-place__opt"
               onClick={() => { onPlace(p); setOpen(false); }}
             >
-              {t(`pp.place.${p}` as 'pp.place.right')}
+              {t(`kit.record.place.${p}` as 'kit.record.place.right')}
             </button>
           ))}
         </Popover>
@@ -77,4 +82,3 @@ export function PassportPlace({ value, onPlace, back }: PassportPlaceProps) {
   );
 }
 
-export default PassportPlace;

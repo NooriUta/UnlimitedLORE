@@ -917,6 +917,24 @@ code, pre, kbd, samp { font-family: var(--mono); }
   .sk-kbd { display: none; }
 }
 
+/* ---------- Подсказка у подписи поля (MDL-07, «аналог peek») ---------- */
+.sk-fhint { position: relative; display: inline-flex; }
+.sk-fhint__label { cursor: help; border-bottom: 1px dashed var(--t3); outline-offset: 2px; }
+.sk-fhint__label:focus-visible { outline: 2px solid var(--acc); }
+.sk-fhint__mark { margin-left: 3px; color: var(--t3); font-size: var(--fs-2xs); }
+.sk-fhint__card {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 60;
+  display: flex; flex-direction: column; gap: 4px;
+  width: max-content; max-width: min(320px, calc(100vw - 24px));
+  padding: 8px 10px; border: 1px solid var(--bdh); border-radius: var(--r-sm);
+  background: var(--bg3); color: var(--t1); font-size: var(--fs-xs); font-weight: 400;
+  text-transform: none; letter-spacing: normal; white-space: normal;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
+}
+.sk-fhint__title { font-weight: 700; }
+.sk-fhint__def { color: var(--t1); }
+.sk-fhint__desc { color: var(--t2); }
+
 /* ---------- Tooltip ---------- */
 .sk-tip-wrap { position: relative; display: inline-flex; }
 .sk-tip {
@@ -5395,6 +5413,11 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-burn__key--done, .sk-burn__key--done b { color: var(--suc); }
 .sk-burn__key--scope, .sk-burn__key--ideal { color: var(--t3); }
 .sk-burn__svg { display: block; }
+/* Деления по Y (K4-CHARTS, 16.11): подписи колонкой слева, сетка — пунктиром как у семейства графиков. */
+.sk-burn__plot { position: relative; padding-left: 28px; }
+.sk-burn__yaxis { position: absolute; left: 0; top: 0; bottom: 0; width: 24px; }
+.sk-burn__tick { position: absolute; right: 0; transform: translateY(-50%); color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1; }
+.sk-burn__grid { stroke: var(--bd); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
 .sk-burn__line { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .sk-burn__line--remaining { stroke: var(--acc); stroke-width: 1.6; }
 .sk-burn__line--done { stroke: var(--suc); stroke-width: 1.6; }
@@ -6512,17 +6535,22 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 }
 [data-mode='light'] .sk-auth__art { --illustration-secondary: color-mix(in srgb, var(--acc) 32%, var(--bg0)); }
 .sk-auth__note { color: var(--t1); }
+/* Корень AP-SESSION-BANNER-NARROW (замер 16.11): при left: 50% ширина фиксированной плашки по
+   содержимому ограничена ПОЛОВИНОЙ окна — на 360px это ~150px, и текст шёл столбцом по 2–3 буквы.
+   Центр — полями слева и справа и auto-отступами, без сдвига на половину. */
 .sk-auth-expired {
   position: fixed;
-  left: 50%;
+  left: 12px;
+  right: 12px;
+  margin-inline: auto;
+  width: fit-content;
   bottom: 16px;
   z-index: 1000;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--gap);
-  max-width: min(640px, calc(100vw - 24px));
+  max-width: 640px;
   padding: 8px 12px;
   border: 1px solid color-mix(in srgb, var(--wrn) 55%, transparent);
   border-radius: var(--r-lg);
@@ -6530,9 +6558,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   color: var(--t1);
   font-size: var(--fs-sm);
 }
-.sk-auth .sk-auth-expired { position: static; transform: none; }
+.sk-auth .sk-auth-expired { position: static; margin-inline: 0; width: auto; }
 .sk-auth-expired__icon { color: var(--wrn); }
-.sk-auth-expired__text { min-width: 0; flex: 1; }
+/* AP-SESSION-BANNER-NARROW (телефон, 15.11): с flex: 1 (основа 0) текст на узком экране сжимался
+   в столбец по 2–3 буквы, а кнопка оставалась в той же строке. Основа 20em — тексту нужна строка
+   нормальной длины; не влезает — кнопка уходит под текст. */
+.sk-auth-expired__text { min-width: 0; flex: 1 1 20em; }
 
 /* ---------- Паспорт по зонам (S4-33): запись справа, вычисляемое — колонкой слева ---------- */
 .sk-rec--zones { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
@@ -7442,3 +7473,173 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-vsum__n { color: var(--vsum-g); font-family: var(--mono); }
 .sk-vsum__note { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
 .sk-vsum__note--warn { color: var(--wrn); }
+
+/* K4-FIELD-KV: поле «ключ → значение» с вложенностью. Плотно, как свойства паспорта: ключ —
+   приглушённый, значение — моно. Вложенный объект — группа <details> с ▾, список объектов —
+   подтаблица. На узком экране прокручивается рамка поля, а не весь экран. */
+.sk-kv { min-width: 0; max-width: 100%; font-size: var(--fs-sm); color: var(--t1); }
+.sk-kv__scroll { overflow-x: auto; max-width: 100%; }
+.sk-kv__rows, .sk-kv__sub { border-collapse: collapse; width: auto; }
+/* Значение — сразу за ключом, а не у правого края: на широком экране таблица во всю ширину
+   разносила их на полэкрана (проверка на препроде 16.11). */
+.sk-kv__rows .sk-kv__key { padding-right: 16px; }
+.sk-kv__rows th, .sk-kv__rows td, .sk-kv__sub th, .sk-kv__sub td { padding: 2px 8px 2px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--bd); }
+.sk-kv__key { color: var(--t2); font-weight: 400; white-space: nowrap; }
+.sk-kv__val { font-family: var(--mono); color: var(--t1); overflow-wrap: anywhere; }
+.sk-kv__sub th { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; white-space: nowrap; }
+.sk-kv__group { margin: 4px 0 0; padding-left: 10px; border-left: 2px solid var(--bd); }
+.sk-kv__group > summary { cursor: pointer; padding: 2px 0; list-style: none; }
+.sk-kv__group > summary::-webkit-details-marker { display: none; }
+.sk-kv__group > summary::before { content: '▸'; display: inline-block; width: 1em; color: var(--t3); }
+.sk-kv__group[open] > summary::before { content: '▾'; }
+
+/* K4-CHARTS: графики одним семейством (line · scatter · bar · heat). Высота фиксирована (200),
+   ширина по контейнеру — урок BurnChart: пропорциональный график вырастал до 400 px. Цвета —
+   только токены; пропуск — полоса «нет данных», а не ноль. */
+.sk-chart { display: grid; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); }
+.sk-chart__head { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; }
+.sk-chart__title { margin: 0; font-size: var(--fs-md); color: var(--t1); }
+.sk-chart__kind { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--acc); border: 1px solid var(--bd); border-radius: 999px; padding: 0 8px; }
+.sk-chart__src { grid-column: 1 / -1; margin: 0; font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .04em; }
+.sk-chart__sum { margin: 0; font-size: var(--fs-xs); color: var(--t2); }
+.sk-chart__sum b { font-family: var(--mono); color: var(--t1); font-weight: 600; }
+.sk-chart__plot { min-width: 0; width: 100%; }
+.sk-chart__svg { display: block; width: 100%; height: 200px; overflow: visible; }
+.sk-chart__axis { pointer-events: none; }
+.sk-chart__grid { stroke: var(--bd); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.sk-chart__tick, .sk-chart__lbl { fill: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-chart__lbl { fill: var(--t2); }
+.sk-chart__gap { fill: var(--wrn); opacity: .14; }
+.sk-chart__legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sk-chart__key { display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; border: 1px solid var(--bd); border-radius: 999px; font-size: var(--fs-2xs); color: var(--t2); }
+.sk-chart__swatch { width: 8px; height: 8px; border-radius: 999px; }
+.sk-chart__swatch[data-dashed] { border-radius: 0; height: 2px; width: 12px; }
+.sk-chart__note { margin: 0; font-size: var(--fs-2xs); color: var(--t3); }
+.sk-chart__note--warn { color: var(--wrn); }
+.sk-chart__tbl { justify-self: start; }
+.sk-chart__table, .sk-chart__heat { border-collapse: collapse; font-size: var(--fs-xs); }
+.sk-chart__table th, .sk-chart__table td { padding: 2px 10px 2px 0; text-align: left; border-bottom: 1px solid var(--bd); }
+.sk-chart__table td { font-family: var(--mono); }
+.sk-chart__scroll { overflow-x: auto; max-width: 100%; }
+.sk-chart__heat { width: 100%; }
+.sk-chart__heat th { color: var(--t3); font-weight: 400; font-size: var(--fs-2xs); text-transform: uppercase; padding: 2px 6px; text-align: left; }
+.sk-chart__heat td { font-family: var(--mono); text-align: center; color: var(--t1); padding: 4px 6px; border: 2px solid var(--bg1); }
+.sk-chart__heat td[data-none] { color: var(--t3); background: var(--bg2); }
+
+/* K5-PASSPORT-FROM-MODEL (шаг 4): оговорки модели — шеврон «⚠ N»; перенесено из web-next ListPassport.css. */
+/* Причина, по которой порядок разделов остался клиентским (S4-29).
+   Приглушённо и одной строкой: это не ошибка, а honest-состояние — «модель
+   порядка не задаёт» или «модель не прочиталась». Молчать нельзя: иначе
+   перегруженность примут за замысел.
+
+   B14 ревью 10.11.2026: панель висела под плавающей «×» дока. Сама она в
+   потоке — ни position, ни z-index тут нет; поверх её правого верхнего угла
+   ложится кнопка закрытия `.sk-dock__close` (`position: sticky; float: right;
+   z-index: 1`, kit/src/styles/seidr.css). Флоат вынут из потока, поэтому
+   следующие БЛОЧНЫЕ боксы — сначала эта полоса, за ней шапка записи —
+   верстаются как будто его нет, и он закрывает им угол. Лечение: угол отдан
+   кнопке явно (margin-right от того же токена --tap, которым задана её
+   ширина: на телефоне палец берёт 44px, и подобранные «на глаз» px снова дали
+   бы наложение), а список оговорок свёрнут в шеврон «⚠ N» (kit/src/record/ModelNotes.tsx) —
+   на месте шапки остаётся одна строка, и ничего не спрятано. */
+.sk-model-note {
+  margin: 0;
+  margin-right: calc(max(var(--tap), 28px) + 8px);
+  padding: 6px 12px;
+  list-style: none;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t3);
+  font-size: var(--fs-2xs);
+}
+
+/* Свёртка: одна строка «⚠ N», раскрытие щелчком. Шеврон — предупреждающего
+   цвета, текст оговорок — приглушённый: заметность нужна метке, а не стене. */
+.sk-model-note__box {
+  min-width: 0;
+}
+
+.sk-model-note__sum {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(var(--tap), 20px);
+  color: var(--wrn);
+  cursor: pointer;
+}
+
+.sk-model-note__sum:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Текст приходит ИЗ ДАННЫХ (имена срезов, коды записей, сообщения сервера) —
+   строки без пробелов и без предела длины, поэтому перенос по любому месту:
+   тот же урок, что у оговорок раздела (B4). */
+.sk-model-note__list {
+  margin: 4px 0 0;
+  padding: 0;
+  min-width: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+
+/* Обёртка TechGate шеврона оговорок: своей вёрстки нет, сжимается в колонке. */
+.sk-model-note__tech { min-width: 0; }
+
+/* ---------- Дорожки (K4-LANES): полосы рядом, на узком экране — столбиком ---------- */
+.sk-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--gap); }
+.sk-lanes__lane { min-width: 0; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--bg1); padding: 6px 8px; }
+.sk-lanes__lane[data-accent='true'] { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 8%, var(--bg1)); }
+.sk-lanes__head { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: var(--fs-xs); text-transform: uppercase; color: var(--t2); }
+.sk-lanes__count { color: var(--t3); font-family: var(--mono); }
+.sk-lanes__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sk-lanes__item { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sk-lanes__badge { font-size: var(--fs-2xs); }
+.sk-lanes__empty { margin: 0; color: var(--t3); font-size: var(--fs-sm); }
+
+/* ---------- Очередь согласования (K4-SUMMARY-QUEUE) ---------- */
+.sk-queue { display: flex; flex-direction: column; gap: 8px; }
+.sk-queue__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sk-queue__n { color: var(--t3); font-family: var(--mono); }
+.sk-queue__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: var(--tap); }
+.sk-queue__pickall { display: inline-flex; align-items: center; gap: 6px; color: var(--t2); font-size: var(--fs-xs); }
+.sk-queue__return { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--bd); border-radius: var(--r-sm); background: var(--bg1); }
+.sk-queue__field { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); color: var(--t2); }
+.sk-queue__field textarea, .sk-queue__field input { font: inherit; color: var(--t1); background: var(--bg0); border: 1px solid var(--bd); border-radius: var(--r-sm); padding: 4px 6px; }
+.sk-queue__result { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: var(--fs-xs); color: var(--suc); }
+.sk-queue__bad { color: var(--dng); }
+.sk-queue__fails { flex-basis: 100%; margin: 0; padding-left: 16px; color: var(--t2); }
+.sk-queue__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sk-queue__none { color: var(--t3); font-size: var(--fs-xs); padding: 6px 0; }
+.sk-queue__row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--bd); flex-wrap: wrap; }
+.sk-queue__pick { display: inline-flex; align-items: center; }
+.sk-queue__main { display: flex; flex-direction: column; gap: 2px; flex: 1 1 16em; min-width: 0; }
+.sk-queue__head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sk-queue__title { color: var(--t1); font-weight: 600; overflow-wrap: anywhere; }
+.sk-queue__diff { display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; font-size: var(--fs-xs); }
+.sk-queue__diff del { color: var(--dng); }
+.sk-queue__diff ins { color: var(--suc); text-decoration: none; }
+.sk-queue__fname { font-family: var(--mono); color: var(--t3); }
+.sk-queue__who { font-size: var(--fs-2xs); color: var(--t3); }
+.sk-queue__deny { font-size: var(--fs-xs); color: var(--wrn); }
+.sk-queue__acts { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---------- Сводка «требует внимания» (K4-SUMMARY-QUEUE, Q1–Q3) ---------- */
+.sk-attn { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 8px; }
+.sk-attn__group { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--bd); border-radius: var(--r-sm); background: var(--bg1); }
+.sk-attn__group[data-empty] { opacity: 0.7; }
+.sk-attn__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sk-attn__title { font-weight: 700; color: var(--t1); }
+.sk-attn__link { color: inherit; text-decoration: none; }
+.sk-attn__link:hover .sk-attn__title { color: var(--acc); }
+.sk-attn__count { font-family: var(--mono); font-size: var(--fs-md); color: var(--acc); }
+.sk-attn__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
+.sk-attn__more { font-size: var(--fs-2xs); color: var(--t3); }
+/* Пилот 16.11: в узкой карточке группы код записи («quiz:0.4/1») обрезался и съедал место у названия.
+   Под группой сводки код не показываем — он в подсказке упоминания (title), а название — в одну строку с «…». */
+.sk-attn__list .sk-pill--id { display: none; }
+.sk-attn__list .sk-mention { max-width: 100%; }
+.sk-attn__list .sk-mention__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }

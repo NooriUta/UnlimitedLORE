@@ -160,8 +160,11 @@ class FreshnessChangedAtLiveDbTest {
         String id = "D-2026-FRESH-CHANGED-AT";
         post("/lore/decision", "{\"decision_id\":\"" + id + "\",\"title\":\"проба свежести\"}");
         Instant d0 = changedAt("decisions", "decision_id", id, Map.of());
-        assertEquals(at(field("SELECT created_at FROM KnowDecision WHERE decision_id=:id", id, "created_at")), d0,
-            "новое решение без истории: changed_at = момент заведения");
+        // #1564 (16.11.2026, слово владелицы «по аналогии выбирать первый статус»): новое решение без статуса
+        // рождается с первым статусом — версией KnowDecisionHist; changed_at = момент открытия этой версии,
+        // как у нового релиза ниже. Раньше версии не было, и changed_at брался из created_at вершины.
+        assertEquals(at(field("SELECT valid_from FROM KnowDecisionHist WHERE in('HAS_STATE').decision_id CONTAINS :id AND valid_to IS NULL", id, "valid_from")), d0,
+            "новое решение: changed_at = момент открытия первой версии статуса");
 
         tick();
         // /lore/status решения не принимает — правка идёт путём записи решения

@@ -43,11 +43,13 @@ export interface NestedListProps {
    * умолчания (статус, вид), без дублей. Какие — решает вызывающий (K-14).
    */
   axes?: readonly string[];
+  /** Подписи колонок вне полей вида (свойства связи у части паспорта) — list.fieldLabels. */
+  fieldLabels?: Record<string, string>;
 }
 
 export const NESTED_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
 
-export function NestedList({ ctx, records, missing, columns, rowActions, testId, className, note, axes: ownAxes }: NestedListProps) {
+export function NestedList({ ctx, records, missing, columns, rowActions, testId, className, note, axes: ownAxes, fieldLabels }: NestedListProps) {
   const multiKind = useMemo(() => new Set(records.map(r => r.kind)).size > 1, [records]);
   const config: KitConfig = useMemo(() => {
     const base = multiKind ? ['status', 'kind'] : ['status'];
@@ -60,9 +62,10 @@ export function NestedList({ ctx, records, missing, columns, rowActions, testId,
         filters: axes,
         groupings: axes,
         showClosed: 'all',
+        ...(fieldLabels ? { fieldLabels } : {}),
       },
     };
-  }, [ctx.config, columns, multiKind, ownAxes]);
+  }, [ctx.config, columns, multiKind, ownAxes, fieldLabels]);
   // Итог — СВОИ записи, а не вся выдача (K5-LIST-TOTAL-TRUNCATED, пилот 15.11): с meta всей
   // выгрузки связь с одной записью писала «Показано 1 из 1292 — обрезана сервером». Обрезку
   // выдачи паспорт называет сам (RecordLinks); неполноту своего состава — `note` вызывающего.

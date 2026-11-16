@@ -180,9 +180,42 @@ class LoreModelTest {
     @Test
     void describedStatusTypesAreListedAndTheRestIsMarkedMissing() {
         Map<String, Object> m = LoreModel.build(taskDict());
-        assertEquals(List.of("task", "sprint", "adr", "spec", "decision", "quality_gate"), m.get("statuses_known"));
+        assertEquals(List.of("task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question"),
+            m.get("statuses_known"));
         assertTrue(String.valueOf(m.get("missing")).contains("statuses:*"),
             "пока описаны не все типы, раздел statuses помечен неполным");
+    }
+
+    /**
+     * Правило (владелица 16.11.2026: «справочники же должны быть», «иначе с локализацией беда»): у каждого
+     * типа модели с полем status есть справочник статусов в ответе модели. Повод — телефон показал статусы
+     * фичи сырыми кодами: поле в модели было, строки в карте «тип → справочник» не было.
+     */
+    @Test
+    void everyTypeWithAStatusFieldHasAStatusDictionary() {
+        List<String> without = new java.util.ArrayList<>();
+        for (String type : LoreRecordRegistry.TYPES) {
+            LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+            if (d == null) continue;
+            boolean hasStatus = d.fields().stream().anyMatch(f -> "status".equals(f.key()));
+            if (hasStatus && !LoreModel.STATUS_DICTS.containsKey(type)) without.add(type);
+        }
+        assertEquals(List.of(), without, "типы с полем status без справочника статусов в LoreModel.STATUS_DICTS");
+    }
+
+    @Test
+    void featureAndQuestionStatusesCarryTitlesFromTheirDictionaries() {
+        List<Map<String, Object>> rows = new java.util.ArrayList<>(taskDict());
+        rows.add(new java.util.HashMap<>(Map.of("dict_type", "feature_status", "code", "in_rework",
+            "label_ru", "В переработке", "label_en", "In rework", "sort_order", 40, "is_active", true)));
+        rows.add(new java.util.HashMap<>(Map.of("dict_type", "question_status", "code", "open",
+            "label_ru", "Открыт", "label_en", "Open", "sort_order", 10, "is_active", true)));
+        Map<String, Object> m = LoreModel.build(rows);
+        String statuses = String.valueOf(m.get("statuses"));
+        assertTrue(statuses.contains("В переработке") && statuses.contains("In rework"), statuses);
+        assertTrue(statuses.contains("Открыт"), statuses);
+        assertEquals("feature_status", LoreModel.STATUS_DICTS.get("feature"));
+        assertEquals("question_status", LoreModel.STATUS_DICTS.get("question"));
     }
 
     // Порядок — часть контракта: по нему строится меню выбора.

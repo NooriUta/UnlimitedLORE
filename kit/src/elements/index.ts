@@ -16,3 +16,4 @@ export * from './iconCanon';
 export * from './MiniList';
 // K4-MENTION-LOOK: упоминание чужого объекта — значок и цвет его вида + ссылка.
 export * from './ObjectMention';
+export * from './Lanes';

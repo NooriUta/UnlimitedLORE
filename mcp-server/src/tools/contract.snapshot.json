@@ -2375,6 +2375,7 @@
       "phase_uid": "string?",
       "reviewer_agent": "string?",
       "sprint_id": "string",
+      "status": "enum(active|backlog|design|planned|todo)?",
       "task_id": "string",
       "task_type": "string?",
       "title": "string",

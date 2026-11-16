@@ -5,3 +5,5 @@ export * from './BurnSpark';
 // Встроенный график (SPRINT_VIZ_EMBED/EMB-L2): рамка и её чистые функции.
 export * from './embedFrame';
 export * from './EmbedChartFrame';
+// Графики одним семейством (SPRINT_UXR_S13_KIT4/K4-CHARTS): line · scatter · bar · heat.
+export * from './family';

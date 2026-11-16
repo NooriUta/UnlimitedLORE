@@ -4,6 +4,7 @@
 // Версия kit: приложение должно уметь сказать, на чём оно работает (K-08 п. 1).
 export * from './version';
 export * from './tokens/prefs';
+export * from './tokens/layoutPrefs';
 export * from './elements';
 export * from './i18n';
 export * from './states';
@@ -28,7 +29,7 @@ export { matchHotkey, parseHotkey, type HotkeySpec, type KeyLike } from './resil
 export { createSafeStorage, type SafeStorage } from './resilience/safeStorage';
 export { StorageBanner } from './resilience/StorageBanner';
 export { ErrorBoundary } from './resilience/ErrorBoundary';
-export { pushUrlState, readUrlState, sectionScopedPatch, urlStateHref, type UrlWindow } from './resilience/urlState';
+export { onUrlStateWrite, pushUrlState, readUrlState, sectionScopedPatch, urlStateHref, type UrlWindow } from './resilience/urlState';
 // S4-13 (B-08): «пользователь набирает текст» — одна проверка на весь kit.
 export { isEditableTarget } from './resilience/editable';
 // Контракт ядра (SPRINT_UXR_S10_SEIDR_KIT): KitConfig, KitData, KitRecord… — только типы.

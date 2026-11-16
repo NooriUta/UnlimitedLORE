@@ -3,19 +3,19 @@
 // хук kit (useLoadState): loading → скелет, 403 → «нет прав», сбой → ошибка с
 // причиной и «Повторить». Пустоту и «обрезано» рисует сам движок списка kit
 // по meta (проверенный ноль ≠ «фильтр отсеял» ≠ «обрезано сервером»).
-import { ModelNotes } from '../record/ModelNotes';
+import { RecordModelNotes as ModelNotes } from '@seidr/kit';
 import { useChildRows } from '../lists/useChildRows';
 import { buildExpand, childScreenOf } from '../lists/nestedExpand';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { lazyChunk } from '../shell/staleChunk';
 import {
-  Forbidden, ICON_CANON, ListView, LoadError, NO_DATE_RANGE, RecordDock, ScreenHead, Skeleton, dateRangeUrlPatch,
+  Forbidden, ICON_CANON, ListView, LoadError, NO_DATE_RANGE, ScreenHead, Skeleton, dateRangeUrlPatch,
   isDateRangeActive, isShowClosed, pushUrlState, readDateRangeUrl, readUrlState, showClosedOf, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
 } from '@seidr/kit';
 import type { DateFilterScope, DateRangeValue, KitConfig, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
-import { isRecordPlacement } from '@seidr/kit';
+import { ListWithRecord, useRecordOpen } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
 import { useFeed } from '../lists/useFeed';
 import { fetchSlice } from '../api/loreClient';
@@ -83,7 +83,6 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
 /** kind — вид открытой записи, если он не вид экрана (PU-29: задача, открытая из вложенной таблицы спринта). */
-type OpenRecord = { id: string | null; place: RecordPlacement; kind?: string | null };
 
 /**
  * PU-29: вид паспорта открытой записи. Вид назван в адресе (?okind=) — паспорт этого вида
@@ -130,57 +129,16 @@ function recordHrefOf(urlState: ListScreenProps['urlState'], id: string): string
   return win ? urlStateHref(win, { open: id, place: null }, { anchor: null }) : undefined;
 }
 
-/** Открытая запись и место — в URL (?open=&place=), как всё состояние v2; urlState=false — в памяти. */
+/**
+ * Открытая запись и место — в URL (?open=&place=), как всё состояние v2; urlState=false — в памяти.
+ * Правила адреса (D-21, D-24, аудит 08.11) — в kit: useRecordOpen (K5-LIST-WITH-RECORD).
+ */
 function useOpenRecord(urlState: ListScreenProps['urlState']) {
   const win: UrlWindow | undefined = urlState === false ? undefined
     : typeof urlState === 'object' ? urlState
       : typeof window === 'undefined' ? undefined : window;
-  const fromUrl = (w: UrlWindow): OpenRecord => {
-    const p = readUrlState(w);
-    const id = p.get('open');
-    const raw = p.get('place') ?? '';
-    // Места в адресе нет — личная настройка «Где открывать запись» (S4-24), иначе справа.
-    const place = isRecordPlacement(raw) ? raw : defaultPlace();
-    return { id: id || null, place, kind: p.get('okind') || null };
-  };
-  const [open, setOpen] = useState<OpenRecord>(() => (win ? fromUrl(win) : { id: null, place: defaultPlace() }));
-  // D-24: «назад»/«вперёд» меняют адрес не нашими руками — паспорт обязан
-  // идти за ним, иначе адрес и экран расходятся молча. Следим только у
-  // настоящего окна: у подменного окна тестов событий нет.
-  useEffect(() => {
-    const w = win as (UrlWindow & Partial<Pick<Window, 'addEventListener' | 'removeEventListener'>>) | undefined;
-    if (!w?.addEventListener || !w.removeEventListener) return;
-    const sync = () => setOpen(fromUrl(w));
-    w.addEventListener('popstate', sync);
-    w.addEventListener('hashchange', sync);
-    return () => { w.removeEventListener!('popstate', sync); w.removeEventListener!('hashchange', sync); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [win]);
-  const set = (next: OpenRecord) => {
-    setOpen(next);
-    if (!win) return;
-    // Закрыли запись — в адресе не остаётся ни места, ни якоря (находка P1
-    // аудита 08.11: «док закрывается, но в адресе остаются place=bottom
-    // #SPRINT_…»). Это не косметика: по такому адресу запись откроется снова,
-    // и «закрыл» перестаёт совпадать с «дал ссылку на список». Фильтры списка
-    // при этом не трогаем — они принадлежат списку, а не записи.
-    const closed = next.id == null;
-    // Вкладка принадлежит ЗАПИСИ, поэтому при закрытии снимается вместе с ней
-    // (D-21): иначе `tab=history` останется в адресе списка и следующая
-    // открытая запись покажется не с начала, а с чужой вкладки.
-    // okind — вид записи, если он чужой экрану (PU-29); своя запись и закрытие его снимают.
-    const patch = { open: next.id, okind: closed ? null : next.kind ?? null, place: closed || next.place === 'right' ? null : next.place, ...(closed ? { tab: null } : {}) };
-    // Открыть и закрыть паспорт — шаг истории (D-24): «назад» его и отменяет.
-    // Переход между записями (пейджер) и смена места — заменой, иначе листание
-    // десяти записей потребовало бы десяти «назад», чтобы выйти из паспорта.
-    const step = (open.id == null) !== closed;
-    pushUrlState(patch, { replace: !step, win, ...(closed ? { anchor: null } : {}) });
-  };
-  /** Адрес списка без открытой записи — им крошка «←» становится ссылкой. */
-  const backHref = win ? urlStateHref(win, { open: null, okind: null, place: null, tab: null }, { anchor: null }) : undefined;
-  // Окно отдаём наружу: паспорт пишет в адрес свою вкладку, и писать он обязан
-  // в ТО ЖЕ окно, где живут `open` и `place` (D-21).
-  return [open, set, backHref, win] as const;
+  const r = useRecordOpen({ win, defaultPlace });
+  return [r.open, r.setOpen, r.backHref, r.win] as const;
 }
 
 type SliceAnswer = Awaited<ReturnType<typeof fetchSlice<Record<string, unknown>>>>;
@@ -303,9 +261,6 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const lang = useKitLang();
   const t = useAppT();
   const [open, setOpen, backHref, urlWin] = useOpenRecord(urlState);
-  // MP2-11: последнее место дока (не «весь экран») — туда возвращает выход из полного экрана.
-  const lastDock = useRef<RecordPlacement>(open.place !== 'full' ? open.place : defaultPlace());
-  if (open.place !== 'full') lastDock.current = open.place;
   // «Библиотека» и «Календарь» (K2-VIEW-LIBRARY, K2-VIEW-CALENDAR): состояние — в адресе.
   const [lib] = useLibraryState(urlWin);
   // MP2-12: `?lib=1` на входе — начальный вид «Библиотека»; дальше видом
@@ -340,16 +295,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Меню убирается на ВРЕМЯ чтения — это действие экрана, не выбор человека:
   // kit такое состояние в хранилище не пишет и выбранную рейку не затирает
   // (S5-05 · D-2026-UXR-READ-COLLAPSE).
+  // Убирается и возвращается меню — в kit (ListWithRecord, K5-LIST-WITH-RECORD).
   const collapseOnRead = appliedCollapseNavOnRead();
-  // Пока запись открыта и человек так выбрал — меню убрано. Возвращаем его,
-  // когда запись закрыли или экран ушёл: оставить меню убранным после
-  // закрытия значило бы менять выбор человека без его участия.
-  const setCollapsed = shell?.setMenuCollapsed;
-  useEffect(() => {
-    if (!collapseOnRead || !setCollapsed) return;
-    setCollapsed(!!open.id);
-    return () => setCollapsed(false);
-  }, [collapseOnRead, setCollapsed, open.id]);
   const baseConfig = useMemo(() => def.config(lang), [def, lang]);
   // Статусная ось раздела — ИЗ МОДЕЛИ (K-14 п. 4, S4-STATUS-AXIS-CONFIG).
   //
@@ -744,45 +691,38 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     );
   }
 
-  if (open.id && ready) {
-    const place = open.place;
-    // MP2-11: выход из полного экрана — в место, из которого вошли (по ссылке ?place=full — в
-    // место из личной настройки), а не всегда вниз.
-    const backPlace: RecordPlacement = lastDock.current;
-    const passportType = passportTypeFor(screen, open.kind);
-    content = (
-      // Место паспорта — настройка в «Вид» списка; «Закрыть» — кнопка дока (владелица 08.11).
-      // modal={false} внутри оболочки: «во весь экран» накрывает область
-      // содержимого, шапка и меню остаются видимыми и рабочими (замечание
-      // владелицы по v1.17.4), поэтому aria-modal был бы ложью.
-      <RecordDock placement={place} modal={shell == null} controls="bar"
-        onExitFull={() => setOpen({ ...open, place: backPlace })} onClose={() => setOpen({ ...open, id: null })} backdrop={content}>
-        {open.id === NEW_RECORD_ID && createType ? (
-          // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
-          // доке открывается сама запись (то, что открывает «Читать целиком»).
-          <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
-            <RecordCreate type={createType} fetchImpl={fetchImpl}
-              onCreated={id => { setOpen({ ...open, id }); result.reload(); }}
-              onCancel={() => setOpen({ ...open, id: null })} />
-          </Suspense>
-        ) : passportType ? (
-          <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
-            <ListPassport key={open.id} type={passportType} id={open.id} placement={place} fetchImpl={fetchImpl}
-              backLabel={t(def.titleKey)} backHref={backHref} onBack={() => setOpen({ ...open, id: null })}
-              ids={ids} onGo={id => setOpen({ ...open, id })}
-              onFull={place === 'full' ? undefined : () => setOpen({ ...open, place: 'full' })} win={urlWin} backPlace={backPlace}
-              // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
-              onPlace={p => setOpen({ ...open, place: p })}
-              onClose={() => setOpen({ ...open, id: null })} />
-          </Suspense>
-        ) : (
-          // Паспорта у типа нет — это говорится словами и на месте щелчка, а не
-          // прячется: пустой паспорт выглядел бы как потерянные данные.
-          <NoPassport id={open.id} section={t(def.titleKey)} onBack={() => setOpen({ ...open, id: null })} />
-        )}
-      </RecordDock>
-    );
-  }
+  // Список остаётся, запись — в доке справа, снизу или во весь экран: раскладка и её правила в kit
+  // (ListWithRecord, K5-LIST-WITH-RECORD), здесь — только чем рисовать запись LORE.
+  // modal={false} внутри оболочки: «во весь экран» накрывает область содержимого, шапка и меню
+  // остаются видимыми и рабочими (замечание владелицы по v1.17.4), поэтому aria-modal был бы ложью.
+  const passportType = open.id ? passportTypeFor(screen, open.kind) : undefined;
+  content = (
+    <ListWithRecord list={content} open={open} onOpen={setOpen} ready={ready} modal={shell == null} controls="bar"
+      collapseNavOnRead={collapseOnRead} defaultPlace={defaultPlace()}
+      record={slot => (slot.id === NEW_RECORD_ID && createType ? (
+        // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
+        // доке открывается сама запись (то, что открывает «Читать целиком»).
+        <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+          <RecordCreate type={createType} fetchImpl={fetchImpl}
+            onCreated={id => { slot.go(id); result.reload(); }}
+            onCancel={slot.close} />
+        </Suspense>
+      ) : passportType ? (
+        <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+          <ListPassport key={slot.id} type={passportType} id={slot.id} placement={slot.place} fetchImpl={fetchImpl}
+            backLabel={t(def.titleKey)} backHref={backHref} onBack={slot.close}
+            ids={ids} onGo={slot.go}
+            onFull={slot.full} win={urlWin} backPlace={slot.backPlace}
+            // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
+            onPlace={slot.setPlace}
+            onClose={slot.close} />
+        </Suspense>
+      ) : (
+        // Паспорта у типа нет — это говорится словами и на месте щелчка, а не
+        // прячется: пустой паспорт выглядел бы как потерянные данные.
+        <NoPassport id={slot.id} section={t(def.titleKey)} onBack={slot.close} />
+      ))} />
+  );
 
   return (
     <section className={open.id && ready ? 'list-screen list-screen--passport' : 'list-screen'} data-screen={screen} aria-labelledby={heading && !titleId ? headId : undefined}>

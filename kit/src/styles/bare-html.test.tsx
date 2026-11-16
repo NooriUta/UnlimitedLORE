@@ -32,12 +32,13 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  ApprovalQueue, AttentionSummary, BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, Lanes, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
 import { ObjectMention } from '../elements/ObjectMention';
 import type { KitConfig, KitCtx } from '../core/contract';
+import type { KitRecordDoc } from '../record/recordDoc';
 
 const SNAPSHOT = '../../demo/seidr-bare.html';
 // В jsdom-окружении import.meta.url не file:// — пути от корня пакета kit
@@ -71,6 +72,19 @@ const BARE_VSUM_CTX = { config: {
   kinds: { topic: { title: 'Темы', icon: 'scroll-unfurled' }, quiz: { title: 'Квизы', icon: 'checkbox-tree' }, rule: { title: 'Правила', icon: 'gears' } },
   verdict: (r: { id: string }) => BARE_VSUM_VERDICTS[r.id],
 } } as unknown as KitCtx;
+/** Очередь согласования (K4-SUMMARY-QUEUE): чужая правка, своя правка (выключена с причиной), запись на согласовании. */
+const BARE_QUEUE_CTX = {
+  data: {
+    records: [{ id: 'Q-1', kind: 'quiz', title: 'Квиз о времени', status: 'review', fields: {} }, { id: 'Q-2', kind: 'quiz', title: 'Квиз о снах', status: 'open', fields: {} }],
+    edges: [], meta: { generated_at: '2026-11-16T12:00:00Z' },
+    journal: [
+      { at: '2026-11-16T09:00:00Z', who: 'boris', record_id: 'Q-2', field: 'hint', from: 'старое', to: 'новое' },
+      { at: '2026-11-16T10:00:00Z', who: 'anna', record_id: 'Q-1', field: 'title', from: 'Время', to: 'Квиз о времени' },
+    ],
+  },
+  config: { modules: [], menu: { groups: [] }, kinds: {}, statuses: { selfApprove: false, items: [] } },
+  user: 'anna', href: (id: string) => '#' + id, esc: (x: string) => x, md: (x: string) => x,
+} as unknown as KitCtx;
 const BARE_STATUS_CONFIG = {
   modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [...BARE_STATUS_ITEMS] }, roles: { viewer: { canStatus: false } },
 } as unknown as KitConfig;
@@ -108,6 +122,10 @@ function Samples() {
           <StatusChip record={{ id: 'compact', kind: 'demo', title: 'compact', status: 'accepted', fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" compact />
         </div>
         {/* Сводка по вердикту: карточки видов, причины со счётом, вид без проверок, плашка «итоги неполные». */}
+        {/* Сводка «требует внимания»: группы — быстрые фильтры, счёт с «≈» при обрезке, первые записи и «ещё N». */}
+        <AttentionSummary records={(BARE_QUEUE_CTX.data.records)} ctx={{ ...BARE_QUEUE_CTX, config: { ...BARE_QUEUE_CTX.config, list: { views: ['list'], quick: [{ id: 'review', title: 'На согласовании', filter: { status: 'review' } }, { id: 'open', title: 'Открыто', filter: { status: 'open' } }] } } }} narrow={false} truncated hrefOf={q => '#lq=' + q} />
+        {/* Очередь согласования: чипы вида дела, выбор, правка «было → стало», своя правка выключена с причиной. */}
+        <ApprovalQueue ctx={BARE_QUEUE_CTX} reviewStatuses={['review']} onApprove={async () => ({ failed: [] })} onReturn={async () => ({ failed: [] })} />
         <VerdictSummary records={BARE_VSUM_RECORDS} ctx={BARE_VSUM_CTX} lang="ru" hrefOf={(kind, check) => `#${kind}${check ? `?lck=${check}` : ''}`} truncated />
         <div className="bare__row">
           <Kbd keys={['Ctrl', 'K']} />
@@ -265,6 +283,7 @@ function Samples() {
         {/* K4-MINILIST: todo с отметками и квиз после ответа (верный и подсказка к неверному). */}
         <MiniList kind="check" label="Чек-лист" items={[{ id: 'a', text: 'Тест до кода', done: true }, { id: 'b', text: 'Витрина' }]} onToggle={noop} />
         <MiniList kind="choice" label="Вопрос" items={[{ id: 'x', text: 'Строки слева без пары' }, { id: 'y', text: 'Только пары', hint: 'Это INNER JOIN' }]} picked="y" correct="x" reveal />
+        <KvValue label="Правила" value={{ combat: { base_damage: 3, crit: { chance: 0.1, mult: 2 } }, economy: { start_gold: 50 }, runes: [{ rune: 'Fehu', heat: 2 }, { rune: 'Uruz', heat: 3, rare: true }], enabled: true }} />
       </section>
       <section className="bare__sec" data-kit="burn-target">
         <h2 className="bare__h2">Цель к сроку</h2>
@@ -276,6 +295,29 @@ function Samples() {
           points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }, { date: '2026-11-05', scope: 4, done: 2, remaining: 2 }]} />
         <BurnSpark points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }, { date: '2026-11-05', scope: 4, done: 2, remaining: 2 }]} />
         <BurnSpark points={[{ date: '2026-11-01', scope: 4, done: 0, remaining: 4 }]} />
+      </section>
+      <section className="bare__sec" data-kit="charts">
+        <h2 className="bare__h2">Графики одним семейством</h2>
+        {/* K4-CHARTS: линия с пропуском (разрыв и полоса «нет данных», не ноль) и матрица с числами. */}
+        <LineChart title="Дрейф" source="MUNINN · bench drift" xLabel={x => String(x)}
+          series={[{ key: 'q', label: 'qwen3-32b', points: [{ x: 1, y: 71 }, { x: 2, y: 72 }, { x: 3, y: null }, { x: 4, y: 77 }] }]} />
+        <HeatChart title="Матрица" rows={['ru-wiki', 'code']} cols={['L1', 'L2']} values={[[92, 88], [84, null]]} />
+        <ScatterChart title="Парето" xTitle="токенов" points={[{ x: 800, y: 74, label: 'gemini' }, { x: 2300, y: 86, label: 'claude' }]} />
+        <BarChart title="Доля" groups={[{ key: 'a', label: 'статьи' }]} data={[{ category: 'Хабр', values: { a: 34 } }, { category: 'LinkedIn', values: { a: null } }]} />
+      </section>
+      <section className="bare__sec" data-kit="lanes">
+        <h2 className="bare__h2">Дорожки</h2>
+        {/* K4-LANES: полосы, ссылки на записи с бейджем, выделенный стык, пустая полоса словами. */}
+        <Lanes label="Тропа" href={id => '#' + id} lanes={[
+          { key: 'A', title: 'У сна А', items: [{ id: 'S-1', title: 'Свиток времени', badge: '×2' }] },
+          { key: 'AB', title: 'Стык', accent: true, items: [{ id: 'Q-1', title: 'Квиз о времени' }] },
+          { key: 'B', title: 'У сна Б', items: [] },
+        ]} />
+      </section>
+      <section className="bare__sec" data-kit="passport-doc">
+        <h2 className="bare__h2">Паспорт из документа приложения</h2>
+        {/* K5-PASSPORT-FROM-MODEL, шаг 7: документ чужого приложения → passportFromDoc → рамка и чтение kit. */}
+        <BarePassport />
       </section>
       <section className="bare__sec" data-kit="library">
         <h2 className="bare__h2">Библиотека</h2>
@@ -486,3 +528,58 @@ describe('S4-00e · голый HTML на одном seidr.css', () => {
     expect(used.filter(c => !defined.has(c)).sort()).toEqual([]);
   });
 });
+
+const PASSPORT_DOC: KitRecordDoc = {
+  contract: 'dw.record/1',
+  record: { type: 'trail', id: 'TR-1', title: 'Время — Непрерывность', status: 'open', version: 'v1', updated_at: '2026-11-15T20:00:00Z', updated_by: null },
+  schema: {
+    type: 'trail', label: 'Тропа', icon: 'path-distance',
+    fields: [
+      { key: 'title', label: 'Название', kind: 'text', required: true, editable: false, group: 'head' },
+      { key: 'body_md', label: 'Описание', kind: 'md', required: false, editable: false, group: 'body' },
+      { key: 'frozen', label: 'Перегон замёрз', kind: 'bool', required: false, editable: false, group: 'props' },
+      { key: 'length', label: 'Длина, шагов', kind: 'number', required: false, editable: false, group: 'props' },
+      { key: 'rules', label: 'Правила перегона', kind: 'text', required: false, editable: false, group: 'props' },
+    ],
+    tabs: [],
+    relations: [
+      { key: 'scrolls', label: 'Свитки', relation: 'composition', rel: 'ON_TRAIL', dir: 'in', count: 3, place: 'part', target_type: 'scroll' },
+      { key: 'dreams', label: 'Сны', relation: 'attribute', rel: 'IN_DREAM', dir: 'out', count: 2, place: 'prop', target_type: 'dream' },
+      { key: 'quizzes', label: 'Квизы', relation: 'association', rel: 'QUIZ_OF', dir: 'in', count: 2, target_type: 'quiz' },
+    ],
+  },
+  values: { title: 'Время — Непрерывность', body_md: 'Тропа через два сна: у сна А — свитки времени, на стыке — квизы.', frozen: true, length: 7, dreams: ['D-A', 'D-B'] },
+  links: [
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-1', type: 'quiz', title: 'Квиз о времени', status: 'open' },
+    { rel: 'QUIZ_OF', dir: 'in', id: 'Q-2', type: 'quiz', title: 'Квиз о непрерывности', status: 'done' },
+  ],
+  parts: [{
+    key: 'scrolls', label: 'Свитки', type: 'scroll', rel: 'ON_TRAIL', dir: 'in', state: 'ok', count: 3,
+    items: [{ id: 'S-1', title: 'Свиток I', status: 'open' }, { id: 'S-2', title: 'Свиток II', status: 'done' }],
+  }],
+  perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: null },
+  meta: { loaded_at: '2026-11-16T00:00:00Z', facade: 'server', sources: [{ block: 'record', state: 'ok' }] },
+};
+
+
+/** Тот же паспорт, что на витрине /kit (KitPassportDemo), — для паритета классов. */
+function BarePassport() {
+  const p = passportFromDoc(PASSPORT_DOC, { lang: 'ru' });
+  const ctx: KitCtx = {
+    config: {
+      modules: [], menu: { groups: [] },
+      kinds: { ...p.kinds, scroll: { title: 'Свиток', icon: 'scroll-unfurled' }, quiz: { title: 'Квиз', icon: 'checkbox-tree' }, dream: { title: 'Сон', icon: 'night-sleep' } },
+      statuses: { items: [
+        { code: 'open', title: 'Открыто', category: 'in_progress', icon: 'progression', color: 'var(--acc)' },
+        { code: 'done', title: 'Пройдено', category: 'done', icon: 'check-mark', color: 'var(--suc)' },
+      ] },
+      roles: { reader: p.reader },
+    },
+    data: p.data, href: id => '#' + id, esc: s => s, md: s => <p>{s}</p>,
+  };
+  return (
+    <RecordScreen bar={{}} state={{ kind: 'ready' }}>
+      <RecordReader record={ctx.data.records[0]} ctx={ctx} tab="" onTab={noop} asideOpen={false} onAside={noop} placement="right" />
+    </RecordScreen>
+  );
+}

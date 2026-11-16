@@ -6,8 +6,8 @@
 import { ICON_CANON } from '@seidr/kit';
 import { useMemo, useState } from 'react';
 import {
-  CommandPalette, EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
-  BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
+  ApprovalQueue, AttentionSummary, CommandPalette, EmptyState, Ear, Lanes, Forbidden, GameIcon, IconButton, Kbd, LoadError, Pill, SECTION_ICONS, Sheet,
+  BatchUndo, CalendarMonth, ControlBar, KvValue, EMPTY_CONTROLS, LibraryView, MiniList, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, Matrix, SecretOnce, Skeleton, StatusStar, Steps, Tabs, Toolbar, Tooltip, Truncated, createRecentList, createSafeStorage, useKitPalette,
   BurnChart, BurnSpark, burnSum, type BurnPoint,
   DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
@@ -17,6 +17,8 @@ import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
 import KitBadges from './KitBadges';
+import { KitChartsDemo } from './KitChartsDemo';
+import { KitPassportDemo } from './KitPassportDemo';
 import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
@@ -104,6 +106,24 @@ export default function KitPage() {
   const kitLang = useKitLang();
   const mentionKinds = useMemo(() => loreKinds(kitLang), [kitLang]);
   const mentionMdLook = useMemo(() => loreRefLook(kitLang), [kitLang]);
+  // K4-SUMMARY-QUEUE: витрина очереди — две правки (одна своя) и запись на согласовании.
+  const queueCtx = useMemo<KitCtx>(() => ({
+    data: {
+      records: [
+        { id: 'Q-DEMO-1', kind: 'task', title: 'Квиз о времени', status: 'review', fields: {} },
+        { id: 'Q-DEMO-2', kind: 'task', title: 'Квиз о снах', status: 'active', fields: {} },
+        { id: 'Q-DEMO-3', kind: 'task', title: 'Квиз о тропах', status: 'active', fields: {} },
+      ],
+      edges: [],
+      journal: [
+        { at: '2026-11-16T09:00:00Z', who: 'boris', record_id: 'Q-DEMO-2', field: 'hint', from: 'Подумай о сне', to: 'Вспомни, что снилось' },
+        { at: '2026-11-16T10:00:00Z', who: 'anna', record_id: 'Q-DEMO-3', field: 'title', from: 'Тропы', to: 'Квиз о тропах' },
+      ],
+      meta: { generated_at: '2026-11-16T12:00:00Z' },
+    },
+    config: { modules: [], menu: { groups: [] }, kinds: {}, statuses: { selfApprove: false, items: [] } },
+    user: 'anna', href: () => '#', esc: x => x, md: x => x,
+  }), []);
   const paletteCtx = useMemo<KitCtx>(() => ({
     data: PALETTE_DEMO_DATA,
     config: {
@@ -243,6 +263,15 @@ export default function KitPage() {
           <div className="kitp__grid">
             {TARGET_PARTS.map(p => <span key={p.id}>{p.id} <BurnSpark points={p.points} /></span>)}
           </div>
+          {/* K4-CHARTS: графики одним семейством — line · scatter · bar · heat. */}
+          <KitChartsDemo lang={kitLang} />
+        </section>
+
+        {/* K5-PASSPORT-FROM-MODEL, шаг 7: паспорт из документа чужого приложения — без своего рендера. */}
+        <section id="kit-passport" className="kitp__sec" aria-labelledby="kit-passport-h">
+          <h2 id="kit-passport-h" className="kitp__h2">{t('kitPage.sec.passport')}</h2>
+          <p>{t('kitPage.passport.lead')}</p>
+          <KitPassportDemo lang={kitLang} />
         </section>
 
         <section id="kit-shell" className="kitp__sec" aria-labelledby="kit-shell-h">
@@ -447,6 +476,9 @@ export default function KitPage() {
           <h3 className="kitp__h3">{t('kitPage.mini.head')}</h3>
           <p>{t('kitPage.mini.lead')}</p>
           <MiniListDemo />
+          <h3 className="kitp__h3">{t('kitPage.kv.head')}</h3>
+          <p>{t('kitPage.kv.lead')}</p>
+          <KvValue label={t('kitPage.kv.head')} value={{ combat: { base_damage: 3, crit: { chance: 0.1, mult: 2 } }, economy: { start_gold: 50 }, runes: [{ rune: 'Fehu', heat: 2 }, { rune: 'Uruz', heat: 3, rare: true }], enabled: true }} />
           <h3 className="kitp__h3">{t('kitPage.lib.head')}</h3>
           <p>{t('kitPage.lib.lead')}</p>
           <LibraryView
@@ -544,6 +576,26 @@ export default function KitPage() {
             <ObjectMention id="FORSETI" kind="component" kinds={mentionKinds} />
           </p>
           <MartProse text={t('kitPage.mentions.md')} refHref={r => paletteCtx.href(r.id)} refLook={mentionMdLook} />
+          {/* K4-LANES: дорожки — запись по полосам; элементы — упоминания со ссылкой, бейдж рядом. */}
+          <h3 className="kitp__h3">{t('kitPage.lanes.title')}</h3>
+          <p>{t('kitPage.lanes.lead')}</p>
+          <Lanes label={t('kitPage.lanes.label')} kinds={mentionKinds} href={id => paletteCtx.href(id)} lanes={[
+            { key: 'done', title: t('kitPage.lanes.done'), items: [{ id: 'SPRINT_UXR_S14_KIT5/K5-LAYOUT-PREFS', kind: 'task' }, { id: 'SPRINT_UXR_S14_KIT5/K5-KV-KEY-LABELS', kind: 'task' }] },
+            { key: 'now', title: t('kitPage.lanes.now'), accent: true, items: [{ id: 'SPRINT_UXR_S13_KIT4/K4-LANES', kind: 'task', badge: '×2' }] },
+            { key: 'next', title: t('kitPage.lanes.next'), items: [] },
+          ]} />
+          {/* K4-SUMMARY-QUEUE (Q1–Q3): сводка «требует внимания» — группы из быстрых фильтров, «≈» при обрезке, первые записи. */}
+          <h3 className="kitp__h3">{t('kitPage.attn.title')}</h3>
+          <p>{t('kitPage.attn.lead')}</p>
+          <AttentionSummary records={queueCtx.data.records} ctx={{ ...queueCtx, config: { ...queueCtx.config, list: { views: ['list'], quick: [
+            { id: 'review', title: t('kitPage.attn.review'), filter: { status: 'review' } },
+            { id: 'active', title: t('kitPage.attn.active'), filter: { status: 'active' } },
+          ] } } }} truncated hrefOf={() => '#'} />
+          {/* K4-SUMMARY-QUEUE: очередь согласования — решения владелицы 16.11 (Q4–Q6). Вы — «anna»: своя правка видна, согласовать её нельзя. */}
+          <h3 className="kitp__h3">{t('kitPage.queue.title')}</h3>
+          <p>{t('kitPage.queue.lead')}</p>
+          <ApprovalQueue ctx={queueCtx} reviewStatuses={['review']}
+            onApprove={async () => ({ failed: [] })} onReturn={async () => ({ failed: [] })} />
           <h3 className="kitp__h3">{t('kitPage.merge.title')}</h3>
           <p>{t('kitPage.merge.lead')}</p>
           <MdMergePanel

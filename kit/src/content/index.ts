@@ -14,6 +14,7 @@ export * from './markdownRoundTrip';
 export * from './tiptapMd';
 export * from './MdInlineEdit';
 export * from './blockMerge';
+export * from './saveMerging';
 export * from './MdMergePanel';
 // S5-13 · формулы в поле правки (узлы TipTap + правила markdown-it).
 export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMarkdownIt } from './tiptapMath';

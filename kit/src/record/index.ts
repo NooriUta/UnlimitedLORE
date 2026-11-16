@@ -25,7 +25,14 @@ export { egoGraph, edgeColor, toCssColor, typesAround, verdictTone, type EgoGrap
 export * from './graphState';
 // Место паспорта: справа / снизу / на весь экран (S4-33).
 export * from './RecordDock';
+export * from './ListWithRecord';
+export * from './RecordPlace';
+export * from './ModelNotes';
+export * from './PeekLoader';
+export * from './RecordScreen';
 export * from './RecordRelations';
+export * from './KvValue';
+export * from './recordDoc';
 export * from './dataState';
 export * from './DataStateBlock';
 // MP2-08: технические сообщения записи — под одним значком warnings с попапом.

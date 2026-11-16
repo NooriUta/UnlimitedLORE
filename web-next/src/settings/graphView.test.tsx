@@ -29,13 +29,15 @@ describe('graph_view', () => {
     expect(h.getAttribute('data-graph-view')).toBeNull();
   });
 
-  it('применённое переводится в вид kit: секторы → graph, список → links; молчание — не выбирал', () => {
+  // 16.11.2026 владелица сняла «Секторы» и «Список»: сохранённые значения — «не выбирал».
+  it('применённое — вид kit из трёх; снятые «секторы»/«список» и молчание — не выбирал', () => {
     const at = (v: string | null) => ({ getAttribute: (n: string) => (n === 'data-graph-view' ? v : null) });
     expect(appliedGraphView(at(null))).toBeUndefined();
-    expect(appliedGraphView(at('sectors'))).toBe('graph');
-    expect(appliedGraphView(at('list'))).toBe('links');
+    expect(appliedGraphView(at('sectors'))).toBeUndefined();
+    expect(appliedGraphView(at('list'))).toBeUndefined();
     expect(appliedGraphView(at('force'))).toBe('force');
     expect(appliedGraphView(at('obsidian'))).toBe('obsidian');
+    expect(appliedGraphView(at('structure'))).toBe('structure');
     expect(appliedGraphView(at('мусор'))).toBeUndefined();
   });
 
@@ -49,12 +51,14 @@ describe('graph_view', () => {
     expect(baseConfig('ru', {}).graph?.view).toBeUndefined();
   });
 
-  it('в панели настроек есть строка «Вид графа» с пятью вариантами', () => {
+  it('в панели настроек есть строка «Вид графа»: авто и три вида, без «Секторов» и «Списка»', () => {
     const ok = { status: 'ok' as const, settings: DEFAULT_SETTINGS, version: 1, saving: false };
     render(<PersonalSettings lang="ru" state={ok} onChange={() => {}} navTargetUrl={null} />);
     expect(screen.getAllByText('Вид графа').length).toBeGreaterThan(0);
-    for (const label of ['Как удобнее экрану', 'Секторы', 'Список', 'Force', 'Обсидиан']) {
+    for (const label of ['Прежний выбор или Обсидиан', 'Force', 'Обсидиан', 'Структура']) {
       expect(screen.getAllByText(label).length, label).toBeGreaterThan(0);
     }
+    expect(screen.queryByText('Секторы')).toBeNull();
+    expect(screen.queryByText('Список')).toBeNull();
   });
 });

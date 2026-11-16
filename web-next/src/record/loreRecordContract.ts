@@ -3,9 +3,8 @@
 // из существующих слайсов (toLoreRecord), а kit рисует только то, что пришло в объекте
 // (fromLoreRecord). Когда фасад появится на бэкенде, toLoreRecord уходит, fromLoreRecord остаётся.
 // Честность: эмуляция помечена в meta.facade; упавший блок — meta.sources[].state='error', не «пусто».
-import { createElement, type ReactNode } from 'react';
-import { NestedList } from '@seidr/kit';
-import type { KitConfig, KitCtx, KitData, KitEdge, KitLang, KitRecord, KitRelation } from '@seidr/kit';
+import { bodyMdIsOwnSection as kitBodyMdIsOwnSection, passportFromDoc } from '@seidr/kit';
+import type { KitConfig, KitLang, KitRelation } from '@seidr/kit';
 import { appT } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
@@ -33,6 +32,9 @@ export interface LoreField {
   dict?: string;
   /** Варианты enum из среза сервера (S4-24, #1241): автор / исполнитель / принимающий — task_identities. */
   options?: OptionsSpec;
+  /** MDL-07: определение и описание поля из модели (сервер шлёт с MDL-02) — подсказкой у подписи в kit. */
+  definition?: string;
+  description?: string;
 }
 /** Откуда брать варианты: срез, его параметр (id записи) и имена полей строки. */
 export interface OptionsSpec { slice: string; param?: string; value: string; label: string; group?: string }
@@ -118,6 +120,8 @@ export interface LoreRecord1 {
    * итогов не показываем, а не выдумываем.
    */
   computed?: Record<string, unknown>;
+  /** MDL-10: значения записи вне модели (ключ → значение), только чтение; нет — ключа нет. */
+  unmodeled?: Record<string, unknown>;
   /**
    * Итоги, посчитанные СЕРВЕРОМ по корпусу (не по присланной выборке).
    *
@@ -222,9 +226,6 @@ export function toLoreRecord(load: PassportLoad, loadedAt: string, lang: KitLang
   };
 }
 
-/** Общие колонки таблицы связей kit (NESTED_COLUMNS): Статус · Вид · Код · Запись. */
-const NESTED_COMMON_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
-
 /**
  * S9-05 / D14: колонки таблицы детей по типу ребёнка — сверх общих. Ключи значений —
  * `values` связи с фасада (LoreRecordFrom.CHILD_VALUES).
@@ -247,7 +248,6 @@ function childFieldsOf(kind: string, lang: KitLang): NonNullable<KitConfig['kind
   ];
 }
 
-/** Объект контракта → входы kit. Kit не знает полей типа — всё отсюда. */
 /** Итоги спринта: поле паспорта ← ключ `computed` сервера, подпись — та же, что у колонки списка. */
 const SPRINT_SUMS = [
   ['effort_total', 'effort_days_total', 'lists.field.effortTotal'],
@@ -255,245 +255,39 @@ const SPRINT_SUMS = [
 ] as const;
 
 /**
- * `body_md` — самостоятельный раздел тела записи, а не копия другого раздела:
- * схема называет его полем группы body, он непуст и не совпадает ни с одним
- * другим полем той же группы.
+ * Объект контракта → входы kit. Сборку делает kit (`passportFromDoc`, K5-PASSPORT-FROM-MODEL);
+ * здесь — только то, что знает LORE: колонки детей задачи и спринта, итоги спринта (S4-09: тем же
+ * разбором sumOfRow, что ячейки списка; не прислал сервер — «не посчитали», а не ноль), облик и
+ * статусы LORE (baseConfig) и вердикт спринта.
  */
-export function bodyMdIsOwnSection(c: LoreRecord1): boolean {
-  const body = c.values.body_md;
-  if (typeof body !== 'string' || !body.trim()) return false;
-  const bodyFields = c.schema.fields.filter(f => f.group === 'body');
-  if (!bodyFields.some(f => f.key === 'body_md')) return false;
-  return !bodyFields.some(f => f.key !== 'body_md' && c.values[f.key] === body);
-}
+/** `body_md` — свой раздел тела или копия другого (правило kit, `bodyMdIsOwnSection`). */
+export const bodyMdIsOwnSection = (c: LoreRecord1): boolean => kitBodyMdIsOwnSection(c);
 
 export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
-  const { type, id } = c.record;
-  const { title, body_md, ...fields } = c.values;
-  const bodyIsOwn = bodyMdIsOwnSection(c);
-  if (bodyIsOwn) fields.body_md = body_md;
-  const record: KitRecord = {
-    id, kind: type, title: typeof title === 'string' && title ? title : id, status: c.record.status,
-    body_md: typeof body_md === 'string' && body_md ? body_md : undefined, updated_at: c.record.updated_at ?? undefined, fields,
-  };
-  // Части записи (parts) — ЗАДАЧИ И ФАЗЫ спринта, вопросы и решения ADR.
-  //
-  // Дефект прода v1.17.8: «Задач нет» при 48 задачах. Сервер отдавал их в
-  // `parts[]`, а здесь читались только `links` — и вкладки, и вердикт считались
-  // по рёбрам, которых в ответе нет. Теперь элементы частей становятся
-  // записями и рёбрами: дальше с ними работает всё обычное — вкладки, граф,
-  // вердикт, таблица задач.
+  const { type } = c.record;
+  const doc = passportFromDoc(c, {
+    lang,
+    childColumns: target => (CHILD_COLUMNS[target]
+      ? { columns: [...CHILD_COLUMNS[target]], kind: { title: appT(lang, target === 'task' ? 'pp.kind.task' : 'pp.kind.sprint'), icon: target, fields: childFieldsOf(target, lang) } }
+      : undefined),
+    extraFields: d => (type === 'sprint' && d.computed
+      ? SPRINT_SUMS.map(([key, from, titleKey]) => {
+        const v = d.computed?.[from];
+        return { field: { key, title: appT(lang, titleKey), type: 'sum' as const }, value: v && typeof v === 'object' ? sumOfRow(v as ServerSum, false) : { error: ABSENT_NUMBERS } };
+      })
+      : []),
+  });
+  const config0: KitConfig = baseConfig(lang, doc.kinds);
+  const config: KitConfig = { ...config0, roles: { reader: doc.reader } };
   const parts = c.parts ?? [];
-  const kinds = (fromKind?: string, toKind?: string) => ({ ...(fromKind ? { fromKind } : {}), ...(toKind ? { toKind } : {}) });
-  const partEdges: KitEdge[] = parts.flatMap(p => p.items.map(i =>
-    p.dir === 'in' ? { from: i.id, to: id, type: p.rel, ...kinds(p.type, type) } : { from: id, to: i.id, type: p.rel, ...kinds(type, p.type) }));
-  const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => ({
-    id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
-  })));
-  const edges: KitEdge[] = [
-    ...c.links.map(l => ({ ...(l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel }),
-      ...kinds(l.fromKind, l.toKind) })),
-    ...partEdges,
-  ];
-  const linkRecords: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)
-    .map(l => ({ id: l.id, kind: l.type, title: l.title, status: l.status, fields: { ...(l.values ?? {}) } }));
-  const others: KitRecord[] = [...linkRecords, ...partRecords]
-    .filter((r, i, a) => r.id !== id && a.findIndex(x => x.id === r.id) === i);
-  // Часть не прочиталась — это РАЗНЫЕ утверждения: «нет прав» (denied) и «сбой»
-  // (error). Ни одно из них не «пусто»: без этой строки вердикт показал бы
-  // проверенный ноль там, где проверки не было.
-  const partErrors = parts.filter(p => p.state !== 'ok').map(p => ({
-    block: p.key,
-    state: p.state === 'denied' ? ('forbidden' as const) : ('error' as const),
-    reason: p.error ?? p.state,
-  }));
-  // В errors — только сбой и отказ. «Обрезано» (truncated) — не ошибка: оно уже
-  // сказано строкой data_state, а в errors kit читал его как «не прочиталось», и
-  // счётчик вкладки «Задачи» человека (первые 100 из 230) становился «?»
-  // (SPRINT_LORE_MODEL_AS_CONFIG/MC-07, приёмка v1.17.21).
-  const errors = [
-    ...c.meta.sources.filter(s => s.state === 'error' || s.state === 'forbidden').map(s => ({ block: s.block, reason: s.reason ?? s.state })),
-    ...partErrors.map(e => ({ block: e.block, reason: e.reason })),
-  ];
-  const props = c.schema.fields.filter(f => f.group === 'props');
-  // Связь place=prop — свойство: значения уже лежат в `values`. Если в
-  // `schema.fields` её не перечислили, поле добавляем сами — иначе значение
-  // («Проекты: NooriUta/AIDA») не показалось бы вообще, а в блоке связей
-  // стояло бы «Проекты 0».
-  // Итоги спринта в паспорте (S4-09): поля-суммы с охватом — тем же разбором
-  // (sumOfRow), что и ячейки списка. Сервер не прислал число — «не посчитали»
-  // с причиной, а не ноль.
-  const sumFields: { key: string; title: string; type: 'sum' }[] = [];
-  if (type === 'sprint' && c.computed) {
-    for (const [key, from, titleKey] of SPRINT_SUMS) {
-      const v = c.computed[from];
-      record.fields[key] = v && typeof v === 'object' ? sumOfRow(v as ServerSum, false) : { error: ABSENT_NUMBERS };
-      sumFields.push({ key, title: appT(lang, titleKey), type: 'sum' });
-    }
-  }
-  const propRels = c.schema.relations.filter(r => r.place === 'prop' && !props.some(f => f.key === r.key));
-  // S4-24: у связи-свойства с путём привязки — её ребро: kit рисует чипы с «Отвязать»
-  // и выбор с поиском (владелица 11.11: «не сделано редактирование множественного выбора привязок»).
-  const edgeOf = (key: string) => {
-    const r = c.schema.relations.find(x => x.place === 'prop' && x.key === key && x.manageable);
-    return r ? { relation: { rel: r.rel, dir: r.dir } } : {};
-  };
-  // K4-MENTION-LOOK: вид записей на другом конце — облик чипов (значок, цвет вида).
-  const refKindOf = (key: string) => {
-    const t = c.schema.relations.find(x => x.key === key)?.target_type;
-    return t && t !== 'any' ? { refKind: t } : {};
-  };
-  const propFields = propRels.map(r => ({
-    key: r.key, title: r.label, type: 'ref' as const, ...edgeOf(r.key), ...refKindOf(r.key),
-  }));
-  // body_md в разделах — только когда это НАСТОЯЩЕЕ тело, а не копия (прод
-  // v1.17.13, 11.11: у решения «Контент» был пуст). Копия — когда его текст
-  // совпадает с другим разделом тела (у задачи body_md = note_md, у спринта =
-  // context_md); тогда второй раз его не показываем. Иначе (у решения body_md —
-  // само решение, rationale_md — обоснование) это первый раздел.
-  const sections = c.schema.fields.filter(f => f.group === 'body' && (f.key !== 'body_md' || bodyIsOwn));
-  // Разделы текста — ДАННЫМИ, а не своей функцией рисования (S5-06).
-  //
-  // Было: функция, которая печатала разделы текстом. И это тихо отнимало
-  // правку: ✎ у тела даёт kit, но ТОЛЬКО если у вида нет своего рисовальщика
-  // обзора. У задачи заметка приходит полем группы «тело», значит функция
-  // задавалась всегда — и редактор до заметки не доходил. Так и выглядел
-  // дефект прода v1.17.7: «нет ни ✎, ни „Править", двойной клик не открывает
-  // редактор», а вместе с ним было нечем проверить черновик (S5-09).
-  //
-  // Теперь kit получает список «ключ + подпись» и рисует разделы сам — с ✎,
-  // черновиком и честным пустым состоянием у каждого.
-  // Признак «можно писать» приходит из схемы сервера: у раздела может не быть
-  // пути записи, и тогда ✎ обещал бы сохранение, которого некуда отправить
-  // (проверено серверной сессией по LoreRecordRegistry.schemaJson 09.11).
-  const bodySections = sections.map(s => ({ key: s.key, title: s.label, editable: s.editable !== false }));
-  // Связи, которые рисует САМ kit (по видам UML — со счётчиком, значком и
-  // управлением). Их ключи нужны ниже: своей вкладки на тот же ключ приложение
-  // не отдаёт.
-  const kitRels = c.schema.relations.filter(r => (r.place ?? 'link_tab') === 'link_tab');
-  const kitRelKeys = new Set(kitRels.map(r => r.key));
-  const linkTabs = c.schema.tabs.filter(t => t.zone === 'record' && t.rel).map(t => ({
-    key: t.key, title: t.label,
-    render: () => c.links.filter(l => l.rel === t.rel && l.dir === t.dir).map(l => l.title).join(' · ') || appT(lang, 'pp.contract.noLinks'),
-  }));
-  // Вкладка части: её элементы уже пришли. Не прочиталась — так и сказано,
-  // а не «нет элементов» (ListPassport подменяет вкладку задач настоящей
-  // таблицей — withSprintTasksTab; эта остаётся для прочих частей).
-  // Сервер отдаёт первые элементы части, а `count` — полное число (у
-  // компонента вкладки tasks/sprints — первые 100, S9-05). Шапка вкладки
-  // называет полное число, значит тело обязано сказать, что пришла лишь часть:
-  // иначе 100 имён под заголовком «230» читаются как «всё». Число неизвестно
-  // (null) — оговорку не выдумываем.
-  //
-  // 11.11.2026 (владелица): «в паспорте, где табличный вид свёрнут под "ещё",
-  // должны идти стандартные сортировки, фильтры, группировки … и поиск тоже».
-  // Поэтому тело части — не строка имён через «·», а список kit (`NestedList`
-  // → тот же ListView, что у разделов) с поиском, фасетами, группировкой и
-  // порядком. Оговорка об обрезке — под списком.
-  const partShown = (p: (typeof parts)[number]): string | undefined =>
-    typeof p.count === 'number' && p.count > p.items.length
-      ? appT(lang, 'pp.contract.partShown', { shown: p.items.length, total: p.count })
-      : undefined;
-  const partBody = (p: (typeof parts)[number], ctx: KitCtx): ReactNode => {
-    if (p.items.length === 0) return appT(lang, 'pp.contract.noLinks');
-    const records: KitRecord[] = p.items.map(i => ({
-      id: i.id, kind: p.type ?? 'ref', title: i.title || i.id, status: i.status, fields: { ...(i.values ?? {}) },
-    }));
-    return createElement(NestedList, { ctx, records, note: partShown(p) });
-  };
-  const partTabs = parts.map(p => ({
-    key: p.key, title: p.label,
-    // Число элементов части — в ряд вкладок (B13). Часть уже отдаёт его
-    // честной формы: при state !== 'ok' приходит null, то есть «не смогли
-    // посчитать», и ряд покажет «?» с подсказкой, а не ложный ноль.
-    count: p.count,
-    render: (_r: KitRecord, ctx: KitCtx) => (p.state !== 'ok'
-      ? (p.error ?? p.state)
-      : partBody(p, ctx)),
-  }));
-  // ОДИН РАЗДЕЛ — ОДНО МЕСТО (ревью 10.11.2026, B13; просьба владелицы того же
-  // дня: «проверить, почему… в паспорте у спринтов дублирующиеся вкладки»).
-  //
-  // Связь с `place: "link_tab"` проходила ДВУМЯ путями: `recordFromServer`
-  // (api/liveRecord.ts, `tabsOf`) делал из неё `schema.tabs` — так было до
-  // того, как kit научился рисовать вкладки связей сам, — а здесь та же связь
-  // уходит в `relations`, и kit строит вкладку второй раз. В ряду выходили две
-  // вкладки «Зависит от»: одна со счётчиком и значком ⇢, другая без ничего
-  // (отсюда же «счётчики то есть, то нет» из ревью).
-  //
-  // Поэтому вкладку связи отдаёт kit, а приложение оставляет свои вкладки
-  // только там, где kit связь НЕ рисует: части (`place: "part"` — у них в
-  // `parts[]` лежат настоящие элементы) и свойства.
-  const tabs = [...partTabs, ...linkTabs.filter(t => !partTabs.some(x => x.key === t.key) && !kitRelKeys.has(t.key))];
-  // S9-05 / D14 «колонки по типу ребёнка»: таблица детей связи — сверх общих колонок
-  // колонки вида ребёнка, но ТОЛЬКО если элементы этой связи принесли значения
-  // (`values`): иначе столбец «—» читался бы как «исполнителя нет», а его не читали.
-  const childKinds = new Set<string>();
-  const childColumnsOf = (r: (typeof kitRels)[number]): { columns?: string[] } => {
-    const target = r.target_type;
-    const extra = target ? CHILD_COLUMNS[target] : undefined;
-    if (!target || !extra) return {};
-    const carries = c.links.some(l => l.rel === r.rel && l.dir === r.dir && l.type === target && l.values);
-    if (!carries) return {};
-    childKinds.add(target);
-    return { columns: [...NESTED_COMMON_COLUMNS, ...extra] };
-  };
-  const relDefs = kitRels.map(r => {
-    const { count: _n, place: _p, target_type: t, ...d } = r;
-    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...childColumnsOf(r) };
-  });
-  // Подписи колонок — полями вида ребёнка (свой вид паспорта не трогаем).
-  const childKindDefs: KitConfig['kinds'] = Object.fromEntries([...childKinds].filter(k => k !== type)
-    .map(k => [k, { title: appT(lang, k === 'task' ? 'pp.kind.task' : 'pp.kind.sprint'), icon: k, fields: childFieldsOf(k, lang) }]));
-  const config0: KitConfig = baseConfig(lang, {
-    ...childKindDefs,
-    [type]: { title: c.schema.label, icon: c.schema.icon, ...(bodySections.length ? { bodySections } : {}), relations: relDefs, fields: [...props.map(f => ({ key: f.key, title: f.label, type: f.kind, ...(f.section ? { section: f.section } : {}),
-      // S4-24: правимо только при ОБОИХ — сервер назвал поле правимым И дал путь записи.
-      ...(f.editable && f.write ? { editable: true } : {}),
-      ...(f.required ? { required: 'block' as const } : {}),
-      ...(f.kind === 'ref' ? { ...edgeOf(f.key), ...refKindOf(f.key) } : {}) })), ...propFields, ...sumFields], ...(tabs.length ? { tabs } : {}) },
-  });
-  const config: KitConfig = { ...config0, roles: { reader: { canEdit: c.perms.can_edit, canStatus: c.perms.can_status } } };
-  // Состояние блоков идёт в meta.data_state ТОЙ ЖЕ формой, что разбирает kit
-  // (dataStateOf): «нет прав», «обрезано» и сбой — разные ответы, и список
-  // errors их сливал в один. errors остаётся рядом: по нему рисует плашку блок
-  // связей (blockError), и терять её нельзя. Задвоения нет — разбор пропускает
-  // блок, о котором уже сказано через data_state.
-  //
-  // S4-TECH-NOTES: строки состояния — имена источников («relation:<ключ>»,
-  // «срез · часть»), с ними человек ничего сделать не может. Приложение
-  // помечает их tech: kit спрячет коды и оставит строку «часть сведений не
-  // загрузилась». Тег, присланный сервером, главнее — решает тот, кто родил строку.
-  const dataState = [
-    ...c.meta.sources.map(s => ({
-      source: s.block, state: s.state, audience: s.audience ?? ('tech' as const),
-      ...(s.reason ? { reason: s.reason } : {}),
-      ...(s.total !== undefined ? { total: s.total } : {}),
-    })),
-    ...partErrors
-      .filter(e => !c.meta.sources.some(s => s.block === e.block))
-      .map(e => ({ source: e.block, state: e.state, reason: e.reason, audience: 'tech' as const })),
-  ];
-  const data: KitData = {
-    records: [record, ...others], edges, journal: [],
-    meta: {
-      generated_at: c.meta.loaded_at,
-      ...(dataState.length ? { data_state: dataState } : {}),
-      ...(errors.length ? { errors } : {}),
-    } as KitData['meta'],
-  };
   const tasksPart = parts.find(p => p.key === 'tasks');
   const served = c.facts?.tasks;
   const counts = served && 'total' in served
     ? { done: served.done, total: served.total, ...(typeof served.open === 'number' ? { open: served.open } : {}) }
     : undefined;
-  // Вердикт нужен всегда, когда сервер прислал блок фактов, а не только когда
-  // пришли ЧИСЛА задач:
-  //  • задачи не прочитались — `facts.tasks` нет вовсе (контракт), и вердикт
-  //    должен сказать «не смогли проверить», а не промолчать;
-  //  • в этом же блоке живёт срок (`dueField`), и прежнее условие «есть
-  //    facts.tasks» молча отнимало вместе с задачами и строку срока.
-  return { record, data, config, ...(c.facts || tasksPart ? { facts: sprintFactsFor(c.links, tasksPart, counts) } : {}) };
+  // Вердикт нужен всегда, когда сервер прислал блок фактов, а не только когда пришли ЧИСЛА
+  // задач: задачи не прочитались — вердикт говорит «не смогли проверить»; в этом же блоке срок.
+  return { record: doc.record, data: doc.data, config, ...(c.facts || tasksPart ? { facts: sprintFactsFor(c.links, tasksPart, counts) } : {}) };
 }
 
 /**
