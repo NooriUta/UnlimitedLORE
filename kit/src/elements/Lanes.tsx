@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import type { KindConfig } from '../core/contract';
 import { kitT, useKitLang } from '../i18n';
 import { ObjectMention } from './ObjectMention';
+import { navClick } from '../core/navClick';
 
 export interface LaneItem {
   id: string;
@@ -39,10 +40,15 @@ export interface LanesProps {
   label: string;
   /** Виды приложения — облик упоминаний. */
   kinds?: Record<string, KindConfig>;
+  /**
+   * Открыть запись без перезагрузки (пилот 16.11: щелчок перезагружал страницу, ~4 с). Обычный щелчок —
+   * сюда, Ctrl/⌘/средняя кнопка — браузеру; ссылка остаётся ссылкой. Нет — обычный переход по href.
+   */
+  onOpen?: (id: string) => void;
   className?: string;
 }
 
-export function Lanes({ lanes, href, label, kinds, className }: LanesProps) {
+export function Lanes({ lanes, href, label, kinds, onOpen, className }: LanesProps) {
   const lang = useKitLang();
   return (
     <div className={['sk-lanes', className].filter(Boolean).join(' ')} role="region" aria-label={label} data-testid="kit-lanes">
@@ -55,7 +61,8 @@ export function Lanes({ lanes, href, label, kinds, className }: LanesProps) {
             <ul className="sk-lanes__items">
               {l.items.map((it, i) => (
                 <li key={`${it.id}#${i}`} className="sk-lanes__item">
-                  <ObjectMention id={it.id} title={it.title} kind={it.kind} kinds={kinds} href={href(it.id)} />
+                  <ObjectMention id={it.id} title={it.title} kind={it.kind} kinds={kinds} href={href(it.id)}
+                    {...(onOpen ? { onClick: navClick(() => onOpen(it.id)) } : {})} />
                   {it.badge != null && <span className="sk-pill sk-lanes__badge">{it.badge}</span>}
                 </li>
               ))}
