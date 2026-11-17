@@ -110,3 +110,13 @@ test('Völva: пара ES256 одной строкой base64 (PKCS#8 и SPKI, �
   assert.ok(crypto.verify('sha256', Buffer.from('встройка'), pub, sig), 'открытый ключ — пара закрытому');
   assert.notEqual(volvaKeys().LORE_VOLVA_EMBED_ES256_PRIVATE_KEY, k.LORE_VOLVA_EMBED_ES256_PRIVATE_KEY, 'каждый раз новая пара');
 });
+
+test('команда установки: каталог абсолютный, версия — тег vX.Y.Z или пусто, порт 1–65535; план — с --dry-run', async () => {
+  const { installArgs } = await import('./setup.mjs');
+  assert.deepEqual(installArgs({ dir: '/opt/lore', version: 'v1.18.0', port: '4400', dry: true }), ['--dir', '/opt/lore', '--version', 'v1.18.0', '--port', '4400', '--dry-run']);
+  assert.deepEqual(installArgs({ dir: '/opt/lore', version: '', port: '', dry: false }), ['--dir', '/opt/lore']);
+  assert.throws(() => installArgs({ dir: 'opt/lore' }), /абсолютный/);
+  assert.throws(() => installArgs({ dir: '/opt/lore; rm -rf /' }), /каталог/);
+  assert.throws(() => installArgs({ dir: '/opt/lore', version: 'latest' }), /версия/);
+  assert.throws(() => installArgs({ dir: '/opt/lore', port: '70000' }), /порт/);
+});

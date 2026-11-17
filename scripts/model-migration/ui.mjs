@@ -15,7 +15,8 @@ import path from 'node:path';
 import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
-import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry } from './setup.mjs';
+import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml } from './setup.mjs';
+import { INSTALL_BUNDLE } from './resources.mjs';
 import os from 'node:os';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
@@ -108,6 +109,16 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <div><b>Режим</b> <label><input type="radio" name="mode" value="new" checked> новая установка</label> <label><input type="radio" name="mode" value="migrate"> перенос на новую модель</label></div>
 </form></div>
 <div id="splan"></div>
+<h3>Установка</h3>
+<div class="tw" style="padding:8px"><form id="if" autocomplete="off"><table class="cfg">
+<tr><td>Каталог установки (Linux)</td><td><input name="dir" size="30" value="/opt/lore"></td></tr>
+<tr><td>Версия (тег) или пусто</td><td><input name="version" size="16"></td></tr>
+<tr><td>Порт веба</td><td><input name="port" size="8" value="4400"></td></tr>
+<tr><td>Адрес области Keycloak</td><td><input name="issuer" size="40" placeholder="https://keycloak/realms/lore"></td></tr>
+<tr><td>Адрес Völva</td><td><input name="volva" size="40" placeholder="если Völva выбрана"></td></tr>
+<tr><td>Адрес сервера miniLORE</td><td><input name="minilore" size="40" placeholder="если miniLORE выбран"></td></tr></table>
+<div class="top"><button type="button" class="btn" id="ienv">Собрать .env</button><button type="button" class="btn" id="iplan">План установки</button><button type="button" class="btn" id="ivolva">Ключи Völva</button><button type="button" class="btn" id="ilink">Файл для link</button></div>
+<pre class="mono" id="iout" style="white-space:pre-wrap;max-height:360px;overflow:auto"></pre><div id="ires" class="sub"></div></form></div>
 <h3>Подключение агента на этой машине</h3>
 <div class="tw" style="padding:8px"><form id="af" autocomplete="off"><table class="cfg">
 <tr><td>Harness</td><td><select name="harness"><option value="claude-code">Claude Code</option><option value="kimi-code">Kimi Code</option><option value="codex">Codex</option><option value="dsh">dsh</option><option value="opencode">OpenCode</option></select></td></tr>
@@ -223,6 +234,9 @@ el.innerHTML='<h3>План</h3><ol>'+d.plan.map(function(p){return '<li><b>'+esc
 fetch('api/setup/defaults').then(function(r){return r.json()}).then(function(d){document.getElementById('scomp').innerHTML=d.components.map(function(c){return '<label style="display:block"><input type="checkbox" name="comp" value="'+esc(c.id)+'"'+(c.required?' checked disabled':'')+'> <b>'+esc(c.name)+'</b> <span class="sub">'+esc(c.about)+'</span></label>'}).join('');
 var a=document.getElementById('af');Object.keys(d.agent).forEach(function(k){if(a.elements[k])a.elements[k].value=d.agent[k]});splan()}).catch(function(){});
 document.addEventListener('change',function(e){if(e.target.closest&&e.target.closest('#sf'))splan()});
+function iform(){var f=document.getElementById('if'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});o.choice=sform();var a=aform();o.machineId=a.machineId;return o}
+document.addEventListener('click',function(e){var map={ienv:'api/setup/env',iplan:'api/setup/install-plan',ivolva:'api/setup/volva-keys',ilink:'api/setup/link-toml'};var u=map[e.target.id];if(!u)return;
+document.getElementById('ires').textContent='…';fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(iform())}).then(function(r){return r.json()}).then(function(d){var o=document.getElementById('iout'),r=document.getElementById('ires');if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}o.textContent=d.text||'';r.innerHTML=esc(d.note||'')})});
 function aform(){var f=document.getElementById('af'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
 document.addEventListener('click',function(e){var id=e.target.id;if(id!=='apreview'&&id!=='aapply')return;var body=aform();if(id==='aapply'){if(!confirm('Записать строку MCP aida-lore в настройки Claude Code? Прежний файл сохранится копией.'))return;body.confirm=true}
 fetch(id==='aapply'?'api/setup/mcp/apply':'api/setup/mcp/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){if(d.error){document.getElementById('ares').innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}
@@ -386,6 +400,46 @@ export async function serve({ port = 2499 } = {}) {
       }
       if (req.method === 'GET' && req.url === '/api/setup/defaults') {
         return json(res, 200, { components: COMPONENTS, agent: { harness: 'claude-code', machineId: os.hostname().toLowerCase(), backendUrl: process.env.LORE_BACKEND_URL || '', issuer: kc.configured ? kc.url.replace(/\/+$/, '') + '/realms/' + kc.realm : '', serverPath: '' } });
+      }
+      if (req.method === 'POST' && ['/api/setup/env', '/api/setup/install-plan', '/api/setup/volva-keys', '/api/setup/link-toml'].includes(req.url)) {
+        // запись файлов и запуск — только со своей страницы
+        if (req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'только со страницы установщика' });
+        const b = await readBody(req), ch = b.choice || {};
+        try {
+          const auth = ch.kc === 'own' || ch.kc === 'none' ? (b.issuer ? 'true' : 'false') : 'false';
+          const env = () => installEnvText(INSTALL_BUNDLE.files['.env.example'], {
+            LORE_VERSION: b.version || '', LORE_HTTP_PORT: String(b.port || 4400), LORE_AUTH_ENABLED: auth, LORE_OIDC_ISSUER: b.issuer || '',
+            LORE_OIDC_ORIGIN: b.issuer ? new URL(b.issuer).origin : '',
+            ...((ch.components || []).includes('volva') && b.volva ? { LORE_VOLVA_ORIGIN: new URL(b.volva).origin, LORE_VOLVA_EMBED_SITE_URL: b.volva } : {}),
+          });
+          if (req.url === '/api/setup/env') return json(res, 200, { text: env(), note: 'пароли останутся CHANGE_ME — install.sh сгенерирует их сам; вход ' + (auth === 'true' ? 'через Keycloak' : 'выключен') });
+          if (req.url === '/api/setup/install-plan') {
+            const args = installArgs({ dir: b.dir, version: b.version, port: b.port, dry: true });
+            const cmd = 'bash install.sh ' + args.join(' ');
+            // Правило владелицы 16.11: установщик не зависит от операционки и не запускает программ. Поэтому пакет
+            // установки с готовым .env выкладывается в папку, а запуск install.sh — команда для Linux-машины.
+            const out = path.join(os.homedir(), 'lore-install');
+            fs.mkdirSync(out, { recursive: true });
+            for (const [n, t] of Object.entries(INSTALL_BUNDLE.files)) if (n !== '.env.example') fs.writeFileSync(path.join(out, n), t, { mode: n.endsWith('.sh') ? 0o755 : 0o644 });
+            fs.writeFileSync(path.join(out, '.env.example'), env(), { mode: 0o600 });
+            return json(res, 200, { text: cmd + String.fromCharCode(10) + 'bash install.sh ' + installArgs({ dir: b.dir, version: b.version, port: b.port }).join(' '), note: 'пакет установки с вашим .env выложен в ' + out + '. Скопируйте папку на Linux-машину с Docker и выполните сначала план (первая строка), потом установку (вторая).' });
+          }
+          if (req.url === '/api/setup/volva-keys') {
+            const dir = b.dir && fs.existsSync(b.dir) ? b.dir : os.homedir();
+            const file = path.join(dir, 'volva-embed.env');
+            if (fs.existsSync(file)) return json(res, 409, { error: 'ключи уже есть: ' + file + ' — не перезаписываю' });
+            const k = volvaKeys();
+            fs.writeFileSync(file, Object.entries(k).map(([n, v]) => n + '=' + v).join('\n') + '\n', { mode: 0o600 });
+            return json(res, 200, { text: 'LORE_VOLVA_EMBED_ES256_PUBLIC_KEY=' + k.LORE_VOLVA_EMBED_ES256_PUBLIC_KEY, note: 'пара ES256 записана в ' + file + ' (права 600); на экране — только открытый ключ. Перенесите оба в хранилище или .env установки.' });
+          }
+          if (req.url === '/api/setup/link-toml') {
+            if (!b.minilore) return json(res, 400, { error: 'не задан адрес сервера miniLORE' });
+            const file = path.join(os.homedir(), 'minilore-link.toml');
+            const text = linkConfigToml({ serverUrl: b.minilore, issuer: b.issuer || '', machineId: b.machineId, secret: '' });
+            fs.writeFileSync(file, text, { mode: 0o600 });
+            return json(res, 200, { text, note: 'файл ' + file + '; секрет пустой — он появится, когда установщик заведёт клиент minilore-link-' + b.machineId + ' в Keycloak' });
+          }
+        } catch (e) { return json(res, 400, { error: e.message }); }
       }
       if (req.method === 'POST' && req.url === '/api/setup/plan') {
         try { return json(res, 200, { plan: planSetup(await readBody(req)) }); } catch (e) { return json(res, 400, { error: e.message }); }

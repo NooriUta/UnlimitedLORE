@@ -172,3 +172,16 @@ export function installEnvText(example, values) {
   }
   return t;
 }
+
+/** Аргументы deploy/install/install.sh из формы. Строгая проверка: аргументы уходят в процесс, а не в оболочку, но каталог и версия — всё равно только безопасные символы. */
+export function installArgs({ dir, version = '', port = '', dry = false }) {
+  if (!dir || !dir.startsWith('/')) throw new Error('каталог установки — абсолютный путь Linux, например /opt/lore');
+  if (!/^\/[A-Za-z0-9._\/-]*$/.test(dir)) throw new Error('каталог: только буквы, цифры, точка, дефис, подчёркивание и /');
+  if (version && !/^v\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$/.test(version)) throw new Error('версия — тег вида v1.18.0 или пусто (сборка из исходников)');
+  if (port !== '' && port !== undefined && !(Number.isInteger(+port) && +port >= 1 && +port <= 65535)) throw new Error('порт — число от 1 до 65535');
+  const a = ['--dir', dir];
+  if (version) a.push('--version', version);
+  if (port !== '' && port !== undefined) a.push('--port', String(+port));
+  if (dry) a.push('--dry-run');
+  return a;
+}
