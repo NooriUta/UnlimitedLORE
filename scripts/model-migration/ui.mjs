@@ -15,6 +15,8 @@ import path from 'node:path';
 import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
+import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry } from './setup.mjs';
+import os from 'node:os';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -61,7 +63,7 @@ export function addDecision(doc, form, at = new Date().toISOString(), caseOf) {
 }
 
 const PAGE = String.raw`<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LORE · перенос на новую модель</title>
+<title>LORE · установщик</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:light;--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#677528;--suc:#3d7a38;--wrn:#a06010;--inf:#3a7060;--dng:#c03030;--mono:'IBM Plex Mono',ui-monospace,monospace;--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:20px;--fs-2xl:24px}
@@ -84,11 +86,12 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 .themesw{display:inline-flex;border:1px solid var(--acc);border-radius:999px;overflow:hidden}.themesw button{background:transparent;border:0;color:var(--acc);font:700 var(--fs-xs) Manrope,sans-serif;padding:3px 10px;cursor:pointer}.themesw button[aria-pressed=true]{background:var(--acc);color:var(--bg0)}
 #msg{position:fixed;left:12px;right:12px;bottom:10px;background:var(--bg1);border:1px solid var(--acc);border-radius:6px;padding:6px 10px;display:none}#msg.err{border-color:var(--dng);color:var(--dng)}
 </style></head><body><div class="wrap">
-<div class="top"><h1>Перенос на новую модель</h1><span class="themesw"><button data-theme-set="light">Светлая</button><button data-theme-set="dark">Тёмная</button></span></div>
+<div class="top"><h1>Установщик LORE</h1><span class="themesw"><button data-theme-set="light">Светлая</button><button data-theme-set="dark">Тёмная</button></span></div>
 <div class="top"><span class="sub">источник <span class="mono" id="src">…</span> · только чтение · решения пишутся в файл решений этой установки</span>
 <label class="sub">кто принимает решения <input id="by" placeholder="логин"></label>
 <span class="sub" id="who"></span> <button class="btn" id="reload">Перепроверить</button><span class="sub" id="fp"></span></div>
 <nav class="steps" id="steps">
+<a href="#step-s" data-step="s"><b>★</b> Старт</a>
 <a href="#step-0" data-step="0"><b>0</b> Вход</a>
 <a href="#step-1" data-step="1"><b>1</b> Подключение</a>
 <a href="#step-2" data-step="2"><b>2</b> Статусы</a>
@@ -96,6 +99,25 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <a href="#step-4" data-step="4"><b>4</b> Перенос</a>
 <a href="#step-5" data-step="5"><b>5</b> Сверка и отчёт</a>
 </nav>
+<section data-page="s" hidden><h2>Старт: что ставим</h2>
+<p class="sub">Выберите компоненты, скажите, есть ли у вас Keycloak и хранилище секретов, и что делаем: новая установка или перенос. Ниже появится план шагов. Подключение агентов к LORE — в конце страницы.</p>
+<div class="tw" style="padding:8px"><form id="sf">
+<div><b>Что ставим</b></div><div id="scomp"></div>
+<div style="margin-top:6px"><b>Keycloak</b> <label><input type="radio" name="kc" value="own" checked> есть свой</label> <label><input type="radio" name="kc" value="none"> нет — скачать и настроить</label></div>
+<div><b>Хранилище секретов</b> <label><input type="radio" name="secrets" value="own" checked> есть своё</label> <label><input type="radio" name="secrets" value="none"> нет — скачать и настроить</label></div>
+<div><b>Режим</b> <label><input type="radio" name="mode" value="new" checked> новая установка</label> <label><input type="radio" name="mode" value="migrate"> перенос на новую модель</label></div>
+</form></div>
+<div id="splan"></div>
+<h3>Подключение агента на этой машине</h3>
+<div class="tw" style="padding:8px"><form id="af" autocomplete="off"><table class="cfg">
+<tr><td>Harness</td><td><select name="harness"><option value="claude-code">Claude Code</option><option value="kimi-code">Kimi Code</option><option value="codex">Codex</option><option value="dsh">dsh</option><option value="opencode">OpenCode</option></select></td></tr>
+<tr><td>Код машины</td><td><input name="machineId" size="30"></td></tr>
+<tr><td>Адрес бэкенда LORE</td><td><input name="backendUrl" size="40"></td></tr>
+<tr><td>Издатель (Keycloak, область)</td><td><input name="issuer" size="40"></td></tr>
+<tr><td>Путь к серверу MCP</td><td><input name="serverPath" size="40"></td></tr></table>
+<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
+<pre class="mono" id="aout" style="white-space:pre-wrap"></pre><div id="ares" class="sub"></div></form></div>
+</section>
 <section data-page="0" hidden><h2>Шаг 0. Вход и проверка владельца</h2>
 <p class="sub">Укажите сервер Keycloak и область входа, затем войдите. Дальше пускает, только если сошлись обе проверки: в токене есть роль владельца, и в базе этой установки у вашей учётки роль владельца проекта.</p>
 <div id="s0">загрузка…</div>
@@ -191,10 +213,20 @@ if(!d.configured){el.innerHTML='<div class="state stop">Вход не настр
 byl.hidden=true;
 if(d.me){el.innerHTML='<div class="state go">Вы вошли как <b>'+esc(d.me.login)+'</b> через '+esc(d.me.kc)+' · область '+esc(d.me.realm)+'. Владелец проекта '+esc(d.me.project)+' — проверено по Keycloak и по базе.</div>';document.getElementById('who').textContent='вошли: '+d.me.login;return}
 el.innerHTML='<form action="auth/start" method="get" class="tw" style="padding:8px"><label class="sub">сервер Keycloak <input name="url" size="40" value="'+esc(d.kc.url)+'"></label> <label class="sub">область <input name="realm" value="'+esc(d.kc.realm)+'"></label> <button class="btn pri">Войти</button><div class="sub">клиент '+esc(d.kc.client)+' · проект-владелец '+esc(d.kc.project)+' · роль '+esc(d.kc.role)+'</div></form>';
-if(stepFromHash()!=='0')location.hash='#step-0'})}
+if(stepFromHash()!=='0'&&stepFromHash()!=='s')location.hash='#step-0'})}
 function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}}
-function stepFromHash(){var m=/^#step-(\d)$/.exec(location.hash);return m?m[1]:'0'}
+function stepFromHash(){var m=/^#step-(\d|s)$/.exec(location.hash);return m?m[1]:'s'}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
+function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
+function splan(){fetch('api/setup/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sform())}).then(function(r){return r.json()}).then(function(d){var el=document.getElementById('splan');if(d.error){el.innerHTML='<div class="state stop">'+esc(d.error)+'</div>';return}
+el.innerHTML='<h3>План</h3><ol>'+d.plan.map(function(p){return '<li><b>'+esc(p.title)+'</b><ul>'+p.howto.map(function(h){return '<li>'+esc(h)+'</li>'}).join('')+'</ul>'+(p.links.length?'<div class="sub">'+p.links.map(function(l){return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.title)+'</a>'}).join(' · ')+'</div>':'')+(p.env.length?'<div class="sub mono">'+p.env.map(esc).join(' · ')+'</div>':'')+'</li>'}).join('')+'</ol>'})}
+fetch('api/setup/defaults').then(function(r){return r.json()}).then(function(d){document.getElementById('scomp').innerHTML=d.components.map(function(c){return '<label style="display:block"><input type="checkbox" name="comp" value="'+esc(c.id)+'"'+(c.required?' checked disabled':'')+'> <b>'+esc(c.name)+'</b> <span class="sub">'+esc(c.about)+'</span></label>'}).join('');
+var a=document.getElementById('af');Object.keys(d.agent).forEach(function(k){if(a.elements[k])a.elements[k].value=d.agent[k]});splan()}).catch(function(){});
+document.addEventListener('change',function(e){if(e.target.closest&&e.target.closest('#sf'))splan()});
+function aform(){var f=document.getElementById('af'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
+document.addEventListener('click',function(e){var id=e.target.id;if(id!=='apreview'&&id!=='aapply')return;var body=aform();if(id==='aapply'){if(!confirm('Записать строку MCP aida-lore в настройки Claude Code? Прежний файл сохранится копией.'))return;body.confirm=true}
+fetch(id==='aapply'?'api/setup/mcp/apply':'api/setup/mcp/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){if(d.error){document.getElementById('ares').innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}
+document.getElementById('aout').textContent=JSON.stringify(d.entry,null,2);document.getElementById('aapply').hidden=!d.canApply;document.getElementById('ares').innerHTML=d.written?'<span class="chip ok">записано</span> '+esc(d.written)+' · копия '+esc(d.backup)+' · действует с нового старта сессии':esc(d.note||'')})});
 function cform(){var f=document.getElementById('cf'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
 function cfill(v){var f=document.getElementById('cf');Object.keys(v).forEach(function(k){var x=f.elements[k];if(!x)return;if(x.type==='password'){x.value='';x.placeholder=v[k]==='задан'?'задан — пусто, чтобы не менять':'не задан'}else x.value=v[k]})}
 function cshow(d){var p=[];if(d.errors&&d.errors.length)p.push('<b style="color:var(--dng)">'+d.errors.map(esc).join('; ')+'</b>');if(d.src)p.push('источник: '+(d.src.ok?'<span class="chip ok">отвечает, типов '+d.src.types+'</span>':'<span class="chip">'+esc(d.src.why)+'</span>'));if(d.dst)p.push('новая база: '+(d.dst.ok?(d.dst.exists?'<span class="chip ok">есть</span>':'<span class="chip">сервер отвечает, базы ещё нет — «Создать новую базу»</span>'):'<span class="chip">'+esc(d.dst.why)+'</span>'));if(d.saved)p.unshift('<span class="chip ok">сохранено</span>');if(d.created)p.unshift('<span class="chip ok">создана '+esc(d.created)+'</span>');document.getElementById('cres').innerHTML=p.join(' · ')}
@@ -351,6 +383,28 @@ export async function serve({ port = 2499 } = {}) {
         let dstTypes = null, dstError = null;
         try { dstTypes = (await db.dstQuery('SELECT count(*) AS n FROM schema:types'))[0].n; } catch (e) { dstError = e.message.slice(0, 120); }
         return json(res, 200, { srcUrl: db.env.MIG_DB_URL, srcDb: db.env.MIG_SRC_DB, dstUrl: dstUrl(db.env), dstDb: db.env.MIG_DST_DB, dstTypes, dstError, src });
+      }
+      if (req.method === 'GET' && req.url === '/api/setup/defaults') {
+        return json(res, 200, { components: COMPONENTS, agent: { harness: 'claude-code', machineId: os.hostname().toLowerCase(), backendUrl: process.env.LORE_BACKEND_URL || '', issuer: kc.configured ? kc.url.replace(/\/+$/, '') + '/realms/' + kc.realm : '', serverPath: '' } });
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/plan') {
+        try { return json(res, 200, { plan: planSetup(await readBody(req)) }); } catch (e) { return json(res, 400, { error: e.message }); }
+      }
+      if (req.method === 'POST' && (req.url === '/api/setup/mcp/preview' || req.url === '/api/setup/mcp/apply')) {
+        // запись в настройки — только со своей страницы: чужой сайт не может послать JSON на 127.0.0.1 с нашим Origin
+        if (req.url.endsWith('/apply') && req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'запись только со страницы установщика' });
+        const b = await readBody(req);
+        let entry; try { entry = mcpEntry(b); } catch (e) { return json(res, 400, { error: e.message }); }
+        const claude = b.harness === 'claude-code';
+        const file = path.join(os.homedir(), '.claude.json');
+        if (req.url.endsWith('/preview')) return json(res, 200, { entry, canApply: claude, note: claude ? 'запишется в ' + file + ' (сервер aida-lore; секрет клиента сохраняется прежний)' : 'для этого harness вставьте строку в его настройки MCP сами' });
+        if (!claude || b.confirm !== true) return json(res, 400, { error: 'записать можно только в настройки Claude Code и только с подтверждением' });
+        const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '{}\n';
+        const next = applyMcpEntry(text, entry);
+        const backup = file + '.bak-' + new Date().toISOString().replace(/[:.]/g, '-');
+        if (fs.existsSync(file)) fs.copyFileSync(file, backup);
+        const tmp = file + '.tmp-lore'; fs.writeFileSync(tmp, next, { mode: 0o600 }); fs.renameSync(tmp, file);
+        return json(res, 200, { entry, written: file, backup: fs.existsSync(backup) ? backup : null });
       }
       if (req.method === 'GET' && req.url === '/api/settings') return json(res, 200, { file: envFile, values: publicView(db.env) });
       if (req.method === 'POST' && req.url === '/api/settings/test') {
