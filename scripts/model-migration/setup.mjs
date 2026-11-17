@@ -7,6 +7,8 @@
 // Допущения исполнителя (ей названы 17.11, ждут поправки): новая установка запускает готовый deploy/install/install.sh;
 // Völva и miniLORE ставятся своими поставками, установщик настраивает связь и проверяет её.
 
+import crypto from 'node:crypto';
+
 export const COMPONENTS = [
   { id: 'lore', name: 'LORE', required: true, about: 'граф знаний проекта: бэкенд, веб, база ArcadeDB, вложения MinIO' },
   { id: 'minilore', name: 'miniLORE', required: false, about: 'спутник LORE: сессии агентов, разговоры, телефон; ставится своей поставкой, link — на каждую машину' },
@@ -138,4 +140,18 @@ export function linkConfigToml({ serverUrl, issuer, machineId, secret }) {
   if (!serverUrl) throw new Error('не задан адрес сервера miniLORE');
   const q = v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
   return `[server]\nurl = ${q(serverUrl)}\n\n[machine]\nid = ${q(machineId)}\n\n` + linkAuthToml({ issuer, machineId, secret });
+}
+
+/**
+ * Пара ключей подписи встройки Völva — ES256 (P-256). Одна строка base64 без PEM-рамок: так её читает
+ * VolvaEmbedEs256 (PKCS#8 закрытый, SPKI открытый) и так она ложится в .env установки или в хранилище.
+ * Völva проверяет подпись открытым ключом с /lore/embed/jwks.
+ */
+export function volvaKeys() {
+  const { generateKeyPairSync } = crypto;
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  return {
+    LORE_VOLVA_EMBED_ES256_PRIVATE_KEY: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+    LORE_VOLVA_EMBED_ES256_PUBLIC_KEY: publicKey.export({ format: 'der', type: 'spki' }).toString('base64'),
+  };
 }

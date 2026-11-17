@@ -96,3 +96,17 @@ test('фрагмент для link: [server], [machine] и [auth] — код м�
   assert.equal(t, '[server]\nurl = "https://minilore2.example"\n\n[machine]\nid = "lorcetus"\n\n[auth]\nissuer = "https://kc/realms/omilore"\nclient_id = "minilore-link-lorcetus"\nclient_secret = "S"\n');
   assert.throws(() => linkConfigToml({ serverUrl: '', issuer: 'x', machineId: 'm', secret: 's' }), /адрес сервера/);
 });
+
+test('Völva: пара ES256 одной строкой base64 (PKCS#8 и SPKI, как читает VolvaEmbedEs256), подпись сходится', async () => {
+  const { volvaKeys } = await import('./setup.mjs');
+  const crypto = await import('node:crypto');
+  const k = volvaKeys();
+  assert.match(k.LORE_VOLVA_EMBED_ES256_PRIVATE_KEY, /^[A-Za-z0-9+/]+=*$/, 'одна строка base64, без PEM-рамок и переводов строк');
+  assert.match(k.LORE_VOLVA_EMBED_ES256_PUBLIC_KEY, /^[A-Za-z0-9+/]+=*$/);
+  const priv = crypto.createPrivateKey({ key: Buffer.from(k.LORE_VOLVA_EMBED_ES256_PRIVATE_KEY, 'base64'), format: 'der', type: 'pkcs8' });
+  const pub = crypto.createPublicKey({ key: Buffer.from(k.LORE_VOLVA_EMBED_ES256_PUBLIC_KEY, 'base64'), format: 'der', type: 'spki' });
+  assert.equal(pub.asymmetricKeyDetails.namedCurve, 'prime256v1', 'кривая P-256 (ES256)');
+  const sig = crypto.sign('sha256', Buffer.from('встройка'), priv);
+  assert.ok(crypto.verify('sha256', Buffer.from('встройка'), pub, sig), 'открытый ключ — пара закрытому');
+  assert.notEqual(volvaKeys().LORE_VOLVA_EMBED_ES256_PRIVATE_KEY, k.LORE_VOLVA_EMBED_ES256_PRIVATE_KEY, 'каждый раз новая пара');
+});
