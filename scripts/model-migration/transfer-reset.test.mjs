@@ -11,3 +11,16 @@ test('свои типы новой базы: записи, служебный о
   for (const t of ['KnowSprint', 'KnowTaskHist', 'MigLeftover', 'HAS_STATE', 'PART_OF', 'IN_PHASE', 'DEPENDS_ON', 'MigDictEntry', 'MigDictLabel']) assert.ok(own.includes(t), t);
   assert.ok(!own.includes('BELONGS_TO_PROJECT'), 'связь, ждущая своего объекта, не своя — её типа в новой базе быть не должно');
 });
+
+test('отметка «схема собрана из модели» (MIG-03): свой тип LoreModelSchema, хэш схемы стабилен и меняется со схемой', async () => {
+  const { modelMarker } = await import('./transfer.mjs');
+  assert.ok(ownTypes().includes('LoreModelSchema'), 'повторный перенос пересоздаёт отметку');
+  const a = modelMarker({ A: { fields: { x: { db_type: 'STRING' } } } }, '2026-11-17T00:00:00Z');
+  const b = modelMarker({ A: { fields: { x: { db_type: 'STRING' } } } }, '2026-11-18T00:00:00Z');
+  const c = modelMarker({ A: { fields: { x: { db_type: 'DATE' } } } }, '2026-11-17T00:00:00Z');
+  assert.match(a.model_hash, /^[0-9a-f]{16}$/);
+  assert.equal(a.model_hash, b.model_hash, 'хэш зависит от схемы, а не от времени');
+  assert.notEqual(a.model_hash, c.model_hash);
+  assert.equal(a.source, 'installer');
+  assert.equal(a.built_at, '2026-11-17T00:00:00Z');
+});

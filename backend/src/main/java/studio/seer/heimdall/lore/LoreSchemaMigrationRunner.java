@@ -166,6 +166,11 @@ public class LoreSchemaMigrationRunner {
         int codeVersion = LoreSchemaMigrations.codeVersion();
         int codeCompatMajor = LoreSchemaMigrations.codeCompatMajor();
 
+        if (dbVersion == 0 && schemaSource(0, readModelMarkers()) == SchemaSource.MODEL) {
+            // MIG-03: схема собрана установщиком из модели (MIG-01) — журнала шагов V у такой базы нет по построению.
+            LOG.infof("[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется");
+            return;
+        }
         if (dbVersion == 0) {
             throw new IllegalStateException("[LORE MIGRATE] Отказ старта: схема НЕ накатана "
                 + "(в " + db + " нет ни одной строки LoreSchemaVersion), а накатка выключена "
@@ -226,6 +231,31 @@ public class LoreSchemaMigrationRunner {
      * тексту ответа: сообщать «БД недоступна» там, где она доступна и пуста,
      * значит отправить читающего чинить не то.
      */
+    /**
+     * MIG-03 · Откуда схема базы. LEDGER — журнал шагов V (старая схема, сверка шагов как прежде); MODEL — журнала
+     * нет, но есть отметка LoreModelSchema с хэшем модели (схему собрал установщик из модели, MIG-01); EMPTY — ни того,
+     * ни другого. Отметка без хэша модели — не отметка: по ней нельзя сказать, из какой модели схема.
+     * Строки журнала «будто применены» на такой базе не пишутся — это была бы неправда о базе.
+     */
+    enum SchemaSource { LEDGER, MODEL, EMPTY }
+
+    static SchemaSource schemaSource(int ledgerMaxVersion, List<Map<String, Object>> markers) {
+        if (ledgerMaxVersion > 0) return SchemaSource.LEDGER;
+        boolean marked = markers.stream().anyMatch(m -> m.get("model_hash") != null && !String.valueOf(m.get("model_hash")).isBlank());
+        return marked ? SchemaSource.MODEL : SchemaSource.EMPTY;
+    }
+
+    /** Отметки LoreModelSchema; типа нет — список пуст (база не из модели), а не ошибка. */
+    private List<Map<String, Object>> readModelMarkers() {
+        try {
+            return ingest.queryPublic("SELECT model_hash, source, built_at FROM LoreModelSchema", Map.of());
+        } catch (RuntimeException e) {
+            String d = String.valueOf(LoreUpstream.detail(e));
+            if (d.contains("LoreModelSchema") && (d.contains("not found") || d.contains("does not exist") || d.contains("was not found"))) return List.of();
+            throw new IllegalStateException("[LORE MIGRATE] не удалось прочитать отметку схемы из модели: " + d, e);
+        }
+    }
+
     private void readLedgerTolerantly(Map<Integer, String> applied, Map<Integer, Integer> appliedCompat) {
         List<Map<String, Object>> rows;
         try {

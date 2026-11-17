@@ -27,9 +27,14 @@ const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', 
 // Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
 const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
 const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
-const SERVICE = ['MigLeftover'], EDGE = 'HAS_STATE';
+const SERVICE = ['MigLeftover', 'LoreModelSchema'], EDGE = 'HAS_STATE';
 /** Типы новой базы, которые кладёт сам конвейер: записи, остаток, связь версий и связи с правилом keep (шаг связей). */
 export const keptEdges = () => Object.entries(EDGES).filter(([n, r]) => r.rule === 'keep' && n !== EDGE).map(([n]) => n);
+/** MIG-03: отметка «схема собрана из модели» — по ней сервер узнаёт базу без журнала шагов V. Хэш — от схемы. */
+export function modelMarker(schema, at = new Date().toISOString()) {
+  const model_hash = crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0, 16);
+  return { model_hash, source: 'installer', built_at: at };
+}
 export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), DICT_ENTRY, DICT_LABEL];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
@@ -144,6 +149,8 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     await db.dstCommand(`CREATE INDEX ON ${T} (mig_src_rid) UNIQUE`);
   }
   await db.dstCommand('CREATE VERTEX TYPE MigLeftover');
+  await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
+  await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
   await db.dstCommand(`CREATE EDGE TYPE ${EDGE}`);
 
   const dstRid = {}; // rid источника → rid приёмника
