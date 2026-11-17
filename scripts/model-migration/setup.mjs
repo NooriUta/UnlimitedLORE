@@ -80,7 +80,7 @@ export function planSetup(c) {
     p.push({ id: 'minilore-machine', title: 'miniLORE — регистрация машины', links: [], env: [], howto: [
       'На каждую машину — клиент minilore-link-<код машины> (confidential, client_credentials, аудитория minilore-srv): сервер сверяет azp с кодом машины.',
       'Та же машина регистрируется в LORE (machine_new) с тем же кодом — правило 15 ADR-LORE-054.',
-      'Установщик выдаёт готовую секцию [auth] для %USERPROFILE%\\.minilore\\config.toml; установщик link её импортирует. Секрет попадает только в этот файл.',
+      'Установщик выдаёт файл minilore-link.toml с [server], [machine] и [auth] (код машины совпадает с machine_new); его принимает установщик link или трей при первом запуске и пишет в %USERPROFILE%\\.minilore\\config.toml. Секрет — только в этом файле.',
     ] });
   }
   if ((c.components || []).includes('volva')) p.push({ id: 'volva-embed', title: 'Völva — встроенные графики', links: [],
@@ -127,4 +127,15 @@ export function linkAuthToml({ issuer, machineId, secret }) {
   if (!machineId) throw new Error('не задан код машины');
   const q = v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
   return `[auth]\nissuer = ${q(issuer)}\nclient_id = ${q('minilore-link-' + machineId)}\nclient_secret = ${q(secret)}\n`;
+}
+
+/**
+ * Фрагмент config.toml для link целиком: [server], [machine], [auth]. Код машины в [machine] совпадает с machine_new
+ * в LORE и с client_id — иначе форма трея подставит имя компьютера (ответ miniLORE 17.11.2026). Файл фрагмента
+ * (minilore-link.toml) принимает установщик link или трей при первом запуске.
+ */
+export function linkConfigToml({ serverUrl, issuer, machineId, secret }) {
+  if (!serverUrl) throw new Error('не задан адрес сервера miniLORE');
+  const q = v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  return `[server]\nurl = ${q(serverUrl)}\n\n[machine]\nid = ${q(machineId)}\n\n` + linkAuthToml({ issuer, machineId, secret });
 }

@@ -89,3 +89,10 @@ test('miniLORE (её ответ 17.11): разовая настройка обл
   assert.match(t, /^\[auth\]\nissuer = "https:\/\/kc\/realms\/omilore"\nclient_id = "minilore-link-lorcetus"\nclient_secret = "S"\n$/);
   assert.throws(() => linkAuthToml({ issuer: 'x', machineId: '' }), /машин/);
 });
+
+test('фрагмент для link: [server], [machine] и [auth] — код машины совпадает с machine_new (ответ miniLORE 17.11)', async () => {
+  const { linkConfigToml } = await import('./setup.mjs');
+  const t = linkConfigToml({ serverUrl: 'https://minilore2.example', issuer: 'https://kc/realms/omilore', machineId: 'lorcetus', secret: 'S' });
+  assert.equal(t, '[server]\nurl = "https://minilore2.example"\n\n[machine]\nid = "lorcetus"\n\n[auth]\nissuer = "https://kc/realms/omilore"\nclient_id = "minilore-link-lorcetus"\nclient_secret = "S"\n');
+  assert.throws(() => linkConfigToml({ serverUrl: '', issuer: 'x', machineId: 'm', secret: 's' }), /адрес сервера/);
+});
