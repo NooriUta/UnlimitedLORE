@@ -55,3 +55,13 @@ test('date_display у вехи — подпись («18 апр», «прогно
   assert.equal(ruleFor('KnowMilestone', 'date_display').rule, 'keep');
   assert.equal(ruleFor('KnowMilestone', 'date_created').how, 'DATE');
 });
+
+test('harness агента — к кодам miniLORE (владелица 17.11: «как у minilore»): claude-code → claude, kimi-code → kimi', async () => {
+  const { applyMap } = await import('./apply-map.mjs');
+  assert.deepEqual([ruleFor('KnowActor', 'harness').rule, ruleFor('KnowActor', 'harness').how], ['transform', 'harness']);
+  const m = { harness: ruleFor('KnowActor', 'harness') };
+  assert.equal(applyMap('KnowActor', m, { harness: 'claude-code' }, {}).out.harness, 'claude');
+  assert.equal(applyMap('KnowActor', m, { harness: 'kimi-code' }, {}).out.harness, 'kimi');
+  assert.equal(applyMap('KnowActor', m, { harness: 'codex' }, {}).out.harness, 'codex');
+  assert.deepEqual(applyMap('KnowActor', m, { harness: 'vim' }, {}).rejects.map(r => r.why), ['harness вне справочника miniLORE']);
+});

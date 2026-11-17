@@ -35,6 +35,8 @@ export function ruleFor(T, f) {
   if (f === 'status_category') return { rule: 'drop', why: 'категория выводится из кода статуса и справочника', basis: 'owner' };
   if (SERVICE.has(f)) return { rule: 'keep', basis: 'owner', note: 'служебное' };
   if ((f === 'status_raw' || f === 'status') && STATUS_TYPES.has(T)) return { rule: 'transform', to: 'status', how: 'status', basis: 'owner', note: 'код справочника, приписка — в status_note' };
+  // harness агента — к кодам справочника miniLORE (её хозяйство, ADR-LORE-054 п.8; владелица 17.11: «как у minilore»).
+  if (T === 'KnowActor' && f === 'harness') return { rule: 'transform', to: 'harness', how: 'harness', basis: 'owner', note: 'коды miniLORE: claude, kimi, dsh, qwen; известные codex, opencode, cursor' };
   if (f === 'priority') return { rule: 'transform', to: 'priority', how: 'priority', basis: 'owner', note: 'одна шкала, приписка — в priority_note' };
   if (EDGE_FIELDS[f]) return { rule: 'open', question: EDGE_FIELDS[f] + ' — строится на шаге связей; до него значение удерживается' };
   if (/_refs$/.test(f)) return { rule: 'open', question: 'ссылки строкой становятся связями на шаге связей; ненайденное — текстом в заметке версии' };

@@ -755,9 +755,11 @@
     "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
    },
    "harness": {
-    "rule": "keep",
-    "basis": "delegated",
-    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+    "rule": "transform",
+    "to": "harness",
+    "how": "harness",
+    "basis": "owner",
+    "note": "коды miniLORE: claude, kimi, dsh, qwen; известные codex, opencode, cursor"
    },
    "kind": {
     "rule": "keep",

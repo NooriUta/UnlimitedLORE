@@ -130,7 +130,10 @@ const TRANSFORMS = {
 };
 const TYPE_ONLY = { DATE: asDate, DATETIME: asDateTime };
 // Общие преобразования карты всех объектов (17.11.2026): статус — к справочнику типа, приоритет — к одной шкале.
-const GENERIC = { status: (f, v, r, ctx) => asStatus(f, v, r, ctx, false), priority: (f, v, r) => asPriority(f, v, r, 'out') };
+// Коды harness — справочник miniLORE (link/src/sources.ts + известные из приложения), 17.11.2026.
+const HARNESS = { claude: 'claude', 'claude-code': 'claude', kimi: 'kimi', 'kimi-code': 'kimi', dsh: 'dsh', qwen: 'qwen', codex: 'codex', opencode: 'opencode', cursor: 'cursor' };
+const asHarness = (f, v, r) => { const c = HARNESS[String(v).trim().toLowerCase()]; if (c) r.out.harness = c; else reject(r, f, v, 'harness вне справочника miniLORE', { bucket: 'out', field: 'harness' }); };
+const GENERIC = { harness: asHarness, status: (f, v, r, ctx) => asStatus(f, v, r, ctx, false), priority: (f, v, r) => asPriority(f, v, r, 'out') };
 const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, 'toVersion') };
 const RENAMES = {
   'KnowSprint.name': (v, rec) => (v === rec.sprint_id ? null : v),

@@ -121,7 +121,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <pre class="mono" id="iout" style="white-space:pre-wrap;max-height:360px;overflow:auto"></pre><div id="ires" class="sub"></div></form></div>
 <h3>Подключение агента на этой машине</h3>
 <div class="tw" style="padding:8px"><form id="af" autocomplete="off"><table class="cfg">
-<tr><td>Harness</td><td><select name="harness"><option value="claude-code">Claude Code</option><option value="kimi-code">Kimi Code</option><option value="codex">Codex</option><option value="dsh">dsh</option><option value="opencode">OpenCode</option></select></td></tr>
+<tr><td>Harness</td><td><select name="harness"><option value="claude">Claude Code</option><option value="kimi">Kimi Code</option><option value="qwen">Qwen Code</option><option value="dsh">DeepSeek Harness</option><option value="codex">Codex</option><option value="opencode">OpenCode</option><option value="cursor">Cursor</option></select></td></tr>
 <tr><td>Код машины</td><td><input name="machineId" size="30"></td></tr>
 <tr><td>Адрес бэкенда LORE</td><td><input name="backendUrl" size="40"></td></tr>
 <tr><td>Издатель (Keycloak, область)</td><td><input name="issuer" size="40"></td></tr>
@@ -399,7 +399,7 @@ export async function serve({ port = 2499 } = {}) {
         return json(res, 200, { srcUrl: db.env.MIG_DB_URL, srcDb: db.env.MIG_SRC_DB, dstUrl: dstUrl(db.env), dstDb: db.env.MIG_DST_DB, dstTypes, dstError, src });
       }
       if (req.method === 'GET' && req.url === '/api/setup/defaults') {
-        return json(res, 200, { components: COMPONENTS, agent: { harness: 'claude-code', machineId: os.hostname().toLowerCase(), backendUrl: process.env.LORE_BACKEND_URL || '', issuer: kc.configured ? kc.url.replace(/\/+$/, '') + '/realms/' + kc.realm : '', serverPath: '' } });
+        return json(res, 200, { components: COMPONENTS, agent: { harness: 'claude', machineId: os.hostname().toLowerCase(), backendUrl: process.env.LORE_BACKEND_URL || '', issuer: kc.configured ? kc.url.replace(/\/+$/, '') + '/realms/' + kc.realm : '', serverPath: '' } });
       }
       if (req.method === 'POST' && ['/api/setup/env', '/api/setup/install-plan', '/api/setup/volva-keys', '/api/setup/link-toml'].includes(req.url)) {
         // запись файлов и запуск — только со своей страницы
@@ -449,7 +449,7 @@ export async function serve({ port = 2499 } = {}) {
         if (req.url.endsWith('/apply') && req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'запись только со страницы установщика' });
         const b = await readBody(req);
         let entry; try { entry = mcpEntry(b); } catch (e) { return json(res, 400, { error: e.message }); }
-        const claude = b.harness === 'claude-code';
+        const claude = b.harness === 'claude' || b.harness === 'claude-code';
         const file = path.join(os.homedir(), '.claude.json');
         if (req.url.endsWith('/preview')) return json(res, 200, { entry, canApply: claude, note: claude ? 'запишется в ' + file + ' (сервер aida-lore; секрет клиента сохраняется прежний)' : 'для этого harness вставьте строку в его настройки MCP сами' });
         if (!claude || b.confirm !== true) return json(res, 400, { error: 'записать можно только в настройки Claude Code и только с подтверждением' });

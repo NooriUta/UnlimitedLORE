@@ -101,7 +101,9 @@ export function planSetup(c) {
 /** Клиент Keycloak для MCP по harness: Claude Code — lore-mcp-full, остальные — lore-mcp-full_<код без «-code»>. */
 export function clientIdFor(harness) {
   if (!harness) throw new Error('не выбран harness');
-  return harness === 'claude-code' ? 'lore-mcp-full' : 'lore-mcp-full_' + harness.replace(/-code$/, '');
+  // коды harness — справочник miniLORE (17.11.2026 «как у minilore»): claude, kimi, dsh, qwen…; старые *-code понимаются
+  const h = harness.replace(/-code$/, '');
+  return h === 'claude' ? 'lore-mcp-full' : 'lore-mcp-full_' + h;
 }
 
 /** Строка сервера MCP aida-lore. Секрет клиента в строку не кладётся: он остаётся в настройках или хранилище. */

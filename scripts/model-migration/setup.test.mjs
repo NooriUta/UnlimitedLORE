@@ -47,7 +47,9 @@ test('miniLORE и Völva добавляют свои шаги; у Völva — н�
 });
 
 test('клиент Keycloak по harness: Claude Code — lore-mcp-full, остальные — lore-mcp-full_<harness без -code>', () => {
+  assert.equal(clientIdFor('claude'), 'lore-mcp-full', 'код miniLORE');
   assert.equal(clientIdFor('claude-code'), 'lore-mcp-full');
+  assert.equal(clientIdFor('kimi'), 'lore-mcp-full_kimi');
   assert.equal(clientIdFor('kimi-code'), 'lore-mcp-full_kimi');
   assert.equal(clientIdFor('dsh'), 'lore-mcp-full_dsh');
 });
