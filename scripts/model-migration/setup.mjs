@@ -64,11 +64,25 @@ export function planSetup(c) {
   } else {
     p.push({ id: 'migrate', title: 'Перенос на новую модель', links: [], env: [], howto: ['Шаги 0–5: вход, подключение, статусы, пробный расчёт, перенос, сверка.'] });
   }
-  if ((c.components || []).includes('minilore')) p.push({ id: 'minilore', title: 'miniLORE', links: [], env: ['LORE_MINILORE_URL'], howto: [
-    'miniLORE ставится своей поставкой; адрес сервера miniLORE впишите сюда.',
-    'На каждую машину с агентами ставится link miniLORE — его установщик miniLORE.',
-    'Установщик LORE проверяет дверь «сессия у записи» одним запросом.',
-  ] });
+  // miniLORE — по ответу её сессии 17.11.2026 (сервер b056e68, link C:/Mobilepoc-kit): сервер и link ставит её поставка,
+  // наш установщик делает то, чего нет нигде, — настройку области и регистрацию машины (правило 15 ADR-LORE-054).
+  if ((c.components || []).includes('minilore')) {
+    p.push({ id: 'minilore', title: 'miniLORE — сервер', links: [], env: ['LORE_MINILORE_URL'], howto: [
+      'Сервер miniLORE ставится её поставкой (образ minilore_serverside, compose, .env с MINILORE_ARCADE_URL и секретом учётки хранилища); адрес сервера впишите сюда.',
+      'Секреты сервера (MINILORE_ARCADE_USER/_PASSWORD, MINILORE_LORE_CLIENT_ID/_SECRET, MINILORE_BLOBS_*) лежат в хранилище; установщик кладёт их туда, значения не показывает.',
+      'Проверка связи: GET /version у miniLORE отвечает kind minilore-srv; GET /links/record/<СПРИНТ/КОД>?view=holder с токеном читателя — 200.',
+    ] });
+    p.push({ id: 'minilore-realm', title: 'miniLORE — настройка области (один раз)', links: [], env: [], howto: [
+      'Аудитория minilore-srv: сервер проверяет её у всех токенов — маппер audience на mobilepoc-app и на каждом клиенте minilore-link-*.',
+      'Клиент телефона mobilepoc-app (public, PKCE, адрес возврата pro.seidrstudio.minilore://auth/callback) с маппером seer_roles — иначе смена статуса в LORE с телефона даёт 403.',
+      'Клиенты связи: lore-backend-minilore-reader (LORE читает miniLORE, аудитория minilore-srv) и lore-reader-minilore (miniLORE читает LORE).',
+    ] });
+    p.push({ id: 'minilore-machine', title: 'miniLORE — регистрация машины', links: [], env: [], howto: [
+      'На каждую машину — клиент minilore-link-<код машины> (confidential, client_credentials, аудитория minilore-srv): сервер сверяет azp с кодом машины.',
+      'Та же машина регистрируется в LORE (machine_new) с тем же кодом — правило 15 ADR-LORE-054.',
+      'Установщик выдаёт готовую секцию [auth] для %USERPROFILE%\\.minilore\\config.toml; установщик link её импортирует. Секрет попадает только в этот файл.',
+    ] });
+  }
   if ((c.components || []).includes('volva')) p.push({ id: 'volva-embed', title: 'Völva — встроенные графики', links: [],
     env: ['LORE_VOLVA_EMBED_SITE_URL', 'LORE_VOLVA_EMBED_ISSUER', 'LORE_VOLVA_EMBED_ES256_PRIVATE_KEY', 'LORE_VOLVA_EMBED_ES256_PUBLIC_KEY'], howto: [
       'Völva ставится своей поставкой; её адрес впишите сюда (LORE_VOLVA_EMBED_SITE_URL).',
@@ -106,4 +120,11 @@ export function applyMcpEntry(text, entry, name = 'aida-lore') {
   j.mcpServers = { ...(j.mcpServers || {}), [name]: { ...prev, ...entry, env: { ...(prev.env || {}), ...entry.env } } };
   const indent = (text.match(/\n( +)"/) || [, '  '])[1].length;
   return JSON.stringify(j, null, indent) + (text.endsWith('\n') ? '\n' : '');
+}
+
+/** Секция [auth] config.toml link miniLORE для машины (её формат: link/src/token.ts, app/MiniLoreConfig.cs). */
+export function linkAuthToml({ issuer, machineId, secret }) {
+  if (!machineId) throw new Error('не задан код машины');
+  const q = v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  return `[auth]\nissuer = ${q(issuer)}\nclient_id = ${q('minilore-link-' + machineId)}\nclient_secret = ${q(secret)}\n`;
 }

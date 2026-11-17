@@ -75,3 +75,17 @@ test('запись в настройки Claude: только сервер aida-
   assert.deepEqual(a.args, ['new.js']);
   assert.throws(() => applyMcpEntry('{не json', e), /не JSON/);
 });
+
+test('miniLORE (её ответ 17.11): разовая настройка области и регистрация машины — клиент link, machine_new, секция [auth]', async () => {
+  const { linkAuthToml } = await import('./setup.mjs');
+  const p = planSetup({ components: ['lore', 'minilore'], kc: 'own', secrets: 'own', mode: 'new' });
+  const realm = p.find(s => s.id === 'minilore-realm'), reg = p.find(s => s.id === 'minilore-machine');
+  assert.ok(realm && reg, 'два шага miniLORE');
+  const txt = realm.howto.join(' ');
+  for (const k of ['minilore-srv', 'mobilepoc-app', 'lore-backend-minilore-reader', 'lore-reader-minilore', 'seer_roles']) assert.ok(txt.includes(k), 'область: ' + k);
+  const r = reg.howto.join(' ');
+  for (const k of ['minilore-link-', 'machine_new', 'config.toml']) assert.ok(r.includes(k), 'регистрация: ' + k);
+  const t = linkAuthToml({ issuer: 'https://kc/realms/omilore', machineId: 'lorcetus', secret: 'S' });
+  assert.match(t, /^\[auth\]\nissuer = "https:\/\/kc\/realms\/omilore"\nclient_id = "minilore-link-lorcetus"\nclient_secret = "S"\n$/);
+  assert.throws(() => linkAuthToml({ issuer: 'x', machineId: '' }), /машин/);
+});
