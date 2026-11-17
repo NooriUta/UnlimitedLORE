@@ -379,6 +379,19 @@ selftest() {
   grep -qE '^\s*- (lore\.bootstrap|LORE_BOOTSTRAP)' "$SCRIPT_DIR/docker-compose.install.yml" && fail "профиль снова зависит от LORE_BOOTSTRAP"; ok
   grep -qE '^[A-Z_]*PASSWORD=(CHANGE_ME)?$' "$SCRIPT_DIR/.env.example" || fail ".env.example: пароли — только заглушки"; ok
   grep -E 'PASSWORD=' "$SCRIPT_DIR/.env.example" | grep -vqE 'PASSWORD=(CHANGE_ME)?$' && fail ".env.example содержит пароль"; ok
+  # 7. вход через Keycloak — по выбору (MIG-04, владелица 17.11.2026: «на новой установке ты заводишь kc»).
+  #    По умолчанию входа нет, как раньше; включается LORE_AUTH_ENABLED=true в .env вместе с адресом области.
+  #    Флаг читается и на сборке (build-arg, OIDC впекается в образ), и в рантайме (фильтр ролей) — см. docker-compose.yml.
+  local c="$SCRIPT_DIR/docker-compose.install.yml"
+  grep -qE '^\s*- LORE_AUTH_ENABLED=false\s*$' "$c" && fail "вход прибит гвоздём: LORE_AUTH_ENABLED=false в профиле"; ok
+  grep -q 'LORE_AUTH_ENABLED=${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет LORE_AUTH_ENABLED с умолчанием false в окружении"; ok
+  grep -q 'LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет build-arg LORE_AUTH_ENABLED"; ok
+  grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
+  grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
+  grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
+  for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
+    grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
+  done
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }

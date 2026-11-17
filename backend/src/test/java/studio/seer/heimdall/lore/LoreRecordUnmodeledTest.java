@@ -48,7 +48,7 @@ class LoreRecordUnmodeledTest {
         // у каждой записи. По решению служебные поля в блок не попадают.
         Map<String, Object> props = vertex("sprint_id", "SPRINT_X", "branch_ref", "feature/x");
         for (String s : LoreRecordUnmodeled.SERVICE) props.put(s, "2026-11-16T00:00:00Z");
-        assertEquals(14, LoreRecordUnmodeled.SERVICE.size(), "перечень служебных полей — четырнадцать");
+        assertEquals(18, LoreRecordUnmodeled.SERVICE.size(), "перечень служебных полей: четырнадцать утверждённых 15.11 + сессия, harness с пометкой сверки и машина правки (16.11)");
         assertEquals(List.of("branch_ref"), List.copyOf(LoreRecordUnmodeled.of("sprint", props).keySet()));
     }
 
