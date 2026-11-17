@@ -47,6 +47,7 @@ import { RecordRef, renderOut, valueText } from './fmt';
 import { RecordFacts } from './RecordFacts';
 import type { RecordFactsSpec } from './facts';
 import { RecordHistory, historyCount, type RecordHistorySource } from './RecordHistory';
+import { FieldHint, hasFieldHint } from './FieldHint';
 import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, relationName, relationTargets } from './RecordRelations';
 import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
@@ -226,7 +227,7 @@ function listItemText(v: unknown): string {
   return valueText(v).trim();
 }
 
-export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string }): ReactNode {
+export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, keyLabels }: { type: string; value: unknown; ctx: KitCtx; edit?: EditSlot; fieldKey?: string; title?: string; /** K4-MENTION-LOOK: вид записей поля-ссылки. */ refKind?: string; /** Подписи ключей поля kv. */ keyLabels?: Record<string, string> }): ReactNode {
   const lang = useKitLang();
   if (type === 'md' && edit && fieldKey) {
     const text = value === null || value === undefined ? '' : valueText(value);
@@ -238,7 +239,7 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind }:
   if (value === null || value === undefined || value === '') return <span className="sk-rec-fields__none">—</span>;
   if (type === 'md') return ctx.md(valueText(value));
   // K4-FIELD-KV: вложенный объект — таблицей «ключ → значение», а не сырым JSON.
-  if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} />;
+  if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} labels={keyLabels} />;
   // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
   // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
   if (type === 'list') {
@@ -272,9 +273,9 @@ function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecor
   if (fields.length === 0) return null;
   const row = (f: (typeof fields)[number]) => (
     <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>
-      <dt>{f.title}</dt>
+      <dt>{hasFieldHint(f.hint) ? <FieldHint fieldKey={f.key} label={f.title} hint={f.hint} /> : f.title}</dt>
       <dd>{(() => {
-        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} refKind={f.refKind} />;
+        const view = <FieldValue type={f.type} value={record.fields[f.key]} ctx={ctx} edit={edit} fieldKey={f.key} title={f.title} refKind={f.refKind} keyLabels={f.keyLabels} />;
         // S4-24: поле-связь (компоненты, проекты) — чипы с «Отвязать» и выбор с поиском.
         if (f.type === 'ref' && f.relation) return <RelationField record={record} ctx={ctx} lang={lang} label={f.title} value={record.fields[f.key]} rel={f.relation.rel} dir={f.relation.dir} refKind={f.refKind} view={view} />;
         // S4-24: ✎ — только у поля, которое приложение назвало правимым, при праве и пути записи;
@@ -434,7 +435,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   const kindTabs = kind?.tabs ?? [];
   // Связи по видам UML: композиция и агрегация — своя вкладка; зависимости (и ассоциация) —
   // одна вкладка; реализация — одна; обобщение — строкой в шапке.
-  const rels: KitRelationDef[] = kind?.relations ?? [];
+  // Связь модели, чей ключ совпадает со служебной вкладкой, которую kit рисует сам (история при
+  // источнике, связи, граф, журнал), своей вкладкой не становится: при склейке по ключу побеждала первая —
+  // вкладка связи — и паспорт показывал «◆История 0» при «правок: 1» в панели (препрод 16.11, веха и
+  // ранбук). Место такой вкладки по-прежнему задаёт модель — по тому же ключу.
+  const ownService = (key: string) => key === RECORD_TABS.links || key === RECORD_TABS.graph || key === RECORD_TABS.journal || (key === RECORD_TABS.history && !!history);
+  const rels: KitRelationDef[] = (kind?.relations ?? []).filter(d => !ownService(d.key));
   // Решил ли порядок разделов сервер. `false` — всё как прежде: группировка
   // связей, порядок по данным, и это ПОМЕЧЕНО как умолчание, а не выдано за
   // решение модели (D-2026-LORE-MODEL-COLUMN-LAYERS, честные состояния).

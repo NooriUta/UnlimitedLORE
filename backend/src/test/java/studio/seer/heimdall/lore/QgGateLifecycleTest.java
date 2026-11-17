@@ -44,4 +44,16 @@ class QgGateLifecycleTest {
         assertEquals("draft", QgGateLifecycle.initialStatus(null));
         assertEquals("active", QgGateLifecycle.initialStatus("active"));
     }
+
+    /** SPRINT_QG_REBUILD/QG-04: тип гейта — только код словаря qg_type; не прислан — поле не трогаем. */
+    @Test
+    void typeMustBeActiveDictionaryCode() {
+        java.util.List<String> codes = java.util.List.of("code", "cicd", "sec", "know", "doc", "test", "perf", "data", "ops", "ux");
+        assertNull(QgGateLifecycle.checkType(null, codes));
+        assertNull(QgGateLifecycle.checkType("perf", codes));
+        String bad = QgGateLifecycle.checkType("PERF", codes);
+        assertNotNull(bad, "регистр не угадываем: код строчный");
+        assertTrue(bad.contains("qg_type") && bad.contains("perf"), bad);
+        assertNotNull(QgGateLifecycle.checkType("lineage", codes));
+    }
 }

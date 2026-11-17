@@ -33,7 +33,49 @@ import java.util.Map;
  * <p>Старые версии без поля остаются без автора; читатели отдают их как «неизвестно»
  * и ничего не выдумывают.
  */
-record ChangeAuthor(String by, String kind) {
+record ChangeAuthor(String by, String kind, String session, String harness, String harnessNote, String machine) {
+
+    /** Автор без сессии (человек, неизвестный, семя модели). */
+    ChangeAuthor(String by, String kind) {
+        this(by, kind, null, null, null, null);
+    }
+
+    /** Заголовок MCP с кодом сессии Claude Code (AO-SESSION-LOG). */
+    static final String SESSION_HEADER = "X-Lore-Session-Id";
+
+    /** Код сессии: то, что MCP шлёт после чистки ([A-Za-z0-9_.-], до 64). Иное — не пишем, не угадываем. */
+    private static final java.util.regex.Pattern SESSION_CANON = java.util.regex.Pattern.compile("[A-Za-z0-9_.-]{1,64}");
+
+    /**
+     * AO-SESSION-LOG: код сессии — только у агента (его шлёт MCP). У человека и неизвестного —
+     * пусто: правка из веба сессии Claude Code не несёт (отрицательный контроль владелицы).
+     */
+    ChangeAuthor withSession(String rawHeader) {
+        if (!KIND_AGENT.equals(kind) || rawHeader == null) return new ChangeAuthor(by, kind, null, harness, harnessNote, machine);
+        String v = rawHeader.trim();
+        return new ChangeAuthor(by, kind, SESSION_CANON.matcher(v).matches() ? v : null, harness, harnessNote, machine);
+    }
+
+    /**
+     * AO-SESSION-LOG: harness агента — присланный X-Lore-Harness, сверенный со справочником и с
+     * harness клиента KC ({@link HarnessCheck}). У человека и неизвестного — пусто.
+     */
+    ChangeAuthor withHarness(String rawHeader, HarnessCheck.Snapshot snap) {
+        if (!KIND_AGENT.equals(kind)) return new ChangeAuthor(by, kind, session, null, null, machine);
+        HarnessCheck.Result r = HarnessCheck.judge(rawHeader, by, snap);
+        return new ChangeAuthor(by, kind, session, r.code(), r.note(), machine);
+    }
+
+    /**
+     * AO-SESSION-LOG (владелица: «и машину что уж тоже»): машина агента — X-Lore-Machine (MCP шлёт
+     * его давно, LORE_MACHINE_ID → COMPUTERNAME → …), канон {@link AgentMachine#canon}. Негодное
+     * значение — null, не угадываем. У человека и неизвестного — пусто.
+     */
+    ChangeAuthor withMachine(String rawHeader) {
+        String m = KIND_AGENT.equals(kind) ? AgentMachine.canon(rawHeader) : null;
+        if (m != null && !SESSION_CANON.matcher(m).matches()) m = null;
+        return new ChangeAuthor(by, kind, session, harness, harnessNote, m);
+    }
 
     static final String KIND_AGENT   = "agent";
     static final String KIND_HUMAN   = "human";
@@ -46,12 +88,19 @@ record ChangeAuthor(String by, String kind) {
      * Хвост {@code SET}-списка вставки версии: {@code INSERT INTO KnowXHist SET …}{@value}.
      * Параметры кладёт {@link #bind(Map)}.
      */
-    static final String SET_SQL = ", changed_by = :changed_by, changed_by_kind = :changed_by_kind";
+    static final String SET_SQL = ", changed_by = :changed_by, changed_by_kind = :changed_by_kind"
+        + ", changed_by_session = :changed_by_session"
+        + ", changed_by_harness = :changed_by_harness, changed_by_harness_note = :changed_by_harness_note"
+        + ", changed_by_machine = :changed_by_machine";
 
     /** Положить параметры {@link #SET_SQL} в карту (изменяемую; null-значение допустимо). */
     Map<String, Object> bind(Map<String, Object> params) {
         params.put("changed_by", by);
         params.put("changed_by_kind", kind);
+        params.put("changed_by_session", session);
+        params.put("changed_by_harness", harness);
+        params.put("changed_by_harness_note", harnessNote);
+        params.put("changed_by_machine", machine);
         return params;
     }
 

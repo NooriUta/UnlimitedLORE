@@ -32,6 +32,9 @@ export interface LoreField {
   dict?: string;
   /** Варианты enum из среза сервера (S4-24, #1241): автор / исполнитель / принимающий — task_identities. */
   options?: OptionsSpec;
+  /** MDL-07: определение и описание поля из модели (сервер шлёт с MDL-02) — подсказкой у подписи в kit. */
+  definition?: string;
+  description?: string;
 }
 /** Откуда брать варианты: срез, его параметр (id записи) и имена полей строки. */
 export interface OptionsSpec { slice: string; param?: string; value: string; label: string; group?: string }
@@ -117,6 +120,8 @@ export interface LoreRecord1 {
    * итогов не показываем, а не выдумываем.
    */
   computed?: Record<string, unknown>;
+  /** MDL-10: значения записи вне модели (ключ → значение), только чтение; нет — ключа нет. */
+  unmodeled?: Record<string, unknown>;
   /**
    * Итоги, посчитанные СЕРВЕРОМ по корпусу (не по присланной выборке).
    *

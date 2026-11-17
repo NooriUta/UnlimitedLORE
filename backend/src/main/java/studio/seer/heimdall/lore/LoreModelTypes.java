@@ -67,7 +67,7 @@ final class LoreModelTypes {
     /** Internal: для MCP и админки, на поверхности не выводится. */
     static boolean isInternal(String prop, String key) {
         if (prop.equals(key)) return false;
-        return prop.endsWith("_uid") || Set.of("bookkeeping", "kc_sub", "pr_id", "changed_by", "changed_by_kind",
+        return prop.endsWith("_uid") || Set.of("bookkeeping", "kc_sub", "pr_id", "changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine",
             "status_backfilled", "status_known_from", "status_category", "valid_from", "source_commit",
             "row_version").contains(prop);
     }
@@ -151,6 +151,8 @@ final class LoreModelTypes {
             type.put("type", t);
             type.put("label", contract.get("label"));
             type.put("label_key", contract.get("label_key"));
+            type.put("label_en", contract.get("label_en"));
+            type.put("label_pl", contract.get("label_pl"));
             type.put("icon", contract.get("icon"));
             type.put("color", TYPE_COLOR.get(t));
             type.put("key", g.key());

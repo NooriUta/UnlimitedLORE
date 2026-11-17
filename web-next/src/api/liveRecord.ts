@@ -279,6 +279,9 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // S4-24 (#1241): варианты из среза сервера — {slice, param, value, label, group?}.
       ...(optionsSpecOf(f.options) ? { options: optionsSpecOf(f.options)! } : {}),
       ...(section ? { section } : {}),
+      // MDL-07: тексты модели о поле — kit покажет подсказкой у подписи («аналог peek»).
+      ...(str(f.definition) ? { definition: str(f.definition) } : {}),
+      ...(str(f.description) ? { description: str(f.description) } : {}),
     };
   });
 
@@ -367,6 +370,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     // среза sprint_totals. Блока нет — пустой объект: «сервер не прислал»
     // скажет разбор, а не молчаливое отсутствие полей.
     computed: obj(b.computed),
+    // MDL-10 (D-2026-LORE-FREE-FIELDS-SHOWN): значения записи вне модели — как прислал сервер; kit рисует их
+    // блоком «Не описано в модели». Пусто или не объект — ключа нет.
+    ...(b.unmodeled && typeof b.unmodeled === 'object' && !Array.isArray(b.unmodeled) && Object.keys(b.unmodeled as object).length
+      ? { unmodeled: b.unmodeled as Record<string, unknown> } : {}),
     facts: factsOut,
     perms: {
       can_edit: perms.can_edit === true, can_status: perms.can_status === true, can_create: perms.can_create === true,

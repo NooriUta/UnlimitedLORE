@@ -13,7 +13,11 @@
 // Поэтому чтение здесь — из того же места, куда настройка применена. Один
 // источник: что применено, то и прочитано. Состояние настроек НЕ дублируется в
 // каждый экран пропсами — иначе появилась бы третья правда.
-export type RightColumn = 'auto' | 'open' | 'closed';
+//
+// Чтение — в kit (K5-LAYOUT-PREFS, 16.11: то же правило у пилота): здесь только обёртки с прежними
+// именами, чтобы экраны LORE не менялись.
+export type { RightColumn } from '@seidr/kit';
+import type { RightColumn } from '@seidr/kit';
 
 /** Где искать атрибуты; null — документа нет (сервер, тесты). */
 type Host = { getAttribute(name: string): string | null } | null;
@@ -30,8 +34,7 @@ function host(given?: Host): Host {
  * нельзя — человек не выбирал закрыть.
  */
 export function appliedRightColumn(given?: Host): RightColumn {
-  const v = host(given)?.getAttribute('data-right-column');
-  return v === 'open' || v === 'closed' ? v : 'auto';
+  return readLayoutPrefs(host(given)).rightColumn;
 }
 
 /**
@@ -39,29 +42,28 @@ export function appliedRightColumn(given?: Host): RightColumn {
  * Не выбирал (auto, атрибута нет, мусор) — undefined: решает экран.
  */
 export function appliedPassportPlace(given?: Host): RecordPlacement | undefined {
-  const v = host(given)?.getAttribute('data-passport-place');
   // Набор мест — данными kit (S4-17): новое место приходит само, без правки здесь.
-  return isRecordPlacement(v) ? v : undefined;
+  return readLayoutPrefs(host(given)).passportPlace;
 }
 
 /** Сворачивать ли меню оболочки, пока открыта запись (D-2026-UXR-READ-COLLAPSE). */
 export function appliedCollapseNavOnRead(given?: Host): boolean {
-  return host(given)?.getAttribute('data-read-nav') === 'collapse';
+  return readLayoutPrefs(host(given)).collapseNavOnRead;
 }
 
 /** Карточки Peek по наведению (S9-10). Нет атрибута — включено: человек не выключал. */
 export function appliedPeekHover(given?: Host): boolean {
-  return host(given)?.getAttribute('data-peek-hover') !== 'off';
+  return readLayoutPrefs(host(given)).peekHover;
 }
 
 /** S4-18: спрашивать «A → B?» до записи смены статуса. Атрибута нет — не спрашивать. */
 export function appliedStatusConfirm(given?: Host): boolean {
-  return host(given)?.getAttribute('data-status-confirm') === 'on';
+  return readLayoutPrefs(host(given)).statusConfirm;
 }
 
 /** Показывать ли технические сведения (S4-TECH-NOTES). Атрибута нет — нет. */
 export function appliedShowTech(given?: Host): boolean {
-  return host(given)?.getAttribute('data-show-tech') === 'on';
+  return readLayoutPrefs(host(given)).showTech;
 }
 
 /**
@@ -70,7 +72,6 @@ export function appliedShowTech(given?: Host): boolean {
  * (владелица: «оставьте только последние 3») — их сохранённые значения тоже undefined.
  */
 export function appliedGraphView(given?: Host): 'force' | 'obsidian' | 'structure' | undefined {
-  const v = host(given)?.getAttribute('data-graph-view');
-  return v === 'force' || v === 'obsidian' || v === 'structure' ? v : undefined;
-}import { isRecordPlacement, type RecordPlacement } from '@seidr/kit';
+  return readLayoutPrefs(host(given)).graphView;
+}import { readLayoutPrefs, type RecordPlacement } from '@seidr/kit';
 

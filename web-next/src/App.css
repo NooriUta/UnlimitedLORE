@@ -236,3 +236,11 @@
 .v2-status__item[data-tone="wrn"] { color: var(--wrn); }
 .v2-status__item[data-tone="dng"] { color: var(--dng); }
 .v2-status__end { margin-left: auto; }
+
+/* K4-CHARTS: раздел «Аналитика» — вкладки, блоки-графики сеткой, метка вкладки над блоком в «Моей сводке». */
+.an { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.an-lead { margin: 0; color: var(--t2); font-size: var(--fs-xs); }
+.an-partial { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
+.an-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, max(420px, calc(50% - 6px))), 1fr)); gap: 12px; }
+.an-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.an-block__src { align-self: flex-start; font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--t3); border: 1px solid var(--bd); border-radius: 999px; padding: 1px 8px; }

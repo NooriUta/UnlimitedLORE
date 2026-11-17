@@ -34,6 +34,12 @@ export interface KitDocField {
   section?: string;
   /** Путь записи поля. Нет (или null) — поле только для чтения, даже если `editable`. */
   write?: unknown;
+  /** Поле kv: подписи ключей значения (как props у связи). Нет — ключи как есть. */
+  keys?: { key: string; label: string }[];
+  /** MDL-07: что это за поле — одной фразой (модель). Подсказкой у подписи. */
+  definition?: string;
+  /** MDL-07: подробнее — как ставится, когда меняется. Подсказкой у подписи. */
+  description?: string;
 }
 
 /** Вкладка схемы. `rel`/`dir` — ребро, которое она показывает. */
@@ -58,6 +64,11 @@ export interface KitDocRelation {
   place?: KitDocPlace | { out?: KitDocPlace; in?: KitDocPlace };
   /** Вид записей на другом конце; `any` — любой. */
   target_type?: string;
+  /**
+   * Свойства ребра с подписями (место на тропе, сторона): во вкладке связей — колонками, значения —
+   * из `values` каждой ссылки. Нет — общие колонки, как раньше.
+   */
+  props?: { key: string; label: string }[];
 }
 
 export interface KitDocLink {
@@ -101,6 +112,11 @@ export interface KitRecordDoc {
   links: KitDocLink[];
   parts?: KitDocPart[];
   computed?: Record<string, unknown>;
+  /**
+   * Значения записи ВНЕ модели (D-2026-LORE-FREE-FIELDS-SHOWN, владелица 16.11): не теряются и не
+   * прячутся — блок «ключ → значение» в конце свойств с пометкой «не описано в модели», только чтение.
+   */
+  unmodeled?: Record<string, unknown>;
   perms: { can_edit: boolean; can_status: boolean; can_create: boolean; status_next: string[]; reason: string | null };
   meta: { loaded_at: string; facade: string; sources: KitDocSource[] };
 }
@@ -134,6 +150,8 @@ export interface PassportFromDoc {
 
 /** Общие колонки таблицы связей (как у NestedList): Статус · Вид · Код · Запись. */
 export const DOC_NESTED_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
+/** Ключ блока «не описано в модели» в полях записи. */
+export const UNMODELED_KEY = '_unmodeled';
 
 /**
  * `body_md` — самостоятельный раздел тела, а не копия другого: схема называет его полем группы
@@ -175,7 +193,7 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const partRecords: KitRecord[] = parts.flatMap(p => p.items.map(i => partRecord(p, i)));
   const edges: KitEdge[] = [
     ...c.links.map(l => ({ ...(l.dir === 'out' ? { from: id, to: l.id, type: l.rel } : { from: l.id, to: id, type: l.rel }),
-      ...kinds(l.fromKind, l.toKind) })),
+      ...kinds(l.fromKind, l.toKind), ...(l.values ? { values: l.values } : {}) })),
     ...partEdges,
   ];
   const linkRecords: KitRecord[] = c.links.filter((l, i, a) => a.findIndex(x => x.id === l.id) === i)
@@ -196,6 +214,9 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const props = c.schema.fields.filter(f => f.group === 'props');
   const extra = opts.extraFields?.(c) ?? [];
   for (const x of extra) record.fields[x.field.key] = x.value;
+  // Вне модели — последним полем свойств, только чтение (ключ служебный, с полями модели не совпадёт).
+  const unmodeled = c.unmodeled && Object.keys(c.unmodeled).length ? c.unmodeled : null;
+  if (unmodeled) record.fields[UNMODELED_KEY] = unmodeled;
   // Связь-свойство без поля в схеме — поле-ссылка: иначе значение не показалось бы вовсе,
   // а в блоке связей стояло бы «Проекты 0».
   const propRels = c.schema.relations.filter(r => docPlaceOf(r) === 'prop' && !props.some(f => f.key === r.key));
@@ -256,12 +277,18 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
     return { columns: [...DOC_NESTED_COLUMNS, ...spec.columns] };
   };
   const relDefs: KitRelationDef[] = kitRels.map(r => {
-    const { count: _n, place: _p, target_type: t, ...d } = r;
+    const { count: _n, place: _p, target_type: t, props: rp, ...d } = r;
     // §7.8 шаг 1: явное место стороны побеждает OWN_TAB — только при объектной форме {out, in};
     // строка и «не задано» — как раньше (LORE не меняется).
     const sideShared = typeof r.place === 'object' && r.place !== null && docPlaceOf(r) === 'link_tab'
       && (r.relation === 'composition' || r.relation === 'aggregation');
-    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...childColumnsOf(r), ...(sideShared ? { shared: true } : {}) };
+    // Свойства ребра — колонками после колонок вида ребёнка (или общих), подписи — из props.
+    const child = childColumnsOf(r);
+    const propCols = rp?.length ? {
+      columns: [...(child.columns ?? DOC_NESTED_COLUMNS), ...rp.map(x => `fields.${x.key}`)],
+      fieldLabels: Object.fromEntries(rp.map(x => [`fields.${x.key}`, x.label])),
+    } : child;
+    return { ...d, ...(t && t !== 'any' ? { targetKind: t } : {}), ...propCols, ...(sideShared ? { shared: true } : {}) };
   });
   const kind: KindConfig = {
     title: c.schema.label, icon: c.schema.icon,
@@ -275,9 +302,12 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
         ...(f.editable && f.write ? { editable: true } : {}),
         ...(f.required ? { required: 'block' as const } : {}),
         ...(f.kind === 'ref' ? { ...edgeOf(f.key), ...refKindOf(f.key) } : {}),
+        ...(f.kind === 'kv' && f.keys?.length ? { keyLabels: Object.fromEntries(f.keys.map(k => [k.key, k.label])) } : {}),
+        ...(f.definition || f.description ? { hint: { ...(f.definition ? { definition: f.definition } : {}), ...(f.description ? { description: f.description } : {}) } } : {}),
       })),
       ...propFields,
       ...extra.map(x => x.field),
+      ...(unmodeled ? [{ key: UNMODELED_KEY, title: kitT(lang, 'kit.record.unmodeled'), type: 'kv' as const }] : []),
     ],
     ...(tabs.length ? { tabs } : {}),
   };

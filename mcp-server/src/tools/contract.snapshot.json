@@ -1610,6 +1610,7 @@
       "name": "string",
       "project": "string?",
       "qg_id": "string",
+      "qg_type": "string?",
       "retired_reason": "string?",
       "sprint_id": "string?",
       "status": "string?"
@@ -2375,6 +2376,7 @@
       "phase_uid": "string?",
       "reviewer_agent": "string?",
       "sprint_id": "string",
+      "status": "enum(active|backlog|design|planned|todo)?",
       "task_id": "string",
       "task_type": "string?",
       "title": "string",

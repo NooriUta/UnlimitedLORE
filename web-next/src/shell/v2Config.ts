@@ -36,7 +36,7 @@ export const V2_SECTIONS = [
   'user', 'agent',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
   'product', 'actor', 'pain', 'gain', 'job',
-  'news', 'settings',
+  'news', 'analytics', 'settings',
 ] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
 
@@ -158,7 +158,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // kit рисуются выше групп, и до новостей приходилось проскроллить
         // личное. `pinTop` поднимает ИМЕННО эту группу — что важнее, решает
         // приложение, kit предметных имён не знает.
-        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', pinTop: true, items: [item('news', ICON_CANON.sectionNews)] },
+        { id: 'feed', title: t('shell.grp.feed'), tone: 'var(--inf)', pinTop: true, items: [item('news', ICON_CANON.sectionNews), item('analytics', 'lucide:chart-column')] },
         // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
         {
           id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',

@@ -29,8 +29,20 @@ final class QgGateLifecycle {
         return null;
     }
 
+    /**
+     * Тип гейта — код словаря {@code qg_type} (SPRINT_QG_REBUILD/QG-04, ADR-LORE-053-D3; слово владелицы
+     * 16.11.2026 «добавь поле тип … пока без цвета и иконки»). Слой «универсальный / проектный» — вид статьи
+     * словаря (kind), у гейта не дублируется. Ошибка словами или null; type == null — поле не трогаем.
+     */
+    static String checkType(String type, java.util.Collection<String> activeCodes) {
+        if (type == null) return null;
+        if (!activeCodes.contains(type))
+            return "qg_type: один из " + new java.util.TreeSet<>(activeCodes) + " (словарь qg_type, строчной латиницей), пришло «" + type + "»";
+        return null;
+    }
+
     /** Статус нового гейта: не передан — draft. */
     static String initialStatus(String status) {
-        return status == null ? "draft" : status;
+        return CreateDefaultStatus.forNew("quality_gate", status); // первый статус справочника qg_status (16.11.2026)
     }
 }

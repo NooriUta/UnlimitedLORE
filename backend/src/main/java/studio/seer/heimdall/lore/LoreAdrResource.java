@@ -82,7 +82,7 @@ public class LoreAdrResource extends LoreResourceBase {
                 .await().indefinitely().result();
             boolean isNewAdr = existingAdr == null || existingAdr.isEmpty();
             String resolvedStatus = (req.status() != null && !req.status().isBlank())
-                ? req.status() : (isNewAdr ? "PROPOSED" : null);
+                ? req.status() : (isNewAdr ? CreateDefaultStatus.forNew("adr", null) : null); // первый статус справочника (16.11.2026)
             // LH-44: date_created/component_id only SET when provided (or on first
             // insert) — previously a partial amend call with neither field would reset
             // date_created to today and null out component_id. Found alongside the

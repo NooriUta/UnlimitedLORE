@@ -17,7 +17,7 @@
 //   • телефон — высота фиксирована, ширина по контейнеру (урок BurnChart: пропорциональный
 //     график вырастал до 400 px).
 // Граница K-14: что считать сериями и откуда данные — приложение; kit только рисует.
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { kitT, useKitLang, type KitLang } from '../i18n';
 import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 
@@ -32,11 +32,14 @@ const W0 = 640;
  * Ширина рисунка — ширина контейнера, а не растяжение (препрод 16.11: с preserveAspectRatio="none"
  * в узкой колонке текст делений сжимался и точки вытягивались). viewBox совпадает с пикселями.
  */
-function useChartWidth(): [RefObject<HTMLDivElement | null>, number] {
-  const ref = useRef<HTMLDivElement | null>(null);
+// Ширина площадки — по контейнеру. Ссылка-функция, а не useRef + эффект при монтировании: пока график
+// «Загрузка…», площадки нет, и наблюдатель, подключённый один раз, её так и не видел — график оставался
+// шириной по умолчанию и растягивался (препрод 16.11, «Аналитика»).
+type PlotRef = (el: HTMLDivElement | null) => void;
+function useChartWidth(): [PlotRef, number] {
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
   const [w, setW] = useState(W0);
   useLayoutEffect(() => {
-    const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(entries => {
       const cw = Math.round(entries[0]?.contentRect.width ?? 0);
@@ -44,8 +47,8 @@ function useChartWidth(): [RefObject<HTMLDivElement | null>, number] {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return [ref, w];
+  }, [el]);
+  return [setEl, w];
 }
 const H = 200;
 const PAD = { l: 36, r: 12, t: 10, b: 24 };
@@ -163,7 +166,7 @@ function scale(d0: number, d1: number, r0: number, r1: number) {
   return (v: number) => (d1 === d0 ? (r0 + r1) / 2 : r0 + ((v - d0) / (d1 - d0)) * (r1 - r0));
 }
 
-function Svg({ label, plot, w, children }: { label: string; plot: RefObject<HTMLDivElement | null>; w: number; children: ReactNode }) {
+function Svg({ label, plot, w, children }: { label: string; plot: PlotRef; w: number; children: ReactNode }) {
   return <div ref={plot} className="sk-chart__plot"><svg className="sk-chart__svg" viewBox={`0 0 ${w} ${H}`} width="100%" role="img" aria-label={label} height={H}>{children}</svg></div>;
 }
 
@@ -232,6 +235,9 @@ export function LineChart(p: LineChartProps) {
 
 // ── scatter ────────────────────────────────────────────────────────────────
 export interface ScatterPoint { x: number; y: number; label?: string; group?: string }
+/** Больше точек — подписи у точек не рисуются (имена — в таблице). */
+export const SCATTER_LABELS_MAX = 20;
+
 export interface ScatterChartProps extends ChartCommon { points: ScatterPoint[]; xTitle?: string; groups?: { key: string; label: string }[] }
 
 export function ScatterChart(p: ScatterChartProps) {
@@ -242,6 +248,9 @@ export function ScatterChart(p: ScatterChartProps) {
   const x = scale(Math.min(...xs), Math.max(...xs), PAD.l + 8, W - PAD.r - 8);
   const y = scale(Math.min(...ys, ...yt), Math.max(...ys, ...yt), H - PAD.b, PAD.t + 6);
   const gi = (g?: string) => Math.max(0, (p.groups ?? []).findIndex(x2 => x2.key === g));
+  // Подписи у точек — пока точек немного: на сотнях они сливаются в кашу и вылезают за карточку
+  // (препрод 16.11, Lead time — 1500 задач). Имена остаются в «Таблицей».
+  const showLabels = p.points.length <= SCATTER_LABELS_MAX;
   return (
     <ChartFrame {...p} kind="scatter" empty={p.points.length === 0}
       summary={summaryText(lang, ys, undefined, p.unit)}
@@ -257,7 +266,7 @@ export function ScatterChart(p: ScatterChartProps) {
         {p.points.map((q, i) => (
           <g key={i} data-point="">
             <circle cx={x(q.x)} cy={y(q.y)} r={4} fill={tone(gi(q.group))} />
-            {q.label && (x(q.x) > W * 0.75
+            {showLabels && q.label && (x(q.x) > W * 0.75
               ? <text x={x(q.x) - 6} y={y(q.y) - 6} textAnchor="end" className="sk-chart__lbl">{q.label}</text>
               : <text x={x(q.x) + 6} y={y(q.y) - 6} textAnchor="start" className="sk-chart__lbl">{q.label}</text>)}
           </g>

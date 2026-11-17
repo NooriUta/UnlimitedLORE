@@ -33,14 +33,17 @@ function scalar(v: unknown): string {
 }
 
 const ownKeys = (o: Obj) => Object.keys(o).filter(k => k !== DOC);
+type Labels = Record<string, string>;
+/** Подпись ключа от приложения; нет — сам ключ (пилот 16.11: «Числа» с сырыми cap, gain). */
+const nameOf = (k: string, labels?: Labels) => labels?.[k] ?? k;
 
-function SubTable({ name, rows }: { name: string; rows: Obj[] }) {
+function SubTable({ name, rows, labels }: { name: string; rows: Obj[]; labels?: Labels }) {
   const cols: string[] = [];
   for (const r of rows) for (const k of ownKeys(r)) if (!cols.includes(k)) cols.push(k);
   return (
     <div className="sk-kv__scroll">
       <table className="sk-kv__sub" data-testid={`kit-kv-table-${name}`}>
-        <thead><tr>{cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
+        <thead><tr>{cols.map(c => <th key={c}>{nameOf(c, labels)}</th>)}</tr></thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i}>{cols.map(c => <td key={c} className="sk-kv__val">{scalar(r[c])}</td>)}</tr>
@@ -51,7 +54,7 @@ function SubTable({ name, rows }: { name: string; rows: Obj[] }) {
   );
 }
 
-function Rows({ obj }: { obj: Obj }): ReactNode {
+function Rows({ obj, labels }: { obj: Obj; labels?: Labels }): ReactNode {
   const keys = ownKeys(obj);
   const plain = keys.filter(k => !isObj(obj[k]) && !(Array.isArray(obj[k]) && (obj[k] as unknown[]).some(isObj)));
   const nested = keys.filter(k => !plain.includes(k));
@@ -61,7 +64,7 @@ function Rows({ obj }: { obj: Obj }): ReactNode {
         <table className="sk-kv__rows">
           <tbody>
             {plain.map(k => (
-              <tr key={k}><th scope="row" className="sk-kv__key">{k}</th><td className="sk-kv__val">{scalar(obj[k])}</td></tr>
+              <tr key={k}><th scope="row" className="sk-kv__key">{nameOf(k, labels)}</th><td className="sk-kv__val">{scalar(obj[k])}</td></tr>
             ))}
           </tbody>
         </table>
@@ -70,8 +73,8 @@ function Rows({ obj }: { obj: Obj }): ReactNode {
         const v = obj[k];
         return (
           <details key={k} className="sk-kv__group" open>
-            <summary className="sk-kv__key">{k}</summary>
-            {Array.isArray(v) ? <SubTable name={k} rows={v.filter(isObj)} /> : <Rows obj={v as Obj} />}
+            <summary className="sk-kv__key">{nameOf(k, labels)}</summary>
+            {Array.isArray(v) ? <SubTable name={k} rows={v.filter(isObj)} labels={labels} /> : <Rows obj={v as Obj} labels={labels} />}
           </details>
         );
       })}
@@ -79,12 +82,12 @@ function Rows({ obj }: { obj: Obj }): ReactNode {
   );
 }
 
-export function KvValue({ value, label }: { value: unknown; label: string }) {
+export function KvValue({ value, label, labels }: { value: unknown; label: string; /** Подписи ключей; ключа нет — сам ключ. */ labels?: Labels }) {
   const v = parsed(value);
   if (Array.isArray(v) && v.some(isObj)) {
-    return <div className="sk-kv" data-testid="kit-kv" role="group" aria-label={label}><SubTable name="items" rows={v.filter(isObj)} /></div>;
+    return <div className="sk-kv" data-testid="kit-kv" role="group" aria-label={label}><SubTable name="items" rows={v.filter(isObj)} labels={labels} /></div>;
   }
   if (!isObj(v)) return <span className="sk-rec-fields__mono">{scalar(v)}</span>;
   if (ownKeys(v).length === 0) return <span className="sk-rec-fields__none">—</span>;
-  return <div className="sk-kv" data-testid="kit-kv" role="group" aria-label={label}><div className="sk-kv__scroll"><Rows obj={v} /></div></div>;
+  return <div className="sk-kv" data-testid="kit-kv" role="group" aria-label={label}><div className="sk-kv__scroll"><Rows obj={v} labels={labels} /></div></div>;
 }

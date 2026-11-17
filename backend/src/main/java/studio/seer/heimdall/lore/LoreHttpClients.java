@@ -59,7 +59,10 @@ final class LoreHttpClients {
                 synchronized (this) {
                     c = client;
                     if (c == null || c.isTerminated()) {
-                        c = builder.get().build();
+                        // 17.11.2026: только HTTP/1.1. JDK по умолчанию шлёт HTTP/2 с апгрейдом h2c
+                        // на открытом http, и Infisical v0.167 отвечает на это 405 ещё до маршрута:
+                        // препрод остался без секретов (LORE CD 8875). Сторож — LoreHttpClientsHttp11Test.
+                        c = builder.get().version(HttpClient.Version.HTTP_1_1).build();
                         client = c;
                     }
                 }

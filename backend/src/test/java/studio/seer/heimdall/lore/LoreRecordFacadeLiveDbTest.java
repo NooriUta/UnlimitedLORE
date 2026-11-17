@@ -286,14 +286,17 @@ class LoreRecordFacadeLiveDbTest {
         JsonPath d = record("decision", "D-2026-REC-PASS");
         assertEquals("decision", d.getString("record.type"));
         assertEquals("решение для паспорта", d.getString("values.title"));
-        assertFalse(d.getBoolean("perms.can_edit"), "только чтение — правка не обещается");
+        // AP-PROJECT-LINK-UI (16.11.2026): у решения правятся проекты (путь /relation), статус — нет.
+        assertTrue(d.getBoolean("perms.can_edit"), "у админа правка проектов обещана");
+        assertFalse(d.getBoolean("perms.can_status"), "статус решения в паспорте не меняется");
         assertEquals(List.of(), d.getList("perms.status_next"));
 
         admin().body("{\"question_id\":\"Q-REC-PASS\",\"title\":\"вопрос для паспорта\",\"status\":\"open\"}").post("/lore/question").then().statusCode(200);
         JsonPath q = record("question", "Q-REC-PASS");
         assertEquals("question", q.getString("record.type"));
         assertEquals("open", q.getString("values.status"));
-        assertFalse(q.getBoolean("perms.can_edit"));
+        assertTrue(q.getBoolean("perms.can_edit"), "у вопроса правятся проекты");
+        assertFalse(q.getBoolean("perms.can_status"));
         admin().get("/lore/record/question/Q-NO-SUCH").then().statusCode(404);
     }
 

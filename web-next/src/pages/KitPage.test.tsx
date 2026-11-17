@@ -75,6 +75,14 @@ describe('/kit — витрина Seiðr-kit', () => {
     expect(row.querySelector('[data-mention][data-nolink]')).toBeTruthy();
   });
 
+  it('K4-LANES: дорожки — полосы, ссылки на записи, стык выделен, пустая полоса словами', () => {
+    const { container } = render(<KitPage />);
+    const box = container.querySelector('[data-testid="kit-lanes"]')!;
+    expect(box.querySelectorAll('[role="group"]')).toHaveLength(3);
+    expect(box.querySelector('[data-accent="true"] a[href]')).toBeTruthy();
+    expect(box.querySelector('[data-lane="next"]')!.textContent).toMatch(/пусто/);
+  });
+
   it('четыре честных исхода + обрезка различимы на одной странице', () => {
     const { container } = render(<KitPage />);
     for (const s of ['loading', 'empty', 'error', 'forbidden', 'partial']) {

@@ -255,7 +255,9 @@ final class LoreRecordFrom {
             s("work_class", "work_class"),
             list("realizes_uc", "realizes_uc"),
             list("prs", "closed_by_prs"),
-            v("status", Transform.PLAN_TOKEN, "status_raw"))),
+            v("status", Transform.PLAN_TOKEN, "status_raw"),
+            s("waiting_for", "waiting_for"),
+            s("status_reason", "status_reason"))),
         Map.entry("adr", List.of(
             v("title", Transform.FIRST_OF, "name", "adr_id"),
             v("context_md", Transform.TRIM, "context_md"),

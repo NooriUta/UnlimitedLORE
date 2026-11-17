@@ -191,6 +191,137 @@
 </span>
 </span>
 </div>
+<section class="sk-attn" aria-label="Требует внимания">
+<div class="sk-attn__group" data-testid="kit-attn-group">
+<div class="sk-attn__head">
+<a href="#lq=review" class="sk-attn__link">
+<span class="sk-attn__title">На согласовании</span>
+</a>
+<span class="sk-attn__count" data-testid="kit-attn-count" title="Посчитано по загруженным записям — выдача обрезана, настоящее число может быть больше">≈1</span>
+</div>
+<ul class="sk-attn__list">
+<li>
+<a class="sk-mention sk-rec-ref" data-mention="" data-kind="quiz" href="#Q-1">
+<span class="sk-mention__name sk-rec-ref__name">Квиз о времени</span>
+<span class="sk-pill sk-pill--id">Q-1</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="sk-attn__group" data-testid="kit-attn-group">
+<div class="sk-attn__head">
+<a href="#lq=open" class="sk-attn__link">
+<span class="sk-attn__title">Открыто</span>
+</a>
+<span class="sk-attn__count" data-testid="kit-attn-count" title="Посчитано по загруженным записям — выдача обрезана, настоящее число может быть больше">≈1</span>
+</div>
+<ul class="sk-attn__list">
+<li>
+<a class="sk-mention sk-rec-ref" data-mention="" data-kind="quiz" href="#Q-2">
+<span class="sk-mention__name sk-rec-ref__name">Квиз о снах</span>
+<span class="sk-pill sk-pill--id">Q-2</span>
+</a>
+</li>
+</ul>
+</div>
+</section>
+<section class="sk-queue" aria-label="Очередь согласования">
+<div class="sk-queue__chips" role="group" aria-label="Вид дела">
+<button type="button" class="sk-pill sk-pill--filter" aria-pressed="true">Все <span class="sk-queue__n">3</span>
+</button>
+<button type="button" class="sk-pill sk-pill--filter" aria-pressed="false">Статусы <span class="sk-queue__n">1</span>
+</button>
+<button type="button" class="sk-pill sk-pill--filter" aria-pressed="false">Правки <span class="sk-queue__n">2</span>
+</button>
+<button type="button" class="sk-pill sk-pill--filter" aria-pressed="false">Мои правки <span class="sk-queue__n">2</span>
+</button>
+</div>
+<div class="sk-queue__bar">
+<label class="sk-queue__pickall">
+<input aria-label="Выбрать все" type="checkbox">
+<span aria-hidden="true">Выбрать все</span>
+</label>
+</div>
+<ul class="sk-queue__list">
+<li class="sk-queue__row" data-testid="kit-queue-row" data-type="edit">
+<label class="sk-queue__pick">
+<input aria-label="Выбрать «Квиз о времени»" type="checkbox">
+</label>
+<div class="sk-queue__main">
+<span class="sk-queue__head">
+<span class="sk-pill sk-pill--value">правка</span>
+<span class="sk-queue__title">
+<a class="sk-mention sk-rec-ref" data-mention="" data-kind="quiz" href="#Q-1">
+<span class="sk-mention__name sk-rec-ref__name">Квиз о времени</span>
+<span class="sk-pill sk-pill--id">Q-1</span>
+</a>
+</span>
+</span>
+<span class="sk-queue__diff">
+<span class="sk-queue__fname">title</span>
+<del>Время</del>
+<span aria-hidden="true">→</span>
+<ins>Квиз о времени</ins>
+</span>
+<span class="sk-queue__who">предложил anna · 2026-11-16 10:00</span>
+<span class="sk-queue__deny">Своё предложение не согласовать: нужен второй человек</span>
+</div>
+<div class="sk-queue__acts">
+<button type="button" class="sk-btn sk-btn--primary" disabled="" title="Своё предложение не согласовать: нужен второй человек">Согласовать</button>
+<button type="button" class="sk-btn">Вернуть с правкой</button>
+</div>
+</li>
+<li class="sk-queue__row" data-testid="kit-queue-row" data-type="status">
+<label class="sk-queue__pick">
+<input aria-label="Выбрать «Квиз о времени»" type="checkbox">
+</label>
+<div class="sk-queue__main">
+<span class="sk-queue__head">
+<span class="sk-pill sk-pill--value">статус</span>
+<span class="sk-queue__title">
+<a class="sk-mention sk-rec-ref" data-mention="" data-kind="quiz" href="#Q-1">
+<span class="sk-mention__name sk-rec-ref__name">Квиз о времени</span>
+<span class="sk-pill sk-pill--id">Q-1</span>
+</a>
+</span>
+</span>
+<span class="sk-queue__who">предложил anna · 2026-11-16 10:00</span>
+<span class="sk-queue__deny">Своё предложение не согласовать: нужен второй человек</span>
+</div>
+<div class="sk-queue__acts">
+<button type="button" class="sk-btn sk-btn--primary" disabled="" title="Своё предложение не согласовать: нужен второй человек">Согласовать</button>
+<button type="button" class="sk-btn">Вернуть с правкой</button>
+</div>
+</li>
+<li class="sk-queue__row" data-testid="kit-queue-row" data-type="edit">
+<label class="sk-queue__pick">
+<input aria-label="Выбрать «Квиз о снах»" type="checkbox">
+</label>
+<div class="sk-queue__main">
+<span class="sk-queue__head">
+<span class="sk-pill sk-pill--value">правка</span>
+<span class="sk-queue__title">
+<a class="sk-mention sk-rec-ref" data-mention="" data-kind="quiz" href="#Q-2">
+<span class="sk-mention__name sk-rec-ref__name">Квиз о снах</span>
+<span class="sk-pill sk-pill--id">Q-2</span>
+</a>
+</span>
+</span>
+<span class="sk-queue__diff">
+<span class="sk-queue__fname">hint</span>
+<del>старое</del>
+<span aria-hidden="true">→</span>
+<ins>новое</ins>
+</span>
+<span class="sk-queue__who">предложил boris · 2026-11-16 09:00</span>
+</div>
+<div class="sk-queue__acts">
+<button type="button" class="sk-btn sk-btn--primary">Согласовать</button>
+<button type="button" class="sk-btn">Вернуть с правкой</button>
+</div>
+</li>
+</ul>
+</section>
 <div class="sk-vsum" data-testid="kit-vsum">
 <p class="sk-vsum__note sk-vsum__note--warn" role="status">Итоги неполные: выдача обрезана сервером, сводка посчитана по загруженным записям</p>
 <div class="sk-vsum__grid">
@@ -958,7 +1089,19 @@
 <span class="sk-burn__key sk-burn__key--deadline">срок 2026-11-30</span>
 <span class="sk-burn__key sk-burn__key--forecast">прогноз</span>
 </div>
+<div class="sk-burn__plot">
+<div class="sk-burn__yaxis" aria-hidden="true">
+<span class="sk-burn__tick" data-burn-tick="0" style="top: 95.83333333333334%;">0</span>
+<span class="sk-burn__tick" data-burn-tick="10" style="top: 54.166666666666664%;">10</span>
+<span class="sk-burn__tick" data-burn-tick="20" style="top: 12.5%;">20</span>
+</div>
 <svg class="sk-burn__svg" width="100%" height="96" viewBox="0 0 600 96" preserveAspectRatio="none" role="img" aria-label="Burnup: закрыто 16 из 22, остаток 6">
+<line class="sk-burn__grid" x1="0" x2="600" y1="92.0" y2="92.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="52.0" y2="52.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="12.0" y2="12.0">
+</line>
 <polyline data-series="scope" class="sk-burn__line sk-burn__line--scope" points="0.0,36.0 190.9,16.0 300.0,4.0">
 </polyline>
 <polyline data-series="done" class="sk-burn__line sk-burn__line--done" points="0.0,92.0 190.9,52.0 300.0,28.0">
@@ -970,6 +1113,7 @@
 <line data-series="deadline" class="sk-burn__deadline" x1="559.1" x2="559.1" y1="0" y2="96">
 </line>
 </svg>
+</div>
 <div class="sk-burn__axis">
 <span>2026-10-20</span>
 <span>2026-12-03</span>
@@ -996,12 +1140,31 @@
 <span class="sk-burn__key">пик 4</span>
 </div>
 <p class="sk-burn__note" data-testid="kit-burn-no-deadline">Срок не задан — плана к сроку и отметки срока нет.</p>
+<div class="sk-burn__plot">
+<div class="sk-burn__yaxis" aria-hidden="true">
+<span class="sk-burn__tick" data-burn-tick="0" style="top: 95.83333333333334%;">0</span>
+<span class="sk-burn__tick" data-burn-tick="1" style="top: 72.91666666666666%;">1</span>
+<span class="sk-burn__tick" data-burn-tick="2" style="top: 50%;">2</span>
+<span class="sk-burn__tick" data-burn-tick="3" style="top: 27.083333333333332%;">3</span>
+<span class="sk-burn__tick" data-burn-tick="4" style="top: 4.166666666666666%;">4</span>
+</div>
 <svg class="sk-burn__svg" width="100%" height="96" viewBox="0 0 600 96" preserveAspectRatio="none" role="img" aria-label="Burndown: остаток 2 из 4, закрыто 2">
+<line class="sk-burn__grid" x1="0" x2="600" y1="92.0" y2="92.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="70.0" y2="70.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="48.0" y2="48.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="26.0" y2="26.0">
+</line>
+<line class="sk-burn__grid" x1="0" x2="600" y1="4.0" y2="4.0">
+</line>
 <polyline data-series="ideal" class="sk-burn__line sk-burn__line--ideal" points="0.0,4.0 600.0,92.0">
 </polyline>
 <polyline data-series="remaining" class="sk-burn__line sk-burn__line--remaining" points="0.0,4.0 600.0,48.0">
 </polyline>
 </svg>
+</div>
 <div class="sk-burn__axis">
 <span>2026-11-01</span>
 <span>2026-11-05</span>
@@ -1186,6 +1349,39 @@
 <p class="sk-chart__note" role="note">Нет данных: 1 — пропуск показан разрывом, а не нулём</p>
 <button type="button" class="sk-btn sk-chart__tbl" aria-pressed="false">Таблицей</button>
 </section>
+</section>
+<section class="bare__sec" data-kit="lanes">
+<h2 class="bare__h2">Дорожки</h2>
+<div class="sk-lanes" role="region" aria-label="Тропа" data-testid="kit-lanes">
+<section class="sk-lanes__lane" role="group" aria-label="У сна А" data-lane="A">
+<h3 class="sk-lanes__head">У сна А<span class="sk-lanes__count">1</span>
+</h3>
+<ul class="sk-lanes__items">
+<li class="sk-lanes__item">
+<a class="sk-mention" data-mention="" href="#S-1">
+<span class="sk-mention__name">Свиток времени</span>
+</a>
+<span class="sk-pill sk-lanes__badge">×2</span>
+</li>
+</ul>
+</section>
+<section class="sk-lanes__lane" role="group" aria-label="Стык" data-lane="AB" data-accent="true">
+<h3 class="sk-lanes__head">Стык<span class="sk-lanes__count">1</span>
+</h3>
+<ul class="sk-lanes__items">
+<li class="sk-lanes__item">
+<a class="sk-mention" data-mention="" href="#Q-1">
+<span class="sk-mention__name">Квиз о времени</span>
+</a>
+</li>
+</ul>
+</section>
+<section class="sk-lanes__lane" role="group" aria-label="У сна Б" data-lane="B">
+<h3 class="sk-lanes__head">У сна Б<span class="sk-lanes__count">0</span>
+</h3>
+<p class="sk-lanes__empty">пусто</p>
+</section>
+</div>
 </section>
 <section class="bare__sec" data-kit="passport-doc">
 <h2 class="bare__h2">Паспорт из документа приложения</h2>

@@ -48,7 +48,9 @@ class LoreRecordSnapshotTest {
      * без них, а само значение проверяет ProductPassportTest. Список явный: молча расширить
      * значения типа нельзя.
      */
-    static final Map<String, List<String>> ADDED_AFTER = Map.of("component", List.of("products"));
+    static final Map<String, List<String>> ADDED_AFTER = Map.of("component", List.of("products"),
+        // 16.11.2026: «чьего ответа ждём» и причина статуса в паспорте задачи (TaskWaitingForPassportTest).
+        "task", List.of("waiting_for", "status_reason"));
 
     /** Значения сборщика без полей, заведённых после снимка ({@link #ADDED_AFTER}). */
     static Map<String, Object> sansAdded(String type, Map<String, Object> v) {

@@ -32,7 +32,7 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import {
   EmptyState, Ear, Forbidden, GameIcon, IconButton, Kbd, KitLangProvider, LoadError, Pill, SECTION_ICONS,
-  BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
+  ApprovalQueue, AttentionSummary, BurnChart, BurnSpark, BatchUndo, CalendarMonth, ControlBar, EMPTY_CONTROLS, LibraryView, MiniList, KvValue, LineChart, HeatChart, ScatterChart, BarChart, RecordScreen, RecordReader, passportFromDoc, Lanes, FreshCell, NestedList, ChainExplain, ContentRelease, DiffPreview, FieldEditor, Matrix, Skeleton, SecretOnce, StatusChip, StatusStar, Steps, VerdictSummary, Tabs, Toolbar, Tooltip, Truncated, registerGameIcons,
 } from '../index';
 import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks } from '../content';
 import { ValueChips } from '../record/ValueChips';
@@ -72,6 +72,19 @@ const BARE_VSUM_CTX = { config: {
   kinds: { topic: { title: 'Темы', icon: 'scroll-unfurled' }, quiz: { title: 'Квизы', icon: 'checkbox-tree' }, rule: { title: 'Правила', icon: 'gears' } },
   verdict: (r: { id: string }) => BARE_VSUM_VERDICTS[r.id],
 } } as unknown as KitCtx;
+/** Очередь согласования (K4-SUMMARY-QUEUE): чужая правка, своя правка (выключена с причиной), запись на согласовании. */
+const BARE_QUEUE_CTX = {
+  data: {
+    records: [{ id: 'Q-1', kind: 'quiz', title: 'Квиз о времени', status: 'review', fields: {} }, { id: 'Q-2', kind: 'quiz', title: 'Квиз о снах', status: 'open', fields: {} }],
+    edges: [], meta: { generated_at: '2026-11-16T12:00:00Z' },
+    journal: [
+      { at: '2026-11-16T09:00:00Z', who: 'boris', record_id: 'Q-2', field: 'hint', from: 'старое', to: 'новое' },
+      { at: '2026-11-16T10:00:00Z', who: 'anna', record_id: 'Q-1', field: 'title', from: 'Время', to: 'Квиз о времени' },
+    ],
+  },
+  config: { modules: [], menu: { groups: [] }, kinds: {}, statuses: { selfApprove: false, items: [] } },
+  user: 'anna', href: (id: string) => '#' + id, esc: (x: string) => x, md: (x: string) => x,
+} as unknown as KitCtx;
 const BARE_STATUS_CONFIG = {
   modules: [], menu: { groups: [] }, kinds: {}, statuses: { items: [...BARE_STATUS_ITEMS] }, roles: { viewer: { canStatus: false } },
 } as unknown as KitConfig;
@@ -109,6 +122,10 @@ function Samples() {
           <StatusChip record={{ id: 'compact', kind: 'demo', title: 'compact', status: 'accepted', fields: {} }} config={BARE_STATUS_CONFIG} role="viewer" compact />
         </div>
         {/* Сводка по вердикту: карточки видов, причины со счётом, вид без проверок, плашка «итоги неполные». */}
+        {/* Сводка «требует внимания»: группы — быстрые фильтры, счёт с «≈» при обрезке, первые записи и «ещё N». */}
+        <AttentionSummary records={(BARE_QUEUE_CTX.data.records)} ctx={{ ...BARE_QUEUE_CTX, config: { ...BARE_QUEUE_CTX.config, list: { views: ['list'], quick: [{ id: 'review', title: 'На согласовании', filter: { status: 'review' } }, { id: 'open', title: 'Открыто', filter: { status: 'open' } }] } } }} narrow={false} truncated hrefOf={q => '#lq=' + q} />
+        {/* Очередь согласования: чипы вида дела, выбор, правка «было → стало», своя правка выключена с причиной. */}
+        <ApprovalQueue ctx={BARE_QUEUE_CTX} reviewStatuses={['review']} onApprove={async () => ({ failed: [] })} onReturn={async () => ({ failed: [] })} />
         <VerdictSummary records={BARE_VSUM_RECORDS} ctx={BARE_VSUM_CTX} lang="ru" hrefOf={(kind, check) => `#${kind}${check ? `?lck=${check}` : ''}`} truncated />
         <div className="bare__row">
           <Kbd keys={['Ctrl', 'K']} />
@@ -287,6 +304,15 @@ function Samples() {
         <HeatChart title="Матрица" rows={['ru-wiki', 'code']} cols={['L1', 'L2']} values={[[92, 88], [84, null]]} />
         <ScatterChart title="Парето" xTitle="токенов" points={[{ x: 800, y: 74, label: 'gemini' }, { x: 2300, y: 86, label: 'claude' }]} />
         <BarChart title="Доля" groups={[{ key: 'a', label: 'статьи' }]} data={[{ category: 'Хабр', values: { a: 34 } }, { category: 'LinkedIn', values: { a: null } }]} />
+      </section>
+      <section className="bare__sec" data-kit="lanes">
+        <h2 className="bare__h2">Дорожки</h2>
+        {/* K4-LANES: полосы, ссылки на записи с бейджем, выделенный стык, пустая полоса словами. */}
+        <Lanes label="Тропа" href={id => '#' + id} lanes={[
+          { key: 'A', title: 'У сна А', items: [{ id: 'S-1', title: 'Свиток времени', badge: '×2' }] },
+          { key: 'AB', title: 'Стык', accent: true, items: [{ id: 'Q-1', title: 'Квиз о времени' }] },
+          { key: 'B', title: 'У сна Б', items: [] },
+        ]} />
       </section>
       <section className="bare__sec" data-kit="passport-doc">
         <h2 className="bare__h2">Паспорт из документа приложения</h2>

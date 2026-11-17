@@ -1,0 +1,148 @@
+name: LORE migration snapshot (prod → preprod) and model-migration run
+
+# SPRINT_LORE_OWN_HOST/OH-MIG-SNAPSHOT-WF — для переезда на новую модель
+# (SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01). Только ручной запуск.
+#
+#   action=snapshot — scripts/migration-snapshot.sh: свежий BACKUP прода (только чтение,
+#                     кредом прод-бэкенда, как migrate-live-check), sha256, счёт KnowSprint /
+#                     KnowTask / KnowPhase, развёртывание на препроде отдельной базой
+#                     migration_src_<дата>. Имя занято — отказ.
+#   action=migrate  — конвейер scripts/model-migration/ из ветки code_ref (по умолчанию
+#                     migration/model-v2) на препроде: источник → приёмник, этап stage.
+#                     Доступ — секреты MIG_DB_USER / MIG_DB_PASSWORD (учётка препрод-ArcadeDB,
+#                     вносит владелица); файл доступа собирается во временный каталог и удаляется.
+#                     Приёмник не может быть system_aida_lore* и не может совпасть с источником.
+#
+# Первый запуск каждого действия — только по прямому слову владелицы.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'snapshot — снимок прода на препрод; migrate — прогон конвейера'
+        required: true
+        type: choice
+        options: ['snapshot', 'migrate']
+      name:
+        description: 'snapshot: имя базы-копии (пусто = migration_src_<дата UTC>); migrate: база-источник'
+        required: false
+        default: ''
+        type: string
+      dest:
+        description: 'migrate: база-приёмник'
+        required: false
+        default: 'migration_dst'
+        type: string
+      stage:
+        description: 'migrate: этап'
+        required: false
+        default: 'dry-run'
+        type: choice
+        options: ['dry-run', 'transfer', 'transfer-edges', 'orphan-census']
+      reset:
+        description: 'migrate/transfer: очистить непустой приёмник (--reset)'
+        required: false
+        default: false
+        type: boolean
+      code_ref:
+        description: 'migrate: ветка или SHA кода конвейера'
+        required: false
+        default: 'migration/model-v2'
+        type: string
+
+concurrency:
+  group: lore-migration-snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    if: inputs.action == 'snapshot'
+    runs-on: ubuntu-latest
+    env:
+      LORE_HOST: lore-host.seidrstudio.pro
+      LORE_HOST_USER: nooriuta
+      LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
+      NAME: ${{ inputs.name }}
+      REPORT_DIR: ${{ github.workspace }}/migration-snapshot-report
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: SSH-ключ CD и закреплённый ключ хоста
+        env:
+          LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
+        run: bash .github/scripts/lore-host-deploy.sh ssh
+
+      - name: Снимок прода → препрод
+        run: bash scripts/migration-snapshot.sh
+
+      - name: Отчёт — артефактом
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v3
+        with:
+          name: migration-snapshot-${{ github.run_id }}
+          path: migration-snapshot-report/
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/lore_host
+
+      - name: Уборка контейнеров прогона
+        if: always()
+        run: bash .github/scripts/ci-teardown.sh "${{ github.run_id }}"
+
+  migrate:
+    if: inputs.action == 'migrate'
+    runs-on: ubuntu-latest
+    env:
+      MIG_SRC_DB: ${{ inputs.name }}
+      MIG_DST_DB: ${{ inputs.dest }}
+      STAGE: ${{ inputs.stage }}
+      RESET: ${{ inputs.reset }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.code_ref }}
+
+      - name: Сторож баз (дублирует env.mjs)
+        run: |
+          set -eu
+          lc() { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
+          src="$(lc "$MIG_SRC_DB")"; dst="$(lc "$MIG_DST_DB")"
+          [ -n "$src" ] || { echo "::error::источник (name) не задан"; exit 1; }
+          case "$src" in migration_src_*) ;; *) echo "::error::источник должен называться migration_src_*: $src"; exit 1 ;; esac
+          case "$dst" in system_aida_lore*) echo "::error::приёмник — рабочая база: $dst"; exit 1 ;; esac
+          case "$dst" in migration_dst*) ;; *) echo "::error::приёмник должен называться migration_dst*: $dst"; exit 1 ;; esac
+          [ "$src" != "$dst" ] || { echo "::error::приёмник совпадает с источником"; exit 1; }
+          echo "источник $src → приёмник $dst, этап $STAGE"
+
+      - name: Конвейер model-migration
+        env:
+          MIG_DB_USER: ${{ secrets.MIG_DB_USER }}
+          MIG_DB_PASSWORD: ${{ secrets.MIG_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "${MIG_DB_USER:-}" ] && [ -n "${MIG_DB_PASSWORD:-}" ] \
+            || { echo "::error::BLOCKED: секреты MIG_DB_USER / MIG_DB_PASSWORD не заданы — их вносит владелица"; exit 2; }
+          d="$(mktemp -d)"; trap 'rm -rf "$d"' EXIT; umask 077
+          {
+            echo "MIG_DB_URL=http://172.17.0.1:2480"
+            echo "MIG_SRC_DB=$MIG_SRC_DB"; echo "MIG_SRC_USER=$MIG_DB_USER"; echo "MIG_SRC_PASSWORD=$MIG_DB_PASSWORD"
+            echo "MIG_DST_DB=$MIG_DST_DB"; echo "MIG_DST_USER=$MIG_DB_USER"; echo "MIG_DST_PASSWORD=$MIG_DB_PASSWORD"
+          } > "$d/migration.env"
+          export MIG_ENV_FILE="$d/migration.env"
+          mkdir -p migration-report
+          node scripts/model-migration/env.mjs
+          extra=""; [ "$STAGE" = transfer ] && [ "$RESET" = true ] && extra="--reset"
+          node "scripts/model-migration/$STAGE.mjs" $extra --out "migration-report/$STAGE.json"
+
+      - name: Отчёт — артефактом
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v3
+        with:
+          name: model-migration-${{ inputs.stage }}-${{ github.run_id }}
+          path: migration-report/

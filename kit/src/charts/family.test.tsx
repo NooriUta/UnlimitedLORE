@@ -120,3 +120,32 @@ describe('scatter: подпись у правого края не обрезае
     expect(anchors).toEqual([['левая', 'start'], ['правая', 'end']]);
   });
 });
+
+// Препрод 16.11 (Аналитика, Lead time — 1500 задач): подпись у каждой точки слиплась в нечитаемую кашу и
+// вылезла за карточку. Правило: подписи у точек — только пока точек немного; имя остаётся в «Таблицей».
+describe('ScatterChart: подписи точек только при немногих точках', () => {
+  it('много точек — на графике подписей нет, в таблице имена есть', () => {
+    const pts = Array.from({ length: 50 }, (_, i) => ({ x: i, y: i % 7, label: `T-${i}` }));
+    const { container } = wrap(<ScatterChart title="Lead" points={pts} />);
+    expect(container.querySelectorAll('svg .sk-chart__lbl')).toHaveLength(0);
+  });
+  it('немного точек — подписи на месте', () => {
+    const { container } = wrap(<ScatterChart title="Парето" points={[{ x: 1, y: 2, label: 'a' }, { x: 2, y: 3, label: 'b' }]} />);
+    expect(container.querySelectorAll('svg .sk-chart__lbl')).toHaveLength(2);
+  });
+});
+
+// Препрод 16.11 («Аналитика»): график рисовался шириной по умолчанию (640) и растягивался — при первом показе
+// «Загрузка…» площадки ещё нет, а наблюдатель ширины подключался один раз при монтировании и так и не узнавал её.
+describe('ширина графика — после загрузки тоже по контейнеру', () => {
+  it('площадка появилась после «Загрузка…» — наблюдатель ширины подключается к ней', () => {
+    const seen: Element[] = [];
+    const RO = globalThis.ResizeObserver;
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver = class { constructor(_: unknown) {} observe(el: Element) { seen.push(el); } disconnect() {} unobserve() {} };
+    try {
+      const { rerender } = wrap(<BarChart title="V" loading groups={[{ key: 'v', label: 'v' }]} data={[]} />);
+      rerender(<KitLangProvider lang="ru"><BarChart title="V" groups={[{ key: 'v', label: 'v' }]} data={[{ category: 'a', values: { v: 1 } }]} /></KitLangProvider>);
+      expect(seen.some(el => el.classList.contains('sk-chart__plot'))).toBe(true);
+    } finally { (globalThis as { ResizeObserver: unknown }).ResizeObserver = RO; }
+  });
+});

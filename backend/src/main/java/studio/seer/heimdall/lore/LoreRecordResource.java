@@ -44,8 +44,11 @@ public class LoreRecordResource extends LoreResourceBase {
 
     @Inject AidaLoreResource sliceResource;      // проектный скоуп вызывающего — тем же резолвером, что у /lore/slice
     @Inject LoreSprintTaskResource sprintTask;
+    @Inject MiniloreHolderReader holderReader;
     @Inject LoreAdrResource adrResource;
     @Inject LoreQuestionResource questionResource;
+    @Inject LoreDecisionResource decisionResource;
+    @Inject LoreRunbookResource runbookResource;
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
@@ -105,6 +108,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     @io.smallrye.common.annotation.Blocking
     public Response record(@PathParam("type") String type, @PathParam("id") String id,
+                           @jakarta.ws.rs.QueryParam("with") String with,
                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         if (!LoreRecordRegistry.TYPES.contains(type))
@@ -122,7 +126,21 @@ public class LoreRecordResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
         boolean identified = role != null && !role.isBlank();
-        return NEW_ID.equals(id) ? newRecord(type, role, identified) : existing(type, id, role, identified, scope);
+        if (NEW_ID.equals(id)) return newRecord(type, role, identified);
+        Response found = existing(type, id, role, identified, scope);
+        // LINKS-VIEW-HOLDER: «сессия у записи» — только по просьбе (?with=holders) и только у найденной записи:
+        // скоуп уже проверен выше, а лишний поход к серверу miniLORE не ложится на каждое открытие паспорта.
+        if (found.getStatus() == 200 && with != null && java.util.Arrays.asList(with.split(",")).contains("holders")
+            && found.getEntity() instanceof Map<?, ?> body) {
+            @SuppressWarnings("unchecked") Map<String, Object> out = (Map<String, Object>) body;
+            out.put("holders", holderReader.read(id).toJson());
+        }
+        return found;
+    }
+
+    /** Паспорт без дополнительных блоков — прежняя форма вызова (тесты и внутренние вызывающие). */
+    Response record(String type, String id, String role) {
+        return record(type, id, null, role);
     }
 
     private Response newRecord(String type, String role, boolean identified) {
@@ -269,6 +287,16 @@ public class LoreRecordResource extends LoreResourceBase {
             facts.put("version_error", versionError);
         }
         dataState.add(LoreRecordDataState.version(versionError));
+        // MDL-10 (D-2026-LORE-FREE-FIELDS-SHOWN): значения вершины вне модели — отдельным блоком, только чтение.
+        // Не прочиталось — блока нет, а причина названа в facts: «нет» и «не читали» различимы.
+        Map<String, Object> unmodeled = null;
+        if (LoreRecordUnmodeled.reads(type)) try {
+            List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordUnmodeled.sql(type), Map.of("id", id));
+            if (v.isEmpty()) facts.put("unmodeled_state", "not_read");
+            else unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+        } catch (RuntimeException e) {
+            facts.put("unmodeled_error", e.getMessage());
+        }
         Map<String, Object> rec = recordHead(type, id, (String) values.get("title"), status, version);
         // Вид обоих концов в каждой связи (fromKind/toKind) — клиент не угадывает его по записям.
         LoreRecordValues.withKinds(type, links);
@@ -277,6 +305,9 @@ public class LoreRecordResource extends LoreResourceBase {
             dataState);
         out.put("schema", recordSchema(type));
         out.put("computed", computed);
+        if (unmodeled != null && !unmodeled.isEmpty()) out.put("unmodeled", unmodeled);
+        // LORE-DOOR-HISTORY-ALL-PASSPORTS: есть ли у записи история и каким типом звать /lore/history.
+        out.put("history", LoreRecordHistory.flag(type));
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());
@@ -596,6 +627,10 @@ public class LoreRecordResource extends LoreResourceBase {
             case SPEC_PROJECT -> specResource.linkSpec(new LoreSpecResource.SpecLinkRequest(a, "project", b, action), role);
             case DOC_COMPONENT -> docResource.linkDocComponent(new LoreDocResource.DocComponentLinkRequest(a, b, action), role);
             case DOC_PROJECT -> docResource.linkDocProject(new LoreDocResource.DocProjectLinkRequest(a, b, action), role);
+            case DECISION_PROJECT -> decisionResource.linkProject(new LoreDecisionResource.DProjectRequest(a, b, action), role);
+            case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
+            case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
+                new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
         };
     }
 }
