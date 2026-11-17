@@ -153,3 +153,9 @@ test('решение с кодом не из справочника поля о�
   assert.equal(bad.length, 1);
   assert.match(bad[0], /ST-74: кода NORMAL в справочнике priority нет/);
 });
+
+test('справочник решений: кодов FIXED и DONE нет — владелица свела fixed и done к ACCEPTED (ST-02, ST-03, 16.11)', () => {
+  const codes = RULES.dictionaries.decision_status.codes.map(c => c.code);
+  assert.ok(!codes.includes('FIXED') && !codes.includes('DONE'), 'иначе fixed/done молча свелись бы к своим кодам мимо её решения');
+  assert.deepEqual(checkRules(RULES), []);
+});

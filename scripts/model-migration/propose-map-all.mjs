@@ -38,6 +38,8 @@ export function ruleFor(T, f) {
   if (f === 'priority') return { rule: 'transform', to: 'priority', how: 'priority', basis: 'owner', note: 'одна шкала, приписка — в priority_note' };
   if (EDGE_FIELDS[f]) return { rule: 'open', question: EDGE_FIELDS[f] + ' — строится на шаге связей; до него значение удерживается' };
   if (/_refs$/.test(f)) return { rule: 'open', question: 'ссылки строкой становятся связями на шаге связей; ненайденное — текстом в заметке версии' };
+  // date_display — подпись срока для людей («18 апр», «прогноз Q4 2026»), не дата (пробный расчёт 17.11).
+  if (f === 'date_display') return { rule: 'keep', basis: 'delegated', note: 'подпись срока, не дата; ' + W };
   if (DATE.test(f)) return { rule: 'transform', to: f === 'created_date' || f === 'date_created' ? 'created_at' : f, how: 'DATE', basis: 'owner' };
   if (DATETIME.test(f)) return { rule: 'transform', to: f, how: 'DATETIME', basis: 'owner' };
   return { rule: 'keep', basis: 'delegated', note: W };

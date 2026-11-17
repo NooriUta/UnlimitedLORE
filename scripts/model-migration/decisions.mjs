@@ -68,7 +68,8 @@ export function resolveRejects(T, r, doc) {
   const left = [];
   r.decided = r.decided || [];
   for (const x of r.rejects) {
-    const d = find(doc.decisions, T, x);
+    // Копия статуса на записи следует решению по версиям того же типа (17.11.2026): своё решение для записи сильнее.
+    const d = find(doc.decisions, T, x) || (T.endsWith("Hist") ? null : find(doc.decisions, T + "Hist", x));
     if (!d) { left.push(x); continue; }
     if (d.action === 'defer') { left.push({ ...x, deferred: d.id }); continue; }
     const t = x.target;

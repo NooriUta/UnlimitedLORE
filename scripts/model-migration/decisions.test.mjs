@@ -93,3 +93,15 @@ test('add_code: добавляемый код статуса — действи�
   delete bad.decisions[0].labels;
   assert.match(checkDecisions(bad).join('; '), /A1.*нет подписей/);
 });
+
+test('копия статуса на записи следует решению по версиям того же типа (KnowDecision ← KnowDecisionHist, 17.11)', () => {
+  const doc = { format: 'mig-decisions/1', decisions: [{ id: 'ST-02', scope: { type: 'KnowDecisionHist', field: 'status_raw', value: 'fixed' }, action: 'map_to', to: 'ACCEPTED', by: 'omiloreadmin', at: '2026-11-16T16:40:00Z' }] };
+  const r = { out: {}, rejects: [Object.defineProperty({ field: 'status_raw', value: 'fixed', why: 'статус вне справочника' }, 'target', { value: { bucket: 'out', field: 'status', note: 'status_note' }, enumerable: false })] };
+  resolveRejects('KnowDecision', r, doc);
+  assert.equal(r.out.status, 'ACCEPTED');
+  assert.deepEqual(r.decided, [{ field: 'status_raw', value: 'fixed', decision: 'ST-02', action: 'map_to' }]);
+  const own = { format: 'mig-decisions/1', decisions: [...doc.decisions, { id: 'X-1', scope: { type: 'KnowDecision', field: 'status_raw', value: 'fixed' }, action: 'map_to', to: 'DEFERRED', by: 'x', at: '2026-11-17T00:00:00Z' }] };
+  const r2 = { out: {}, rejects: [Object.defineProperty({ field: 'status_raw', value: 'fixed', why: 'статус вне справочника' }, 'target', { value: { bucket: 'out', field: 'status', note: 'status_note' }, enumerable: false })] };
+  resolveRejects('KnowDecision', r2, own);
+  assert.equal(r2.out.status, 'DEFERRED', 'своё решение для записи сильнее решения по версиям');
+});

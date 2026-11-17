@@ -23,7 +23,9 @@ import { applyMap } from './apply-map.mjs';
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
-const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
+// Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
+const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
+const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 // Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
 const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
 const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
@@ -53,7 +55,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const calc = {}; // T → [{ rid, res }]
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
-    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T] }) });
+    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]] }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};

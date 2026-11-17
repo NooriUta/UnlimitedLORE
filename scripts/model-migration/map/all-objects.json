@@ -1576,10 +1576,9 @@
   },
   "KnowMilestone": {
    "date_display": {
-    "rule": "transform",
-    "to": "date_display",
-    "how": "DATE",
-    "basis": "owner"
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "подпись срока, не дата; владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
    },
    "label": {
     "rule": "keep",

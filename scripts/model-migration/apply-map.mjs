@@ -1,3 +1,4 @@
+import { classify as classifyRules } from './status-unify.mjs';
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Исполнитель карты переноса.
 //
 // Чистая функция: запись старой базы + карта её типа → запись новой базы. Базы не касается, поэтому
@@ -95,7 +96,8 @@ const asDate = (f, v, r, to) => { const d = toDate(v); if (d === null) reject(r,
 const asDateTime = (f, v, r, to) => { const d = toDateTime(v); if (d === null) reject(r, f, v, 'не момент времени', { bucket: 'out', field: to }); else r.out[to] = d; };
 const asPriority = (f, v, r, bucket) => { const p = toPriority(v); if (p.value === null) reject(r, f, v, 'приоритет вне шкалы', { bucket, field: 'priority', note: 'priority_note' }); else { r[bucket].priority = p.value; if (p.note) r[bucket].priority_note = p.note; } };
 function asStatus(f, v, r, ctx, phase) {
-  const codes = (ctx.statusCodes || {})[ctx.statusDict];
+  // Все объекты (17.11.2026): коды справочника берутся и из правил переноса, если в базе их нет.
+  const codes = (ctx.statusCodes || {})[ctx.statusDict] || (ctx.statusRules ? ctx.statusRules.codes.map(c => c.code.toLowerCase()) : undefined);
   if (!codes) throw new Error(`для ${f} не задан справочник статусов (ctx.statusDict)`);
   const st = ctx.statusVocab ? classifyStatus(v, { vocab: ctx.statusVocab, codes, canonToCode: ctx.canonToCode, strict: phase }) : splitStatus(v, codes);
   // Фаза: в истории лежат статусы задач (PARTIAL, READY FOR DEPLOY…). Сводим их к коду фазы тем же правилом,
@@ -104,6 +106,8 @@ function asStatus(f, v, r, ctx, phase) {
     const to = ctx.phaseStatusMap[String(st.canon).toUpperCase()];
     if (to) { r.out.status = ctx.codeCase === 'upper' ? to.toUpperCase() : to.toLowerCase(); r.out.status_note = st.note; return; }
   }
+  // Не узнал словарь приложения — тот же разбор, что в диалоге статусов (коды и синонимы справочника правил).
+  if (st.code === null && ctx.statusRules) { const k = classifyRules(v, ctx.statusRules); if (k.kind === 'known') { st.code = k.code.toLowerCase(); st.note = ''; } }
   r.out.status = st.code !== null && ctx.codeCase === 'upper' ? st.code.toUpperCase() : st.code;
   if (st.code === null) { if (phase && !st.known) r.titleFallback = st.note; else reject(r, f, v, 'статус вне справочника', { bucket: 'out', field: 'status', note: 'status_note' }); }
   else if (st.note) r.out.status_note = st.note;
@@ -125,6 +129,8 @@ const TRANSFORMS = {
   'KnowPhase.phase_id': (f, v, r) => { r.out.phase_id = String(v).trim().replace(/^Фаза\s+/u, ''); },
 };
 const TYPE_ONLY = { DATE: asDate, DATETIME: asDateTime };
+// Общие преобразования карты всех объектов (17.11.2026): статус — к справочнику типа, приоритет — к одной шкале.
+const GENERIC = { status: (f, v, r, ctx) => asStatus(f, v, r, ctx, false), priority: (f, v, r) => asPriority(f, v, r, 'out') };
 const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, 'toVersion') };
 const RENAMES = {
   'KnowSprint.name': (v, rec) => (v === rec.sprint_id ? null : v),
@@ -152,7 +158,7 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     }
     if (e.rule === 'to_current_version') { if (TO_VERSION[k]) TO_VERSION[k](f, v, r); else r.toVersion[f] = v; continue; }
     if (e.rule === 'transform') {
-      const fn = TRANSFORMS[k];
+      const fn = TRANSFORMS[k] || (GENERIC[e.how] && ((f2, v2, r2, c2) => GENERIC[e.how](f2, v2, r2, c2)));
       if (!fn) throw new Error(`${k}: преобразование согласовано в карте, но не реализовано`);
       fn(f, v, r, ctx);
       continue;
@@ -167,6 +173,6 @@ export function applyMap(T, typeMap, record, ctx = {}) {
 /** Преобразования карты, для которых нет кода, — сторож полноты исполнителя. */
 export function missingTransforms(types) {
   const out = [];
-  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && DECIDED.has(e.basis) && !TRANSFORMS[`${T}.${f}`] && !TYPE_ONLY[e.how]) out.push(`${T}.${f}`);
+  for (const [T, fields] of Object.entries(types)) for (const [f, e] of Object.entries(fields)) if (e.rule === 'transform' && DECIDED.has(e.basis) && !TRANSFORMS[`${T}.${f}`] && !TYPE_ONLY[e.how] && !GENERIC[e.how]) out.push(`${T}.${f}`);
   return out;
 }

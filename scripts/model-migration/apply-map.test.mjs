@@ -196,3 +196,15 @@ test('основание «delegated» (владелица поручила ре
   assert.equal(r.out.priority, 'normal');
   assert.equal(r.out.priority_note, '(не блокер)');
 });
+
+test('все объекты (17.11): статус и приоритет по общим правилам карты — ADR сводится к коду справочника правил', async () => {
+  const { RULES } = await import('./resources.mjs');
+  const map = { status_raw: { rule: 'transform', to: 'status', how: 'status', basis: 'owner' }, priority: { rule: 'transform', to: 'priority', how: 'priority', basis: 'owner' } };
+  const c = { statusCodes: {}, statusDict: 'adr_status', statusRules: RULES.dictionaries.adr_status, codeCase: 'upper', statusVocab: VOCAB };
+  const r = applyMap('KnowADRHist', map, { status_raw: 'ACCEPTED', priority: 'P1' }, c);
+  assert.equal(r.out.status, 'ACCEPTED');
+  assert.equal(r.out.priority, 'high');
+  assert.deepEqual(r.rejects, []);
+  const u = applyMap('KnowADRHist', map, { status_raw: 'что-то' }, c);
+  assert.deepEqual(u.rejects, [{ field: 'status_raw', value: 'что-то', why: 'статус вне справочника' }], 'неузнанное — несоответствием, не молча');
+});

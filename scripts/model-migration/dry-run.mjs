@@ -14,7 +14,9 @@ import { fingerprint } from './fingerprint.mjs';
 import { applyMap } from './apply-map.mjs';
 
 import { MAP, VOCAB, CODE_CASE, RULES } from './resources.mjs';
-const DICT_OF = { KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
+// Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
+const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
+const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 // Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
 const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
 
@@ -33,7 +35,7 @@ export async function dryRun(db, DECISIONS) {
       t.records++;
       const clean = {};
       for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
-      const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T] });
+      const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]] });
       for (const f of Object.keys(r.out)) bump(t.outFields, f);
       for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
       for (const f of r.dropped) bump(t.dropped, f);

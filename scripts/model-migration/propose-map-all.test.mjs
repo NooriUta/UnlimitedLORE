@@ -50,3 +50,8 @@ test('статус: копия на записи (ADR, решение, спек�
   assert.equal(ruleFor('KnowSpecHist', 'status_raw').rule, 'drop');
   assert.equal(ruleFor('KnowSpecHist', 'status').how, 'status');
 });
+
+test('date_display у вехи — подпись («18 апр», «прогноз Q4 2026»), не дата (пробный расчёт 17.11: 46 отказов «не дата»)', () => {
+  assert.equal(ruleFor('KnowMilestone', 'date_display').rule, 'keep');
+  assert.equal(ruleFor('KnowMilestone', 'date_created').how, 'DATE');
+});
