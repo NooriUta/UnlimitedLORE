@@ -199,7 +199,25 @@ public abstract class LoreResourceBase {
      * Снимать в начале обработки запроса (до асинхронных цепочек) и передавать дальше.
      */
     ChangeAuthor changeAuthor() {
-        return ChangeAuthor.of(identity);
+        return ChangeAuthor.of(identity).withSession(callHeader(ChangeAuthor.SESSION_HEADER))
+            .withHarness(callHeader(HarnessCheck.HEADER), harnessRegistry == null ? null : harnessRegistry.snapshot())
+            .withMachine(callHeader(AgentMachine.HEADER));
+    }
+
+    /** AO-SESSION-LOG: заголовок текущего HTTP-запроса; вне запроса (джобы, тесты) — null. */
+    @Inject
+    io.quarkus.vertx.http.runtime.CurrentVertxRequest currentRequest;
+
+    @Inject
+    HarnessRegistry harnessRegistry;
+
+    String callHeader(String name) {
+        try {
+            var rc = currentRequest == null ? null : currentRequest.getCurrent();
+            return rc == null ? null : rc.request().getHeader(name);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /**

@@ -1973,6 +1973,7 @@
   "pp.field.jobKind": "Job kind",
   "pp.field.importance": "Importance",
   "pp.field.state": "State",
+  "pp.field.qgType": "Type",
   "pp.field.lastRunStatus": "Last run result",
   "pp.field.ownerProject": "Owner project",
   "pp.field.retiredAt": "Retired",
