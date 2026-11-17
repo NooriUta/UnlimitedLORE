@@ -155,3 +155,20 @@ export function volvaKeys() {
     LORE_VOLVA_EMBED_ES256_PUBLIC_KEY: publicKey.export({ format: 'der', type: 'spki' }).toString('base64'),
   };
 }
+
+/**
+ * Текст .env установки из образца (.env.example пакета deploy/install): значения выбора подставляются в свои строки,
+ * новые ключи дописываются в конец. Пароли сюда не передаются: в образце они CHANGE_ME, и install.sh генерирует их сам.
+ */
+export function installEnvText(example, values) {
+  let t = example.replace(/\n*$/, '\n');
+  for (const [k, v] of Object.entries(values)) {
+    if (!/^[A-Z][A-Z0-9_]*$/.test(k)) throw new Error(`имя переменной «${k}» не годится`);
+    if (/PASSWORD|SECRET|PRIVATE_KEY/.test(k)) throw new Error(`${k}: пароль и секрет в .env через установщик не передаются — их генерирует install.sh или кладёт хранилище`);
+    const s = String(v);
+    if (/[\r\n]/.test(s)) throw new Error(`${k}: перевод строки в значении`);
+    const re = new RegExp('^' + k + '=.*$', 'm');
+    t = re.test(t) ? t.replace(re, () => `${k}=${s}`) : t + `${k}=${s}\n`;
+  }
+  return t;
+}

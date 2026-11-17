@@ -7,6 +7,7 @@ import edges from './map/sprint-phase-task.edges.json' with { type: 'json' };
 import schema from './schema/sprint-phase-task.json' with { type: 'json' };
 import rules from './rules/status-unification.json' with { type: 'json' };
 import statuses from '../../shared/lore-statuses.json' with { type: 'json' };
+import installBundle from './rules/install-bundle.json' with { type: 'json' };
 
 export const MAP = map.types;
 export const EDGES = edges.edges;
@@ -14,3 +15,4 @@ export const SCHEMA = schema.types;
 export const RULES = rules;
 export const VOCAB = statuses.statusMatch;
 export const CODE_CASE = rules.code_case.status;
+export const INSTALL_BUNDLE = installBundle;
