@@ -575,7 +575,80 @@
         "P1": "high",
         "P2": "normal",
         "P3": "low",
-        "BLOCKER": "critical"
+        "BLOCKER": "critical",
+        "MEDIUM": "normal"
+      }
+    },
+    "harness": {
+      "kind": "other",
+      "_about": "Справочник harness — хозяйство miniLORE (ADR-LORE-054 п.8); у LORE копия. Коды link: claude, kimi, dsh, qwen; известные, не подключённые к miniLORE: codex, opencode, cursor. Владелица 17.11.2026: «как у minilore», «коды у minilore правильные, а название можно сделать больше», «завели в правила проверки и унификации».",
+      "codes": [
+        {
+          "code": "claude",
+          "labels": {
+            "ru": "Claude Code — агент Anthropic в терминале и приложении",
+            "en": "Claude Code — Anthropic agent for terminal and desktop",
+            "pl": "Claude Code — agent Anthropic w terminalu i aplikacji"
+          }
+        },
+        {
+          "code": "kimi",
+          "labels": {
+            "ru": "Kimi Code — агент Moonshot AI",
+            "en": "Kimi Code — Moonshot AI agent",
+            "pl": "Kimi Code — agent Moonshot AI"
+          }
+        },
+        {
+          "code": "qwen",
+          "labels": {
+            "ru": "Qwen Code — агент Alibaba (форк Gemini CLI)",
+            "en": "Qwen Code — Alibaba agent (Gemini CLI fork)",
+            "pl": "Qwen Code — agent Alibaba (fork Gemini CLI)"
+          }
+        },
+        {
+          "code": "dsh",
+          "labels": {
+            "ru": "DeepSeek Harness — агент на моделях DeepSeek",
+            "en": "DeepSeek Harness — agent on DeepSeek models",
+            "pl": "DeepSeek Harness — agent na modelach DeepSeek"
+          }
+        },
+        {
+          "code": "codex",
+          "labels": {
+            "ru": "Codex — агент OpenAI (не подключён к miniLORE)",
+            "en": "Codex — OpenAI agent (not connected to miniLORE)",
+            "pl": "Codex — agent OpenAI (niepodłączony do miniLORE)"
+          }
+        },
+        {
+          "code": "opencode",
+          "labels": {
+            "ru": "OpenCode — открытый агент SST (не подключён к miniLORE)",
+            "en": "OpenCode — open-source agent by SST (not connected to miniLORE)",
+            "pl": "OpenCode — otwarty agent SST (niepodłączony do miniLORE)"
+          }
+        },
+        {
+          "code": "cursor",
+          "labels": {
+            "ru": "Cursor — редактор с агентом Anysphere (не подключён к miniLORE)",
+            "en": "Cursor — Anysphere agent editor (not connected to miniLORE)",
+            "pl": "Cursor — edytor z agentem Anysphere (niepodłączony do miniLORE)"
+          }
+        }
+      ],
+      "synonyms": {
+        "claude-code": "claude",
+        "kimi-code": "kimi",
+        "claude code": "claude",
+        "kimi code": "kimi",
+        "qwen code": "qwen",
+        "deepseek": "dsh",
+        "deepseek harness": "dsh",
+        "open code": "opencode"
       }
     }
   },
@@ -673,6 +746,13 @@
       "dict": "spec_status",
       "required": false,
       "_about": "копия статуса на записи (у части записей нет версии); MIG-01 все объекты, 17.11.2026"
+    },
+    {
+      "type": "KnowActor",
+      "field": "harness",
+      "dict": "harness",
+      "required": false,
+      "_about": "harness агента — к кодам miniLORE (17.11.2026)"
     }
   ],
   "_hints": "Подсказки конвейера для значения, которое не свелось к коду само (слова владелицы 16.11.2026: «так предложение сразу кнопкой сделай», «по спринту хоть какой то алгоритм предложений и компоновки»). Порядок проверки: not_status → phrase → marker → word; внутри яруса — сверху вниз; побеждает первая подходящая, чей код есть в справочнике типа (dict — ограничить справочниками). phrase и not_status ищутся во всём тексте без разметки, marker — значок в начале, word — в «голове» до разделителя. Подсказка — предложение, решение принимает человек. Другая установка дописывает свои подсказки сюда же. Порядок фраз: «в работе» раньше «в очереди» — слово pending в хвосте не перебивает «В РАБОТЕ» в начале (найдено в интерфейсе 16.11.2026).",

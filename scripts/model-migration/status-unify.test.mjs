@@ -126,18 +126,20 @@ test('владелица 16.11.2026: «статусная модель uppercase
   const p = RULES.dictionaries.priority;
   assert.equal(p.kind, 'other');
   assert.deepEqual(p.codes.map(c => c.code), ['critical', 'high', 'normal', 'low']);
-  for (const [name, d] of Object.entries(RULES.dictionaries)) if (name !== 'priority') assert.equal(d.kind, 'status', name);
+  // не статусная модель — приоритет и harness (17.11.2026: harness в правилах, коды miniLORE строчными)
+  for (const [name, d] of Object.entries(RULES.dictionaries)) if (!['priority', 'harness'].includes(name)) assert.equal(d.kind, 'status', name);
   assert.deepEqual(classify('P1', p), { kind: 'known', code: 'high' });
   assert.deepEqual(classify('🔴 HIGH', p), { kind: 'known', code: 'high' });
   assert.deepEqual(classify('blocker', p), { kind: 'known', code: 'critical' });
-  assert.deepEqual(classify('medium', p), { kind: 'unknown', code: null });
+  // medium — середина шкалы (ST-74, 16.11): тот же разбор, что у переноса (apply-map toPriority)
+  assert.deepEqual(classify('medium', p), { kind: 'known', code: 'normal' });
   // приоритет необязателен: пустое сведено без решения, незнакомое — строка диалога
   const d = buildDialog([
     { type: 'KnowSprintHist', field: 'priority', value: null, n: 400 },
     { type: 'KnowSprintHist', field: 'priority', value: 'medium', n: 6 },
     { type: 'KnowQuestion', field: 'priority', value: 'normal', n: 208 },
   ], RULES, NONE);
-  assert.deepEqual(d.rows.map(r => r.state), ['unified', 'needs_decision', 'unified']);
+  assert.deepEqual(d.rows.map(r => r.state), ['unified', 'unified', 'unified'], 'medium сведён синонимом, решения не ждёт');
   // справочник не статусов с заглавным кодом не принимается
   const broken = structuredClone(RULES);
   broken.dictionaries.priority.codes[0].code = 'CRITICAL';
@@ -158,4 +160,16 @@ test('справочник решений: кодов FIXED и DONE нет — �
   const codes = RULES.dictionaries.decision_status.codes.map(c => c.code);
   assert.ok(!codes.includes('FIXED') && !codes.includes('DONE'), 'иначе fixed/done молча свелись бы к своим кодам мимо её решения');
   assert.deepEqual(checkRules(RULES), []);
+});
+
+test('harness — в правилах проверки и унификации (владелица 17.11: «завели в правила проверки и унификации»): коды miniLORE, синонимы старых кодов', () => {
+  const d = RULES.dictionaries.harness;
+  assert.ok(d, 'справочник harness в правилах');
+  assert.equal(d.kind, 'other', 'не статусная модель — строчными');
+  assert.deepEqual(d.codes.map(c => c.code), ['claude', 'kimi', 'qwen', 'dsh', 'codex', 'opencode', 'cursor']);
+  assert.equal(d.synonyms['claude-code'], 'claude');
+  assert.equal(d.synonyms['kimi-code'], 'kimi');
+  assert.ok(RULES.sources.some(s => s.type === 'KnowActor' && s.field === 'harness' && s.dict === 'harness'));
+  assert.deepEqual(checkRules(RULES), []);
+  assert.deepEqual(classify('claude-code', d), { kind: 'known', code: 'claude' });
 });

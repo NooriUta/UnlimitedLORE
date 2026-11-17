@@ -1,4 +1,6 @@
 import { classify as classifyRules } from './status-unify.mjs';
+import HARNESS_RULES_FILE from './rules/status-unification.json' with { type: 'json' };
+const HARNESS_RULES = HARNESS_RULES_FILE.dictionaries.harness;
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Исполнитель карты переноса.
 //
 // Чистая функция: запись старой базы + карта её типа → запись новой базы. Базы не касается, поэтому
@@ -130,9 +132,8 @@ const TRANSFORMS = {
 };
 const TYPE_ONLY = { DATE: asDate, DATETIME: asDateTime };
 // Общие преобразования карты всех объектов (17.11.2026): статус — к справочнику типа, приоритет — к одной шкале.
-// Коды harness — справочник miniLORE (link/src/sources.ts + известные из приложения), 17.11.2026.
-const HARNESS = { claude: 'claude', 'claude-code': 'claude', kimi: 'kimi', 'kimi-code': 'kimi', dsh: 'dsh', qwen: 'qwen', codex: 'codex', opencode: 'opencode', cursor: 'cursor' };
-const asHarness = (f, v, r) => { const c = HARNESS[String(v).trim().toLowerCase()]; if (c) r.out.harness = c; else reject(r, f, v, 'harness вне справочника miniLORE', { bucket: 'out', field: 'harness' }); };
+// harness — по справочнику правил проверки и унификации (rules/status-unification.json, 17.11.2026).
+const asHarness = (f, v, r, ctx) => { const d = (ctx.harnessRules || HARNESS_RULES); const k = classifyRules(v, d); if (k.kind === 'known') r.out.harness = k.code; else reject(r, f, v, 'harness вне справочника miniLORE', { bucket: 'out', field: 'harness' }); };
 const GENERIC = { harness: asHarness, status: (f, v, r, ctx) => asStatus(f, v, r, ctx, false), priority: (f, v, r) => asPriority(f, v, r, 'out') };
 const TO_VERSION = { 'KnowSprint.priority': (f, v, r) => asPriority(f, v, r, 'toVersion') };
 const RENAMES = {
