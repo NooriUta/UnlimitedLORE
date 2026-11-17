@@ -109,7 +109,11 @@ jobs:
             echo "напрямую: $(env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy curl -sS -o /dev/null --max-time 20 -w '%{http_code} %{remote_ip} %{time_total}s' "$u" 2>&1)"
           done
 
+      # На push стенд в эти минуты перезапускается (выкатка идёт параллельно): прогон 8889 упал на
+      # входе test-sa, пока бэкенд вставал. Здесь вход нужен лишь для токена ожидания — хватит любой
+      # учётки; обязательный вход — повторный, после ожидания.
       - name: Автологин тестовых учёток
+        continue-on-error: ${{ github.event_name == 'push' }}
         working-directory: web-next
         run: npm run e2e:stand:login
 
