@@ -102,8 +102,9 @@ public class LoreSearchResource extends LoreResourceBase {
             List.of("title"),
             "KnowSpecHist", "ftKnowSpecHist", List.of("content_md"),
             DIRECT_COMP, null, null, DIRECT_PROJ, 1.10),
-        new Branch("sprint", "KnowSprint", "sprint_id", "name", "ftKnowSprint",
-            List.of("name", "context_md"),
+        // D-2026-MIG-SPRINT-PHASE-TITLE: название спринта в новой схеме — title; context_md живёт в версии (KnowSprintHist)
+        new Branch("sprint", "KnowSprint", "sprint_id", "title", "ftKnowSprint",
+            List.of("title"),
             "KnowSprintHist", "ftKnowSprintHist", List.of("context_md", "outcome_md"),
             DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
         // Задачи: прямые компоненты — TAGGED_WITH (task_link rel=component);
