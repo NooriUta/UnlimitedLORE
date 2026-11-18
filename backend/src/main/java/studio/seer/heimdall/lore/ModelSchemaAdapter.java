@@ -109,6 +109,57 @@ final class ModelSchemaAdapter {
         return sb.toString();
     }
 
+    private static final Map<String, String> CANON_TO_CODE = Map.ofEntries(
+        Map.entry("todo", "TODO"), Map.entry("backlog", "BACKLOG"), Map.entry("planned", "PLANNED"),
+        Map.entry("design", "DESIGN"), Map.entry("in_progress", "ACTIVE"), Map.entry("waiting", "WAITING"),
+        Map.entry("partial", "PARTIAL"), Map.entry("review", "REVIEW"), Map.entry("ready_for_deploy", "READY_FOR_DEPLOY"),
+        Map.entry("uat", "UAT"), Map.entry("done", "DONE"), Map.entry("failed", "FAILED"),
+        Map.entry("blocked", "BLOCKED"), Map.entry("cancelled", "CANCELLED"));
+
+    /** Строка статуса старого вида («🔄 IN PROGRESS», «🟡 PARTIAL — …») → код справочника; код остаётся кодом. */
+    static String toCode(String raw) {
+        if (raw == null) return null;
+        String t = raw.strip();
+        if (DISPLAY.containsKey(t)) return t;
+        String canon = LoreStatusVocabulary.classify(t);
+        return CANON_TO_CODE.getOrDefault(canon, raw);
+    }
+
+    private static final Pattern STATUS_ASSIGN = Pattern.compile("(?<![\\w])status_raw\\s*=\\s*:(\\w+)");
+
+    /** Запись: параметр, который присваивается полю status_raw, переводится в код справочника. */
+    static Map<String, Object> rewriteParams(String sql, Map<String, Object> params) {
+        if (sql == null || params == null || params.isEmpty() || !sql.contains("status_raw")) return params;
+        Matcher m = STATUS_ASSIGN.matcher(sql);
+        Map<String, Object> out = null;
+        while (m.find()) {
+            String name = m.group(1);
+            if (params.get(name) instanceof String s) {
+                if (out == null) out = new java.util.HashMap<>(params);
+                out.put(name, toCode(s));
+            }
+        }
+        return out == null ? params : out;
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /** Ответ ArcadeDB целиком: строки в {@code result} приводятся {@link #adaptRows}; иной ответ — как есть. */
+    @SuppressWarnings("unchecked")
+    static String adaptJson(String json) {
+        if (json == null || !json.contains("status_raw")) return json;
+        try {
+            Map<String, Object> body = JSON.readValue(json, java.util.LinkedHashMap.class);
+            if (!(body.get("result") instanceof List<?> l)) return json;
+            List<Map<String, Object>> rows = new java.util.ArrayList<>();
+            for (Object o : l) if (o instanceof Map<?, ?> mm) rows.add((Map<String, Object>) mm);
+            adaptRows(rows);
+            return JSON.writeValueAsString(body);
+        } catch (java.io.IOException e) {
+            return json;
+        }
+    }
+
     /** Ответ: код плана в ключе status_raw → строка старого вида. */
     static void adaptRows(List<Map<String, Object>> rows) {
         if (rows == null) return;

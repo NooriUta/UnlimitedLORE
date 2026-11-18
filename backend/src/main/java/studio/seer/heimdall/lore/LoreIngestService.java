@@ -129,15 +129,11 @@ public class LoreIngestService {
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> queryRows(String sql, Map<String, Object> params) {
-        // MIG-03: база собрана из модели — поле status_raw там зовётся status (код справочника).
-        boolean model = ModelSchemaAdapter.enabled();
-        if (model) sql = ModelSchemaAdapter.rewriteSql(sql);
+        // MIG-03: под новую схему запрос и ответ приводит ModelSchemaClientFilter (клиент mart-api).
         try {
             LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
                     new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
-            List<Map<String, Object>> rows = r.result() instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
-            if (model) ModelSchemaAdapter.adaptRows(rows);
-            return rows;
+            return r.result() instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
         } catch (RuntimeException e) {
             // DBR-05: тело ответа ArcadeDB несёт настоящую причину («Index not
             // found …», «no viable alternative at input …», локаут креда), а

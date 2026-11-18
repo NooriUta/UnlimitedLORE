@@ -59,6 +59,27 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void запись_статуса_пишет_код_в_status() {
+        String sql = "UPDATE KnowTaskHist SET state_uid = :nsid, status_raw = :ns, status_category = :cat, title = :t WHERE x = 1";
+        Map<String, Object> p = new HashMap<>(Map.of("nsid", "u1", "ns", "🔄 IN PROGRESS", "cat", "active", "t", "✅ DONE как заголовок"));
+        Map<String, Object> out = ModelSchemaAdapter.rewriteParams(sql, p);
+        assertEquals("ACTIVE", out.get("ns"));
+        assertEquals("✅ DONE как заголовок", out.get("t"), "параметр не статуса не трогается");
+        assertEquals("u1", out.get("nsid"));
+        assertEquals("READY_FOR_DEPLOY", ModelSchemaAdapter.rewriteParams("INSERT INTO KnowTaskHist SET status_raw=:sraw", Map.of("sraw", "🚀 READY FOR DEPLOY")).get("sraw"));
+        assertEquals("PARTIAL", ModelSchemaAdapter.rewriteParams("UPDATE X SET status_raw = :s", Map.of("s", "🟡 PARTIAL — ждём ответа")).get("s"));
+        assertEquals("DONE", ModelSchemaAdapter.rewriteParams("UPDATE X SET status_raw = :s", Map.of("s", "DONE")).get("s"), "код остаётся кодом");
+    }
+
+    @Test
+    void ответ_базы_целиком_json_приводится_к_прежнему_виду() {
+        String json = "{\"result\":[{\"task_uid\":\"A/1\",\"status_raw\":\"BLOCKED\"},{\"n\":3}]}";
+        String out = ModelSchemaAdapter.adaptJson(json);
+        org.junit.jupiter.api.Assertions.assertTrue(out.contains("\"status_raw\":\"🔴 BLOCKED\""), out);
+        assertEquals("{\"user\":\"x\"}", ModelSchemaAdapter.adaptJson("{\"user\":\"x\"}"));
+    }
+
+    @Test
     void все_коды_плана_опознаются_словарём_как_свой_канон() {
         Map<String, String> want = Map.ofEntries(
             Map.entry("TODO", "todo"), Map.entry("BACKLOG", "backlog"), Map.entry("PLANNED", "planned"),
