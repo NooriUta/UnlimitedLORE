@@ -42,7 +42,10 @@ public class LoreDictResource extends LoreResourceBase {
      * допустимых значений на словарь. Сейчас вид есть только у product: tech — технологический,
      * service — сервисно-организационный (от него git не требуется).
      */
-    static final Map<String, java.util.Set<String>> KINDS = Map.of("product", java.util.Set.of("tech", "service"));
+    // qg_type — слой гейта (SPRINT_QG_REBUILD/QG-04, ADR-LORE-053-D3): универсальный или проектный.
+    static final Map<String, java.util.Set<String>> KINDS = Map.of(
+        "product", java.util.Set.of("tech", "service"),
+        "qg_type", java.util.Set.of("universal", "project"));
 
     /** Отказ словами, если вид не подходит словарю; null — вид не прислан или допустим. */
     static String kindRefusal(String dictType, String kind) {

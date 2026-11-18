@@ -1746,6 +1746,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       sprint_id:    z.string().optional().describe('sprint this QG belongs to, e.g. "SPRINT_AUTH_REDESIGN"'),
       project:      z.string().optional().describe('owner project slug (KnowGitProject) — creates BELONGS_TO_PROJECT; required before status=active'),
       retired_reason: z.string().optional().describe('why the gate is retired — required with status=retired'),
+      qg_type:      z.string().optional().describe('SPRINT_QG_REBUILD/QG-04: gate type, code of dictionary qg_type — universal: code | cicd | sec | know | doc; project: test | perf | data | ops | ux (lowercase)'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/quality-gate', p)); }

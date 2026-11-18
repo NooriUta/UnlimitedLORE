@@ -49,6 +49,10 @@ services:
       dockerfile: Dockerfile.local
       args:
         LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
+        # Вход через Keycloak — по выбору (MIG-04). OIDC впекается в образ на сборке, поэтому флаг и адрес
+        # области — build-args; тот же флаг нужен и в окружении (фильтр ролей читает его в рантайме).
+        LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}
+        LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
@@ -62,7 +66,14 @@ services:
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD}
       - LORE_DB=${LORE_DB:-system_aida_lore}
       - LORE_RELEASE_TAG=${LORE_VERSION:-}
-      - LORE_AUTH_ENABLED=false
+      # Пусто в .env → false, как раньше (вход выключен). Пустая строка без умолчания уронила бы разбор boolean.
+      - LORE_AUTH_ENABLED=${LORE_AUTH_ENABLED:-false}
+      - LORE_OIDC_ISSUER=${LORE_OIDC_ISSUER:-}
+      # Völva — встроенные графики (по выбору): адрес, издатель; ключи ES256 — секреты, в .env установки.
+      - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      - LORE_VOLVA_EMBED_ISSUER=${LORE_VOLVA_EMBED_ISSUER:-}
+      - LORE_VOLVA_EMBED_ES256_PRIVATE_KEY=${LORE_VOLVA_EMBED_ES256_PRIVATE_KEY:-}
+      - LORE_VOLVA_EMBED_ES256_PUBLIC_KEY=${LORE_VOLVA_EMBED_ES256_PUBLIC_KEY:-}
       - lore.secrets.provider=env
       # Схема накатывается на каждом старте под root; бэкап перед накаткой
       # пишется в том lore-db-backups (на пустой базе пропускается сам).
@@ -88,11 +99,15 @@ services:
       dockerfile: web-next/Dockerfile
       args:
         VITE_LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
+        # Vite впекает вход в бандл — флипать вместе с бэкендом, тем же значением.
+        VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}
+        VITE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+        VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
     restart: unless-stopped
     environment:
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
-      LORE_OIDC_ORIGIN: ""
-      LORE_VOLVA_ORIGIN: ""
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
       LORE_BACKEND_URL: ""
       LORE_BACKEND_HOST: ""
       LORE_FRONT: v2

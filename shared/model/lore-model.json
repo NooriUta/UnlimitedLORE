@@ -4674,6 +4674,15 @@
       "labelEn" : "State",
       "labelPl" : "Stan"
     }, {
+      "key" : "qg_type",
+      "label" : "Тип",
+      "labelKey" : "pp.field.qgType",
+      "kind" : "enum",
+      "group" : "head",
+      "dict" : "qg_type",
+      "labelEn" : "Type",
+      "labelPl" : "Typ"
+    }, {
       "key" : "title",
       "label" : "Название",
       "labelKey" : "pp.field.title",

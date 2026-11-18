@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "fe6e4789b3c18a4e",
+  "version" : "5ebf7cac4f12cde6",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -10406,6 +10406,40 @@
         "property_type" : null,
         "source" : "SUPPLIES"
       }, {
+        "key" : "qg_type",
+        "label" : "Тип",
+        "label_key" : "pp.field.qgType",
+        "kind" : "enum",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "dict" : "qg_type",
+        "label_en" : "Type",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Typ",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "s",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
         "key" : "title",
         "label" : "Название",
         "label_key" : "pp.field.title",
@@ -13443,11 +13477,11 @@
     } ]
   },
   "field_texts" : {
-    "fields" : 197,
-    "without_definition" : 177,
+    "fields" : 198,
+    "without_definition" : 178,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 197
+    "without_definition_en" : 198
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }
