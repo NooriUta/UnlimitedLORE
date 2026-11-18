@@ -18,6 +18,7 @@ import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } fr
 import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml } from './setup.mjs';
 import { INSTALL_BUNDLE } from './resources.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
+import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
 import os from 'node:os';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
@@ -127,7 +128,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Адрес бэкенда LORE</td><td><input name="backendUrl" size="40"></td></tr>
 <tr><td>Издатель (Keycloak, область)</td><td><input name="issuer" size="40"></td></tr>
 <tr><td>Путь к серверу MCP</td><td><input name="serverPath" size="40"></td></tr></table>
-<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn" id="acheck">Проверить связь</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
+<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn" id="acheck">Проверить связь</button><button type="button" class="btn" id="amach">Завести машину в LORE</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
 <pre class="mono" id="aout" style="white-space:pre-wrap"></pre><div id="ares" class="sub"></div></form></div>
 </section>
 <section data-page="0" hidden><h2>Шаг 0. Вход и проверка владельца</h2>
@@ -239,6 +240,7 @@ function iform(){var f=document.getElementById('if'),o={};Array.prototype.forEac
 document.addEventListener('click',function(e){var map={ienv:'api/setup/env',iplan:'api/setup/install-plan',ivolva:'api/setup/volva-keys',ilink:'api/setup/link-toml'};var u=map[e.target.id];if(!u)return;
 document.getElementById('ires').textContent='…';fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(iform())}).then(function(r){return r.json()}).then(function(d){var o=document.getElementById('iout'),r=document.getElementById('ires');if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}o.textContent=d.text||'';r.innerHTML=esc(d.note||'')})});
 document.addEventListener('click',function(e){if(e.target.id!=='acheck')return;var r=document.getElementById('ares');r.textContent='…';fetch('api/setup/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(aform())}).then(function(x){return x.json()}).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}var lab={ok:'да',warn:'внимание',fail:'нет',unchecked:'не смогли проверить'};r.innerHTML=d.checks.map(function(c){return '<div><span class="chip'+(c.state==='ok'?' ok':'')+'" style="'+(c.state==='fail'?'color:var(--dng)':c.state==='ok'?'':'color:var(--wrn)')+'">'+esc(c.name)+': '+lab[c.state]+'</span> '+esc(c.reason)+'</div>'}).join('')})});
+document.addEventListener('click',function(e){if(e.target.id!=='amach')return;var r=document.getElementById('ares'),body=aform();var go=function(apply){body.apply=apply;r.textContent='…';return fetch('api/setup/machine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(x){return x.json()})};go(false).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}r.innerHTML='<span class="chip'+(d.state==='ok'?' ok':'')+'">'+esc(d.machineId||'')+'</span> '+esc(d.reason);if(d.state!=='plan')return;if(!confirm('Завести машину '+d.machineId+' в LORE? '+d.reason))return;go(true).then(function(d2){r.innerHTML=d2.error?'<b style="color:var(--dng)">'+esc(d2.error)+'</b>':'<span class="chip'+(d2.state==='ok'?' ok':'')+'">'+esc(d2.machineId||'')+'</span> '+esc(d2.reason)})})});
 function aform(){var f=document.getElementById('af'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
 document.addEventListener('click',function(e){var id=e.target.id;if(id!=='apreview'&&id!=='aapply')return;var body=aform();if(id==='aapply'){if(!confirm('Записать строку MCP aida-lore в настройки Claude Code? Прежний файл сохранится копией.'))return;body.confirm=true}
 fetch(id==='aapply'?'api/setup/mcp/apply':'api/setup/mcp/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){if(d.error){document.getElementById('ares').innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}
@@ -359,6 +361,7 @@ export async function serve({ port = 2499 } = {}) {
   const redirect = `http://127.0.0.1:${port}/auth/callback`;
   const sid = req => (/(?:^|;\s*)lmsid=([A-Za-z0-9_-]+)/.exec(req.headers.cookie || '') || [])[1];
   const me = req => sessions.get(sid(req)) || null;
+  const tokens = new Map();
   const server = http.createServer(async (req, res) => {
     try {
       const full = new URL(req.url, 'http://127.0.0.1');
@@ -382,13 +385,16 @@ export async function serve({ port = 2499 } = {}) {
         const page = (title, lines) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(`<!doctype html><meta charset="utf-8"><body style="font:14px Manrope,system-ui;background:#faf6ee;color:#2a2218;padding:24px"><h2 style="color:#a8660a">${title}</h2>${lines.map(l => `<p>${String(l).replace(/</g, '&lt;')}</p>`).join('')}<p><a href="/#step-0">к шагу 0</a></p>`); };
         if (!st || Date.now() - st.at > 600000) return page('Вход не выполнен', ['состояние входа не найдено или устарело — начните вход заново']);
         if (full.searchParams.get('error')) return page('Вход не выполнен', [`Keycloak ответил: ${full.searchParams.get('error')}`]);
-        const claims = tokenClaims(await exchange(st.kc, full.searchParams.get('code') || '', redirect, st.verifier));
+        const accessToken = await exchange(st.kc, full.searchParams.get('code') || '', redirect, st.verifier);
+        const claims = tokenClaims(accessToken);
         let owner = null;
         try { owner = await ownerInDb(db, claims.sub, kc.project); } catch { owner = null; }
         const v = verdict(claims, kc.role, owner, kc.project);
         if (!v.ok) return page('Дальше нельзя', [`Вошли как ${claims.login}.`, ...v.reasons]);
         const id = crypto.randomBytes(24).toString('base64url');
         sessions.set(id, { login: claims.login, sub: claims.sub, kc: st.kc.url, realm: st.kc.realm, project: kc.project });
+        // Токен — только в памяти процесса и отдельно от сессии: /api/me отдаёт сессию браузеру, токен туда не попадает.
+        tokens.set(id, accessToken);
         res.writeHead(302, { 'Set-Cookie': `lmsid=${id}; HttpOnly; SameSite=Strict; Path=/`, Location: '/#step-1' });
         return res.end();
       }
@@ -442,6 +448,21 @@ export async function serve({ port = 2499 } = {}) {
             return json(res, 200, { text, note: 'файл ' + file + '; секрет пустой — он появится, когда установщик заведёт клиент minilore-link-' + b.machineId + ' в Keycloak' });
           }
         } catch (e) { return json(res, 400, { error: e.message }); }
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/machine') {
+        // machine_new из окна: план (dry_run), запись — только с apply:true и только со своей страницы. Вход — токен шага 0.
+        if (req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'только со страницы установщика' });
+        const b = await readBody(req), token = tokens.get(sid(req));
+        if (!token) return json(res, 400, { error: 'нужен вход на шаге 0: машину заводят от имени человека' });
+        let base, body;
+        try { base = new URL(b.backendUrl); if (!/^https?:$/.test(base.protocol)) throw new Error(); } catch { return json(res, 400, { error: 'адрес бэкенда LORE — http(s)://хост:порт' }); }
+        try { body = enrollBody({ machineId: b.machineId, harness: b.harness, dryRun: !b.apply }); } catch (e) { return json(res, 400, { error: e.message }); }
+        let r;
+        try {
+          const x = await fetch(new URL('lore/actor/machine', base), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+          r = { status: x.status, body: await x.text() };
+        } catch (e) { r = { error: e.cause?.code || e.message }; }
+        return json(res, 200, { ...enrollVerdict(r), machineId: body.machine_id });
       }
       if (req.method === 'POST' && req.url === '/api/setup/check') {
         // Только чтение: два GET к LORE. Ключ Völva для сверки — из volva-embed.env, который выдал установщик.
