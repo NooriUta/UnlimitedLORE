@@ -223,7 +223,7 @@ final class LoreRecordFrom {
     /** Значения записи по типу (строка главного среза {@link LoreRecordResource#sourceOf}). */
     static final Map<String, List<Val>> VALUES = Map.ofEntries(
         Map.entry("sprint", List.of(
-            v("title", Transform.FIRST_OF, "name", "sprint_id"),
+            v("title", Transform.FIRST_OF, "title", "name", "sprint_id"),
             s("body_md", "context_md"),
             s("context_md", "context_md"),
             s("outcome_md", "outcome_md"),

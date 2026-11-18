@@ -56,7 +56,7 @@ final class LoreNewsV2Collector {
         "out('PART_OF').sprint_id[0] AS sprint_id FROM KnowTask";
     /** S7A-09: спринты — без context_md, приоритета, PR и плана; выражения — те же, что у среза sprints. */
     static final String SQL_SPRINTS =
-        "SELECT sprint_id, name, created_date, " +
+        "SELECT sprint_id, coalesce(title, name) AS name, created_date, " +
         "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
         "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
         LoreSlices.DONE_DATE_SQL + " AS done_date, " +

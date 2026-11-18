@@ -78,7 +78,7 @@ public class LoreIngestService {
 
         // 1. Upsert KnowSprint
         StringBuilder set = new StringBuilder(
-            "UPDATE KnowSprint SET sprint_id=:sid, name=:nm, status_raw=:sraw");
+            "UPDATE KnowSprint SET sprint_id=:sid, title=:nm, status_raw=:sraw");
         java.util.Map<String, Object> p = new java.util.LinkedHashMap<>(
             Map.of("sid", sprintId, "nm", nm, "sraw", statusRaw));
         if (planId    != null) { set.append(", plan_id=:pid");     p.put("pid", planId); }
@@ -310,7 +310,7 @@ public class LoreIngestService {
         params.put("outcome_md",   nullToEmpty(s.outcomeMd()));
 
         exec("UPDATE KnowSprint SET " +
-                "sprint_id=:sprint_id, name=:name, status_raw=:status_raw, " +
+                "sprint_id=:sprint_id, title=:name, status_raw=:status_raw, " +
                 "priority=:priority, date_created=:date_created, " +
                 "plan_id=:plan_id, outcome_md=:outcome_md " +
                 "UPSERT WHERE sprint_id=:sprint_id", params);

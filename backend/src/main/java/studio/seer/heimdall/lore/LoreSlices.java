@@ -399,7 +399,7 @@ public final class LoreSlices {
     record ProjectOwned(String entityType, String vertexType, String idField, String titleField, String inherit) {}
 
     static final List<ProjectOwned> PROJECT_OWNED = List.of(
-        new ProjectOwned("sprint",   "KnowSprint",   "sprint_id",   "name",       null),
+        new ProjectOwned("sprint",   "KnowSprint",   "sprint_id",   "coalesce(title, name)",       null),
         new ProjectOwned("adr",      "KnowADR",      "adr_id",      "title",      null),
         new ProjectOwned("decision", "KnowDecision", "decision_id", "title",      "out('DECIDED_IN')"),
         new ProjectOwned("question", "KnowQuestion", "question_id", "title",      "out('RAISED_IN')"),
@@ -511,7 +511,7 @@ public final class LoreSlices {
             List.of(), Map.of(), " LIMIT 400");
 
         slice("timeline_sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
             "out('HAS_STATE').status_raw[0] AS status_raw " +
             "FROM KnowSprint ORDER BY sprint_id",
@@ -895,7 +895,7 @@ public final class LoreSlices {
         // открытая строка истории done/cancelled; открытая задача — ни done, ни cancelled.
         // Фазы тоже PART_OF спринта, поэтому дети фильтруются по типу.
         slice("closed_sprints_with_open_tasks",
-            "SELECT sprint_id, name, out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
             "in('PART_OF')[@type = 'KnowTask'].task_uid AS task_uids, " +
             "in('PART_OF')[@type = 'KnowTask'].out('HAS_STATE')[valid_to IS NULL].status_raw AS task_statuses " +
             "FROM KnowSprint WHERE out('HAS_STATE')[valid_to IS NULL AND (" +
@@ -933,7 +933,7 @@ public final class LoreSlices {
         // ── §3 Sprints ───────────────────────────────────────────────────────
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",
-            "SELECT sprint_id, name, created_date, no_release_required, unplanned_intentional, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, created_date, no_release_required, unplanned_intentional, " +
             changedAtSql("created_date") + ", " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0] AS valid_from, " +
@@ -969,7 +969,7 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, name, context_md, outcome_md, created_date, no_release_required, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, context_md, outcome_md, created_date, no_release_required, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
@@ -1385,7 +1385,7 @@ public final class LoreSlices {
             "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
             "$ad = (SELECT 'adr' AS entity_type, adr_id AS ref_id, name AS title FROM KnowADR " +
             "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
-            "$sr = (SELECT 'sprint' AS entity_type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
+            "$sr = (SELECT 'sprint' AS entity_type, sprint_id AS ref_id, coalesce(title, name) AS title FROM KnowSprint " +
             "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
             "$rl = (SELECT 'release' AS entity_type, release_id AS ref_id, git_tag AS title FROM KnowRelease " +
             "       WHERE out('BELONGS_TO_PROJECT').size() = 0)" +
@@ -1891,7 +1891,7 @@ public final class LoreSlices {
         // 13 его спринтов не привязаны ни к одной вехе), и число «0 вех» само по
         // себе неотличимо от «продукта не существует» — а список отличим.
         slice("roadmap_unplanned",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components " +
             "FROM KnowSprint " +
@@ -1959,10 +1959,10 @@ public final class LoreSlices {
             "$sh = (SELECT 'spec' AS type, in('HAS_STATE').spec_id[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
             "      FROM KnowSpecHist WHERE valid_to IS NULL " +
             "      AND content_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
-            "$p = (SELECT 'sprint' AS type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
-            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "$p = (SELECT 'sprint' AS type, sprint_id AS ref_id, coalesce(title, name) AS title FROM KnowSprint " +
+            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') OR coalesce(title, name) ILIKE ('%' + :pattern + '%') " +
             "      OR context_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
-            "$ph = (SELECT 'sprint' AS type, in('HAS_STATE').sprint_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
+            "$ph = (SELECT 'sprint' AS type, in('HAS_STATE').sprint_id[0] AS ref_id, coalesce(in('HAS_STATE').title[0], in('HAS_STATE').name[0]) AS title " +
             "      FROM KnowSprintHist WHERE valid_to IS NULL AND (" +
             "      context_md ILIKE ('%' + :pattern + '%') OR outcome_md ILIKE ('%' + :pattern + '%')) LIMIT 15), " +
             "$t = (SELECT 'task' AS type, task_uid AS ref_id, title FROM KnowTask " +
@@ -2097,13 +2097,13 @@ public final class LoreSlices {
         // SPRINT_UXR_S9_SCALE_OPT/S9-05 (часть B): «таблица детей» вехи — её спринты с названием и
         // статусом. Раньше вкладка шла сырыми id из milestone_by_id (название = id, статус пуст).
         slice("milestone_sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('TARGETS_MILESTONE').milestone_id CONTAINS :mid",
             List.of("mid"), Map.of(), " ORDER BY sprint_id DESC");
 
         slice("component_sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components, " +
             "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " + CHILD_SPRINT_COLS + " " +
@@ -2130,7 +2130,7 @@ public final class LoreSlices {
             "SELECT slug, name, default_branch, is_private FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
         slice("project_sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
             List.of("project"), Map.of(), " ORDER BY sprint_id DESC");
@@ -2358,7 +2358,7 @@ public final class LoreSlices {
 
         // Заблокированные СЕЙЧАС (открытая строка истории) — с объяснением блокировки.
         slice("blocked_sprints_reason",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[valid_to IS NULL].block_reason[0] AS block_reason, " +
             "in('PART_OF').size() AS task_count, " +
@@ -2804,13 +2804,13 @@ public final class LoreSlices {
         // S4-29: был LIMIT 50 без ORDER BY — произвольные 50 без признака обрезки.
         // Потолка нет, порядок детерминирован; страница — общими limit/offset (SE-01).
         slice("release_sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_uid CONTAINS :ruid",
             List.of("ruid"), Map.of(), " ORDER BY sprint_id");
 
         slice("release_sprints_by_tag",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_id CONTAINS :tag",
             // REL-UID-01: номер версии общий у разных проектов — project сужает до своего.
@@ -3138,7 +3138,7 @@ public final class LoreSlices {
         // не поле: спринт к продукту напрямую не привязан и привязан не будет —
         // иначе появится третья копия той же связи.
         slice("product_sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components " +
             "FROM KnowSprint " +
