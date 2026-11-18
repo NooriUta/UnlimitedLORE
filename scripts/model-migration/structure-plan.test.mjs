@@ -85,3 +85,12 @@ test('строка временного ряда: момент строкой UT
   assert.deepEqual(tsContent({ ts: '2026-11-07 08:24:29.729', object_type: 'status', source: null, value: 200 }, 'ts'),
     { ts: 1794039869729, object_type: 'status', value: 200 });
 });
+
+test('тип, который карта явно не переносит (план-доска снята решением), шаг структуры не воссоздаёт', () => {
+  // D-2026-LORE-PLAN-BOARD-REMOVED: «план доску удаляем» — Plan* не переносятся, а шаг «как есть» их вернул (18.11.2026).
+  const src = [{ name: 'PlanTrack', type: 'vertex', properties: [{ name: 'x', type: 'STRING' }], indexes: [] },
+               { name: 'MetricSnapshot', type: 'document', properties: [], indexes: [] }];
+  const p = structurePlan(src, {}, { PlanTrack: 'план-доска снята' });
+  assert.deepEqual(p.types.map(t => t.name), ['MetricSnapshot']);
+  assert.deepEqual(p.notCarried, [{ type: 'PlanTrack', why: 'план-доска снята' }]);
+});

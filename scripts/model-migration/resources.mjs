@@ -13,7 +13,8 @@ import installBundle from './rules/install-bundle.json' with { type: 'json' };
 
 // Первый объект — своей картой; все остальные — картой, выведенной правилами (propose-map-all.mjs, 17.11.2026).
 export const MAP = { ...map.types, ...allObjects.types };
-export const NOT_MOVED = allObjects.skipped;
+/** Типы, которые карта решила не переносить: тип → почему (план-доска снята, журнал шагов V …). */
+export const NOT_MOVED = allObjects.skipped || {};
 // Общая карта связей всех объектов (map/all.edges.json, MIG-01 18.11.2026).
 export const EDGES = edges.edges;
 // 18.11.2026: схема первого объекта + предложение схемы всех остальных (владелица: «а так ок» на пять правил переноса).

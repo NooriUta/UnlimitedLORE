@@ -20,11 +20,13 @@ export function renamesOf(type) {
 }
 
 /** План: типы без карты (структура источника) и индексы источника на новых именах. srcTypes — строки schema:types. */
-export function structurePlan(srcTypes, schema) {
-  const types = [], indexes = [], skipped = [], typeDdl = [], indexDdl = [];
+export function structurePlan(srcTypes, schema, notMoved = {}) {
+  const types = [], indexes = [], skipped = [], typeDdl = [], indexDdl = [], notCarried = [];
   const sorted = [...srcTypes].sort((a, b) => a.name.localeCompare(b.name));
   for (const t of sorted) {
     if (t.type === 'edge' || NOT_CARRIED.has(t.name) || schema[t.name]) continue;
+    // карта решила «не переносить» (план-доска снята и т.п.) — тип не воссоздаётся, причина — в отчёт
+    if (notMoved[t.name]) { notCarried.push({ type: t.name, why: notMoved[t.name] }); continue; }
     if (t.type === 't') { // временной ряд ArcadeDB: колонки — момент, теги, поля; строки без @rid
       const cols = t.tsColumns || [];
       types.push({ name: t.name, kind: 'TIMESERIES', ts: t.timestampColumn, props: cols.map(c => ({ name: c.name, type: c.dataType, role: c.role })) });
@@ -45,7 +47,7 @@ export function structurePlan(srcTypes, schema) {
     indexDdl.push(`CREATE INDEX IF NOT EXISTS ON ${t.name} (mig_src_rid) UNIQUE`);
   }
   for (const t of sorted) {
-    if (t.type === 'edge' || NOT_CARRIED.has(t.name)) continue;
+    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || notMoved[t.name]) continue;
     const mapped = schema[t.name];
     const ren = mapped ? renamesOf(mapped) : null;
     for (const ix of [...(t.indexes || [])].sort((a, b) => a.name.localeCompare(b.name))) {
@@ -60,7 +62,7 @@ export function structurePlan(srcTypes, schema) {
     }
   }
   // индексы создаются ПОСЛЕ записи данных: дубль в данных источника не должен ронять перенос
-  return { types, indexes, skipped, typeDdl, indexDdl, ddl: [...typeDdl, ...indexDdl] };
+  return { types, indexes, skipped, notCarried, typeDdl, indexDdl, ddl: [...typeDdl, ...indexDdl] };
 }
 
 /**

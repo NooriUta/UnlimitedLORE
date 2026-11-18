@@ -20,7 +20,7 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
+import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED } from './resources.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
@@ -162,8 +162,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
   // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
-  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA);
-  const mine = [...ownTypes(), ...structure.types.map(t => t.name)];
+  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA, NOT_MOVED);
+  // свои: типы карты и структуры; плюс типы «не переносить», оставленные прежней версией переноса, — их --reset удаляет
+  const mine = [...ownTypes(), ...structure.types.map(t => t.name), ...Object.keys(NOT_MOVED)];
   const clash = existing.filter(n => mine.includes(n));
   if (existing.length && !reset) throw new Error(`приёмник не пуст (${existing.length} типов): запуск с --reset удалит типы этого переноса и запишет заново`);
   if (existing.some(n => !mine.includes(n))) throw new Error('в приёмнике есть чужие типы: ' + existing.filter(n => !mine.includes(n)).join(', '));
@@ -244,7 +245,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   for (const s of structure.indexDdl) {
     try { await db.dstCommand(s); } catch (e) { indexFailed.push({ ddl: s, why: String(e.message || e).slice(0, 300) }); }
   }
-  report.stages.structure = { as_is: asIs, indexes: structure.indexes.length - indexFailed.length, skipped: structure.skipped, failed: indexFailed };
+  report.stages.structure = { as_is: asIs, not_carried: structure.notCarried, indexes: structure.indexes.length - indexFailed.length, skipped: structure.skipped, failed: indexFailed };
   log('3 структура вне карты:', structure.types.length, 'типов как есть,', structure.indexes.length - indexFailed.length, 'индексов источника,', structure.skipped.length, 'пропущено,', indexFailed.length, 'не создано (данные мешают)');
   for (const x of indexFailed) log('  индекс не создан:', x.ddl, '—', x.why);
   log('3 запись:', JSON.stringify(report.stages.write));

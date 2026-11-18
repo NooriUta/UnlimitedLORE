@@ -66,3 +66,9 @@ test('harness агента — к кодам miniLORE (владелица 17.11:
   assert.equal(applyMap('KnowActor', m, { harness: 'codex' }, {}).out.harness, 'codex');
   assert.deepEqual(applyMap('KnowActor', m, { harness: 'vim' }, {}).rejects.map(r => r.why), ['harness вне справочника miniLORE']);
 });
+
+test('ключ своего типа — не «связь»: component_id у LoreComponent остаётся полем (18.11.2026: в новой базе component_id = null)', () => {
+  // Правило «компонент и проект — только связью» про ССЫЛКУ на компонент из другой записи, а не про ключ самого компонента.
+  assert.equal(ruleFor('LoreComponent', 'component_id').rule, 'keep');
+  assert.equal(ruleFor('KnowADR', 'component_id').rule, 'open', 'у ADR component_id по-прежнему ссылка → связь');
+});

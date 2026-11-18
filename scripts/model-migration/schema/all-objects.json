@@ -4520,6 +4520,16 @@
       "records": 110,
       "version_of": null,
       "fields": {
+        "component_id": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "component_id"
+          ],
+          "filled": 110,
+          "of": 110,
+          "name": "Код компонента"
+        },
         "game_icon": {
           "kind": "text",
           "db_type": "STRING",
