@@ -33,6 +33,15 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void однозначные_переименования_схемы_тоже_идут_по_новому_имени() {
+        // date_created / created_date → created_at (KnowADR, KnowDecision …): без этого timeline_adrs и timeline_decisions пусты
+        assertEquals("SELECT adr_id, created_at AS date_created FROM KnowADR WHERE created_at IS NOT NULL ORDER BY created_at DESC",
+            ModelSchemaAdapter.rewriteSql("SELECT adr_id, date_created FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC"));
+        assertEquals("SELECT created_at AS created_date FROM KnowSprint",
+            ModelSchemaAdapter.rewriteSql("SELECT created_date FROM KnowSprint"));
+    }
+
+    @Test
     void псевдоним_и_текст_в_кавычках_не_трогаются() {
         String sql = "SELECT first(x) AS status_raw, 'status_raw' AS k FROM KnowTask WHERE note_md LIKE '%status_raw%'";
         assertEquals(sql, ModelSchemaAdapter.rewriteSql(sql));

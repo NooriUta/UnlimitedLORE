@@ -53,11 +53,21 @@ final class ModelSchemaAdapter {
         return DISPLAY.getOrDefault(code, code);
     }
 
-    private static final Pattern WORD = Pattern.compile("(?<![\\w])status_raw(?![\\w])");
+    /**
+     * Однозначные переименования полей новой схемы (старое → новое): старое имя не живёт ни в одном типе новой схемы.
+     * Сверено со schema/*.json установщика 18.11.2026. Неоднозначные (name → title, priority → priority_note: старое
+     * имя живёт в других типах) — не здесь: их правит код по типу.
+     */
+    static final Map<String, String> RENAMES = Map.of(
+        "status_raw", "status",
+        "date_created", "created_at",
+        "created_date", "created_at");
+
+    private static final Pattern WORD = Pattern.compile("(?<![\\w])(status_raw|date_created|created_date)(?![\\w])");
 
     /** SQL под новую схему; текст внутри кавычек остаётся как есть. */
     static String rewriteSql(String sql) {
-        if (sql == null || !sql.contains("status_raw")) return sql;
+        if (sql == null || RENAMES.keySet().stream().noneMatch(sql::contains)) return sql;
         StringBuilder out = new StringBuilder(sql.length() + 16);
         int i = 0;
         while (i < sql.length()) {
@@ -87,6 +97,14 @@ final class ModelSchemaAdapter {
     private static final Pattern AS_BEFORE = Pattern.compile("(?i)\\bAS\\s+$");
     private static final Pattern ITEM_START = Pattern.compile("(?i)(\\bSELECT|,)\\s*$");
     private static final Pattern ITEM_END = Pattern.compile("(?i)^\\s*(,|\\bFROM\\b|$)");
+    private static final Pattern LAST_SELECT = Pattern.compile("(?is).*\\bSELECT\\b(.*)$");
+    private static final Pattern CLAUSE = Pattern.compile("(?i)\\b(FROM|WHERE|ORDER|GROUP|LET|SET)\\b");
+
+    /** Позиция в списке выборки: после последнего SELECT ещё не было FROM/WHERE/ORDER … */
+    private static boolean inProjection(String left) {
+        Matcher m = LAST_SELECT.matcher(left);
+        return m.matches() && !CLAUSE.matcher(m.group(1)).find();
+    }
 
     private static String rewriteUnquoted(String part, CharSequence before) {
         Matcher m = WORD.matcher(part);
@@ -96,12 +114,13 @@ final class ModelSchemaAdapter {
             String left = before.toString() + sb + part.substring(last, m.start());
             String right = part.substring(m.end());
             sb.append(part, last, m.start());
+            String old = m.group(1), now = RENAMES.get(old);
             if (AS_BEFORE.matcher(left).find()) {
-                sb.append("status_raw");                     // псевдоним — имя ключа ответа
-            } else if (ITEM_START.matcher(left).find() && ITEM_END.matcher(right).find()) {
-                sb.append("status AS status_raw");           // поле без псевдонима в выборке
+                sb.append(old);                              // псевдоним — имя ключа ответа
+            } else if (ITEM_START.matcher(left).find() && ITEM_END.matcher(right).find() && inProjection(left)) {
+                sb.append(now).append(" AS ").append(old);   // поле без псевдонима в выборке — ключ ответа прежний
             } else {
-                sb.append("status");
+                sb.append(now);
             }
             last = m.end();
         }
