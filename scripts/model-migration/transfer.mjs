@@ -22,13 +22,15 @@ import { applyMap } from './apply-map.mjs';
 
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
+import { SESSION_EDGES } from './session-model.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 // Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
 const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
-const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
+// Типы с версиями — все, у кого в схеме есть пара <T>Hist (18.11.2026: перенос всех объектов, не только первого).
+const BASES = Object.keys(SCHEMA).filter(T => SCHEMA[T + 'Hist']);
 const SERVICE = ['MigLeftover', 'LoreModelSchema'], EDGE = 'HAS_STATE';
 /** Типы новой базы, которые кладёт сам конвейер: записи, остаток, связь версий и связи с правилом keep (шаг связей). */
 export const keptEdges = () => Object.entries(EDGES).filter(([n, r]) => r.rule === 'keep' && n !== EDGE).map(([n]) => n);
@@ -37,7 +39,12 @@ export function modelMarker(schema, at = new Date().toISOString()) {
   const model_hash = crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0, 16);
   return { model_hash, source: 'installer', built_at: at };
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), DICT_ENTRY, DICT_LABEL];
+/** DDL поля: имя в обратных кавычках — поле с именем-ключевым словом SQL (KnowQuestion.trigger, 18.11.2026) иначе роняет перенос. */
+export function ddlProperty(T, f, dbType) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f);
+  return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType;
+}
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, DICT_ENTRY, DICT_LABEL];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
@@ -146,7 +153,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   for (const n of [...edgesFirst, ...clash.filter(n => !edgesFirst.includes(n))]) if (existing.includes(n)) await db.dstCommand(`DROP TYPE ${n} UNSAFE`);
   for (const [T, t] of Object.entries(SCHEMA)) {
     await db.dstCommand(`CREATE VERTEX TYPE ${T}`);
-    for (const [f, e] of Object.entries(t.fields)) await db.dstCommand(`CREATE PROPERTY ${T}.${f} ${e.db_type}`);
+    for (const [f, e] of Object.entries(t.fields)) await db.dstCommand(ddlProperty(T, f, e.db_type));
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
     await db.dstCommand(`CREATE INDEX ON ${T} (mig_src_rid) UNIQUE`);
   }

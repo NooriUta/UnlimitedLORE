@@ -1,101 +1,135 @@
 #!/usr/bin/env node
-// SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Перенос связей первого объекта, у которых оба конца уже в приёмнике.
-// Запускается после transfer.mjs. По карте связей (map/*.edges.json): keep — переносится; wait — считается
-// и ждёт своего объекта; drop — не переносится. Связь, которой нет в карте, — ошибка.
-// Источник только читается; в приёмнике пересоздаются только типы связей этого шага.
-// Сверка: число связей каждого типа и каждая пара концов (по адресам записей источника) совпали.
+// SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Перенос связей ВСЕХ объектов по общей карте map/all.edges.json (18.11.2026;
+// прежде — только спринт, фаза, задача). Запускается после transfer.mjs. Правило на каждый вид — edgePlan
+// (keep / drop / convert; связь вне карты — ошибка), что записать — edgeWrites (свойства как есть + mig_src_rid;
+// конец не перенесён — в отчёт; дубль отсекается только при переводе). HAS_STATE пишет этап записи версий — здесь сверка.
+// Источник только читается; в приёмнике пересоздаются только виды связей этого шага.
+// Сверка: число связей каждого вида и концы каждой связи (по адресам приёмника) совпали с расчётом.
 import fs from 'node:fs';
 import { connect } from './db.mjs';
+import { EDGES, SCHEMA } from './resources.mjs';
+import { edgePlan, edgeWrites } from './edge-plan.mjs';
+import { planSessionModel } from './session-model.mjs';
 
-import { EDGES } from './resources.mjs';
-const OWN = ['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHist', 'KnowTask', 'KnowTaskHist'];
+// Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
+const NOT_MACHINES = ['legion'];
+
+const VERSION_EDGE = 'HAS_STATE';
+
 /** Перенос связей и их сверка. log — куда писать ход. */
 export async function transferEdges(db, { log = console.log } = {}) {
   if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
   const pool = async (items, n, fn) => { let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) await fn(items[i++]); })); };
-
-  // адрес записи источника → адрес в приёмнике
-  const dstRid = new Map();
-  for (const T of OWN) {
+  const pages = async (query, sql, fn, key = 'r') => {
     let last = '#-1:-1';
     for (;;) {
-      const rows = await db.dstQuery(`SELECT @rid AS r, mig_src_rid AS s FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
+      const rows = await query(sql(last));
       if (!rows.length) break;
-      for (const x of rows) dstRid.set(x.s, x.r);
-      last = rows[rows.length - 1].r; if (rows.length < 5000) break;
+      for (const x of rows) fn(x);
+      last = rows[rows.length - 1][key]; if (rows.length < 5000) break;
     }
-  }
-  if (!dstRid.size) throw new Error('в приёмнике нет записей первого объекта — сначала transfer.mjs');
+  };
+  const OWN = Object.keys(SCHEMA);
 
-  const srcTypes = await db.src("SELECT name, type, records FROM schema:types");
-  const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, moved: {}, waiting: {}, dropped: {}, anomalies: [], unknown: [] };
-  const dstTypes = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
-  let ok = true;
+  // адрес записи источника → адрес в приёмнике (все перенесённые типы)
+  const dstRid = new Map();
+  for (const T of OWN) await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => dstRid.set(x.s, x.r));
+  if (!dstRid.size) throw new Error('в приёмнике нет перенесённых записей — сначала transfer.mjs');
 
+  // перепись связей источника: вид, тип начала, тип конца, число
+  const srcTypes = await db.src('SELECT name, type, records FROM schema:types');
+  const triples = [];
   for (const e of srcTypes.filter(t => t.type === 'edge' && t.records > 0)) {
     const ends = await db.src(`SELECT o, i, count(*) AS n FROM (SELECT @out.@type AS o, @in.@type AS i FROM ${e.name}) GROUP BY o, i`);
-    const mine = ends.filter(x => OWN.includes(x.o) || OWN.includes(x.i));
-    if (!mine.length) continue;
-    const rule = EDGES[e.name];
-    if (!rule) { report.unknown.push(e.name); ok = false; continue; }
-    const touching = mine.reduce((a, x) => a + x.n, 0);
-    if (rule.rule === 'drop') { report.dropped[e.name] = touching; continue; }
-    if (rule.rule === 'wait') { report.waiting[e.name] = { links: touching, waits: rule.waits }; continue; }
-    if (e.name === 'HAS_STATE') {
-      // перенесена этапом записи версий; здесь только сверка и разбор аномалий
-      const inside = mine.filter(x => !x.o.endsWith('Hist') && x.i === x.o + 'Hist').reduce((a, x) => a + x.n, 0);
-      const odd = mine.filter(x => !(!x.o.endsWith('Hist') && x.i === x.o + 'Hist'));
-      for (const x of odd) report.anomalies.push({ edge: e.name, from: x.o, to: x.i, n: x.n, why: 'связь «запись → версия» стоит не в ту сторону или между чужими типами; не переносится' });
-      const got = (await db.dstQuery('SELECT count(*) AS n FROM HAS_STATE'))[0].n;
-      report.moved[e.name] = { source: inside, target: got };
-      if (inside !== got) ok = false;
-      continue;
-    }
-    // keep: читаем связи источника, у которых оба конца — записи первого объекта
-    const props = rule.props || [];
-    const list = [];
-    let last = '#-1:-1';
-    for (;;) {
-      const rows = await db.src(`SELECT @rid AS r, @out AS o, @in AS i${props.map(p => `, ${p}`).join('')} FROM ${e.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
-      if (!rows.length) break;
-      for (const x of rows) list.push(x);
-      last = rows[rows.length - 1].r; if (rows.length < 5000) break;
-    }
-    const inside = list.filter(x => dstRid.has(x.o) && dstRid.has(x.i));
-    const outside = list.length - inside.length;
-    if (dstTypes.has(e.name)) await db.dstCommand(`DROP TYPE ${e.name} UNSAFE`);
-    await db.dstCommand(`CREATE EDGE TYPE ${e.name}`);
-    await db.dstCommand(`CREATE PROPERTY ${e.name}.mig_src_rid STRING`);
-    await pool(inside, 8, x => {
-      const c = { mig_src_rid: x.r };
-      for (const p of props) if (x[p] !== undefined && x[p] !== null && x[p] !== '') c[p] = x[p];
-      return db.dstCommand(`CREATE EDGE ${e.name} FROM ${dstRid.get(x.o)} TO ${dstRid.get(x.i)} CONTENT :c`, { c });
-    });
-    // сверка: каждая связь приёмника соединяет те же записи, что в источнике
-    const want = new Map(inside.map(x => [x.r, `${x.o}>${x.i}`]));
-    let got = 0, bad = 0; last = '#-1:-1';
-    for (;;) {
-      const rows = await db.dstQuery(`SELECT @rid AS r, mig_src_rid AS s, @out.mig_src_rid AS o, @in.mig_src_rid AS i FROM ${e.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
-      if (!rows.length) break;
-      for (const x of rows) { got++; if (want.get(x.s) !== `${x.o}>${x.i}`) bad++; }
-      last = rows[rows.length - 1].r; if (rows.length < 5000) break;
-    }
-    report.moved[e.name] = { source: inside.length, target: got, wrong_ends: bad, props, to_other_objects: outside };
-    if (got !== inside.length || bad) ok = false;
+    for (const x of ends) triples.push({ edge: e.name, from: x.o, to: x.i, n: x.n });
   }
+  const plan = edgePlan(triples, EDGES, new Set(OWN)); // связь вне карты — исключение с её именем
+
+  // связи источника (кроме версий — их пишет этап записи)
+  const src = {};
+  for (const [e, p] of Object.entries(plan)) {
+    if (p.rule === 'drop' || e === VERSION_EDGE) continue;
+    const list = (src[e] = []);
+    await pages(q => db.src(q), last => `SELECT FROM ${e} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, row => {
+      const props = {};
+      for (const [k, v] of Object.entries(row)) if (!k.startsWith('@') && k !== 'out' && k !== 'in' && v !== null && v !== undefined && v !== '') props[k] = v;
+      list.push({ r: row['@rid'], o: row['@out'], i: row['@in'], props });
+    }, '@rid');
+  }
+  const planNoVersions = Object.fromEntries(Object.entries(plan).filter(([e]) => e !== VERSION_EDGE));
+  const { writes, missingEnds, duplicates } = edgeWrites(src, dstRid, planNoVersions);
+
+  const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, plan: Object.fromEntries(Object.entries(plan).map(([e, p]) => [e, { rule: p.rule, to: p.to, reverse: p.reverse || undefined, dropped_ends: p.dropped_ends.length ? p.dropped_ends : undefined }])), moved: {}, missing_ends: missingEnds, duplicates };
+  let ok = true;
+  const dstTypes = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
+  for (const [T, list] of Object.entries(writes)) {
+    if (dstTypes.has(T)) await db.dstCommand(`DROP TYPE ${T} UNSAFE`);
+    await db.dstCommand(`CREATE EDGE TYPE ${T}`);
+    await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
+    await pool(list, 8, w => db.dstCommand(`CREATE EDGE ${T} FROM ${w.from} TO ${w.to} CONTENT :c`, { c: w.content }));
+    // сверка: каждая связь приёмника соединяет те записи, что дал расчёт
+    const want = new Map(list.map(w => [w.content.mig_src_rid, `${w.from}>${w.to}`]));
+    let got = 0, bad = 0;
+    await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s, @out AS o, @in AS i FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => { got++; if (want.get(x.s) !== `${x.o}>${x.i}`) bad++; });
+    report.moved[T] = { expected: list.length, target: got, wrong_ends: bad };
+    if (got !== list.length || bad) ok = false;
+  }
+  // версии: пишет этап записи; здесь — что число связей версий в приёмнике не меньше расчётного по своим типам
+  const hs = triples.filter(t => t.edge === VERSION_EDGE && OWN.includes(t.from) && t.to === t.from + 'Hist').reduce((a, t) => a + t.n, 0);
+  const hsGot = dstTypes.has(VERSION_EDGE) ? (await db.dstQuery(`SELECT count(*) AS n FROM ${VERSION_EDGE}`))[0].n : 0;
+  report.moved[VERSION_EDGE] = { source: hs, target: hsGot };
+  if (hs !== hsGot) ok = false;
+  // новые связи модели сессий (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL) — по перенесённым записям приёмника
+  const sm = await sessionModel(db, { pages });
+  report.session_model = sm;
+  if (!sm.ok) ok = false;
   report.ok = ok;
-  for (const [k, v] of Object.entries(report.moved)) log(`перенесено ${k}: ${JSON.stringify(v)}`);
-  log('ждут своего объекта:', Object.entries(report.waiting).map(([k, v]) => `${k} ${v.links}`).join(' · '));
-  log('не переносится:', JSON.stringify(report.dropped), '· аномалии:', JSON.stringify(report.anomalies), '· вне карты:', JSON.stringify(report.unknown));
+  for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
+  log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
+  log('не перенесены (конец не в приёмнике):', JSON.stringify(missingEnds), '· дубли при переводе:', JSON.stringify(duplicates));
+  log('не переносится по карте:', Object.entries(plan).filter(([, p]) => p.rule === 'drop').map(([e]) => e).join(', '));
   log('сверка связей:', ok ? 'сошлась' : 'НЕ сошлась');
   return report;
 }
 
+/** Модель сессий: регистрация машин из сессий и связи NEW_ON_MACHINE, NEW_IN_PROJECT, NEW_RUNS_IN, NEW_CHANGED_IN. */
+async function sessionModel(db, { pages }) {
+  const dq = q => db.dstQuery(q);
+  const read = async (T, cols, where = '') => { const out = []; await pages(dq, last => `SELECT @rid AS r, ${cols} FROM ${T} WHERE @rid > ${last}${where} ORDER BY @rid LIMIT 5000`, x => out.push(x)); return out; };
+  const has = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
+  const sessions = has.has('KnowAgentSession') ? await read('KnowAgentSession', 'mig_src_rid, session_id, machine_id, started_at, last_activity_at') : [];
+  // строка project у сессии в новую схему не входит (становится связью) — берётся из источника
+  const projOf = new Map();
+  await pages(q => db.src(q), last => `SELECT @rid AS r, project FROM KnowAgentSession WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => projOf.set(x.r, x.project));
+  for (const s of sessions) { s.rid = s.r; s.project = projOf.get(s.mig_src_rid); }
+  const machines = (has.has('KnowMachine') ? await read('KnowMachine', 'machine_id') : []).map(x => ({ rid: x.r, machine_id: x.machine_id }));
+  const projects = (has.has('KnowGitProject') ? await read('KnowGitProject', 'slug, full_name, name') : []).map(x => ({ rid: x.r, slug: x.slug, full_name: x.full_name, name: x.name }));
+  const harness = (has.has('KnowDictEntry') ? await read('KnowDictEntry', 'code', " AND dict_type = 'harness'") : []).map(x => ({ rid: x.r, code: x.code }));
+  const actors = (has.has('KnowActor') ? await read('KnowActor', 'harness') : []).map(x => ({ rid: x.r, harness: x.harness }));
+  const versions = [];
+  for (const T of Object.keys(SCHEMA).filter(t => t.endsWith('Hist') && SCHEMA[t].fields.changed_by_session))
+    for (const x of await read(T, 'changed_by_session, changed_by_machine', ' AND changed_by_session IS NOT NULL')) versions.push({ rid: x.r, changed_by_session: x.changed_by_session, changed_by_machine: x.changed_by_machine });
+  const plan = planSessionModel({ sessions, machines, projects, harness, actors, versions, notMachines: NOT_MACHINES });
+
+  for (const m of plan.newMachines) await db.dstCommand('INSERT INTO KnowMachine CONTENT :c', { c: { ...m, mig_src_rid: 'registered-from-sessions:' + m.machine_id } });
+  const machineRid = new Map((await read('KnowMachine', 'machine_id')).map(x => [String(x.machine_id).toLowerCase(), x.r]));
+  const counts = {}; let ok = true;
+  for (const [E, list] of Object.entries(plan.edges)) {
+    if (has.has(E)) await db.dstCommand(`DROP TYPE ${E} UNSAFE`);
+    await db.dstCommand(`CREATE EDGE TYPE ${E}`);
+    const rows = list.map(([a, b]) => [a, b.startsWith('machine:') ? machineRid.get(b.slice(8)) : b]);
+    for (const [a, b] of rows) await db.dstCommand(`CREATE EDGE ${E} FROM ${a} TO ${b} CONTENT :c`, { c: { mig_rule: 'session-model' } });
+    const got = (await db.dstQuery(`SELECT count(*) AS n FROM ${E}`))[0].n;
+    counts[E] = { expected: rows.length, target: got };
+    if (got !== rows.length || rows.some(([, b]) => !b)) ok = false;
+  }
+  return { ok, new_machines: plan.newMachines, counts, unresolved_counts: Object.fromEntries(Object.entries(plan.unresolved).map(([k, v]) => [k, v.length])), unresolved: plan.unresolved };
+}
+
 if (process.argv[1] === 'edges') {
-const db = connect();
-const report = await transferEdges(db);
-const ok = report.ok;
-const o = process.argv.indexOf('--out');
-if (o > 0) fs.writeFileSync(process.argv[o + 1], JSON.stringify(report, null, 1));
-process.exit(ok ? 0 : 1);
+  const db = connect();
+  const report = await transferEdges(db);
+  const o = process.argv.indexOf('--out');
+  if (o > 0) fs.writeFileSync(process.argv[o + 1], JSON.stringify(report, null, 1));
+  process.exit(report.ok ? 0 : 1);
 }
