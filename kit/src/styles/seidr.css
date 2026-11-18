@@ -3915,10 +3915,12 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-cards__card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px 12px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
 .sk-cards__card.is-selected { border-color: var(--acc); }
 .sk-cards__head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.sk-cards__title { min-width: 0; font-size: var(--fs-md); }
-.sk-cards__fields { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin: 0; font-size: var(--fs-sm); }
+.sk-cards__title { min-width: 0; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.sk-cards__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; margin: 0; font-size: var(--fs-sm); }
+/* MP2-PASSPORT-TABS-OVERLAP: пары <div><dt><dd> — две равные колонки; длинный код переносится, а не выталкивает соседа. */
+.sk-cards__fields > div { min-width: 0; }
 .sk-cards__fields dt { color: var(--t3); }
-.sk-cards__fields dd { margin: 0; min-width: 0; }
+.sk-cards__fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 /* Лента как ВИД того же источника (K2-FEED-VIEW, прототип kit2-story-feed,
    раздел 1). Форма строки ОДНА на все типы записей: время слева колонкой,
    справа — шапка (вид, код), название, суть и повод. Своей вёрстки под тип
@@ -6794,9 +6796,14 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   position: relative;
   min-height: 0;
   overflow: auto;
+  --dock-pad-top: 12px;
   padding: 12px 14px;
+  padding-top: var(--dock-pad-top);
   background: var(--bg1);
 }
+/* MP2-PASSPORT-TABS-OVERLAP: липкие вкладки прилипают к краю панели, а не под её отступ — иначе в полосе
+   отступа над вкладками виден прокрученный контент. */
+.sk-dock__panel .sk-rec__tabs > .sk-tabs { top: calc(var(--rec-sticky-top, 0px) - var(--dock-pad-top, 0px)); }
 .sk-dock[data-placement='right'] .sk-dock__panel { border-left: 1px solid var(--bd); }
 .sk-dock[data-placement='left'] .sk-dock__panel { border-right: 1px solid var(--bd); }
 .sk-dock[data-placement='bottom'] .sk-dock__panel { border-top: 1px solid var(--bd); }
@@ -6814,7 +6821,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    а не поверх панели. Раньше панель прокручивалась ПОД ними, и липкая строка вкладок
    (во всю ширину — до самого угла) уходила под «×» и «Выйти». */
 .sk-dock[data-placement='full'] { grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
-.sk-dock[data-placement='full'] .sk-dock__panel { padding: 4px 20px 12px; }
+.sk-dock[data-placement='full'] .sk-dock__panel { --dock-pad-top: 4px; padding: 4px 20px 12px; }
 .sk-dock__close { position: sticky; top: 0; float: right; z-index: 1; min-width: max(var(--tap), 28px); min-height: max(var(--tap), 28px); border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg2); color: var(--t2); font: inherit; font-size: var(--fs-md); cursor: pointer; }
 .sk-dock__close:hover { border-color: var(--acc); color: var(--t1); }
 .sk-dock__ctl { position: static; justify-self: end; display: flex; align-items: center; gap: 6px; padding: 8px 16px 4px; }
@@ -6832,9 +6839,9 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
      образец — v1). Замер 360 px: колонка записи 227 px — треть ширины съедали
      рамка и поля дока и плавающая «×». Остаётся только внутренний отступ 12 px. */
   .sk-dock[data-placement] { border: 0; border-radius: 0; }
-  .sk-dock[data-placement] .sk-dock__panel { padding: 8px 12px; border: 0; }
+  .sk-dock[data-placement] .sk-dock__panel { --dock-pad-top: 8px; padding: 8px 12px; border: 0; }
   .sk-dock[data-placement='full'] { grid-template-rows: auto minmax(0, 1fr); }
-  .sk-dock[data-placement='full'] .sk-dock__panel { padding: 4px 12px 12px; }
+  .sk-dock[data-placement='full'] .sk-dock__panel { --dock-pad-top: 4px; padding: 4px 12px 12px; }
   .sk-dock[data-placement='full'] .sk-dock__ctl { padding: 6px 12px 2px; }
   .sk-dock[data-placement='full'] .sk-rec { padding: 0 0 24px; }
   /* «×» плавает справа, а плавающий элемент сужает ВЕСЬ соседний блок-сетку
