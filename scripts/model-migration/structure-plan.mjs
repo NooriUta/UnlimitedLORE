@@ -5,6 +5,8 @@
 // шагов V, есть в новой базе (без карты — пустым, со структурой источника); каждый индекс источника переносится на
 // новые имена полей (по карте), а индекс на поле, которого в новой схеме нет, — в пропуски с причиной.
 const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+// анализатор и сходство полнотекстовых индексов — как у сервера (ADR-LORE-033 D10, LoreSchemaMigrations.FT_ANALYZER)
+const FT_META = ' METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}';
 const NOT_CARRIED = new Set(['LoreSchemaVersion']); // журнал шагов V: у базы из модели его нет по построению
 
 const q = f => { if (!NAME.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f); return '`' + f + '`'; };
@@ -54,11 +56,17 @@ export function structurePlan(srcTypes, schema, notMoved = {}) {
       const props = ix.properties || [];
       if (!props.length || props.every(p => p === 'mig_src_rid')) continue;
       const lost = mapped ? props.filter(p => !(p in ren)) : [];
-      if (lost.length) { skipped.push({ index: ix.name, why: `поля ${lost.join(', ')} нет в новой схеме ${t.name}` }); continue; }
-      const fields = props.map(p => (ren ? ren[p] : p));
       const kind = ix.type === 'FULL_TEXT' ? 'FULL_TEXT' : ix.unique ? 'UNIQUE' : 'NOTUNIQUE';
+      // полнотекстовый индекс осмыслен и на части полей (поиск по оставшимся); уникальный и обычный — нет
+      const kept = props.filter(p => !lost.includes(p));
+      if (lost.length && !(kind === 'FULL_TEXT' && kept.length)) { skipped.push({ index: ix.name, why: `поля ${lost.join(', ')} нет в новой схеме ${t.name}` }); continue; }
+      if (lost.length) skipped.push({ index: ix.name, why: `частично: поля ${lost.join(', ')} нет в новой схеме ${t.name} — индекс на оставшихся` });
+      const fields = [...new Set(kept.map(p => (ren ? ren[p] : p)))];
       indexes.push({ type: t.name, fields, kind, from: ix.name });
-      indexDdl.push(`CREATE INDEX IF NOT EXISTS ON ${t.name} (${fields.map(q).join(', ')}) ${kind}`);
+      // имя, которое дал человек (сервер зовёт индекс по имени: SEARCH_INDEX('ftKnowSprint', …)), сохраняется;
+      // автоимя вида Тип[поля] база выдаст сама
+      const named = !/^\w+\[.*\]$/.test(ix.name) && NAME.test(ix.name);
+      indexDdl.push(`CREATE INDEX ${named ? '`' + ix.name + '` ' : ''}IF NOT EXISTS ON ${t.name} (${fields.map(q).join(', ')}) ${kind}${kind === 'FULL_TEXT' ? FT_META : ''}`);
     }
   }
   // индексы создаются ПОСЛЕ записи данных: дубль в данных источника не должен ронять перенос

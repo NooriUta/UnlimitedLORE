@@ -94,3 +94,18 @@ test('тип, который карта явно не переносит (пла
   assert.deepEqual(p.types.map(t => t.name), ['MetricSnapshot']);
   assert.deepEqual(p.notCarried, [{ type: 'PlanTrack', why: 'план-доска снята' }]);
 });
+
+test('именованный индекс сохраняет имя; полнотекстовый — на оставшихся полях, если часть полей ушла в версию', () => {
+  // 18.11.2026: поиск зовёт индексы по имени (SEARCH_INDEX('ftKnowSprint', …)); ftKnowSprint(name, context_md) пропадал
+  // целиком — context_md в новой схеме живёт в версии.
+  const src = [{ name: 'KnowSprint', type: 'vertex', properties: [], indexes: [
+    { name: 'ftKnowSprint', unique: false, type: 'FULL_TEXT', properties: ['name', 'context_md'] },
+    { name: 'KnowSprint[sprint_id]', unique: true, type: 'LSM_TREE', properties: ['sprint_id'] }] }];
+  const schema = { KnowSprint: { fields: { sprint_id: { from: ['sprint_id'] }, title: { from: ['name'] } } } };
+  const p = structurePlan(src, schema);
+  // анализатор — как у сервера (ADR-LORE-033 D10, LoreSchemaMigrations.FT_ANALYZER): без него кириллица не ищется
+  // (проба 18.11: «модели» — 0 в новой базе, 53 в источнике)
+  assert.ok(p.indexDdl.includes('CREATE INDEX `ftKnowSprint` IF NOT EXISTS ON KnowSprint (`title`) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}'), JSON.stringify(p.indexDdl));
+  assert.ok(p.indexDdl.includes('CREATE INDEX IF NOT EXISTS ON KnowSprint (`sprint_id`) UNIQUE'), 'автоимя — без имени');
+  assert.deepEqual(p.skipped, [{ index: 'ftKnowSprint', why: 'частично: поля context_md нет в новой схеме KnowSprint — индекс на оставшихся' }]);
+});
