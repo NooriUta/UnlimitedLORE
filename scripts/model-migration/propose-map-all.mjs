@@ -47,6 +47,14 @@ export function ruleFor(T, f) {
   return { rule: 'keep', basis: 'delegated', note: W };
 }
 
+/**
+ * Служебные поля правки у каждого типа версий — «как есть», даже если перепись их ещё не видела (их нет в снимке 15.11:
+ * AO-SESSION-LOG пишет их с 16.11; снимок 18.11 их несёт, и без правила перенос терял бы их как «вне карты»).
+ * Основание — D-2026-LORE-SESSION-MACHINE-PLACE-MODEL; схема объявляет те же поля (propose-schema*.mjs, SERVICE).
+ */
+export const SERVICE_EDIT = ['changed_by_session', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine'];
+const SERVICE_EDIT_RULE = { rule: 'keep', basis: 'owner', note: 'служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)' };
+
 /** Карта по переписи: { types: {T: {f: правило}}, skipped: {T: почему} }. Порядок — по имени, детерминированно. */
 export function proposeMap(census) {
   const types = {}, skipped = {};
@@ -55,6 +63,7 @@ export function proposeMap(census) {
     if (!p.move) { if (!FIRST.has(T)) skipped[T] = p.why; continue; }
     types[T] = {};
     for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
+    if (T.endsWith('Hist')) for (const f of SERVICE_EDIT) if (!types[T][f]) types[T][f] = { ...SERVICE_EDIT_RULE };
   }
   return { _about: 'MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.', types, skipped };
 }

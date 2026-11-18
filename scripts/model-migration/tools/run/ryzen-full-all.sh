@@ -5,9 +5,10 @@
 # Запуск: sh ryzen-full-all.sh <модуль lore-migrate-*.mjs в clean/> [база приёмника] [метка прогона]
 B=~/lore-migrate-build; cd $B/clean || exit 1
 M=${1:?модуль lore-migrate-*.mjs}; DST=${2:-migration_dst_linux}; TAG=${3:-run}
+SRC=${SRC:-}  # источник: переменная окружения SRC, иначе MIG_SRC_DB из migration.env
 trap 'rm -f access.env' EXIT
 umask 077
-{ grep -E '^(MIG_DB_URL|MIG_SRC_DB|MIG_SRC_USER|MIG_SRC_PASSWORD)=' $B/migration.env; echo "MIG_DST_URL=http://127.0.0.1:2490"; echo "MIG_DST_DB=$DST"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$(cat $B/arcadedb.secret)"; } > access.env
+{ grep -E '^(MIG_DB_URL|MIG_SRC_USER|MIG_SRC_PASSWORD)=' $B/migration.env; if [ -n "$SRC" ]; then echo "MIG_SRC_DB=$SRC"; else grep -E '^MIG_SRC_DB=' $B/migration.env; fi; echo "MIG_DST_URL=http://127.0.0.1:2490"; echo "MIG_DST_DB=$DST"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$(cat $B/arcadedb.secret)"; } > access.env
 R="env -i PATH=/usr/bin:/bin $B/node-v24.14.1-linux-x64/bin/node $M"
 # замер: секунды на шаг (владелица 18.11: «замеряй производительность, оптимизируй работу с базой»)
 T0=$(date +%s); t() { N=$(date +%s); echo "  время: $((N-T0)) с"; T0=$N; }
