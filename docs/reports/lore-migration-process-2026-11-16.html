@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE — как проходит миграция при установке новой версии · 16.11.2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#faf6ee;--bg1:#ffffff;--bg2:#f1eadc;--bd:#dccfb8;
+  --t1:#2a2218;--t2:#5f5343;--t3:#8a7c68;
+  --acc:#a8660a;--suc:#3f7a2c;--wrn:#a8660a;--dng:#b23a26;--inf:#2f6a94;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:16px;--fs-xl:20px;--fs-2xl:26px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-md)/1.5 Manrope,system-ui,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
+h1{font:800 var(--fs-2xl)/1.15 Unbounded,sans-serif;margin:0 0 6px}
+h2{font:800 var(--fs-lg)/1.2 Unbounded,sans-serif;margin:28px 0 8px;color:var(--acc)}
+h3{font:700 var(--fs-md)/1.3 Manrope,sans-serif;margin:0 0 4px}
+p{margin:6px 0}
+.sub{color:var(--t2);font-size:var(--fs-sm)}
+.lead{background:var(--bg1);border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:8px;padding:12px 14px;margin:14px 0}
+.step{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin:8px 0;display:grid;grid-template-columns:34px 1fr;gap:10px}
+.step .no{font:800 var(--fs-xl)/1 Unbounded,sans-serif;color:var(--acc)}
+.step ul{margin:4px 0;padding-left:18px}.step li{margin:2px 0}
+.stop{color:var(--dng);font-weight:700}
+.wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:8px;background:var(--bg1)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:var(--fs-sm)}
+th{text-align:left;text-transform:uppercase;letter-spacing:.06em;font-size:var(--fs-2xs);color:var(--t3);padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--bg2)}
+td{padding:6px 10px;border-bottom:1px solid var(--bd);vertical-align:top}
+tr:last-child td{border-bottom:0}
+code{font-family:var(--mono);font-size:var(--fs-xs);background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:0 4px}
+.chip{display:inline-block;border-radius:999px;padding:1px 8px;font-size:var(--fs-2xs);font-weight:700;border:1px solid var(--bd);white-space:nowrap}
+.dng{color:var(--dng);border-color:var(--dng)}.wrn{color:var(--wrn);border-color:var(--wrn)}.suc{color:var(--suc);border-color:var(--suc)}.inf{color:var(--inf);border-color:var(--inf)}
+.diagram{overflow-x:auto;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);padding:10px}
+.diagram svg{max-width:none}
+ol{padding-left:20px;margin:6px 0}li{margin:4px 0}
+footer{margin-top:28px;color:var(--t3);font-size:var(--fs-xs)}
+</style>
+</head>
+<body>
+<main>
+<h1>Миграция при установке новой версии</h1>
+<p class="sub">LORE · описание процесса · 16.11.2026 · к задаче SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01</p>
+
+<div class="lead">
+<b>Суть.</b> Новая версия не правит действующую базу на месте. Она делает бэкап, разворачивает его рядом как источник, создаёт пустую базу по новой модели и переносит данные одним проходом. Всё, чего конвейер не понял, он спрашивает у человека до переноса. Действующая база остаётся нетронутой до самого переключения и после него служит откатом.
+</div>
+
+<h2>Схема процесса</h2>
+<div class="diagram">
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart TB
+  A["1. Запуск и проверка условий"] --> B["2. Подключение к серверу базы"]
+  B --> C["3. Бэкап действующей базы"]
+  C --> D["4. Источник: бэкап развёрнут рядом"]
+  D --> E["5. Новая пустая база по модели"]
+  E --> F["6. Перепись источника"]
+  F --> G["7. Пробный расчёт без записи"]
+  G --> H{"Есть вопросы к человеку?"}
+  H -- да --> I["8. Диалоги: решения человека, затем снова шаг 7"]
+  H -- нет --> J["9. Перенос записей и связей"]
+  J --> K["10. Сверка источника и новой базы"]
+  K --> L{"Сошлось?"}
+  L -- нет --> M["Стоп: отчёт о расхождениях, возврат к шагу 8"]
+  L -- да --> N["11. Отчёт о переносе"]
+  N --> O["12. Приёмка на новой базе"]
+  O --> P{"Владелец: да?"}
+  P -- нет --> X["Доработка правил, возврат к шагу 7"]
+  P -- да --> Q["13. Переключение: стоп записи, повтор шагов 3–10, смена базы"]
+  Q --> R["14. Работа на новой базе; старая — откат"]
+</pre>
+</div>
+<p class="sub">Решения человека сохраняются как правила. Поэтому повтор шагов при переключении идёт без вопросов: спрашивается только то, что появилось в данных после первого прохода.</p>
+
+<h2>Шаги подробно</h2>
+
+<div class="step"><div class="no">1</div><div><h3>Запуск и проверка условий</h3>
+<ul><li>Миграцию запускает человек-суперадмин в разделе «Перенос» новой версии. Агент её не запускает.</li>
+<li>Проверяется: версия сервера ArcadeDB, версия схемы действующей базы, свободное место (нужно на бэкап и на две копии базы).</li>
+<li><span class="stop">Стоп</span>, если версия схемы источника неизвестна конвейеру или места не хватает.</li></ul></div></div>
+
+<div class="step"><div class="no">2</div><div><h3>Подключение</h3>
+<ul><li>Миграция спрашивает адрес сервера базы и учётку.</li>
+<li>Учётку вводит человек. В настройках, журнале и отчёте она не хранится и не показывается.</li>
+<li>Проверка подключения: сервер отвечает, действующая база видна, прав хватает на бэкап и создание базы.</li></ul></div></div>
+
+<div class="step"><div class="no">3</div><div><h3>Бэкап действующей базы</h3>
+<ul><li>Делается свежий бэкап средствами ArcadeDB на том же сервере. Вариант: взять готовый бэкап, указав его.</li>
+<li>Действующая база при этом работает и не меняется.</li>
+<li>В отчёт идёт момент бэкапа: всё, что записано в действующую базу позже, в этот проход не попадёт.</li></ul></div></div>
+
+<div class="step"><div class="no">4</div><div><h3>Источник</h3>
+<ul><li>Бэкап разворачивается на том же сервере отдельной базой с датой в имени.</li>
+<li>Конвейер источник только читает: любая команда записи в него отвергается ещё до отправки на сервер.</li></ul></div></div>
+
+<div class="step"><div class="no">5</div><div><h3>Новая база</h3>
+<ul><li>Создаётся пустая база. Схема собирается заново из модели новой версии, а не цепочкой старых шагов миграции.</li>
+<li>Справочники новой базы заполняются из правил: статусы — код заглавными, остальные — строчными; у каждого значения подписи на русском, английском и польском.</li></ul></div></div>
+
+<div class="step"><div class="no">6</div><div><h3>Перепись источника</h3>
+<ul><li>Считается, сколько записей и связей каждого типа в источнике. Это эталон для сверки на шаге 10.</li></ul></div></div>
+
+<div class="step"><div class="no">7</div><div><h3>Пробный расчёт без записи</h3>
+<p>Каждая запись источника проходит через карту переноса. В новую базу ничего не пишется. Конвейер собирает всё, что не смог решить сам:</p>
+<ul><li><b>Статусы и значения справочников</b> — значение не узнано или пусто там, где обязательно.</li>
+<li><b>Поля вне карты</b> — в данных есть поле, которого карта не знает (на чужой установке это обычное дело).</li>
+<li><b>Не привелось</b> — дата не дата, число не число.</li>
+<li><b>Потеряшки</b> — запись без места: задача без спринта, версия без записи, связь в никуда.</li>
+<li><b>Удержано</b> — поле, по которому ещё нет правила.</li></ul>
+<p>Значения ни одного из этих видов не теряются молча и не подтягиваются к «похожему».</p></div></div>
+
+<div class="step"><div class="no">8</div><div><h3>Диалоги: решения человека</h3>
+<ul><li>По строке на каждое значение, с числом затронутых записей и ссылкой на них.</li>
+<li>Выбор: свести к существующему коду; добавить новый код (только с подписями на трёх языках); текст в заметку; привязать потеряшку по смыслу или удалить; решу позже.</li>
+<li>Решение — правило, а не правка записи: действует на все записи с таким значением и переживает повторный перенос.</li>
+<li>У решения записано, кто и когда его принял. Файл решений переносится на другую установку как есть.</li>
+<li><span class="stop">Стоп</span>, пока есть строка без решения. «Решу позже» перенос не разблокирует.</li></ul></div></div>
+
+<div class="step"><div class="no">9</div><div><h3>Перенос</h3>
+<ul><li>Сначала записи с их историей версий, затем связи.</li>
+<li>История сохраняется целиком: кто, когда и что менял.</li>
+<li>Перенос повторяем: при сбое новая база удаляется и создаётся заново, источник не страдает.</li></ul></div></div>
+
+<div class="step"><div class="no">10</div><div><h3>Сверка</h3>
+<ul><li>Число записей и связей по типам: источник против новой базы.</li>
+<li>Поле в поле: каждое значение либо совпало, либо изменено названным правилом, либо снято названным решением.</li>
+<li>Справочники: каждый код, стоящий в записях, есть в справочнике с тремя подписями.</li>
+<li>Убыль допускается только объявленная — с правилом или решением, которое её объясняет.</li>
+<li><span class="stop">Стоп</span> при любом необъяснённом расхождении. «Не смогли проверить» считается расхождением, а не успехом.</li></ul></div></div>
+
+<div class="step"><div class="no">11</div><div><h3>Отчёт</h3>
+<ul><li>Сколько перенесено по типам; что изменено и каким правилом; что снято и почему; список решений человека; итог сверки; момент бэкапа.</li>
+<li>Отчёт сохраняется документом в новой базе и скачивается файлом.</li></ul></div></div>
+
+<div class="step"><div class="no">12</div><div><h3>Приёмка</h3>
+<ul><li>Новая версия поднимается на стенде поверх новой базы.</li>
+<li>Проверяются: списки, паспорта записей, история, поиск, ответы для клиентов (веб, телефон, MCP).</li>
+<li>Действующая версия на старой базе всё это время работает как обычно.</li>
+<li>Дальше — только по слову владельца.</li></ul></div></div>
+
+<div class="step"><div class="no">13</div><div><h3>Переключение</h3>
+<ul><li>Запись в действующую базу останавливается (чтение остаётся).</li>
+<li>Шаги 3–10 повторяются на свежем бэкапе. Вопросов почти нет: правила уже приняты.</li>
+<li>После зелёной сверки новая версия переключается на новую базу, запись открывается.</li>
+<li>Простой на запись равен времени одного прохода.</li></ul></div></div>
+
+<div class="step"><div class="no">14</div><div><h3>После переключения и откат</h3>
+<ul><li>Старая база и бэкап не удаляются: это откат.</li>
+<li>Откат — вернуть старую версию на старую базу. Записанное в новую базу после переключения при откате теряется, поэтому решение об откате принимается быстро.</li>
+<li>Старая база удаляется только по слову владельца.</li></ul></div></div>
+
+<h2>Что уже есть и чего нет</h2>
+<div class="wrap"><table>
+<tr><th>Часть</th><th>Состояние</th><th>Примечание</th></tr>
+<tr><td>Подключение из файла доступа, источник только на чтение</td><td><span class="chip suc">есть</span></td><td>учётки вне репозитория, в вывод не попадают</td></tr>
+<tr><td>Перепись записей и связей</td><td><span class="chip suc">есть</span></td><td></td></tr>
+<tr><td>Карта переноса и пробный расчёт</td><td><span class="chip wrn">частично</span></td><td>только спринт, фаза, задача; остальные типы не описаны</td></tr>
+<tr><td>Правила справочников с тремя языками и стоп-проверка</td><td><span class="chip wrn">частично</span></td><td>статусы девяти типов и приоритет; остальные справочники не вписаны</td></tr>
+<tr><td>Файл решений человека</td><td><span class="chip suc">есть</span></td><td>формат и применение; экрана нет</td></tr>
+<tr><td>Перенос записей и связей, сверка</td><td><span class="chip wrn">частично</span></td><td>для спринта, фазы, задачи — сошлось поле в поле на снимке от 15.11</td></tr>
+<tr><td>Сборка схемы новой базы из модели</td><td><span class="chip wrn">частично</span></td><td>для трёх типов</td></tr>
+<tr><td>Запись справочников с подписями в новую базу</td><td><span class="chip dng">нет</span></td><td></td></tr>
+<tr><td>Бэкап и разворот кнопкой</td><td><span class="chip dng">нет</span></td><td>сейчас это делает вручную сессия CICDGitHub</td></tr>
+<tr><td>Экран «Перенос» с диалогами</td><td><span class="chip dng">нет</span></td><td>есть прототип, ждёт вашего слова</td></tr>
+<tr><td>Отчёт документом</td><td><span class="chip dng">нет</span></td><td>сейчас — вывод в консоль и файл JSON</td></tr>
+<tr><td>Переключение и откат</td><td><span class="chip dng">нет</span></td><td>процедура описана здесь, не автоматизирована</td></tr>
+</table></div>
+
+<h2>Что нужно решить вам</h2>
+<ol>
+<li>Согласны ли с порядком шагов, особенно с переключением: остановка записи на время одного прохода.</li>
+<li>Сколько хранить старую базу после переключения.</li>
+<li>Приёмка (шаг 12): на препроде или на отдельном стенде.</li>
+</ol>
+
+<footer>Состояние конвейера — по ветке <code>migration/model-v2</code> на 16.11.2026. Шаги 1–2, 8 и 11–14 описывают целевое поведение, в коде их ещё нет.</footer>
+</main>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import elk from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elk);
+mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: false } });
+</script>
+</body>
+</html>

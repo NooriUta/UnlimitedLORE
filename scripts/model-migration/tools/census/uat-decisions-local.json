@@ -1,0 +1,999 @@
+{
+  "format": "mig-decisions/1",
+  "_about": "Решения владелицы для установки LORE (system_aida_lore), приняты в прототипе раздела «Перенос» 16.11.2026 и присланы в диалог списком «Решения по переносу (11)». Передаётся установщику ключом --decisions.",
+  "decisions": [
+    {
+      "id": "ST-01",
+      "scope": {
+        "type": "KnowADRHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "DRAFT",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 152"
+    },
+    {
+      "id": "ST-02",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "fixed"
+      },
+      "action": "map_to",
+      "to": "ACCEPTED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 114"
+    },
+    {
+      "id": "ST-03",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "done"
+      },
+      "action": "map_to",
+      "to": "ACCEPTED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 20"
+    },
+    {
+      "id": "ST-04",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "rejected"
+      },
+      "action": "map_to",
+      "to": "SUPERSEDED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 2"
+    },
+    {
+      "id": "ST-05",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "🚫 CANCELLED"
+      },
+      "action": "map_to",
+      "to": "SUPERSEDED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 1"
+    },
+    {
+      "id": "ST-06",
+      "scope": {
+        "type": "KnowMilestoneHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "UPCOMING",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 38"
+    },
+    {
+      "id": "ST-07",
+      "scope": {
+        "type": "KnowSpecHist",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "PROPOSED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 607"
+    },
+    {
+      "id": "ST-08",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "BACKLOG",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 108"
+    },
+    {
+      "id": "ST-09",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "⏸ DEFERRED"
+      },
+      "action": "map_to",
+      "to": "WAITING",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 10"
+    },
+    {
+      "id": "ST-10",
+      "scope": {
+        "type": "KnowUseCase",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "PROPOSED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 3"
+    },
+    {
+      "id": "ST-11",
+      "scope": {
+        "type": "QualityGate",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "DRAFT",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 1"
+    },
+    {
+      "id": "ST-12",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⬜ OPEN"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:21.129Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "TODO"
+    },
+    {
+      "id": "ST-13",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "📋 OPEN — не начат"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:21.129Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "TODO"
+    },
+    {
+      "id": "ST-14",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⬜ Stub — Post-HighLoad Sprint 1 (~ноябрь 2026)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:22.354Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "BACKLOG"
+    },
+    {
+      "id": "ST-15",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:22.354Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "BACKLOG"
+    },
+    {
+      "id": "ST-16",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⬜ Stub — требует проработки"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:22.354Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "BACKLOG"
+    },
+    {
+      "id": "ST-17",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⬜ Proposed"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:22.354Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "BACKLOG"
+    },
+    {
+      "id": "ST-18",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⏳ Pending — старт Jun 8, 2026 (W7)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:23.574Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PLANNED"
+    },
+    {
+      "id": "ST-19",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⏳ Pending — старт ~Jun 2, 2026 (W7)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:23.574Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PLANNED"
+    },
+    {
+      "id": "ST-20",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔵 PLANNING"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:23.574Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PLANNED"
+    },
+    {
+      "id": "ST-21",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⏳ Pending — старт ~Apr 27, 2026 (W2)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:23.574Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PLANNED"
+    },
+    {
+      "id": "ST-22",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🟡 NEXT-2 — второй в очереди после `SPRINT_HOUND_SPEC_STORAGE`"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:23.575Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PLANNED"
+    },
+    {
+      "id": "ST-23",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔬 **ИССЛЕДОВАНИЕ** (research) — выводы + предложения; реализация после приоритизации"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:24.708Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DESIGN"
+    },
+    {
+      "id": "ST-24",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔬 **ИССЛЕДОВАНИЕ** (research) для HA-части + ✅ **разведка/5 фиксов DONE** + 🎯 **MVP «без сирот» определён**"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:24.708Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DESIGN"
+    },
+    {
+      "id": "ST-25",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔬 **ИССЛЕДОВАНИЕ** (research) для HA-части + ✅ **разведка/5 фиксов DONE** + ✅ **MVP «без сирот» РЕАЛИЗОВАН и СМ�ержен в develop** (MVP-1..5, PR #343 `7a86c322`, 11.06.2026; reaper-код подтверждён в дереве `origin/develop`) — **ещё НЕ в проде** (нет в v1.6.4); остаётся релиз v1.6.5+ на прод + env-fli"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:24.708Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DESIGN"
+    },
+    {
+      "id": "ST-26",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔬 RESEARCH"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:24.708Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DESIGN"
+    },
+    {
+      "id": "ST-27",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔨 ОТКРЫТ (12.06.2026)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:25.936Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "ACTIVE"
+    },
+    {
+      "id": "ST-28",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔄 В РАБОТЕ — задачи готовы, ждёт нового релиза"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:25.936Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "ACTIVE"
+    },
+    {
+      "id": "ST-29",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔄 В РАБОТЕ — 6/12 задач выполнено (HK-1/2/4/6/8/9 ✅; HK-5/7/10/11/12/13 pending)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:25.936Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "ACTIVE"
+    },
+    {
+      "id": "ST-30",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⏸ **Conditional** — активируется ТОЛЬКО при trigger; default state: deferred indefinitely"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:27.167Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "WAITING"
+    },
+    {
+      "id": "ST-31",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⏸ PAUSED"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:27.167Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "WAITING"
+    },
+    {
+      "id": "ST-32",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "⬜ DEFERRED — start ~end of May (W6, May 25), end ~late June (W11, Jun 29)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:27.167Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "WAITING"
+    },
+    {
+      "id": "ST-33",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ PHASES 1/3/4/5 COMPLETE — P2 pending live docker"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:28.396Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PARTIAL"
+    },
+    {
+      "id": "ST-34",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🟡 PHASES 0-6 DONE — Phase 7 partial, Phase 8 pending"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:28.396Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PARTIAL"
+    },
+    {
+      "id": "ST-35",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🟡 INFRA COMPLETE — тест-стенд развёрнут и верифицирован локально (Docker); ожидает OL-07 для HTTP switch"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:28.397Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PARTIAL"
+    },
+    {
+      "id": "ST-36",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ В ОСНОВНОМ ЗАКРЫТ (verify-by-code 11.06.2026) — BH-1/2/3/5/6/7 DONE в develop, BH-8 локальный soak прогнан, BH-9 отложен by design, BH-4 = решение «skip». **Реально открыт только BH-10** (baseline-док). Доки-индексы обогнаны кодом."
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:28.397Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PARTIAL"
+    },
+    {
+      "id": "ST-37",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ **CODE COMPLETE 02.05.2026** — выполнено за 1 день, ожидает CI + PR"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:29.514Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-38",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ **CODE COMPLETE 02.05.2026** — реализация в feature/mimir-foundation, ожидает merge"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:29.514Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-39",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🟢 READY FOR REVIEW — Backend complete, Oracle tested, PRs #241 #242 open"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:29.514Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-40",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🟡 CODE COMPLETE → PR #249 → develop (CI in progress)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:29.514Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-41",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CODE COMPLETE (ветка `feature/hound-predicate-flow`; deploy-gate re-harvest + live-FE pending) · **Date:** 2026-06-09 · **Track:** engine/lineage (HOUND → SHUTTLE → Verdandi)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:29.514Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-42",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CODE COMPLETE (ветка `feature/hound-out-param-edge`; deploy-gate re-harvest pending) · **Date:** 2026-06-09 · **Track:** engine/lineage (HOUND)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:29.514Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-43",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ Фазы 2+3 DONE → v1.6.6 (#354, OFF by default); Фаза 1 → PROD_VERIFY_DOCKERLOCAL"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.751Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-44",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ ЗАКРЫТ (11.06.2026) → **v1.6.5 PROD** (tag = master = release `2b72f5f8`; CD gate INIT+UPGRADE ✅ run 27333744433 → CD Prod ✅ run 27334417735; prod 200×3; prod-бандл чист — 0 bench-ссылок, фича dev-only). Реестр HBR-01..11 закрыт полностью, acceptance машинно (e2e 7/7, T15b 5/5, VERIFY витрины со с"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.751Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-45",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ V1 DONE → v1.6.6 (#354): LAL-00..31 ingest+slices+front+Gantt+decision-board; dev-only (lore.enabled=false)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.751Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-46",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CLOSED"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-47",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CLOSED — PROD 2026-06-04 v1.4.6"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-48",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ MERGED — ветка влита в develop, CI зелёный"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-49",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "ЗАВЕРШЁН (v1.3.7)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-50",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ ЗАВЕРШЁН"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-51",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CLOSED — merged → develop → release; тег `v1.3.17`"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-52",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CLOSED — merged → develop → release; тег `v1.3.17` (2026-04-29)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-53",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ ALL PHASES COMPLETE — P2 DONE (81/81 E2E pass, 100% passedPct)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-54",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ SPRINT CLOSED — P1-P4 + P5 COMPLETE; P3-D Sprint+1; aggregate ≥53%"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-55",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ SPRINT CLOSED — PR #59 merged → develop → prerelease → release"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-56",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ **MERGED 02.05.2026** — PR #103 (`c11da23`) в master (real AnvilTools + FRIGG sessions + secret wrapper + schema fix). CORE v1.3.25 in prod."
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-57",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ **MERGED 02.05.2026** — PR #102 `a1a6d90` в master (tools real impl + events + per-tenant scaffold)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-58",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "Phase 1 ✅ DONE → v1.4.2 PROD (parse-health view починен v1.4.3, #211); Phase 2 PLANNED/gated (§H telemetry + heap-bump; WIP-код на `feat/dali-parallel-batch-parse`, НЕ в develop) · **Created:** 2026-05-29 · **Owner:** platform"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-59",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ **DONE DEVELOP** (M3 Sprint-1, 2026-06-03/04) — P1-P8 merged PR [#233](https://github.com/NooriUta/AIDA/pull/233) → develop `2dd76c6`; 29/29 CI green. **v1.5.0 в pipeline** (CD Staging ✅). Ветка `feature/rbac-svc-users` (deleted)."
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-60",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ **КОД В ПРОДЕ v1.5.0** (M3 Sprint-1, 2026-06-04 07:18 UTC) — P1-P8 merged PR [#233](https://github.com/NooriUta/AIDA/pull/233) → develop `2dd76c6` → prerelease → **v1.5.0 PROD** (подтверждено: `git merge-base --is-ancestor 2dd76c6 v1.5.1` ✅). 29/29 CI green. Ветка `feature/rbac-svc-users` (deleted"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-61",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CLOSED (2026-06-10) — все items 1-5 (SC-F1/F2 + SC-V8/V9/V5/V6 + **SC-V10** ✅) закрыты в v1.5.9 (07.06, PR #255 + #256). Оставшийся scope (Track 2 SC-D1..D5 + Track 4 SC-O1..O3) → SPRINT_OL_XREF_PHASE4. Архивировано."
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-62",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ FULLY CLOSED (2026-06-10) — PR #317 → develop → v1.6.2 PROD. Deploy-gate ✅: LT-05 re-harvest hound_default с PR #317 (bundle #317–#321); live-FE verified (Prod seer/heimdall 200 v1.6.2). Канарейка PF-07 locked (actionable ≤ 2). · **Date:** 2026-06-09 · **Track:** engine/lineage (HOUND → SHUTTLE → "
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-63",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ FULLY CLOSED (2026-06-10) — PR #318 → develop → v1.6.2 PROD. Deploy-gate ✅: LT-05 re-harvest hound_default с PR #318 (bundle #317–#321). ASSIGNS_OUT_PARAM рёбра в проде. Контракт аддитивный. · **Date:** 2026-06-09 · **Track:** engine/lineage (HOUND)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-64",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ CLOSED (2026-06-10) — PR #335 → develop · Released: v1.6.4 / HOUND v1.0.1"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-65",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ ЗАКРЫТ (2026-06-04; архивирован 11.06.2026) · **Created:** 2026-06-04 · **Owner:** data-strategy (solo)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-66",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "✅ Phase 1 DONE — PR #204 → v1.4.2 (clearDFA OOM fix + telemetry); Phase 2 ⏸ ABANDONED 04.06 (load test: 4 threads ×2.5 slower)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:30.752Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-67",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "📋 опционально — Smart Gradle dep-graph, не реализовано (explore later)"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:31.980Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PLANNED"
+    },
+    {
+      "id": "ST-68",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "🟡"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:33.106Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "PARTIAL"
+    },
+    {
+      "id": "ST-69",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "🟢"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:34.338Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "REVIEW"
+    },
+    {
+      "id": "ST-70",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "✅"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:49:35.556Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-71",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "ARCHIVED"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:50:01.369Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "DONE"
+    },
+    {
+      "id": "ST-72",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "**SPLIT 2026-06-04** — tracked as two separate items in SPRINTS_INDEX:"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:50:02.904Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "CANCELLED"
+    },
+    {
+      "id": "ST-73",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "status_raw",
+        "value": "🔴 P0"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:50:04.439Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "TODO"
+    },
+    {
+      "id": "ST-74",
+      "scope": {
+        "type": "KnowSprintHist",
+        "field": "priority",
+        "value": "medium"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:50:46.956Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "normal"
+    },
+    {
+      "id": "ST-75",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "🔴 P0"
+      },
+      "action": "map_to",
+      "by": "AGENT-FULL-msbt0fed (по слову владелицы 16.11: «по максимуму сама»)",
+      "at": "2026-11-16T19:50:29.931Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "TODO"
+    },
+    {
+      "id": "ST-76",
+      "scope": {
+        "type": "KnowPhaseHist",
+        "field": "status_raw",
+        "value": "🚫 CANCELLED"
+      },
+      "action": "add_code",
+      "by": "omiloreadmin (слово в канале 16.11.2026: «давай в cancelled»; записал AGENT-FULL-msbt0fed)",
+      "at": "2026-11-16T21:57:43.462Z",
+      "note": "принято в интерфейсе установщика",
+      "to": "CANCELLED",
+      "labels": {
+        "ru": "Отменена",
+        "en": "Cancelled",
+        "pl": "Anulowana"
+      }
+    }
+  ]
+}
