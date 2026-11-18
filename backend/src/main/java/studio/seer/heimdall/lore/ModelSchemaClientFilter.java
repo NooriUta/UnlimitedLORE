@@ -20,6 +20,8 @@ import java.nio.charset.StandardCharsets;
  */
 public class ModelSchemaClientFilter implements ClientRequestFilter, ClientResponseFilter {
 
+    private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(ModelSchemaClientFilter.class);
+
     @Override
     public void filter(ClientRequestContext req) {
         if (!ModelSchemaAdapter.enabled()) return;
@@ -38,6 +40,14 @@ public class ModelSchemaClientFilter implements ClientRequestFilter, ClientRespo
         if (!ModelSchemaAdapter.enabled() || !res.hasEntity()) return;
         InputStream in = res.getEntityStream();
         String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        // Отказ базы на новой схеме — с телом ответа и SQL: без них «409»/«500» не разобрать (вызовы записи
+        // разворачивают ответ не везде).
+        if (res.getStatus() >= 400) {
+            Object e = req.getEntity();
+            String sql = e instanceof MartQuery q ? q.command() : e instanceof LoreCommandClient.LoreCommand c ? c.command() : "";
+            LOG.warnf("[LORE MODEL-SCHEMA] база ответила %d: %s | sql: %s", res.getStatus(),
+                body.length() > 600 ? body.substring(0, 600) : body, sql.length() > 1500 ? sql.substring(0, 1500) : sql);
+        }
         res.setEntityStream(new ByteArrayInputStream(ModelSchemaAdapter.adaptJson(body).getBytes(StandardCharsets.UTF_8)));
     }
 

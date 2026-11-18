@@ -72,6 +72,17 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void строка_версии_целиком_получает_прежний_ключ_статуса() {
+        // SELECT * открытой версии на новой базе: статус только в status — без этого old_status в ответе смены статуса пуст
+        Map<String, Object> v = new HashMap<>(Map.of("state_uid", "u", "status", "PLANNED"));
+        Map<String, Object> adr = new HashMap<>(Map.of("adr_id", "A", "status", "ACCEPTED"));
+        ModelSchemaAdapter.adaptRows(List.of(v, adr));
+        assertEquals("📋 PLANNED", v.get("status_raw"));
+        assertEquals("PLANNED", v.get("status"), "код в status остаётся");
+        assertEquals(null, adr.get("status_raw"), "статус не плана (ADR) — ключа не добавляем");
+    }
+
+    @Test
     void ответ_базы_целиком_json_приводится_к_прежнему_виду() {
         String json = "{\"result\":[{\"task_uid\":\"A/1\",\"status_raw\":\"BLOCKED\"},{\"n\":3}]}";
         String out = ModelSchemaAdapter.adaptJson(json);

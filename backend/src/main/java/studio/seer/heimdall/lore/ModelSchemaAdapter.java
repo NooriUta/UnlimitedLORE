@@ -166,9 +166,14 @@ final class ModelSchemaAdapter {
         for (Map<String, Object> r : rows) {
             if (r == null) continue;
             Object v = r.get("status_raw");
-            if (v instanceof String s && DISPLAY.containsKey(s)) {
-                try { r.put("status_raw", DISPLAY.get(s)); } catch (UnsupportedOperationException ignored) { /* неизменяемая строка ответа */ }
-            }
+            try {
+                if (v instanceof String s && DISPLAY.containsKey(s)) {
+                    r.put("status_raw", DISPLAY.get(s));
+                } else if (v == null && !r.containsKey("status_raw") && r.get("status") instanceof String c && DISPLAY.containsKey(c)) {
+                    // строка версии целиком (SELECT *): статус плана только в status — прежний ключ рядом
+                    r.put("status_raw", DISPLAY.get(c));
+                }
+            } catch (UnsupportedOperationException ignored) { /* неизменяемая строка ответа */ }
         }
     }
 }
