@@ -39,6 +39,7 @@ import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import { loreListPeek } from '../record/lorePeek';
 import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
+import { browserZone } from '../time/browserZone';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -157,9 +158,6 @@ export function mergeBodies(open: SliceAnswer, closed: SliceAnswer): SliceAnswer
   };
 }
 
-function browserZone(): string {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
-}
 
 /**
  * Диапазон «Изменены с … по …» в адресе (?changed=…, K2-DATE-RANGE): тот же
