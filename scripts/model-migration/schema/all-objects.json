@@ -2102,9 +2102,9 @@
           "of": 458
         },
         "content_md_ru_bytes": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "content_md_ru_bytes"
           ],
@@ -2149,9 +2149,9 @@
           "of": 458
         },
         "content_md_en_bytes": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "content_md_en_bytes"
           ],
@@ -2179,9 +2179,9 @@
           "of": 458
         },
         "content_html_bytes": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "content_html_bytes"
           ],
@@ -2406,9 +2406,9 @@
           "of": 31
         },
         "verified": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "verified"
           ],
@@ -2758,9 +2758,9 @@
           "of": 46
         },
         "week": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "week"
           ],
@@ -3476,9 +3476,9 @@
       "version_of": null,
       "fields": {
         "is_current": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "is_current"
           ],
@@ -3542,9 +3542,9 @@
           "of": 575
         },
         "week": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "week"
           ],
@@ -3674,9 +3674,9 @@
           "of": 981
         },
         "is_current": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "is_current"
           ],
@@ -4512,9 +4512,9 @@
           "of": 110
         },
         "children": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "list",
+          "db_type": "LIST",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "children"
           ],
@@ -4522,9 +4522,9 @@
           "of": 110
         },
         "tech": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "list",
+          "db_type": "LIST",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "tech"
           ],
@@ -4782,9 +4782,9 @@
           "of": 14
         },
         "effort_days": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "note": "в схеме прода не объявлено — тип по значениям",
           "from": [
             "effort_days"
           ],
