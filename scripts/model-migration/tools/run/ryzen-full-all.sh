@@ -9,7 +9,9 @@ trap 'rm -f access.env' EXIT
 umask 077
 { grep -E '^(MIG_DB_URL|MIG_SRC_DB|MIG_SRC_USER|MIG_SRC_PASSWORD)=' $B/migration.env; echo "MIG_DST_URL=http://127.0.0.1:2490"; echo "MIG_DST_DB=$DST"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$(cat $B/arcadedb.secret)"; } > access.env
 R="env -i PATH=/usr/bin:/bin $B/node-v24.14.1-linux-x64/bin/node $M"
-$R connect --env access.env --create-dst > $TAG-connect.txt 2>&1; echo "connect exit=$?"
-$R transfer --env access.env --decisions $B/decisions.lore.json --reset --out $TAG-transfer.json > $TAG-transfer.txt 2>&1; echo "transfer exit=$?"; grep -E "^[0-9] |ошибка|Error" $TAG-transfer.txt | cut -c1-400
-$R edges --env access.env --out $TAG-edges.json > $TAG-edges.txt 2>&1; echo "edges exit=$?"; grep -E "сверка|не перенесены|ошибка|Error|вне карты" $TAG-edges.txt | cut -c1-400
-$R dst-fingerprint --env access.env --out $TAG-dstfp.json > $TAG-dstfp.txt 2>&1; echo "dst-fingerprint exit=$?"; tail -2 $TAG-dstfp.txt | cut -c1-300
+# замер: секунды на шаг (владелица 18.11: «замеряй производительность, оптимизируй работу с базой»)
+T0=$(date +%s); t() { N=$(date +%s); echo "  время: $((N-T0)) с"; T0=$N; }
+$R connect --env access.env --create-dst > $TAG-connect.txt 2>&1; echo "connect exit=$?"; t
+$R transfer --env access.env --decisions $B/decisions.lore.json --reset --out $TAG-transfer.json > $TAG-transfer.txt 2>&1; echo "transfer exit=$?"; t; grep -E "^[0-9] |ошибка|Error" $TAG-transfer.txt | cut -c1-400
+$R edges --env access.env --out $TAG-edges.json > $TAG-edges.txt 2>&1; echo "edges exit=$?"; t; grep -E "сверка|не перенесены|ошибка|Error|вне карты" $TAG-edges.txt | cut -c1-400
+$R dst-fingerprint --env access.env --out $TAG-dstfp.json > $TAG-dstfp.txt 2>&1; echo "dst-fingerprint exit=$?"; t; tail -2 $TAG-dstfp.txt | cut -c1-300
