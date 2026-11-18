@@ -42,7 +42,7 @@ test('независимость от операционки: в коде уст
   const own = ['cli.mjs', 'resources.mjs', 'env.mjs', 'db.mjs', 'apply-map.mjs', 'decisions.mjs', 'status-unify.mjs', 'fingerprint.mjs',
     'probe.mjs', 'dst-fingerprint.mjs', 'ui.mjs', 'status-run.mjs', 'auth.mjs', 'report.mjs', 'dicts.mjs', 'edge-census.mjs', 'orphan-census.mjs', 'status-check.mjs', 'dry-run.mjs', 'transfer.mjs', 'transfer-edges.mjs',
     // 18.11.2026: модули окна установщика — тоже код, который едет к пользователю.
-    'setup.mjs', 'setup-check.mjs', 'machine-enroll.mjs'];
+    'setup.mjs', 'setup-check.mjs', 'machine-enroll.mjs', 'kc-realm.mjs'];
   for (const f of own) {
     const s = fs.readFileSync(new URL(f, dir), 'utf8');
     assert.ok(!/node:child_process|execSync|spawn\(/.test(s), f + ': запуск внешней программы');

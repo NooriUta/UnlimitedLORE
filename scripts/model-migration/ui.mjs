@@ -19,6 +19,7 @@ import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, install
 import { INSTALL_BUNDLE } from './resources.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
+import { realmPlan, applyRealm, issuerParts } from './kc-realm.mjs';
 import os from 'node:os';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
@@ -117,9 +118,11 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Версия (тег) или пусто</td><td><input name="version" size="16"></td></tr>
 <tr><td>Порт веба</td><td><input name="port" size="8" value="4400"></td></tr>
 <tr><td>Адрес области Keycloak</td><td><input name="issuer" size="40" placeholder="https://keycloak/realms/lore"></td></tr>
+<tr><td>Адрес веба LORE</td><td><input name="web" size="40" placeholder="https://lore.example.org"></td></tr>
+<tr><td>Администратор Keycloak (новая установка)</td><td><input name="kcAdmin" size="16" autocomplete="off" placeholder="admin"> <input name="kcPassword" type="password" size="16" autocomplete="new-password" placeholder="пароль — не сохраняется"></td></tr>
 <tr><td>Адрес Völva</td><td><input name="volva" size="40" placeholder="если Völva выбрана"></td></tr>
 <tr><td>Адрес сервера miniLORE</td><td><input name="minilore" size="40" placeholder="если miniLORE выбран"></td></tr></table>
-<div class="top"><button type="button" class="btn" id="ienv">Собрать .env</button><button type="button" class="btn" id="iplan">План установки</button><button type="button" class="btn" id="ivolva">Ключи Völva</button><button type="button" class="btn" id="ilink">Файл для link</button></div>
+<div class="top"><button type="button" class="btn" id="ienv">Собрать .env</button><button type="button" class="btn" id="iplan">План установки</button><button type="button" class="btn" id="ivolva">Ключи Völva</button><button type="button" class="btn" id="ilink">Файл для link</button><button type="button" class="btn" id="ikcplan">План области Keycloak</button><button type="button" class="btn" id="ikcapply">Завести область</button></div>
 <pre class="mono" id="iout" style="white-space:pre-wrap;max-height:360px;overflow:auto"></pre><div id="ires" class="sub"></div></form></div>
 <h3>Подключение агента на этой машине</h3>
 <div class="tw" style="padding:8px"><form id="af" autocomplete="off"><table class="cfg">
@@ -241,6 +244,7 @@ document.addEventListener('click',function(e){var map={ienv:'api/setup/env',ipla
 document.getElementById('ires').textContent='…';fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(iform())}).then(function(r){return r.json()}).then(function(d){var o=document.getElementById('iout'),r=document.getElementById('ires');if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}o.textContent=d.text||'';r.innerHTML=esc(d.note||'')})});
 document.addEventListener('click',function(e){if(e.target.id!=='acheck')return;var r=document.getElementById('ares');r.textContent='…';fetch('api/setup/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(aform())}).then(function(x){return x.json()}).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}var lab={ok:'да',warn:'внимание',fail:'нет',unchecked:'не смогли проверить'};r.innerHTML=d.checks.map(function(c){return '<div><span class="chip'+(c.state==='ok'?' ok':'')+'" style="'+(c.state==='fail'?'color:var(--dng)':c.state==='ok'?'':'color:var(--wrn)')+'">'+esc(c.name)+': '+lab[c.state]+'</span> '+esc(c.reason)+'</div>'}).join('')})});
 document.addEventListener('click',function(e){if(e.target.id!=='amach')return;var r=document.getElementById('ares'),body=aform();var go=function(apply){body.apply=apply;r.textContent='…';return fetch('api/setup/machine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(x){return x.json()})};go(false).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}r.innerHTML='<span class="chip'+(d.state==='ok'?' ok':'')+'">'+esc(d.machineId||'')+'</span> '+esc(d.reason);if(d.state!=='plan')return;if(!confirm('Завести машину '+d.machineId+' в LORE? '+d.reason))return;go(true).then(function(d2){r.innerHTML=d2.error?'<b style="color:var(--dng)">'+esc(d2.error)+'</b>':'<span class="chip'+(d2.state==='ok'?' ok':'')+'">'+esc(d2.machineId||'')+'</span> '+esc(d2.reason)})})});
+document.addEventListener('click',function(e){var id=e.target.id;if(id!=='ikcplan'&&id!=='ikcapply')return;var o=iform(),a=aform(),r=document.getElementById('ires'),out=document.getElementById('iout');o.harness=a.harness;o.apply=id==='ikcapply';if(o.apply&&!confirm('Завести область и клиенты в Keycloak '+(o.issuer||'')+'? Уже существующее не трогается.'))return;r.textContent='…';fetch('api/setup/kc-realm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(function(x){return x.json()}).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}if(d.plan){out.textContent=d.plan.map(function(s){return s.method+' '+s.path+'  ('+s.id+')'}).join(String.fromCharCode(10));r.textContent='план: шагов '+d.plan.length+'; ничего не записано';return}out.textContent=d.results.map(function(s){return s.id+': '+s.reason}).join(String.fromCharCode(10));r.textContent=d.results.every(function(s){return s.state==='created'||s.state==='exists'})?'область готова':'остановлено на ошибке — см. список'})});
 function aform(){var f=document.getElementById('af'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
 document.addEventListener('click',function(e){var id=e.target.id;if(id!=='apreview'&&id!=='aapply')return;var body=aform();if(id==='aapply'){if(!confirm('Записать строку MCP aida-lore в настройки Claude Code? Прежний файл сохранится копией.'))return;body.confirm=true}
 fetch(id==='aapply'?'api/setup/mcp/apply':'api/setup/mcp/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){if(d.error){document.getElementById('ares').innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}
@@ -448,6 +452,25 @@ export async function serve({ port = 2499 } = {}) {
             return json(res, 200, { text, note: 'файл ' + file + '; секрет пустой — он появится, когда установщик заведёт клиент minilore-link-' + b.machineId + ' в Keycloak' });
           }
         } catch (e) { return json(res, 400, { error: e.message }); }
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/kc-realm') {
+        // Новая установка: область и клиенты Keycloak (слово владелицы 17.11 «ты реинсталлишь»). Только со своей страницы;
+        // пароль администратора — только в этом запросе, не сохраняется и не пишется в журнал.
+        if (req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'только со страницы установщика' });
+        const b = await readBody(req);
+        let steps, kcUrl;
+        try { ({ kcUrl } = issuerParts(b.issuer)); steps = realmPlan({ realm: issuerParts(b.issuer).realm, webOrigin: b.web, harnesses: b.harness ? [b.harness] : [] }); }
+        catch (e) { return json(res, 400, { error: e.message }); }
+        if (!b.apply) return json(res, 200, { plan: steps.map(x => ({ id: x.id, method: x.method, path: x.path })) });
+        if (!b.kcAdmin || !b.kcPassword) return json(res, 400, { error: 'нужны логин и пароль администратора Keycloak' });
+        const writeSecrets = sec => {
+          const file = path.join(os.homedir(), 'kc-clients-' + steps[0].body.realm + '.env');
+          const NL = String.fromCharCode(10);
+          fs.writeFileSync(file, Object.entries(sec).map(([k, v]) => 'LORE_KC_SECRET_' + k.toUpperCase().replace(/[^A-Z0-9]/g, '_') + '=' + v).join(NL) + NL, { mode: 0o600 });
+          return file;
+        };
+        const out = await applyRealm({ kcUrl, adminUser: b.kcAdmin, adminPassword: b.kcPassword, steps, writeSecrets });
+        return json(res, 200, out);
       }
       if (req.method === 'POST' && req.url === '/api/setup/machine') {
         // machine_new из окна: план (dry_run), запись — только с apply:true и только со своей страницы. Вход — токен шага 0.
