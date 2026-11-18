@@ -268,12 +268,24 @@ public abstract class LoreResourceBase {
     }
 
     String callerKcSub() {
-        if (identity == null
-                || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
-            return null;
+        String sub = null;
+        if (identity != null && identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt) {
+            sub = jwt.getSubject();
         }
-        String sub = jwt.getSubject();
-        return sub == null || sub.isBlank() ? null : sub;
+        org.eclipse.microprofile.config.Config cfg = org.eclipse.microprofile.config.ConfigProvider.getConfig();
+        boolean oidc = cfg.getOptionalValue("quarkus.oidc.enabled", Boolean.class).orElse(true);
+        return resolveSub(sub, oidc, cfg.getOptionalValue("lore.dev.mock-sub", String.class).orElse(null));
+    }
+
+    /**
+     * Кто вызывающий: настоящий {@code sub} токена; без токена — заглушка {@code lore.dev.mock-sub}, но ТОЛЬКО при
+     * выключенном входе (тестовая ветка переезда, владелица 18.11.2026: «подставляй мокап к входу и мокап токен»).
+     * На включённом входе заглушки нет вовсе.
+     */
+    static String resolveSub(String tokenSub, boolean oidcEnabled, String mockSub) {
+        if (tokenSub != null && !tokenSub.isBlank()) return tokenSub;
+        if (oidcEnabled || mockSub == null || mockSub.isBlank()) return null;
+        return mockSub;
     }
 
     /**
