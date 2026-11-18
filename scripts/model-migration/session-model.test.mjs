@@ -39,7 +39,8 @@ test('машины из сессий регистрируются: arharaga — 
 
 test('сессия → машина: четыре написания сводятся, LEGION — в отчёт с причиной', () => {
   const p = planSessionModel(base());
-  assert.deepEqual(p.edges.NEW_ON_MACHINE, [['#s:1', 'machine:lorcetus'], ['#s:2', 'machine:lorcetus'], ['#s:3', 'machine:arharaga']]);
+  // зарегистрированные сессии; восстановленные из версий (session:…) проверяет тест восстановления
+  assert.deepEqual(p.edges.NEW_ON_MACHINE.filter(([a]) => !a.startsWith('session:')), [['#s:1', 'machine:lorcetus'], ['#s:2', 'machine:lorcetus'], ['#s:3', 'machine:arharaga']]);
   assert.equal(p.unresolved.NEW_ON_MACHINE.length, 1);
   assert.match(p.unresolved.NEW_ON_MACHINE[0].why, /пользовател/);
 });
@@ -56,10 +57,30 @@ test('агент → harness: код справочника; кода нет в 
   assert.deepEqual(p.unresolved.NEW_RUNS_IN.map(x => x.value), ['codex']);
 });
 
-test('версия → сессия: по паре «машина + код»; сессии нет — в отчёт', () => {
+test('версия → сессия: по паре «машина + код»; сессии нет — восстанавливается из версий и связывается', () => {
+  // Слово владелицы 18.11.2026 (D-2026-MIG-UNREGISTERED-SESSIONS): «если нужна реконструкция списком уникальных значений
+  // откуда ссылается заполни и свяжи». Раньше такая версия уходила в «не связано» (51 версия на снимке 18.11).
   const p = planSessionModel(base());
-  assert.deepEqual(p.edges.NEW_CHANGED_IN, [['#v:1', '#s:1']]);
-  assert.deepEqual(p.unresolved.NEW_CHANGED_IN.map(x => x.value), ['lorcetus|zz']);
+  assert.deepEqual(p.edges.NEW_CHANGED_IN, [['#v:1', '#s:1'], ['#v:2', 'session:lorcetus|zz']]);
+  assert.deepEqual(p.unresolved.NEW_CHANGED_IN, []);
+  assert.equal(p.restoredSessions.length, 1);
+  assert.equal(p.restoredSessions[0].machine_id, 'lorcetus');
+  assert.equal(p.restoredSessions[0].session_id, 'zz');
+  assert.equal(p.restoredSessions[0].restored_by_migration, true);
+  assert.ok(p.edges.NEW_ON_MACHINE.some(([a, b]) => a === 'session:lorcetus|zz' && b === 'machine:lorcetus'));
+});
+
+test('восстановление сессий: уникально по паре, время — первая и последняя правка, harness — из версий, счёт ссылок', () => {
+  const b = base();
+  b.versions = [
+    { rid: '#v:7', changed_by_session: 'q1', changed_by_machine: 'ARHARAGA', changed_by_harness: 'claude', valid_from: '2026-11-17 10:00:00.000' },
+    { rid: '#v:8', changed_by_session: 'q1', changed_by_machine: 'arharaga', changed_by_harness: 'claude', valid_from: '2026-11-18 09:00:00.000' },
+    { rid: '#v:9', changed_by_session: 'q2', changed_by_machine: null },
+  ];
+  const p = planSessionModel(b);
+  assert.deepEqual(p.restoredSessions, [{ machine_id: 'arharaga', session_id: 'q1', started_at: '2026-11-17 10:00:00.000',
+    last_activity_at: '2026-11-18 09:00:00.000', harness: 'claude', versions: 2, restored_by_migration: true }]);
+  assert.deepEqual(p.unresolved.NEW_CHANGED_IN.map(x => x.rid), ['#v:9'], 'без машины пару не собрать — в отчёт');
 });
 
 test('ключ сессии — пара: один код на двух машинах — две разные сессии', () => {

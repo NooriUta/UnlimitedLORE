@@ -85,7 +85,7 @@ export async function transferEdges(db, { log = console.log } = {}) {
   if (!sm.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
-  log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
+  log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
   log('не перенесены (конец не в приёмнике):', JSON.stringify(missingEnds), '· дубли при переводе:', JSON.stringify(duplicates));
   log('не переносится по карте:', Object.entries(plan).filter(([, p]) => p.rule === 'drop').map(([e]) => e).join(', '));
   log('сверка связей:', ok ? 'сошлась' : 'НЕ сошлась');
@@ -108,22 +108,30 @@ async function sessionModel(db, { pages }) {
   const actors = (has.has('KnowActor') ? await read('KnowActor', 'harness') : []).map(x => ({ rid: x.r, harness: x.harness }));
   const versions = [];
   for (const T of Object.keys(SCHEMA).filter(t => t.endsWith('Hist') && SCHEMA[t].fields.changed_by_session))
-    for (const x of await read(T, 'changed_by_session, changed_by_machine', ' AND changed_by_session IS NOT NULL')) versions.push({ rid: x.r, changed_by_session: x.changed_by_session, changed_by_machine: x.changed_by_machine });
+    for (const x of await read(T, 'changed_by_session, changed_by_machine, changed_by_harness, valid_from', ' AND changed_by_session IS NOT NULL')) versions.push({ rid: x.r, changed_by_session: x.changed_by_session, changed_by_machine: x.changed_by_machine, changed_by_harness: x.changed_by_harness, valid_from: x.valid_from });
   const plan = planSessionModel({ sessions, machines, projects, harness, actors, versions, notMachines: NOT_MACHINES });
 
   for (const m of plan.newMachines) await db.dstCommand('INSERT INTO KnowMachine CONTENT :c', { c: { ...m, mig_src_rid: 'registered-from-sessions:' + m.machine_id } });
   const machineRid = new Map((await read('KnowMachine', 'machine_id')).map(x => [String(x.machine_id).toLowerCase(), x.r]));
+  // сессии, восстановленные из версий (D-2026-MIG-UNREGISTERED-SESSIONS): заводятся до связей, заглушка session:<машина|код> → адрес
+  const sessionRid = new Map();
+  for (const r of plan.restoredSessions) {
+    const key = r.machine_id + '|' + r.session_id;
+    const res = await db.dstCommand('INSERT INTO KnowAgentSession CONTENT :c', { c: { ...r, mig_src_rid: 'restored-from-versions:' + key } });
+    sessionRid.set(key, res[0]['@rid']);
+  }
+  const resolve = b => b.startsWith('machine:') ? machineRid.get(b.slice(8)) : b.startsWith('session:') ? sessionRid.get(b.slice(8)) : b;
   const counts = {}; let ok = true;
   for (const [E, list] of Object.entries(plan.edges)) {
     if (has.has(E)) await db.dstCommand(`DROP TYPE ${E} UNSAFE`);
     await db.dstCommand(`CREATE EDGE TYPE ${E}`);
-    const rows = list.map(([a, b]) => [a, b.startsWith('machine:') ? machineRid.get(b.slice(8)) : b]);
+    const rows = list.map(([a, b]) => [resolve(a), resolve(b)]);
     for (const [a, b] of rows) await db.dstCommand(`CREATE EDGE ${E} FROM ${a} TO ${b} CONTENT :c`, { c: { mig_rule: 'session-model' } });
     const got = (await db.dstQuery(`SELECT count(*) AS n FROM ${E}`))[0].n;
     counts[E] = { expected: rows.length, target: got };
-    if (got !== rows.length || rows.some(([, b]) => !b)) ok = false;
+    if (got !== rows.length || rows.some(([a, b]) => !a || !b)) ok = false;
   }
-  return { ok, new_machines: plan.newMachines, counts, unresolved_counts: Object.fromEntries(Object.entries(plan.unresolved).map(([k, v]) => [k, v.length])), unresolved: plan.unresolved };
+  return { ok, new_machines: plan.newMachines, restored_sessions: plan.restoredSessions.length, counts, unresolved_counts: Object.fromEntries(Object.entries(plan.unresolved).map(([k, v]) => [k, v.length])), unresolved: plan.unresolved };
 }
 
 if (process.argv[1] === 'edges') {

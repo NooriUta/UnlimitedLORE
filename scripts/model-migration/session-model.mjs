@@ -64,13 +64,27 @@ export function planSessionModel({ sessions = [], machines = [], projects = [], 
     else unresolved.NEW_RUNS_IN.push({ rid: a.rid, value: a.harness, why: 'кода нет в справочнике harness' });
   }
 
+  // Сессия, на которую ссылается версия, но которой нет среди зарегистрированных (сессии живут в miniLORE, в LORE —
+  // только записанные), восстанавливается по уникальной паре «машина + код»: время — первая и последняя правка,
+  // harness — из версий, пометка restored_by_migration. Слово владелицы 18.11.2026: «если нужна реконструкция списком
+  // уникальных значений откуда ссылается заполни и свяжи» (D-2026-MIG-UNREGISTERED-SESSIONS).
+  const restored = new Map();
   for (const v of versions) {
     if (!v.changed_by_session) continue;
     const m = canonMachine(v.changed_by_machine, notMachines);
     const key = pair(m.id, v.changed_by_session);
     const s = m.id && byPair.get(key);
-    if (s) edges.NEW_CHANGED_IN.push([v.rid, s]);
-    else unresolved.NEW_CHANGED_IN.push({ rid: v.rid, value: key, why: m.id ? 'сессии с такой парой «машина + код» нет' : m.why });
+    if (s) { edges.NEW_CHANGED_IN.push([v.rid, s]); continue; }
+    if (!m.id) { unresolved.NEW_CHANGED_IN.push({ rid: v.rid, value: key, why: m.why }); continue; }
+    const r = restored.get(key) || { machine_id: m.id, session_id: v.changed_by_session, started_at: null, last_activity_at: null, harness: null, versions: 0, restored_by_migration: true };
+    r.started_at = minStr(r.started_at, v.valid_from || null);
+    r.last_activity_at = maxStr(r.last_activity_at, v.valid_from || null);
+    if (!r.harness && v.changed_by_harness) r.harness = v.changed_by_harness;
+    r.versions++;
+    restored.set(key, r);
+    edges.NEW_CHANGED_IN.push([v.rid, 'session:' + key]);
   }
-  return { newMachines, edges, unresolved };
+  const restoredSessions = [...restored.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, r]) => r);
+  for (const r of restoredSessions) edges.NEW_ON_MACHINE.push(['session:' + pair(r.machine_id, r.session_id), 'machine:' + r.machine_id]);
+  return { newMachines, edges, unresolved, restoredSessions };
 }
