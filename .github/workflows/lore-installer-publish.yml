@@ -10,6 +10,7 @@ name: LORE installer → kkRepo
 # ТОЛЬКО ручной запуск. dry_run — сборка и план без записи. Для publish нужны секреты
 # KKREPO_USER / KKREPO_PASSWORD (учётка с правом записи в репозиторий lore-installer);
 # без них шаг падает громко с BLOCKED, а не пропускается молча.
+# После выкладки — чистка старых версий (prune-plan.mjs).
 # Логика — scripts/model-migration/publish-plan.mjs (многострочный bash в run: ломал разбор у Forgejo).
 
 on:
@@ -39,7 +40,6 @@ jobs:
     env:
       KKREPO_BASE: http://192.168.3.131:8081/repository
       KKREPO_REPO: lore-installer
-      TOOLS: ${{ runner.temp }}/installer-tools
     steps:
       - uses: actions/checkout@v7
 
@@ -53,15 +53,15 @@ jobs:
         run: node --version
 
       - name: Сборщики esbuild и postject
-        run: npm install --no-save --no-audit --no-fund --prefix "$TOOLS" esbuild@0.28.1 postject@1.0.0-alpha.6
+        run: npm install --no-save --no-audit --no-fund --prefix .installer-tools esbuild@0.28.1 postject@1.0.0-alpha.6
 
       - name: Тесты установщика
         run: node --test scripts/model-migration/
 
       - name: Сборка — .mjs и исполняемый файл Linux x64
         env:
-          ESBUILD_DIR: ${{ runner.temp }}/installer-tools
-          POSTJECT_DIR: ${{ runner.temp }}/installer-tools
+          ESBUILD_DIR: .installer-tools
+          POSTJECT_DIR: .installer-tools
         run: node scripts/model-migration/build-installer.mjs --out build --exe
 
       - name: Исполняемый файл запускается
@@ -76,3 +76,15 @@ jobs:
           KKREPO_USER: ${{ secrets.KKREPO_USER }}
           KKREPO_PASSWORD: ${{ secrets.KKREPO_PASSWORD }}
         run: node scripts/model-migration/publish-plan.mjs --dir build --version "${{ inputs.version }}"
+
+      # Слово владелицы 18.11.2026: «сразу сделай prune — не оставляй версий старше 10 минорных, и только мажорные».
+      # Правило — scripts/model-migration/prune-plan.mjs; удаление проверяется чтением (файл больше не отдаётся).
+      - name: План чистки
+        run: node scripts/model-migration/publish-plan.mjs --prune-only --dry
+
+      - name: Чистка kkRepo
+        if: inputs.mode == 'publish'
+        env:
+          KKREPO_USER: ${{ secrets.KKREPO_USER }}
+          KKREPO_PASSWORD: ${{ secrets.KKREPO_PASSWORD }}
+        run: node scripts/model-migration/publish-plan.mjs --prune-only

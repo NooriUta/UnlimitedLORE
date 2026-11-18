@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prunePlan, versionsFromAssets } from './prune-plan.mjs';
 
 const VERSION_RE = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 
@@ -38,9 +39,57 @@ export function publishPlan({ base, repo, version, files }) {
   return [...out.map(f => ({ url: dir + f.name, bytes: f.bytes })), { url: dir + 'SHA256SUMS', bytes: Buffer.from(sha256sums(out)) }];
 }
 
+/**
+ * Чистка репозитория по prune-plan.mjs. Список — search/assets kkRepo (Nexus-совместимый, постранично); время выкладки
+ * предварительных — Last-Modified их SHA256SUMS. Удаление — DELETE по пути файла и проверка, что файл больше не отдаётся.
+ */
+async function prune({ base, repo, auth, dry }) {
+  const origin = new URL(base).origin, items = [], hdr = auth ? { authorization: auth } : {};
+  let token = '';
+  do {
+    const u = new URL('/service/rest/v1/search/assets', origin);
+    u.searchParams.set('repository', repo);
+    if (token) u.searchParams.set('continuationToken', token);
+    const r = await fetch(u, { headers: hdr });
+    if (!r.ok) throw new Error('список файлов kkRepo не прочитан: ' + r.status + ' — чистку не делаю');
+    const j = await r.json();
+    items.push(...(j.items || []));
+    token = j.continuationToken || '';
+  } while (token);
+  const dir = base.replace(/\/+$/, '') + '/' + repo + '/';
+  const byVersion = versionsFromAssets(items);
+  const list = [];
+  for (const [version, paths] of Object.entries(byVersion)) {
+    let at = '';
+    if (version.includes('-')) {
+      const h = await fetch(dir + version + '/SHA256SUMS', { method: 'HEAD', headers: hdr });
+      const lm = h.headers.get('last-modified');
+      at = lm ? new Date(lm).toISOString() : '';
+    }
+    list.push({ version, at, paths });
+  }
+  const plan = prunePlan(list);
+  console.log('чистка: версий ' + list.length + ', остаются ' + plan.keep.length + (plan.keep.length ? ' (' + plan.keep.join(', ') + ')' : '')
+    + ', удаляются ' + plan.remove.length + (plan.remove.length ? ' (' + plan.remove.join(', ') + ')' : ''));
+  if (dry) return;
+  for (const v of plan.remove) for (const p of byVersion[v]) {
+    const r = await fetch(dir + p, { method: 'DELETE', headers: hdr });
+    if (!r.ok && r.status !== 404) throw new Error('DELETE ' + p + ' → ' + r.status + ' ' + (await r.text()).slice(0, 200) + ' (нужно право delete у роли lore-installer-publisher)');
+    const g = await fetch(dir + p, { method: 'HEAD', headers: hdr });
+    if (g.status !== 404) throw new Error('удалено, но файл ещё отдаётся: ' + p + ' → ' + g.status);
+    console.log('удалено и проверено: ' + p);
+  }
+}
+
 async function main() {
   const arg = k => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
   const dir = arg('--dir') || 'build', dry = process.argv.includes('--dry');
+  const base = process.env.KKREPO_BASE || 'http://192.168.3.131:8081/repository', repo = process.env.KKREPO_REPO || 'lore-installer';
+  if (process.argv.includes('--prune-only')) {
+    const u = process.env.KKREPO_USER, pw = process.env.KKREPO_PASSWORD;
+    if (!dry && (!u || !pw)) throw new Error('BLOCKED: нет KKREPO_USER / KKREPO_PASSWORD — чистка без учётки невозможна');
+    return prune({ base, repo, auth: u && pw ? 'Basic ' + Buffer.from(u + ':' + pw).toString('base64') : '', dry });
+  }
   const version = versionOf({ input: arg('--version'), sha: process.env.GITHUB_SHA });
   const files = ['lore-migrate.mjs', 'lore-migrate', 'lore-migrate.exe'].filter(n => fs.existsSync(path.join(dir, n)))
     .map(n => ({ name: n, bytes: fs.readFileSync(path.join(dir, n)) }));
