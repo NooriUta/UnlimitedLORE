@@ -24,6 +24,7 @@ import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
+import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
@@ -160,7 +161,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
-  const mine = ownTypes();
+  // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
+  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA);
+  const mine = [...ownTypes(), ...structure.types.map(t => t.name)];
   const clash = existing.filter(n => mine.includes(n));
   if (existing.length && !reset) throw new Error(`приёмник не пуст (${existing.length} типов): запуск с --reset удалит типы этого переноса и запишет заново`);
   if (existing.some(n => !mine.includes(n))) throw new Error('в приёмнике есть чужие типы: ' + existing.filter(n => !mine.includes(n)).join(', '));
@@ -173,6 +176,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
     await db.dstCommand(`CREATE INDEX ON ${T} (mig_src_rid) UNIQUE`);
   }
+  for (const s of structure.typeDdl) await db.dstCommand(s);
   await db.dstCommand('CREATE VERTEX TYPE MigLeftover');
   await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
   await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
@@ -195,6 +199,54 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await pool(links, 8, ([v, p]) => db.dstCommand(`CREATE EDGE ${EDGE} FROM ${dstRid[p]} TO ${dstRid[v]}`));
   await pool(leftovers, 8, x => db.dstCommand('INSERT INTO MigLeftover CONTENT :c', { c: { ...x, value: typeof x.value === 'string' ? x.value : JSON.stringify(x.value) } }));
   report.stages.write = { records: written, links: links.length, leftovers: leftovers.length, fields_not_in_schema: undeclared };
+  // типы без карты — как есть (журналы, снимки метрик, планы): строка источника без @-полей + mig_src_rid; сверка счётом
+  const asIs = {};
+  const fmt = ms => new Date(ms).toISOString().replace('T', ' ').replace('Z', '');
+  // временной ряд: строк без @rid, поэтому окнами по времени; окно, упёршееся в потолок ответа базы, делится пополам
+  const tsCopy = async t => {
+    const [m] = await db.src(`SELECT min(${t.ts}) AS a, max(${t.ts}) AS b FROM ${t.name}`);
+    if (!m || m.a == null) return 0;
+    let n = 0;
+    const win = async (a, b) => {
+      const rows = await db.src(`SELECT FROM ${t.name} WHERE ${t.ts} >= '${fmt(a)}' AND ${t.ts} < '${fmt(b)}'`);
+      if (rows.length >= 20000 && b - a > 1) { const mid = Math.floor((a + b) / 2); await win(a, mid); await win(mid, b); return; }
+      await pool(rows, 8, r => db.dstCommand(`INSERT INTO ${t.name} CONTENT :c`, { c: tsContent(r, t.ts) }));
+      n += rows.length;
+    };
+    const lo = tsContent({ x: m.a }, 'x').x, hi = tsContent({ x: m.b }, 'x').x + 1, DAY = 86400000;
+    for (let a = lo; a < hi; a += DAY) await win(a, Math.min(a + DAY, hi));
+    return n;
+  };
+  for (const t of structure.types) {
+    if (t.kind === 'TIMESERIES') {
+      const n = await tsCopy(t);
+      const src = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
+      asIs[t.name] = { source: src, target: n };
+      if (src !== n) throw new Error(`перенос как есть: ${t.name} — в источнике ${src}, перенесено ${n}`);
+      continue;
+    }
+    let last = '#-1:-1', n = 0;
+    for (;;) {
+      const rows = await db.src(`SELECT FROM ${t.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
+      if (!rows.length) break;
+      await pool(rows, 8, r => db.dstCommand(`INSERT INTO ${t.name} CONTENT :c`, { c: asIsContent(r) }));
+      n += rows.length; last = rows[rows.length - 1]['@rid'];
+      if (rows.length < 5000) break;
+    }
+    const src = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
+    asIs[t.name] = { source: src, target: n };
+    if (src !== n) throw new Error(`перенос как есть: ${t.name} — в источнике ${src}, перенесено ${n}`);
+  }
+  log('3 как есть (типы без карты):', JSON.stringify(asIs));
+  // индексы источника — после записи: индекс, которому мешают данные (дубль под уникальным), не роняет перенос,
+  // а называется в отчёте с причиной базы
+  const indexFailed = [];
+  for (const s of structure.indexDdl) {
+    try { await db.dstCommand(s); } catch (e) { indexFailed.push({ ddl: s, why: String(e.message || e).slice(0, 300) }); }
+  }
+  report.stages.structure = { as_is: asIs, indexes: structure.indexes.length - indexFailed.length, skipped: structure.skipped, failed: indexFailed };
+  log('3 структура вне карты:', structure.types.length, 'типов как есть,', structure.indexes.length - indexFailed.length, 'индексов источника,', structure.skipped.length, 'пропущено,', indexFailed.length, 'не создано (данные мешают)');
+  for (const x of indexFailed) log('  индекс не создан:', x.ddl, '—', x.why);
   log('3 запись:', JSON.stringify(report.stages.write));
 
   // ── 5. Сверка «до и после» ────────────────────────────────────────────────────────────────────────
