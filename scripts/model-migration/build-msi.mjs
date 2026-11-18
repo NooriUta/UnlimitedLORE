@@ -37,7 +37,9 @@ async function main() {
 
   // 1) установщик одним файлом (.mjs) — та же сборка, что выкладывается в kkRepo
   execFileSync(process.execPath, [path.join(HERE, 'build-installer.mjs'), '--out', stage], { stdio: 'inherit' });
-  for (const f of ['lore-installer.cmd', 'lore-migrate.env.example']) fs.copyFileSync(path.join(HERE, 'windows', f), path.join(stage, f));
+  // Пускач — с концами строк CRLF: cmd на LF-строках ломается на блоках в скобках, а git на чекауте их не гарантирует.
+  for (const f of ['lore-installer.cmd', 'lore-migrate.env.example'])
+    fs.writeFileSync(path.join(stage, f), fs.readFileSync(path.join(HERE, 'windows', f), 'utf8').replace(/\r?\n/g, '\r\n'));
 
   // 2) node.exe и LICENSE из архива Node.js
   const top = path.basename(nodeZip).replace(/\.zip$/, '');
