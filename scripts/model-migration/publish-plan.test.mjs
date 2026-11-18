@@ -32,3 +32,11 @@ test('кривая версия и чужой адрес отбиваются, �
   assert.throws(() => publishPlan({ base: 'ftp://x', repo: 'lore-installer', version: '1.0.0', files }), /адрес/);
   assert.throws(() => publishPlan({ base: 'http://h/repository', repo: 'a/b', version: '1.0.0', files }), /репозиторий/);
 });
+
+test('готовый MSI для Windows кладётся под своим именем рядом с SHA256SUMS', () => {
+  const p = publishPlan({ base: 'http://h/repository', repo: 'lore-installer', version: '0.0.0-preview.891f7a5a',
+    files: [{ name: 'lore-installer-0.0.0-preview.891f7a5a-win-x64.msi', bytes: Buffer.from('m') }] });
+  assert.deepEqual(p.map(x => x.url.split('/').pop()), ['lore-installer-0.0.0-preview.891f7a5a-win-x64.msi', 'SHA256SUMS']);
+  assert.throws(() => publishPlan({ base: 'http://h/repository', repo: 'lore-installer', version: '1.0.0',
+    files: [{ name: 'lore-installer-0.9.0-win-x64.msi', bytes: Buffer.from('m') }] }), /версия/);
+});
