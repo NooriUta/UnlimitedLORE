@@ -8,6 +8,19 @@ import fs from 'node:fs';
 import { connect } from './db.mjs';
 import { contentFingerprint } from './fingerprint.mjs';
 
+/**
+ * Изменчивые поля — не содержимое: время сборки отметки «схема собрана из модели» разное у каждого прогона.
+ * 18.11.2026, all4/all4b: две базы совпали по всем типам, кроме LoreModelSchema — только из-за built_at.
+ */
+const VOLATILE = { LoreModelSchema: ['built_at'] };
+export function stripVolatile(T, row) {
+  const drop = VOLATILE[T];
+  if (!drop) return row;
+  const out = { ...row };
+  for (const f of drop) delete out[f];
+  return out;
+}
+
 /** Отпечаток содержимого новой базы. */
 export async function dstFingerprint(db) {
   const types = (await db.dstQuery("SELECT name, type FROM schema:types")).filter(t => t.type === 'vertex' || t.type === 'edge' || t.type === 'document');
@@ -17,7 +30,7 @@ export async function dstFingerprint(db) {
     let last = '#-1:-1';
     for (;;) {
       const rows = await db.dstQuery(`SELECT FROM ${t.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
-      all.push(...rows.filter(r => r['@type'] === t.name)); // без записей подтипов: они посчитаны у своего типа
+      all.push(...rows.filter(r => r['@type'] === t.name).map(r => stripVolatile(t.name, r))); // без записей подтипов: они посчитаны у своего типа
       if (rows.length < 5000) break;
       last = rows[rows.length - 1]['@rid'];
     }

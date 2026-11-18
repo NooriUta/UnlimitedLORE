@@ -43,3 +43,11 @@ test('отпечаток содержимого чувствует значен�
   assert.notEqual(contentFingerprint(e).total, f0);
   assert.equal(contentFingerprint(base()).types.KnowTask.n, 2);
 });
+
+test('отпечаток новой базы не зависит от времени сборки: built_at отметки схемы — изменчивое поле (прогоны all4/all4b 18.11)', async () => {
+  const { stripVolatile } = await import('./dst-fingerprint.mjs');
+  const a = stripVolatile('LoreModelSchema', { model_hash: 'h', source: 'installer', built_at: '2026-11-18T10:00:00Z' });
+  const b = stripVolatile('LoreModelSchema', { model_hash: 'h', source: 'installer', built_at: '2026-11-18T11:00:00Z' });
+  assert.deepEqual(a, b);
+  assert.deepEqual(stripVolatile('KnowTask', { built_at: 'x' }), { built_at: 'x' }, 'у других типов поле с тем же именем — содержимое');
+});
