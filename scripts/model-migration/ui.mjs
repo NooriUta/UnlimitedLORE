@@ -17,6 +17,7 @@ import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
 import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml } from './setup.mjs';
 import { INSTALL_BUNDLE } from './resources.mjs';
+import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import os from 'node:os';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
@@ -126,7 +127,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Адрес бэкенда LORE</td><td><input name="backendUrl" size="40"></td></tr>
 <tr><td>Издатель (Keycloak, область)</td><td><input name="issuer" size="40"></td></tr>
 <tr><td>Путь к серверу MCP</td><td><input name="serverPath" size="40"></td></tr></table>
-<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
+<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn" id="acheck">Проверить связь</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
 <pre class="mono" id="aout" style="white-space:pre-wrap"></pre><div id="ares" class="sub"></div></form></div>
 </section>
 <section data-page="0" hidden><h2>Шаг 0. Вход и проверка владельца</h2>
@@ -237,6 +238,7 @@ document.addEventListener('change',function(e){if(e.target.closest&&e.target.clo
 function iform(){var f=document.getElementById('if'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});o.choice=sform();var a=aform();o.machineId=a.machineId;return o}
 document.addEventListener('click',function(e){var map={ienv:'api/setup/env',iplan:'api/setup/install-plan',ivolva:'api/setup/volva-keys',ilink:'api/setup/link-toml'};var u=map[e.target.id];if(!u)return;
 document.getElementById('ires').textContent='…';fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(iform())}).then(function(r){return r.json()}).then(function(d){var o=document.getElementById('iout'),r=document.getElementById('ires');if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}o.textContent=d.text||'';r.innerHTML=esc(d.note||'')})});
+document.addEventListener('click',function(e){if(e.target.id!=='acheck')return;var r=document.getElementById('ares');r.textContent='…';fetch('api/setup/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(aform())}).then(function(x){return x.json()}).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}var lab={ok:'да',warn:'внимание',fail:'нет',unchecked:'не смогли проверить'};r.innerHTML=d.checks.map(function(c){return '<div><span class="chip'+(c.state==='ok'?' ok':'')+'" style="'+(c.state==='fail'?'color:var(--dng)':c.state==='ok'?'':'color:var(--wrn)')+'">'+esc(c.name)+': '+lab[c.state]+'</span> '+esc(c.reason)+'</div>'}).join('')})});
 function aform(){var f=document.getElementById('af'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
 document.addEventListener('click',function(e){var id=e.target.id;if(id!=='apreview'&&id!=='aapply')return;var body=aform();if(id==='aapply'){if(!confirm('Записать строку MCP aida-lore в настройки Claude Code? Прежний файл сохранится копией.'))return;body.confirm=true}
 fetch(id==='aapply'?'api/setup/mcp/apply':'api/setup/mcp/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){if(d.error){document.getElementById('ares').innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}
@@ -440,6 +442,20 @@ export async function serve({ port = 2499 } = {}) {
             return json(res, 200, { text, note: 'файл ' + file + '; секрет пустой — он появится, когда установщик заведёт клиент minilore-link-' + b.machineId + ' в Keycloak' });
           }
         } catch (e) { return json(res, 400, { error: e.message }); }
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/check') {
+        // Только чтение: два GET к LORE. Ключ Völva для сверки — из volva-embed.env, который выдал установщик.
+        const b = await readBody(req);
+        let base;
+        try { base = new URL(b.backendUrl); if (!/^https?:$/.test(base.protocol)) throw new Error(); } catch { return json(res, 400, { error: 'адрес бэкенда LORE — http(s)://хост:порт' }); }
+        const get = async p => { try { const r = await fetch(new URL(p, base), { signal: AbortSignal.timeout(8000) }); return { status: r.status, body: await r.text() }; } catch (e) { return { error: e.cause?.code || e.message }; } };
+        let pub = '';
+        for (const d of [b.dir, os.homedir()].filter(Boolean)) { try { pub = (fs.readFileSync(path.join(d, 'volva-embed.env'), 'utf8').match(/^LORE_VOLVA_EMBED_ES256_PUBLIC_KEY=(.+)$/m) || [])[1] || ''; if (pub) break; } catch { /* нет файла */ } }
+        const [jw, wh] = await Promise.all([get('lore/embed/jwks'), get('lore/whoami')]);
+        return json(res, 200, { checks: [
+          { name: 'Völva: ключ встройки', ...jwksVerdict(jw, pub.trim() || undefined) },
+          { name: 'LORE: whoami', ...whoamiVerdict(wh, { machineId: b.machineId }) },
+        ] });
       }
       if (req.method === 'POST' && req.url === '/api/setup/plan') {
         try { return json(res, 200, { plan: planSetup(await readBody(req)) }); } catch (e) { return json(res, 400, { error: e.message }); }
