@@ -1,6 +1,6 @@
 {
   "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы всех объектов, кроме первого — владелицей не утверждено. Выведено propose-schema-all.mjs из карты map/all-objects.json, переписи полей прода и пробного расчёта: в схему попали только поля, которые перенос реально дал. Запись в приёмник по этой схеме — после её слова.",
-  "_source": "migration_src_2026_11_15",
+  "_source": "migration_src_2026_11_18",
   "_assumed": [
     "Имена типов прежние: ответы срезов не меняются.",
     "Версия — отдельный тип с окончанием Hist и связью HAS_STATE, как у первого объекта.",
@@ -669,7 +669,7 @@
       "rejects": {}
     },
     "ClRoutineMetric": {
-      "records": 861,
+      "records": 1722,
       "version_of": null,
       "fields": {
         "metric_key": {
@@ -678,8 +678,8 @@
           "from": [
             "metric_key"
           ],
-          "filled": 861,
-          "of": 861
+          "filled": 1722,
+          "of": 1722
         },
         "routine_name": {
           "kind": "text",
@@ -687,8 +687,8 @@
           "from": [
             "routine_name"
           ],
-          "filled": 861,
-          "of": 861
+          "filled": 1722,
+          "of": 1722
         },
         "status": {
           "kind": "text",
@@ -696,8 +696,8 @@
           "from": [
             "status"
           ],
-          "filled": 861,
-          "of": 861
+          "filled": 1722,
+          "of": 1722
         },
         "unit": {
           "kind": "text",
@@ -705,8 +705,8 @@
           "from": [
             "unit"
           ],
-          "filled": 861,
-          "of": 861
+          "filled": 1722,
+          "of": 1722
         },
         "target": {
           "kind": "number",
@@ -714,8 +714,8 @@
           "from": [
             "target"
           ],
-          "filled": 852,
-          "of": 861
+          "filled": 1713,
+          "of": 1722
         },
         "run_date": {
           "kind": "date",
@@ -723,8 +723,8 @@
           "from": [
             "run_date"
           ],
-          "filled": 805,
-          "of": 861
+          "filled": 1666,
+          "of": 1722
         },
         "value": {
           "kind": "number",
@@ -732,8 +732,8 @@
           "from": [
             "value"
           ],
-          "filled": 774,
-          "of": 861
+          "filled": 1635,
+          "of": 1722
         },
         "source": {
           "kind": "text",
@@ -741,8 +741,8 @@
           "from": [
             "source"
           ],
-          "filled": 527,
-          "of": 861
+          "filled": 1388,
+          "of": 1722
         },
         "metric_id": {
           "kind": "text",
@@ -750,8 +750,8 @@
           "from": [
             "metric_id"
           ],
-          "filled": 332,
-          "of": 861
+          "filled": 1193,
+          "of": 1722
         },
         "run_id": {
           "kind": "text",
@@ -759,8 +759,8 @@
           "from": [
             "run_id"
           ],
-          "filled": 332,
-          "of": 861
+          "filled": 1193,
+          "of": 1722
         },
         "model": {
           "kind": "text",
@@ -769,7 +769,7 @@
             "model"
           ],
           "filled": 195,
-          "of": 861
+          "of": 1722
         },
         "not_measured_reason": {
           "kind": "text",
@@ -777,8 +777,8 @@
           "from": [
             "not_measured_reason"
           ],
-          "filled": 18,
-          "of": 861
+          "filled": 65,
+          "of": 1722
         },
         "skip_reason": {
           "kind": "text",
@@ -788,7 +788,7 @@
             "skip_reason"
           ],
           "filled": 15,
-          "of": 861
+          "of": 1722
         },
         "note": {
           "kind": "text",
@@ -798,7 +798,7 @@
             "note"
           ],
           "filled": 6,
-          "of": 861
+          "of": 1722
         }
       },
       "held": {},
@@ -858,7 +858,7 @@
       "rejects": {}
     },
     "ClRoutineRun": {
-      "records": 164,
+      "records": 905,
       "version_of": null,
       "fields": {
         "routine_name": {
@@ -867,8 +867,8 @@
           "from": [
             "routine_name"
           ],
-          "filled": 164,
-          "of": 164
+          "filled": 905,
+          "of": 905
         },
         "status": {
           "kind": "text",
@@ -876,8 +876,8 @@
           "from": [
             "status"
           ],
-          "filled": 164,
-          "of": 164
+          "filled": 905,
+          "of": 905
         },
         "run_date": {
           "kind": "date",
@@ -885,8 +885,71 @@
           "from": [
             "run_date"
           ],
-          "filled": 159,
-          "of": 164
+          "filled": 900,
+          "of": 905
+        },
+        "run_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "run_id"
+          ],
+          "filled": 801,
+          "of": 905
+        },
+        "finished_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "finished_at"
+          ],
+          "filled": 799,
+          "of": 905
+        },
+        "started_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "started_at"
+          ],
+          "filled": 797,
+          "of": 905
+        },
+        "channel": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "channel"
+          ],
+          "filled": 754,
+          "of": 905
+        },
+        "commit_sha": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "commit_sha"
+          ],
+          "filled": 642,
+          "of": 905
+        },
+        "source_url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_url"
+          ],
+          "filled": 642,
+          "of": 905
+        },
+        "pr_number": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "pr_number"
+          ],
+          "filled": 419,
+          "of": 905
         },
         "flags": {
           "kind": "text",
@@ -895,34 +958,7 @@
             "flags"
           ],
           "filled": 156,
-          "of": 164
-        },
-        "run_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "run_id"
-          ],
-          "filled": 60,
-          "of": 164
-        },
-        "finished_at": {
-          "kind": "datetime",
-          "db_type": "DATETIME",
-          "from": [
-            "finished_at"
-          ],
-          "filled": 58,
-          "of": 164
-        },
-        "started_at": {
-          "kind": "datetime",
-          "db_type": "DATETIME",
-          "from": [
-            "started_at"
-          ],
-          "filled": 56,
-          "of": 164
+          "of": 905
         },
         "run_ts": {
           "kind": "datetime",
@@ -931,7 +967,7 @@
             "run_ts"
           ],
           "filled": 50,
-          "of": 164
+          "of": 905
         },
         "detail_md": {
           "kind": "text",
@@ -940,7 +976,7 @@
             "detail_md"
           ],
           "filled": 37,
-          "of": 164
+          "of": 905
         },
         "gates_failed_ids": {
           "kind": "text",
@@ -949,7 +985,7 @@
             "gates_failed_ids"
           ],
           "filled": 36,
-          "of": 164
+          "of": 905
         },
         "model": {
           "kind": "text",
@@ -958,16 +994,7 @@
             "model"
           ],
           "filled": 15,
-          "of": 164
-        },
-        "channel": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "channel"
-          ],
-          "filled": 13,
-          "of": 164
+          "of": 905
         },
         "source": {
           "kind": "text",
@@ -977,7 +1004,7 @@
             "source"
           ],
           "filled": 1,
-          "of": 164
+          "of": 905
         }
       },
       "held": {},
@@ -1046,7 +1073,7 @@
       "rejects": {}
     },
     "KnowADR": {
-      "records": 262,
+      "records": 265,
       "version_of": null,
       "fields": {
         "adr_id": {
@@ -1055,8 +1082,8 @@
           "from": [
             "adr_id"
           ],
-          "filled": 262,
-          "of": 262
+          "filled": 265,
+          "of": 265
         },
         "created_at": {
           "kind": "datetime",
@@ -1065,8 +1092,8 @@
             "created_at",
             "date_created"
           ],
-          "filled": 262,
-          "of": 262
+          "filled": 265,
+          "of": 265
         },
         "status": {
           "kind": "enum",
@@ -1074,8 +1101,8 @@
           "from": [
             "status"
           ],
-          "filled": 262,
-          "of": 262
+          "filled": 265,
+          "of": 265
         },
         "name": {
           "kind": "text",
@@ -1083,8 +1110,8 @@
           "from": [
             "name"
           ],
-          "filled": 254,
-          "of": 262
+          "filled": 253,
+          "of": 265
         },
         "updated_at": {
           "kind": "datetime",
@@ -1092,8 +1119,8 @@
           "from": [
             "updated_at"
           ],
-          "filled": 194,
-          "of": 262
+          "filled": 197,
+          "of": 265
         },
         "file_path": {
           "kind": "text",
@@ -1103,7 +1130,7 @@
             "file_path"
           ],
           "filled": 68,
-          "of": 262
+          "of": 265
         },
         "context_md": {
           "kind": "text",
@@ -1113,7 +1140,7 @@
             "context_md"
           ],
           "filled": 50,
-          "of": 262
+          "of": 265
         },
         "decision_md": {
           "kind": "text",
@@ -1123,7 +1150,7 @@
             "decision_md"
           ],
           "filled": 50,
-          "of": 262
+          "of": 265
         },
         "consequences_md": {
           "kind": "text",
@@ -1133,16 +1160,18 @@
             "consequences_md"
           ],
           "filled": 42,
-          "of": 262
+          "of": 265
         }
       },
       "held": {
         "component_id": 3
       },
-      "rejects": {}
+      "rejects": {
+        "status · статус вне справочника": 1
+      }
     },
     "KnowADRHist": {
-      "records": 437,
+      "records": 443,
       "version_of": "KnowADR",
       "fields": {
         "content_hash": {
@@ -1151,8 +1180,8 @@
           "from": [
             "content_hash"
           ],
-          "filled": 437,
-          "of": 437
+          "filled": 443,
+          "of": 443
         },
         "state_uid": {
           "kind": "text",
@@ -1160,8 +1189,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 437,
-          "of": 437
+          "filled": 443,
+          "of": 443
         },
         "valid_from": {
           "kind": "datetime",
@@ -1169,8 +1198,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 437,
-          "of": 437
+          "filled": 443,
+          "of": 443
         },
         "context_md": {
           "kind": "text",
@@ -1178,8 +1207,8 @@
           "from": [
             "context_md"
           ],
-          "filled": 432,
-          "of": 437
+          "filled": 438,
+          "of": 443
         },
         "decision_md": {
           "kind": "text",
@@ -1187,8 +1216,8 @@
           "from": [
             "decision_md"
           ],
-          "filled": 432,
-          "of": 437
+          "filled": 438,
+          "of": 443
         },
         "consequences_md": {
           "kind": "text",
@@ -1196,8 +1225,8 @@
           "from": [
             "consequences_md"
           ],
-          "filled": 415,
-          "of": 437
+          "filled": 419,
+          "of": 443
         },
         "status": {
           "kind": "enum",
@@ -1205,8 +1234,8 @@
           "from": [
             "status_raw"
           ],
-          "filled": 285,
-          "of": 437
+          "filled": 291,
+          "of": 443
         },
         "status_known_from": {
           "kind": "text",
@@ -1214,8 +1243,8 @@
           "from": [
             "status_known_from"
           ],
-          "filled": 283,
-          "of": 437
+          "filled": 289,
+          "of": 443
         },
         "status_backfilled": {
           "kind": "bool",
@@ -1224,7 +1253,7 @@
             "status_backfilled"
           ],
           "filled": 243,
-          "of": 437
+          "of": 443
         },
         "valid_to": {
           "kind": "datetime",
@@ -1232,8 +1261,8 @@
           "from": [
             "valid_to"
           ],
-          "filled": 175,
-          "of": 437
+          "filled": 178,
+          "of": 443
         },
         "source_commit": {
           "kind": "text",
@@ -1242,7 +1271,7 @@
             "source_commit"
           ],
           "filled": 112,
-          "of": 437
+          "of": 443
         },
         "sprint_id": {
           "kind": "text",
@@ -1252,7 +1281,7 @@
             "sprint_id"
           ],
           "filled": 94,
-          "of": 437
+          "of": 443
         },
         "changed_by": {
           "kind": "text",
@@ -1260,8 +1289,8 @@
           "from": [
             "changed_by"
           ],
-          "filled": 40,
-          "of": 437
+          "filled": 46,
+          "of": 443
         },
         "changed_by_kind": {
           "kind": "text",
@@ -1269,8 +1298,8 @@
           "from": [
             "changed_by_kind"
           ],
-          "filled": 40,
-          "of": 437
+          "filled": 46,
+          "of": 443
         },
         "adr_id": {
           "kind": "text",
@@ -1280,7 +1309,7 @@
             "adr_id"
           ],
           "filled": 1,
-          "of": 437
+          "of": 443
         },
         "file_path": {
           "kind": "text",
@@ -1290,7 +1319,7 @@
             "file_path"
           ],
           "filled": 1,
-          "of": 437
+          "of": 443
         },
         "changed_by_session": {
           "kind": "text",
@@ -1298,7 +1327,7 @@
           "name": "Сессия правки",
           "from": [],
           "filled": 0,
-          "of": 437,
+          "of": 443,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -1308,7 +1337,7 @@
           "name": "Harness правки",
           "from": [],
           "filled": 0,
-          "of": 437,
+          "of": 443,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -1318,7 +1347,7 @@
           "name": "Сверка harness",
           "from": [],
           "filled": 0,
-          "of": 437,
+          "of": 443,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -1328,16 +1357,18 @@
           "name": "Машина правки",
           "from": [],
           "filled": 0,
-          "of": 437,
+          "of": 443,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
-      "rejects": {}
+      "rejects": {
+        "status_raw · статус вне справочника": 1
+      }
     },
     "KnowActor": {
-      "records": 18,
+      "records": 19,
       "version_of": null,
       "fields": {
         "actor_id": {
@@ -1346,8 +1377,8 @@
           "from": [
             "actor_id"
           ],
-          "filled": 18,
-          "of": 18
+          "filled": 19,
+          "of": 19
         },
         "kind": {
           "kind": "text",
@@ -1355,8 +1386,8 @@
           "from": [
             "kind"
           ],
-          "filled": 18,
-          "of": 18
+          "filled": 19,
+          "of": 19
         },
         "name": {
           "kind": "text",
@@ -1364,8 +1395,17 @@
           "from": [
             "name"
           ],
+          "filled": 19,
+          "of": 19
+        },
+        "client_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "client_id"
+          ],
           "filled": 18,
-          "of": 18
+          "of": 19
         },
         "agent_role": {
           "kind": "text",
@@ -1374,16 +1414,7 @@
             "agent_role"
           ],
           "filled": 17,
-          "of": 18
-        },
-        "client_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "client_id"
-          ],
-          "filled": 17,
-          "of": 18
+          "of": 19
         },
         "harness": {
           "kind": "enum",
@@ -1391,8 +1422,8 @@
           "from": [
             "harness"
           ],
-          "filled": 11,
-          "of": 18
+          "filled": 12,
+          "of": 19
         },
         "machine_id": {
           "kind": "text",
@@ -1400,8 +1431,8 @@
           "from": [
             "machine_id"
           ],
-          "filled": 10,
-          "of": 18
+          "filled": 11,
+          "of": 19
         },
         "session_id": {
           "kind": "text",
@@ -1410,7 +1441,7 @@
             "session_id"
           ],
           "filled": 2,
-          "of": 18
+          "of": 19
         },
         "body_md": {
           "kind": "text",
@@ -1419,14 +1450,14 @@
             "body_md"
           ],
           "filled": 1,
-          "of": 18
+          "of": 19
         }
       },
       "held": {},
       "rejects": {}
     },
     "KnowAgentSession": {
-      "records": 121,
+      "records": 124,
       "version_of": null,
       "fields": {
         "last_activity_at": {
@@ -1435,8 +1466,8 @@
           "from": [
             "last_activity_at"
           ],
-          "filled": 121,
-          "of": 121
+          "filled": 124,
+          "of": 124
         },
         "machine_id": {
           "kind": "text",
@@ -1444,8 +1475,8 @@
           "from": [
             "machine_id"
           ],
-          "filled": 121,
-          "of": 121
+          "filled": 124,
+          "of": 124
         },
         "session_id": {
           "kind": "text",
@@ -1453,8 +1484,8 @@
           "from": [
             "session_id"
           ],
-          "filled": 121,
-          "of": 121
+          "filled": 124,
+          "of": 124
         },
         "started_at": {
           "kind": "datetime",
@@ -1462,8 +1493,8 @@
           "from": [
             "started_at"
           ],
-          "filled": 121,
-          "of": 121
+          "filled": 124,
+          "of": 124
         },
         "entrypoint": {
           "kind": "text",
@@ -1472,7 +1503,7 @@
             "entrypoint"
           ],
           "filled": 5,
-          "of": 121
+          "of": 124
         },
         "dialogue_name": {
           "kind": "text",
@@ -1481,11 +1512,11 @@
             "dialogue_name"
           ],
           "filled": 4,
-          "of": 121
+          "of": 124
         }
       },
       "held": {
-        "project": 120
+        "project": 123
       },
       "rejects": {}
     },
@@ -1582,7 +1613,7 @@
       "rejects": {}
     },
     "KnowDecision": {
-      "records": 1167,
+      "records": 1193,
       "version_of": null,
       "fields": {
         "decision_id": {
@@ -1591,8 +1622,8 @@
           "from": [
             "decision_id"
           ],
-          "filled": 1167,
-          "of": 1167
+          "filled": 1193,
+          "of": 1193
         },
         "title": {
           "kind": "text",
@@ -1600,8 +1631,8 @@
           "from": [
             "title"
           ],
-          "filled": 1167,
-          "of": 1167
+          "filled": 1193,
+          "of": 1193
         },
         "created_at": {
           "kind": "datetime",
@@ -1610,8 +1641,8 @@
             "created_at",
             "date_created"
           ],
-          "filled": 1165,
-          "of": 1167
+          "filled": 1191,
+          "of": 1193
         },
         "status": {
           "kind": "enum",
@@ -1619,8 +1650,8 @@
           "from": [
             "status_raw"
           ],
-          "filled": 1120,
-          "of": 1167
+          "filled": 1146,
+          "of": 1193
         },
         "body_md": {
           "kind": "text",
@@ -1628,8 +1659,8 @@
           "from": [
             "body_md"
           ],
-          "filled": 1052,
-          "of": 1167
+          "filled": 1078,
+          "of": 1193
         },
         "updated_at": {
           "kind": "datetime",
@@ -1637,8 +1668,8 @@
           "from": [
             "updated_at"
           ],
-          "filled": 622,
-          "of": 1167
+          "filled": 633,
+          "of": 1193
         },
         "refs_raw": {
           "kind": "text",
@@ -1646,8 +1677,8 @@
           "from": [
             "refs_raw"
           ],
-          "filled": 599,
-          "of": 1167
+          "filled": 600,
+          "of": 1193
         }
       },
       "held": {
@@ -1655,12 +1686,12 @@
         "sprint_refs": 103,
         "pr_refs": 103,
         "release_refs": 103,
-        "component_id": 470
+        "component_id": 475
       },
       "rejects": {}
     },
     "KnowDecisionHist": {
-      "records": 1121,
+      "records": 1147,
       "version_of": "KnowDecision",
       "fields": {
         "status": {
@@ -1669,8 +1700,8 @@
           "from": [
             "status_raw"
           ],
-          "filled": 1121,
-          "of": 1121
+          "filled": 1147,
+          "of": 1147
         },
         "status_known_from": {
           "kind": "text",
@@ -1678,8 +1709,8 @@
           "from": [
             "status_known_from"
           ],
-          "filled": 1121,
-          "of": 1121
+          "filled": 1147,
+          "of": 1147
         },
         "valid_from": {
           "kind": "datetime",
@@ -1687,8 +1718,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 1121,
-          "of": 1121
+          "filled": 1147,
+          "of": 1147
         },
         "changed_by_kind": {
           "kind": "text",
@@ -1696,8 +1727,8 @@
           "from": [
             "changed_by_kind"
           ],
-          "filled": 1114,
-          "of": 1121
+          "filled": 1140,
+          "of": 1147
         },
         "state_uid": {
           "kind": "text",
@@ -1705,8 +1736,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 1114,
-          "of": 1121
+          "filled": 1140,
+          "of": 1147
         },
         "status_backfilled": {
           "kind": "bool",
@@ -1715,7 +1746,7 @@
             "status_backfilled"
           ],
           "filled": 1034,
-          "of": 1121
+          "of": 1147
         },
         "changed_by": {
           "kind": "text",
@@ -1723,8 +1754,8 @@
           "from": [
             "changed_by"
           ],
-          "filled": 87,
-          "of": 1121
+          "filled": 113,
+          "of": 1147
         },
         "content_hash": {
           "kind": "text",
@@ -1733,7 +1764,7 @@
             "content_hash"
           ],
           "filled": 7,
-          "of": 1121
+          "of": 1147
         },
         "source_commit": {
           "kind": "text",
@@ -1743,7 +1774,19 @@
             "source_commit"
           ],
           "filled": 7,
-          "of": 1121
+          "of": 1147
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness_note"
+          ],
+          "filled": 1,
+          "of": 1147,
+          "name": "Сверка harness",
+          "service": true
         },
         "valid_to": {
           "kind": "datetime",
@@ -1752,7 +1795,7 @@
             "valid_to"
           ],
           "filled": 1,
-          "of": 1121
+          "of": 1147
         },
         "changed_by_session": {
           "kind": "text",
@@ -1760,7 +1803,7 @@
           "name": "Сессия правки",
           "from": [],
           "filled": 0,
-          "of": 1121,
+          "of": 1147,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -1770,17 +1813,7 @@
           "name": "Harness правки",
           "from": [],
           "filled": 0,
-          "of": 1121,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_harness_note": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Сверка harness",
-          "from": [],
-          "filled": 0,
-          "of": 1121,
+          "of": 1147,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -1790,7 +1823,7 @@
           "name": "Машина правки",
           "from": [],
           "filled": 0,
-          "of": 1121,
+          "of": 1147,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         }
@@ -1799,7 +1832,7 @@
       "rejects": {}
     },
     "KnowDictEntry": {
-      "records": 151,
+      "records": 180,
       "version_of": null,
       "fields": {
         "code": {
@@ -1808,8 +1841,8 @@
           "from": [
             "code"
           ],
-          "filled": 151,
-          "of": 151
+          "filled": 180,
+          "of": 180
         },
         "dict_type": {
           "kind": "text",
@@ -1817,17 +1850,8 @@
           "from": [
             "dict_type"
           ],
-          "filled": 151,
-          "of": 151
-        },
-        "is_active": {
-          "kind": "bool",
-          "db_type": "BOOLEAN",
-          "from": [
-            "is_active"
-          ],
-          "filled": 151,
-          "of": 151
+          "filled": 180,
+          "of": 180
         },
         "label_ru": {
           "kind": "text",
@@ -1835,8 +1859,17 @@
           "from": [
             "label_ru"
           ],
-          "filled": 151,
-          "of": 151
+          "filled": 180,
+          "of": 180
+        },
+        "is_active": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_active"
+          ],
+          "filled": 179,
+          "of": 180
         },
         "sort_order": {
           "kind": "number",
@@ -1844,8 +1877,8 @@
           "from": [
             "sort_order"
           ],
-          "filled": 148,
-          "of": 151
+          "filled": 175,
+          "of": 180
         },
         "is_extensible": {
           "kind": "bool",
@@ -1853,8 +1886,8 @@
           "from": [
             "is_extensible"
           ],
-          "filled": 145,
-          "of": 151
+          "filled": 173,
+          "of": 180
         },
         "color": {
           "kind": "text",
@@ -1862,8 +1895,8 @@
           "from": [
             "color"
           ],
-          "filled": 131,
-          "of": 151
+          "filled": 148,
+          "of": 180
         },
         "label_en": {
           "kind": "text",
@@ -1871,8 +1904,8 @@
           "from": [
             "label_en"
           ],
-          "filled": 112,
-          "of": 151
+          "filled": 139,
+          "of": 180
         },
         "icon": {
           "kind": "text",
@@ -1880,15 +1913,15 @@
           "from": [
             "icon"
           ],
-          "filled": 88,
-          "of": 151
+          "filled": 105,
+          "of": 180
         }
       },
       "held": {},
       "rejects": {}
     },
     "KnowDictEntryHist": {
-      "records": 23,
+      "records": 55,
       "version_of": "KnowDictEntry",
       "fields": {
         "code": {
@@ -1897,8 +1930,8 @@
           "from": [
             "code"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "dict_type": {
           "kind": "text",
@@ -1906,8 +1939,8 @@
           "from": [
             "dict_type"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "is_active": {
           "kind": "bool",
@@ -1915,8 +1948,8 @@
           "from": [
             "is_active"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "is_extensible": {
           "kind": "bool",
@@ -1924,8 +1957,8 @@
           "from": [
             "is_extensible"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "label_ru": {
           "kind": "text",
@@ -1933,8 +1966,8 @@
           "from": [
             "label_ru"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "state_uid": {
           "kind": "text",
@@ -1942,8 +1975,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "valid_from": {
           "kind": "datetime",
@@ -1951,8 +1984,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 23,
-          "of": 23
+          "filled": 55,
+          "of": 55
         },
         "sort_order": {
           "kind": "number",
@@ -1960,17 +1993,8 @@
           "from": [
             "sort_order"
           ],
-          "filled": 21,
-          "of": 23
-        },
-        "color": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "color"
-          ],
-          "filled": 13,
-          "of": 23
+          "filled": 52,
+          "of": 55
         },
         "changed_by": {
           "kind": "text",
@@ -1978,8 +2002,8 @@
           "from": [
             "changed_by"
           ],
-          "filled": 10,
-          "of": 23
+          "filled": 42,
+          "of": 55
         },
         "changed_by_kind": {
           "kind": "text",
@@ -1987,8 +2011,8 @@
           "from": [
             "changed_by_kind"
           ],
-          "filled": 10,
-          "of": 23
+          "filled": 42,
+          "of": 55
         },
         "label_en": {
           "kind": "text",
@@ -1996,8 +2020,17 @@
           "from": [
             "label_en"
           ],
-          "filled": 9,
-          "of": 23
+          "filled": 40,
+          "of": 55
+        },
+        "color": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "color"
+          ],
+          "filled": 34,
+          "of": 55
         },
         "icon": {
           "kind": "text",
@@ -2005,8 +2038,8 @@
           "from": [
             "icon"
           ],
-          "filled": 8,
-          "of": 23
+          "filled": 29,
+          "of": 55
         },
         "valid_to": {
           "kind": "datetime",
@@ -2014,8 +2047,8 @@
           "from": [
             "valid_to"
           ],
-          "filled": 1,
-          "of": 23
+          "filled": 7,
+          "of": 55
         },
         "changed_by_session": {
           "kind": "text",
@@ -2023,7 +2056,7 @@
           "name": "Сессия правки",
           "from": [],
           "filled": 0,
-          "of": 23,
+          "of": 55,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -2033,7 +2066,7 @@
           "name": "Harness правки",
           "from": [],
           "filled": 0,
-          "of": 23,
+          "of": 55,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -2043,7 +2076,7 @@
           "name": "Сверка harness",
           "from": [],
           "filled": 0,
-          "of": 23,
+          "of": 55,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -2053,7 +2086,7 @@
           "name": "Машина правки",
           "from": [],
           "filled": 0,
-          "of": 23,
+          "of": 55,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         }
@@ -2062,7 +2095,7 @@
       "rejects": {}
     },
     "KnowDoc": {
-      "records": 458,
+      "records": 460,
       "version_of": null,
       "fields": {
         "doc_id": {
@@ -2071,8 +2104,8 @@
           "from": [
             "doc_id"
           ],
-          "filled": 458,
-          "of": 458
+          "filled": 460,
+          "of": 460
         },
         "title": {
           "kind": "text",
@@ -2080,8 +2113,8 @@
           "from": [
             "title"
           ],
-          "filled": 458,
-          "of": 458
+          "filled": 460,
+          "of": 460
         },
         "kind": {
           "kind": "text",
@@ -2089,8 +2122,8 @@
           "from": [
             "kind"
           ],
-          "filled": 457,
-          "of": 458
+          "filled": 459,
+          "of": 460
         },
         "content_md_ru": {
           "kind": "text",
@@ -2098,8 +2131,8 @@
           "from": [
             "content_md_ru"
           ],
-          "filled": 418,
-          "of": 458
+          "filled": 420,
+          "of": 460
         },
         "content_md_ru_bytes": {
           "kind": "number",
@@ -2108,8 +2141,8 @@
           "from": [
             "content_md_ru_bytes"
           ],
-          "filled": 418,
-          "of": 458
+          "filled": 420,
+          "of": 460
         },
         "content_md_ru_sha256": {
           "kind": "text",
@@ -2118,8 +2151,8 @@
           "from": [
             "content_md_ru_sha256"
           ],
-          "filled": 418,
-          "of": 458
+          "filled": 420,
+          "of": 460
         },
         "file_path": {
           "kind": "text",
@@ -2128,7 +2161,7 @@
             "file_path"
           ],
           "filled": 210,
-          "of": 458
+          "of": 460
         },
         "sort_order": {
           "kind": "number",
@@ -2137,7 +2170,7 @@
             "sort_order"
           ],
           "filled": 205,
-          "of": 458
+          "of": 460
         },
         "content_md_en": {
           "kind": "text",
@@ -2146,7 +2179,7 @@
             "content_md_en"
           ],
           "filled": 96,
-          "of": 458
+          "of": 460
         },
         "content_md_en_bytes": {
           "kind": "number",
@@ -2156,7 +2189,7 @@
             "content_md_en_bytes"
           ],
           "filled": 96,
-          "of": 458
+          "of": 460
         },
         "content_md_en_sha256": {
           "kind": "text",
@@ -2166,7 +2199,7 @@
             "content_md_en_sha256"
           ],
           "filled": 96,
-          "of": 458
+          "of": 460
         },
         "content_html": {
           "kind": "text",
@@ -2176,7 +2209,7 @@
             "content_html"
           ],
           "filled": 4,
-          "of": 458
+          "of": 460
         },
         "content_html_bytes": {
           "kind": "number",
@@ -2186,7 +2219,7 @@
             "content_html_bytes"
           ],
           "filled": 4,
-          "of": 458
+          "of": 460
         },
         "content_html_sha256": {
           "kind": "text",
@@ -2196,7 +2229,7 @@
             "content_html_sha256"
           ],
           "filled": 4,
-          "of": 458
+          "of": 460
         }
       },
       "held": {
@@ -2205,7 +2238,7 @@
       "rejects": {}
     },
     "KnowDocHist": {
-      "records": 358,
+      "records": 362,
       "version_of": "KnowDoc",
       "fields": {
         "changed_by": {
@@ -2214,8 +2247,8 @@
           "from": [
             "changed_by"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "changed_by_kind": {
           "kind": "text",
@@ -2223,8 +2256,8 @@
           "from": [
             "changed_by_kind"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "content_hash": {
           "kind": "text",
@@ -2232,8 +2265,8 @@
           "from": [
             "content_hash"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "content_md": {
           "kind": "text",
@@ -2241,8 +2274,8 @@
           "from": [
             "content_md"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "doc_id": {
           "kind": "text",
@@ -2250,8 +2283,8 @@
           "from": [
             "doc_id"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "state_uid": {
           "kind": "text",
@@ -2259,8 +2292,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "valid_from": {
           "kind": "datetime",
@@ -2268,8 +2301,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 358,
-          "of": 358
+          "filled": 362,
+          "of": 362
         },
         "valid_to": {
           "kind": "datetime",
@@ -2277,8 +2310,8 @@
           "from": [
             "valid_to"
           ],
-          "filled": 75,
-          "of": 358
+          "filled": 77,
+          "of": 362
         },
         "changed_by_session": {
           "kind": "text",
@@ -2286,7 +2319,7 @@
           "name": "Сессия правки",
           "from": [],
           "filled": 0,
-          "of": 358,
+          "of": 362,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -2296,7 +2329,7 @@
           "name": "Harness правки",
           "from": [],
           "filled": 0,
-          "of": 358,
+          "of": 362,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -2306,7 +2339,7 @@
           "name": "Сверка harness",
           "from": [],
           "filled": 0,
-          "of": 358,
+          "of": 362,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -2316,7 +2349,7 @@
           "name": "Машина правки",
           "from": [],
           "filled": 0,
-          "of": 358,
+          "of": 362,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         }
@@ -2928,7 +2961,7 @@
       "rejects": {}
     },
     "KnowModelConfigHist": {
-      "records": 4,
+      "records": 5,
       "version_of": "KnowModelConfig",
       "fields": {
         "changed_by": {
@@ -2937,8 +2970,8 @@
           "from": [
             "changed_by"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "changed_by_kind": {
           "kind": "text",
@@ -2946,8 +2979,8 @@
           "from": [
             "changed_by_kind"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "content": {
           "kind": "text",
@@ -2955,8 +2988,8 @@
           "from": [
             "content"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "content_hash": {
           "kind": "text",
@@ -2964,8 +2997,8 @@
           "from": [
             "content_hash"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "reason": {
           "kind": "text",
@@ -2973,8 +3006,8 @@
           "from": [
             "reason"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "state_uid": {
           "kind": "text",
@@ -2982,8 +3015,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "valid_from": {
           "kind": "datetime",
@@ -2991,8 +3024,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 4,
-          "of": 4
+          "filled": 5,
+          "of": 5
         },
         "valid_to": {
           "kind": "datetime",
@@ -3000,8 +3033,8 @@
           "from": [
             "valid_to"
           ],
-          "filled": 3,
-          "of": 4
+          "filled": 4,
+          "of": 5
         },
         "changed_by_session": {
           "kind": "text",
@@ -3009,7 +3042,7 @@
           "name": "Сессия правки",
           "from": [],
           "filled": 0,
-          "of": 4,
+          "of": 5,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -3019,7 +3052,7 @@
           "name": "Harness правки",
           "from": [],
           "filled": 0,
-          "of": 4,
+          "of": 5,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -3029,7 +3062,7 @@
           "name": "Сверка harness",
           "from": [],
           "filled": 0,
-          "of": 4,
+          "of": 5,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -3039,7 +3072,7 @@
           "name": "Машина правки",
           "from": [],
           "filled": 0,
-          "of": 4,
+          "of": 5,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         }
@@ -3048,7 +3081,7 @@
       "rejects": {}
     },
     "KnowPR": {
-      "records": 1970,
+      "records": 2115,
       "version_of": null,
       "fields": {
         "pr_number": {
@@ -3057,8 +3090,8 @@
           "from": [
             "pr_number"
           ],
-          "filled": 1970,
-          "of": 1970
+          "filled": 2115,
+          "of": 2115
         },
         "pr_uid": {
           "kind": "text",
@@ -3066,8 +3099,8 @@
           "from": [
             "pr_uid"
           ],
-          "filled": 1970,
-          "of": 1970
+          "filled": 2115,
+          "of": 2115
         },
         "title": {
           "kind": "text",
@@ -3075,8 +3108,8 @@
           "from": [
             "title"
           ],
-          "filled": 912,
-          "of": 1970
+          "filled": 1045,
+          "of": 2115
         },
         "url": {
           "kind": "text",
@@ -3085,8 +3118,8 @@
           "from": [
             "url"
           ],
-          "filled": 852,
-          "of": 1970
+          "filled": 985,
+          "of": 2115
         },
         "merged_at": {
           "kind": "datetime",
@@ -3094,8 +3127,8 @@
           "from": [
             "merged_at"
           ],
-          "filled": 743,
-          "of": 1970
+          "filled": 866,
+          "of": 2115
         },
         "base_ref": {
           "kind": "text",
@@ -3104,8 +3137,8 @@
           "from": [
             "base_ref"
           ],
-          "filled": 440,
-          "of": 1970
+          "filled": 573,
+          "of": 2115
         },
         "head_ref": {
           "kind": "text",
@@ -3114,8 +3147,8 @@
           "from": [
             "head_ref"
           ],
-          "filled": 440,
-          "of": 1970
+          "filled": 573,
+          "of": 2115
         },
         "pr_id": {
           "kind": "text",
@@ -3124,7 +3157,7 @@
             "pr_id"
           ],
           "filled": 320,
-          "of": 1970
+          "of": 2115
         },
         "release_id": {
           "kind": "text",
@@ -3134,7 +3167,7 @@
             "release_id"
           ],
           "filled": 319,
-          "of": 1970
+          "of": 2115
         },
         "repo": {
           "kind": "text",
@@ -3144,7 +3177,7 @@
             "repo"
           ],
           "filled": 32,
-          "of": 1970
+          "of": 2115
         },
         "body_md": {
           "kind": "text",
@@ -3154,7 +3187,7 @@
             "body_md"
           ],
           "filled": 4,
-          "of": 1970
+          "of": 2115
         },
         "pr_state": {
           "kind": "text",
@@ -3164,11 +3197,11 @@
             "pr_state"
           ],
           "filled": 4,
-          "of": 1970
+          "of": 2115
         }
       },
       "held": {
-        "git_project": 1970
+        "git_project": 2115
       },
       "rejects": {}
     },
@@ -3352,7 +3385,7 @@
       "rejects": {}
     },
     "KnowQuestion": {
-      "records": 464,
+      "records": 470,
       "version_of": null,
       "fields": {
         "body_md": {
@@ -3361,8 +3394,8 @@
           "from": [
             "body_md"
           ],
-          "filled": 464,
-          "of": 464
+          "filled": 470,
+          "of": 470
         },
         "opened_date": {
           "kind": "date",
@@ -3370,8 +3403,8 @@
           "from": [
             "opened_date"
           ],
-          "filled": 464,
-          "of": 464
+          "filled": 470,
+          "of": 470
         },
         "question_id": {
           "kind": "text",
@@ -3379,8 +3412,8 @@
           "from": [
             "question_id"
           ],
-          "filled": 464,
-          "of": 464
+          "filled": 470,
+          "of": 470
         },
         "status": {
           "kind": "enum",
@@ -3388,8 +3421,8 @@
           "from": [
             "status"
           ],
-          "filled": 464,
-          "of": 464
+          "filled": 470,
+          "of": 470
         },
         "title": {
           "kind": "text",
@@ -3397,8 +3430,8 @@
           "from": [
             "title"
           ],
-          "filled": 464,
-          "of": 464
+          "filled": 470,
+          "of": 470
         },
         "priority": {
           "kind": "enum",
@@ -3407,7 +3440,7 @@
             "priority"
           ],
           "filled": 425,
-          "of": 464
+          "of": 470
         },
         "raised_by": {
           "kind": "text",
@@ -3417,7 +3450,7 @@
             "raised_by"
           ],
           "filled": 413,
-          "of": 464
+          "of": 470
         },
         "owner": {
           "kind": "text",
@@ -3426,8 +3459,8 @@
           "from": [
             "owner"
           ],
-          "filled": 343,
-          "of": 464
+          "filled": 349,
+          "of": 470
         },
         "updated_at": {
           "kind": "datetime",
@@ -3435,8 +3468,8 @@
           "from": [
             "updated_at"
           ],
-          "filled": 284,
-          "of": 464
+          "filled": 290,
+          "of": 470
         },
         "closed_date": {
           "kind": "date",
@@ -3445,7 +3478,7 @@
             "closed_date"
           ],
           "filled": 255,
-          "of": 464
+          "of": 470
         },
         "trigger": {
           "kind": "text",
@@ -3454,7 +3487,7 @@
             "trigger"
           ],
           "filled": 25,
-          "of": 464
+          "of": 470
         },
         "due_date": {
           "kind": "date",
@@ -3463,7 +3496,7 @@
             "due_date"
           ],
           "filled": 11,
-          "of": 464
+          "of": 470
         }
       },
       "held": {
@@ -3472,7 +3505,7 @@
       "rejects": {}
     },
     "KnowRelease": {
-      "records": 575,
+      "records": 619,
       "version_of": null,
       "fields": {
         "is_current": {
@@ -3482,8 +3515,8 @@
           "from": [
             "is_current"
           ],
-          "filled": 575,
-          "of": 575
+          "filled": 619,
+          "of": 619
         },
         "release_id": {
           "kind": "text",
@@ -3491,8 +3524,8 @@
           "from": [
             "release_id"
           ],
-          "filled": 575,
-          "of": 575
+          "filled": 619,
+          "of": 619
         },
         "release_uid": {
           "kind": "text",
@@ -3500,8 +3533,8 @@
           "from": [
             "release_uid"
           ],
-          "filled": 575,
-          "of": 575
+          "filled": 619,
+          "of": 619
         },
         "description_md": {
           "kind": "text",
@@ -3509,8 +3542,8 @@
           "from": [
             "description_md"
           ],
-          "filled": 571,
-          "of": 575
+          "filled": 615,
+          "of": 619
         },
         "release_date": {
           "kind": "date",
@@ -3518,8 +3551,8 @@
           "from": [
             "release_date"
           ],
-          "filled": 569,
-          "of": 575
+          "filled": 613,
+          "of": 619
         },
         "git_tag": {
           "kind": "text",
@@ -3528,18 +3561,8 @@
           "from": [
             "git_tag"
           ],
-          "filled": 554,
-          "of": 575
-        },
-        "type": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "type"
-          ],
-          "filled": 528,
-          "of": 575
+          "filled": 591,
+          "of": 619
         },
         "week": {
           "kind": "number",
@@ -3548,8 +3571,18 @@
           "from": [
             "week"
           ],
-          "filled": 522,
-          "of": 575
+          "filled": 560,
+          "of": 619
+        },
+        "type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "type"
+          ],
+          "filled": 549,
+          "of": 619
         },
         "updated_at": {
           "kind": "datetime",
@@ -3557,8 +3590,17 @@
           "from": [
             "updated_at"
           ],
-          "filled": 384,
-          "of": 575
+          "filled": 392,
+          "of": 619
+        },
+        "released_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "released_at"
+          ],
+          "filled": 94,
+          "of": 619
         },
         "version": {
           "kind": "text",
@@ -3568,7 +3610,7 @@
             "version"
           ],
           "filled": 92,
-          "of": 575
+          "of": 619
         },
         "release_name": {
           "kind": "text",
@@ -3577,16 +3619,7 @@
             "release_name"
           ],
           "filled": 66,
-          "of": 575
-        },
-        "released_at": {
-          "kind": "datetime",
-          "db_type": "DATETIME",
-          "from": [
-            "released_at"
-          ],
-          "filled": 55,
-          "of": 575
+          "of": 619
         },
         "title": {
           "kind": "text",
@@ -3596,16 +3629,16 @@
             "title"
           ],
           "filled": 2,
-          "of": 575
+          "of": 619
         }
       },
       "held": {
-        "git_project": 575
+        "git_project": 619
       },
       "rejects": {}
     },
     "KnowReleaseHist": {
-      "records": 981,
+      "records": 1040,
       "version_of": "KnowRelease",
       "fields": {
         "state_uid": {
@@ -3615,8 +3648,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 981,
-          "of": 981
+          "filled": 1040,
+          "of": 1040
         },
         "valid_from": {
           "kind": "datetime",
@@ -3624,17 +3657,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 981,
-          "of": 981
-        },
-        "description_md": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "description_md"
-          ],
-          "filled": 465,
-          "of": 981
+          "filled": 1040,
+          "of": 1040
         },
         "changed_by": {
           "kind": "text",
@@ -3642,8 +3666,8 @@
           "from": [
             "changed_by"
           ],
-          "filled": 450,
-          "of": 981
+          "filled": 509,
+          "of": 1040
         },
         "changed_by_kind": {
           "kind": "text",
@@ -3651,8 +3675,17 @@
           "from": [
             "changed_by_kind"
           ],
-          "filled": 450,
-          "of": 981
+          "filled": 509,
+          "of": 1040
+        },
+        "description_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "description_md"
+          ],
+          "filled": 480,
+          "of": 1040
         },
         "valid_to": {
           "kind": "datetime",
@@ -3660,8 +3693,8 @@
           "from": [
             "valid_to"
           ],
-          "filled": 395,
-          "of": 981
+          "filled": 410,
+          "of": 1040
         },
         "content_hash": {
           "kind": "text",
@@ -3671,7 +3704,7 @@
             "content_hash"
           ],
           "filled": 74,
-          "of": 981
+          "of": 1040
         },
         "is_current": {
           "kind": "bool",
@@ -3681,7 +3714,7 @@
             "is_current"
           ],
           "filled": 74,
-          "of": 981
+          "of": 1040
         },
         "source_commit": {
           "kind": "text",
@@ -3691,47 +3724,55 @@
             "source_commit"
           ],
           "filled": 74,
-          "of": 981
-        },
-        "changed_by_session": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Сессия правки",
-          "from": [],
-          "filled": 0,
-          "of": 981,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_harness": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Harness правки",
-          "from": [],
-          "filled": 0,
-          "of": 981,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "of": 1040
         },
         "changed_by_harness_note": {
           "kind": "text",
           "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness_note"
+          ],
+          "filled": 12,
+          "of": 1040,
           "name": "Сверка harness",
-          "from": [],
-          "filled": 0,
-          "of": 981,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "service": true
         },
         "changed_by_machine": {
           "kind": "text",
           "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_machine"
+          ],
+          "filled": 6,
+          "of": 1040,
           "name": "Машина правки",
-          "from": [],
-          "filled": 0,
-          "of": 981,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "service": true
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_session"
+          ],
+          "filled": 3,
+          "of": 1040,
+          "name": "Сессия правки",
+          "service": true
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness"
+          ],
+          "filled": 2,
+          "of": 1040,
+          "name": "Harness правки",
+          "service": true
         }
       },
       "held": {},
@@ -3891,7 +3932,7 @@
       "rejects": {}
     },
     "KnowSpec": {
-      "records": 481,
+      "records": 498,
       "version_of": null,
       "fields": {
         "spec_id": {
@@ -3900,8 +3941,8 @@
           "from": [
             "spec_id"
           ],
-          "filled": 481,
-          "of": 481
+          "filled": 498,
+          "of": 498
         },
         "title": {
           "kind": "text",
@@ -3909,8 +3950,8 @@
           "from": [
             "title"
           ],
-          "filled": 475,
-          "of": 481
+          "filled": 492,
+          "of": 498
         },
         "content_md": {
           "kind": "text",
@@ -3919,8 +3960,8 @@
           "from": [
             "content_md"
           ],
-          "filled": 435,
-          "of": 481
+          "filled": 452,
+          "of": 498
         },
         "version": {
           "kind": "text",
@@ -3929,8 +3970,8 @@
           "from": [
             "version"
           ],
-          "filled": 335,
-          "of": 481
+          "filled": 349,
+          "of": 498
         },
         "updated_at": {
           "kind": "datetime",
@@ -3938,8 +3979,8 @@
           "from": [
             "updated_at"
           ],
-          "filled": 275,
-          "of": 481
+          "filled": 292,
+          "of": 498
         },
         "file_path": {
           "kind": "text",
@@ -3948,7 +3989,7 @@
             "file_path"
           ],
           "filled": 215,
-          "of": 481
+          "of": 498
         },
         "status": {
           "kind": "enum",
@@ -3956,17 +3997,17 @@
           "from": [
             "status"
           ],
-          "filled": 14,
-          "of": 481
+          "filled": 31,
+          "of": 498
         }
       },
       "held": {
-        "component_id": 92
+        "component_id": 98
       },
       "rejects": {}
     },
     "KnowSpecHist": {
-      "records": 708,
+      "records": 740,
       "version_of": "KnowSpec",
       "fields": {
         "content_hash": {
@@ -3975,8 +4016,8 @@
           "from": [
             "content_hash"
           ],
-          "filled": 708,
-          "of": 708
+          "filled": 740,
+          "of": 740
         },
         "state_uid": {
           "kind": "text",
@@ -3984,8 +4025,8 @@
           "from": [
             "state_uid"
           ],
-          "filled": 708,
-          "of": 708
+          "filled": 740,
+          "of": 740
         },
         "valid_from": {
           "kind": "datetime",
@@ -3993,8 +4034,8 @@
           "from": [
             "valid_from"
           ],
-          "filled": 708,
-          "of": 708
+          "filled": 740,
+          "of": 740
         },
         "content_md": {
           "kind": "text",
@@ -4002,8 +4043,8 @@
           "from": [
             "content_md"
           ],
-          "filled": 706,
-          "of": 708
+          "filled": 738,
+          "of": 740
         },
         "spec_id": {
           "kind": "text",
@@ -4011,8 +4052,8 @@
           "from": [
             "spec_id"
           ],
-          "filled": 646,
-          "of": 708
+          "filled": 678,
+          "of": 740
         },
         "version": {
           "kind": "text",
@@ -4020,8 +4061,8 @@
           "from": [
             "version"
           ],
-          "filled": 601,
-          "of": 708
+          "filled": 628,
+          "of": 740
         },
         "summary": {
           "kind": "text",
@@ -4029,8 +4070,8 @@
           "from": [
             "summary"
           ],
-          "filled": 532,
-          "of": 708
+          "filled": 560,
+          "of": 740
         },
         "valid_to": {
           "kind": "datetime",
@@ -4038,8 +4079,8 @@
           "from": [
             "valid_to"
           ],
-          "filled": 233,
-          "of": 708
+          "filled": 248,
+          "of": 740
         },
         "source_commit": {
           "kind": "text",
@@ -4049,7 +4090,7 @@
             "source_commit"
           ],
           "filled": 164,
-          "of": 708
+          "of": 740
         },
         "status": {
           "kind": "enum",
@@ -4057,8 +4098,8 @@
           "from": [
             "status"
           ],
-          "filled": 101,
-          "of": 708
+          "filled": 133,
+          "of": 740
         },
         "status_known_from": {
           "kind": "text",
@@ -4066,8 +4107,26 @@
           "from": [
             "status_known_from"
           ],
-          "filled": 76,
-          "of": 708
+          "filled": 108,
+          "of": 740
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 66,
+          "of": 740
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 66,
+          "of": 740
         },
         "status_backfilled": {
           "kind": "bool",
@@ -4076,25 +4135,31 @@
             "status_backfilled"
           ],
           "filled": 52,
-          "of": 708
+          "of": 740
         },
-        "changed_by": {
+        "changed_by_harness_note": {
           "kind": "text",
           "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
           "from": [
-            "changed_by"
+            "changed_by_harness_note"
           ],
-          "filled": 34,
-          "of": 708
+          "filled": 1,
+          "of": 740,
+          "name": "Сверка harness",
+          "service": true
         },
-        "changed_by_kind": {
+        "changed_by_machine": {
           "kind": "text",
           "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
           "from": [
-            "changed_by_kind"
+            "changed_by_machine"
           ],
-          "filled": 34,
-          "of": 708
+          "filled": 1,
+          "of": 740,
+          "name": "Машина правки",
+          "service": true
         },
         "changed_by_session": {
           "kind": "text",
@@ -4102,7 +4167,7 @@
           "name": "Сессия правки",
           "from": [],
           "filled": 0,
-          "of": 708,
+          "of": 740,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
@@ -4112,27 +4177,7 @@
           "name": "Harness правки",
           "from": [],
           "filled": 0,
-          "of": 708,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_harness_note": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Сверка harness",
-          "from": [],
-          "filled": 0,
-          "of": 708,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_machine": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Машина правки",
-          "from": [],
-          "filled": 0,
-          "of": 708,
+          "of": 740,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         }
@@ -4141,7 +4186,7 @@
       "rejects": {}
     },
     "KnowTag": {
-      "records": 1075,
+      "records": 1080,
       "version_of": null,
       "fields": {
         "tag_id": {
@@ -4150,8 +4195,8 @@
           "from": [
             "tag_id"
           ],
-          "filled": 1075,
-          "of": 1075
+          "filled": 1080,
+          "of": 1080
         }
       },
       "held": {},
@@ -4260,6 +4305,15 @@
           "filled": 41,
           "of": 88
         },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 19,
+          "of": 88
+        },
         "body_md": {
           "kind": "text",
           "db_type": "STRING",
@@ -4274,15 +4328,6 @@
           "db_type": "STRING",
           "from": [
             "context_md"
-          ],
-          "filled": 18,
-          "of": 88
-        },
-        "updated_at": {
-          "kind": "datetime",
-          "db_type": "DATETIME",
-          "from": [
-            "updated_at"
           ],
           "filled": 18,
           "of": 88
@@ -4887,21 +4932,21 @@
           "filled": 25,
           "of": 25
         },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 25,
+          "of": 25
+        },
         "content_md": {
           "kind": "text",
           "db_type": "STRING",
           "note": "в схеме прода не объявлено — строкой",
           "from": [
             "content_md"
-          ],
-          "filled": 24,
-          "of": 25
-        },
-        "status": {
-          "kind": "enum",
-          "db_type": "STRING",
-          "from": [
-            "status"
           ],
           "filled": 24,
           "of": 25
@@ -4948,7 +4993,7 @@
         }
       },
       "held": {
-        "component_id": 2
+        "component_id": 20
       },
       "rejects": {}
     }

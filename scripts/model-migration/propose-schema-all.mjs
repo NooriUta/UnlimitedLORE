@@ -55,7 +55,8 @@ function main() {
       const rule = src.length ? MAP[T][src[0]] : null;
       fields[f] = { ...fieldType(rule, src.length ? declared[src[0]] : declared[f], (t.outKinds || {})[f]), from: src, filled: n, of: t.records };
     }
-    if (T.endsWith('Hist')) for (const [f, name] of Object.entries(SERVICE)) if (!fields[f]) fields[f] = { kind: 'text', db_type: 'STRING', name, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
+    // Служебное поле служебное и с данными (снимок 18.11: у версий релизов и решений поля правки заполнены).
+    if (T.endsWith('Hist')) for (const [f, name] of Object.entries(SERVICE)) fields[f] = fields[f] ? { ...fields[f], kind: 'text', db_type: 'STRING', name, service: true } : { kind: 'text', db_type: 'STRING', name, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
     types[T] = { records: t.records, version_of: T.endsWith('Hist') ? T.slice(0, -4) : null, fields, held: t.held, rejects: Object.fromEntries(Object.entries(t.rejects).map(([k, e]) => [k, e.n ?? e])) };
   }
   const out = {
