@@ -112,8 +112,17 @@ jobs:
       # На push стенд в эти минуты перезапускается (выкатка идёт параллельно): прогон 8889 упал на
       # входе test-sa, пока бэкенд вставал. Здесь вход нужен лишь для токена ожидания — хватит любой
       # учётки; обязательный вход — повторный, после ожидания.
+      # Два шага вместо continue-on-error: ${{ … }} — Forgejo выражение в этом поле не разбирает и отбрасывает весь
+      # файл («cannot unmarshal !!str into bool», 18.11.2026: смоук не запускался с 17.11). Сторож —
+      # web-next/src/workflowForgejoBools.test.ts.
+      - name: Автологин тестовых учёток (push — не обязателен)
+        if: github.event_name == 'push'
+        continue-on-error: true
+        working-directory: web-next
+        run: npm run e2e:stand:login
+
       - name: Автологин тестовых учёток
-        continue-on-error: ${{ github.event_name == 'push' }}
+        if: github.event_name != 'push'
         working-directory: web-next
         run: npm run e2e:stand:login
 
