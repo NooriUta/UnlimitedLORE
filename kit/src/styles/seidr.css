@@ -3520,6 +3520,9 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
    соседним overflow без всякого знака, что значение не уместилось). */
 .sk-list__val { display: inline-flex; align-items: center; gap: 3px; min-width: 0; max-width: 100%; overflow: hidden; }
 .sk-list__val-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Поле-ссылка в строке и карточке ведёт к своей записи (владелица 18.11.2026): вид ссылки — акцент и подчёркивание по наведению. */
+.sk-list__reflink { color: var(--acc); text-decoration: none; }
+.sk-list__reflink:hover, .sk-list__reflink:focus-visible { text-decoration: underline; }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 /* PU-07: свёрнутая многозначная ячейка — одна строка: значение сжимается, «+N» на виду. */
 .sk-list__vals.is-folded { flex-wrap: nowrap; }
