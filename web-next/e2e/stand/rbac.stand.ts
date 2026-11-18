@@ -165,9 +165,14 @@ test('RB-40 Владелец видит свой проект: test-user-1 — o
   for (const r of roles) expect(String(r.project), 'только тестовые проекты').toMatch(/^TEST-/);
 });
 
+const STAND_BACK_ON = Date.parse('2026-11-21T00:00:00Z');
+
 // ── §7 Админка ──────────────────────────────────────────────────────────────
 
 test('AD-01 Админка viewer-у: честный отказ, а не пустой экран', async ({ login }) => {
+  // Владелица 18.11.2026: «выключи с пометкой вернутся 21 эти тесты». Красный на стенде — «Новости» (#1573, держит владелица)
+  // и админка viewer; не регрессия релиза v1.17.27. Пропуск снимается сам 21.11.2026 — правки не нужно.
+  test.skip(Date.now() < STAND_BACK_ON, 'выключен владелицей 18.11 до 21.11.2026 — вернётся сам');
   const page = await login(RBAC_ACCOUNTS.viewer);
   await page.goto('/?mod=admin&sec=adm-home');
   const card = page.locator('[data-testid="adm-home-403"]');
