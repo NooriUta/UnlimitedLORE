@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Перенос LORE в новую модель — что доделывать, 18.11.2026</title>
+<style>
+body{font-family:Manrope,system-ui,sans-serif;background:#faf8f3;color:#1e1a12;margin:0;padding:16px;font-size:14px;line-height:1.5;max-width:860px}
+h1{font-family:Unbounded,system-ui,sans-serif;font-weight:800;font-size:19px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.03em;color:#76694f}
+.sub{color:#76694f;font-size:12px}.card{background:#fff;border:1px solid #d4ccb8;border-radius:10px;padding:10px 12px;margin:0 0 10px}
+.card b.t{font-size:14px}.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700;margin-right:4px}
+.p1{background:#fbe9e5;color:#b4412f}.p2{background:#fff7e6;color:#b07a12}.p3{background:#eef3fb;color:#2f5f9e}.p4{background:#eeeae2;color:#5c5240}
+code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#f3efe6;border-radius:4px;padding:0 3px}ol,ul{padding-left:20px;margin:6px 0}li{margin:2px 0}
+.warn{background:#fff7e6;border-left:3px solid #b07a12;padding:8px 10px;border-radius:6px}
+</style></head><body>
+<h1>Перенос LORE в новую модель — что доделывать</h1>
+<div class="sub">18.11.2026 · ветка <code>migration/model-v2</code> · тесты 130 из 130 · передача работы</div>
+
+<h2>Коротко</h2>
+<div class="card">Новая модель собрана, правила унификации и решения владелицы приняты, пробный перенос всех объектов — без отказов. Чтобы новая версия заработала, осталось три больших шага: <b>связи для всех объектов</b>, <b>сервер на кодах статуса</b> и <b>полный перенос с проверкой</b>. Установщик и ребро зависимости идут параллельно.
+<div class="warn" style="margin-top:8px"><b>Сроков в LORE нет</b> — ни у одной задачи дата не назначена. Ниже — оценка в рабочих днях, это <b>предположение исполнителя</b>, не согласованный срок. Оценки MIG-01 и MIG-04 в LORE (1,5 и 1 д) занижены: осталось больше.</div></div>
+
+<h2>Задачи по порядку</h2>
+
+<div class="card"><span class="pill p1">1 · сейчас</span><b class="t">Релиз v1.17.27 на прод</b> — веду я, к передаче не относится.<br>
+Все проверки зелёные, ждёт смоук стенда. Потом мерж в main, тег, запись релиза в LORE, проверка прода.</div>
+
+<div class="card"><span class="pill p1">2 · высший</span><b class="t">SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 — перенос: связи и аудит</b> · в работе · ≈ 3 д<br>
+Без этого шага полный перенос невозможен.
+<ol><li>Обобщить <code>transfer-edges.mjs</code> на все типы связей (сейчас только спринт, фаза, задача).</li>
+<li>Построить связи из удержанных полей: project, component, *_refs — список в <code>tools/census/dry-all.json</code> (поле <code>held</code>).</li>
+<li>Перевести мёртвые связи HAS_PR, RELEASED_IN, INCLUDES.</li>
+<li>Добавить поля аудита в модель и схему (<code>propose-schema.mjs</code>): created_at, created_by, сессия, harness, машина — таблица в разделе 7 отчёта «Новая модель против прода».</li>
+<li>Полный перенос на копию на ryzenai, отпечаток источника и приёмника, второй прогон — тот же отпечаток.</li></ol>
+Спека: SPEC-LORE-MIGRATION-NO-EVOLUTION.</div>
+
+<div class="card"><span class="pill p2">3 · высокий</span><b class="t">SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 — одно ребро «зависит от»</b> · бэклог · ≈ 2 д<br>
+Делать вместе с шагом связей MIG-01: depends_on_ids и треки спринта превращаются в рёбра DEPENDS_ON с видом blocks / waits / relates. Спека: SPEC-LORE-DEPENDENCY-EDGE.</div>
+
+<div class="card"><span class="pill p2">4 · высокий, самый большой</span><b class="t">SPRINT_LORE_MODEL_DOCS_TIDY/MIG-03 — сервер на новой модели</b> · в работе · ≈ 10 д<br>
+<ol><li>Одно выражение статуса по полю <code>status</code> вместо status_raw / status_category: 66 мест в LoreSlices, 40 файлов.</li>
+<li>status_raw в ответах собирать из справочника — клиенты не ломаются.</li>
+<li>Тест на каждый слайс против перенесённой копии: бэкенд на 9191 к migration_dst_win_B через туннель <code>ssh -N -L 2490:127.0.0.1:2490 ryzenai</code>, <code>lore.migrate=false</code>.</li>
+<li>Пути записи (MCP) — тот же переход.</li></ol>
+Можно начинать параллельно с п.2: на копии уже лежат спринты, фазы и задачи.</div>
+
+<div class="card"><span class="pill p3">5 · средний</span><b class="t">SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 — универсальный установщик</b> · в работе · ≈ 3 д<br>
+Готово: «Старт», план, строка MCP, .env пакета, ключи Völva, toml для link. Осталось:
+<ol><li>область и клиенты Keycloak через admin API на новой установке;</li><li>machine_new из окна;</li><li>издатель Völva;</li><li>проверки whoami и /lore/embed/jwks.</li></ol>
+Спека: SPEC-LORE-UNIVERSAL-INSTALLER. Новый перенос от этого не зависит.</div>
+
+<div class="card"><span class="pill p4">ждёт владелицу</span><b class="t">SPRINT_LORE_MODEL_DOCS_TIDY/MIG-02 — установщик переноса, шаг 2</b> · ждёт<br>
+Решения UAT сохранены на ryzenai (<code>~/lore-migrate-build/uat-decisions.json</code>). Окно установщика остановлено; поднять заново — <code>tools/run/ryzen-uat.sh</code>.</div>
+
+<h2>Нужно решение владелицы</h2>
+<ul><li>Кто мастер привязки «место → проект»: предложение miniLORE — проект по адресу считает LORE, ручную привязку места хранит miniLORE.</li>
+<li>AgentActionLog (TIMESERIES): новые поля без DDL не добавить — исключение из заморозки схемы или ждать переноса.</li></ul>
+
+<h2>Что читать, по порядку</h2>
+<ol><li><code>scripts/model-migration/HANDOFF.md</code> — карта: где что лежит, что не доделано, правила.</li>
+<li>SPEC-LORE-MIGRATION-NO-EVOLUTION — принципы переноса и сервера.</li>
+<li><code>docs/reports/lore-model-v2-vs-prod-2026-11-17.html</code> — что меняется относительно прода, схемы, аудит, контракт с miniLORE.</li>
+<li><code>rules/status-unification.json</code> и <code>map/all-objects.json</code> — правила и карта полей.</li>
+<li>SPEC-LORE-DEPENDENCY-EDGE, затем SPEC-LORE-UNIVERSAL-INSTALLER.</li>
+<li>Код по порядку прохода: <code>apply-map.mjs</code> → <code>transfer.mjs</code> → <code>transfer-edges.mjs</code> → <code>propose-schema.mjs</code>; сервер — <code>LoreSchemaMigrationRunner.java</code> (schemaSource).</li></ol>
+
+<h2>Доступы</h2>
+<ul><li>ryzenai — <code>ssh ryzenai</code> (ключ <code>~/.ssh/id_ryzenai</code>); копия базы — порт 2490, пароль в <code>~/lore-migrate-build/arcadedb.secret</code> там же.</li>
+<li>Доступ к проду на чтение — только в <code>C:\AIDA\_audit_scripts\mig\*.env</code> на этой машине; в репо не класть, на ryzenai после прогона удалять.</li>
+<li>В LORE писать только через MCP.</li></ul>
+</body></html>
