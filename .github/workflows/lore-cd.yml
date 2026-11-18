@@ -868,7 +868,8 @@ jobs:
       # в проекте lore-preprod (а не старого стенда и не чужого маршрута Traefik).
       # Тот же скрипт сверяет прод в релизе — там ожидаемое берётся из образа.
       # S8-02 (владелица 18.11.2026: «отключить v1 и все перевести на v2», «и на препроде»): основное имя
-      # препрода отдаёт v2; старое имя с new — тоже v2; v1 — только запасной вход по IP :4410.
+      # препрода отдаёт v2; старое имя с new — тоже v2. v1 выключен: по IP :4410 его nginx отвечает 301 на
+      # основное имя (LORE CD 8968) — пробы бандла v1 нет.
       - name: Проба бандла v2 по основному имени препрода
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/bundle-probe.sh "v2 препрод (основное имя)" container:lore-app-next https://preprod.lore.odal.seidrstudio.pro/
@@ -877,9 +878,6 @@ jobs:
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/bundle-probe.sh "v2 препрод (имя с new)" container:lore-app-next https://preprod.new.lore.odal.seidrstudio.pro/
 
-      - name: Проба бандла v1 — запасной вход по IP
-        if: steps.mode.outputs.live == 'true'
-        run: bash .github/scripts/bundle-probe.sh "v1 препрод (запасной)" container:lore-app http://192.168.3.131:4410/
 
       # PL-04 → PL-05: ПОСЛЕДНИМ, после всех проб — тег unlimitedlore-<сервис>:<sha8>
       # на образы, работающие в lore-preprod (собранное сейчас и не тронутое).

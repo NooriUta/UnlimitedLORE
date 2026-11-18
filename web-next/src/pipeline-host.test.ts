@@ -124,7 +124,9 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
     const v1 = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app\s+http:\/\/192\.168\.3\.131:4410\//.test(x.body));
     expect(main, 'нет пробы: основное имя препрода отдаёт бандл v2').toBeDefined();
     expect(alias, 'нет пробы: имя с new по-прежнему отдаёт v2').toBeDefined();
-    expect(v1, 'нет пробы запасного входа v1 по IP :4410').toBeDefined();
+    // LORE CD 8968 (18.11.2026): v1 по IP :4410 отвечает 301 на основное имя (его LORE_PUBLIC_URL) — то есть
+    // страницы v1 больше нет вовсе, а проба «v1 отдаёт свой бандл» роняла выкатку и отменяла тег образов (PL-05).
+    expect(v1, 'v1 выключен — пробы его бандла быть не должно').toBeUndefined();
     expect(cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app\s+https:\/\/preprod\.lore/.test(x.body)), 'v1 больше не на основном имени').toBeUndefined();
   });
 
