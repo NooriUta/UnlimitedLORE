@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE — что мешает унификации данных · 16.11.2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#faf6ee;--bg1:#ffffff;--bg2:#f1eadc;--bd:#dccfb8;
+  --t1:#2a2218;--t2:#5f5343;--t3:#8a7c68;
+  --acc:#a8660a;--suc:#3f7a2c;--wrn:#a8660a;--dng:#b23a26;--inf:#2f6a94;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:16px;--fs-xl:20px;--fs-2xl:26px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-md)/1.5 Manrope,system-ui,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
+h1{font:800 var(--fs-2xl)/1.15 Unbounded,sans-serif;margin:0 0 6px}
+h2{font:800 var(--fs-lg)/1.2 Unbounded,sans-serif;margin:28px 0 8px;color:var(--acc)}
+p{margin:6px 0}
+.sub{color:var(--t2);font-size:var(--fs-sm)}
+.lead{background:var(--bg1);border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:8px;padding:12px 14px;margin:14px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:12px 0}
+.tile{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.tile b{display:block;font:800 var(--fs-xl)/1.1 Unbounded,sans-serif}
+.tile span{color:var(--t2);font-size:var(--fs-xs)}
+.wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:8px;background:var(--bg1)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:var(--fs-sm)}
+th{text-align:left;text-transform:uppercase;letter-spacing:.06em;font-size:var(--fs-2xs);color:var(--t3);padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--bg2)}
+td{padding:6px 10px;border-bottom:1px solid var(--bd);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+code{font-family:var(--mono);font-size:var(--fs-xs);background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:0 4px}
+.chip{display:inline-block;border-radius:999px;padding:1px 8px;font-size:var(--fs-2xs);font-weight:700;border:1px solid var(--bd);white-space:nowrap}
+.dng{color:var(--dng);border-color:var(--dng)}.wrn{color:var(--wrn);border-color:var(--wrn)}.suc{color:var(--suc);border-color:var(--suc)}.inf{color:var(--inf);border-color:var(--inf)}
+ol{padding-left:20px;margin:6px 0}li{margin:4px 0}
+footer{margin-top:28px;color:var(--t3);font-size:var(--fs-xs)}
+</style>
+</head>
+<body>
+<main>
+<h1>Что мешает унификации данных</h1>
+<p class="sub">LORE · замер на прод-базе 16.11.2026, только чтение · к задаче SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01</p>
+
+<div class="lead">
+<b>Главное.</b> Мешают четыре вещи: статус хранится тремя разными способами; приоритет ведётся двумя шкалами; подпись в справочнике рассчитана ровно на два языка; у части записей значения нет или оно не из справочника. Первые три решаются правилом переноса, четвёртая — вашими решениями по значениям на экране «Перенос».
+</div>
+
+<div class="grid">
+  <div class="tile"><b>3</b><span>способа хранить статус</span></div>
+  <div class="tile"><b>506</b><span>записей с приоритетом словами, а не P0–P3</span></div>
+  <div class="tile"><b>20</b><span>записей со значением вне справочника</span></div>
+  <div class="tile"><b>8</b><span>справочников без английских подписей</span></div>
+  <div class="tile"><b>413</b><span>спек без статуса (из 483)</span></div>
+</div>
+
+<h2>1. Статус хранится тремя способами</h2>
+<p>В справочниках лежат коды (<code>done</code>, <code>active</code>). В записях у шести типов лежит не код, а подпись со значком, и код получается только в бэкенде при чтении. Пока так, перевести подпись на другой язык нельзя: она записана в саму запись.</p>
+<div class="wrap"><table>
+<tr><th>Способ</th><th>Типы</th><th>Что лежит в записи</th><th>Поле</th></tr>
+<tr><td>Подпись со значком, заглавными</td><td>задача, спринт, фаза</td><td>«✅ DONE», «🔄 IN PROGRESS», «🧪 UAT TESTING»</td><td><code>status_raw</code></td></tr>
+<tr><td>Слово без значка</td><td>ADR — заглавными; решение, веха — строчными</td><td>«ACCEPTED»; «accepted», «upcoming»</td><td><code>status_raw</code></td></tr>
+<tr><td>Код справочника</td><td>спека, вопрос, фича, гейт качества</td><td><code>proposed</code>, <code>open</code>, <code>shipped</code>, <code>draft</code></td><td><code>status</code></td></tr>
+</table></div>
+<p class="sub">Объём: задач 6604, спринтов 543, фаз 257, ADR 265, решений 1143, вех 46 — все в первых двух способах.</p>
+
+<h2>2. Приоритет — две шкалы</h2>
+<p>Справочник приоритета знает только P0–P3. В данных рядом живёт вторая шкала — словами.</p>
+<div class="wrap"><table>
+<tr><th>Тип</th><th>По шкале P0–P3</th><th>Словами</th><th>Пусто</th></tr>
+<tr><td>Спринт</td><td class="n">41</td><td>81: high 53, normal 14, critical 7, low 6, medium 1</td><td class="n">421</td></tr>
+<tr><td>Вопрос</td><td class="n">0</td><td>425: normal 208, high 167, low 31, blocker 19</td><td class="n">45</td></tr>
+<tr><td>Задача</td><td class="n">0</td><td>—</td><td class="n">6604 (все)</td></tr>
+</table></div>
+
+<h2>3. Локализация подписей</h2>
+<p>Подпись значения — две колонки: <code>label_ru</code> и <code>label_en</code>. Польскому и любому следующему языку места в справочнике нет, поэтому польские подписи статусов сейчас взять неоткуда.</p>
+<p>Английской подписи нет в восьми справочниках: статус решения (6 значений), роль в проекте (8), класс работы (3), уровень цели сценария (4), строгость сценария (2), вид работы клиента (4), ранг выгоды (4), настройки приложения (6). У продукта — у 4 из 17.</p>
+
+<h2>4. Значения вне справочника и пустые</h2>
+<div class="wrap"><table>
+<tr><th>Тип · поле</th><th>Что не так</th><th>Сколько</th><th>Чьё решение</th></tr>
+<tr><td>ADR · статус</td><td>REJECTED — в справочнике нет</td><td class="n">1</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Решение · статус</td><td>rejected — 2; «🚫 CANCELLED» — 1</td><td class="n">3</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Фаза · статус</td><td>статусы задачи, которых у фазы нет: partial 4, cancelled 1, ready for deploy 1</td><td class="n">6</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Задача · тип</td><td>data — 7, bug — 3</td><td class="n">10</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Спека · статус</td><td>пусто</td><td class="n">413 из 483</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Веха · статус</td><td>пусто</td><td class="n">38 из 46</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Фича · статус</td><td>пусто</td><td class="n">3 из 88</td><td><span class="chip wrn">ваше</span></td></tr>
+<tr><td>Решение</td><td>вершина есть, открытой версии нет — статус читать неоткуда</td><td class="n">47</td><td><span class="chip inf">моё: разобрать</span></td></tr>
+<tr><td>Задача · класс работы</td><td>пусто</td><td class="n">3238 из 6628</td><td><span class="chip suc">не мешает</span></td></tr>
+</table></div>
+
+<h2>5. Мелочи устройства</h2>
+<ol>
+<li>Справочники статусов спринта и задачи — одни и те же 14 кодов двумя копиями; подпись приходится править дважды.</li>
+<li>У статусов фичи и вопроса нет категории («открыто / закрыто»), у остальных типов она есть.</li>
+<li>В справочнике «настройки приложения» лежит тестовое значение «ффф».</li>
+</ol>
+
+<h2>Единое правило — предложение</h2>
+<div class="lead">
+<b>Правило одной строкой.</b> У каждого типа статус лежит в одном поле <code>status</code> и равен коду справочника. Код — латиницей, заглавными, слова через подчёркивание: <code>DONE</code>, <code>READY_FOR_DEPLOY</code>. Значок, цвет и подписи на всех языках — только в справочнике. Пустого статуса нет: нет значения — ставится первый статус справочника.
+</div>
+<p class="sub">Почему заглавными: так уже записано у ADR и в подписях задач, спринтов и фаз — это 7669 записей из 9458 со статусом. Строчными — меньшинство.</p>
+
+<h2>А. Во что превращается каждое значение</h2>
+<p><b>Задача, спринт</b> — один общий справочник вместо двух копий.</p>
+<div class="wrap"><table><tr><th>Сейчас в записи</th><th>Станет</th><th>Задач</th><th>Спринтов</th></tr><tr><td>✅ DONE</td><td><code>DONE</code></td><td class="n">5290</td><td class="n">365</td></tr>
+<tr><td>📋 PLANNED</td><td><code>PLANNED</code></td><td class="n">529</td><td class="n">45</td></tr>
+<tr><td>🚫 CANCELLED</td><td><code>CANCELLED</code></td><td class="n">496</td><td class="n">13</td></tr>
+<tr><td>🟡 PARTIAL</td><td><code>PARTIAL</code></td><td class="n">87</td><td class="n">5</td></tr>
+<tr><td>🚀 READY FOR DEPLOY</td><td><code>READY_FOR_DEPLOY</code></td><td class="n">39</td><td class="n">1</td></tr>
+<tr><td>🔴 BLOCKED</td><td><code>BLOCKED</code></td><td class="n">39</td><td class="n">1</td></tr>
+<tr><td>🔄 IN PROGRESS</td><td><code>ACTIVE</code></td><td class="n">36</td><td class="n">88</td></tr>
+<tr><td>⬜ TODO</td><td><code>TODO</code></td><td class="n">26</td><td class="n">3</td></tr>
+<tr><td>⏳ WAITING</td><td><code>WAITING</code></td><td class="n">25</td><td class="n">0</td></tr>
+<tr><td>🧪 UAT TESTING</td><td><code>UAT</code></td><td class="n">19</td><td class="n">0</td></tr>
+<tr><td>🟣 BACKLOG</td><td><code>BACKLOG</code></td><td class="n">11</td><td class="n">6</td></tr>
+<tr><td>🔬 DESIGN</td><td><code>DESIGN</code></td><td class="n">7</td><td class="n">16</td></tr></table></div>
+<p class="sub">Коды <code>REVIEW</code> и <code>FAILED</code> в справочнике есть, в данных не встречаются — остаются.</p>
+
+<p><b>Остальные типы.</b></p>
+<div class="wrap"><table><tr><th>Тип</th><th>Сейчас</th><th>Станет</th><th>Записей</th></tr><tr><td>Фаза</td><td>📋 PLANNED · ✅ DONE · 🔄 IN PROGRESS</td><td><code>PLANNED</code> · <code>DONE</code> · <code>ACTIVE</code></td><td class="n">204 · 37 · 10</td></tr>
+<tr><td>ADR</td><td>ACCEPTED, PROPOSED, SUPERSEDED, DEFERRED, DEPRECATED</td><td>без изменений</td><td class="n">264</td></tr>
+<tr><td>Решение</td><td>accepted, proposed, deferred, superseded</td><td><code>ACCEPTED</code>, <code>PROPOSED</code>, <code>DEFERRED</code>, <code>SUPERSEDED</code></td><td class="n">1006</td></tr>
+<tr><td>Веха</td><td>upcoming</td><td><code>UPCOMING</code></td><td class="n">8</td></tr>
+<tr><td>Спека</td><td>proposed, accepted, deprecated</td><td><code>PROPOSED</code>, <code>ACCEPTED</code>, <code>DEPRECATED</code></td><td class="n">70</td></tr>
+<tr><td>Вопрос</td><td>open, closed, deferred, dropped</td><td><code>OPEN</code>, <code>CLOSED</code>, <code>DEFERRED</code>, <code>DROPPED</code></td><td class="n">470</td></tr>
+<tr><td>Фича</td><td>proposed, active, shipped, in_rework</td><td><code>PROPOSED</code>, <code>ACTIVE</code>, <code>SHIPPED</code>, <code>IN_REWORK</code></td><td class="n">85</td></tr>
+<tr><td>Гейт качества</td><td>draft</td><td><code>DRAFT</code></td><td class="n">25</td></tr></table></div>
+
+<h2>Б. Значения вне справочника — на что менять</h2>
+<div class="wrap"><table><tr><th>Тип</th><th>Сейчас</th><th>Предлагаю</th><th>Сколько</th><th>Почему</th></tr><tr><td>ADR</td><td>REJECTED</td><td>добавить в справочник <code>REJECTED</code> «Отклонён»</td><td class="n">1</td><td>отказ — не «устарел» и не «заменён», это отдельный исход</td></tr>
+<tr><td>Решение</td><td>rejected</td><td>добавить <code>REJECTED</code> «Отклонено»</td><td class="n">2</td><td>то же</td></tr>
+<tr><td>Решение</td><td>🚫 CANCELLED</td><td><code>REJECTED</code></td><td class="n">1</td><td>по смыслу то же, что отклонено</td></tr>
+<tr><td>Решение</td><td>fixed</td><td><code>ACCEPTED</code></td><td class="n">114</td><td>в справочнике помечено «легаси сида — к ревизии»; по смыслу действующее правило</td></tr>
+<tr><td>Решение</td><td>done</td><td><code>ACCEPTED</code></td><td class="n">20</td><td>то же</td></tr>
+<tr><td>Фаза</td><td>🟡 PARTIAL</td><td><code>ACTIVE</code></td><td class="n">4</td><td>часть сделана — фаза идёт</td></tr>
+<tr><td>Фаза</td><td>🚀 READY FOR DEPLOY</td><td><code>ACTIVE</code></td><td class="n">1</td><td>до выкатки фаза не закрыта</td></tr>
+<tr><td>Фаза</td><td>🚫 CANCELLED</td><td>добавить фазе <code>CANCELLED</code> «Отменена»</td><td class="n">1</td><td>«вынесена» — другое: работа переехала, а не снята</td></tr>
+<tr><td>Тип задачи</td><td>bug</td><td><code>DEV</code></td><td class="n">3</td><td>ошибка — повод работы, а не её вид</td></tr>
+<tr><td>Тип задачи</td><td>data</td><td><code>OPS</code></td><td class="n">7</td><td>правка данных; если нужен отдельный вид — добавить DATA</td></tr></table></div>
+
+<h2>В. Пустые — что поставить</h2>
+<div class="wrap"><table><tr><th>Тип</th><th>Пусто</th><th>Предлагаю</th><th>Почему</th></tr><tr><td>Спека · статус</td><td class="n">413 из 483</td><td><code>PROPOSED</code></td><td>первый статус справочника — ваше правило от 16.11 для записей без статуса</td></tr>
+<tr><td>Веха · статус</td><td class="n">38 из 46</td><td><code>UPCOMING</code>; с прошедшей датой — <code>MISSED</code> или <code>REACHED</code> по строкам на экране</td><td>первый статус; прошедшие вехи покажу списком</td></tr>
+<tr><td>Фича · статус</td><td class="n">3 из 88</td><td><code>PROPOSED</code></td><td>первый статус</td></tr>
+<tr><td>Приоритет задачи</td><td class="n">6604 (все)</td><td>оставить пустым</td><td>приоритет — необязательное поле; у задач им не пользуются</td></tr>
+<tr><td>Приоритет спринта</td><td class="n">421 из 543</td><td>оставить пустым</td><td>то же</td></tr>
+<tr><td>Класс работы задачи</td><td class="n">3238 из 6628</td><td>оставить пустым</td><td>необязательное поле</td></tr></table></div>
+
+<h2>Г. Приоритет — одна шкала (исправлено)</h2>
+<div class="lead"><b>Поправка.</b> В первой версии отчёта здесь стояла шкала P0–P3 — это моя ошибка. В карте переноса уже записано ваше решение: <b>словесная шкала</b>. Привожу по нему.</div>
+<div class="wrap"><table>
+<tr><th>Сейчас</th><th>Станет</th><th>Подписи ru / en / pl</th><th>Спринтов</th><th>Вопросов</th></tr>
+<tr><td>P0, critical, blocker</td><td><code>critical</code></td><td>Критический / Critical / Krytyczny</td><td class="n">16</td><td class="n">19</td></tr>
+<tr><td>P1, high</td><td><code>high</code></td><td>Высокий / High / Wysoki</td><td class="n">66</td><td class="n">167</td></tr>
+<tr><td>P2, normal, medium</td><td><code>normal</code></td><td>Средний / Normal / Średni</td><td class="n">29</td><td class="n">208</td></tr>
+<tr><td>P3, low</td><td><code>low</code></td><td>Низкий / Low / Niski</td><td class="n">11</td><td class="n">31</td></tr>
+</table></div>
+<p class="sub">Справочник приоритета сейчас хранит коды P0–P3 — при переносе его коды становятся словами. Регистр кодов (строчные по вашему прежнему решению или заглавные) — один вопрос на статусы и приоритет сразу.</p>
+
+<h2>Д. Недостающие подписи</h2>
+<p>Подпись — строка «значение — язык», три языка обязательны: русский, английский, польский. Польских нет ни у одного значения — добавляются все. Английские, которых нет сейчас:</p>
+<div class="wrap"><table><tr><th>Справочник</th><th>Код</th><th>Русская (есть)</th><th>Английская (предлагаю)</th></tr><tr><td>Статус решения</td><td>PROPOSED</td><td>Предложено</td><td>Proposed</td></tr>
+<tr><td></td><td>ACCEPTED</td><td>Принято</td><td>Accepted</td></tr>
+<tr><td></td><td>DEFERRED</td><td>Отложено</td><td>Deferred</td></tr>
+<tr><td></td><td>SUPERSEDED</td><td>Вытеснено</td><td>Superseded</td></tr>
+<tr><td>Роль в проекте</td><td>owner</td><td>Владелец проекта</td><td>Project owner</td></tr>
+<tr><td></td><td>architect</td><td>Архитектор</td><td>Architect</td></tr>
+<tr><td></td><td>pm</td><td>Руководитель (PM)</td><td>Project manager</td></tr>
+<tr><td></td><td>developer</td><td>Разработчик</td><td>Developer</td></tr>
+<tr><td></td><td>business-analyst</td><td>Бизнес-аналитик</td><td>Business analyst</td></tr>
+<tr><td></td><td>marketer</td><td>Контент/маркетинг</td><td>Content / marketing</td></tr>
+<tr><td></td><td>tester</td><td>Тестировщик</td><td>Tester</td></tr>
+<tr><td></td><td>reader</td><td>Читатель</td><td>Reader</td></tr>
+<tr><td>Класс работы</td><td>uc</td><td>Use Case — реализует сценарий</td><td>Use case — implements a scenario</td></tr>
+<tr><td></td><td>jtd</td><td>Job to be Done — задача-хелпер</td><td>Job to be done — a helper task</td></tr>
+<tr><td></td><td>enb</td><td>Enabler — расчищает дорогу</td><td>Enabler — clears the way</td></tr>
+<tr><td>Уровень цели</td><td>cloud</td><td>Облако — стратегическая цель</td><td>Cloud — strategic goal</td></tr>
+<tr><td></td><td>kite</td><td>Змей — обзорная цель</td><td>Kite — summary goal</td></tr>
+<tr><td></td><td>sea-level</td><td>Уровень моря — пользовательская цель</td><td>Sea level — user goal</td></tr>
+<tr><td></td><td>subfunction</td><td>Рыба — подфункция</td><td>Fish — subfunction</td></tr>
+<tr><td>Строгость сценария</td><td>casual</td><td>Лёгкий</td><td>Casual</td></tr>
+<tr><td></td><td>fully-dressed</td><td>Полный</td><td>Fully dressed</td></tr>
+<tr><td>Вид работы клиента</td><td>functional</td><td>Функциональная — выполнить задачу</td><td>Functional — get the task done</td></tr>
+<tr><td></td><td>social</td><td>Социальная — как выглядеть в глазах других</td><td>Social — how one looks to others</td></tr>
+<tr><td></td><td>emotional</td><td>Эмоциональная — как себя чувствовать</td><td>Emotional — how one feels</td></tr>
+<tr><td></td><td>supporting</td><td>Вспомогательная — обслуживает основную работу</td><td>Supporting — serves the main job</td></tr>
+<tr><td>Ранг выгоды</td><td>essential</td><td>Обязательная</td><td>Essential</td></tr>
+<tr><td></td><td>expected</td><td>Ожидаемая</td><td>Expected</td></tr>
+<tr><td></td><td>desired</td><td>Желаемая</td><td>Desired</td></tr>
+<tr><td></td><td>unexpected</td><td>Неожиданная</td><td>Unexpected</td></tr>
+<tr><td>Продукт</td><td>DW</td><td>DataWanderes</td><td>Datawanderers — и русскую поправить: в ней опечатка</td></tr>
+<tr><td></td><td>HARPA, FREYJA, BOKVIT</td><td>как код</td><td>как код</td></tr></table></div>
+<p class="sub">Значки (🔴, ⚙, ☁) сейчас вписаны в русские подписи этих справочников — по правилу они уходят в поле значка. «Настройки приложения» — не справочник значений, подписи ему не нужны; тестовую строку «ффф» предлагаю удалить.</p>
+
+<h2>Чего это стоит клиентам</h2>
+<ol>
+<li>Коды статусов в ответах станут заглавными. Веб, телефон и пилот сейчас сравнивают со строчными — им нужна правка. На время перехода вход принимает оба регистра.</li>
+<li>Меняется схема, поэтому всё идёт только внутри переноса (большая ветка). Текущая версия и её данные не трогаются.</li>
+</ol>
+
+<h2>Что нужно от вас</h2>
+<ol>
+<li>«Да» на правило: одно поле, код заглавными, пустого статуса нет.</li>
+<li>«Да» или правки по таблицам Б, В, Г — можно построчно, на экране «Перенос».</li>
+<li>Английские подписи из таблицы Д: записать в прод сейчас (схему не меняет) или тоже с переносом?</li>
+</ol>
+
+<h2 id="fields">Поля по объектам: что вами не проверено</h2>
+<div class="lead">
+<b>Отметки «проверено владелицей» в модели нет</b> — ни у одного поля. Поэтому непроверенными считаются все 167 полей у 22 объектов. Ниже — полный список и то, что по каждому полю уже подготовлено к вашей проверке.
+</div>
+<div class="grid">
+  <div class="tile"><b>167</b><span>полей всего, проверенных — 0</span></div>
+  <div class="tile"><b>17</b><span>с определением в модели (спринт, задача) — ждут проверки</span></div>
+  <div class="tile"><b>37</b><span>определение написано, но не влито: вы сказали «стоп»</span></div>
+  <div class="tile"><b>113</b><span>определения нет</span></div>
+</div>
+<p class="sub"><span class="chip wrn">жёлтое</span> определение есть, ждёт вашей проверки · <span class="chip inf">синее</span> определение написано, лежит невлитым · <span class="chip dng">красное</span> определения нет · ▾ значение из справочника</p>
+<div class="wrap"><table>
+<tr><th>Объект</th><th>Полей</th><th>С определением</th><th>Поля</th></tr>
+<tr><td><b>Спринт</b></td><td class="n">12</td><td class="n">8</td><td style="line-height:2"><span class="chip wrn">Название</span> <span class="chip wrn">Статус ▾</span> <span class="chip wrn">Приоритет ▾</span> <span class="chip dng">Проекты</span> <span class="chip dng">Релизы</span> <span class="chip wrn">Создан</span> <span class="chip dng">Вехи</span> <span class="chip wrn">Начало по плану</span> <span class="chip wrn">Конец по плану</span> <span class="chip wrn">Не требует релиза</span> <span class="chip wrn">Трек</span> <span class="chip dng">Компоненты</span></td></tr>
+<tr><td><b>Задача</b></td><td class="n">17</td><td class="n">9</td><td style="line-height:2"><span class="chip wrn">Название</span> <span class="chip wrn">Статус ▾</span> <span class="chip dng">Код</span> <span class="chip dng">Спринт</span> <span class="chip dng">Фаза</span> <span class="chip dng">Компоненты</span> <span class="chip dng">Проекты</span> <span class="chip wrn">Автор</span> <span class="chip wrn">Исполнитель</span> <span class="chip wrn">Принимающий</span> <span class="chip wrn">Оценка, чел.-дн</span> <span class="chip wrn">Факт, чел.-дн</span> <span class="chip wrn">Тип задачи ▾</span> <span class="chip wrn">Класс работы ▾</span> <span class="chip dng">Сценарий (UC)</span> <span class="chip dng">PR</span> <span class="chip dng">Файлы</span></td></tr>
+<tr><td><b>ADR</b></td><td class="n">7</td><td class="n">0</td><td style="line-height:2"><span class="chip inf">Название</span> <span class="chip inf">Статус ▾</span> <span class="chip inf">Дата</span> <span class="chip inf">Компоненты</span> <span class="chip inf">Проекты</span> <span class="chip inf">Теги</span> <span class="chip inf">Файл</span></td></tr>
+<tr><td><b>Спека</b></td><td class="n">7</td><td class="n">0</td><td style="line-height:2"><span class="chip inf">Название</span> <span class="chip inf">Статус ▾</span> <span class="chip inf">Версия</span> <span class="chip inf">Кратко</span> <span class="chip inf">Компонент</span> <span class="chip inf">Проекты</span> <span class="chip inf">Файл</span></td></tr>
+<tr><td><b>Документ</b></td><td class="n">7</td><td class="n">0</td><td style="line-height:2"><span class="chip inf">Название</span> <span class="chip inf">Вид</span> <span class="chip inf">Компонент</span> <span class="chip inf">Проекты</span> <span class="chip inf">Родительский документ</span> <span class="chip inf">Спринты</span> <span class="chip inf">Файл</span></td></tr>
+<tr><td><b>Решение</b></td><td class="n">8</td><td class="n">0</td><td style="line-height:2"><span class="chip inf">Название</span> <span class="chip inf">Статус ▾</span> <span class="chip inf">Код</span> <span class="chip inf">Дата</span> <span class="chip inf">ADR</span> <span class="chip inf">Компоненты</span> <span class="chip inf">Проекты</span> <span class="chip inf">Теги</span></td></tr>
+<tr><td><b>Вопрос</b></td><td class="n">11</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Статус</span> <span class="chip dng">Код</span> <span class="chip dng">Приоритет ▾</span> <span class="chip dng">Срок</span> <span class="chip dng">Ответственный</span> <span class="chip dng">Поднял</span> <span class="chip dng">Открыт</span> <span class="chip dng">Закрыт</span> <span class="chip dng">Компоненты</span> <span class="chip dng">Проекты</span></td></tr>
+<tr><td><b>Веха</b></td><td class="n">8</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Код</span> <span class="chip dng">Неделя</span> <span class="chip dng">Срок</span> <span class="chip dng">Приоритет ▾</span> <span class="chip dng">Продукты</span> <span class="chip dng">Проекты</span> <span class="chip dng">Компоненты</span></td></tr>
+<tr><td><b>Релиз</b></td><td class="n">8</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Тег</span> <span class="chip dng">Вид</span> <span class="chip dng">Дата</span> <span class="chip dng">Текущий</span> <span class="chip dng">Неделя</span> <span class="chip dng">Проекты</span> <span class="chip dng">Компоненты</span></td></tr>
+<tr><td><b>Компонент</b></td><td class="n">13</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Код</span> <span class="chip dng">Область</span> <span class="chip dng">Родитель</span> <span class="chip dng">Владелец</span> <span class="chip dng">Команда</span> <span class="chip dng">Иконка</span> <span class="chip dng">Подкомпоненты</span> <span class="chip dng">Технологии</span> <span class="chip dng">ADR</span> <span class="chip dng">Спеки</span> <span class="chip dng">Проекты</span> <span class="chip dng">Продукты</span></td></tr>
+<tr><td><b>Технология</b></td><td class="n">5</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Код</span> <span class="chip dng">Версия</span> <span class="chip dng">Проверено</span> <span class="chip dng">Компонент</span></td></tr>
+<tr><td><b>Фича</b></td><td class="n">13</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Статус</span> <span class="chip dng">Код</span> <span class="chip dng">Уровень цели ▾</span> <span class="chip dng">Оформление</span> <span class="chip dng">Приоритет</span> <span class="chip dng">Создан</span> <span class="chip dng">Выпущен</span> <span class="chip dng">Родитель</span> <span class="chip dng">Сценарии</span> <span class="chip dng">Компоненты</span> <span class="chip dng">Проекты</span> <span class="chip dng">Задачи</span></td></tr>
+<tr><td><b>Продукт</b></td><td class="n">11</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Код</span> <span class="chip dng">Цвет</span> <span class="chip dng">Название (en)</span> <span class="chip dng">Иконка</span> <span class="chip dng">Порядок</span> <span class="chip dng">Вид</span> <span class="chip dng">Активен</span> <span class="chip dng">Родитель</span> <span class="chip dng">Проекты</span> <span class="chip dng">Компоненты</span></td></tr>
+<tr><td><b>Человек</b></td><td class="n">4</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Имя</span> <span class="chip dng">Проекты</span> <span class="chip dng">Логин</span> <span class="chip dng">Аватар</span></td></tr>
+<tr><td><b>Агент</b></td><td class="n">6</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Имя</span> <span class="chip dng">Учётка</span> <span class="chip dng">Профиль</span> <span class="chip dng">Оболочка</span> <span class="chip dng">Владелец</span> <span class="chip dng">Проекты</span></td></tr>
+<tr><td><b>Роль продукта</b></td><td class="n">3</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Вид роли</span> <span class="chip dng">Проекты</span></td></tr>
+<tr><td><b>Боль</b></td><td class="n">3</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Острота</span> <span class="chip dng">Создана</span></td></tr>
+<tr><td><b>Выгода</b></td><td class="n">3</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Ранг</span> <span class="chip dng">Создана</span></td></tr>
+<tr><td><b>Работа</b></td><td class="n">4</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Вид работы</span> <span class="chip dng">Важность</span> <span class="chip dng">Создана</span></td></tr>
+<tr><td><b>Ранбук</b></td><td class="n">4</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Область</span> <span class="chip dng">Создан</span> <span class="chip dng">Проекты</span></td></tr>
+<tr><td><b>Гейт качества</b></td><td class="n">9</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Состояние ▾</span> <span class="chip dng">Название</span> <span class="chip dng">Итог последнего прогона</span> <span class="chip dng">Проект-владелец</span> <span class="chip dng">Компоненты</span> <span class="chip dng">Спринт</span> <span class="chip dng">Создан</span> <span class="chip dng">Выведен из работы</span> <span class="chip dng">Причина вывода из работы</span></td></tr>
+<tr><td><b>Проект</b></td><td class="n">4</td><td class="n">0</td><td style="line-height:2"><span class="chip dng">Название</span> <span class="chip dng">Код</span> <span class="chip dng">Основная ветка</span> <span class="chip dng">Приватный</span></td></tr>
+</table></div>
+<p><b>Предложение.</b> Завести у поля отметку «проверено: кем и когда» и ставить её на экране модели. Тогда этот список станет счётчиком в админке, а не отчётом. Отметка — настройка модели, схему базы не меняет.</p>
+
+<footer>Источник: прод-база, запросы на чтение, скрипт <code>C:\AIDA\_audit_scripts\mig\unif-status.cjs</code>. Счёт статусов — по открытым версиям записей.</footer>
+</main>
+</body>
+</html>

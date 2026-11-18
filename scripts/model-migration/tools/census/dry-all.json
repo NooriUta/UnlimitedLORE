@@ -1,0 +1,1578 @@
+{
+ "source": "migration_src_2026_11_15",
+ "types": {
+  "KnowSprint": {
+   "records": 542,
+   "outFields": {
+    "sprint_id": 542,
+    "title": 542,
+    "created_at": 368,
+    "updated_at": 201,
+    "effort_days": 47,
+    "version": 2,
+    "goal": 1,
+    "no_release_required": 4,
+    "unplanned_intentional": 1
+   },
+   "toVersion": {
+    "priority": 233,
+    "context_md": 372,
+    "priority_note": 12,
+    "outcome_md": 255
+   },
+   "dropped": {
+    "status_raw": 469,
+    "plan_id": 67,
+    "branch_ref": 36
+   },
+   "held": {
+    "pr_refs": 3
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowSprintHist": {
+   "records": 2148,
+   "outFields": {
+    "valid_from": 2147,
+    "valid_to": 1606,
+    "content_hash": 2148,
+    "source_commit": 340,
+    "status": 2131,
+    "status_note": 192,
+    "priority": 486,
+    "outcome_md": 281,
+    "state_uid": 2148,
+    "note_md": 11,
+    "src": 12,
+    "context_md": 214,
+    "planned_start_date": 773,
+    "planned_end_date": 767,
+    "track_id": 527,
+    "status_known_from": 56,
+    "changed_by": 85,
+    "changed_by_kind": 85,
+    "block_reason": 1,
+    "version_kind": 1
+   },
+   "toVersion": {},
+   "dropped": {
+    "sprint_id": 3,
+    "planned_milestone_id": 528,
+    "status_category": 55
+   },
+   "held": {
+    "pr_refs": 405
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "BACKLOG": 20,
+    "TODO": 122,
+    "DESIGN": 34,
+    "ACTIVE": 391,
+    "DONE": 946,
+    "PLANNED": 406,
+    "WAITING": 7,
+    "PARTIAL": 97,
+    "CANCELLED": 16,
+    "READY_FOR_DEPLOY": 66,
+    "BLOCKED": 26
+   }
+  },
+  "KnowPhase": {
+   "records": 254,
+   "outFields": {
+    "phase_uid": 254,
+    "phase_id": 254,
+    "title": 253,
+    "order_index": 254,
+    "src": 229
+   },
+   "toVersion": {},
+   "dropped": {
+    "status_raw": 53
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowPhaseHist": {
+   "records": 356,
+   "outFields": {
+    "valid_from": 356,
+    "valid_to": 99,
+    "content_hash": 55,
+    "source_commit": 55,
+    "status": 356,
+    "note_md": 3,
+    "state_uid": 301,
+    "status_note": 10,
+    "changed_by": 19,
+    "changed_by_kind": 19,
+    "status_known_from": 3
+   },
+   "toVersion": {},
+   "dropped": {
+    "status_category": 3
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 27,
+   "statusCodes": {
+    "(без кода)": 27,
+    "PLANNED": 257,
+    "DONE": 39,
+    "ACTIVE": 32,
+    "CANCELLED": 1
+   }
+  },
+  "KnowTask": {
+   "records": 6545,
+   "outFields": {
+    "task_uid": 6545,
+    "task_id": 6542,
+    "title": 6545,
+    "order_index": 6529,
+    "task_type": 6544,
+    "updated_at": 3025,
+    "work_class": 3311,
+    "src": 6228,
+    "priority": 1,
+    "priority_note": 1,
+    "summary_md": 1,
+    "bookkeeping": 809,
+    "actual_days": 36
+   },
+   "toVersion": {
+    "effort_days": 4728,
+    "note_md": 5662
+   },
+   "dropped": {
+    "status_raw": 4864,
+    "sprint_id": 4
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowTaskHist": {
+   "records": 15940,
+   "outFields": {
+    "valid_from": 15940,
+    "valid_to": 9419,
+    "content_hash": 15283,
+    "source_commit": 470,
+    "status": 15832,
+    "note_md": 13717,
+    "state_uid": 15940,
+    "effort_days": 9570,
+    "status_note": 21,
+    "src": 329,
+    "title": 1,
+    "valid_from_source": 14,
+    "status_known_from": 1822,
+    "changed_by": 2353,
+    "changed_by_kind": 2353,
+    "status_reason": 130,
+    "version_kind": 203,
+    "evidence_type": 181,
+    "evidence_ref": 181,
+    "waiting_for": 7,
+    "stage": 2
+   },
+   "toVersion": {},
+   "dropped": {
+    "hist_for": 996,
+    "task_id": 3,
+    "sprint_id": 3,
+    "status_category": 1697
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "TODO": 443,
+    "PARTIAL": 801,
+    "REVIEW": 7,
+    "DONE": 5606,
+    "PLANNED": 5412,
+    "CANCELLED": 528,
+    "ACTIVE": 1096,
+    "WAITING": 15,
+    "BLOCKED": 186,
+    "READY_FOR_DEPLOY": 1416,
+    "BACKLOG": 55,
+    "DESIGN": 16,
+    "UAT": 251
+   }
+  },
+  "BragiAsset": {
+   "records": 11,
+   "outFields": {
+    "asset_id": 11,
+    "asset_type": 11,
+    "file_url": 11,
+    "alt": 3,
+    "size_bytes": 4
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiCampaign": {
+   "records": 1,
+   "outFields": {
+    "campaign_id": 1,
+    "utm_source": 1,
+    "utm_medium": 1,
+    "utm_campaign": 1,
+    "target_url": 1,
+    "period": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiChannel": {
+   "records": 5,
+   "outFields": {
+    "channel_id": 5,
+    "channel_type": 5,
+    "url_handle": 5,
+    "funnel_role": 5,
+    "rules_md": 5
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiCompetitor": {
+   "records": 5,
+   "outFields": {
+    "competitor_id": 5,
+    "name": 5
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiInsight": {
+   "records": 30,
+   "outFields": {
+    "insight_id": 30,
+    "insight_date": 30,
+    "statement_md": 30,
+    "evidence_ref": 22
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiIntegration": {
+   "records": 7,
+   "outFields": {
+    "integration_id": 7,
+    "service": 7,
+    "purpose": 7,
+    "status": 7,
+    "secret_ref": 7,
+    "last_called_at": 3,
+    "scope": 4,
+    "endpoint": 2
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "needs_admin": 1,
+    "active": 5,
+    "planned": 1
+   }
+  },
+  "BragiKeyword": {
+   "records": 8,
+   "outFields": {
+    "keyword_id": 8,
+    "phrase": 8,
+    "cluster": 8,
+    "freq_exact": 7,
+    "intent": 8,
+    "source": 8,
+    "freq_broad": 3,
+    "region_engine": 7,
+    "measured_at": 7
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiPage": {
+   "records": 6,
+   "outFields": {
+    "page_id": 6,
+    "url": 6,
+    "page_type": 6,
+    "title": 6
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiPublication": {
+   "records": 8,
+   "outFields": {
+    "publication_id": 8,
+    "title": 8,
+    "topic": 8,
+    "main_text_md": 8,
+    "type": 8,
+    "status_general": 8,
+    "source_file_path": 1,
+    "annotation_md": 1,
+    "todo_md": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiRubric": {
+   "records": 9,
+   "outFields": {
+    "rubric_id": 9,
+    "name": 9,
+    "order_index": 9,
+    "description": 9
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "BragiVariant": {
+   "records": 14,
+   "outFields": {
+    "variant_id": 14,
+    "status": 14,
+    "url": 6,
+    "annotation_md": 6,
+    "todo_md": 7,
+    "published_at": 9,
+    "text_md": 6
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ready": 4,
+    "published": 7,
+    "planned": 2,
+    "draft": 1
+   }
+  },
+  "ClRoutineMetric": {
+   "records": 861,
+   "outFields": {
+    "metric_id": 332,
+    "run_id": 332,
+    "routine_name": 861,
+    "run_date": 805,
+    "metric_key": 861,
+    "value": 774,
+    "unit": 861,
+    "target": 852,
+    "status": 861,
+    "source": 527,
+    "note": 6,
+    "model": 195,
+    "not_measured_reason": 18,
+    "skip_reason": 15
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "FAIL": 233,
+    "PASS": 303,
+    "WARN": 194,
+    "SKIP": 130,
+    "INFO": 1
+   }
+  },
+  "ClRoutineOutput": {
+   "records": 18,
+   "outFields": {
+    "routine_name": 18,
+    "run_date": 18,
+    "output_type": 18,
+    "title": 18,
+    "content_md": 18
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "ClRoutineRun": {
+   "records": 164,
+   "outFields": {
+    "run_id": 60,
+    "routine_name": 164,
+    "run_date": 159,
+    "status": 164,
+    "started_at": 56,
+    "finished_at": 58,
+    "flags": 156,
+    "run_ts": 50,
+    "detail_md": 37,
+    "gates_failed_ids": 36,
+    "model": 15,
+    "channel": 13,
+    "source": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "WARN": 87,
+    "PASS": 17,
+    "FAIL": 59,
+    "PARTIAL": 1
+   }
+  },
+  "ClRoutineSprintFlag": {
+   "records": 1503,
+   "outFields": {
+    "run_date": 1503,
+    "sprint_id": 1503,
+    "lore_status": 1503,
+    "git_status": 1503,
+    "flag": 1503,
+    "routine_name": 673
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowADR": {
+   "records": 262,
+   "outFields": {
+    "adr_id": 262,
+    "file_path": 68,
+    "created_at": 262,
+    "name": 254,
+    "status": 262,
+    "context_md": 50,
+    "decision_md": 50,
+    "consequences_md": 42,
+    "updated_at": 194
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 3
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ACCEPTED": 189,
+    "SUPERSEDED": 11,
+    "PROPOSED": 59,
+    "DEFERRED": 2,
+    "DEPRECATED": 1
+   }
+  },
+  "KnowADRHist": {
+   "records": 437,
+   "outFields": {
+    "valid_from": 437,
+    "content_hash": 437,
+    "source_commit": 112,
+    "context_md": 432,
+    "decision_md": 432,
+    "consequences_md": 415,
+    "state_uid": 437,
+    "status": 285,
+    "status_known_from": 283,
+    "status_backfilled": 243,
+    "valid_to": 175,
+    "sprint_id": 94,
+    "adr_id": 1,
+    "file_path": 1,
+    "changed_by": 40,
+    "changed_by_kind": 40
+   },
+   "toVersion": {},
+   "dropped": {
+    "status_category": 283
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ACCEPTED": 193,
+    "PROPOSED": 78,
+    "SUPERSEDED": 11,
+    "DEFERRED": 2,
+    "DEPRECATED": 1
+   }
+  },
+  "KnowActor": {
+   "records": 18,
+   "outFields": {
+    "actor_id": 18,
+    "name": 18,
+    "kind": 18,
+    "client_id": 17,
+    "agent_role": 17,
+    "machine_id": 10,
+    "session_id": 2,
+    "harness": 11,
+    "body_md": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowAgentSession": {
+   "records": 121,
+   "outFields": {
+    "session_id": 121,
+    "last_activity_at": 121,
+    "started_at": 121,
+    "machine_id": 121,
+    "entrypoint": 5,
+    "dialogue_name": 4
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "project": 120
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowAsset": {
+   "records": 3,
+   "outFields": {
+    "asset_key": 3,
+    "entity_type": 3,
+    "entity_id": 3,
+    "mime": 3,
+    "size_bytes": 3,
+    "alt": 3,
+    "created_at": 3
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowCanvas": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowCanvasItem": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowCanvasLink": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowDecision": {
+   "records": 1167,
+   "outFields": {
+    "decision_id": 1167,
+    "title": 1167,
+    "created_at": 1165,
+    "status": 1120,
+    "body_md": 1052,
+    "refs_raw": 599,
+    "updated_at": 622
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "adr_refs": 103,
+    "sprint_refs": 103,
+    "pr_refs": 103,
+    "release_refs": 103,
+    "component_id": 470
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ACCEPTED": 980,
+    "SUPERSEDED": 17,
+    "DEFERRED": 6,
+    "PROPOSED": 117
+   }
+  },
+  "KnowDecisionHist": {
+   "records": 1121,
+   "outFields": {
+    "valid_from": 1121,
+    "content_hash": 7,
+    "source_commit": 7,
+    "status": 1121,
+    "status_known_from": 1121,
+    "status_backfilled": 1034,
+    "state_uid": 1114,
+    "changed_by_kind": 1114,
+    "valid_to": 1,
+    "changed_by": 87
+   },
+   "toVersion": {},
+   "dropped": {
+    "status_category": 1121
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ACCEPTED": 981,
+    "SUPERSEDED": 17,
+    "DEFERRED": 6,
+    "PROPOSED": 117
+   }
+  },
+  "KnowDictEntry": {
+   "records": 151,
+   "outFields": {
+    "dict_type": 151,
+    "code": 151,
+    "is_active": 151,
+    "is_extensible": 145,
+    "label_ru": 151,
+    "label_en": 112,
+    "color": 131,
+    "icon": 88,
+    "sort_order": 148
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowDictEntryHist": {
+   "records": 23,
+   "outFields": {
+    "dict_type": 23,
+    "code": 23,
+    "state_uid": 23,
+    "valid_from": 23,
+    "label_ru": 23,
+    "color": 13,
+    "sort_order": 21,
+    "is_active": 23,
+    "is_extensible": 23,
+    "valid_to": 1,
+    "label_en": 9,
+    "icon": 8,
+    "changed_by": 10,
+    "changed_by_kind": 10
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowDoc": {
+   "records": 458,
+   "outFields": {
+    "doc_id": 458,
+    "title": 458,
+    "kind": 457,
+    "file_path": 210,
+    "content_md_en": 96,
+    "content_md_ru": 418,
+    "content_md_ru_sha256": 418,
+    "content_md_ru_bytes": 418,
+    "content_md_en_sha256": 96,
+    "content_md_en_bytes": 96,
+    "content_html": 4,
+    "sort_order": 205,
+    "content_html_sha256": 4,
+    "content_html_bytes": 4
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 122
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowDocHist": {
+   "records": 358,
+   "outFields": {
+    "doc_id": 358,
+    "state_uid": 358,
+    "valid_from": 358,
+    "content_md": 358,
+    "changed_by": 358,
+    "changed_by_kind": 358,
+    "content_hash": 358,
+    "valid_to": 75
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowFile": {
+   "records": 71,
+   "outFields": {
+    "file_path": 71,
+    "summary_md": 67
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "project": 71
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowFinding": {
+   "records": 31,
+   "outFields": {
+    "finding_id": 31,
+    "type": 31,
+    "source_sprint": 25,
+    "external_ref": 24,
+    "summary": 3,
+    "verified": 7,
+    "summary_md": 7
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowFindingHist": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowGain": {
+   "records": 25,
+   "outFields": {
+    "gain_id": 25,
+    "title": 25,
+    "metric_md": 25,
+    "created_at": 25,
+    "rank": 25,
+    "body_md": 23
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowGitProject": {
+   "records": 28,
+   "outFields": {
+    "slug": 28,
+    "name": 28,
+    "description": 5,
+    "is_private": 5,
+    "hosts": 24,
+    "default_branch": 23,
+    "full_name": 2,
+    "repo_url": 2
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowJob": {
+   "records": 14,
+   "outFields": {
+    "job_id": 14,
+    "title": 14,
+    "body_md": 14,
+    "kind": 14,
+    "importance": 14,
+    "created_at": 14
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowMachine": {
+   "records": 1,
+   "outFields": {
+    "machine_id": 1,
+    "last_seen_at": 1,
+    "first_seen_at": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowMilestone": {
+   "records": 46,
+   "outFields": {
+    "milestone_id": 46,
+    "label": 46,
+    "week": 8,
+    "date_display": 46,
+    "priority": 39,
+    "updated_at": 6
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowMilestoneHist": {
+   "records": 46,
+   "outFields": {
+    "valid_from": 46,
+    "content_hash": 46,
+    "source_commit": 8,
+    "goal_md": 46,
+    "state_uid": 46,
+    "status": 8,
+    "changed_by": 6,
+    "changed_by_kind": 6
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "UPCOMING": 8
+   }
+  },
+  "KnowModelConfig": {
+   "records": 1,
+   "outFields": {
+    "config_id": 1,
+    "format": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowModelConfigHist": {
+   "records": 4,
+   "outFields": {
+    "state_uid": 4,
+    "valid_from": 4,
+    "content": 4,
+    "content_hash": 4,
+    "reason": 4,
+    "changed_by": 4,
+    "changed_by_kind": 4,
+    "valid_to": 3
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowPR": {
+   "records": 1970,
+   "outFields": {
+    "pr_id": 320,
+    "pr_number": 1970,
+    "title": 912,
+    "merged_at": 743,
+    "release_id": 319,
+    "url": 852,
+    "pr_uid": 1970,
+    "repo": 32,
+    "body_md": 4,
+    "base_ref": 440,
+    "head_ref": 440,
+    "pr_state": 4
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "git_project": 1970
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowPain": {
+   "records": 38,
+   "outFields": {
+    "pain_id": 38,
+    "title": 38,
+    "severity": 38,
+    "created_at": 38,
+    "body_md": 38
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowProjectActor": {
+   "records": 15,
+   "outFields": {
+    "actor_id": 15,
+    "name": 15,
+    "kind": 15,
+    "body_md": 15
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowProjectRoleEvent": {
+   "records": 87,
+   "outFields": {
+    "event_uid": 87,
+    "kc_sub": 87,
+    "action": 87,
+    "at": 87,
+    "role": 84,
+    "by_role": 87,
+    "role_before": 1,
+    "batch_id": 3
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "project": 87
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowQuestion": {
+   "records": 464,
+   "outFields": {
+    "question_id": 464,
+    "title": 464,
+    "status": 464,
+    "body_md": 464,
+    "closed_date": 255,
+    "opened_date": 464,
+    "updated_at": 284,
+    "priority": 425,
+    "due_date": 11,
+    "trigger": 25,
+    "owner": 343,
+    "raised_by": 413
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 215
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "CLOSED": 255,
+    "DEFERRED": 19,
+    "OPEN": 178,
+    "DROPPED": 12
+   }
+  },
+  "KnowRelease": {
+   "records": 575,
+   "outFields": {
+    "release_id": 575,
+    "version": 92,
+    "git_tag": 554,
+    "release_date": 569,
+    "is_current": 575,
+    "description_md": 571,
+    "release_uid": 575,
+    "release_name": 66,
+    "week": 522,
+    "updated_at": 384,
+    "type": 528,
+    "title": 2,
+    "released_at": 55
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "git_project": 575
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowReleaseHist": {
+   "records": 981,
+   "outFields": {
+    "valid_from": 981,
+    "content_hash": 74,
+    "source_commit": 74,
+    "is_current": 74,
+    "description_md": 465,
+    "state_uid": 981,
+    "valid_to": 395,
+    "changed_by": 450,
+    "changed_by_kind": 450
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowRunbook": {
+   "records": 57,
+   "outFields": {
+    "runbook_id": 57,
+    "name": 57,
+    "area": 57,
+    "created_at": 57
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowRunbookHist": {
+   "records": 57,
+   "outFields": {
+    "state_uid": 57,
+    "valid_from": 57,
+    "content_md": 57,
+    "content_hash": 57,
+    "changed_by": 3,
+    "changed_by_kind": 3
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowSavedView": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowSpec": {
+   "records": 481,
+   "outFields": {
+    "spec_id": 481,
+    "file_path": 215,
+    "title": 475,
+    "version": 335,
+    "content_md": 435,
+    "updated_at": 275,
+    "status": 14
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 92
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "DEPRECATED": 1,
+    "PROPOSED": 10,
+    "ACCEPTED": 3
+   }
+  },
+  "KnowSpecHist": {
+   "records": 708,
+   "outFields": {
+    "valid_from": 708,
+    "valid_to": 233,
+    "content_hash": 708,
+    "source_commit": 164,
+    "version": 601,
+    "summary": 532,
+    "content_md": 706,
+    "state_uid": 708,
+    "spec_id": 646,
+    "status": 101,
+    "status_known_from": 76,
+    "status_backfilled": 52,
+    "changed_by": 34,
+    "changed_by_kind": 34
+   },
+   "toVersion": {},
+   "dropped": {
+    "status_raw": 76,
+    "status_category": 76
+   },
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ACCEPTED": 29,
+    "PROPOSED": 71,
+    "DEPRECATED": 1
+   }
+  },
+  "KnowTag": {
+   "records": 1075,
+   "outFields": {
+    "tag_id": 1075
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUseCase": {
+   "records": 88,
+   "outFields": {
+    "uc_id": 88,
+    "title": 88,
+    "scenario_md": 79,
+    "acceptance_md": 76,
+    "status": 85,
+    "feature_id": 3,
+    "created_at": 88,
+    "goal_level": 88,
+    "rigor": 79,
+    "parent_uc_id": 55,
+    "body_md": 18,
+    "context_md": 18,
+    "shipped_at": 41,
+    "priority": 68,
+    "updated_at": 18
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 17
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "PROPOSED": 33,
+    "ACTIVE": 9,
+    "SHIPPED": 37,
+    "IN_REWORK": 6
+   }
+  },
+  "KnowUser": {
+   "records": 9,
+   "outFields": {
+    "kc_sub": 9,
+    "display_name": 9
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUserDraft": {
+   "records": 3,
+   "outFields": {
+    "owner_sub": 3,
+    "ref_type": 3,
+    "ref_id": 3,
+    "field": 3,
+    "body_md": 3,
+    "base_record_version": 3,
+    "saved_at": 3
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUserFavorite": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUserHabit": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUserMemoryPref": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUserRecent": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "KnowUserSettings": {
+   "records": 2,
+   "outFields": {
+    "owner_sub": 2,
+    "settings_json": 2,
+    "row_version": 2,
+    "updated_at": 2
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "LoreComponent": {
+   "records": 110,
+   "outFields": {
+    "full_name": 106,
+    "area": 104,
+    "parent_id": 93,
+    "game_icon": 107,
+    "team": 24,
+    "children": 84,
+    "tech": 84,
+    "owner": 13,
+    "updated_at": 10
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 110,
+    "project": 39
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "LoreNewsReadMark": {
+   "records": 1,
+   "outFields": {
+    "mark_id": 1,
+    "mark_at": 1,
+    "updated_at": 1,
+    "updated_by": 1
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "LoreRefDismissal": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "LoreTechnology": {
+   "records": 13,
+   "outFields": {
+    "tech_id": 13,
+    "name": 13,
+    "category": 13
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "QGJobTask": {
+   "records": 85,
+   "outFields": {
+    "job_id": 85,
+    "qg_id": 85,
+    "inv_id": 64,
+    "run_date": 85,
+    "severity": 85,
+    "status": 85,
+    "note_md": 85
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "open": 57,
+    "resolved": 28
+   }
+  },
+  "QGMetric": {
+   "records": 0,
+   "outFields": {},
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {}
+  },
+  "QGRecommendation": {
+   "records": 14,
+   "outFields": {
+    "rec_id": 14,
+    "job_id": 14,
+    "title": 14,
+    "body_md": 13,
+    "status": 14,
+    "priority": 13,
+    "severity": 13,
+    "effort_days": 13,
+    "tags": 12,
+    "qg_id": 13,
+    "inv_id": 13,
+    "fix_cmd": 11,
+    "how_to_verify": 11
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {},
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "promoted": 9,
+    "pending": 5
+   }
+  },
+  "QualityGate": {
+   "records": 25,
+   "outFields": {
+    "qg_id": 25,
+    "name": 25,
+    "description": 9,
+    "status": 24,
+    "content_md": 24,
+    "sprint_id": 5,
+    "last_run_status": 15,
+    "routine_name": 15
+   },
+   "toVersion": {},
+   "dropped": {},
+   "held": {
+    "component_id": 2
+   },
+   "unknown": {},
+   "rejects": {},
+   "titleFallback": 0,
+   "statusCodes": {
+    "ACTIVE": 24
+   }
+  }
+ }
+}

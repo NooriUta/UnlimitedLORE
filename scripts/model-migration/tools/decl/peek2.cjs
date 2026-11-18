@@ -1,0 +1,11 @@
+const fs=require("fs");const J=f=>JSON.parse(fs.readFileSync(f,"utf8"));
+const m=J("C:/AIDA/UnlimitedLORE/.claude/worktrees/agent-a5de572dc8a21cf30/shared/model/lore-model.json");
+const t=m.types.find(x=>x.type=="sprint"||x.id=="sprint"||x.key=="sprint")||m.types[0];
+console.log("TYPE KEYS",Object.keys(t));
+console.log(JSON.stringify(t,null,1).slice(0,5000));
+console.log("PASSPORT.sprint",JSON.stringify(m.passport.sprint,null,1).slice(0,2500));
+console.log("TASK type keys", JSON.stringify(m.types.find(x=>JSON.stringify(x).includes('"task"')&&(x.type=="task"||x.id=="task"||x.key=="task")),null,0).slice(0,1500));
+console.log("child_only",JSON.stringify(m.child_only),"read_only",JSON.stringify(m.read_only));
+console.log("time.sprint",JSON.stringify(m.time.sprint),"graph.sprint",JSON.stringify(m.graph.sprint),"computed.sprint",JSON.stringify(m.computed.sprint).slice(0,600));
+console.log("audience.sprint",JSON.stringify(m.audience.sprint).slice(0,600));
+console.log("display_overrides",JSON.stringify(m.display_overrides).slice(0,600));
