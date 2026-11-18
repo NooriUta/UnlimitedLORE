@@ -42,6 +42,41 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void коды_статусов_заглавные_сравнения_в_SQL_и_параметры_тоже() {
+        // слово владелицы 16.11.2026: «статусная модель uppercase остальные в lower»; question_hygiene был пуст
+        assertEquals("SELECT FROM KnowQuestion WHERE status IN ['OPEN', 'DEFERRED']",
+            ModelSchemaAdapter.rewriteSql("SELECT FROM KnowQuestion WHERE status IN ['open', 'deferred']"));
+        assertEquals("SELECT FROM KnowADR WHERE status = 'ACCEPTED' AND status <> 'SUPERSEDED'",
+            ModelSchemaAdapter.rewriteSql("SELECT FROM KnowADR WHERE status = 'accepted' AND status <> 'superseded'"));
+        assertEquals("SELECT FROM KnowADR WHERE title = 'accepted'",
+            ModelSchemaAdapter.rewriteSql("SELECT FROM KnowADR WHERE title = 'accepted'"), "не поле статуса — не трогаем");
+        assertEquals("OPEN", ModelSchemaAdapter.rewriteParams("UPDATE KnowQuestion SET status = :st", new HashMap<>(Map.of("st", "open"))).get("st"));
+        // статус-текст (QG, BRAGI, рутины) в новой схеме не справочник — регистр прежний: qg_violations опустел бы
+        assertEquals("SELECT FROM QGRecommendation WHERE status = 'pending'",
+            ModelSchemaAdapter.rewriteSql("SELECT FROM QGRecommendation WHERE status = 'pending'"));
+        assertEquals("pending", ModelSchemaAdapter.rewriteParams("UPDATE QGJobTask SET status = :st", new HashMap<>(Map.of("st", "pending"))).get("st"));
+    }
+
+    @Test
+    void ответ_без_status_raw_тоже_разбирается() {
+        String out = ModelSchemaAdapter.adaptJson("{\"result\":[{\"question_id\":\"Q-1\",\"status\":\"DEFERRED\"}]}");
+        org.junit.jupiter.api.Assertions.assertTrue(out.contains("\"status\":\"deferred\""), out);
+    }
+
+    @Test
+    void в_ответе_статус_не_плана_строчными_как_раньше_версия_плана_заглавными() {
+        Map<String, Object> q = new HashMap<>(Map.of("question_id", "Q-1", "status", "DEFERRED"));
+        Map<String, Object> uc = new HashMap<>(Map.of("uc_id", "UC-1", "status", "ACTIVE"));
+        Map<String, Object> ver = new HashMap<>(Map.of("state_uid", "u", "status", "ACTIVE"));
+        ModelSchemaAdapter.adaptRows(List.of(q, uc, ver));
+        assertEquals("deferred", q.get("status"));
+        assertEquals("active", uc.get("status"));
+        assertEquals(null, uc.get("status_raw"), "у сценария нет строки статуса плана");
+        assertEquals("ACTIVE", ver.get("status"));
+        assertEquals("🔄 IN PROGRESS", ver.get("status_raw"));
+    }
+
+    @Test
     void псевдоним_и_текст_в_кавычках_не_трогаются() {
         String sql = "SELECT first(x) AS status_raw, 'status_raw' AS k FROM KnowTask WHERE note_md LIKE '%status_raw%'";
         assertEquals(sql, ModelSchemaAdapter.rewriteSql(sql));

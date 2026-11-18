@@ -67,7 +67,39 @@ final class ModelSchemaAdapter {
 
     /** SQL под новую схему; текст внутри кавычек остаётся как есть. */
     static String rewriteSql(String sql) {
-        if (sql == null || RENAMES.keySet().stream().noneMatch(sql::contains)) return sql;
+        if (sql == null) return null;
+        return upperStatusLiterals(renameFields(sql));
+    }
+
+    private static final Pattern STATUS_CMP = Pattern.compile("(?<![\\w])(status\\s*(?:=|<>|!=)\\s*)'([a-z][a-z_]*)'");
+    private static final Pattern STATUS_IN = Pattern.compile("(?i)(?<![\\w])(status\\s+(?:NOT\\s+)?IN\\s*\\[)([^\\]]*)(\\])");
+    private static final Pattern LOWER_LIT = Pattern.compile("'([a-z][a-z_]*)'");
+
+    /**
+     * Коды статусов в новой схеме — заглавными (слово владелицы 16.11.2026: «статусная модель uppercase остальные в
+     * lower»): строчный литерал, с которым сравнивается поле status, — заглавными.
+     */
+    /** Типы, у которых status — свободный текст, а не код справочника (schema/all-objects.json, kind=text). */
+    static final java.util.Set<String> TEXT_STATUS_TYPES = java.util.Set.of(
+        "QGRecommendation", "QGJobTask", "ClRoutineRun", "ClRoutineMetric", "BragiIntegration", "BragiVariant");
+    private static final Pattern FROM_TYPE = Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE)\\s+(\\w+)");
+
+    private static boolean touchesTextStatus(String sql) {
+        Matcher m = FROM_TYPE.matcher(sql);
+        while (m.find()) if (TEXT_STATUS_TYPES.contains(m.group(1))) return true;
+        return false;
+    }
+
+    static String upperStatusLiterals(String sql) {
+        if (!sql.contains("status") || touchesTextStatus(sql)) return sql;
+        String s = STATUS_CMP.matcher(sql).replaceAll(m -> Matcher.quoteReplacement(m.group(1) + "'" + m.group(2).toUpperCase(java.util.Locale.ROOT) + "'"));
+        return STATUS_IN.matcher(s).replaceAll(m -> Matcher.quoteReplacement(m.group(1)
+            + LOWER_LIT.matcher(m.group(2)).replaceAll(x -> Matcher.quoteReplacement("'" + x.group(1).toUpperCase(java.util.Locale.ROOT) + "'"))
+            + m.group(3)));
+    }
+
+    private static String renameFields(String sql) {
+        if (RENAMES.keySet().stream().noneMatch(sql::contains)) return sql;
         StringBuilder out = new StringBuilder(sql.length() + 16);
         int i = 0;
         while (i < sql.length()) {
@@ -147,15 +179,26 @@ final class ModelSchemaAdapter {
     private static final Pattern STATUS_ASSIGN = Pattern.compile("(?<![\\w])status_raw\\s*=\\s*:(\\w+)");
 
     /** Запись: параметр, который присваивается полю status_raw, переводится в код справочника. */
+    private static final Pattern STATUS_PARAM = Pattern.compile("(?<![\\w])status\\s*(?:=|<>|!=)\\s*:(\\w+)");
+
     static Map<String, Object> rewriteParams(String sql, Map<String, Object> params) {
-        if (sql == null || params == null || params.isEmpty() || !sql.contains("status_raw")) return params;
-        Matcher m = STATUS_ASSIGN.matcher(sql);
+        if (sql == null || params == null || params.isEmpty() || !sql.contains("status")) return params;
         Map<String, Object> out = null;
+        Matcher m = STATUS_ASSIGN.matcher(sql);
         while (m.find()) {
             String name = m.group(1);
             if (params.get(name) instanceof String s) {
                 if (out == null) out = new java.util.HashMap<>(params);
                 out.put(name, toCode(s));
+            }
+        }
+        // поле status (вопрос, ADR, спека …): строчный код — заглавными, как хранит новая схема
+        Matcher p = STATUS_PARAM.matcher(sql);
+        while (!touchesTextStatus(sql) && p.find()) {
+            String name = p.group(1);
+            if (params.get(name) instanceof String s && s.matches("[a-z][a-z_]*")) {
+                if (out == null) out = new java.util.HashMap<>(params);
+                out.put(name, s.toUpperCase(java.util.Locale.ROOT));
             }
         }
         return out == null ? params : out;
@@ -166,7 +209,7 @@ final class ModelSchemaAdapter {
     /** Ответ ArcadeDB целиком: строки в {@code result} приводятся {@link #adaptRows}; иной ответ — как есть. */
     @SuppressWarnings("unchecked")
     static String adaptJson(String json) {
-        if (json == null || !json.contains("status_raw")) return json;
+        if (json == null || !json.contains("\"status")) return json;
         try {
             Map<String, Object> body = JSON.readValue(json, java.util.LinkedHashMap.class);
             if (!(body.get("result") instanceof List<?> l)) return json;
@@ -180,6 +223,11 @@ final class ModelSchemaAdapter {
     }
 
     /** Ответ: код плана в ключе status_raw → строка старого вида. */
+    /** Строка версии (SCD2): у неё есть ключ версии или начало действия. */
+    private static boolean isVersionRow(Map<String, Object> r) {
+        return r.containsKey("state_uid") || r.containsKey("valid_from");
+    }
+
     static void adaptRows(List<Map<String, Object>> rows) {
         if (rows == null) return;
         for (Map<String, Object> r : rows) {
@@ -188,9 +236,14 @@ final class ModelSchemaAdapter {
             try {
                 if (v instanceof String s && DISPLAY.containsKey(s)) {
                     r.put("status_raw", DISPLAY.get(s));
-                } else if (v == null && !r.containsKey("status_raw") && r.get("status") instanceof String c && DISPLAY.containsKey(c)) {
+                } else if (v == null && !r.containsKey("status_raw") && isVersionRow(r)
+                        && r.get("status") instanceof String c && DISPLAY.containsKey(c)) {
                     // строка версии целиком (SELECT *): статус плана только в status — прежний ключ рядом
                     r.put("status_raw", DISPLAY.get(c));
+                }
+                // статус не плана (вопрос, ADR, сценарий …): клиенты знают его строчным — как до переноса
+                if (!r.containsKey("status_raw") && r.get("status") instanceof String c2 && c2.matches("[A-Z][A-Z_]*")) {
+                    r.put("status", c2.toLowerCase(java.util.Locale.ROOT));
                 }
             } catch (UnsupportedOperationException ignored) { /* неизменяемая строка ответа */ }
         }
