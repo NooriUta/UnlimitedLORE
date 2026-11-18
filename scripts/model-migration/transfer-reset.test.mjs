@@ -45,3 +45,11 @@ test('сверка называет поле расхождения: какое 
   ]);
   assert.equal(fieldDiff({ t: 'a'.repeat(500) }, { t: 'b' })[0].got.length, 120, 'длинное значение обрезается');
 });
+
+test('сверка: дата без времени в поле DATETIME — полночь, как отдаёт база (created_at из date_created у ADR и решений)', async () => {
+  const { asRead } = await import('./transfer.mjs');
+  assert.equal(asRead('2026-04-23', 'DATETIME'), '2026-04-23 00:00:00.000');
+  assert.equal(asRead('2026-04-23T10:11:12.000Z', 'DATETIME'), '2026-04-23 10:11:12.000');
+  assert.equal(asRead('2026-04-23', 'DATE'), '2026-04-23');
+  assert.equal(asRead(5, 'LONG'), 5);
+});

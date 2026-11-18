@@ -44,6 +44,15 @@ export function ddlProperty(T, f, dbType) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f);
   return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType;
 }
+/**
+ * Ожидаемое значение в том виде, в каком его отдаёт база. Момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC). Дата без времени
+ * в поле DATETIME (created_at из date_created у ADR и решений — два поля источника в одно) ложится полночью.
+ */
+export function asRead(v, type) {
+  if (type !== 'DATETIME' || typeof v !== 'string') return v;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v + ' 00:00:00.000';
+  return v.replace('T', ' ').replace(/Z$/, '');
+}
 /** Поля, в которых запись приёмника разошлась с расчётом: имя, что в базе, что ждали (значения до 120 символов). */
 export function fieldDiff(got, want) {
   const cut = v => (typeof v === 'string' && v.length > 120 ? v.slice(0, 120) : v);
@@ -190,7 +199,6 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
 
   // ── 5. Сверка «до и после» ────────────────────────────────────────────────────────────────────────
   // Ожидаемое значение приводится к тому виду, в каком база его отдаёт: момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC).
-  const asRead = (v, type) => (type === 'DATETIME' && typeof v === 'string' ? v.replace('T', ' ').replace(/Z$/, '') : v);
   const canon = o => JSON.stringify(Object.keys(o).sort().map(k => [k, o[k]]));
   const perType = {};
   const verify = { counts: {}, mismatched_records: {}, samples: [], links: null, leftovers: null, digest: {} };

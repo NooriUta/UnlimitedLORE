@@ -12,6 +12,7 @@ const DECISIONS = loadDecisions(); // решения человека из ра�
 import { connect } from './db.mjs';
 import { fingerprint } from './fingerprint.mjs';
 import { applyMap } from './apply-map.mjs';
+import { valueKind } from './value-kind.mjs';
 
 import { MAP, VOCAB, CODE_CASE, RULES } from './resources.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
@@ -29,14 +30,14 @@ export async function dryRun(db, DECISIONS) {
   const bump = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; };
   const report = { source: db.env.MIG_SRC_DB, types: {} };
   for (const T of Object.keys(MAP)) {
-    const t = { records: 0, outFields: {}, toVersion: {}, dropped: {}, held: {}, unknown: {}, rejects: {}, titleFallback: 0, statusCodes: {} };
+    const t = { records: 0, outFields: {}, outKinds: {}, toVersion: {}, dropped: {}, held: {}, unknown: {}, rejects: {}, titleFallback: 0, statusCodes: {} };
     const known = new Set(Object.keys(MAP[T]));
     for await (const rec of db.scan(T)) {
       t.records++;
       const clean = {};
       for (const [f, v] of Object.entries(rec)) { if (f.startsWith('@') || known.has(f)) clean[f] = v; else if (v !== null && v !== '') bump(t.unknown, f); }
       const r = applyMap(T, MAP[T], clean, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]] });
-      for (const f of Object.keys(r.out)) bump(t.outFields, f);
+      for (const [f, v] of Object.entries(r.out)) { bump(t.outFields, f); bump(t.outKinds[f] ||= {}, valueKind(v)); }
       for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
       for (const f of r.dropped) bump(t.dropped, f);
       for (const f of Object.keys(r.held)) bump(t.held, f);

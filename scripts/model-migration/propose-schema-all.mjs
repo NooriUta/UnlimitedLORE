@@ -9,14 +9,26 @@ import { fileURLToPath } from 'node:url';
 
 const KIND_OF = { STRING: 'text', INTEGER: 'number', LONG: 'number', DOUBLE: 'number', FLOAT: 'number', BOOLEAN: 'bool', DATE: 'date', DATETIME: 'datetime', MAP: 'map', LIST: 'list' };
 
-/** Тип нового поля: у преобразования — из правила, у «как есть» — объявленный в схеме прода. */
-export function fieldType(rule, declared) {
+export { valueKind } from './value-kind.mjs';
+
+const BY_KINDS = { integer: { kind: 'number', db_type: 'LONG' }, number: { kind: 'number', db_type: 'DOUBLE' }, boolean: { kind: 'bool', db_type: 'BOOLEAN' }, list: { kind: 'list', db_type: 'LIST' }, map: { kind: 'map', db_type: 'MAP' }, string: { kind: 'text', db_type: 'STRING' } };
+
+/**
+ * Тип нового поля: у преобразования — из правила; у «как есть» — объявленный в схеме прода; не объявленный —
+ * по фактическим значениям (kinds: {вид: сколько}). 18.11.2026, прогон all3: необъявленные числа, да/нет и списки
+ * ложились строкой («4427», «false», «[]») — правило «строкой» потеряло тип.
+ */
+export function fieldType(rule, declared, kinds) {
   if (rule && rule.rule === 'transform') {
     if (rule.how === 'DATE') return { kind: 'date', db_type: 'DATE' };
     if (rule.how === 'DATETIME') return { kind: 'datetime', db_type: 'DATETIME' };
     if (['status', 'priority', 'harness'].includes(rule.how)) return { kind: 'enum', db_type: 'STRING' };
   }
   if (declared && KIND_OF[declared]) return { kind: KIND_OF[declared], db_type: declared };
+  const seen = Object.keys(kinds || {}).filter(k => kinds[k] > 0);
+  const k = seen.length === 1 ? seen[0] : seen.length === 2 && seen.includes('integer') && seen.includes('number') ? 'number' : null;
+  if (k && k !== 'string') return { ...BY_KINDS[k], note: 'в схеме прода не объявлено — тип по значениям' };
+  if (seen.length > 1) return { kind: 'text', db_type: 'STRING', note: 'в схеме прода не объявлено, значения разных типов — строкой' };
   return { kind: 'text', db_type: 'STRING', note: 'в схеме прода не объявлено — строкой' };
 }
 
@@ -41,7 +53,7 @@ function main() {
     for (const [f, n] of Object.entries(t.outFields).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
       const src = sourcesOf(MAP[T], f);
       const rule = src.length ? MAP[T][src[0]] : null;
-      fields[f] = { ...fieldType(rule, src.length ? declared[src[0]] : declared[f]), from: src, filled: n, of: t.records };
+      fields[f] = { ...fieldType(rule, src.length ? declared[src[0]] : declared[f], (t.outKinds || {})[f]), from: src, filled: n, of: t.records };
     }
     if (T.endsWith('Hist')) for (const [f, name] of Object.entries(SERVICE)) if (!fields[f]) fields[f] = { kind: 'text', db_type: 'STRING', name, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
     types[T] = { records: t.records, version_of: T.endsWith('Hist') ? T.slice(0, -4) : null, fields, held: t.held, rejects: Object.fromEntries(Object.entries(t.rejects).map(([k, e]) => [k, e.n ?? e])) };
