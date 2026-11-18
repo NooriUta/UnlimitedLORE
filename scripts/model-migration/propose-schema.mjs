@@ -18,6 +18,7 @@ const DB_TYPE = { date: 'DATE', datetime: 'DATETIME', number: 'DOUBLE', bool: 'B
 
 const types = {};
 for (const [T, t] of Object.entries(report.types)) {
+  if (!MAP[T]) continue; // отчёт пробного расчёта всех объектов: остальные типы — propose-schema-all.mjs
   // откуда пришло новое поле: имя старого поля по карте
   const from = {};
   for (const [f, e] of Object.entries(MAP[T])) {

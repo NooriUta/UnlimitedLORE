@@ -75,6 +75,16 @@
           "of": 542,
           "name": "Не требует релиза"
         },
+        "version": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "version"
+          ],
+          "filled": 2,
+          "of": 542,
+          "name": "Версия"
+        },
         "goal": {
           "kind": "text",
           "db_type": "STRING",
@@ -98,16 +108,13 @@
       "from_record_to_current_version": [
         "priority",
         "context_md",
-        "outcome_md",
-        "priority_note"
+        "priority_note",
+        "outcome_md"
       ],
       "held": {
-        "pr_refs": 3,
-        "version": 2
+        "pr_refs": 3
       },
-      "rejects": {
-        "priority · приоритет вне шкалы": 10
-      }
+      "rejects": {}
     },
     "KnowSprintHist": {
       "records": 2148,
@@ -203,7 +210,7 @@
           "from": [
             "priority"
           ],
-          "filled": 485,
+          "filled": 486,
           "of": 2148,
           "name": "Приоритет"
         },
@@ -326,7 +333,7 @@
           "from": [
             "KnowSprint.priority"
           ],
-          "filled": 9,
+          "filled": 12,
           "of": 2148,
           "note": "приходит с записи в текущую версию"
         },
@@ -350,20 +357,20 @@
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
-        "changed_by_machine": {
+        "changed_by_harness_note": {
           "kind": "text",
           "db_type": "STRING",
-          "name": "Машина правки",
+          "name": "Сверка harness",
           "from": [],
           "filled": 0,
           "of": 2148,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
-        "changed_by_harness_note": {
+        "changed_by_machine": {
           "kind": "text",
           "db_type": "STRING",
-          "name": "Сверка harness",
+          "name": "Машина правки",
           "from": [],
           "filled": 0,
           "of": 2148,
@@ -376,8 +383,7 @@
         "pr_refs": 405
       },
       "rejects": {
-        "status_raw · статус вне справочника": 12,
-        "priority · приоритет вне шкалы": 1
+        "status_raw · статус вне справочника": 12
       }
     },
     "KnowPhase": {
@@ -531,6 +537,26 @@
           "name": "Вид автора правки",
           "service": true
         },
+        "status_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 10,
+          "of": 356,
+          "name": "Статус"
+        },
+        "note_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "note_md"
+          ],
+          "filled": 3,
+          "of": 356,
+          "name": "Заметка (Markdown)"
+        },
         "status_known_from": {
           "kind": "text",
           "db_type": "STRING",
@@ -562,16 +588,6 @@
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
-        "changed_by_machine": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Машина правки",
-          "from": [],
-          "filled": 0,
-          "of": 356,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
         "changed_by_harness_note": {
           "kind": "text",
           "db_type": "STRING",
@@ -581,14 +597,22 @@
           "of": 356,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "from_record_to_current_version": [],
-      "held": {
-        "note_md": 3
-      },
+      "held": {},
       "rejects": {
-        "status_raw · статус вне справочника": 11
+        "status_raw · статус вне справочника": 1
       }
     },
     "KnowTask": {
@@ -696,6 +720,26 @@
           "of": 6545,
           "name": "Факт, чел.-дн"
         },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 1,
+          "of": 6545,
+          "name": "Приоритет"
+        },
+        "priority_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 1,
+          "of": 6545,
+          "name": "Приоритет"
+        },
         "summary_md": {
           "kind": "md",
           "db_type": "STRING",
@@ -711,9 +755,7 @@
         "effort_days",
         "note_md"
       ],
-      "held": {
-        "priority": 1
-      },
+      "held": {},
       "rejects": {}
     },
     "KnowTaskHist": {
@@ -925,6 +967,15 @@
           "of": 15940,
           "name": "Стадия внутри статуса"
         },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 1,
+          "of": 15940
+        },
         "changed_by_session": {
           "kind": "text",
           "db_type": "STRING",
@@ -945,16 +996,6 @@
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
         },
-        "changed_by_machine": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Машина правки",
-          "from": [],
-          "filled": 0,
-          "of": 15940,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
         "changed_by_harness_note": {
           "kind": "text",
           "db_type": "STRING",
@@ -964,15 +1005,22 @@
           "of": 15940,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 15940,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "from_record_to_current_version": [],
-      "held": {
-        "hist_for": 996,
-        "title": 1
-      },
+      "held": {},
       "rejects": {
-        "status_raw · статус вне справочника": 14
+        "status_raw · статус вне справочника": 4
       }
     }
   }

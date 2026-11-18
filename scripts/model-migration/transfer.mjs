@@ -44,6 +44,13 @@ export function ddlProperty(T, f, dbType) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f);
   return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType;
 }
+/** Поля, в которых запись приёмника разошлась с расчётом: имя, что в базе, что ждали (значения до 120 символов). */
+export function fieldDiff(got, want) {
+  const cut = v => (typeof v === 'string' && v.length > 120 ? v.slice(0, 120) : v);
+  return [...new Set([...Object.keys(got), ...Object.keys(want)])].sort()
+    .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
+    .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
+}
 export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, DICT_ENTRY, DICT_LABEL];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
@@ -185,6 +192,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // Ожидаемое значение приводится к тому виду, в каком база его отдаёт: момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC).
   const asRead = (v, type) => (type === 'DATETIME' && typeof v === 'string' ? v.replace('T', ' ').replace(/Z$/, '') : v);
   const canon = o => JSON.stringify(Object.keys(o).sort().map(k => [k, o[k]]));
+  const perType = {};
   const verify = { counts: {}, mismatched_records: {}, samples: [], links: null, leftovers: null, digest: {} };
   for (const T of Object.keys(SCHEMA)) {
     const expected = new Map();
@@ -197,7 +205,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
         n++; const got = {};
         for (const [f, v] of Object.entries(row)) if (!f.startsWith('@') && f !== 'mig_src_rid' && given(v)) got[f] = v;
         const want = expected.get(row.mig_src_rid);
-        if (!want || canon(got) !== canon(want)) { bad++; if (verify.samples.length < 5) verify.samples.push({ T, src: row.mig_src_rid, got: canon(got).slice(0, 300), want: want ? canon(want).slice(0, 300) : 'нет в расчёте' }); }
+        if (!want || canon(got) !== canon(want)) { bad++; if ((perType[T] = (perType[T] || 0) + 1) <= 2) verify.samples.push({ T, src: row.mig_src_rid, diff: want ? fieldDiff(got, want).slice(0, 4) : 'нет в расчёте' }); }
       }
       last = rows[rows.length - 1]['@rid']; if (rows.length < 2000) break;
     }

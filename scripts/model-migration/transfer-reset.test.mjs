@@ -37,3 +37,11 @@ test('новые связи модели сессий — свои типы: п�
   const own = ownTypes();
   for (const t of ['NEW_ON_MACHINE', 'NEW_IN_PROJECT', 'NEW_RUNS_IN', 'NEW_CHANGED_IN']) assert.ok(own.includes(t), t);
 });
+
+test('сверка называет поле расхождения: какое поле, что в базе, что ждали — а не обрезанные 300 символов записи', async () => {
+  const { fieldDiff } = await import('./transfer.mjs');
+  assert.deepEqual(fieldDiff({ a: 1, b: 'x', c: true }, { a: 1, b: 'y', d: 5 }), [
+    { field: 'b', got: 'x', want: 'y' }, { field: 'c', got: true, want: undefined }, { field: 'd', got: undefined, want: 5 },
+  ]);
+  assert.equal(fieldDiff({ t: 'a'.repeat(500) }, { t: 'b' })[0].got.length, 120, 'длинное значение обрезается');
+});
