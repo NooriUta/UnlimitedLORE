@@ -15,7 +15,7 @@ import path from 'node:path';
 import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
-import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml } from './setup.mjs';
+import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml, volvaEmbedEnv } from './setup.mjs';
 import { INSTALL_BUNDLE } from './resources.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
@@ -422,9 +422,12 @@ export async function serve({ port = 2499 } = {}) {
           const env = () => installEnvText(INSTALL_BUNDLE.files['.env.example'], {
             LORE_VERSION: b.version || '', LORE_HTTP_PORT: String(b.port || 4400), LORE_AUTH_ENABLED: auth, LORE_OIDC_ISSUER: b.issuer || '',
             LORE_OIDC_ORIGIN: b.issuer ? new URL(b.issuer).origin : '',
-            ...((ch.components || []).includes('volva') && b.volva ? { LORE_VOLVA_ORIGIN: new URL(b.volva).origin, LORE_VOLVA_EMBED_SITE_URL: b.volva } : {}),
+            // встройка Völva: издатель — origin веба LORE (EMB-L6); без адреса веба — только адреса Völva, ES256 не включится
+            ...((ch.components || []).includes('volva') && b.volva ? (b.web ? volvaEmbedEnv({ web: b.web, volva: b.volva }).lore : { LORE_VOLVA_ORIGIN: new URL(b.volva).origin, LORE_VOLVA_EMBED_SITE_URL: b.volva }) : {}),
           });
-          if (req.url === '/api/setup/env') return json(res, 200, { text: env(), note: 'пароли останутся CHANGE_ME — install.sh сгенерирует их сам; вход ' + (auth === 'true' ? 'через Keycloak' : 'выключен') });
+          const volvaSide = (ch.components || []).includes('volva') && b.volva && b.web ? volvaEmbedEnv({ web: b.web, volva: b.volva }).volva : null;
+          if (req.url === '/api/setup/env') return json(res, 200, { text: env(), note: 'пароли останутся CHANGE_ME — install.sh сгенерирует их сам; вход ' + (auth === 'true' ? 'через Keycloak' : 'выключен')
+            + (volvaSide ? '. На стороне Völva: MB_EMBEDDING_JWT_ISSUERS=' + volvaSide.MB_EMBEDDING_JWT_ISSUERS + ', ключи — ' + volvaSide.jwks : (ch.components || []).includes('volva') ? '. Издатель Völva не задан — впишите «Адрес веба LORE», иначе подпись останется временной HS256' : '') });
           if (req.url === '/api/setup/install-plan') {
             const args = installArgs({ dir: b.dir, version: b.version, port: b.port, dry: true });
             const cmd = 'bash install.sh ' + args.join(' ');
