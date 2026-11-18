@@ -201,7 +201,7 @@ jobs:
       CORS_ORIGINS: http://localhost:4410,http://127.0.0.1:4410,http://192.168.3.131:4410,http://localhost:4412,http://127.0.0.1:4412,http://192.168.3.131:4412,https://preprod.lore.odal.seidrstudio.pro,https://preprod.new.lore.odal.seidrstudio.pro
       LORE_PUBLIC_URL: https://preprod.lore.odal.seidrstudio.pro
       # У v2 свой канонический адрес (оверлей подставляет его lore-app-next).
-      LORE_PUBLIC_URL_V2: https://preprod.new.lore.odal.seidrstudio.pro
+      LORE_PUBLIC_URL_V2: https://preprod.lore.odal.seidrstudio.pro
       LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
       # SPRINT_VIZ_EMBED/EMB-L1: origin Völva для встроенных графиков (frame-src CSP).
       # Назван самой Völva 06.11: site-url стенда, резолв в 192.168.3.131, /api/health 200.
@@ -867,13 +867,19 @@ jobs:
       # PL-04: по ИМЕНИ препрода отдаётся бандл ровно того контейнера, что работает
       # в проекте lore-preprod (а не старого стенда и не чужого маршрута Traefik).
       # Тот же скрипт сверяет прод в релизе — там ожидаемое берётся из образа.
-      - name: Проба бандла v1 по имени препрода
+      # S8-02 (владелица 18.11.2026: «отключить v1 и все перевести на v2», «и на препроде»): основное имя
+      # препрода отдаёт v2; старое имя с new — тоже v2; v1 — только запасной вход по IP :4410.
+      - name: Проба бандла v2 по основному имени препрода
         if: steps.mode.outputs.live == 'true'
-        run: bash .github/scripts/bundle-probe.sh "v1 препрод" container:lore-app https://preprod.lore.odal.seidrstudio.pro/
+        run: bash .github/scripts/bundle-probe.sh "v2 препрод (основное имя)" container:lore-app-next https://preprod.lore.odal.seidrstudio.pro/
 
-      - name: Проба бандла v2 по имени препрода
+      - name: Проба бандла v2 по старому имени с new
         if: steps.mode.outputs.live == 'true'
-        run: bash .github/scripts/bundle-probe.sh "v2 препрод" container:lore-app-next https://preprod.new.lore.odal.seidrstudio.pro/
+        run: bash .github/scripts/bundle-probe.sh "v2 препрод (имя с new)" container:lore-app-next https://preprod.new.lore.odal.seidrstudio.pro/
+
+      - name: Проба бандла v1 — запасной вход по IP
+        if: steps.mode.outputs.live == 'true'
+        run: bash .github/scripts/bundle-probe.sh "v1 препрод (запасной)" container:lore-app http://192.168.3.131:4410/
 
       # PL-04 → PL-05: ПОСЛЕДНИМ, после всех проб — тег unlimitedlore-<сервис>:<sha8>
       # на образы, работающие в lore-preprod (собранное сейчас и не тронутое).

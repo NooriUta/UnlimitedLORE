@@ -97,8 +97,11 @@ say "$PREPROD_YGG: распаковка снимка в $NAME"
 docker exec "$PREPROD_YGG" test -e "$DB_DIR/$NAME" && deny "база $NAME появилась на препроде во время прогона — не трогаю"
 docker cp "$SNAP" "$PREPROD_YGG:/tmp/$NAME.zip" || skip "архив не скопирован в $PREPROD_YGG"
 docker exec "$PREPROD_YGG" sh -c "set -e; mkdir '$DB_DIR/$NAME'; cd '$DB_DIR/$NAME'; unzip -q /tmp/$NAME.zip" \
-  || { docker exec "$PREPROD_YGG" rm -f "/tmp/$NAME.zip"; skip "распаковка в $PREPROD_YGG:$DB_DIR/$NAME не удалась"; }
-docker exec "$PREPROD_YGG" rm -f "/tmp/$NAME.zip"
+  || { docker exec -u 0 "$PREPROD_YGG" rm -f "/tmp/$NAME.zip"; skip "распаковка в $PREPROD_YGG:$DB_DIR/$NAME не удалась"; }
+# Архив кладёт docker cp от root, а exec по умолчанию — пользователь контейнера: rm без -u 0 давал
+# «Operation not permitted» и под set -e ронял уже развёрнутый снимок (прогон #8933, 18.11.2026).
+# Уборка — не повод для красного: снимок к этому моменту развёрнут.
+docker exec -u 0 "$PREPROD_YGG" rm -f "/tmp/$NAME.zip" || note "⚠ временный архив /tmp/$NAME.zip в $PREPROD_YGG не удалён — убрать вручную"
 files="$(docker exec "$PREPROD_YGG" sh -c "ls '$DB_DIR/$NAME' | wc -l")"
 size="$(docker exec "$PREPROD_YGG" sh -c "du -sh '$DB_DIR/$NAME' | cut -f1")"
 note ""

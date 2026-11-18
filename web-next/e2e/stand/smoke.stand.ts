@@ -55,14 +55,19 @@ test('S2 Паспорт спринта: вкладка «Задачи» не п�
   await expect(rows.first(), `${id}: в паспорте есть строки задач (список говорит ${total})`).toBeVisible({ timeout: 30_000 });
 });
 
+const STAND_BACK_ON = Date.parse('2026-11-21T00:00:00Z');
+
 test('S3 Новости: лента открывается и показывает строки', async ({ page }) => {
+  // Владелица 18.11.2026: «выключи с пометкой вернутся 21 эти тесты». Красный на стенде — «Новости» (#1573, держит владелица)
+  // и админка viewer; не регрессия релиза v1.17.27. Пропуск снимается сам 21.11.2026 — правки не нужно.
+  test.skip(Date.now() < STAND_BACK_ON, 'выключен владелицей 18.11 до 21.11.2026 — вернётся сам');
   const rows = page.locator('[data-testid^="news-row-"]');
   await openStand(page, '/news', rows, 45_000);
   // 16.11.2026: два прогона подряд — «Test timeout» без причины. Под владелицей лента за 6 с
   // (340 строк), под test-sa — нет. Чем стала страница (пусто по скоупу, ошибка, вечная
   // загрузка) — в текст падения, иначе по журналу CI причину не установить.
   if (!(await rows.first().isVisible().catch(() => false))) {
-    const seen = (await page.locator('body').innerText().catch(() => '')).replace(/s+/g, ' ').slice(0, 400);
+    const seen = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 400);
     expect(await rows.count(), `в ленте нет строк за 45 с; на странице: «${seen}»`).toBeGreaterThan(0);
   }
 });
