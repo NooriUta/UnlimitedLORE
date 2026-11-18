@@ -169,6 +169,8 @@ public class LoreSchemaMigrationRunner {
         if (dbVersion == 0 && schemaSource(0, readModelMarkers()) == SchemaSource.MODEL) {
             // MIG-03: схема собрана установщиком из модели (MIG-01) — журнала шагов V у такой базы нет по построению.
             LOG.infof("[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется");
+            ModelSchemaAdapter.enable(true);
+            LOG.infof("[LORE MIGRATE] переходник чтения новой схемы включён (status_raw → status)");
             return;
         }
         if (dbVersion == 0) {
@@ -238,6 +240,28 @@ public class LoreSchemaMigrationRunner {
      * Строки журнала «будто применены» на такой базе не пишутся — это была бы неправда о базе.
      */
     enum SchemaSource { LEDGER, MODEL, EMPTY }
+
+    /**
+     * База собрана из модели: журнала шагов нет, отметка LoreModelSchema есть. Сбой чтения (база ещё не поднялась)
+     * — не «из модели»: дальше идёт прежний путь со своими повторами и громкими отказами.
+     */
+    private boolean builtFromModel() {
+        try {
+            Map<Integer, String> ledger = new HashMap<>();
+            readLedgerTolerantly(ledger, new HashMap<>());
+            int max = ledger.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+            return schemaSource(max, max > 0 ? List.of() : readModelMarkers()) == SchemaSource.MODEL;
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] не удалось определить, собрана ли схема из модели: %s — прежний путь старта", e.getMessage());
+            return false;
+        }
+    }
+
+    /** Отказ старта: lore.migrate=true на базе, собранной из модели. */
+    static String modelMigrateRefusal() {
+        return "[LORE MIGRATE] Отказ старта: схема базы собрана из модели (LoreModelSchema), а lore.migrate=true — "
+            + "шаги V записали бы старую схему поверх новой. Запускайте с lore.migrate=false.";
+    }
 
     static SchemaSource schemaSource(int ledgerMaxVersion, List<Map<String, Object>> markers) {
         if (ledgerMaxVersion > 0) return SchemaSource.LEDGER;
@@ -309,6 +333,14 @@ public class LoreSchemaMigrationRunner {
     private void runSchema() {
         if (!enabled) {
             LOG.info("[LORE MIGRATE] skipped (lore.enabled=false)");
+            return;
+        }
+        // MIG-03: база собрана из модели — переходник чтения включается на ЛЮБОМ пути старта (и при выключенной
+        // сверке), а накатка шагов V на неё запрещена: шаги пишут старую схему поверх новой.
+        if (builtFromModel()) {
+            if (migrate) throw new IllegalStateException(modelMigrateRefusal());
+            ModelSchemaAdapter.enable(true);
+            LOG.info("[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)");
             return;
         }
         if (!migrate) {
