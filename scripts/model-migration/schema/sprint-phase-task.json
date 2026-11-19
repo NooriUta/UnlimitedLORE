@@ -792,7 +792,8 @@
           ],
           "filled": 17109,
           "of": 17217,
-          "name": "Статус"
+          "name": "Статус",
+          "notnull": true
         },
         "content_hash": {
           "kind": "text",

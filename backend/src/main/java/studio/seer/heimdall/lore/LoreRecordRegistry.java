@@ -49,19 +49,22 @@ final class LoreRecordRegistry {
 
     /**
      * Поле записи. {@code group}: head | body | props. {@code relation} — вид связи,
-     * если поле показывает ребро (attribute/composition), иначе null.
+     * если поле показывает ребро (attribute/composition), иначе null. {@code notnull} — MDL-11: в схеме 1.18 поле
+     * объявлено MANDATORY + NOTNULL (установщик, {@code scripts/model-migration/notnull.mjs}); на живой базе
+     * обязательность читает {@link LoreFieldRequirement} из схемы БД.
      */
     record Field(String key, String label, String labelKey, String kind, String group, String dict,
                  boolean editable, Write write, boolean multi, boolean required,
                  String refType, String rel, String dir, String relation, Options options,
                  String shortLabel, String definition, String description, String layer, boolean historic,
                  String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
-                 String labelPl, String shortLabelPl, String definitionPl, String descriptionPl) {
+                 String labelPl, String shortLabelPl, String definitionPl, String descriptionPl,
+                 boolean notnull) {
         Field(String key, String label, String labelKey, String kind, String group, String dict,
               boolean editable, Write write, boolean multi, boolean required,
               String refType, String rel, String dir, String relation) {
             this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
-                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null);
+                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null, false);
         }
     }
 

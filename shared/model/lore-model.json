@@ -519,7 +519,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "notnull" : true
     }, {
       "key" : "waiting_for",
       "label" : "Ждём",
