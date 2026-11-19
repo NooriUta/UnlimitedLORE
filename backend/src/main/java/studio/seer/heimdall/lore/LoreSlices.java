@@ -277,6 +277,17 @@ public final class LoreSlices {
      * из спринта, где другие уже уехали, показывала «v1.17.20 +2» (владелица 14.11.2026;
      * правило PU-07: у задачи — тот релиз, в котором уехал её PR). Нет PR в релизе — пусто.
      */
+    /**
+     * Колонки репозитория (D-2026-MIG-REPOSITORY-ORGANIZATION): ключ — адрес; роль у проекта (primary | unassigned),
+     * компонент, зеркала в обе стороны и «использует» — для паспорта и списка «Репозитории».
+     */
+    private static final String REPO_COLUMNS =
+        "SELECT url AS repo_id, url, full_path, host, owner, name, default_branch, "
+        + "in('HAS_REPOSITORY').slug AS projects, inE('HAS_REPOSITORY').role AS project_roles, "
+        + "in('COMPONENT_REPOSITORY').component_id AS components, "
+        + "out('MIRRORED_TO').url AS mirrors, in('MIRRORED_TO').url AS mirror_of, "
+        + "out('USES_REPOSITORY').url AS uses, in('USES_REPOSITORY').url AS used_by ";
+
     private static final String TASK_RELEASES_SQL =
         "out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids";
 
@@ -2089,6 +2100,21 @@ public final class LoreSlices {
             "out('IN_PRODUCT').code AS products " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
+
+        // D-2026-MIG-REPOSITORY-ORGANIZATION (владелица 19.11.2026, прототип принят «делаем пока так»):
+        // репозиторий — отдельный объект (хост + владелец + имя); проект → один основной (HAS_REPOSITORY
+        // role primary), компонент → свой (COMPONENT_REPOSITORY), зеркало и «использует» — связи репозиториев.
+        // Ключ записи — адрес (url): у репозитория нет своего кода, адрес уникален (индекс переноса).
+        slice("repositories", REPO_COLUMNS + "FROM KnowRepository ORDER BY full_path");
+        slice("repo_by_id", REPO_COLUMNS + "FROM KnowRepository WHERE url = :id LIMIT 1", List.of("id"), Map.of(), "");
+        // Репозитории проекта: свой основной + репозитории компонентов его продуктов
+        // (компонент → IN_PRODUCT → продукт → BELONGS_TO_PROJECT → проект; перегруппировка переносит эти рёбра на опору).
+        slice("repos_of_project", REPO_COLUMNS + "FROM KnowRepository WHERE in('HAS_REPOSITORY').slug CONTAINS :project "
+            + "OR in('COMPONENT_REPOSITORY').out('IN_PRODUCT').out('BELONGS_TO_PROJECT').slug CONTAINS :project "
+            + "ORDER BY full_path", List.of("project"), Map.of(), "");
+        slice("repos_of_component", REPO_COLUMNS + "FROM KnowRepository WHERE in('COMPONENT_REPOSITORY').component_id CONTAINS :id ORDER BY full_path",
+            List.of("id"), Map.of(), "");
+        slice("organizations", "SELECT org_id, name FROM KnowOrganization ORDER BY org_id");
 
         // Спринты компонента — по ребру BELONGS_TO (спринт → компонент), и только по нему.
         // S4-29: был LIMIT 30 и подбор по имени (sprint_id LIKE '%ключ%' у спринтов без
