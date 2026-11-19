@@ -12,6 +12,7 @@ import { FlagsScreen } from './FlagsScreen';
 import { AdminHome } from './HomeScreen';
 import { MachinesScreen } from './MachinesScreen';
 import { McpScreen } from './McpScreen';
+import { MigrationScreen } from './MigrationScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
 import { TidyScreen } from './TidyScreen';
@@ -39,6 +40,8 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-rules': () => <RulesScreen />,
   // PU-20: ссылки в текстах — автопочинка пачкой и ручной список.
   'adm-tidy': () => <TidyScreen />,
+  // MIG-02: «Перенос на новую модель» — правила переноса решением человека super-admin.
+  'adm-migration': () => <MigrationScreen />,
   'adm-flags': () => <FlagsScreen />,
   'adm-mcp': () => <McpScreen />,
   'adm-log': () => <ActionsScreen />,

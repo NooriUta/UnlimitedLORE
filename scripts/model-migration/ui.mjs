@@ -343,7 +343,7 @@ function forPage(dialog, rules) {
 }
 
 export async function serve({ port = 2499 } = {}) {
-  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun }, { dstUrl, updateEnvText, parseEnv, checkEnv, publicView }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
+  const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun, reportFingerprint }, { dstUrl, updateEnvText, parseEnv, checkEnv, publicView }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
   const envFile = process.env.MIG_ENV_FILE;
   // Одно задание за раз: перенос (записи → связи → отпечаток) или только отпечаток. Ход — строками, итог — объектом.
   let J = { running: false, lines: [], result: null, error: null };
@@ -618,7 +618,7 @@ export async function serve({ port = 2499 } = {}) {
       }
       if (req.method === 'GET' && req.url === '/api/dryrun') {
         const report = await dryRun(db, readDoc());
-        return json(res, 200, { ...report, fingerprint: fingerprint(report) });
+        return json(res, 200, { ...report, fingerprint: reportFingerprint(report) });
       }
       // Шаг В: вид продукта (владелица 19.11.2026: «продукт · вид — в wizard переноса»)
       if (req.method === 'GET' && req.url === '/api/product-kind') {
