@@ -1612,6 +1612,7 @@
       "qg_id": "string",
       "qg_type": "string?",
       "retired_reason": "string?",
+      "scope": "enum(global|project)?",
       "sprint_id": "string?",
       "status": "string?"
     },

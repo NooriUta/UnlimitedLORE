@@ -1254,5 +1254,12 @@
   "kit.attn.approx": "Counted over loaded records — the result is truncated, the real number may be higher",
   "kit.attn.more": "{n} more",
   "kit.attn.noGroups": "No groups",
-  "kit.attn.noGroupsHint": "Summary groups are the list's quick filters; none are named for this section."
+  "kit.attn.noGroupsHint": "Summary groups are the list's quick filters; none are named for this section.",
+  "kit.sortable.up": "Up: {name}",
+  "kit.sortable.down": "Down: {name}",
+  "kit.dialog.close": "Close",
+  "kit.dialog.cancel": "Cancel",
+  "kit.dialog.reason": "Reason",
+  "kit.lang.missing": "no translation — the default language is shown",
+  "kit.lang.key": "localization key:"
 }

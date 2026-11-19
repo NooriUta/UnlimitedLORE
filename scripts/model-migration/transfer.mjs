@@ -25,9 +25,11 @@ import { seriesDdl } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
+import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
+import { repairVersions, addFixes } from './scd2-repair.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
@@ -102,12 +104,21 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // ── 2. Сведение ───────────────────────────────────────────────────────────────────────────────────
   const merge = { to_version_set: 0, to_version_kept_existing: 0, no_current_version: 0, phase_title_from_status: 0, phase_title_already_set: 0 };
   const leftovers = [];
+  // MT-MCP-TRUTH Б6: битая история лечится ДО сведения — пустой state_uid, лишние открытые версии, запись без
+  // текущей версии. Прежние значения — в остаток (MigLeftover), счёт — в отчёт.
+  const scd2Fixes = { state_uid_filled: 0, extra_open_closed: 0, current_reopened: 0 };
   for (const B of BASES) {
     const H = B + 'Hist';
     const versions = new Map(); // rid записи → версии
     for (const v of calc[H]) { const p = parentOf[v.rid]; if (p) (versions.get(p) || versions.set(p, []).get(p)).push(v); }
     for (const b of calc[B]) {
       const own = versions.get(b.rid) || [];
+      // лечится только то, что тип версий ведёт по схеме: у KnowMilestoneHist/KnowRunbookHist нет valid_to,
+      // у KnowFindingHist нет и state_uid
+      const hf = (SCHEMA[H] && SCHEMA[H].fields) || {};
+      const fixed = repairVersions(own, { parent: b.rid, type: H, intervals: Boolean(hf.valid_to), stateUid: Boolean(hf.state_uid) });
+      addFixes(scd2Fixes, fixed.fixes);
+      leftovers.push(...fixed.leftovers);
       const open = own.filter(v => !given(v.res.out.valid_to)).sort((a, c) => String(c.res.out.valid_from || '').localeCompare(String(a.res.out.valid_from || '')) || a.rid.localeCompare(c.rid));
       const cur = open[0];
       for (const [f, val] of Object.entries(b.res.toVersion)) {
@@ -164,11 +175,36 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     report.stages.key_dups = { merged: kd.leftovers.map(x => x.src_rid), conflicts: kd.conflicts };
     log('2 дубли ключа справочника: слито', kd.leftovers.length, '· конфликтов', kd.conflicts.length, kd.conflicts.length ? JSON.stringify(kd.conflicts) : '');
   }
+  // задачи без спринта (шаг «З» мастера, владелица 19.11.2026: «предложить владельцу привязать»): ребро ставит
+  // шаг связей по ответу человека; ответ «дубль» — задача и её версии не переносятся, уходят в остаток с причиной;
+  // без ответа задача переносится без спринта, в отчёте — «ждёт решения»
+  if (calc.KnowTask) {
+    const loose = await db.src("SELECT @rid AS rid, task_uid FROM KnowTask WHERE out('PART_OF').size() = 0");
+    const st = orphanSprintState(loose, orphanSprintAnswers(DECISIONS));
+    const ridOf = new Map(loose.map(x => [x.task_uid, x.rid]));
+    const dropRid = new Set();
+    for (const d of st.duplicate) {
+      const rid = ridOf.get(d.task_uid);
+      dropRid.add(rid);
+      leftovers.push({ src_type: 'KnowTask', src_rid: rid, field: 'task_uid', value: d.task_uid, kind: 'merged_duplicate',
+        why: `дубль: задача без спринта ${d.task_uid} — та же задача, что ${d.of} (ответ человека в мастере, шаг «З»); вторая задача с тем же кодом не заводится` });
+      for (const [v, p] of Object.entries(parentOf)) if (p === rid) {
+        dropRid.add(v);
+        leftovers.push({ src_type: 'KnowTaskHist', src_rid: v, field: 'parent', value: rid, kind: 'merged_duplicate', why: `версия задачи-дубля ${d.task_uid} (см. ${d.of})` });
+      }
+    }
+    calc.KnowTask = calc.KnowTask.filter(x => !dropRid.has(x.rid));
+    if (calc.KnowTaskHist) calc.KnowTaskHist = calc.KnowTaskHist.filter(x => !dropRid.has(x.rid));
+    report.stages.orphan_sprints = { without_sprint: loose.length, to_link: st.link.length, duplicate: st.duplicate, keep: st.keep, waiting: st.waiting, state: st.waiting.length ? 'ждёт решения' : 'решено' };
+    log('2 задачи без спринта:', loose.length, '· привяжет шаг связей', st.link.length, '· дубль', st.duplicate.map(d => `${d.task_uid} = ${d.of}`).join(', ') || '—', '· без спринта по ответу', st.keep.length, st.waiting.length ? '· ЖДУТ РЕШЕНИЯ (шаг «З»): ' + st.waiting.join(', ') : '');
+  }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
     for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
   }
   report.stages.merge = merge;
+  report.stages.scd2_repair = scd2Fixes;
+  log('2 история SCD2:', JSON.stringify(scd2Fixes));
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────

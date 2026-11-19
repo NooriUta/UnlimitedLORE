@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * SPRINT_LORE_MODEL_DOCS_TIDY/MIG-03 · переходник чтения для базы, собранной из модели: поле версии status_raw
@@ -149,6 +151,58 @@ class ModelSchemaAdapterTest {
         assertEquals("READY_FOR_DEPLOY", ModelSchemaAdapter.rewriteParams("INSERT INTO KnowTaskHist SET status_raw=:sraw", Map.of("sraw", "🚀 READY FOR DEPLOY")).get("sraw"));
         assertEquals("PARTIAL", ModelSchemaAdapter.rewriteParams("UPDATE X SET status_raw = :s", Map.of("s", "🟡 PARTIAL — ждём ответа")).get("s"));
         assertEquals("DONE", ModelSchemaAdapter.rewriteParams("UPDATE X SET status_raw = :s", Map.of("s", "DONE")).get("s"), "код остаётся кодом");
+    }
+
+    /**
+     * MT-MCP-TRUTH Б7 (гипотеза сверки 19.11, подтверждена): статус с припиской («🟡 PARTIAL — ждём CI») на базе из
+     * модели превращался в код PARTIAL, а приписка пропадала. В новой схеме её место — status_note версии
+     * (так же раскладывает установщик, apply-map.mjs asStatus).
+     */
+    @Test
+    void приписка_статуса_при_записи_версии_уходит_в_status_note() {
+        String sql = "INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = :ns, valid_from = :now";
+        Map<String, Object> p = new HashMap<>(Map.of("nsid", "u1", "ns", "🟡 PARTIAL — ждём CI", "now", "t"));
+        String rewritten = ModelSchemaAdapter.rewriteSql(sql);
+        Map<String, Object> out = ModelSchemaAdapter.rewriteParams(sql, p);
+        assertEquals("INSERT INTO KnowTaskHist SET state_uid = :nsid, status = :ns, status_note = :ns__note, valid_from = :now", rewritten);
+        assertEquals("PARTIAL", out.get("ns"));
+        assertEquals("ждём CI", out.get("ns__note"), "хвост статуса — в status_note, а не в никуда");
+        // без приписки — пустая приписка (смена статуса пишет её заново, прежняя не переносится)
+        Map<String, Object> plain = ModelSchemaAdapter.rewriteParams(sql, new HashMap<>(Map.of("ns", "🔄 IN PROGRESS")));
+        assertEquals("ACTIVE", plain.get("ns"));
+        assertTrue(plain.containsKey("ns__note") && plain.get("ns__note") == null, "параметр есть, значение null");
+        // слово без значка тоже голова, а не хвост
+        assertEquals("03.05.2026 — PR #105",
+            ModelSchemaAdapter.rewriteParams(sql, new HashMap<>(Map.of("ns", "MERGED 03.05.2026 — PR #105"))).get("ns__note"));
+        assertEquals("Закрыто вручную",
+            ModelSchemaAdapter.rewriteParams(sql, new HashMap<>(Map.of("ns", "✅ Закрыто вручную"))).get("ns__note"),
+            "слово-префикс внутри длинного слова — не голова статуса");
+    }
+
+    @Test
+    void сравнение_статуса_в_where_приписку_не_заводит() {
+        String sql = "UPDATE KnowTaskHist SET valid_to = :now WHERE in('HAS_STATE').task_uid CONTAINS :id AND valid_to IS NULL AND status_raw = :expected_raw";
+        assertEquals(sql.replace("status_raw", "status"), ModelSchemaAdapter.rewriteSql(sql), "условие — не присваивание");
+        Map<String, Object> out = ModelSchemaAdapter.rewriteParams(sql, new HashMap<>(Map.of("expected_raw", "🔄 IN PROGRESS", "now", "t", "id", "x")));
+        assertEquals("ACTIVE", out.get("expected_raw"));
+        assertFalse(out.containsKey("expected_raw__note"));
+        // вершина (не версия): status_note у неё нет — не заводим
+        String vertex = "UPDATE KnowSprint SET sprint_id=:sid, status_raw=:sraw WHERE sprint_id=:sid";
+        assertFalse(ModelSchemaAdapter.rewriteSql(vertex).contains("status_note"));
+    }
+
+    /** MT-MCP-TRUTH A3 (гипотеза сверки 19.11, подтверждена): CASE status WHEN 'open' — сравнение со строчным кодом. */
+    @Test
+    void case_status_when_переводит_коды_в_заглавные() {
+        assertEquals("SELECT CASE status WHEN 'OPEN' THEN 0 WHEN 'DEFERRED' THEN 1 WHEN 'CLOSED' THEN 2 WHEN 'DROPPED' THEN 3 ELSE 4 END AS status_rank FROM KnowQuestion",
+            ModelSchemaAdapter.rewriteSql("SELECT CASE status WHEN 'open' THEN 0 WHEN 'deferred' THEN 1 WHEN 'closed' THEN 2 WHEN 'dropped' THEN 3 ELSE 4 END AS status_rank FROM KnowQuestion"));
+        String questions = ModelSchemaAdapter.rewriteSql(LoreSlices.get("questions").baseSql());
+        assertTrue(questions.contains("WHEN 'OPEN' THEN 0"), "срез questions на базе из модели сортирует открытые первыми");
+        assertEquals("SELECT CASE status WHEN 'pending' THEN 0 ELSE 1 END AS r FROM QGRecommendation",
+            ModelSchemaAdapter.rewriteSql("SELECT CASE status WHEN 'pending' THEN 0 ELSE 1 END AS r FROM QGRecommendation"),
+            "у типов со статусом-текстом коды не трогаются");
+        assertEquals("SELECT CASE kind WHEN 'open' THEN 0 END AS r FROM X",
+            ModelSchemaAdapter.rewriteSql("SELECT CASE kind WHEN 'open' THEN 0 END AS r FROM X"), "не поле статуса");
     }
 
     @Test

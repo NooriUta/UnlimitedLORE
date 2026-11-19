@@ -6458,6 +6458,30 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "has_ext_deps",
+        "label" : "Внешние зависимости",
+        "label_key" : "pp.field.hasExtDeps",
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "External dependencies",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zależności zewnętrzne",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "content_md_ru",
         "label" : "Текст",
         "label_key" : "pp.field.body",
@@ -6532,7 +6556,7 @@
         } ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {
@@ -6862,6 +6886,30 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "has_ext_deps",
+        "label" : "Внешние зависимости",
+        "label_key" : "pp.field.hasExtDeps",
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "External dependencies",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zależności zewnętrzne",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "content_md_ru",
         "label" : "Текст",
         "label_key" : "pp.field.body",
@@ -6936,7 +6984,7 @@
         } ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {
@@ -18621,6 +18669,30 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "scope",
+        "label" : "Охват",
+        "label_key" : "pp.field.qgScope",
+        "kind" : "enum",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Scope",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zakres",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "title",
         "label" : "Название",
         "label_key" : "pp.field.title",
@@ -18889,7 +18961,7 @@
         } ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "projects", "components", "sprint", "date" ]
+          "fields" : [ "scope", "projects", "components", "sprint", "date" ]
         }, {
           "section" : null,
           "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
@@ -19014,6 +19086,30 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "scope",
+        "label" : "Охват",
+        "label_key" : "pp.field.qgScope",
+        "kind" : "enum",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Scope",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zakres",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "title",
         "label" : "Название",
         "label_key" : "pp.field.title",
@@ -19282,7 +19378,7 @@
         } ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "projects", "components", "sprint", "date" ]
+          "fields" : [ "scope", "projects", "components", "sprint", "date" ]
         }, {
           "section" : null,
           "fields" : [ "last_run_status", "retired_at", "retired_reason" ]

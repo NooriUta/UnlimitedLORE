@@ -17,7 +17,9 @@ import java.util.Set;
  *   <li>срезы, на которые ссылаются части паспорта и варианты полей, существуют;</li>
  *   <li>ребро каждой связи объявлено в схеме графа (опечатка в имени ребра — пустая вкладка навсегда);</li>
  *   <li>вид поля не противоречит объявленному типу свойства схемы; исключения — {@link #KIND_EXEMPT} с причиной;</li>
- *   <li>порядок разделов паспорта ссылается только на разделы, которые у типа есть.</li>
+ *   <li>порядок разделов паспорта ссылается только на разделы, которые у типа есть;</li>
+ *   <li>MC-06: группа поля — одна из {@link #GROUPS}; поле {@code title} — в группе {@code head}
+ *       (паспорт без названия в шапке не строится; группу правит экран «Модель» админки).</li>
  * </ol>
  * Вкладка связи без своего среза читается по ребру всегда (LoreRecordValues#readByEdge), поэтому
  * отдельного правила «вкладка читается» здесь нет — его заменяет правило 2.
@@ -28,6 +30,9 @@ final class LoreModelConsistency {
 
     /** Вид поля, расходящийся с типом свойства схемы сознательно: тип.поле → причина. */
     static final Map<String, String> KIND_EXEMPT = Map.of();
+
+    /** MC-06: группы поля, которые понимает паспорт ({@link LoreRecordRegistry.Field}: head | body | props). */
+    static final Set<String> GROUPS = Set.of("head", "body", "props");
 
     /**
      * D-2026-MIG-REPOSITORY-ORGANIZATION: рёбра, которые есть только в схеме, собранной из модели (установщик MIG-01,
@@ -60,9 +65,14 @@ final class LoreModelConsistency {
             for (LoreRecordRegistry.Part p : d.parts())
                 if (p.slice() != null && !sliceExists.test(p.slice()))
                     out.add(t + ": часть «" + p.key() + "» читает срез «" + p.slice() + "», которого нет");
-            for (LoreRecordRegistry.Field f : d.fields())
+            for (LoreRecordRegistry.Field f : d.fields()) {
                 if (f.options() != null && !sliceExists.test(f.options().slice()))
                     out.add(t + "." + f.key() + ": варианты из среза «" + f.options().slice() + "», которого нет");
+                if (f.group() != null && !GROUPS.contains(f.group()))
+                    out.add(t + "." + f.key() + ": группы «" + f.group() + "» паспорт не знает — ждали одну из head, body, props");
+                else if ("title".equals(f.key()) && !"head".equals(f.group()))
+                    out.add(t + ".title: поле названия обязано быть в группе head — паспорт без названия в шапке не строится");
+            }
             if (schemaNames != null)
                 for (LoreRecordRegistry.Relation r : d.relations())
                     if (!schemaNames.contains(r.rel()) && !MODEL_SCHEMA_EDGES.containsKey(r.rel()))

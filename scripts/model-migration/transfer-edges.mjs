@@ -14,6 +14,7 @@ import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
+import { applyOrphanSprints } from './orphan-sprints.mjs';
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
@@ -94,8 +95,18 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   // версии: пишет этап записи; здесь — что число связей версий в приёмнике не меньше расчётного по своим типам
   const hs = triples.filter(t => t.edge === VERSION_EDGE && OWN.includes(t.from) && t.to === t.from + 'Hist').reduce((a, t) => a + t.n, 0);
   const hsGot = dstTypes.has(VERSION_EDGE) ? (await db.dstQuery(`SELECT count(*) AS n FROM ${VERSION_EDGE}`))[0].n : 0;
-  report.moved[VERSION_EDGE] = { source: hs, target: hsGot };
-  if (hs !== hsGot) ok = false;
+  // ожидаемое — связи версий источника, у которых оба конца перенесены: запись, не перенесённая этапом записи
+  // (дубль — остаток с причиной), не переносит и свои версии (задачи без спринта, 19.11.2026)
+  let hsKept = 0;
+  // (та же выборка, что hs: запись своего типа → её тип версий; прочие направления — аномалии, не переносятся)
+  await pages(q => db.src(q), last => `SELECT @rid AS r, @out AS o, @in AS i, @out.@type AS ot, @in.@type AS it FROM ${VERSION_EDGE} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`,
+    x => { if (OWN.includes(x.ot) && x.it === x.ot + 'Hist' && dstRid.has(x.o) && dstRid.has(x.i)) hsKept++; });
+  report.moved[VERSION_EDGE] = { source: hs, expected: hsKept, target: hsGot };
+  if (hsKept !== hsGot) ok = false;
+  // задачи без спринта (шаг «З» мастера): ребро PART_OF задача → спринт только по ответу человека (orphan_sprints)
+  const decisionsOs = loadDecisions();
+  report.orphan_sprints = await applyOrphanSprints(db, decisionsOs, { log });
+  if (!report.orphan_sprints.ok) ok = false;
   // новые связи модели сессий (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL) — по перенесённым записям приёмника
   const sm = await sessionModel(db, { pages });
   report.session_model = sm;

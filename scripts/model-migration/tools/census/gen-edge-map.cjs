@@ -12,8 +12,14 @@ const special = {
   ON_MILESTONE: { rule: 'drop', basis: 'owner', note: 'начало связи — PlanCheckpoint; план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED)' },
   RELEASED_IN: { rule: 'convert', to: 'IMPLEMENTED_IN_RELEASE', basis: 'proposal', note: 'мёртвая связь: код её не пишет и не читает; спринт → релиз живёт в IMPLEMENTED_IN_RELEASE. Перевод без дублей. Предложение исполнителя' },
   INCLUDES: { rule: 'convert', to: 'IMPLEMENTED_IN_RELEASE', reverse: true, basis: 'proposal', note: 'мёртвая связь релиз → спринт; разворот в IMPLEMENTED_IN_RELEASE (спринт → релиз) без дублей. Предложение исполнителя' },
+  // MD-02 «что выключаем»: связи к легаси-словарям, снятым V89 (#1401). В переписи прода их нет, но источник без V89
+  // их несёт: без правила перенос падал бы «связь вне карты». Поэтому правило есть всегда.
+  HAS_STATUS: { rule: 'drop', basis: 'owner', note: 'снята V89 (#1401): статус — код в строке версии (status_raw), словари Status* сняты; MD-02' },
+  OF_TYPE: { rule: 'drop', basis: 'owner', note: 'снята V89 (#1401): вид трека — поле PlanTrack.area, словарь TrackType снят; MD-02' },
 };
+const ALWAYS = ['HAS_STATUS', 'OF_TYPE'];
 const edges = {};
+for (const e of ALWAYS) edges[e] = special[e];
 for (const [e] of triples) {
   if (edges[e]) continue;
   if (special[e]) edges[e] = special[e];
