@@ -1747,6 +1747,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       project:      z.string().optional().describe('owner project slug (KnowGitProject) — creates BELONGS_TO_PROJECT; required before status=active'),
       retired_reason: z.string().optional().describe('why the gate is retired — required with status=retired'),
       qg_type:      z.string().optional().describe('SPRINT_QG_REBUILD/QG-04: gate type, code of dictionary qg_type — universal: code | cicd | sec | know | doc; project: test | perf | data | ops | ux (lowercase)'),
+      scope:        z.enum(['global', 'project']).optional().describe('SPRINT_QG_REBUILD/QG-01: global = common gate, no owner project (its project links are removed; visible to every project, checks all projects; may be active without project); project = bound to exactly one project (pass project or have one already)'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/quality-gate', p)); }

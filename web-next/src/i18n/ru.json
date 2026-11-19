@@ -2001,6 +2001,7 @@
   "pp.field.importance": "Важность",
   "pp.field.state": "Состояние",
   "pp.field.qgType": "Тип",
+  "pp.field.qgScope": "Охват",
   "pp.field.lastRunStatus": "Итог последнего прогона",
   "pp.field.ownerProject": "Проект-владелец",
   "pp.field.retiredAt": "Выведен из работы",

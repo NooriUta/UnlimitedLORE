@@ -4875,6 +4875,15 @@
       "labelEn" : "Type",
       "labelPl" : "Typ"
     }, {
+      "key" : "scope",
+      "label" : "Охват",
+      "labelKey" : "pp.field.qgScope",
+      "kind" : "enum",
+      "group" : "props",
+      "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
+      "labelEn" : "Scope",
+      "labelPl" : "Zakres"
+    }, {
       "key" : "title",
       "label" : "Название",
       "labelKey" : "pp.field.title",
@@ -4974,7 +4983,7 @@
       "labelPl" : "Tekst"
     } ],
     "props" : [ {
-      "fields" : [ "projects", "components", "sprint", "date" ]
+      "fields" : [ "scope", "projects", "components", "sprint", "date" ]
     }, {
       "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
     } ],

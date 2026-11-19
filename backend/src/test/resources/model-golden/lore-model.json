@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "c03ed22b56234406",
+  "version" : "f293836183838331",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -10500,6 +10500,39 @@
         "property_type" : null,
         "source" : "SUPPLIES"
       }, {
+        "key" : "scope",
+        "label" : "Охват",
+        "label_key" : "pp.field.qgScope",
+        "kind" : "enum",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Scope",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zakres",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "s",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
         "key" : "title",
         "label" : "Название",
         "label_key" : "pp.field.title",
@@ -14105,11 +14138,11 @@
     } ]
   },
   "field_texts" : {
-    "fields" : 207,
+    "fields" : 208,
     "without_definition" : 11,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 207
+    "without_definition_en" : 208
   },
   "edge_history" : {
     "fields" : [ "valid_from", "valid_to" ],
