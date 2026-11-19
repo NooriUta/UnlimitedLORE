@@ -25,6 +25,7 @@ import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './d
 import { SESSION_EDGES } from './session-model.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
+import { mergeKeyDups } from './key-dups.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
@@ -151,6 +152,15 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
       v.res.rejects = v.res.rejects.filter(x => x.field !== 'status_raw');
       merge.phase_status_from_tasks++;
     }
+  }
+  // дубли уникального ключа справочника (D-2026-MIG-SETTING-LIST-VALUE): отличаются только организацией — одна строка
+  if (calc.KnowDictEntry) {
+    const slugs = new Set((await db.src('SELECT slug FROM KnowGitProject')).map(x => x.slug).filter(Boolean));
+    const kd = mergeKeyDups(calc.KnowDictEntry, ['dict_type', 'code'], 'label_ru', slugs);
+    calc.KnowDictEntry = kd.keep;
+    for (const x of kd.leftovers) leftovers.push({ src_type: 'KnowDictEntry', ...x });
+    report.stages.key_dups = { merged: kd.leftovers.map(x => x.src_rid), conflicts: kd.conflicts };
+    log('2 дубли ключа справочника: слито', kd.leftovers.length, '· конфликтов', kd.conflicts.length, kd.conflicts.length ? JSON.stringify(kd.conflicts) : '');
   }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
