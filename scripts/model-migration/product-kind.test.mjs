@@ -136,3 +136,16 @@ test('мастер: две галочки tech и service вместо одно�
   assert.match(ui, /type="checkbox"[^>]*data-pk=/);
   assert.doesNotMatch(ui, /type="radio" name="pk-/);
 });
+
+// Файл решений установщика покрывает все 17 продуктов прода (19.11.2026: «продукты приеято» — 10 оставшихся
+// приняты по предложению установщика). Без этого перенос 1.18 не проходит сверку вида продукта.
+test('decisions.lore.json: вид продукта решён у всех 17 продуктов', async () => {
+  const { readFileSync } = await import('node:fs');
+  const doc = JSON.parse(readFileSync(new URL('./rules/decisions.lore.json', import.meta.url), 'utf8'));
+  const expected = {
+    BRAGI: ['service'], ODIN: ['tech'], MIDGARD: ['tech'], MIGGEN: ['tech'], TYR: ['service'], DW: ['tech', 'service'], BOKVIT: ['service'],
+    AIDA: ['tech'], HOUND: ['tech'], SEIDR: ['tech'], HEIMDALL: ['tech'], MT: ['tech'], OMILORE: ['tech'], MINILORE: ['tech'], VOLVA: ['tech'],
+    FREYJA: ['service'], HARPA: ['tech', 'service'],
+  };
+  assert.deepEqual(productKindMap(doc), expected);
+});

@@ -170,9 +170,41 @@
       ],
       "BOKVIT": [
         "service"
+      ],
+      "AIDA": [
+        "tech"
+      ],
+      "HOUND": [
+        "tech"
+      ],
+      "SEIDR": [
+        "tech"
+      ],
+      "HEIMDALL": [
+        "tech"
+      ],
+      "MT": [
+        "tech"
+      ],
+      "OMILORE": [
+        "tech"
+      ],
+      "MINILORE": [
+        "tech"
+      ],
+      "VOLVA": [
+        "tech"
+      ],
+      "FREYJA": [
+        "service"
+      ],
+      "HARPA": [
+        "tech",
+        "service"
       ]
     },
+    "_about_rest": "AIDA…HARPA (10): предложение установщика принято владелицей 19.11.2026 целиком — «продукты приеято» (канал, ответ на файл product-kinds-1.18.md).",
     "by": "владелица",
-    "at": "2026-11-19T18:00:00Z"
+    "at": "2026-11-19T20:30:00Z"
   }
 }
