@@ -206,5 +206,54 @@
     "_about_rest": "AIDA…HARPA (10): предложение установщика принято владелицей 19.11.2026 целиком — «продукты приеято» (канал, ответ на файл product-kinds-1.18.md).",
     "by": "владелица",
     "at": "2026-11-19T20:30:00Z"
+  },
+  "projects": {
+    "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at).",
+    "map": {
+      "NooriUta/BRAGI": "SEIDR_BACKOFFICE",
+      "AIDA/freyja": "SEIDR_BACKOFFICE",
+      "NooriUta/seidr-site": "SEIDR_BACKOFFICE",
+      "AIDA/studio": "SEIDR_BACKOFFICE",
+      "AIDA/core-services": "SEIDR_BACKOFFICE",
+      "AIDA/forgejo-mcp": "OMILORE",
+      "AIDA/miniLoremobilekit": "SEIDR_BACKOFFICE",
+      "AIDA/qwen-code-fork": "MINILORE",
+      "NooriUta/AIDA-TestPlayGround": "AIDA",
+      "ivanovalex32/UDWE": "MIGGEN"
+    },
+    "repos": {
+      "AIDA/miniLoremobilekit": {
+        "component": "SEIDRKIT"
+      },
+      "AIDA/qwen-code-fork": {
+        "component": "ML_QWEN_CODE_FORK"
+      },
+      "AIDA/forgejo-mcp": {
+        "component": "FORGEJO_MCP"
+      },
+      "ivanovalex32/UDWE": {
+        "mirror": true
+      },
+      "NooriUta/AIDA-TestPlayGround": {
+        "component": "AIDA_TPG"
+      },
+      "AIDA/miniLore_serverside": {
+        "component": "MINILORE_SRV"
+      },
+      "AIDA/Datawanderers-Unity": {
+        "component": "DW_UNITY"
+      },
+      "AIDA/udwe-engine": {
+        "component": "MIGCORE"
+      },
+      "AIDA/udwe-rollout": {
+        "component": "MIGPIPE"
+      },
+      "NooriUta/seidr-site": {
+        "component": "HARPA"
+      }
+    },
+    "by": "владелица (omiloreadmin, мастер переноса на копии ryzenai, 19.11.2026)",
+    "at": "2026-11-19T13:31:00.187Z"
   }
 }

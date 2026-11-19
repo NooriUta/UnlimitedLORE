@@ -105,3 +105,17 @@ test('копия статуса на записи следует решению 
   resolveRejects('KnowDecision', r2, own);
   assert.equal(r2.out.status, 'DEFERRED', 'своё решение для записи сильнее решения по версиям');
 });
+
+// Ответы владелицы по перегруппировке проектов и репозиториям (19.11.2026, в т. ч. «FORGEJO_MCP») должны ехать
+// с установщиком в репозитории: прежде они лежали только в ui-decisions.json на копии ryzenai, и перенос на
+// препрод по rules/decisions.lore.json шёл бы без перегруппировки.
+test('пример файла решений содержит раздел projects: непустая перегруппировка и компонент FORGEJO_MCP', async () => {
+  const { regroupOverrides, repoOverrides } = await import('./regroup.mjs');
+  const doc = JSON.parse(fs.readFileSync(new URL('./rules/decisions.lore.json', import.meta.url), 'utf8'));
+  assert.deepEqual(checkDecisions(doc), []);
+  assert.ok(doc.projects, 'раздел projects есть');
+  assert.ok(Object.keys(regroupOverrides(doc)).length > 0, 'перегруппировка не пуста');
+  assert.equal(regroupOverrides(doc)['AIDA/forgejo-mcp'], 'OMILORE');
+  assert.deepEqual(repoOverrides(doc)['AIDA/forgejo-mcp'], { component: 'FORGEJO_MCP' });
+  assert.match(String(doc.projects.by), /владелиц/);
+});
