@@ -145,6 +145,16 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
   const ridOf = async slug => (await q('SELECT @rid AS r FROM KnowGitProject WHERE slug = :s', { s: slug }))[0]?.r || null;
   const members = async rid => new Set((await q(`SELECT @rid AS r FROM (SELECT expand(in('BELONGS_TO_PROJECT')) FROM ${rid})`)).map(x => x.r));
   const report = { groups: {}, ok: true };
+  // перепись всех связей приёмника по типам — до и после: всё, что не слито как повтор, обязано остаться
+  const edgeTotals = async () => {
+    const out = {};
+    for (const t of await q("SELECT name FROM schema:types WHERE type = 'edge'")) out[t.name] = Number((await q(`SELECT count(*) AS n FROM ${t.name}`))[0]?.n) || 0;
+    return out;
+  };
+  const edgesBefore = await edgeTotals();
+  const mergedByType = {};
+  const projectsBefore = Number((await q('SELECT count(*) AS n FROM KnowGitProject'))[0]?.n) || 0;
+  let removedProjects = 0;
   for (const [g, p] of Object.entries(plan)) {
     const anchor = await ridOf(p.anchor);
     if (!anchor) { report.groups[g] = { error: `нет опоры ${p.anchor}` }; report.ok = false; continue; }
@@ -163,11 +173,14 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
         const t = e['@type'], o = e['@out'] === m ? anchor : e['@out'], i = e['@in'] === m ? anchor : e['@in'];
         const props = Object.fromEntries(Object.entries(e).filter(([k, v]) => !k.startsWith('@') && k !== 'out' && k !== 'in' && v !== null && v !== undefined));
         const same = await q(`SELECT count(*) AS n FROM ${t} WHERE @out = ${o} AND @in = ${i}` + (props.role !== undefined ? ' AND role = :role' : ''), props.role !== undefined ? { role: props.role } : {});
-        if (Number(same[0]?.n) > 0) merged++;
+        if (Number(same[0]?.n) > 0) { merged++; mergedByType[t] = (mergedByType[t] || 0) + 1; }
         else { await c(`CREATE EDGE ${t} FROM ${o} TO ${i} CONTENT :c`, { c: props }); moved++; }
         await c(`DELETE FROM ${e['@rid']}`);
       }
+      const left = Number((await q(`SELECT bothE().size() AS n FROM ${m}`))[0]?.n) || 0;
+      if (left) { report.ok = false; log(`проект ${slug}: перед удалением у него осталось связей ${left} — они бы пропали`); }
       await c(`DELETE FROM ${m}`);
+      removedProjects++;
     }
     await c(`UPDATE ${anchor} SET aliases = :a, regroup = :g, hosts = :h`, { a: p.aliases, g, h: hosts.length ? hosts : null });
     const after = await members(anchor);
@@ -177,6 +190,19 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
     if (lost || extra || missing.length) report.ok = false;
     log(`группа ${g}: опора ${p.anchor}, влито ${p.merge.length - missing.length}, записей ${before.size} → ${after.size}, связей перенесено ${moved}, слито повторов ${merged}` + (missing.length ? `, нет в приёмнике: ${missing.join(', ')}` : ''));
   }
+  // все связи: после = до − слитые повторы, по каждому типу; проектов меньше ровно на влитые
+  const edgesAfter = await edgeTotals();
+  const edgeDiff = {};
+  for (const t of new Set([...Object.keys(edgesBefore), ...Object.keys(edgesAfter)])) {
+    const want = (edgesBefore[t] || 0) - (mergedByType[t] || 0), got = edgesAfter[t] || 0;
+    if (want !== got) edgeDiff[t] = { before: edgesBefore[t] || 0, merged: mergedByType[t] || 0, after: got };
+  }
+  const projectsAfter = Number((await q('SELECT count(*) AS n FROM KnowGitProject'))[0]?.n) || 0;
+  report.edges = { types: Object.keys(edgesBefore).length, total_before: Object.values(edgesBefore).reduce((a, b) => a + b, 0), total_after: Object.values(edgesAfter).reduce((a, b) => a + b, 0), merged: mergedByType, mismatch: edgeDiff };
+  report.projects = { before: projectsBefore, removed: removedProjects, after: projectsAfter };
+  if (Object.keys(edgeDiff).length || projectsAfter !== projectsBefore - removedProjects) report.ok = false;
+  log(`связи после перегруппировки: типов ${report.edges.types}, всего ${report.edges.total_before} → ${report.edges.total_after}, слито повторов ${JSON.stringify(mergedByType)}, расхождений ${Object.keys(edgeDiff).length ? JSON.stringify(edgeDiff) : 'нет'}`);
+  log(`проекты: ${projectsBefore} → ${projectsAfter} (влито ${removedProjects})`);
   log('сверка перегруппировки:', report.ok ? 'сошлась' : 'НЕ сошлась');
   return report;
 }
