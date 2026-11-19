@@ -78,7 +78,7 @@ public class LoreIngestService {
 
         // 1. Upsert KnowSprint
         StringBuilder set = new StringBuilder(
-            "UPDATE KnowSprint SET sprint_id=:sid, title=:nm, status_raw=:sraw");
+            "UPDATE KnowSprint SET sprint_id=:sid, " + ModelSchemaAdapter.titleSet("nm") + ", status_raw=:sraw");
         java.util.Map<String, Object> p = new java.util.LinkedHashMap<>(
             Map.of("sid", sprintId, "nm", nm, "sraw", statusRaw));
         if (planId    != null) { set.append(", plan_id=:pid");     p.put("pid", planId); }
@@ -314,7 +314,7 @@ public class LoreIngestService {
         params.put("outcome_md",   nullToEmpty(s.outcomeMd()));
 
         exec("UPDATE KnowSprint SET " +
-                "sprint_id=:sprint_id, title=:name, status_raw=:status_raw, " +
+                "sprint_id=:sprint_id, " + ModelSchemaAdapter.titleSet("name") + ", status_raw=:status_raw, " +
                 "priority=:priority, date_created=:date_created, " +
                 "plan_id=:plan_id, outcome_md=:outcome_md " +
                 "UPSERT WHERE sprint_id=:sprint_id", params);
@@ -431,7 +431,9 @@ public class LoreIngestService {
                 Map<String, Object> hp = new HashMap<>();
                 hp.put("nsid", nsid); hp.put("now", java.time.Instant.now().toString());
                 hp.put("cnt", rb.contentMd()); hp.put("id", rb.runbookId());
-                execScript("INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt;" +
+                ChangeAuthor.UNKNOWN.bind(hp); // S2-12: инжест md — автор неизвестен
+                execScript("INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt" +
+                    ChangeAuthor.SET_SQL + ";" +
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
                     "TO (SELECT FROM KnowRunbookHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp);
             }

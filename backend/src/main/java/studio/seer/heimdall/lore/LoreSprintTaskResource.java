@@ -764,7 +764,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         // A1: atomic sqlscript — a partial failure leaves no KnowPhase
                         // without its PART_OF/HAS_STATE edges.
                         String script =
-                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, title = :name, " +
+                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, " + ModelSchemaAdapter.titleSet("name") + ", " +
                             "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
@@ -1408,7 +1408,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
         Map<String, Object> p = new LinkedHashMap<>();
-        if (req.name()       != null) { sb.append("title=:name, ");           p.put("name",       req.name()); }
+        if (req.name()       != null) { sb.append(ModelSchemaAdapter.titleSet("name")).append(", ");           p.put("name",       req.name()); }
         if (outcomeNew != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    outcomeNew); }
         if (contextNew != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        contextNew); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }

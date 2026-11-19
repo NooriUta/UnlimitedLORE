@@ -77,6 +77,16 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void название_спринта_в_старой_схеме_пишется_и_в_name() {
+        // полный прогон 19.11: sprint_new писал только title, FT-индекс старой схемы — по name, поиск не находил спринт
+        assertEquals("title=:nm, name=:nm", ModelSchemaAdapter.titleSet("nm"));
+        ModelSchemaAdapter.enable(true);
+        try {
+            assertEquals("title=:nm", ModelSchemaAdapter.titleSet("nm"));
+        } finally { ModelSchemaAdapter.enable(false); }
+    }
+
+    @Test
     void поле_внутри_скобок_функции_без_псевдонима() {
         // проба 19.11 (LoreRecordEdgeLinks): coalesce(status, status_raw, status_general) превратился в
         // coalesce(status, status AS status_raw, …) — «extraneous input 'AS'»; псевдоним — только на верхнем уровне выборки

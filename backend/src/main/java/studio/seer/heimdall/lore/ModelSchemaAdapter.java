@@ -181,6 +181,14 @@ final class ModelSchemaAdapter {
         return v.matches("[A-Z][A-Z_]*") ? v.toLowerCase(java.util.Locale.ROOT) : v;
     }
 
+    /**
+     * Запись названия спринта/фазы (D-2026-MIG-SPRINT-PHASE-TITLE): на базе из модели — title; в старой схеме ещё и
+     * name — по нему построен FT-индекс ftKnowSprint и читают старые клиенты (полный прогон 19.11: новый спринт не искался).
+     */
+    static String titleSet(String param) {
+        return enabled ? "title=:" + param : "title=:" + param + ", name=:" + param;
+    }
+
     /** Узнаётся ли строка словарём плана: значок или слово в начале (без отката на «todo»). */
     static boolean looksLikePlan(String t) {
         String up = t.stripLeading().toUpperCase(java.util.Locale.ROOT);
