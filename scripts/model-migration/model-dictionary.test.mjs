@@ -82,3 +82,14 @@ test('судьба типа: первый объект — своей карто
   assert.match(transferOfType('PlanTrack', objectsMap), /не переносится/);
   assert.equal(transferOfType('KnowADR', objectsMap), 'переносится по карте');
 });
+
+test('паспорт связи — одна строка на тип: места из relations, вкладки и поля только если relations этот тип не покрыли', () => {
+  const d = dict();
+  const ref = d.edges.find(e => e.name === 'REFERENCES');
+  const types = ref.passport.map(s => s.split(':')[0]);
+  assert.equal(new Set(types).size, types.length, 'тип не повторяется');
+  const adr = ref.passport.find(s => s.startsWith('adr:'));
+  assert.ok(!/вкладка/.test(adr), 'вкладка не дублирует relations: ' + adr);
+  const po = d.edges.find(e => e.name === 'PART_OF');
+  assert.ok(po.passport.some(s => s.startsWith('sprint:') && /Задачи \(in, part\)/.test(s)), JSON.stringify(po.passport));
+});

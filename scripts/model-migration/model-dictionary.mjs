@@ -144,13 +144,22 @@ export function buildDictionary({ model, edgesMap, objectsMap, triples, code, so
   }
 
   // Связи: карта переноса ∪ связи, которые показывает модель.
-  const shown = new Map();
+  // Где связь видна в паспорте: одна строка на тип. relations — полный перечень мест; части, вкладки и поля
+  // повторяют его, поэтому идут, только если relations этого типа связь не назвали.
+  const shown = new Map(); // rel → Map(type → [места])
   for (const t of [...model.types, ...model.child_only]) {
-    const add = (rel, how) => { if (!rel) return; (shown.get(rel) || shown.set(rel, []).get(rel)).push(`${t.type}: ${how}`); };
-    for (const r of t.relations || []) add(r.rel, `${r.label} (${r.dir}, ${r.place || 'link_tab'})`);
-    for (const p of t.parts || []) add(p.rel, `часть «${p.label}» (${p.dir})`);
-    for (const tab of t.linkTabs || []) for (const r of tab.rels || []) add(r.rel, `вкладка «${tab.label}» · ${r.label} (${r.dir})`);
-    for (const f of t.fields || []) if (f.rel) add(f.rel, `поле «${f.label}» (${f.dir || 'out'})`);
+    const byRel = new Map();
+    const put = (rel, how) => { if (rel) (byRel.get(rel) || byRel.set(rel, []).get(rel)).push(how); };
+    for (const r of t.relations || []) put(r.rel, `${r.label} (${r.dir}, ${r.place || 'link_tab'})`);
+    const fallback = new Map();
+    const fb = (rel, how) => { if (rel && !byRel.has(rel)) (fallback.get(rel) || fallback.set(rel, []).get(rel)).push(how); };
+    for (const p of t.parts || []) fb(p.rel, `часть «${p.label}» (${p.dir})`);
+    for (const tab of t.linkTabs || []) for (const r of tab.rels || []) fb(r.rel, `вкладка «${tab.label}» · ${r.label} (${r.dir})`);
+    for (const f of t.fields || []) if (f.rel) fb(f.rel, `поле «${f.label}» (${f.dir || 'out'})`);
+    for (const [rel, hows] of [...byRel, ...fallback]) {
+      const m = shown.get(rel) || shown.set(rel, new Map()).get(rel);
+      m.set(t.type, [...new Set([...(m.get(t.type) || []), ...hows])]);
+    }
   }
   const names = [...new Set([...Object.keys(edgesMap.edges), ...shown.keys()])].sort();
   const edges = names.map(name => {
@@ -159,7 +168,7 @@ export function buildDictionary({ model, edgesMap, objectsMap, triples, code, so
       name,
       purpose: edgePurpose(name, model, edgesMap),
       ends: triples.filter(x => x[0] === name).map(x => `${x[1]} → ${x[2]} (${x[3]})`).sort(),
-      passport: [...new Set(shown.get(name) || [])].sort(),
+      passport: [...(shown.get(name) || new Map())].map(([type, hows]) => `${type}: ${hows.join('; ')}`).sort(),
       writers: c.writers, readers: c.readers,
       transfer: transferOf(edgesMap.edges[name]),
       historic: !!(model.edge_history && model.edge_history.edges && model.edge_history.edges[name]),
