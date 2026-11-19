@@ -62,3 +62,28 @@ export function proposeRegroup({ projects, products, counts = {}, overrides = {}
   }
   return { rows, groups, unassigned: rows.filter(r => !r.to).map(r => r.from) };
 }
+
+/** Данные для предложения из источника (только чтение): проекты, продукты с владельцами, число записей проекта. */
+export async function readRegroupInput(db) {
+  const projects = await db.src('SELECT slug, name, hosts, in(\'BELONGS_TO_PROJECT\').size() AS n FROM KnowGitProject ORDER BY slug');
+  const prods = await db.src("SELECT code, out('PARENT_PRODUCT').code[0] AS parent, outE('BELONGS_TO_PROJECT')[role = 'owner'].inV().slug AS owners FROM KnowDictEntry WHERE dict_type = 'product'");
+  const parseHosts = h => { if (Array.isArray(h)) return h; try { return JSON.parse(h); } catch { return null; } };
+  return {
+    projects: projects.map(p => ({ slug: p.slug, name: p.name, hosts: parseHosts(p.hosts) })),
+    products: prods.map(p => ({ code: p.code, parent: p.parent || null, owners: Array.isArray(p.owners) ? p.owners : [] })),
+    counts: Object.fromEntries(projects.map(p => [p.slug, Number(p.n) || 0])),
+  };
+}
+
+/** Правки человека из файла решений: { "проект": "группа" | null }; нет раздела — пусто. */
+export function regroupOverrides(doc) {
+  const o = doc && doc.projects && typeof doc.projects === 'object' ? doc.projects.map || {} : {};
+  return Object.fromEntries(Object.entries(o).filter(([k, v]) => typeof k === 'string' && (v === null || typeof v === 'string')));
+}
+
+/** Записать правки в документ решений: кто и когда — рядом; пустая строка — «оставить без группы». */
+export function withRegroupOverrides(doc, overrides, by, at = new Date().toISOString()) {
+  const map = { ...regroupOverrides(doc) };
+  for (const [k, v] of Object.entries(overrides || {})) map[k] = v ? String(v).trim() : null;
+  return { ...doc, projects: { map, by: by || null, at } };
+}

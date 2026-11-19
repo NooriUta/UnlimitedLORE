@@ -21,6 +21,7 @@ import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
 import { realmPlan, applyRealm, issuerParts } from './kc-realm.mjs';
 import os from 'node:os';
+import { proposeRegroup, readRegroupInput, regroupOverrides, withRegroupOverrides } from './regroup.mjs';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -99,6 +100,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <a href="#step-0" data-step="0"><b>0</b> Вход</a>
 <a href="#step-1" data-step="1"><b>1</b> Подключение</a>
 <a href="#step-2" data-step="2"><b>2</b> Статусы</a>
+<a href="#step-p" data-step="p"><b>П</b> Проекты</a>
 <a href="#step-3" data-step="3"><b>3</b> Пробный расчёт</a>
 <a href="#step-4" data-step="4"><b>4</b> Перенос</a>
 <a href="#step-5" data-step="5"><b>5</b> Сверка и отчёт</a>
@@ -179,6 +181,9 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <section data-page="2" hidden><h2>Шаг 2. Унификация статусов</h2>
 <p class="sub">В записи — код справочника (статусы заглавными); подписи на трёх языках — в справочнике. Предложение конвейера принимается кнопкой; группа — кнопкой в её заголовке. Пока есть строка без решения, перенос не начинается.</p>
 <div id="state" class="state">загрузка…</div><div class="kpis" id="kpis"></div><div id="body"></div></section>
+<section data-page="p" hidden><h2>Шаг П. Перегруппировка проектов</h2>
+<p class="sub">Предложение из данных этой установки: проект = продукт верхнего уровня (подпродукт — в родителе), дубль того же репозитория — туда же. Строку можно поправить: впишите группу или оставьте пустым — проект останется сам по себе. Старые проекты станут синонимами новой группы: записи и ссылки переезжают, ничего не теряется. Сверка — записей до = записей после по каждой группе.</p>
+<div id="rg" class="state">загрузка…</div></section>
 <section data-page="3" hidden><h2>Шаг 3. Пробный расчёт без записи</h2>
 <p class="sub">Каждая запись источника проходит через карту переноса; в новую базу ничего не пишется. Здесь — что не привелось, что удержано до решения и поля, которых карта не знает. Пока описаны спринт, фаза и задача.</p>
 <div id="s3"><button class="btn pri" id="run3">Посчитать</button> <span class="sub">чтение всего источника, около минуты</span></div></section>
@@ -230,8 +235,18 @@ byl.hidden=true;
 if(d.me){el.innerHTML='<div class="state go">Вы вошли как <b>'+esc(d.me.login)+'</b> через '+esc(d.me.kc)+' · область '+esc(d.me.realm)+'. Владелец проекта '+esc(d.me.project)+' — проверено по Keycloak и по базе.</div>';document.getElementById('who').textContent='вошли: '+d.me.login;return}
 el.innerHTML='<form action="auth/start" method="get" class="tw" style="padding:8px"><label class="sub">сервер Keycloak <input name="url" size="40" value="'+esc(d.kc.url)+'"></label> <label class="sub">область <input name="realm" value="'+esc(d.kc.realm)+'"></label> <button class="btn pri">Войти</button><div class="sub">клиент '+esc(d.kc.client)+' · проект-владелец '+esc(d.kc.project)+' · роль '+esc(d.kc.role)+'</div></form>';
 if(stepFromHash()!=='0'&&stepFromHash()!=='s')location.hash='#step-0'})}
-function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}}
-function stepFromHash(){var m=/^#step-(\d|s)$/.exec(location.hash);return m?m[1]:'s'}
+function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}if(n==='p')rg()}
+function stepFromHash(){var m=/^#step-(\d|s|p)$/.exec(location.hash);return m?m[1]:'s'}
+function rg(){var el=document.getElementById('rg');fetch('api/regroup').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent=d.error;return}
+el.className='';var gs=Object.keys(d.groups).sort();
+var h='<div class="kpis">'+gs.map(function(g){return '<div class="kpi"><b>'+esc(g)+'</b><span class="sub">'+d.groups[g].from.length+' пр. · '+d.groups[g].records+' зап.</span></div>'}).join('')+(d.unassigned.length?'<div class="kpi"><b>куда?</b><span class="sub">'+d.unassigned.length+' пр.</span></div>':'')+'</div>';
+h+='<datalist id="rgg">'+gs.map(function(g){return '<option value="'+esc(g)+'">'}).join('')+'</datalist>';
+h+='<table class="tw"><thead><tr><th>проект</th><th>записей</th><th>почему</th><th>группа</th><th></th></tr></thead><tbody>'+d.rows.map(function(r){return '<tr><td class="mono">'+esc(r.from)+'<div class="sub">'+esc(r.name)+'</div></td><td>'+r.records+'</td><td class="sub">'+esc(r.why)+'</td><td><input list="rgg" data-from="'+esc(r.from)+'" value="'+esc(r.to||'')+'" placeholder="без группы"></td><td><button class="btn" data-save="'+esc(r.from)+'">Сохранить</button></td></tr>'}).join('')+'</tbody></table>';
+h+='<div class="top"><button class="btn pri" id="rgall">Принять всю таблицу</button> <span class="sub">записывает группу каждой строки в файл решений</span></div>';
+el.innerHTML=h;
+function save(map){fetch('api/regroup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({overrides:map,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error){el.insertAdjacentHTML('afterbegin','<div class="state stop">'+esc(x.error)+'</div>');return}rg()})}
+el.querySelectorAll('[data-save]').forEach(function(b){b.onclick=function(){var i=el.querySelector('input[data-from="'+b.dataset.save+'"]');var m={};m[b.dataset.save]=i.value;save(m)}});
+document.getElementById('rgall').onclick=function(){var m={};el.querySelectorAll('input[data-from]').forEach(function(i){m[i.dataset.from]=i.value});save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать проекты: '+e.message})}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
 function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
 function splan(){fetch('api/setup/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sform())}).then(function(r){return r.json()}).then(function(d){var el=document.getElementById('splan');if(d.error){el.innerHTML='<div class="state stop">'+esc(d.error)+'</div>';return}
@@ -567,6 +582,17 @@ export async function serve({ port = 2499 } = {}) {
       if (req.method === 'GET' && req.url === '/api/dryrun') {
         const report = await dryRun(db, readDoc());
         return json(res, 200, { ...report, fingerprint: fingerprint(report) });
+      }
+      // Шаг П: перегруппировка проектов (владелица 19.11.2026: «сделай отдельное меню с предложением перегруппировки»)
+      if (req.method === 'GET' && req.url === '/api/regroup') {
+        return json(res, 200, proposeRegroup({ ...(await readRegroupInput(db)), overrides: regroupOverrides(readDoc()) }));
+      }
+      if (req.method === 'POST' && req.url === '/api/regroup') {
+        let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }
+        const b = JSON.parse(body); const who = me(req);
+        const next = withRegroupOverrides(readDoc(), b.overrides, who ? who.login : (b.by || null));
+        fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+        return json(res, 200, { ok: true });
       }
       if (req.method === 'POST' && req.url === '/api/decisions') {
         let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }

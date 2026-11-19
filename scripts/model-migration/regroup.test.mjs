@@ -55,3 +55,13 @@ test('сводка по группам: записей до = записей п�
   const placed = Object.values(r.groups).reduce((a, g) => a + g.records, 0) + r.unassigned.reduce((a, s) => a + counts[s], 0);
   assert.equal(placed, total);
 });
+
+import { regroupOverrides, withRegroupOverrides } from './regroup.mjs';
+test('правки перегруппировки живут в файле решений и не трогают остальные решения', () => {
+  const doc = { format: 'mig-decisions/1', decisions: [{ id: 'x' }] };
+  const next = withRegroupOverrides(doc, { 'NooriUta/BRAGI': 'SEIDR_BACKOFFICE', 'AIDA/studio': '' }, 'omiloreadmin', '2026-11-19T12:00:00Z');
+  assert.deepEqual(next.decisions, doc.decisions);
+  assert.deepEqual(regroupOverrides(next), { 'NooriUta/BRAGI': 'SEIDR_BACKOFFICE', 'AIDA/studio': null });
+  assert.equal(next.projects.by, 'omiloreadmin');
+  assert.deepEqual(regroupOverrides({}), {});
+});
