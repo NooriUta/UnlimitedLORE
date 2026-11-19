@@ -1,4 +1,4 @@
-import { classify as classifyRules } from './status-unify.mjs';
+import { classify as classifyRules, EMPTY as EMPTY_STATUS } from './status-unify.mjs';
 import HARNESS_RULES_FILE from './rules/status-unification.json' with { type: 'json' };
 const HARNESS_RULES = HARNESS_RULES_FILE.dictionaries.harness;
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Исполнитель карты переноса.
@@ -201,9 +201,25 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     }
     throw new Error(`${k}: неизвестное правило «${e.rule}»`);
   }
+  // MD-02 7а (владелица 19.11.2026): пустой обязательный статус — не «нет статуса молча», а несоответствие «пусто»,
+  // то же, что диалог унификации показывает строкой «ждёт решения». Ответ человека (map_to по причине «пусто»)
+  // закрывает его ниже; без ответа значение уходит в остаток, кода никто не подставляет.
+  const rs = ctx.requiredStatus;
+  if (rs && typeMap[rs] && typeMap[rs].rule === 'transform' && !given(record[rs])) reject(r, rs, null, EMPTY_STATUS, { bucket: 'out', field: 'status', note: 'status_note' });
   // MIG-02: решения человека о несоответствиях данных (раздел «Перенос») — после расчёта по карте.
   if (ctx.decisions) resolveRejects(T, r, ctx.decisions);
   return r;
+}
+
+/**
+ * Обязательное поле статуса типа по правилам унификации (sources, required) — или null. Справочник с правилом
+ * вывода (фаза — по задачам) человека не ждёт, поэтому обязательным пустое там не считается.
+ */
+export function requiredStatusField(rules, T) {
+  const s = (rules.sources || []).find(x => x.type === T && x.required && (x.field === 'status' || x.field === 'status_raw'));
+  if (!s) return null;
+  const d = (rules.dictionaries || {})[s.dict];
+  return d && d.kind === 'status' && !d.derive ? s.field : null;
 }
 
 /** Преобразования карты, для которых нет кода, — сторож полноты исполнителя. */

@@ -18,7 +18,7 @@ import { loadDecisions } from './decisions.mjs';
 const DECISIONS = loadDecisions(); // решения человека из раздела «Перенос»; файла нет — решений нет
 import crypto from 'node:crypto';
 import { connect } from './db.mjs';
-import { applyMap } from './apply-map.mjs';
+import { applyMap, requiredStatusField } from './apply-map.mjs';
 
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
 import { seriesDdl } from './series.mjs';
@@ -65,6 +65,13 @@ export function fieldDiff(got, want) {
     .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
     .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
 }
+/**
+ * Остаток по несоответствию, которое не закрыто решением человека. MD-02 7а (владелица 19.11.2026): перенос честно
+ * пишет «ждёт решения» (или «отложено человеком», если человек выбрал «решу позже»), а не подставляет значение молча.
+ */
+export function rejectLeftover(T, rid, x) {
+  return { src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why, state: x.deferred ? 'отложено человеком' : 'ждёт решения' };
+}
 export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
@@ -83,7 +90,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const calc = {}; // T → [{ rid, res }]
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
-    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]] }) });
+    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], requiredStatus: requiredStatusField(RULES, T) }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};
@@ -190,7 +197,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
-    for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
+    for (const x of res.rejects) leftovers.push(rejectLeftover(T, rid, x));
   }
   report.stages.merge = merge;
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
@@ -198,7 +205,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
   // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
-  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA, notMovedFor(db.env));
+  // MD-02 8а: пустой тип не переносится — число записей считает сам установщик по источнику (count, как и сверка
+  // «как есть» ниже), а не берёт счётчик схемы: у временного ряда он не обязан совпадать с числом строк
+  const srcTypes = await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types');
+  for (const t of srcTypes) if (t.type !== 'edge' && !SCHEMA[t.name]) t.records = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
+  const structure = structurePlan(srcTypes, SCHEMA, notMovedFor(db.env));
   // свои: типы карты и структуры; плюс типы «не переносить», оставленные прежней версией переноса, — их --reset удаляет
   const mine = [...ownTypes(), ...structure.types.map(t => t.name), ...Object.keys(NOT_MOVED)];
   const clash = existing.filter(n => mine.includes(n));

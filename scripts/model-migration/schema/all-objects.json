@@ -6,7 +6,7 @@
     "Версия — отдельный тип с окончанием Hist и связью HAS_STATE, как у первого объекта.",
     "Тип поля «как есть» — объявленный в схеме прода; не объявленное там поле — строкой (пометка у поля).",
     "Удержанные значения (component_id, project и *_refs до шага связей) в схему не входят — они становятся связями.",
-    "Типы без записей в снимке (KnowCanvas, KnowSavedView, QGMetric и др.) получают пустой перечень полей — схема заводится, поля появятся с данными."
+    "Типы без записей в снимке (KnowCanvas, KnowSavedView, QGMetric и др.) не переносятся и в схему не входят — решение владелицы 19.11.2026 (MD-02 8а), возврат из бэкапа."
   ],
   "types": {
     "BragiAsset": {
@@ -1591,27 +1591,6 @@
       "held": {},
       "rejects": {}
     },
-    "KnowCanvas": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
-    "KnowCanvasItem": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
-    "KnowCanvasLink": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
     "KnowDecision": {
       "records": 1193,
       "version_of": null,
@@ -2456,54 +2435,6 @@
           ],
           "filled": 3,
           "of": 31
-        }
-      },
-      "held": {},
-      "rejects": {}
-    },
-    "KnowFindingHist": {
-      "records": 0,
-      "version_of": "KnowFinding",
-      "fields": {
-        "changed_by_session": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Сессия правки",
-          "from": [],
-          "filled": 0,
-          "of": 0,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_harness": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Harness правки",
-          "from": [],
-          "filled": 0,
-          "of": 0,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_harness_note": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Сверка harness",
-          "from": [],
-          "filled": 0,
-          "of": 0,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
-        },
-        "changed_by_machine": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Машина правки",
-          "from": [],
-          "filled": 0,
-          "of": 0,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
@@ -3924,13 +3855,6 @@
       "held": {},
       "rejects": {}
     },
-    "KnowSavedView": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
     "KnowSpec": {
       "records": 498,
       "version_of": null,
@@ -4444,34 +4368,6 @@
       "held": {},
       "rejects": {}
     },
-    "KnowUserFavorite": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
-    "KnowUserHabit": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
-    "KnowUserMemoryPref": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
-    "KnowUserRecent": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
     "KnowUserSettings": {
       "records": 2,
       "version_of": null,
@@ -4665,13 +4561,6 @@
       "held": {},
       "rejects": {}
     },
-    "LoreRefDismissal": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
-      "held": {},
-      "rejects": {}
-    },
     "LoreTechnology": {
       "records": 13,
       "version_of": null,
@@ -4777,13 +4666,6 @@
           "of": 85
         }
       },
-      "held": {},
-      "rejects": {}
-    },
-    "QGMetric": {
-      "records": 0,
-      "version_of": null,
-      "fields": {},
       "held": {},
       "rejects": {}
     },

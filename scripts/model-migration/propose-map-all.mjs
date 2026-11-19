@@ -10,6 +10,8 @@
 // (owner, «план доску удаляем»); журнал шагов — заменён отметкой схемы; остальное — как есть (delegated).
 // Запуск: node propose-map-all.mjs <перепись.json> → map/all-objects.json
 import fs from 'node:fs';
+import { EMPTY_WHY } from './structure-plan.mjs';
+export { EMPTY_WHY };
 
 const FIRST = new Set(['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHist', 'KnowTask', 'KnowTaskHist']);
 const SERVICE = new Set(['valid_from', 'valid_to', 'state_uid', 'content_hash', 'changed_by', 'changed_by_kind', 'changed_by_session',
@@ -79,6 +81,8 @@ export function proposeMap(census) {
   for (const T of Object.keys(census).sort()) {
     const p = typePlan(T);
     if (!p.move) { if (!FIRST.has(T)) skipped[T] = p.why; continue; }
+    // MD-02 8а (владелица 19.11.2026): пустой тип не переносится ни один — список по переписи, не жёсткий
+    if (census[T].total === 0) { skipped[T] = EMPTY_WHY; continue; }
     types[T] = {};
     for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
     if (T.endsWith('Hist')) for (const f of SERVICE_EDIT) if (!types[T][f]) types[T][f] = { ...SERVICE_EDIT_RULE };

@@ -9,6 +9,26 @@ const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const FT_META = ' METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}';
 const NOT_CARRIED = new Set(['LoreSchemaVersion']); // журнал шагов V: у базы из модели его нет по построению
 
+/**
+ * MD-02 8а, решение владелицы 19.11.2026: пустой тип (0 записей в источнике) не переносится ни один, возврат — из
+ * бэкапа. Список не жёсткий: генератор карты считает его по переписи (propose-map-all.mjs), установщик — по числу
+ * записей источника (schema:types.records) на шаге структуры.
+ */
+export const EMPTY_WHY = 'пустой тип: 0 записей в источнике — не переносится, возврат из бэкапа (решение владелицы 19.11.2026, MD-02 8а)';
+
+/** Тип пуст по числу записей источника; число неизвестно — не пуст (данные не теряются по догадке). */
+const isEmpty = t => t.records === 0 || t.records === '0';
+
+/**
+ * «Не переносить» с поправкой на сам источник: тип, пустой по переписи-снимку, но с записями в этом источнике, —
+ * переносится (как есть); тип вне карты с 0 записей — не переносится с причиной EMPTY_WHY.
+ */
+function notMovedBySource(t, notMoved) {
+  const why = notMoved[t.name];
+  if (why === EMPTY_WHY) return isEmpty(t) || t.records === undefined ? why : null;
+  return why || (isEmpty(t) ? EMPTY_WHY : null);
+}
+
 const q = f => { if (!NAME.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f); return '`' + f + '`'; };
 
 /** Старое имя поля → новое по карте типа: new ← from[]; новое имя отвечает и само за себя. */
@@ -28,7 +48,8 @@ export function structurePlan(srcTypes, schema, notMoved = {}) {
   for (const t of sorted) {
     if (t.type === 'edge' || NOT_CARRIED.has(t.name) || schema[t.name]) continue;
     // карта решила «не переносить» (план-доска снята и т.п.) — тип не воссоздаётся, причина — в отчёт
-    if (notMoved[t.name]) { notCarried.push({ type: t.name, why: notMoved[t.name] }); continue; }
+    const skip = notMovedBySource(t, notMoved);
+    if (skip) { notCarried.push({ type: t.name, why: skip }); continue; }
     if (t.type === 't') { // временной ряд ArcadeDB: колонки — момент, теги, поля; строки без @rid
       const cols = t.tsColumns || [];
       types.push({ name: t.name, kind: 'TIMESERIES', ts: t.timestampColumn, props: cols.map(c => ({ name: c.name, type: c.dataType, role: c.role })) });
@@ -49,7 +70,7 @@ export function structurePlan(srcTypes, schema, notMoved = {}) {
     indexDdl.push(`CREATE INDEX IF NOT EXISTS ON ${t.name} (mig_src_rid) UNIQUE`);
   }
   for (const t of sorted) {
-    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || notMoved[t.name]) continue;
+    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || (!schema[t.name] && notMovedBySource(t, notMoved)) || (schema[t.name] && notMoved[t.name])) continue;
     const mapped = schema[t.name];
     const ren = mapped ? renamesOf(mapped) : null;
     for (const ix of [...(t.indexes || [])].sort((a, b) => a.name.localeCompare(b.name))) {

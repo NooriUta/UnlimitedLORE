@@ -19,7 +19,9 @@ const DROPPED_EDGES = ['HAS_PR', 'ON_MILESTONE'];
 // Мёртвые связи — переводятся в живую IMPLEMENTED_IN_RELEASE, под своим именем не переносятся.
 const CONVERTED_EDGES = ['INCLUDES', 'RELEASED_IN'];
 // «что нужно в QG то и оставляй» (18.11) и «матрица технологий переносится» (18.11) — переносятся.
-const KEPT_TYPES = ['ClRoutineRun', 'ClRoutineMetric', 'ClRoutineOutput', 'ClRoutineSprintFlag', 'KnowFindingHist', 'LoreTechnology'];
+// KnowFindingHist тоже был в этом списке (18.11), но в источнике он пуст (0 записей): решение владелицы 19.11 «8а» —
+// пустые типы не переносятся ни один, возврат из бэкапа (md02-owner-answers.test.mjs). Более позднее слово сильнее.
+const KEPT_TYPES = ['ClRoutineRun', 'ClRoutineMetric', 'ClRoutineOutput', 'ClRoutineSprintFlag', 'LoreTechnology'];
 const KEPT_EDGES = ['ClRoutineHasOutput'];
 
 test('MD-02: снятые V89 типы и план-доска — в «не переносится» с причиной', () => {
