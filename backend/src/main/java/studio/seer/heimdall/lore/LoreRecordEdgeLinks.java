@@ -33,7 +33,7 @@ final class LoreRecordEdgeLinks {
     // порядка конец-гейт назывался бы кодом своего спринта (MD-04, второй заход по QG).
     static final List<String> ID_FIELDS = List.of("qg_id", "task_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
         "question_id", "milestone_id", "release_uid", "component_id", "uc_id", "runbook_id", "doc_id",
-        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "slug");
+        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "org_id", "slug");
 
     static final List<String> TITLE_FIELDS = List.of("title", "name", "label", "full_name", "display_name", "statement_md");
 
@@ -49,7 +49,9 @@ final class LoreRecordEdgeLinks {
         Map.entry("KnowPain", "pain"),
         Map.entry("KnowGain", "gain"), Map.entry("KnowJob", "job"), Map.entry("KnowProjectActor", "actor"),
         // S9-05 A: концы вкладок человека и агента.
-        Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"));
+        Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: организация — конец связей проекта, продукта и человека.
+        Map.entry("KnowOrganization", "organization"));
 
     /** Имя источника в meta.data_state: видно, что вкладка прочитана по ребру, а не срезом. */
     static String source(LoreRecordRegistry.Relation r) {
@@ -70,7 +72,9 @@ final class LoreRecordEdgeLinks {
             + "coalesce(" + String.join(", ", TITLE_FIELDS) + ") AS end_title, "
             + "coalesce(status, status_raw, status_general) AS end_status, "
             + "unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects "
-            + "FROM (SELECT expand(" + dir + "('" + r.rel() + "')) FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
+            // MDL-02: у историчной связи — только текущие рёбра (valid_to IS NULL), закрытые — история.
+            + "FROM (SELECT expand(" + ("out".equals(dir) ? LoreEdgeHistory.out(r.rel()) : LoreEdgeHistory.in(r.rel()))
+            + ") FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
             + "LIMIT " + (LIMIT + 1);
     }
 

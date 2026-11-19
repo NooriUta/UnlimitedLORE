@@ -262,7 +262,7 @@ class LorePassportSurfaceTest {
 
     @Test
     void component() {
-        assertEquals(List.of("specs", "adrs", "tech", "children", "decisions", "questions", "features", "docs", "qgs",
+        assertEquals(List.of("specs", "adrs", "tech", "repositories", "children", "decisions", "questions", "features", "docs", "qgs",
                 "tasks", "sprints", "Ссылки[refsOut+refsIn]"), tabs("component"),
             "компонент: Спеки · ADR · Технологии · Подкомпоненты (46а/52а) · решения, вопросы, сценарии, знания, гейты "
                 + "(11.11, как v1) · Задачи · Спринты (срезы с пагинацией, S4-29)");
@@ -270,16 +270,16 @@ class LorePassportSurfaceTest {
 
     @Test
     void project() {
-        assertEquals(List.of("sprints", "components", "adrs", "releases", "Люди и агенты[people+agents]",
+        assertEquals(List.of("sprints", "components", "repositories", "adrs", "releases", "Люди и агенты[people+agents]",
                 // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — после 53а.
                 "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "boundAgents",
-                "files", "prs"), tabs("project"),
+                "files", "prs", "organizations"), tabs("project"),
             "проект (53а): Спринты · Компоненты · ADR · Релизы · Люди и агенты; затем прямые связи (11.11)");
     }
 
     @Test
     void product() {
-        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones"), tabs("product"),
+        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones", "organizations"), tabs("product"),
             "продукт (S4-PRODUCTS-NODE): Компоненты · Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты · Обслуживает · Обслуживается · Вехи");
     }
 

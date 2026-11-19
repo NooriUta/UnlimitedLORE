@@ -1,0 +1,929 @@
+{
+  "format": "mig-status-rules/1",
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-02. Правило переноса статусов: в записи одно поле status с кодом справочника; подпись, значок и цвет — только в справочнике; подписи обязательны на всех языках из languages. Значение источника сводится к коду по написанию (без значка и приписки, регистр и пробел/подчёркивание не важны) и по synonyms. Что не свелось — строка диалога унификации перед переносом; решение человека хранится в файле решений (decisions.mjs) и переживает повторный перенос. Сюда вписаны только статусы нашей установки; статусы другой установки добавляются решениями, а не правкой этого файла.",
+  "languages": [
+    "ru",
+    "en",
+    "pl"
+  ],
+  "code_case": {
+    "status": "upper",
+    "other": "lower"
+  },
+  "_code_case": "Регистр кода в приёмнике — слово владелицы 16.11.2026: «статусная модель uppercase остальные в lower». kind справочника: status — статусы, other — остальные (приоритет и следующие).",
+  "dictionaries": {
+    "plan_status": {
+      "_about": "Спринт и задача — один справочник вместо двух одинаковых копий (sprint_status, task_status).",
+      "kind": "status",
+      "codes": [
+        {
+          "code": "TODO",
+          "labels": {
+            "ru": "К выполнению",
+            "en": "To Do",
+            "pl": "Do zrobienia"
+          },
+          "icon": "checkbox-tree"
+        },
+        {
+          "code": "BACKLOG",
+          "labels": {
+            "ru": "Бэклог",
+            "en": "Backlog",
+            "pl": "Backlog"
+          },
+          "icon": "tied-scroll"
+        },
+        {
+          "code": "PLANNED",
+          "labels": {
+            "ru": "Запланировано",
+            "en": "Planned",
+            "pl": "Zaplanowane"
+          },
+          "icon": "calendar"
+        },
+        {
+          "code": "DESIGN",
+          "labels": {
+            "ru": "Проектирование",
+            "en": "Design",
+            "pl": "Projektowanie"
+          },
+          "icon": "magic-swirl"
+        },
+        {
+          "code": "ACTIVE",
+          "labels": {
+            "ru": "В работе",
+            "en": "In Progress",
+            "pl": "W toku"
+          },
+          "icon": "progression"
+        },
+        {
+          "code": "WAITING",
+          "labels": {
+            "ru": "Ждём ответа",
+            "en": "Waiting",
+            "pl": "Oczekuje na odpowiedź"
+          },
+          "icon": "hourglass"
+        },
+        {
+          "code": "PARTIAL",
+          "labels": {
+            "ru": "Частично",
+            "en": "Partial",
+            "pl": "Częściowo"
+          },
+          "icon": "battery-50"
+        },
+        {
+          "code": "REVIEW",
+          "labels": {
+            "ru": "На приёмке",
+            "en": "Review",
+            "pl": "W przeglądzie"
+          },
+          "icon": "magnifying-glass"
+        },
+        {
+          "code": "READY_FOR_DEPLOY",
+          "labels": {
+            "ru": "Готово к деплою",
+            "en": "Ready for Deploy",
+            "pl": "Gotowe do wdrożenia"
+          },
+          "icon": "wave-crest"
+        },
+        {
+          "code": "UAT",
+          "labels": {
+            "ru": "UAT — приёмка",
+            "en": "UAT Testing",
+            "pl": "Testy akceptacyjne (UAT)"
+          },
+          "icon": "stamper"
+        },
+        {
+          "code": "DONE",
+          "labels": {
+            "ru": "Готово",
+            "en": "Done",
+            "pl": "Gotowe"
+          },
+          "icon": "divided-spiral"
+        },
+        {
+          "code": "FAILED",
+          "labels": {
+            "ru": "Неуспех",
+            "en": "Failed",
+            "pl": "Niepowodzenie"
+          },
+          "icon": "cancel"
+        },
+        {
+          "code": "BLOCKED",
+          "labels": {
+            "ru": "Заблокировано",
+            "en": "Blocked",
+            "pl": "Zablokowane"
+          },
+          "icon": "handcuffed"
+        },
+        {
+          "code": "CANCELLED",
+          "labels": {
+            "ru": "Отменено",
+            "en": "Cancelled",
+            "pl": "Anulowane"
+          },
+          "icon": "cross-mark"
+        }
+      ],
+      "synonyms": {
+        "IN PROGRESS": "ACTIVE",
+        "UAT TESTING": "UAT",
+        "CANCELED": "CANCELLED"
+      },
+      "empty_default": "BACKLOG",
+      "_empty_default": "Пустой статус спринта и задачи → BACKLOG: правило владелицы «если статус не указан при создании ставим первый статус в беклог» и её решение ST-08 от 16.11.2026."
+    },
+    "phase_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "BACKLOG",
+          "labels": {
+            "ru": "Бэклог",
+            "en": "Backlog",
+            "pl": "Backlog"
+          }
+        },
+        {
+          "code": "PLANNED",
+          "labels": {
+            "ru": "Запланирована",
+            "en": "Planned",
+            "pl": "Zaplanowana"
+          }
+        },
+        {
+          "code": "ACTIVE",
+          "labels": {
+            "ru": "В работе",
+            "en": "In Progress",
+            "pl": "W toku"
+          }
+        },
+        {
+          "code": "DONE",
+          "labels": {
+            "ru": "Реализована",
+            "en": "Done",
+            "pl": "Zrealizowana"
+          }
+        },
+        {
+          "code": "MOVED",
+          "labels": {
+            "ru": "Вынесена",
+            "en": "Moved out",
+            "pl": "Przeniesiona"
+          }
+        }
+      ],
+      "synonyms": {
+        "IN PROGRESS": "ACTIVE",
+        "CANCELLED": "MOVED",
+        "CANCELED": "MOVED"
+      },
+      "_synonyms": "CANCELLED/CANCELED → MOVED — допущение исполнителя 19.11.2026 (SPRINT_LORE_MODEL_DOCS_TIDY/MIG-02, предложено 16.11), владелицей не подтверждено: в пути фазы отмены нет, отменённая фаза считается вынесенной. Переиграть — правкой этого синонима (строки в разделе «Перенос» у такой фазы не будет: значение сводится к коду).",
+      "unrecognized_why": "похоже на название фазы, а не на статус: по правилу карты переноса текст уходит в название фазы, если оно пусто",
+      "derive": {
+        "_about": "Слово владелицы 16.11.2026: «статус ставишь минимальный по задачам входящим в фазу». Фаза, у версии которой статус не свёлся к коду (в поле лежит название или статус задачи, которого у фазы нет, или пусто), получает самый ранний этап пути среди своих задач (связь IN_PHASE, текущая версия задачи). Отменённые задачи не учитываются; задач нет — empty.",
+        "from": "tasks_min",
+        "order": [
+          "BACKLOG",
+          "PLANNED",
+          "ACTIVE",
+          "DONE"
+        ],
+        "map": {
+          "TODO": "BACKLOG",
+          "BACKLOG": "BACKLOG",
+          "PLANNED": "PLANNED",
+          "DESIGN": "PLANNED",
+          "ACTIVE": "ACTIVE",
+          "WAITING": "ACTIVE",
+          "PARTIAL": "ACTIVE",
+          "REVIEW": "ACTIVE",
+          "READY_FOR_DEPLOY": "ACTIVE",
+          "UAT": "ACTIVE",
+          "BLOCKED": "ACTIVE",
+          "FAILED": "ACTIVE",
+          "DONE": "DONE"
+        },
+        "skip": [
+          "CANCELLED"
+        ],
+        "empty": "BACKLOG"
+      }
+    },
+    "adr_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "DRAFT",
+          "labels": {
+            "ru": "Черновик",
+            "en": "Draft",
+            "pl": "Szkic"
+          }
+        },
+        {
+          "code": "PROPOSED",
+          "labels": {
+            "ru": "Предложен",
+            "en": "Proposed",
+            "pl": "Zaproponowany"
+          }
+        },
+        {
+          "code": "ACCEPTED",
+          "labels": {
+            "ru": "Принят",
+            "en": "Accepted",
+            "pl": "Przyjęty"
+          }
+        },
+        {
+          "code": "DEFERRED",
+          "labels": {
+            "ru": "Отложен",
+            "en": "Deferred",
+            "pl": "Odłożony"
+          }
+        },
+        {
+          "code": "DEPRECATED",
+          "labels": {
+            "ru": "Устарел",
+            "en": "Deprecated",
+            "pl": "Przestarzały"
+          }
+        },
+        {
+          "code": "SUPERSEDED",
+          "labels": {
+            "ru": "Заменён",
+            "en": "Superseded",
+            "pl": "Zastąpiony"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "decision_status": {
+      "_about": "Коды fixed и done из справочника источника сюда не вписаны: в источнике они помечены «легаси сида — к ревизии», их судьба — решение человека в диалоге.",
+      "kind": "status",
+      "codes": [
+        {
+          "code": "PROPOSED",
+          "labels": {
+            "ru": "Предложено",
+            "en": "Proposed",
+            "pl": "Zaproponowane"
+          }
+        },
+        {
+          "code": "ACCEPTED",
+          "labels": {
+            "ru": "Принято",
+            "en": "Accepted",
+            "pl": "Przyjęte"
+          }
+        },
+        {
+          "code": "DEFERRED",
+          "labels": {
+            "ru": "Отложено",
+            "en": "Deferred",
+            "pl": "Odłożone"
+          }
+        },
+        {
+          "code": "SUPERSEDED",
+          "labels": {
+            "ru": "Вытеснено",
+            "en": "Superseded",
+            "pl": "Zastąpione"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "spec_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "PROPOSED",
+          "labels": {
+            "ru": "Предложение",
+            "en": "Proposed",
+            "pl": "Propozycja"
+          }
+        },
+        {
+          "code": "ACCEPTED",
+          "labels": {
+            "ru": "Принята",
+            "en": "Accepted",
+            "pl": "Przyjęta"
+          }
+        },
+        {
+          "code": "DEPRECATED",
+          "labels": {
+            "ru": "Устарела",
+            "en": "Deprecated",
+            "pl": "Przestarzała"
+          }
+        },
+        {
+          "code": "SUPERSEDED",
+          "labels": {
+            "ru": "Вытеснена",
+            "en": "Superseded",
+            "pl": "Zastąpiona"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "milestone_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "UPCOMING",
+          "labels": {
+            "ru": "Предстоит",
+            "en": "Upcoming",
+            "pl": "Nadchodzi"
+          }
+        },
+        {
+          "code": "ACTIVE",
+          "labels": {
+            "ru": "Активна",
+            "en": "Active",
+            "pl": "Aktywny"
+          }
+        },
+        {
+          "code": "REACHED",
+          "labels": {
+            "ru": "Достигнута",
+            "en": "Reached",
+            "pl": "Osiągnięty"
+          }
+        },
+        {
+          "code": "MISSED",
+          "labels": {
+            "ru": "Пропущена",
+            "en": "Missed",
+            "pl": "Niedotrzymany"
+          }
+        }
+      ],
+      "synonyms": {}
+    },
+    "question_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "OPEN",
+          "labels": {
+            "ru": "Открыт",
+            "en": "Open",
+            "pl": "Otwarte"
+          },
+          "icon": "calendar"
+        },
+        {
+          "code": "CLOSED",
+          "labels": {
+            "ru": "Закрыт",
+            "en": "Closed",
+            "pl": "Zamknięte"
+          },
+          "icon": "laurel-crown"
+        },
+        {
+          "code": "DEFERRED",
+          "labels": {
+            "ru": "Отложен",
+            "en": "Deferred",
+            "pl": "Odłożone"
+          },
+          "icon": "pause-button"
+        },
+        {
+          "code": "DROPPED",
+          "labels": {
+            "ru": "Снят",
+            "en": "Dropped",
+            "pl": "Wycofane"
+          },
+          "icon": "cancel"
+        }
+      ],
+      "synonyms": {}
+    },
+    "feature_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "PROPOSED",
+          "labels": {
+            "ru": "Предложена",
+            "en": "Proposed",
+            "pl": "Zaproponowana"
+          },
+          "icon": "calendar"
+        },
+        {
+          "code": "ACTIVE",
+          "labels": {
+            "ru": "В работе",
+            "en": "In progress",
+            "pl": "W toku"
+          },
+          "icon": "progression"
+        },
+        {
+          "code": "SHIPPED",
+          "labels": {
+            "ru": "Поставлена",
+            "en": "Shipped",
+            "pl": "Dostarczona"
+          },
+          "icon": "laurel-crown"
+        },
+        {
+          "code": "IN_REWORK",
+          "labels": {
+            "ru": "В переработке",
+            "en": "In rework",
+            "pl": "W przeróbce"
+          },
+          "icon": "battery-50"
+        },
+        {
+          "code": "DROPPED",
+          "labels": {
+            "ru": "Снята",
+            "en": "Dropped",
+            "pl": "Wycofana"
+          },
+          "icon": "cancel"
+        }
+      ],
+      "synonyms": {}
+    },
+    "qg_status": {
+      "kind": "status",
+      "codes": [
+        {
+          "code": "DRAFT",
+          "labels": {
+            "ru": "Задуман",
+            "en": "Draft",
+            "pl": "Szkic"
+          },
+          "icon": "quill-ink"
+        },
+        {
+          "code": "ACTIVE",
+          "labels": {
+            "ru": "Работает",
+            "en": "Active",
+            "pl": "Działa"
+          },
+          "icon": "play-button"
+        },
+        {
+          "code": "STALE",
+          "labels": {
+            "ru": "Молчит",
+            "en": "Stale",
+            "pl": "Milczy"
+          },
+          "icon": "hourglass"
+        },
+        {
+          "code": "RETIRED",
+          "labels": {
+            "ru": "Выведен",
+            "en": "Retired",
+            "pl": "Wycofany"
+          },
+          "icon": "tombstone"
+        }
+      ],
+      "synonyms": {}
+    },
+    "priority": {
+      "_about": "Владелица 16.11.2026: «приоритет такой же справочник по факту как и все остальные». Словесная шкала — её прежнее решение в карте переноса; P0–P3 и blocker сводятся к ней. medium и вольный текст — решение человека в диалоге.",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "critical",
+          "labels": {
+            "ru": "Критический",
+            "en": "Critical",
+            "pl": "Krytyczny"
+          }
+        },
+        {
+          "code": "high",
+          "labels": {
+            "ru": "Высокий",
+            "en": "High",
+            "pl": "Wysoki"
+          }
+        },
+        {
+          "code": "normal",
+          "labels": {
+            "ru": "Средний",
+            "en": "Normal",
+            "pl": "Średni"
+          }
+        },
+        {
+          "code": "low",
+          "labels": {
+            "ru": "Низкий",
+            "en": "Low",
+            "pl": "Niski"
+          }
+        }
+      ],
+      "synonyms": {
+        "P0": "critical",
+        "P1": "high",
+        "P2": "normal",
+        "P3": "low",
+        "BLOCKER": "critical",
+        "MEDIUM": "normal"
+      }
+    },
+    "harness": {
+      "kind": "other",
+      "_about": "Справочник harness — хозяйство miniLORE (ADR-LORE-054 п.8); у LORE копия. Коды link: claude, kimi, dsh, qwen; известные, не подключённые к miniLORE: codex, opencode, cursor. Владелица 17.11.2026: «как у minilore», «коды у minilore правильные, а название можно сделать больше», «завели в правила проверки и унификации».",
+      "codes": [
+        {
+          "code": "claude",
+          "labels": {
+            "ru": "Claude Code — агент Anthropic в терминале и приложении",
+            "en": "Claude Code — Anthropic agent for terminal and desktop",
+            "pl": "Claude Code — agent Anthropic w terminalu i aplikacji"
+          }
+        },
+        {
+          "code": "kimi",
+          "labels": {
+            "ru": "Kimi Code — агент Moonshot AI",
+            "en": "Kimi Code — Moonshot AI agent",
+            "pl": "Kimi Code — agent Moonshot AI"
+          }
+        },
+        {
+          "code": "qwen",
+          "labels": {
+            "ru": "Qwen Code — агент Alibaba (форк Gemini CLI)",
+            "en": "Qwen Code — Alibaba agent (Gemini CLI fork)",
+            "pl": "Qwen Code — agent Alibaba (fork Gemini CLI)"
+          }
+        },
+        {
+          "code": "dsh",
+          "labels": {
+            "ru": "DeepSeek Harness — агент на моделях DeepSeek",
+            "en": "DeepSeek Harness — agent on DeepSeek models",
+            "pl": "DeepSeek Harness — agent na modelach DeepSeek"
+          }
+        },
+        {
+          "code": "codex",
+          "labels": {
+            "ru": "Codex — агент OpenAI (не подключён к miniLORE)",
+            "en": "Codex — OpenAI agent (not connected to miniLORE)",
+            "pl": "Codex — agent OpenAI (niepodłączony do miniLORE)"
+          }
+        },
+        {
+          "code": "opencode",
+          "labels": {
+            "ru": "OpenCode — открытый агент SST (не подключён к miniLORE)",
+            "en": "OpenCode — open-source agent by SST (not connected to miniLORE)",
+            "pl": "OpenCode — otwarty agent SST (niepodłączony do miniLORE)"
+          }
+        },
+        {
+          "code": "cursor",
+          "labels": {
+            "ru": "Cursor — редактор с агентом Anysphere (не подключён к miniLORE)",
+            "en": "Cursor — Anysphere agent editor (not connected to miniLORE)",
+            "pl": "Cursor — edytor z agentem Anysphere (niepodłączony do miniLORE)"
+          }
+        }
+      ],
+      "synonyms": {
+        "claude-code": "claude",
+        "kimi-code": "kimi",
+        "claude code": "claude",
+        "kimi code": "kimi",
+        "qwen code": "qwen",
+        "deepseek": "dsh",
+        "deepseek harness": "dsh",
+        "open code": "opencode"
+      }
+    }
+  },
+  "_sources": "Где в источнике лежит статус. required: пустое значение — строка диалога (правило владелицы 16.11.2026: пустого статуса нет, предложение — первый статус справочника).",
+  "sources": [
+    {
+      "type": "KnowSprintHist",
+      "field": "status_raw",
+      "dict": "plan_status",
+      "required": true
+    },
+    {
+      "type": "KnowTaskHist",
+      "field": "status_raw",
+      "dict": "plan_status",
+      "required": true
+    },
+    {
+      "type": "KnowPhaseHist",
+      "field": "status_raw",
+      "dict": "phase_status",
+      "required": true
+    },
+    {
+      "type": "KnowADRHist",
+      "field": "status_raw",
+      "dict": "adr_status",
+      "required": true
+    },
+    {
+      "type": "KnowDecisionHist",
+      "field": "status_raw",
+      "dict": "decision_status",
+      "required": true
+    },
+    {
+      "type": "KnowSpecHist",
+      "field": "status",
+      "dict": "spec_status",
+      "required": true
+    },
+    {
+      "type": "KnowMilestoneHist",
+      "field": "status_raw",
+      "dict": "milestone_status",
+      "required": true
+    },
+    {
+      "type": "KnowQuestion",
+      "field": "status",
+      "dict": "question_status",
+      "required": true
+    },
+    {
+      "type": "KnowUseCase",
+      "field": "status",
+      "dict": "feature_status",
+      "required": true
+    },
+    {
+      "type": "QualityGate",
+      "field": "status",
+      "dict": "qg_status",
+      "required": true
+    },
+    {
+      "type": "KnowSprintHist",
+      "field": "priority",
+      "dict": "priority",
+      "required": false
+    },
+    {
+      "type": "KnowQuestion",
+      "field": "priority",
+      "dict": "priority",
+      "required": false
+    },
+    {
+      "type": "KnowADR",
+      "field": "status",
+      "dict": "adr_status",
+      "required": false,
+      "_about": "копия статуса на записи (у части записей нет версии); MIG-01 все объекты, 17.11.2026"
+    },
+    {
+      "type": "KnowDecision",
+      "field": "status_raw",
+      "dict": "decision_status",
+      "required": false,
+      "_about": "копия статуса на записи (у части записей нет версии); MIG-01 все объекты, 17.11.2026"
+    },
+    {
+      "type": "KnowSpec",
+      "field": "status",
+      "dict": "spec_status",
+      "required": false,
+      "_about": "копия статуса на записи (у части записей нет версии); MIG-01 все объекты, 17.11.2026"
+    },
+    {
+      "type": "KnowActor",
+      "field": "harness",
+      "dict": "harness",
+      "required": false,
+      "_about": "harness агента — к кодам miniLORE (17.11.2026)"
+    }
+  ],
+  "_hints": "Подсказки конвейера для значения, которое не свелось к коду само (слова владелицы 16.11.2026: «так предложение сразу кнопкой сделай», «по спринту хоть какой то алгоритм предложений и компоновки»). Порядок проверки: not_status → phrase → marker → word; внутри яруса — сверху вниз; побеждает первая подходящая, чей код есть в справочнике типа (dict — ограничить справочниками). phrase и not_status ищутся во всём тексте без разметки, marker — значок в начале, word — в «голове» до разделителя. Подсказка — предложение, решение принимает человек. Другая установка дописывает свои подсказки сюда же. Порядок фраз: «в работе» раньше «в очереди» — слово pending в хвосте не перебивает «В РАБОТЕ» в начале (найдено в интерфейсе 16.11.2026).",
+  "hints": [
+    {
+      "tier": "not_status",
+      "match": "^\\s*🔴\\s*P[0-3]\\b|^(P[0-3]|low|medium|normal|high|critical|blocker)$",
+      "to": null,
+      "why": "это приоритет, а не статус"
+    },
+    {
+      "tier": "phrase",
+      "match": "^(rejected)$|CANCELLED",
+      "to": "SUPERSEDED",
+      "why": "как в решениях владелицы ST-04, ST-05",
+      "dict": [
+        "decision_status"
+      ]
+    },
+    {
+      "tier": "phrase",
+      "match": "^(fixed|done)$",
+      "to": "ACCEPTED",
+      "why": "в справочнике источника помечено «легаси сида»; по смыслу — действующее правило",
+      "dict": [
+        "decision_status"
+      ]
+    },
+    {
+      "tier": "phrase",
+      "match": "PARTIAL|READY FOR DEPLOY",
+      "to": "ACTIVE",
+      "why": "у фазы нет такого статуса; фаза ещё идёт",
+      "dict": [
+        "phase_status"
+      ]
+    },
+    {
+      "tier": "phrase",
+      "match": "CODE COMPLETE|READY FOR REVIEW|ожида\\S* (CI|ревью|PR)",
+      "to": "REVIEW",
+      "why": "код готов, ждёт проверки"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\bpartial\\b|частично|В ОСНОВНОМ|(COMPLETE|DONE).*\\bpending\\b",
+      "to": "PARTIAL",
+      "why": "сделано не всё"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\b(PAUSED|DEFERRED)\\b|ОТЛОЖЕН",
+      "to": "WAITING",
+      "why": "отложено — как в решении владелицы ST-09 («⏸ DEFERRED» → WAITING)"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\b(Conditional|Stub|Proposed)\\b",
+      "to": "BACKLOG",
+      "why": "ещё не проработано"
+    },
+    {
+      "tier": "phrase",
+      "match": "ОТКРЫТ|IN PROGRESS|В РАБОТЕ",
+      "to": "ACTIVE",
+      "why": "в работе"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\bPending\\b|\\bNEXT\\b",
+      "to": "PLANNED",
+      "why": "в очереди, не начато"
+    },
+    {
+      "tier": "phrase",
+      "match": "\\bOPEN\\b|не начат",
+      "to": "TODO",
+      "why": "открыт, не начат"
+    },
+    {
+      "tier": "phrase",
+      "match": "RESEARCH|ИССЛЕДОВАНИЕ",
+      "to": "DESIGN",
+      "why": "исследование и проектирование"
+    },
+    {
+      "tier": "marker",
+      "match": "✅",
+      "to": "DONE",
+      "why": "значок ✅"
+    },
+    {
+      "tier": "marker",
+      "match": "🔄|🔨|🚧",
+      "to": "ACTIVE",
+      "why": "значок работы"
+    },
+    {
+      "tier": "marker",
+      "match": "🟡",
+      "to": "PARTIAL",
+      "why": "значок 🟡 — частично"
+    },
+    {
+      "tier": "marker",
+      "match": "⏸",
+      "to": "WAITING",
+      "why": "значок паузы"
+    },
+    {
+      "tier": "marker",
+      "match": "⏳",
+      "to": "PLANNED",
+      "why": "значок ожидания старта"
+    },
+    {
+      "tier": "marker",
+      "match": "🚫|❌",
+      "to": "CANCELLED",
+      "why": "значок отмены"
+    },
+    {
+      "tier": "marker",
+      "match": "🔴",
+      "to": "BLOCKED",
+      "why": "значок 🔴"
+    },
+    {
+      "tier": "marker",
+      "match": "🚀",
+      "to": "READY_FOR_DEPLOY",
+      "why": "значок выкатки"
+    },
+    {
+      "tier": "marker",
+      "match": "📋|🔵",
+      "to": "PLANNED",
+      "why": "значок плана"
+    },
+    {
+      "tier": "marker",
+      "match": "⬜",
+      "to": "TODO",
+      "why": "значок ⬜"
+    },
+    {
+      "tier": "marker",
+      "match": "🔬",
+      "to": "DESIGN",
+      "why": "значок исследования"
+    },
+    {
+      "tier": "marker",
+      "match": "🟢",
+      "to": "REVIEW",
+      "why": "значок 🟢"
+    },
+    {
+      "tier": "word",
+      "match": "CLOSED|MERGED|DONE|COMPLETE|ЗАВЕРШ|ЗАКРЫТ|В ПРОДЕ",
+      "to": "DONE",
+      "why": "закрыт, влит или в проде"
+    },
+    {
+      "tier": "word",
+      "match": "PLANNING",
+      "to": "PLANNED",
+      "why": "планирование"
+    }
+  ]
+}

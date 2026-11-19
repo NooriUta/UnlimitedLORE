@@ -204,10 +204,10 @@ describe('PL-04: оверлей docker-compose.preprod.yml', () => {
   });
 
   it('образы именуются как на проде, тег :sha8, метка revision', () => {
-    for (const svc of ['lore-backend', 'lore-app', 'lore-app-next']) {
+    for (const svc of ['lore-backend', 'lore-app', 'lore-app-next', 'lore-mcp']) {
       expect(ov()).toMatch(new RegExp(`image: unlimitedlore-${svc}:\\$\\{LORE_IMAGE_TAG:\\?`));
     }
-    expect((ov().match(/org\.opencontainers\.image\.revision: \$\{LORE_BUILD_COMMIT/g) ?? []).length).toBe(3);
+    expect((ov().match(/org\.opencontainers\.image\.revision: \$\{LORE_BUILD_COMMIT/g) ?? []).length).toBe(4);
   });
 
   it('базовый compose не тронут: v1 по-прежнему "4400:80"', () => {

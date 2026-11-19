@@ -49,7 +49,7 @@ final class LoreNewsDynamicsCollector {
         "SELECT sprint_id, " +
         "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
         "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
-        "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+        "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestone_ids, " +
         "out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS status_raw, " +
         LoreSlices.STATUS_SINCE_SQL + " AS status_since " +
         "FROM KnowSprint";

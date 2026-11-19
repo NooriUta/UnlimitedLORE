@@ -223,7 +223,7 @@ final class LoreRecordFrom {
     /** Значения записи по типу (строка главного среза {@link LoreRecordResource#sourceOf}). */
     static final Map<String, List<Val>> VALUES = Map.ofEntries(
         Map.entry("sprint", List.of(
-            v("title", Transform.FIRST_OF, "name", "sprint_id"),
+            v("title", Transform.FIRST_OF, "title", "name", "sprint_id"),
             s("body_md", "context_md"),
             s("context_md", "context_md"),
             s("outcome_md", "outcome_md"),
@@ -452,6 +452,19 @@ final class LoreRecordFrom {
             s("code", "slug"),
             s("default_branch", "default_branch"),
             v("is_private", Transform.BOOL_YES, "is_private"))),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий — хост, владелец на хосте, имя, полный путь; ключ — адрес.
+        // Подпись — имя, иначе полный путь (прототип: «Репозиторий UnlimitedLORE», путь — полем).
+        Map.entry("repository", List.of(
+            v("title", Transform.FIRST_OF, "name", "full_path", "url"),
+            s("full_path", "full_path"),
+            s("host", "host"),
+            s("owner", "owner"),
+            s("default_branch", "default_branch"),
+            s("url", "url"))),
+        // Организация — самостоятельный объект {org_id, name}, пока без связей.
+        Map.entry("organization", List.of(
+            v("title", Transform.FIRST_OF, "name", "org_id"),
+            s("code", "org_id"))),
         // S4-PRODUCTS-NODE: продукт — статья словаря (ключ code); подпись — label_ru, иначе код.
         // Цвет — колонка color статьи как есть: нет её — null, цвет не выдумывается.
         Map.entry("product", List.of(
@@ -562,6 +575,15 @@ final class LoreRecordFrom {
             lf("BELONGS_TO", "in", "doc", "docs"),
             lf("BELONGS_TO", "in", "qg", "qgs"),
             lf("IN_PRODUCT", "out", "product", "products"))),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: связи репозитория — из строки repo_by_id (колонки REPO_COLUMNS).
+        // Основной у проекта, компонент, зеркало и «использует» — в обе стороны.
+        Map.entry("repository", List.of(
+            lf("HAS_REPOSITORY", "in", "project", "projects"),
+            lf("COMPONENT_REPOSITORY", "in", "component", "components"),
+            lf("MIRRORED_TO", "out", "repository", "mirrors"),
+            lf("MIRRORED_TO", "in", "repository", "mirror_of"),
+            lf("USES_REPOSITORY", "out", "repository", "uses"),
+            lf("USES_REPOSITORY", "in", "repository", "used_by"))),
         // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
         Map.entry("product", List.of(
             lf("IN_PRODUCT", "in", "component", "components"),
@@ -609,7 +631,10 @@ final class LoreRecordFrom {
             new SliceLink("tasks", "component_tasks", "cid", "TAGGED_WITH", "in", "task",
                 from(Transform.STR, "task_uid"), from(Transform.STR, "title"), from(Transform.PLAN_TOKEN, "status_raw"), true),
             new SliceLink("sprints", "component_sprints", "cid", "BELONGS_TO", "in", "sprint",
-                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: свой репозиторий компонента (COMPONENT_REPOSITORY).
+            new SliceLink("repositories", "repos_of_component", "id", "COMPONENT_REPOSITORY", "out", "repository",
+                from(Transform.STR, "url"), from(Transform.FIRST_OF, "full_path", "url"), null, true)),
         // S4-29 (53а): вкладки паспорта проекта — каждая своим срезом project_*, постранично.
         // Компоненты — через спринты проекта; агенты — через роль владельца (своего ребра к
         // проекту у них нет), поэтому rel у них тот же, что у людей, а различает тип цели.
@@ -618,6 +643,9 @@ final class LoreRecordFrom {
                 from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true),
             new SliceLink("components", "project_components", "project", "BELONGS_TO_PROJECT", "in", "component",
                 from(Transform.STR, "component_id"), from(Transform.FIRST_OF, "full_name", "component_id"), null, true),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: основной репозиторий проекта и репозитории его компонентов.
+            new SliceLink("repositories", "repos_of_project", "project", "HAS_REPOSITORY", "out", "repository",
+                from(Transform.STR, "url"), from(Transform.FIRST_OF, "full_path", "url"), null, true),
             new SliceLink("adrs", "project_adrs", "project", "BELONGS_TO_PROJECT", "in", "adr",
                 from(Transform.STR, "adr_id"), from(Transform.FIRST_OF, "name", "adr_id"), from(Transform.DOC_TOKEN, "status"), true),
             new SliceLink("releases", "project_releases", "project", "BELONGS_TO_PROJECT", "in", "release",

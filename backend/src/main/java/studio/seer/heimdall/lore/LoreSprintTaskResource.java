@@ -364,10 +364,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "bk", req.bookkeeping() != null && req.bookkeeping());
                 p.put("st0", createStatusRaw);
                 by.bind(p);
-                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
+                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads outE('IN_PHASE')[valid_to IS NULL].inV())
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
-                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid);");
+                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid) SET valid_from = :now;");
                     p.put("puid", phase);
                 }
                 // PL-14 (D16): uc-задача обязана нести REALIZES. Ребро создаётся В ТОМ
@@ -764,7 +764,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         // A1: atomic sqlscript — a partial failure leaves no KnowPhase
                         // without its PART_OF/HAS_STATE edges.
                         String script =
-                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
+                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, " + ModelSchemaAdapter.titleSet("name") + ", " +
                             "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
@@ -828,23 +828,18 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 Map<String, Object> params = req.phase_uid() != null
                     ? Map.of("t", req.task_uid(), "p", req.phase_uid())
                     : Map.of("t", req.task_uid());
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE " + where, params);
-                for (Map<String, Object> e : edges) {
-                    String rid = e.get("@rid").toString();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM IN_PHASE WHERE @rid=" + rid, null)).await().indefinitely();
-                }
+                // MDL-02: IN_PHASE историчная — снятие закрывает ребро (valid_to), а не стирает его.
+                deleteEdges("IN_PHASE", where, params);
             } else {
                 List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p",
+                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p AND valid_to IS NULL",
                     Map.of("t", req.task_uid(), "p", req.phase_uid()));
                 if (existing.isEmpty()) {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         String.format(
                             "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
-                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s')",
-                            req.task_uid(), req.phase_uid()),
+                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s') SET valid_from = '%s'",
+                            req.task_uid(), req.phase_uid(), Instant.now()),
                         null)).await().indefinitely();
                 }
             }
@@ -1396,7 +1391,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         String[] finalTexts = null;
         if (req.context_md() != null || req.outcome_md() != null || req.context_append() != null || req.outcome_append() != null) {
             List<Map<String, Object>> cur = ingestService.queryPublic(
-                "SELECT context_md, outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
+                "SELECT COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
             if (cur.isEmpty()) return badParams("sprint not found: " + req.sprint_id());
             String ctx0 = cur.get(0).get("context_md") == null ? null : String.valueOf(cur.get(0).get("context_md"));
             String out0 = cur.get(0).get("outcome_md") == null ? null : String.valueOf(cur.get(0).get("outcome_md"));
@@ -1408,7 +1403,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
         Map<String, Object> p = new LinkedHashMap<>();
-        if (req.name()       != null) { sb.append("name=:name, ");            p.put("name",       req.name()); }
+        if (req.name()       != null) { sb.append(ModelSchemaAdapter.titleSet("name")).append(", ");           p.put("name",       req.name()); }
         if (outcomeNew != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    outcomeNew); }
         if (contextNew != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        contextNew); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }

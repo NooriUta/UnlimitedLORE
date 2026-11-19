@@ -93,6 +93,15 @@ public class LoreSearchResource extends LoreResourceBase {
     private static final String DIRECT_COMP = "out('BELONGS_TO').component_id";
     private static final String DIRECT_PROJ = "out('BELONGS_TO_PROJECT').slug";
 
+    /** Название родителя для ветки по версиям: поле или coalesce(полей) — каждое через in('HAS_STATE'). */
+    static String histTitle(String titleField) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)coalesce\\((.*)\\)").matcher(titleField.trim());
+        if (!m.matches()) return "in('HAS_STATE')." + titleField + "[0]";
+        List<String> parts = new ArrayList<>();
+        for (String a : m.group(1).split(",")) parts.add("in('HAS_STATE')." + a.trim() + "[0]");
+        return "coalesce(" + String.join(", ", parts) + ")";
+    }
+
     private static final List<Branch> BRANCHES = List.of(
         new Branch("adr", "KnowADR", "adr_id", "name", "ftKnowADR",
             List.of("name"),
@@ -102,8 +111,10 @@ public class LoreSearchResource extends LoreResourceBase {
             List.of("title"),
             "KnowSpecHist", "ftKnowSpecHist", List.of("content_md"),
             DIRECT_COMP, null, null, DIRECT_PROJ, 1.10),
-        new Branch("sprint", "KnowSprint", "sprint_id", "name", "ftKnowSprint",
-            List.of("name", "context_md"),
+        // D-2026-MIG-SPRINT-PHASE-TITLE: название спринта в новой схеме — title; context_md живёт в версии (KnowSprintHist)
+        // старая схема: name заполнено, title пуст — читаем оба (полный прогон 19.11: поиск спринта по имени был пуст)
+        new Branch("sprint", "KnowSprint", "sprint_id", "coalesce(title, name)", "ftKnowSprint",
+            List.of("title", "name"),
             "KnowSprintHist", "ftKnowSprintHist", List.of("context_md", "outcome_md"),
             DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
         // Задачи: прямые компоненты — TAGGED_WITH (task_link rel=component);
@@ -614,7 +625,7 @@ public class LoreSearchResource extends LoreResourceBase {
             // [0] только у скалярных проекций (ref_id/title — родитель один);
             // компоненты/проекты — СПИСКИ, [0] оставил бы один случайный.
             String hsql = "SELECT in('HAS_STATE')." + b.idField() + "[0] AS ref_id, "
-                + "in('HAS_STATE')." + b.titleField() + "[0] AS title, "
+                + histTitle(b.titleField()) + " AS title, "
                 + (histByIndex ? "$score AS score, " : "1.0 AS score, ")
                 + histText + ", "
                 // Ветка без компонента (релиз) — здесь ПРОСТО null, а не

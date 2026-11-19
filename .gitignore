@@ -38,3 +38,6 @@ web-next/e2e/.results/
 # Отчёт смоука стенда (E2E-STAND): скрины и сводки, плюс сохранённый вход, если его положили рядом
 web-next/e2e/.stand-report/
 web-next/e2e/stand/.auth/
+
+# установщик переноса (scripts/model-migration/build-installer.mjs): сборка, не исходник
+/build/lore-migrate*

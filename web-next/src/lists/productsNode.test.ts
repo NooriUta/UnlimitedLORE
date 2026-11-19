@@ -39,7 +39,8 @@ describe('меню: группа «Продукт»', () => {
     const ids = system.items.map(i => i.id);
     expect(ids).not.toContain('feature');
     expect(ids).not.toContain('product');
-    expect(ids).toEqual(['project', 'component', 'tech']);
+    // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — тоже «Устройство».
+    expect(ids).toEqual(['project', 'component', 'tech', 'repository', 'organization']);
     expect(groupOf('feature')).toBe('product');
   });
 

@@ -14,6 +14,7 @@
 import { loadModel, type KitLang, type KitRecord } from '@seidr/kit';
 import type { RefCreateResult, RefCreateSpec, RefFieldDef } from '@seidr/kit/content';
 import { loreFetch } from '../auth/session';
+import { recordPath } from '../api/liveRecord';
 
 /** Поле типа в модели — форма LoreRecordRegistry.fieldJson (+ required_level из MD-REQUIRED). */
 export interface ModelField {
@@ -111,7 +112,7 @@ function bodyOf(type: Creatable, v: Record<string, string>, me: string): { path:
 /** Свободен ли код: true — записи нет (404), false — есть (200/403), null — проверить не смогли. */
 async function codeIsFree(type: string, id: string, fetchFn: FetchFn): Promise<boolean | null> {
   try {
-    const r = await fetchFn(`/lore/record/${type}/${id.split('/').map(encodeURIComponent).join('/')}`);
+    const r = await fetchFn(`/lore/record/${type}/${recordPath(id)}`);
     return r.status === 404 ? true : r.ok || r.status === 403 ? false : null;
   } catch {
     return null;

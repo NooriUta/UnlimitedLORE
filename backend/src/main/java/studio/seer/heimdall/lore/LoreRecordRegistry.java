@@ -182,7 +182,12 @@ final class LoreRecordRegistry {
         out.put("label_pl", d.labelPl());
         out.put("icon", d.icon());
         List<Map<String, Object>> fields = new ArrayList<>();
-        for (Field f : d.fields()) fields.add(fieldJson(d, f));
+        for (Field f : d.fields()) {
+            // D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION: выбор из снятого раздела (трек спринта — из доски плана)
+            // паспорту не отдаётся — иначе он зовёт срез и получает 410 «раздел снят»
+            if (f.options() != null && ModelSchemaAdapter.planSectionRemoved(f.options().slice())) continue;
+            fields.add(fieldJson(d, f));
+        }
         for (Body b : d.body()) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("key", b.key());

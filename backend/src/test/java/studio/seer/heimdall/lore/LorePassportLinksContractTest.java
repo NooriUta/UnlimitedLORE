@@ -104,6 +104,15 @@ class LorePassportLinksContractTest {
         new Fact("product", "PARENT_PRODUCT", "product", "LoreProductAxisResource product_link(rel:parent)"),
         new Fact("product", "SERVES", "product", "LoreProductAxisResource product_link(rel:serves)"),
         new Fact("milestone", "TARGETS_PRODUCT", "product", "LoreMilestoneResource milestone_product"),
+        // репозитории и организации (D-2026-MIG-REPOSITORY-ORGANIZATION): рёбра ставит перенос данных 1.18
+        new Fact("project", "HAS_REPOSITORY", "repository", "перенос 1.18 (MIG-03): основной репозиторий проекта, role=primary"),
+        new Fact("component", "COMPONENT_REPOSITORY", "repository", "перенос 1.18 (MIG-03): свой репозиторий компонента"),
+        new Fact("repository", "MIRRORED_TO", "repository", "перенос 1.18 (MIG-03): зеркало"),
+        new Fact("repository", "USES_REPOSITORY", "repository", "перенос 1.18 (MIG-03): «использует»"),
+        // организация (решение владелицы 19.11.2026) — связи правятся в админке
+        new Fact("organization", "ORG_HAS_PROJECT", "project", "LoreOrganizationResource organization/link"),
+        new Fact("organization", "ORG_HAS_PRODUCT", "product", "LoreOrganizationResource organization/link"),
+        new Fact("organization", "ORG_MEMBER", "user", "LoreOrganizationResource organization/link"),
         // проект
         new Fact("sprint", "BELONGS_TO_PROJECT", "project", "LoreSprintTaskResource sprint_new / sprint_link"),
         new Fact("adr", "BELONGS_TO_PROJECT", "project", "LoreAdrResource adr_link(project)"),
@@ -270,7 +279,15 @@ class LorePassportLinksContractTest {
      * Рёбра, объявленные в паспорте, которых нет среди CREATE EDGE TYPE схемы, — с причиной.
      * ArcadeDB создаёт тип на первой записи, поэтому такие рёбра живут на проде без объявления.
      */
-    static final Map<String, String> UNDECLARED_EDGES = Map.of();
+    static final Map<String, String> UNDECLARED_EDGES = Map.of(
+        "HAS_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "COMPONENT_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "MIRRORED_TO", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "USES_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        // Решение владелицы 19.11.2026: связи организации; тип ребра заводит создание организации (LoreOrganizationResource).
+        "ORG_HAS_PROJECT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_HAS_PRODUCT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_MEMBER", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод");
 
     /**
      * Снятые из схемы рёбра, которые обходят только шаги миграций, убирающие их легаси-экземпляры
@@ -628,7 +645,13 @@ class LorePassportLinksContractTest {
         Map.entry("gain|projects", "выгода — общий профиль клиента, проекта нет (MD-04)"),
         Map.entry("gain|components", "выгода — общий профиль клиента, компонента нет (MD-04)"),
         Map.entry("job|projects", "работа — глобальная вершина (AL-113), проекта нет (MD-04)"),
-        Map.entry("job|components", "работа — глобальная вершина (AL-113), компонента нет (MD-04)"));
+        Map.entry("job|components", "работа — глобальная вершина (AL-113), компонента нет (MD-04)"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: у репозитория проект и компонент — связи вкладки «Связи»
+        // (основной у проекта HAS_REPOSITORY, репозиторий компонента COMPONENT_REPOSITORY), как в прототипе; у организации связей пока нет.
+        Map.entry("repository|projects", "проект репозитория — связь «основной у проекта» (HAS_REPOSITORY) во вкладке «Связи»"),
+        Map.entry("repository|components", "компонент репозитория — связь COMPONENT_REPOSITORY во вкладке «Связи»"),
+        Map.entry("organization|projects", "проекты организации — вкладка «Связи» (ORG_HAS_PROJECT), правится в админке"),
+        Map.entry("organization|components", "у организации компонентов нет: связи — проекты, продукты, люди (решение владелицы 19.11.2026)"));
 
     @Test
     void chipValuesHaveADeclaredField() {

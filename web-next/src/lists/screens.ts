@@ -21,7 +21,7 @@ import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
   painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, runbookRecord, qualityGateRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
-  techRecord,
+  techRecord, repositoryRecord, organizationRecord,
 } from './records';
 import type { RowMapCtx } from './records';
 import { staleByStatus, withCalendar, withLibrary, type CalendarDate, type LibrarySpec } from './library';
@@ -110,6 +110,16 @@ export interface ListScreenDef {
    * в срезе умолчания не получает — поле не выдумывается.
    */
   defaultSort?: ListSort;
+  /**
+   * Группировка по умолчанию (`list.groupings` раздела): репозитории — по проекту (прототип 19.11.2026).
+   * Это умолчание, а не выбор: `lg` в адресе главнее. Нет — без группировки.
+   */
+  defaultGroup?: string;
+  /**
+   * Управление разделом — только в админке (организации, решение владелицы 19.11.2026): в пользовательском меню
+   * раздел только для чтения — без «+ Новая» и без правки связей в паспорте, даже у super-admin.
+   */
+  manageOnlyInAdmin?: boolean;
   /**
    * Лента раздела (K2-FEED-VIEW): то же описание, из которого собран
    * `list.feed` конфига, — экрану оно нужно, чтобы отдать kit тело записи и
@@ -408,6 +418,8 @@ interface SectionSpec {
    * order нужен виду «Дерево»; в таблице соседи одного уровня идут порядком сортировки списка.
    */
   tree?: NonNullable<KitConfig['list']>['tree'];
+  /** Слова проверенного ноля раздела (kit list.empty): почему записей нет. Нет — общие слова kit. */
+  empty?: [title: AppKey, hint: AppKey];
 }
 
 /**
@@ -453,6 +465,7 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
       ...(spec.collapsedGroupings ? { collapsedGroupings: spec.collapsedGroupings } : {}),
       columns: spec.columns,
       ...(spec.tree ? { tree: spec.tree } : {}),
+      ...(spec.empty ? { empty: { title: appT(lang, spec.empty[0]), hint: appT(lang, spec.empty[1]) } } : {}),
     },
   };
 }
@@ -638,6 +651,40 @@ const projectsSpec: SectionSpec = {
   filters: [],
   groupings: [],
   columns: ['id', 'title', 'default_branch'],
+};
+
+/**
+ * D-2026-MIG-REPOSITORY-ORGANIZATION (прототип mig-repos-orgs.html): репозитории — полный путь, роль, проект /
+ * компонент, зеркала. Статуса нет. Группировка по проекту — общий механизм: репозиторий в нескольких — в каждой группе.
+ */
+const repositoriesSpec: SectionSpec = {
+  kind: 'repository', titleKey: 'lists.repositories.title', icon: 'chest',
+  fields: [
+    ['role', 'text'], ['project', 'ref'], ['component', 'ref'], ['components', 'ref'],
+    ['mirrors', 'text'], ['mirrorOf', 'text'], ['host', 'text'], ['hostOwner', 'text'], ['default_branch', 'text'],
+  ],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-project', 'lists.quick.noProjects', { project: '' }]],
+  filters: ['fields.host', 'fields.hostOwner', 'fields.role', LORE_FILTER_FIELDS.project],
+  groupings: [LORE_FILTER_FIELDS.project, 'fields.role', 'fields.host', 'fields.hostOwner'],
+  columns: ['title', 'role', 'project', 'component', 'mirrors'],
+};
+
+/**
+ * Организации — самостоятельный объект, пока пустой: тип заведён переносом, какие организации завести и с чем
+ * связать — решает владелица. Пустой раздел говорит это словами, а не общим «пусто».
+ */
+const organizationsSpec: SectionSpec = {
+  kind: 'organization', titleKey: 'lists.organizations.title', icon: 'castle',
+  fields: [['name', 'text']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-name', 'lists.quick.noName', { name: '' }]],
+  filters: [],
+  groupings: [],
+  columns: ['id', 'title'],
+  empty: ['lists.organizations.emptyTitle', 'lists.organizations.emptyHint'],
 };
 
 /** Технологии: СТАТУСА НЕТ — это реестр версий (спеки SPEC-TECH-*). */
@@ -894,6 +941,17 @@ export const LIST_SCREENS = {
   projects: {
     slice: 'git_projects', titleKey: 'lists.projects.title', icon: 'open-folder',
     map: projectRecord, config: lang => sectionConfig(lang, projectsSpec), quickIcons: {},
+  },
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — раздел «Система», паспорт (только чтение).
+  repositories: {
+    slice: 'repositories', titleKey: 'lists.repositories.title', icon: 'chest',
+    map: repositoryRecord, config: lang => sectionConfig(lang, repositoriesSpec), quickIcons: {},
+    defaultGroup: LORE_FILTER_FIELDS.project,
+  },
+  organizations: {
+    slice: 'organizations', titleKey: 'lists.organizations.title', icon: 'castle',
+    map: organizationRecord, config: lang => sectionConfig(lang, organizationsSpec), quickIcons: {},
+    manageOnlyInAdmin: true,
   },
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',

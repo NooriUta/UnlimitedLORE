@@ -32,7 +32,9 @@ final class LoreRecordRelationRoutes {
         // S5-DOC-PASSPORT: компонент и проекты документа — штатные doc/component, doc/project.
         DOC_COMPONENT, DOC_PROJECT,
         // AP-PROJECT-LINK-UI: проекты решения, вопроса и ранбука — штатные decision/project, question/project, runbook/project.
-        DECISION_PROJECT, QUESTION_PROJECT, RUNBOOK_PROJECT
+        DECISION_PROJECT, QUESTION_PROJECT, RUNBOOK_PROJECT,
+        // Решение владелицы 19.11.2026: связи организации — один путь organization/link (super-admin).
+        ORG_LINK
     }
 
     record Route(String type, String rel, String dir, Handler handler, boolean reversed) {}
@@ -77,7 +79,11 @@ final class LoreRecordRelationRoutes {
         // решение, вопрос, ранбук (AP-PROJECT-LINK-UI) — добавить и снять по одному проекту, набор не заменяется
         r("decision", "BELONGS_TO_PROJECT", "out", Handler.DECISION_PROJECT, false),
         r("question", "BELONGS_TO_PROJECT", "out", Handler.QUESTION_PROJECT, false),
-        r("runbook", "BELONGS_TO_PROJECT", "out", Handler.RUNBOOK_PROJECT, false)
+        r("runbook", "BELONGS_TO_PROJECT", "out", Handler.RUNBOOK_PROJECT, false),
+        // организация (D-2026-MIG-REPOSITORY-ORGANIZATION) — проекты, продукты, люди
+        r("organization", "ORG_HAS_PROJECT", "out", Handler.ORG_LINK, false),
+        r("organization", "ORG_HAS_PRODUCT", "out", Handler.ORG_LINK, false),
+        r("organization", "ORG_MEMBER", "out", Handler.ORG_LINK, false)
     );
 
     /** Маршрут или {@code null}: ребра у типа нет либо путь привязки для него не заведён. */

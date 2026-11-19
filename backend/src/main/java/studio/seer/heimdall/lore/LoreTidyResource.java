@@ -42,7 +42,7 @@ public class LoreTidyResource extends LoreResourceBase {
 
     static final List<Target> TARGETS = List.of(
         new Target("KnowTask", "task_uid", List.of("note_md"), List.of("note_md"), List.of(), true),
-        new Target("KnowSprint", "sprint_id", List.of("context_md"), List.of(), List.of("outcome_md"), true),
+        new Target("KnowSprint", "sprint_id", List.of("context_md"), List.of("context_md"), List.of("outcome_md"), true), // MIG-03: в новой схеме — только в версии
         new Target("KnowADR", "adr_id", List.of("context_md", "decision_md", "consequences_md"),
             List.of("context_md", "decision_md", "consequences_md"), List.of(), true),
         new Target("KnowDecision", "decision_id", List.of("body_md"), List.of(), List.of(), true),

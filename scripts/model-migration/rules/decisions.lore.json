@@ -1,0 +1,259 @@
+{
+  "format": "mig-decisions/1",
+  "_about": "Решения владелицы для установки LORE (system_aida_lore), приняты в прототипе раздела «Перенос» 16.11.2026 и присланы в диалог списком «Решения по переносу (11)». Передаётся установщику ключом --decisions.",
+  "decisions": [
+    {
+      "id": "ST-01",
+      "scope": {
+        "type": "KnowADRHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "DRAFT",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 152"
+    },
+    {
+      "id": "ST-02",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "fixed"
+      },
+      "action": "map_to",
+      "to": "ACCEPTED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 114"
+    },
+    {
+      "id": "ST-03",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "done"
+      },
+      "action": "map_to",
+      "to": "ACCEPTED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 20"
+    },
+    {
+      "id": "ST-04",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "rejected"
+      },
+      "action": "map_to",
+      "to": "SUPERSEDED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 2"
+    },
+    {
+      "id": "ST-05",
+      "scope": {
+        "type": "KnowDecisionHist",
+        "field": "status_raw",
+        "value": "🚫 CANCELLED"
+      },
+      "action": "map_to",
+      "to": "SUPERSEDED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 1"
+    },
+    {
+      "id": "ST-06",
+      "scope": {
+        "type": "KnowMilestoneHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "UPCOMING",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 38"
+    },
+    {
+      "id": "ST-07",
+      "scope": {
+        "type": "KnowSpecHist",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "PROPOSED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 607"
+    },
+    {
+      "id": "ST-08",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "BACKLOG",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 108"
+    },
+    {
+      "id": "ST-09",
+      "scope": {
+        "type": "KnowTaskHist",
+        "field": "status_raw",
+        "value": "⏸ DEFERRED"
+      },
+      "action": "map_to",
+      "to": "WAITING",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 10"
+    },
+    {
+      "id": "ST-10",
+      "scope": {
+        "type": "KnowUseCase",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "PROPOSED",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 3"
+    },
+    {
+      "id": "ST-11",
+      "scope": {
+        "type": "QualityGate",
+        "field": "status",
+        "why": "пусто"
+      },
+      "action": "map_to",
+      "to": "DRAFT",
+      "by": "omiloreadmin",
+      "at": "2026-11-16T16:40:00Z",
+      "note": "решение владелицы в прототипе «Перенос», 16.11.2026; записей 1"
+    }
+  ],
+  "product_kind": {
+    "_about": "Вид продукта (enum multi, ADR-LORE-044): ответы владелицы 19.11.2026 на шаге «В. Вид продукта», BOKVIT — service («бокvit service»).",
+    "map": {
+      "BRAGI": [
+        "service"
+      ],
+      "ODIN": [
+        "tech"
+      ],
+      "MIDGARD": [
+        "tech"
+      ],
+      "MIGGEN": [
+        "tech"
+      ],
+      "TYR": [
+        "service"
+      ],
+      "DW": [
+        "tech",
+        "service"
+      ],
+      "BOKVIT": [
+        "service"
+      ],
+      "AIDA": [
+        "tech"
+      ],
+      "HOUND": [
+        "tech"
+      ],
+      "SEIDR": [
+        "tech"
+      ],
+      "HEIMDALL": [
+        "tech"
+      ],
+      "MT": [
+        "tech"
+      ],
+      "OMILORE": [
+        "tech"
+      ],
+      "MINILORE": [
+        "tech"
+      ],
+      "VOLVA": [
+        "tech"
+      ],
+      "FREYJA": [
+        "service"
+      ],
+      "HARPA": [
+        "tech",
+        "service"
+      ]
+    },
+    "_about_rest": "AIDA…HARPA (10): предложение установщика принято владелицей 19.11.2026 целиком — «продукты приеято» (канал, ответ на файл product-kinds-1.18.md).",
+    "by": "владелица",
+    "at": "2026-11-19T20:30:00Z"
+  },
+  "projects": {
+    "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at).",
+    "map": {
+      "NooriUta/BRAGI": "SEIDR_BACKOFFICE",
+      "AIDA/freyja": "SEIDR_BACKOFFICE",
+      "NooriUta/seidr-site": "SEIDR_BACKOFFICE",
+      "AIDA/studio": "SEIDR_BACKOFFICE",
+      "AIDA/core-services": "SEIDR_BACKOFFICE",
+      "AIDA/forgejo-mcp": "OMILORE",
+      "AIDA/miniLoremobilekit": "SEIDR_BACKOFFICE",
+      "AIDA/qwen-code-fork": "MINILORE",
+      "NooriUta/AIDA-TestPlayGround": "AIDA",
+      "ivanovalex32/UDWE": "MIGGEN"
+    },
+    "repos": {
+      "AIDA/miniLoremobilekit": {
+        "component": "SEIDRKIT"
+      },
+      "AIDA/qwen-code-fork": {
+        "component": "ML_QWEN_CODE_FORK"
+      },
+      "AIDA/forgejo-mcp": {
+        "component": "FORGEJO_MCP"
+      },
+      "ivanovalex32/UDWE": {
+        "mirror": true
+      },
+      "NooriUta/AIDA-TestPlayGround": {
+        "component": "AIDA_TPG"
+      },
+      "AIDA/miniLore_serverside": {
+        "component": "MINILORE_SRV"
+      },
+      "AIDA/Datawanderers-Unity": {
+        "component": "DW_UNITY"
+      },
+      "AIDA/udwe-engine": {
+        "component": "MIGCORE"
+      },
+      "AIDA/udwe-rollout": {
+        "component": "MIGPIPE"
+      },
+      "NooriUta/seidr-site": {
+        "component": "HARPA"
+      }
+    },
+    "by": "владелица (omiloreadmin, мастер переноса на копии ryzenai, 19.11.2026)",
+    "at": "2026-11-19T13:31:00.187Z"
+  }
+}

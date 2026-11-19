@@ -265,13 +265,13 @@ final class TestAccountDelete {
         }
         List<Map<String, Object>> roles = new ArrayList<>();
         for (Map<String, Object> r : g.query(
-                "SELECT @in.slug AS project, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :s", Map.of("s", kcSub))) {
+                "SELECT @in.slug AS project, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :s", Map.of("s", kcSub))) {
             String project = str(r.get("project"));
             String role = str(r.get("role"));
             roles.add(Map.of("project", project == null ? "?" : project, "role", role == null ? "" : role));
             if ("owner".equals(role) && project != null) {
                 List<Map<String, Object>> n = g.query(
-                    "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @in.slug = :p AND role = 'owner'", Map.of("p", project));
+                    "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :p AND role = 'owner'", Map.of("p", project));
                 long owners = n.isEmpty() || !(n.get(0).get("n") instanceof Number x) ? 0 : x.longValue();
                 if (owners <= 1)
                     blockers.add("последний owner проекта " + project + " — сначала назначьте другого владельца");
@@ -332,7 +332,7 @@ final class TestAccountDelete {
         for (Map<String, Object> a : (List<Map<String, Object>>) plan.get("agents")) agents.add(applyAgent(kc, g, a));
         out.put("agents", agents);
         Map<String, Object> lore = (Map<String, Object>) plan.get("lore");
-        g.exec("DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :s", Map.of("s", kcSub));
+        g.exec("DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :s", Map.of("s", kcSub)); // edge-history: тестовая учётка стирается целиком, со всеми версиями
         out.put("project_roles_removed", ((List<?>) lore.get("project_roles")).size());
         boolean hadUser = lore.get("user") != null;
         if (hadUser) {

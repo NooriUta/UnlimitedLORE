@@ -78,7 +78,7 @@ public class LoreIngestService {
 
         // 1. Upsert KnowSprint
         StringBuilder set = new StringBuilder(
-            "UPDATE KnowSprint SET sprint_id=:sid, name=:nm, status_raw=:sraw");
+            "UPDATE KnowSprint SET sprint_id=:sid, " + ModelSchemaAdapter.titleSet("nm") + ", status_raw=:sraw");
         java.util.Map<String, Object> p = new java.util.LinkedHashMap<>(
             Map.of("sid", sprintId, "nm", nm, "sraw", statusRaw));
         if (planId    != null) { set.append(", plan_id=:pid");     p.put("pid", planId); }
@@ -109,6 +109,10 @@ public class LoreIngestService {
                 Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
             String priSet = "";
             if (priority != null && !priority.isBlank()) { priSet = ", priority=:pri"; hp.put("pri", priority); }
+            // MIG-03: в новой схеме тексты спринта живут только в версии — начальная версия несёт их сразу,
+            // иначе context/outcome из sprint_new на новой базе терялись (ревизия 19.11.2026)
+            if (contextMd != null) { priSet += ", context_md=:ctx"; hp.put("ctx", contextMd); }
+            if (outcomeMd != null) { priSet += ", outcome_md=:omd"; hp.put("omd", outcomeMd); }
             by.bind(hp);
             execScript(
                 "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet
@@ -129,6 +133,7 @@ public class LoreIngestService {
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> queryRows(String sql, Map<String, Object> params) {
+        // MIG-03: под новую схему запрос и ответ приводит ModelSchemaClientFilter (клиент mart-api).
         try {
             LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
                     new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
@@ -309,7 +314,7 @@ public class LoreIngestService {
         params.put("outcome_md",   nullToEmpty(s.outcomeMd()));
 
         exec("UPDATE KnowSprint SET " +
-                "sprint_id=:sprint_id, name=:name, status_raw=:status_raw, " +
+                "sprint_id=:sprint_id, " + ModelSchemaAdapter.titleSet("name") + ", status_raw=:status_raw, " +
                 "priority=:priority, date_created=:date_created, " +
                 "plan_id=:plan_id, outcome_md=:outcome_md " +
                 "UPSERT WHERE sprint_id=:sprint_id", params);
@@ -412,10 +417,34 @@ public class LoreIngestService {
         params.put("date_created", nullToEmpty(rb.dateCreated()));
         params.put("content_md",  nullToEmpty(rb.contentMd()));
 
-        exec("UPDATE KnowRunbook SET " +
-                "runbook_id=:runbook_id, name=:name, area=:area, " +
-                "date_created=:date_created, content_md=:content_md " +
-                "UPSERT WHERE runbook_id=:runbook_id", params);
+        exec(runbookVertexSql(), params);
+        if (ModelSchemaAdapter.enabled() && rb.contentMd() != null) {
+            // MIG-03: в новой схеме тело ранбука живёт только в версии — открытую правим, нет её — заводим
+            List<Map<String, Object>> open = queryRows(
+                "SELECT @rid AS rid FROM KnowRunbookHist WHERE in('HAS_STATE').runbook_id[0] = :id AND valid_to IS NULL LIMIT 1",
+                Map.of("id", rb.runbookId()));
+            if (!open.isEmpty()) {
+                exec("UPDATE KnowRunbookHist SET content_md=:cnt WHERE @rid=:rid",
+                    Map.of("cnt", rb.contentMd(), "rid", open.get(0).get("rid")));
+            } else {
+                String nsid = java.util.UUID.randomUUID().toString();
+                Map<String, Object> hp = new HashMap<>();
+                hp.put("nsid", nsid); hp.put("now", java.time.Instant.now().toString());
+                hp.put("cnt", rb.contentMd()); hp.put("id", rb.runbookId());
+                ChangeAuthor.UNKNOWN.bind(hp); // S2-12: инжест md — автор неизвестен
+                execScript("INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt" +
+                    ChangeAuthor.SET_SQL + ";" +
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
+                    "TO (SELECT FROM KnowRunbookHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp);
+            }
+        }
+    }
+
+    /** Запись ранбука при инжесте md: на базе из модели — без тела (оно в версии), в старой схеме — как раньше. */
+    static String runbookVertexSql() {
+        return "UPDATE KnowRunbook SET runbook_id=:runbook_id, name=:name, area=:area, date_created=:date_created"
+            + (ModelSchemaAdapter.enabled() ? "" : ", content_md=:content_md")
+            + " UPSERT WHERE runbook_id=:runbook_id";
     }
 
     // ── QualityGate + QGMetric ingest (LAL-28) ────────────────────────────────

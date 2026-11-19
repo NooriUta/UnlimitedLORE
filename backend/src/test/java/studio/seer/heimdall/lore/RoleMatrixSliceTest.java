@@ -18,8 +18,8 @@ class RoleMatrixSliceTest {
     void matrixReadsEveryUserWithProjectsAndRolesFromTheGraph() {
         String sql = LoreSlices.compose("role_matrix", Map.of()).sql();
         assertTrue(sql.contains("FROM KnowUser"), sql);
-        assertTrue(sql.contains("out('HAS_PROJECT_ROLE').slug AS projects"), sql);
-        assertTrue(sql.contains("outE('HAS_PROJECT_ROLE').role AS roles"), "роль — с ребра: " + sql);
+        assertTrue(sql.contains("outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects"), sql);
+        assertTrue(sql.contains("outE('HAS_PROJECT_ROLE')[valid_to IS NULL].role AS roles"), "роль — с ребра: " + sql);
         assertFalse(sql.contains(":kc_sub"), "вся матрица, без обязательного человека: " + sql);
         assertTrue(sql.contains("ORDER BY display_name"), sql);
     }

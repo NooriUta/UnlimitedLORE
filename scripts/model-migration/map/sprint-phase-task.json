@@ -1,0 +1,631 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. Карта переноса первого объекта — спринт, фазы, задачи: что делает перенос с каждым полем старой базы. Перечень полей снят с прода 15.11.2026 (только чтение). basis: owner — решение владелицы (книга декларации модели, записи в MIG-01); proposal — предложение исполнителя, не согласовано; open — вопрос, перенос поля не определён.",
+  "_rules": {
+    "keep": "переносится как есть",
+    "rename": "переносится под новым именем (to)",
+    "transform": "переносится с преобразованием (how)",
+    "to_current_version": "копия на записи не хранится: значение живёт в текущей версии; если в текущей версии пусто — значение с записи переносится туда",
+    "drop": "не переносится (why)",
+    "open": "не решено (question)"
+  },
+  "types": {
+    "KnowSprint": {
+      "sprint_id": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ключ записи"
+      },
+      "name": {
+        "rule": "rename",
+        "to": "title",
+        "how": "значение, равное sprint_id, становится пустым",
+        "basis": "owner"
+      },
+      "context_md": {
+        "rule": "to_current_version",
+        "basis": "owner"
+      },
+      "outcome_md": {
+        "rule": "to_current_version",
+        "basis": "owner"
+      },
+      "created_date": {
+        "rule": "transform",
+        "to": "created_at",
+        "how": "DATE; одно поле «создано» вместе с date_created",
+        "basis": "owner"
+      },
+      "date_created": {
+        "rule": "transform",
+        "to": "created_at",
+        "how": "DATE; одно поле «создано» вместе с created_date",
+        "basis": "owner"
+      },
+      "updated_at": {
+        "rule": "transform",
+        "to": "updated_at",
+        "how": "DATETIME",
+        "basis": "owner"
+      },
+      "effort_days": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "фактические трудозатраты спринта"
+      },
+      "status_raw": {
+        "rule": "drop",
+        "why": "копия статуса на записи; настоящий статус — в текущей версии",
+        "basis": "owner"
+      },
+      "priority": {
+        "rule": "to_current_version",
+        "how": "словесная шкала: P0 → critical, P1 → high, P2 → normal, P3 → low",
+        "basis": "owner"
+      },
+      "goal": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ «оставить»"
+      },
+      "pr_refs": {
+        "rule": "transform",
+        "to": "связь спринт → PR",
+        "how": "номера PR из строки или списка становятся связью спринта с записью PR; номер без найденной записи PR остаётся текстом в заметке версии",
+        "basis": "proposal",
+        "note": "3 записи на вершине; канон — версия; замер прода 15.11.2026: в связь поле не переехало — из 320 номеров в текущих версиях 89 спринтов связью HAS_PR покрыто 13, через задачи — 5; только в связи HAS_PR — 109"
+      },
+      "branch_ref": {
+        "rule": "drop",
+        "why": "легаси, список подтверждён",
+        "basis": "owner"
+      },
+      "plan_id": {
+        "rule": "drop",
+        "why": "ссылка на объект план-доски; объекты плана сняты",
+        "basis": "proposal"
+      },
+      "no_release_required": {
+        "rule": "keep",
+        "basis": "proposal"
+      },
+      "unplanned_intentional": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "опциональное"
+      },
+      "version": {
+        "rule": "keep",
+        "basis": "delegated",
+        "note": "владелица 16.11.2026: «по максимуму сама» — решила исполнитель, замер прода 16.11; версия документа спринта («1.3», «1.2») у 2 спринтов — необязательное поле, значения сохраняются"
+      }
+    },
+    "KnowSprintHist": {
+      "state_uid": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "content_hash": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "valid_from": {
+        "rule": "transform",
+        "to": "valid_from",
+        "how": "DATETIME",
+        "basis": "owner",
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
+      },
+      "valid_to": {
+        "rule": "transform",
+        "to": "valid_to",
+        "how": "DATETIME",
+        "basis": "owner",
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
+      },
+      "changed_by": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное; пустое остаётся пустым"
+      },
+      "changed_by_kind": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "source_commit": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "status_raw": {
+        "rule": "transform",
+        "to": "status",
+        "how": "код из справочника заглавными латиницей (слово владелицы 16.11.2026: «uppercase»); приписка после статуса — в status_note",
+        "basis": "owner"
+      },
+      "status_category": {
+        "rule": "drop",
+        "why": "вычисляется из статуса и типа",
+        "basis": "proposal"
+      },
+      "status_known_from": {
+        "rule": "transform",
+        "to": "status_known_from",
+        "how": "DATETIME",
+        "basis": "proposal",
+        "note": "само поле — предложение исполнителя (оставить); вид хранения — по решению владелицы «даты настоящим типом»"
+      },
+      "status_backfilled": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "служебное"
+      },
+      "planned_start_date": {
+        "rule": "transform",
+        "to": "planned_start_date",
+        "how": "DATE",
+        "basis": "owner"
+      },
+      "planned_end_date": {
+        "rule": "transform",
+        "to": "planned_end_date",
+        "how": "DATE",
+        "basis": "owner"
+      },
+      "planned_milestone_id": {
+        "rule": "drop",
+        "why": "старое поле; веха спринта — связью TARGETS_MILESTONE (слова владелицы: «старое убрать, есть ребро на веху»)",
+        "basis": "owner"
+      },
+      "track_id": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "трек остаётся свойством спринта"
+      },
+      "priority": {
+        "rule": "transform",
+        "to": "priority",
+        "how": "словесная шкала",
+        "basis": "owner"
+      },
+      "block_reason": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "context_md": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "outcome_md": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "note_md": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "заметка версии: почему изменили"
+      },
+      "src": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ «оставить»"
+      },
+      "sprint_id": {
+        "rule": "drop",
+        "why": "ключ записи в версиях не хранится",
+        "basis": "owner"
+      },
+      "pr_refs": {
+        "rule": "transform",
+        "to": "связь спринт → PR",
+        "how": "номера PR из строки или списка становятся связью спринта с записью PR; номер без найденной записи PR остаётся текстом в заметке версии",
+        "basis": "proposal",
+        "note": "замер прода 15.11.2026: в связь поле не переехало — из 320 номеров в текущих версиях 89 спринтов связью HAS_PR покрыто 13, через задачи — 5; только в связи HAS_PR — 109"
+      },
+      "version_kind": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "живое поле: «text» — версия открыта правкой текста, статус тот же (MT-NOTE-APPEND); срезы считают версии статуса по пустому значению"
+      },
+      "changed_by_session": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness_note": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_machine": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      }
+    },
+    "KnowPhase": {
+      "phase_uid": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ключ записи"
+      },
+      "phase_id": {
+        "rule": "transform",
+        "to": "phase_id",
+        "how": "код фазы внутри спринта, подпись «Фаза» убирается",
+        "basis": "owner"
+      },
+      "name": {
+        "rule": "rename",
+        "to": "title",
+        "how": "одно поле названия вместе с title",
+        "basis": "owner"
+      },
+      "title": {
+        "rule": "keep",
+        "how": "одно поле названия вместе с name",
+        "basis": "owner"
+      },
+      "order_index": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "src": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "status_raw": {
+        "rule": "drop",
+        "why": "копия статуса на записи; настоящий статус — в текущей версии",
+        "basis": "owner"
+      },
+      "summary_md": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ «оставить»"
+      }
+    },
+    "KnowPhaseHist": {
+      "state_uid": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное; недостающее добавляется всем версиям"
+      },
+      "content_hash": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное; недостающее добавляется всем версиям"
+      },
+      "valid_from": {
+        "rule": "transform",
+        "to": "valid_from",
+        "how": "DATETIME",
+        "basis": "owner",
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
+      },
+      "valid_to": {
+        "rule": "transform",
+        "to": "valid_to",
+        "how": "DATETIME",
+        "basis": "owner",
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
+      },
+      "changed_by": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "changed_by_kind": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "source_commit": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "status_raw": {
+        "rule": "transform",
+        "to": "status",
+        "how": "код из справочника; значение вне справочника уходит в название фазы, если оно пусто, статус остаётся пустым",
+        "basis": "owner",
+        "note": "«согласна — если есть ребро статуса лучше на него»: статус версии читается с версии, привязанной связью HAS_STATE"
+      },
+      "status_category": {
+        "rule": "drop",
+        "why": "вычисляется из статуса и типа",
+        "basis": "proposal"
+      },
+      "status_known_from": {
+        "rule": "transform",
+        "to": "status_known_from",
+        "how": "DATETIME",
+        "basis": "proposal",
+        "note": "само поле — предложение исполнителя (оставить); вид хранения — по решению владелицы «даты настоящим типом»"
+      },
+      "status_backfilled": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "служебное"
+      },
+      "note_md": {
+        "rule": "keep",
+        "basis": "delegated",
+        "note": "владелица 16.11.2026: «по максимуму сама» — решила исполнитель, замер прода 16.11; заметка версии «почему изменили», как у остальных типов (декларация: «оставить»)"
+      },
+      "changed_by_session": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness_note": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_machine": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      }
+    },
+    "KnowTask": {
+      "task_uid": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ключ записи"
+      },
+      "task_id": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "код задачи внутри спринта; оба поля остаются"
+      },
+      "title": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "note_md": {
+        "rule": "to_current_version",
+        "basis": "owner"
+      },
+      "effort_days": {
+        "rule": "to_current_version",
+        "basis": "owner"
+      },
+      "actual_days": {
+        "rule": "keep",
+        "basis": "proposal"
+      },
+      "bookkeeping": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "опциональное"
+      },
+      "order_index": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "src": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "status_raw": {
+        "rule": "drop",
+        "why": "копия статуса на записи; настоящий статус — в текущей версии",
+        "basis": "owner"
+      },
+      "summary_md": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "итог одной строкой при закрытии"
+      },
+      "task_type": {
+        "rule": "keep",
+        "basis": "proposal"
+      },
+      "work_class": {
+        "rule": "keep",
+        "basis": "proposal"
+      },
+      "updated_at": {
+        "rule": "transform",
+        "to": "updated_at",
+        "how": "DATETIME",
+        "basis": "owner"
+      },
+      "priority": {
+        "rule": "transform",
+        "to": "priority",
+        "how": "словесная шкала, приписка в заметку",
+        "basis": "delegated",
+        "note": "владелица 16.11.2026: «по максимуму сама» — решила исполнитель, замер прода 16.11; у 1 задачи"
+      },
+      "sprint_id": {
+        "rule": "drop",
+        "why": "спринт задачи — связью; строка заполнена у 4 задач",
+        "basis": "proposal"
+      },
+      "author_agent": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ владелицы 15.11.2026 «оставить»; прежняя пометка «легаси» отменена"
+      },
+      "executor_agent": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ владелицы 15.11.2026 «оставить»; прежняя пометка «легаси» отменена"
+      },
+      "reviewer_agent": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ владелицы 15.11.2026 «оставить»; прежняя пометка «легаси» отменена"
+      }
+    },
+    "KnowTaskHist": {
+      "state_uid": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "content_hash": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное; недостающее добавляется всем версиям"
+      },
+      "valid_from": {
+        "rule": "transform",
+        "to": "valid_from",
+        "how": "DATETIME",
+        "basis": "owner",
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
+      },
+      "valid_to": {
+        "rule": "transform",
+        "to": "valid_to",
+        "how": "DATETIME",
+        "basis": "owner",
+        "note": "служебное; решение владелицы «даты настоящим типом» распространено на служебные моменты версии"
+      },
+      "changed_by": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "changed_by_kind": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "source_commit": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное"
+      },
+      "status_raw": {
+        "rule": "transform",
+        "to": "status",
+        "how": "код из справочника заглавными латиницей (слово владелицы 16.11.2026: «uppercase»); приписка после статуса — в status_note",
+        "basis": "owner"
+      },
+      "status_reason": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "опциональное"
+      },
+      "status_category": {
+        "rule": "drop",
+        "why": "вычисляется из статуса и типа",
+        "basis": "proposal"
+      },
+      "status_known_from": {
+        "rule": "transform",
+        "to": "status_known_from",
+        "how": "DATETIME",
+        "basis": "proposal",
+        "note": "само поле — предложение исполнителя (оставить); вид хранения — по решению владелицы «даты настоящим типом»"
+      },
+      "status_backfilled": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "служебное"
+      },
+      "effort_days": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "note_md": {
+        "rule": "keep",
+        "basis": "owner"
+      },
+      "evidence_ref": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ «оставить»: недавняя доработка, пустота не признак устаревшего"
+      },
+      "evidence_type": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ «оставить»: недавняя доработка, пустота не признак устаревшего"
+      },
+      "waiting_for": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "ответ «оставить»: недавняя доработка, пустота не признак устаревшего"
+      },
+      "src": {
+        "rule": "keep",
+        "basis": "proposal"
+      },
+      "sprint_id": {
+        "rule": "drop",
+        "why": "ключ записи в версиях не хранится",
+        "basis": "owner"
+      },
+      "task_id": {
+        "rule": "drop",
+        "why": "ключ записи в версиях не хранится",
+        "basis": "owner"
+      },
+      "title": {
+        "rule": "keep",
+        "basis": "delegated",
+        "note": "владелица 16.11.2026: «по максимуму сама» — решила исполнитель, замер прода 16.11; название в версии у 1 строки — сохраняется как есть"
+      },
+      "hist_for": {
+        "rule": "drop",
+        "why": "ключ задачи в версии повторяет связь HAS_STATE: у всех 996 версий связь есть (замер 16.11); в коде поле никто не пишет и не читает",
+        "basis": "delegated",
+        "note": "владелица 16.11.2026: «по максимуму сама» — решила исполнитель, замер прода 16.11"
+      },
+      "stage": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "живое поле: стадия внутри статуса ядра (WK-05), пишет путь смены статуса"
+      },
+      "valid_from_source": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "служебное: откуда взято подставленное начало действия версии (шаг схемы 55)"
+      },
+      "version_kind": {
+        "rule": "keep",
+        "basis": "proposal",
+        "note": "живое поле: «text» — версия открыта правкой текста, статус тот же (MT-NOTE-APPEND); срезы считают версии статуса по пустому значению"
+      },
+      "changed_by_session": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness_note": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_machine": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      }
+    }
+  }
+}

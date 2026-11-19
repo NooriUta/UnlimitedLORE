@@ -82,6 +82,9 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   feature: () => <ListScreen screen="features" titleId={SECTION_TITLE_ID} />,
   // S4-29 (53а): раздел «Проекты» — тем же путём; щелчок открывает паспорт проекта.
   project: () => <ListScreen screen="projects" titleId={SECTION_TITLE_ID} />,
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — тем же путём.
+  repository: () => <ListScreen screen="repositories" titleId={SECTION_TITLE_ID} />,
+  organization: () => <ListScreen screen="organizations" titleId={SECTION_TITLE_ID} />,
   // S4-PRODUCTS-NODE: нода «Продукт» — тем же путём (общий ListScreen + описание экрана).
   // Паспорт — только у продукта; боли, выгоды, работы, роли отвечают «паспорта нет».
   product: () => <ListScreen screen="products" titleId={SECTION_TITLE_ID} />,

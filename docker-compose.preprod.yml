@@ -99,6 +99,14 @@ services:
       traefik.http.routers.lore-preprod-next.tls.certresolver: regru
       traefik.http.services.lore-preprod-next.loadbalancer.server.port: "80"
 
+  # AO-MCP-HOSTED: MCP препрода — по адресу https://preprod.lore.odal.seidrstudio.pro/mcp
+  # через nginx lore-app-next; порта наружу нет, сеть — только default проекта.
+  lore-mcp:
+    image: unlimitedlore-lore-mcp:${LORE_IMAGE_TAG:?LORE_IMAGE_TAG не задан}
+    build:
+      labels:
+        org.opencontainers.image.revision: ${LORE_BUILD_COMMIT:-}
+
 networks:
   headscale-net:
     external: true

@@ -205,7 +205,9 @@ public class LoreLinkResource extends LoreResourceBase {
             + "FROM KnowADRHist WHERE valid_to IS NULL");
         BACKFILL_BODIES.put("decision", "SELECT decision_id AS id, body_md FROM KnowDecision");
         BACKFILL_BODIES.put("doc", "SELECT doc_id AS id, content_md_ru, content_md_en FROM KnowDoc");
-        BACKFILL_BODIES.put("sprint", "SELECT sprint_id AS id, context_md, outcome_md FROM KnowSprint");
+        BACKFILL_BODIES.put("sprint", "SELECT sprint_id AS id, " // MIG-03: в новой схеме тексты — в версии
+            + "COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, "
+            + "COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md FROM KnowSprint");
         // Заметка задачи — на открытой строке истории (её читают срезы), вершина — зеркало;
         // берутся обе (повтор упоминания схлопывает parse), как читает currentTaskNote.
         BACKFILL_BODIES.put("task", "SELECT task_uid AS id, "

@@ -89,7 +89,7 @@ public class LoreGraphResource extends LoreResourceBase {
     private static final String OPEN = "out('HAS_STATE')[valid_to IS NULL]";
 
     static final List<VDef> VERTICES = List.of(
-        new VDef("sprint", "KnowSprint", "sprint_id", "name", OPEN + ".status_raw[0]", Axis.PLAN,
+        new VDef("sprint", "KnowSprint", "sprint_id", "coalesce(title, name)", OPEN + ".status_raw[0]", Axis.PLAN,
             List.of(PROJ), List.of(COMP)),
         new VDef("task", "KnowTask", "task_uid", "title", OPEN + ".status_raw[0]", Axis.PLAN,
             List.of("out('PART_OF')." + PROJ), List.of("out('TAGGED_WITH').component_id", "out('PART_OF')." + COMP)),

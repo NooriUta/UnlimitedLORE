@@ -300,7 +300,7 @@ public class LoreStatusResource extends LoreResourceBase {
         Map<String, Object> out = new LinkedHashMap<>();
         if (r.getEntity() instanceof StatusUpdateResponse s) {
             out.put("ok", s.ok()); out.put("entity_type", s.entity_type()); out.put("id", s.id());
-            out.put("old_status", s.old_status()); out.put("new_status", s.new_status()); out.put("revision", s.revision());
+            out.put("old_status", ModelSchemaAdapter.forClient(s.old_status())); out.put("new_status", ModelSchemaAdapter.forClient(s.new_status())); out.put("revision", s.revision());
         } else if (r.getEntity() instanceof Map<?, ?> m) {
             m.forEach((k, v) -> out.put(String.valueOf(k), v));
         } else {
@@ -367,7 +367,7 @@ public class LoreStatusResource extends LoreResourceBase {
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             if (resp.getEntity() instanceof StatusUpdateResponse s) {
                 out.put("ok", s.ok()); out.put("entity_type", s.entity_type()); out.put("id", s.id());
-                out.put("old_status", s.old_status()); out.put("new_status", s.new_status()); out.put("revision", s.revision());
+                out.put("old_status", ModelSchemaAdapter.forClient(s.old_status())); out.put("new_status", ModelSchemaAdapter.forClient(s.new_status())); out.put("revision", s.revision());
             }
             if (hint != null) out.put("hint", hint); else out.put("block_reason", req.reason().trim());
             return noStore(Response.ok(out));

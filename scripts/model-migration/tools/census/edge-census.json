@@ -1,0 +1,418 @@
+{
+ "source": "migration_src_2026_11_15",
+ "edges": [
+  {
+   "edge": "HAS_STATE",
+   "total": 22162,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowSprintHist",
+     "n": 2148,
+     "inside": true
+    },
+    {
+     "from": "KnowTask",
+     "to": "KnowTaskHist",
+     "n": 15940,
+     "inside": true
+    },
+    {
+     "from": "KnowPhase",
+     "to": "KnowPhaseHist",
+     "n": 356,
+     "inside": true
+    },
+    {
+     "from": "KnowSprintHist",
+     "to": "KnowSprint",
+     "n": 1,
+     "inside": true
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "ROLE_HELD_BY",
+   "total": 10693,
+   "ends": [
+    {
+     "from": "KnowTask",
+     "to": "KnowActor",
+     "n": 5675,
+     "inside": false
+    },
+    {
+     "from": "KnowTask",
+     "to": "KnowUser",
+     "n": 5018,
+     "inside": false
+    }
+   ],
+   "declared": [
+    "feedback_md:STRING",
+    "model:STRING",
+    "origin:STRING",
+    "profile:STRING",
+    "reviewed_at:STRING",
+    "role:STRING",
+    "valid_from:STRING",
+    "valid_to:STRING",
+    "verdict:STRING"
+   ],
+   "seen_in_sample": {
+    "role": 300,
+    "valid_from": 300,
+    "profile": 149
+   }
+  },
+  {
+   "edge": "PART_OF",
+   "total": 6787,
+   "ends": [
+    {
+     "from": "KnowPhase",
+     "to": "KnowSprint",
+     "n": 254,
+     "inside": true
+    },
+    {
+     "from": "KnowTask",
+     "to": "KnowSprint",
+     "n": 6533,
+     "inside": true
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "TAGGED_WITH",
+   "total": 4634,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowTag",
+     "n": 80,
+     "inside": false
+    },
+    {
+     "from": "KnowTask",
+     "to": "LoreComponent",
+     "n": 1495,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "BELONGS_TO_PROJECT",
+   "total": 3765,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowGitProject",
+     "n": 585,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "BELONGS_TO",
+   "total": 2958,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "LoreComponent",
+     "n": 676,
+     "inside": false
+    },
+    {
+     "from": "KnowTask",
+     "to": "LoreComponent",
+     "n": 6,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "IN_PHASE",
+   "total": 1070,
+   "ends": [
+    {
+     "from": "KnowTask",
+     "to": "KnowPhase",
+     "n": 1070,
+     "inside": true
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "IMPLEMENTED_IN_RELEASE",
+   "total": 988,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowRelease",
+     "n": 969,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {
+    "source": 66,
+    "created_at": 2,
+    "note": 1
+   }
+  },
+  {
+   "edge": "TARGETS_MILESTONE",
+   "total": 731,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowMilestone",
+     "n": 729,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "JUSTIFIED_BY",
+   "total": 693,
+   "ends": [
+    {
+     "from": "KnowTask",
+     "to": "KnowADR",
+     "n": 693,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "CLOSED_BY",
+   "total": 445,
+   "ends": [
+    {
+     "from": "KnowTask",
+     "to": "KnowPR",
+     "n": 445,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "DEPENDS_ON",
+   "total": 426,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowSprint",
+     "n": 115,
+     "inside": true
+    }
+   ],
+   "declared": [
+    "kind:STRING",
+    "reason:STRING"
+   ],
+   "seen_in_sample": {
+    "kind": 41,
+    "reason": 41
+   }
+  },
+  {
+   "edge": "REALIZES",
+   "total": 274,
+   "ends": [
+    {
+     "from": "KnowTask",
+     "to": "KnowUseCase",
+     "n": 274,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "IMPLEMENTED_IN",
+   "total": 191,
+   "ends": [
+    {
+     "from": "KnowADR",
+     "to": "KnowSprint",
+     "n": 124,
+     "inside": false
+    },
+    {
+     "from": "KnowDoc",
+     "to": "KnowSprint",
+     "n": 67,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "HAS_PR",
+   "total": 159,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowPR",
+     "n": 122,
+     "inside": false
+    },
+    {
+     "from": "KnowTask",
+     "to": "KnowPR",
+     "n": 33,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {
+    "role": 5,
+    "note": 1
+   }
+  },
+  {
+   "edge": "RAISED_IN",
+   "total": 148,
+   "ends": [
+    {
+     "from": "KnowQuestion",
+     "to": "KnowSprint",
+     "n": 15,
+     "inside": false
+    },
+    {
+     "from": "KnowQuestion",
+     "to": "KnowTask",
+     "n": 22,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "YIELDED",
+   "total": 108,
+   "ends": [
+    {
+     "from": "KnowFinding",
+     "to": "KnowSprint",
+     "n": 23,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "EDITED_IN",
+   "total": 92,
+   "ends": [
+    {
+     "from": "KnowFile",
+     "to": "KnowTask",
+     "n": 92,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "GATES",
+   "total": 62,
+   "ends": [
+    {
+     "from": "KnowQuestion",
+     "to": "KnowTask",
+     "n": 62,
+     "inside": false
+    }
+   ],
+   "declared": [
+    "solved_at:STRING"
+   ],
+   "seen_in_sample": {
+    "solved_at": 4
+   }
+  },
+  {
+   "edge": "RELEASED_IN",
+   "total": 19,
+   "ends": [
+    {
+     "from": "KnowSprint",
+     "to": "KnowRelease",
+     "n": 19,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "INCLUDES",
+   "total": 18,
+   "ends": [
+    {
+     "from": "KnowRelease",
+     "to": "KnowSprint",
+     "n": 18,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "PROMOTED_TO",
+   "total": 10,
+   "ends": [
+    {
+     "from": "QGRecommendation",
+     "to": "KnowTask",
+     "n": 10,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  },
+  {
+   "edge": "LED_TO",
+   "total": 1,
+   "ends": [
+    {
+     "from": "BragiInsight",
+     "to": "KnowTask",
+     "n": 1,
+     "inside": false
+    }
+   ],
+   "declared": [],
+   "seen_in_sample": {}
+  }
+ ]
+}

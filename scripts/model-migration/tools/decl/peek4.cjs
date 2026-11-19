@@ -1,0 +1,14 @@
+const fs=require("fs");const J=f=>JSON.parse(fs.readFileSync(f,"utf8"));
+const m=J("C:/AIDA/UnlimitedLORE/.claude/worktrees/agent-a5de572dc8a21cf30/shared/model/lore-model.json");
+const t=m.types.find(x=>x.type=="sprint");
+console.log("linkTabs",JSON.stringify(t.linkTabs).slice(0,900));
+console.log("relations",JSON.stringify(t.relations).slice(0,700));
+console.log("tree",JSON.stringify(t.tree).slice(0,400));
+console.log("parts[2]",JSON.stringify(t.parts[2]));
+console.log("types",m.types.map(x=>x.type+"("+x.fields.length+"/"+(x.body||[]).length+")").join(" "));
+console.log("keysets",[...new Set(m.types.flatMap(x=>Object.keys(x)))].join(","));
+console.log("fieldkeys",[...new Set(m.types.flatMap(x=>x.fields.flatMap(f=>Object.keys(f))))].join(","));
+console.log("audience",JSON.stringify(m.audience).slice(0,500));
+console.log("edge_fields",JSON.stringify(m.edge_fields).slice(0,500));
+console.log("nav",JSON.stringify(m.nav).slice(0,700));
+const sl=J("C:/AIDA/_audit_scripts/md04/slices.json"); console.log("slice body len", sl.sprints.body.length, Object.keys(sl).length);

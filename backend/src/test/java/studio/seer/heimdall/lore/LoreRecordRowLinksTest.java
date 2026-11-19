@@ -108,6 +108,9 @@ class LoreRecordRowLinksTest {
             Map.entry("job", Map.of()), Map.entry("runbook", Map.of()),
             // MD-04, второй заход по QG: у гейта вкладки только по рёбрам (ссылки) — из строки ничего.
             Map.entry("quality_gate", Map.of()),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: связи репозитория — из строки repo_by_id; у организации связей нет.
+            Map.entry("repository", Map.of("projects", x, "components", x, "mirrors", x, "mirror_of", x, "uses", x, "used_by", x)),
+            Map.entry("organization", Map.of()),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.

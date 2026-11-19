@@ -44,7 +44,8 @@ class BlockedSprintsReasonTest {
     @Test
     void reasonSliceCarriesTheExplanation() {
         String s = sql("blocked_sprints_reason");
-        assertTrue(s.contains("SELECT sprint_id, name, "), "name выбирается без псевдонима: " + s);
+        // D-2026-MIG-SPRINT-PHASE-TITLE: название спринта — title новой схемы, name старой; ключ ответа прежний — name
+        assertTrue(s.contains("SELECT sprint_id, coalesce(title, name) AS name, "), "название спринта под ключом name: " + s);
         for (String col : new String[] {"block_reason", "task_count", "deps", "open_deps", "open_questions"}) {
             assertTrue(s.contains(" AS " + col), "колонка " + col + ": " + s);
         }

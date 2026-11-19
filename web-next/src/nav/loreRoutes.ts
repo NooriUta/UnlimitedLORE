@@ -66,6 +66,9 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   runbook: 'runbook',
   // MD-04, второй заход по QG: у гейта качества появились раздел и паспорт.
   quality_gate: 'quality_gate',
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес) и организация — разделы и паспорта.
+  repository: 'repository',
+  organization: 'organization',
 };
 
 /** Модуль оболочки по умолчанию: адрес записи без модуля открывал бы «Новости». */

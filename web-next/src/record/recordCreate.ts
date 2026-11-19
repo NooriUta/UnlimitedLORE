@@ -35,7 +35,8 @@ import { planStatusOf } from '../sprints/taskStatus';
 import { saveRelation } from './relationSave';
 
 // S4-24 (14.11): решения и спеки — та же форма; кнопка появится, когда сервер отдаст паспорт `_new` с can_create.
-export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec'] as const;
+// Организация (решение владелицы 19.11.2026): код и название; заводит только super-admin — кнопку решает can_create.
+export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization'] as const;
 export type CreateType = (typeof CREATE_TYPES)[number];
 
 export const isCreateType = (t: string | undefined | null): t is CreateType =>
@@ -95,6 +96,11 @@ const SPECS: Record<CreateType, FieldSpec[]> = {
     { key: 'summary', label: 'create.field.summary', kind: 'text' },
     // Без body в блоке create: поле несёт after_write — привязка BELONGS_TO после записи (#1344).
     { key: 'component', label: 'create.field.component', kind: 'enum' },
+  ],
+  // Организация — блок create модели: код → org_id, название → name. Связи — в паспорте после создания.
+  organization: [
+    { key: 'id', label: 'create.field.orgId', kind: 'text', required: true },
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
   ],
 };
 
@@ -227,6 +233,8 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
       return { url: '/lore/decision?mode=create', body: strip({ decision_id: text(values.id), title: text(values.title), project: opt(values.projects), adr_id: opt(values.adr) }) };
     case 'spec':
       return { url: '/lore/spec?mode=create', body: strip({ spec_id: text(values.id), title: text(values.title), project: opt(values.projects), summary: opt(values.summary) }) };
+    case 'organization':
+      return { url: '/lore/organization', body: { org_id: text(values.id), name: text(values.title) } };
   }
 }
 

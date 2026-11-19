@@ -58,7 +58,11 @@ final class LoreModelFile {
         // S4-24: паспорт создания _new — путь записи, поля формы, обязательное «одно из» (LoreModelCreate).
         Map<String, LoreModelCreate.Spec> create,
         // WK-05: переходы ядра и виды работы со стадиями и доказательством done (LoreModelWorkflow).
-        LoreModelWorkflow.Workflow workflow) {}
+        LoreModelWorkflow.Workflow workflow,
+        // DBR-07: временные ряды модели 1.18 (AuditDbLogin) — DDL строится из модели (LoreModelSeries).
+        Map<String, LoreModelSeries.Series> series,
+        // MDL-02: историчные связи — история в самом ребре, одно описание на модель (LoreEdgeHistory).
+        LoreEdgeHistory.EdgeHistory edgeHistory) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -157,7 +161,8 @@ final class LoreModelFile {
             strMap(doc.get("type_color"), "type_color"), set(doc, "no_type_color"), strMap(doc.get("precision"), "precision"),
             ro(time), ro(display), ro(computed), strMap(doc.get("edge_fields"), "edge_fields"),
             set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"), ro(create),
-            LoreModelWorkflow.parse(doc.get("workflow")));
+            LoreModelWorkflow.parse(doc.get("workflow")), ro(LoreModelSeries.parse(doc.get("series"))),
+            LoreEdgeHistory.parse(doc.get("edge_history")));
         check(c);
         return c;
     }
@@ -191,6 +196,7 @@ final class LoreModelFile {
         bad.addAll(LoreModelNav.problems(c.nav(), c.audience()));
         bad.addAll(LoreModelCreate.problems(c.create(), c.typeDefs()));
         bad.addAll(LoreModelWorkflow.problems(c.workflow()));
+        bad.addAll(LoreEdgeHistory.problems(c.edgeHistory(), c.typeDefs()));
         if (!bad.isEmpty()) throw new IllegalStateException("файл модели несогласован: " + bad);
     }
 
@@ -275,6 +281,7 @@ final class LoreModelFile {
         d.put("display_overrides", disp);
         d.put("computed", new TreeMap<>(c.computed()));
         d.put("edge_fields", new TreeMap<>(c.edgeFields()));
+        if (!c.edgeHistory().edges().isEmpty()) d.put("edge_history", LoreEdgeHistory.surface(c));
         d.put("legacy_role_strings", sorted(c.legacyRoleStrings()));
         Map<String, Object> passport = new TreeMap<>();
         c.passport().forEach((k, v) -> passport.put(k, LoreModelCodec.encode(v)));
@@ -285,6 +292,7 @@ final class LoreModelFile {
         c.create().forEach((k, v) -> create.put(k, LoreModelCodec.encode(v)));
         d.put("create", create);
         d.put("workflow", LoreModelWorkflow.render(c.workflow()));
+        d.put("series", LoreModelSeries.render(c.series()));
         return new JsonObject(d).encodePrettily().replace("\r\n", "\n") + "\n";
     }
 

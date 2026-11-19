@@ -1,0 +1,17 @@
+const fs=require("fs");const J=f=>JSON.parse(fs.readFileSync(f,"utf8"));
+const A="C:/AIDA/_audit_scripts/";
+const s=J(A+"md04/sample.json"); const sc=J(A+"schema.json");
+const m=J("C:/AIDA/UnlimitedLORE/.claude/worktrees/agent-a5de572dc8a21cf30/shared/model/lore-model.json");
+console.log("GRAPH",JSON.stringify(m.graph));
+const v=s.types.filter(t=>t.type=="vertex").map(t=>t.name+":"+(s.counts[t.name]??"?")+":"+Object.keys((s.fields[t.name]||{fields:{}}).fields).length);
+console.log("VERTEX",v.join("  "));
+const e=s.types.filter(t=>t.type!="vertex").map(t=>t.name+":"+(s.counts[t.name]??"?")+":"+t.type);
+console.log("OTHER",e.join("  "));
+console.log("schema-only vertex", Object.keys(sc.vertex).filter(n=>!s.types.find(t=>t.name==n)).join(" "));
+console.log("dropped",JSON.stringify(sc.dropped).slice(0,600));
+console.log("ends sample",JSON.stringify(J(A+"db_audit.json").ends.PART_OF));
+console.log("field entry",JSON.stringify(s.fields.KnowTask.fields.effort_days||Object.values(s.fields.KnowTask.fields)[3]));
+console.log("KnowTask fields",Object.keys(s.fields.KnowTask.fields).join(","));
+console.log("KnowTaskHist fields",Object.keys(s.fields.KnowTaskHist.fields).join(","));
+console.log("writers",JSON.stringify(sc.writers).slice(0,700));
+console.log("tmap",JSON.stringify(sc.tmap).slice(0,400));

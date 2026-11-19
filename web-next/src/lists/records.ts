@@ -1,7 +1,8 @@
 // Строки слайсов LORE → записи kit (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-04).
 // Чистые функции: экран отдаёт сюда тело слайса и получает KitData, по meta
 // которого kit честно пишет «Показано N из M» / «обрезано» / «всего неизвестно».
-import type { KitData, KitRecord } from '@seidr/kit';
+import type { KitData, KitLang, KitRecord } from '@seidr/kit';
+import { appT } from '../i18n';
 import type { SliceBody } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
 import { DECISION_STATUSES, FEATURE_STATUSES, QG_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
@@ -18,6 +19,8 @@ type Row = Record<string, unknown>;
  */
 export interface RowMapCtx {
   statusCodes?: readonly string[];
+  /** Язык экрана: подписи значений, которые маппер называет словом (роль репозитория). Нет — русский. */
+  lang?: KitLang;
 }
 
 /** Ось для сверки: модель главнее, перечень в коде — умолчание. */
@@ -344,6 +347,46 @@ export function qualityGateRecord(row: Row, ctx?: RowMapCtx): KitRecord {
       project: list(row.projects), sprint: str(row.sprint_id),
     },
   };
+}
+
+/** Адрес без схемы: «https://github.com/a/b» → «github.com/a/b» (так в прототипе и в полном пути). */
+const noScheme = (u: string): string => u.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+const strList = (v: unknown): string[] => (Array.isArray(v) ? v.filter(x => x !== null && x !== undefined && x !== '').map(String) : str(v) ? [str(v)] : []);
+
+/** Роль репозитория в разделе: основной у проекта, репозиторий компонента, зеркало или не привязан. */
+export type RepoRole = 'primary' | 'component' | 'mirror' | 'none';
+
+export function repoRoleOf(row: Row): RepoRole {
+  if (strList(row.project_roles).includes('primary')) return 'primary';
+  if (strList(row.components).length) return 'component';
+  if (strList(row.mirror_of).length) return 'mirror';
+  return 'none';
+}
+
+/**
+ * D-2026-MIG-REPOSITORY-ORGANIZATION: строка среза repositories → запись kit. Ключ — адрес (url), подпись —
+ * полный путь. Проект — для группировки: свой (HAS_REPOSITORY), проект компонента, проект оригинала зеркала;
+ * репозиторий в нескольких проектах — в каждой группе. Статуса нет — роль идёт полем словом экрана.
+ */
+export function repositoryRecord(row: Row, ctx?: RowMapCtx): KitRecord {
+  const id = str(row.url);
+  const role = repoRoleOf(row);
+  const project = [...new Set([...strList(row.projects), ...strList(row.component_projects), ...strList(row.mirror_projects)])];
+  return {
+    id, kind: 'repository', title: str(row.full_path) || noScheme(id) || id, status: '',
+    fields: {
+      role: appT(ctx?.lang ?? 'ru', `lists.repoRole.${role}`),
+      project, component: strList(row.components), components: strList(row.components),
+      mirrors: strList(row.mirrors).map(noScheme), mirrorOf: strList(row.mirror_of).map(noScheme),
+      host: str(row.host), hostOwner: str(row.owner), default_branch: str(row.default_branch),
+    },
+  };
+}
+
+/** D-2026-MIG-REPOSITORY-ORGANIZATION: строка среза organizations → запись kit. Связей у организации пока нет. */
+export function organizationRecord(row: Row): KitRecord {
+  const id = str(row.org_id);
+  return { id, kind: 'organization', title: str(row.name) || id, status: '', fields: { name: str(row.name) } };
 }
 
 /** S9-05 A: строка среза users → запись kit. Статуса у человека нет — пустой, а не выдуманный. */

@@ -12,11 +12,13 @@ import { FlagsScreen } from './FlagsScreen';
 import { AdminHome } from './HomeScreen';
 import { MachinesScreen } from './MachinesScreen';
 import { McpScreen } from './McpScreen';
+import { MigrationScreen } from './MigrationScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
 import { TidyScreen } from './TidyScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import { WizardsScreen } from './WizardsScreen';
+import { ListScreen } from '../pages/ListScreen';
 import { AdminForbidden, WhoamiBarView, adminDenied, useWhoami } from './WhoamiBar';
 import { AdminNavProvider, type AdminNav } from './adminNav';
 import type { AdminSection } from './adminModule';
@@ -30,11 +32,16 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-who': () => <WhoWhereScreen view="people" meSub={v2Auth.getState().user?.sub ?? null} />,
   // S7B-28: «Проекты» — отдельный раздел; та же сборка участия, ось — проекты.
   'adm-projects': () => <WhoWhereScreen view="projects" meSub={v2Auth.getState().user?.sub ?? null} />,
+  // Решение владелицы 19.11.2026: организации — список, создание и связи (проекты, продукты, люди) в паспорте.
+  // Тот же экран, что в «Системе», но с правом управления; пишет только super-admin (can_create / can_edit сервера).
+  'adm-orgs': () => <ListScreen screen="organizations" manage />,
   'adm-roles': () => <RolesScreen />,
   'adm-dicts': () => <DictsScreen />,
   'adm-rules': () => <RulesScreen />,
   // PU-20: ссылки в текстах — автопочинка пачкой и ручной список.
   'adm-tidy': () => <TidyScreen />,
+  // MIG-02: «Перенос на новую модель» — правила переноса решением человека super-admin.
+  'adm-migration': () => <MigrationScreen />,
   'adm-flags': () => <FlagsScreen />,
   'adm-mcp': () => <McpScreen />,
   'adm-log': () => <ActionsScreen />,

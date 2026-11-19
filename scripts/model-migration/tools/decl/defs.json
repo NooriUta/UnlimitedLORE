@@ -1,0 +1,3189 @@
+{
+"defs": {
+"KnowFile.file_path": [
+"D",
+"Относительный путь файла в репозитории проекта; вместе с project — ключ ссылки на файл (ADR-LORE-018: ссылка, не разбор).",
+"lore/LoreSchemaInitializer.java:773; UNIQUE (project, file_path)",
+"model"
+],
+"KnowGitProject.description": [
+"P",
+"Предложение: краткое описание git-проекта для карточки и полнотекстового поиска (индекс ftKnowGitProject по name+description). Нынешний project_new поле не пишет — значения остались от раннего заведения.",
+"индекс lore/LoreSchemaMigrations.java:1831; писатель не найден",
+"ask"
+],
+"KnowGitProject.full_name": [
+"L",
+"Похоже на «owner/repo» хостинга — дубль hosts[]. Писателя и читателя нет.",
+"писатель не найден; адрес репо ведёт hosts (ADR-018)",
+"drop"
+],
+"KnowGitProject.repo_url": [
+"L",
+"URL репозитория из раннего заведения; адрес теперь берётся из hosts[] (primary-хост).",
+"lore/LoreProjectResource.java:65 пишет только slug/name/hosts/default_branch",
+"drop"
+],
+"KnowMilestoneHist.planned_date": [
+"L",
+"Плановая дата вехи в истории; 0% заполнения, писателя нет. Дата вехи живёт в date_display/week.",
+"писатель не найден",
+"drop"
+],
+"KnowPR.base_ref": [
+"D",
+"Ветка, в которую влит PR (base.ref из Forgejo), подтягивается обогащением при release_link.",
+"lore/ForgejoBridge.java:310-323",
+"decl"
+],
+"KnowPR.head_ref": [
+"D",
+"Ветка-источник PR (head.ref из Forgejo), подтягивается обогащением при release_link.",
+"lore/ForgejoBridge.java:310-321",
+"decl"
+],
+"KnowPR.merged_at": [
+"D",
+"Момент влития PR (merged_at из Forgejo); пусто — не влит или не обогащён (пустое значение намеренно не пишется).",
+"lore/ForgejoBridge.java:310-319; LoreReleaseResource.java:29 (S2-14)",
+"decl"
+],
+"KnowPR.pr_id": [
+"L",
+"Ранний ключ PR до pr_uid; новые писатели его не ставят.",
+"lore/LoreSchemaInitializer.java:203 «свойства по факту прода»",
+"drop"
+],
+"KnowPR.pr_number": [
+"D",
+"Номер PR в репозитории (N из owner/repo#N).",
+"lore/LoreReleaseResource.java:487; LoreForgejoResource.java:433",
+"model"
+],
+"KnowPR.pr_state": [
+"L",
+"Состояние PR (open/closed) у 4 записей; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowPR.pr_uid": [
+"D",
+"Уникальный ключ PR «git_project#N»; по нему upsert и рёбра SHIPPED_IN/CLOSED_BY.",
+"lore/LoreSchemaInitializer.java:324-327 (DBR-17, UNIQUE)",
+"model"
+],
+"KnowPR.repo": [
+"L",
+"Имя репозитория у единичных PR — дубль git_project; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowPR.url": [
+"D",
+"Ссылка на PR в Forgejo (html_url), подтягивается обогащением при release_link.",
+"lore/ForgejoBridge.java:318",
+"decl"
+],
+"KnowPhase.phase_id": [
+"D",
+"Человекочитаемая метка фазы «Фаза <KEY>»; ключ — phase_uid.",
+"lore/LoreSprintTaskResource.java:692,755",
+"decl"
+],
+"KnowPhase.phase_uid": [
+"D",
+"Ключ фазы «<sprint_id>/PHASE_<KEY>».",
+"lore/LoreSprintTaskResource.java:692",
+"model"
+],
+"KnowPhase.src": [
+"D",
+"Происхождение записи: manual — заведена инструментом; иное — ингест md.",
+"lore/LoreSprintTaskResource.java:756",
+"decl"
+],
+"KnowPhase.summary_md": [
+"D",
+"Краткое описание фазы (Markdown), задаётся sprint_phase_new; в выборке пусто.",
+"lore/LoreSprintTaskResource.java:716,756",
+"decl"
+],
+"KnowPhase.title": [
+"D",
+"Название фазы; у фаз из phase_new название лежит в name — срез берёт coalesce(title, name).",
+"lore/LoreSlices.java:1024-1026 (PU-22)",
+"model"
+],
+"KnowPhaseHist.note_md": [
+"L",
+"Заметка в строке истории фазы (1%); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowRelease.git_tag": [
+"D",
+"Git-тег релиза (vX.Y.Z); подпись релиза в графе и поиске.",
+"lore/LoreGraphResource.java:107; LoreSearchResource.java:183",
+"decl"
+],
+"KnowRelease.release_name": [
+"P",
+"Предложение: человеческое имя релиза в дополнение к тегу. Писателя нет — вероятно, ранний ингест.",
+"объявлено lore/LoreSchemaMigrations.java:567; писатель не найден",
+"ask"
+],
+"KnowRelease.release_uid": [
+"D",
+"Уникальный ключ релиза проекта; по нему рёбра SHIPPED_IN и выборки.",
+"lore/LoreForgejoResource.java:401-463; LoreQualityFacts.java:127",
+"model"
+],
+"KnowRelease.released_at": [
+"D",
+"Полный ISO-момент выпуска (UTC) рядом с датой release_date.",
+"lore/CreationMoment.java:22; LoreReleaseResource.java:205 (S2-10)",
+"model"
+],
+"KnowSprint.branch_ref": [
+"L",
+"Ветка спринта у ранних спринтов; писателя и читателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowSprint.goal": [
+"L",
+"Цель спринта у 1 записи; цель живёт в outcome_md.",
+"mcp-server/src/tools/loreWrite.ts:516 (outcome_md — «sprint goal»)",
+"drop"
+],
+"KnowSprint.pr_refs": [
+"L",
+"PR спринта на вершине (3 записи); канон — KnowSprintHist.pr_refs.",
+"lore/LoreSprintTaskResource.java:1169",
+"drop"
+],
+"KnowSprint.unplanned_intentional": [
+"D",
+"Спринт вне вех осознанно — снимается из «правда забыли» на карте вех (RM-U6).",
+"lore/LoreSchemaInitializer.java:690-691",
+"model"
+],
+"KnowSprintHist.note_md": [
+"L",
+"Заметка в строке истории спринта (<1%); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowSprintHist.pr_refs": [
+"D",
+"Номера PR спринта, дописываются в открытую строку истории (sprint_set pr_numbers); форма неоднородна (строка/список).",
+"lore/LoreSprintTaskResource.java:1169-1211; src/components/lore/LoreSprintDetail.tsx:112",
+"decl"
+],
+"KnowSprintHist.src": [
+"L",
+"Происхождение строки истории (1%); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowTask.order_index": [
+"D",
+"Порядок задачи в спринте: max по спринту + 1 при task_new; срезы сортируют по нему.",
+"lore/LoreSprintTaskResource.java:323,638; LoreSlices.java:1051",
+"decl"
+],
+"KnowTask.src": [
+"D",
+"Происхождение задачи: manual — task_new/task_mv, qg — продвинута из рекомендации гейта; прочее — ингест md (разбивка by_src в отчёте миграции).",
+"lore/LoreSprintTaskResource.java:638; LoreQgResource.java:376; LoreTaskComponentEdgeMigration.java:25",
+"decl"
+],
+"KnowTaskHist.evidence_ref": [
+"D",
+"Указатель на доказательство done (PR, ссылка, файл) по виду работы.",
+"lore/LoreSchemaMigrations.java:1645 (WK-05, V87)",
+"model"
+],
+"KnowTaskHist.evidence_type": [
+"D",
+"Вид доказательства done по виду работы.",
+"lore/LoreSchemaMigrations.java:1645 (WK-05, V87)",
+"model"
+],
+"KnowTaskHist.hist_for": [
+"L",
+"Служебная метка ранней миграции истории (у 13% строк выборки); ни писателя, ни читателя.",
+"писатель не найден",
+"drop"
+],
+"KnowTaskHist.stage": [
+"D",
+"Стадия внутри статуса ядра (по умолчанию — из словаря воркфлоу).",
+"lore/LoreSchemaMigrations.java:1645; LoreStatusResource.java:840",
+"model"
+],
+"KnowTaskHist.status_reason": [
+"D",
+"Причина перехода статуса.",
+"lore/LoreSchemaMigrations.java:1645; LoreStatusResource.java:837",
+"model"
+],
+"KnowTaskHist.waiting_for": [
+"D",
+"Адресат ожидания при статусе waiting (кого/чего ждём).",
+"lore/LoreSchemaMigrations.java:1645; LoreStatusResource.java:836",
+"model"
+],
+"LoreTechnology.category": [
+"P",
+"Предложение: класс технологии — language / framework / db / library / infra.",
+"значения в проде; писатель не найден",
+"decl"
+],
+"LoreTechnology.name": [
+"P",
+"Предложение: отображаемое имя технологии (Java 21, Quarkus…).",
+"значения в проде; писатель не найден",
+"decl"
+],
+"LoreTechnology.tech_id": [
+"P",
+"Предложение: ключ технологии (java, quarkus…), UNIQUE.",
+"lore/LoreSchemaInitializer.java:298,334",
+"model"
+],
+"KnowADRHist.sprint_id": [
+"L",
+"Спринт в строке истории ADR (22% ранних строк); связь ADR↔спринт ведётся ребром.",
+"писатель не найден",
+"drop"
+],
+"KnowAsset.entity_type": [
+"D",
+"Тип сущности-владельца картинки; часть контент-адреса {entity_type}/{entity_id}/{sha}.{ext}.",
+"lore/LoreAssetResource.java:29-31,136",
+"model"
+],
+"KnowAsset.mime": [
+"D",
+"MIME картинки; из него выводится расширение, вне списка — 400 (ADR-031 §2).",
+"lore/LoreAssetResource.java:45,136",
+"model"
+],
+"KnowAsset.size_bytes": [
+"D",
+"Размер файла ассета в байтах.",
+"lore/LoreAssetResource.java:137,155",
+"model"
+],
+"KnowDecision.adr_refs": [
+"L",
+"Ссылки решения на ADR списком (3%); писателя нет — связь ведётся ребром DECIDED_IN.",
+"читается lore/LoreSlices.java:670; писатель не найден",
+"drop"
+],
+"KnowDecision.pr_refs": [
+"L",
+"PR решения списком (<1%); писателя нет.",
+"lore/LoreSlices.java:670",
+"drop"
+],
+"KnowDecision.release_refs": [
+"L",
+"Теги релизов решения (2 записи); срез по релизу ищет решения по этому полю — почти всегда пусто.",
+"lore/LoreSlices.java:2764",
+"ask"
+],
+"KnowDecision.sprint_refs": [
+"L",
+"Спринты решения списком (2%); писателя нет.",
+"lore/LoreSlices.java:670",
+"drop"
+],
+"KnowDoc.content_html_bytes": [
+"D",
+"Длина тела content_html в байтах UTF-8 — сверка корпуса без вытягивания тел (DS-3).",
+"lore/LoreDocBodyDigest.java:5-54",
+"decl"
+],
+"KnowDoc.content_html_sha256": [
+"D",
+"Полный SHA-256 тела content_html (сверка с sha256sum у потребителя, DS-3).",
+"lore/LoreDocBodyDigest.java:5-54",
+"decl"
+],
+"KnowDoc.content_md": [
+"L",
+"Нелокализованное тело дока на вершине — 0%; тела теперь content_md_ru/_en, поле читается фолбэком.",
+"lore/LoreDocResource.java:145",
+"drop"
+],
+"KnowDoc.content_md_en_bytes": [
+"D",
+"Длина английского тела в байтах UTF-8 (DS-3).",
+"lore/LoreDocBodyDigest.java",
+"decl"
+],
+"KnowDoc.content_md_en_sha256": [
+"D",
+"SHA-256 английского тела (DS-3).",
+"lore/LoreDocBodyDigest.java",
+"decl"
+],
+"KnowDoc.content_md_ru_bytes": [
+"D",
+"Длина русского тела в байтах UTF-8 (DS-3).",
+"lore/LoreDocBodyDigest.java",
+"decl"
+],
+"KnowDoc.content_md_ru_sha256": [
+"D",
+"SHA-256 русского тела (DS-3).",
+"lore/LoreDocBodyDigest.java",
+"decl"
+],
+"KnowDocHist.content_md": [
+"D",
+"Тело дока в версии истории (SCD2), полнотекстовый индекс.",
+"lore/LoreDocResource.java:173; LoreSchemaInitializer.java:820",
+"model"
+],
+"KnowFinding.external_ref": [
+"P",
+"Предложение: внешний идентификатор находки (номер в исходном отчёте/трекере). Писателя нет — след ранней загрузки.",
+"значения в проде; писатель не найден",
+"ask"
+],
+"KnowFinding.finding_id": [
+"D",
+"Ключ находки (UNIQUE), по нему upsert ингеста.",
+"lore/LoreIngestService.java:552",
+"model"
+],
+"KnowFinding.source_sprint": [
+"D",
+"Спринт, в котором сделана находка (до 200 символов, из ингеста).",
+"lore/LoreIngestService.java:549-553",
+"decl"
+],
+"KnowFinding.summary": [
+"L",
+"Короткая сводка (10%); ингест пишет summary_md — дубль.",
+"lore/LoreSchemaMigrations.java:568; LoreTidyResource.java:60",
+"ask"
+],
+"KnowFinding.summary_md": [
+"D",
+"Содержание находки в Markdown (до 20 000 символов, из ингеста).",
+"lore/LoreIngestService.java:550-554",
+"decl"
+],
+"KnowFinding.verified": [
+"D",
+"Находка подтверждена: статус в исходнике содержит done.",
+"lore/LoreIngestService.java:547",
+"decl"
+],
+"KnowRunbook.name": [
+"D",
+"Название ранбука (подпись в поиске).",
+"lore/LoreRunbookResource.java:149; LoreSearchResource.java:127",
+"model"
+],
+"KnowUseCase.actor": [
+"L",
+"Актор сценария строкой — 0%; заменён ребром HAS_ACTOR с role (ADR-028 D19).",
+"lore/LoreProductResource.java:1717",
+"drop"
+],
+"AgentActionLog.client": [
+"D",
+"Тег ряда: клиент KC вызывающего (client_id) с пометкой агент/человек.",
+"lore/AgentActionLog.java:10-11",
+"model"
+],
+"AgentActionLog.machine": [
+"D",
+"Тег ряда: машина вызывающего (X-Lore-Machine, канон AgentMachine.canon).",
+"lore/AgentActionLog.java:11",
+"model"
+],
+"AgentActionLog.object_id": [
+"D",
+"Ключ сущности, над которой выполнено действие.",
+"lore/LoreRequestStats.java:156; LoreEntityHistory.java:52",
+"model"
+],
+"AgentActionLog.object_type": [
+"D",
+"Семейство сущности (task, sprint…) — срез действий фильтрует по нему.",
+"lore/LoreRequestStats.java:156; LoreAdminActions.java:67",
+"model"
+],
+"AgentActionLog.segment": [
+"D",
+"Ось вызывающего из токена: agent | human | unauth.",
+"lore/LoreEntityHistory.java:28-32; AgentQuota.java:32",
+"model"
+],
+"AgentActionLog.source": [
+"D",
+"Вызывающий/скоуп (имя клиента) — по нему считается квота агента.",
+"lore/AgentQuota.java:32; LoreSlices.java:2976",
+"model"
+],
+"AgentActionLog.ts": [
+"D",
+"Момент действия (TIMESTAMP ряда).",
+"lore/AgentActionLog.java:33",
+"model"
+],
+"AgentActionLog.value": [
+"D",
+"HTTP-код ответа мутирующего вызова (упавшие видны наравне с успешными).",
+"lore/LoreSlices.java:2928",
+"model"
+],
+"KnowActor.activity_window_h": [
+"D",
+"Окно активности машины в часах (1..24); пусто — общий дефолт.",
+"lore/MachineActivity.java:19",
+"model"
+],
+"KnowActor.activity_window_harness": [
+"D",
+"Окна активности по harness на машине ({\"dsh\": 24}).",
+"lore/MachineActivity.java:20",
+"model"
+],
+"KnowAgentSession.last_activity_at": [
+"D",
+"Последняя активность сессии агента (обновляется каждым agent_session_log).",
+"mcp-server/src/tools/loreWrite.ts:966",
+"model"
+],
+"KnowAgentSession.started_at": [
+"D",
+"Начало сессии агента — ставится только при первом вызове с этим session_id.",
+"mcp-server/src/tools/loreWrite.ts:966",
+"model"
+],
+"KnowMachine.first_seen_at": [
+"D",
+"Когда машина впервые вышла на связь (ставится один раз).",
+"lore/AgentMachine.java:60",
+"model"
+],
+"KnowMachine.last_seen_at": [
+"D",
+"Когда машина последний раз была на связи (S7B-ACT-1).",
+"lore/AidaLoreResource.java:1138; AgentMachine.java:56",
+"model"
+],
+"KnowProjectRoleEvent.action": [
+"D",
+"Действие над ролью: grant / update / remove.",
+"lore/LoreSchemaMigrations.java:825-830 (AL-102)",
+"model"
+],
+"KnowProjectRoleEvent.at": [
+"D",
+"Когда роль выдана/снята.",
+"lore/LoreSchemaMigrations.java:830",
+"model"
+],
+"KnowProjectRoleEvent.batch_id": [
+"D",
+"Пачка массовой правки (rb-<millis>-<hex8>) — для раскрытия и отката пачки.",
+"lore/LoreSchemaMigrations.java:1580-1583 (S7B-13)",
+"model"
+],
+"KnowProjectRoleEvent.by_role": [
+"D",
+"Роль того, кто выдал роль.",
+"lore/LoreSchemaMigrations.java:829",
+"model"
+],
+"KnowProjectRoleEvent.event_uid": [
+"D",
+"UUID события (UNIQUE).",
+"lore/LoreUserResource.java:779",
+"model"
+],
+"KnowProjectRoleEvent.role_before": [
+"D",
+"Роль до правки — для отката пачки.",
+"lore/LoreSchemaMigrations.java:1580-1583",
+"model"
+],
+"KnowUser.kc_sub": [
+"D",
+"sub пользователя в Keycloak — стабильная личность, ключ KnowUser; он же changed_by.",
+"lore/ChangeAuthor.java:25",
+"model"
+],
+"KnowUserDraft.base_record_version": [
+"D",
+"Версия записи (строкой, как record.version), от которой начат черновик — для обнаружения конфликта.",
+"lore/LoreMeDrafts.java:45-50; LoreSchemaMigrations.java:1565",
+"model"
+],
+"KnowUserDraft.base_version": [
+"L",
+"Прежняя версия-основа INTEGER — заменена base_record_version, пишется null.",
+"lore/LoreMeDrafts.java:45; LoreMeResource.java:685",
+"drop"
+],
+"KnowUserDraft.body_md": [
+"D",
+"Текст несохранённого черновика поля (может быть пустым).",
+"lore/LoreMeDrafts.java:64; LoreMeResource.java:684",
+"model"
+],
+"KnowUserDraft.field": [
+"D",
+"Поле записи, к которому относится черновик.",
+"lore/LoreMeDrafts.java:36-40",
+"model"
+],
+"KnowUserDraft.owner_sub": [
+"D",
+"Владелец черновика (kc_sub).",
+"lore/LoreMeDrafts.java:33-40",
+"model"
+],
+"KnowUserDraft.ref_id": [
+"D",
+"Ключ записи, к которой черновик.",
+"lore/LoreMeDrafts.java:35-40",
+"model"
+],
+"KnowUserDraft.ref_type": [
+"D",
+"Тип записи, к которой черновик.",
+"lore/LoreMeDrafts.java:34-40",
+"model"
+],
+"KnowUserDraft.saved_at": [
+"D",
+"Момент сохранения черновика.",
+"lore/LoreMeResource.java:685",
+"model"
+],
+"KnowUserSettings.owner_sub": [
+"D",
+"Владелец настроек (kc_sub), UNIQUE.",
+"lore/LoreSchemaMigrations.java:1448-1452",
+"model"
+],
+"KnowUserSettings.row_version": [
+"D",
+"Версия строки для оптимистичной блокировки (UPDATE … WHERE row_version=:cv).",
+"lore/LoreMeResource.java:775-776",
+"model"
+],
+"KnowUserSettings.settings_json": [
+"D",
+"Личные настройки пользователя JSON-строкой.",
+"lore/LoreMeResource.java:600-608",
+"model"
+],
+"ClRoutineMetric.metric_key": [
+"D",
+"Ключ метрики внутри прогона рутины.",
+"lore/LoreQgRunWriter.java:125",
+"model"
+],
+"ClRoutineMetric.model": [
+"D",
+"Модель (LLM), которой посчитана метрика; по умолчанию — модель прогона.",
+"lore/LoreQgRunWriter.java:127,136",
+"model"
+],
+"ClRoutineMetric.not_measured_reason": [
+"D",
+"Типизированная причина «не измерено»; SKIP без неё — дефект.",
+"lore/LoreQgRunWriter.java:89-91",
+"model"
+],
+"ClRoutineMetric.note": [
+"L",
+"Заметка к метрике (<1%); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"ClRoutineMetric.routine_name": [
+"D",
+"Имя рутины (qg-* для гейтов).",
+"lore/LoreQgRunWriter.java:125; LoreSlices.java:2543",
+"model"
+],
+"ClRoutineMetric.run_date": [
+"D",
+"Дата прогона рутины.",
+"lore/LoreQgRunWriter.java:125; LoreSchemaMigrations.java:900",
+"model"
+],
+"ClRoutineMetric.run_id": [
+"D",
+"Прогон, к которому относится метрика (ClRoutineRun.run_id).",
+"lore/LoreQgRunWriter.java:124",
+"model"
+],
+"ClRoutineMetric.skip_reason": [
+"L",
+"Причина пропуска (2%) — предшественник not_measured_reason; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"ClRoutineMetric.status": [
+"D",
+"Итог метрики, посчитанный скриптом рутины при записи (PASS/WARN/FAIL/SKIP); не пересчитывается.",
+"src/components/lore/LoreAnalytics.tsx:978 (ADR-QG-004)",
+"model"
+],
+"ClRoutineMetric.target": [
+"D",
+"Целевое значение метрики.",
+"lore/LoreSlices.java:2542",
+"model"
+],
+"ClRoutineMetric.unit": [
+"D",
+"Единица измерения метрики.",
+"lore/LoreSlices.java:2542",
+"model"
+],
+"ClRoutineMetric.value": [
+"D",
+"Измеренное значение метрики.",
+"lore/LoreQgRunWriter.java:125",
+"model"
+],
+"ClRoutineOutput.content_md": [
+"P",
+"Предложение: текст артефакта прогона рутины (отчёт) в Markdown. Писателя в коде нет — пишет внешняя рутина.",
+"lore/LoreSlices.java:2827; писатель не найден",
+"ask"
+],
+"ClRoutineOutput.output_type": [
+"P",
+"Предложение: вид артефакта прогона; вместе с routine_name+run_date — ключ (UNIQUE).",
+"lore/LoreSchemaInitializer.java:532",
+"model"
+],
+"ClRoutineOutput.routine_name": [
+"P",
+"Предложение: рутина, выпустившая артефакт.",
+"lore/LoreSlices.java:2822",
+"model"
+],
+"ClRoutineOutput.run_date": [
+"P",
+"Предложение: дата прогона, давшего артефакт.",
+"lore/LoreSlices.java:2821",
+"model"
+],
+"ClRoutineOutput.title": [
+"P",
+"Предложение: заголовок артефакта.",
+"lore/LoreSlices.java:2821",
+"model"
+],
+"ClRoutineRun.detail_md": [
+"P",
+"Предложение: подробности прогона рутины (Markdown).",
+"lore/LoreSlices.java:2815",
+"model"
+],
+"ClRoutineRun.gates_failed_ids": [
+"P",
+"Предложение: список гейтов, упавших в прогоне (строкой).",
+"lore/LoreSlices.java:2815",
+"model"
+],
+"ClRoutineRun.run_ts": [
+"P",
+"Предложение: момент прогона (DATETIME) у 30% строк; новые писатели ставят started_at/finished_at.",
+"объявлено LoreSchemaInitializer.java:489; писатель не найден",
+"ask"
+],
+"MetricSnapshot.value": [
+"D",
+"Значение точки временного ряда метрики (просмотры, клики, lore.action…).",
+"backend/db-schema/seed-bragi-demo.sql:109; LoreEntityHistory.java:30",
+"model"
+],
+"QGJobTask.status": [
+"D",
+"Статус нарушения инварианта: open — активное (срез нарушений), иначе закрыто.",
+"lore/LoreSlices.java:2525",
+"model"
+],
+"QGRecommendation.status": [
+"D",
+"Статус рекомендации: pending → promoted (в задачу).",
+"lore/LoreQgResource.java:214,409",
+"model"
+],
+"QualityGate.description": [
+"D",
+"Краткое описание гейта (qg_new / ингест).",
+"lore/LoreQgResource.java:44-50; LoreIngestService.java:462",
+"decl"
+],
+"QualityGate.last_run_status": [
+"P",
+"Предложение: итог последнего прогона гейта (PASS/FAIL). Писателя нет — значение застыло со времени заведения, а показывается как живое.",
+"читается lore/LoreSlices.java:2489; писатель не найден",
+"ask"
+],
+"QualityGate.name": [
+"D",
+"Название гейта (подпись в поиске).",
+"lore/LoreQgResource.java:47; LoreSearchResource.java:137",
+"decl"
+],
+"QualityGate.routine_name": [
+"P",
+"Предложение: рутина (qg-*), которая гоняет гейт. Писателя нет.",
+"писатель не найден",
+"ask"
+],
+"BragiAsset.file_url": [
+"D",
+"Где лежит файл ассета (/lore/bragi/asset/file/<имя>).",
+"lore/LoreBragiResource.java:255",
+"model"
+],
+"BragiAsset.size_bytes": [
+"D",
+"Размер файла ассета в байтах.",
+"lore/LoreBragiResource.java:202,255",
+"model"
+],
+"BragiCampaign.target_url": [
+"D",
+"Целевая ссылка кампании с UTM-метками (EDIT-04).",
+"src/components/lore/LoreBragiPublicationEditor.tsx:38",
+"model"
+],
+"BragiCampaign.utm_campaign": [
+"D",
+"UTM-метка utm_campaign.",
+"lore/LoreBragiResource.java:528",
+"model"
+],
+"BragiCampaign.utm_medium": [
+"D",
+"UTM-метка utm_medium.",
+"lore/LoreBragiResource.java:527",
+"model"
+],
+"BragiCampaign.utm_source": [
+"D",
+"UTM-метка utm_source.",
+"lore/LoreBragiResource.java:526",
+"model"
+],
+"BragiCompetitor.competitor_id": [
+"P",
+"Предложение: ключ конкурента (COMP-*), UNIQUE.",
+"backend/db-schema/create-schema.sql:291-293",
+"model"
+],
+"BragiCompetitor.name": [
+"P",
+"Предложение: название конкурента (Collibra, DataHub…).",
+"backend/db-schema/seed-bragi-demo.sql:89-93",
+"model"
+],
+"BragiInsight.statement_md": [
+"D",
+"Формулировка вывода из данных (Markdown); доказательство — evidence_ref.",
+"src/components/lore/LoreMcpApiScreen.tsx:392",
+"model"
+],
+"BragiIntegration.endpoint": [
+"D",
+"Адрес API внешнего сервиса интеграции.",
+"lore/LoreBragiResource.java:766",
+"model"
+],
+"BragiIntegration.last_called_at": [
+"D",
+"Когда интеграция последний раз отдавала метрики (bragi_sync).",
+"mcp-server/src/tools/loreWrite.ts:2821",
+"model"
+],
+"BragiIntegration.scope": [
+"D",
+"Права/скоуп доступа интеграции.",
+"lore/LoreBragiResource.java:767",
+"model"
+],
+"BragiKeyword.cluster": [
+"D",
+"Кластер семантического ядра (произвольная группа ключей).",
+"backend/db-schema/create-schema.sql:318",
+"model"
+],
+"BragiKeyword.freq_broad": [
+"D",
+"Частота ключа в широком соответствии.",
+"lore/LoreBragiResource.java:304",
+"model"
+],
+"BragiKeyword.phrase": [
+"D",
+"Фраза ключевого слова.",
+"mcp-server/src/tools/loreWrite.ts:2608",
+"model"
+],
+"BragiPage.description": [
+"D",
+"Описание целевой страницы (пусто у всех).",
+"mcp-server/src/tools/loreWrite.ts:2632",
+"model"
+],
+"BragiPage.title": [
+"D",
+"Заголовок целевой страницы.",
+"mcp-server/src/tools/loreWrite.ts:2632",
+"model"
+],
+"BragiPage.url": [
+"D",
+"Путь/URL целевой страницы на сайте.",
+"mcp-server/src/tools/loreWrite.ts:2632",
+"model"
+],
+"BragiPublication.source_file_path": [
+"D",
+"Где на диске лежит полный черновик публикации.",
+"lore/LoreBragiResource.java:53",
+"model"
+],
+"BragiPublication.title": [
+"D",
+"Заголовок публикации.",
+"lore/LoreBragiResource.java (bragi_pub_new)",
+"model"
+],
+"BragiPublication.topic": [
+"P",
+"Предложение: тема публикации свободной строкой (техничка, продукт…).",
+"backend/db-schema/seed-bragi-demo.sql:42-83",
+"model"
+],
+"BragiRubric.description": [
+"D",
+"Описание рубрики — фиксированного классификатора публикаций.",
+"mcp-server/src/tools/loreWrite.ts:2220",
+"model"
+],
+"BragiRubric.name": [
+"D",
+"Название рубрики.",
+"mcp-server/src/tools/loreWrite.ts:2219",
+"model"
+],
+"KnowTag.tag_id": [
+"D",
+"Ключ тега; теги ADR/решений ставятся ребром TAGGED_WITH.",
+"lore/LoreAdrResource.java:316-322",
+"model"
+],
+"PlanCheckpoint.checkpoint_id": [
+"P",
+"Предложение: ключ контрольной точки план-борда.",
+"lore/LoreSlices.java:2008-2010",
+"model"
+],
+"PlanCheckpoint.desc_md": [
+"P",
+"Предложение: описание контрольной точки (Markdown).",
+"lore/LoreSlices.java:2008",
+"decl"
+],
+"PlanCheckpoint.label": [
+"P",
+"Предложение: подпись контрольной точки на борде.",
+"lore/LoreSlices.java:2008",
+"decl"
+],
+"PlanConfig.config_id": [
+"P",
+"Предложение: ключ настройки план-борда (используется default).",
+"lore/LoreSlices.java:1988",
+"model"
+],
+"PlanConfig.note": [
+"P",
+"Предложение: пояснение к настройке план-борда. Никто не читает.",
+"писатель/читатель не найдены",
+"ask"
+],
+"PlanConfig.w0_date": [
+"D",
+"Дата нулевой недели план-борда — от неё считается week у релизов и вех.",
+"lore/LoreReleaseResource.java:452 (LH-43)",
+"decl"
+],
+"PlanSection.color": [
+"P",
+"Предложение: цвет секции план-борда.",
+"lore/LoreSlices.java:2000",
+"decl"
+],
+"PlanSection.end_week": [
+"P",
+"Предложение: последняя неделя секции (от W0).",
+"lore/LoreSlices.java:2000",
+"decl"
+],
+"PlanSection.label": [
+"P",
+"Предложение: подпись секции план-борда.",
+"lore/LoreSlices.java:2000",
+"decl"
+],
+"PlanSection.section_id": [
+"P",
+"Предложение: ключ секции план-борда.",
+"lore/LoreSlices.java:2000",
+"model"
+],
+"PlanSection.start_week": [
+"P",
+"Предложение: первая неделя секции (от W0).",
+"lore/LoreSlices.java:2000",
+"decl"
+],
+"PlanTrack.label": [
+"P",
+"Предложение: подпись трека (свимлейна) план-борда; фолбэк — track_id.",
+"lore/LoreSprintTracks.java:23",
+"decl"
+],
+"PlanTrack.track_id": [
+"P",
+"Предложение: ключ трека; спринт ссылается на него полем track_id.",
+"lore/LoreSprintTracks.java:23-27",
+"model"
+],
+"PlanVersion.changelog_md": [
+"P",
+"Предложение: что изменилось в версии плана (Markdown).",
+"lore/LoreSlices.java:2013",
+"decl"
+],
+"PlanVersion.version_date": [
+"P",
+"Предложение: дата версии плана.",
+"lore/LoreSlices.java:2013",
+"decl"
+],
+"PlanVersion.version_id": [
+"P",
+"Предложение: ключ версии плана.",
+"lore/LoreSlices.java:2013",
+"model"
+],
+"TrackType.label": [
+"P",
+"Предложение: подпись типа трека. Никто не читает в коде.",
+"читатель не найден",
+"ask"
+],
+"TrackType.sort_order": [
+"P",
+"Предложение: порядок типов треков. Никто не читает.",
+"читатель не найден",
+"ask"
+],
+"TrackType.type_id": [
+"P",
+"Предложение: ключ типа трека; трек ссылается ребром OF_TYPE.",
+"lore/LoreSlices.java:1991",
+"model"
+],
+"KnowModelConfig.config_id": [
+"D",
+"Ключ конфигурации модели (lore-model) — живая копия модели в базе.",
+"lore/LoreModelStore.java:237",
+"model"
+],
+"KnowModelConfig.format": [
+"D",
+"Формат тела конфигурации модели.",
+"lore/LoreModelStore.java:237",
+"model"
+],
+"KnowModelConfigHist.content": [
+"D",
+"Тело версии модели (для диффа и отката, MC-06).",
+"lore/LoreModelStore.java:239,255-259",
+"model"
+],
+"KnowModelConfigHist.reason": [
+"D",
+"Причина правки модели.",
+"lore/LoreModelStore.java:240",
+"model"
+],
+"LoreSchemaVersion.applied_at": [
+"D",
+"Когда шаг миграции применён.",
+"lore/LoreSchemaMigrations.java:19",
+"model"
+],
+"LoreSchemaVersion.checksum": [
+"D",
+"Контрольная сумма шага миграции — сверка, что шаг не менялся.",
+"lore/LoreSchemaMigrations.java:19",
+"model"
+],
+"LoreSchemaVersion.compat_major": [
+"D",
+"Мажор совместимости шага; у легаси-строк пусто — major = номер шага.",
+"lore/LoreSchemaMigrationRunner.java:314",
+"model"
+],
+"LoreSchemaVersion.name": [
+"D",
+"Имя шага миграции.",
+"lore/LoreSchemaMigrations.java:19",
+"model"
+],
+"HAS_ACTOR.role": [
+"D",
+"Роль актора в сценарии: primary | supporting.",
+"lore/LoreProductResource.java:1717 (ADR-028 D19)",
+"model"
+],
+"IN_PRODUCT.role": [
+"D",
+"Роль в продукте: owner (строит) | consumer (пользуется).",
+"mcp-server/src/tools/loreWrite.ts:1940-1941",
+"model"
+],
+"ROLE_HELD_BY.feedback_md": [
+"D",
+"Обратная связь ревьюера по задаче (TR-06).",
+"lore/LoreSchemaMigrations.java:1062-1068",
+"model"
+],
+"ROLE_HELD_BY.model": [
+"D",
+"Модель агента в этом действии (атрибут действия, не личности).",
+"lore/LoreSchemaMigrations.java:1055-1060 (ADR-LORE-042 §3)",
+"model"
+],
+"ROLE_HELD_BY.profile": [
+"D",
+"Профиль инструментов агента в этом действии.",
+"lore/LoreSchemaMigrations.java:1055-1059",
+"model"
+],
+"ROLE_HELD_BY.reviewed_at": [
+"D",
+"Когда ревьюер вынес вердикт.",
+"lore/LoreSchemaMigrations.java:1069",
+"model"
+],
+"ROLE_HELD_BY.verdict": [
+"D",
+"Вердикт ревьюера (TR-06).",
+"lore/LoreSchemaMigrations.java:1062-1067",
+"model"
+],
+"SERVES.kind": [
+"D",
+"Как сервисный продукт обслуживает продукт: count | sell | support.",
+"lore/LoreProductAxisResource.java:40; loreWrite.ts:1947",
+"model"
+],
+"BELONGS_TO_PROJECT.role": [
+"L",
+"Роль проекта у единственного ребра (owner); у ребра принадлежности роли нет в модели.",
+"писатель не найден",
+"drop"
+],
+"BragiPublication.annotation_md": [
+"D",
+"Постоянная редакторская мета публикации (мастер-источник, правило замены, контекст выпуска) — в скин площадки не попадает.",
+"mcp-server/src/tools/loreWrite.ts (bragi_pub_new: annotation_md)",
+"decl"
+],
+"BragiPublication.todo_md": [
+"D",
+"Временный чек-лист публикации («- [ ] …») — только для редактора.",
+"mcp-server/src/tools/loreWrite.ts (bragi_pub_new: todo_md)",
+"decl"
+],
+"BragiVariant.annotation_md": [
+"D",
+"Постоянная редакторская мета конкретного варианта площадки.",
+"mcp-server/src/tools/loreWrite.ts (bragi_variant_new)",
+"decl"
+],
+"BragiVariant.todo_md": [
+"D",
+"Временный чек-лист варианта площадки.",
+"mcp-server/src/tools/loreWrite.ts (bragi_variant_new)",
+"decl"
+],
+"ClRoutineRun.source": [
+"L",
+"Источник прогона у одной строки (morning-pulse); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"DEPENDS_ON.kind": [
+"D",
+"Сила зависимости спринтов: hard | soft | gate.",
+"mcp-server/src/tools/loreWrite.ts (sprint_link rel=\"dep\")",
+"decl"
+],
+"DEPENDS_ON.reason": [
+"D",
+"Краткая причина зависимости спринтов.",
+"mcp-server/src/tools/loreWrite.ts (sprint_link rel=\"dep\")",
+"decl"
+],
+"GATES.solved_at": [
+"D",
+"Когда гейт снят: задача закрыта (done/cancelled/failed); при переоткрытии метка снимается, ребро не удаляется (QG-17).",
+"lore/LoreStatusResource.java:60-69",
+"decl"
+],
+"HAS_PR.role": [
+"P",
+"Предложение: роль PR для спринта (feature/release). Писателя нет — 5 ранних рёбер.",
+"писатель не найден",
+"ask"
+],
+"HAS_PR.note": [
+"L",
+"Заметка на ребре (одна: «HD-3 partial»); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"IMPLEMENTED_IN_RELEASE.source": [
+"P",
+"Предложение: как установлена связь спринт→релиз — date (по дате), verified, pr-verified (по PR). Писателя нет — след ранней сверки.",
+"значения в проде; писатель не найден",
+"ask"
+],
+"IMPLEMENTED_IN_RELEASE.created_at": [
+"L",
+"Дата создания ребра у 2 рёбер; провенанс рёбер теперь пишется иначе.",
+"писатель не найден",
+"drop"
+],
+"IMPLEMENTED_IN_RELEASE.note": [
+"L",
+"Заметка на ребре (одна); писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowADR.file_path": [
+"D",
+"Путь md-файла ADR в репозитории, из которого он загружен ингестом.",
+"lore/LoreIngestService.java:222-229",
+"decl"
+],
+"KnowADR.date_created": [
+"D",
+"Дата принятия/создания ADR (YYYY-MM-DD), по умолчанию — сегодня.",
+"mcp-server/src/tools/loreWrite.ts (adr_new: date_created)",
+"decl"
+],
+"KnowADR.status": [
+"D",
+"Статус ADR (ACCEPTED/PROPOSED/SUPERSEDED…) на вершине — из ингеста; канон статуса — status_raw открытой версии.",
+"lore/LoreIngestService.java:227",
+"ask"
+],
+"KnowADR.context_md": [
+"D",
+"Раздел «Контекст» ADR на вершине (из ингеста md); тела ADR в новых записях живут в версии истории.",
+"lore/LoreIngestService.java:227; срезы adr/adr_history",
+"ask"
+],
+"KnowADR.decision_md": [
+"D",
+"Раздел «Решение» ADR на вершине (из ингеста md).",
+"lore/LoreIngestService.java:227",
+"ask"
+],
+"KnowADR.consequences_md": [
+"D",
+"Раздел «Последствия» ADR на вершине (из ингеста md).",
+"lore/LoreIngestService.java:227",
+"ask"
+],
+"KnowADR.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowADR.component_id": [
+"D",
+"Скаляр «первый компонент» ADR; полный набор — рёбра BELONGS_TO.",
+"SPEC-LORE-FIELD-LABELS (через разбор MD-01); LoreIngestService.java:227",
+"decl"
+],
+"KnowADRHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowADRHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowADRHist.adr_id": [
+"L",
+"Ключ ADR в строке истории (одна строка); связь версии с ADR — ребро HAS_STATE.",
+"lore/LoreAdrResource.java:183",
+"drop"
+],
+"KnowADRHist.file_path": [
+"L",
+"Путь md-файла в строке истории (одна строка).",
+"писатель не найден",
+"drop"
+],
+"KnowDecision.date_created": [
+"D",
+"Дата фиксации решения (YYYY-MM-DD), по умолчанию — сегодня.",
+"mcp-server/src/tools/loreWrite.ts (decision_new)",
+"decl"
+],
+"KnowDecision.refs_raw": [
+"D",
+"Сырые ссылки решения строкой (источник в документе, decided_in->ADR…); по ним ищутся решения, упоминающие вопрос. Живое поле, пишет decision_new/decision_set.",
+"lore/LoreDecisionResource.java:103-118; LoreSlices.java:778-791",
+"decl"
+],
+"KnowDecision.component_id": [
+"D",
+"Скаляр «первый компонент» решения; полный набор — из рёбер.",
+"lore/LoreDecisionResource.java:328 (decision_link)",
+"decl"
+],
+"KnowDecisionHist.content_hash": [
+"D",
+"Короткий (16 hex) хеш тел открытой версии; равный прошлому = «ревизия без изменений содержания» (SV-10, AL-30).",
+"lore/LoreHashStamper.java:15-25,73",
+"decl"
+],
+"KnowDecisionHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowDecisionHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowDoc.kind": [
+"D",
+"Вид дока: page, fragment, guide, reference, research, product, site, prompt, claude-rules…",
+"mcp-server/src/tools/loreWrite.ts (doc_new: kind)",
+"decl"
+],
+"KnowDoc.file_path": [
+"D",
+"Путь исходного md-файла дока (абсолютный путь машины ингеста или репо).",
+"lore/LoreDocResource.java:63; LoreIngestService.java:602-610",
+"decl"
+],
+"KnowDoc.content_html": [
+"L",
+"Легаси HTML-тело дока (до 100 КБ, рендер в песочнице) — 4 дока; новые тела — Markdown.",
+"mcp-server/src/tools/loreWrite.ts (doc_new: «Legacy: HTML content»)",
+"decl"
+],
+"KnowDoc.component_id": [
+"D",
+"Скаляр «первый компонент» дока.",
+"lore/LoreDocResource.java:63",
+"decl"
+],
+"KnowDocHist.doc_id": [
+"D",
+"Ключ дока в строке истории (пишется при каждой версии).",
+"lore/LoreDocResource.java:173",
+"decl"
+],
+"KnowDocHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowFinding.type": [
+"P",
+"Предложение: вид находки — constraint, insight, research.",
+"lore/LoreIngestService.java:552; значения в проде",
+"decl"
+],
+"KnowMilestone.label": [
+"D",
+"Короткая подпись вехи для борда.",
+"mcp-server/src/tools/loreWrite.ts (milestone_new: label)",
+"decl"
+],
+"KnowMilestone.week": [
+"D",
+"Номер недели плана относительно W0.",
+"mcp-server/src/tools/loreWrite.ts (milestone_new: week)",
+"decl"
+],
+"KnowMilestone.date_display": [
+"D",
+"Человекочитаемая дата/диапазон вехи («Aug W2»).",
+"mcp-server/src/tools/loreWrite.ts (milestone_new: date_display)",
+"decl"
+],
+"KnowMilestone.priority": [
+"D",
+"Приоритет вехи (high, critical; в данных также P0).",
+"mcp-server/src/tools/loreWrite.ts (milestone_new: priority)",
+"decl"
+],
+"KnowMilestone.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowMilestoneHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowMilestoneHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowPhase.order_index": [
+"D",
+"Позиция фазы в спринте; по умолчанию max + 1.",
+"mcp-server/src/tools/loreWrite.ts (sprint_phase_new: order_index)",
+"decl"
+],
+"KnowPhase.name": [
+"D",
+"Человекочитаемое название фазы (phase_new); срез показывает coalesce(title, name).",
+"mcp-server/src/tools/loreWrite.ts (sprint_phase_new: name); LoreSlices.java:1024",
+"decl"
+],
+"KnowPhase.status_raw": [
+"L",
+"Статус фазы на вершине (из ингеста, с эмодзи); канон статуса — открытая версия KnowPhaseHist.",
+"lore/LoreSlices.java:1024-1025 (PU-22)",
+"ask"
+],
+"KnowPhaseHist.content_hash": [
+"D",
+"Короткий (16 hex) хеш тел открытой версии; равный прошлому = «ревизия без изменений содержания» (SV-10, AL-30).",
+"lore/LoreHashStamper.java:15-25,73",
+"decl"
+],
+"KnowPhaseHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowPhaseHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowPR.release_id": [
+"L",
+"Тег релиза на PR (v1.6.x) у 17% — дубль ребра SHIPPED_IN; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowPR.body_md": [
+"L",
+"Тело PR у 4 записей; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowQuestion.status": [
+"D",
+"Статус вопроса: open | deferred | dropped; closed ставится связью answers.",
+"mcp-server/src/tools/loreWrite.ts (question_new: status)",
+"decl"
+],
+"KnowQuestion.closed_date": [
+"D",
+"Дата закрытия вопроса (ставится при связи answers).",
+"lore/LoreQuestionResource.java:188-198 (question_link)",
+"decl"
+],
+"KnowQuestion.opened_date": [
+"D",
+"Дата открытия вопроса.",
+"lore/LoreQuestionResource.java:115-118",
+"decl"
+],
+"KnowQuestion.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowQuestion.priority": [
+"D",
+"Приоритет вопроса: blocker | high | normal…",
+"lore/LoreQuestionResource.java:85 (question_new/question_set)",
+"decl"
+],
+"KnowQuestion.due_date": [
+"D",
+"Срок, к которому нужен ответ.",
+"lore/LoreQuestionResource.java:85",
+"decl"
+],
+"KnowQuestion.trigger": [
+"D",
+"Условие реактивации отложенного вопроса (обязательно при deferred, может быть датой).",
+"mcp-server/src/tools/loreWrite.ts (question_new: trigger)",
+"decl"
+],
+"KnowQuestion.owner": [
+"D",
+"Кто должен ответить (логин/роль) — строкой, не ребром.",
+"lore/LoreQuestionResource.java:85",
+"ask"
+],
+"KnowQuestion.raised_by": [
+"D",
+"Кто поднял вопрос (агент/логин) — строкой.",
+"lore/LoreQuestionResource.java:85",
+"ask"
+],
+"KnowQuestion.component_id": [
+"D",
+"Скаляр «первый компонент» вопроса.",
+"lore/LoreQuestionResource.java:327 (question_link)",
+"decl"
+],
+"KnowRelease.version": [
+"L",
+"Версия строкой у 16% ранних релизов — дубль git_tag; писателя нет, но читается срезом releases (miniLORE).",
+"писатель не найден; miniLORE-контракт releases",
+"ask"
+],
+"KnowRelease.release_date": [
+"D",
+"Дата релиза (YYYY-MM-DD), по умолчанию — сегодня.",
+"mcp-server/src/tools/loreWrite.ts (release_new: release_date)",
+"decl"
+],
+"KnowRelease.is_current": [
+"D",
+"Текущий прод-релиз проекта; если не задан — LORE сам делает текущим новейший релиз с тегом (реконсилер).",
+"mcp-server/src/tools/loreWrite.ts (release_new); LoreReleaseCurrentReconciler.java:144-159",
+"decl"
+],
+"KnowRelease.week": [
+"D",
+"Номер недели плана относительно W0; при release_link ставится из release_date и PlanConfig.w0_date, если пуст.",
+"lore/LoreReleaseResource.java:452 (LH-43)",
+"decl"
+],
+"KnowRelease.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowRelease.type": [
+"P",
+"Предложение: вид релиза по semver — major | minor | patch. Писателя нет (94% из ранней загрузки), читается срезами.",
+"значения в проде; писатель не найден",
+"ask"
+],
+"KnowRelease.title": [
+"L",
+"Заголовок релиза у 2 записей; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowReleaseHist.content_hash": [
+"D",
+"Короткий (16 hex) хеш тел открытой версии; равный прошлому = «ревизия без изменений содержания» (SV-10, AL-30).",
+"lore/LoreHashStamper.java:15-25,73",
+"decl"
+],
+"KnowReleaseHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowReleaseHist.is_current": [
+"L",
+"Флаг «текущий» в строке истории (15%) — дубль вершины; читается срезом releases.",
+"писатель не найден",
+"ask"
+],
+"KnowReleaseHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowRunbook.area": [
+"D",
+"Область ранбука: recovery, infra, deploy, ops, auth, db, service.",
+"mcp-server/src/tools/loreWrite.ts (runbook_new: area)",
+"decl"
+],
+"KnowRunbook.date_created": [
+"D",
+"Дата создания ранбука (YYYY-MM-DD), по умолчанию — сегодня.",
+"mcp-server/src/tools/loreWrite.ts (runbook_new: date_created)",
+"decl"
+],
+"KnowSpec.file_path": [
+"D",
+"Путь исходного md-файла спеки в репозитории.",
+"lore/LoreSpecResource.java:97",
+"decl"
+],
+"KnowSpec.version": [
+"D",
+"Версия спеки (1.1, 2.0.1…).",
+"lore/LoreSpecResource.java:97",
+"decl"
+],
+"KnowSpec.content_md": [
+"D",
+"Тело спеки на вершине (Markdown); версии — в KnowSpecHist.",
+"lore/LoreSpecResource.java:97",
+"decl"
+],
+"KnowSpec.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowSpec.component_id": [
+"D",
+"Скаляр «первый компонент» спеки.",
+"lore/LoreSpecResource.java:97; LoreResourceBase.java:895",
+"decl"
+],
+"KnowSpec.status": [
+"P",
+"Предложение: статус спеки (accepted/proposed/deprecated) у 2%; писателя нет, читается срезами spec_by_id/specs.",
+"писатель не найден",
+"ask"
+],
+"KnowSpecHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowSpecHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowSpecHist.spec_id": [
+"D",
+"Ключ спеки в строке истории.",
+"lore/LoreSpecResource.java:172-205",
+"decl"
+],
+"KnowSprint.plan_id": [
+"D",
+"Ключ плана/группы спринтов (mimir_prep…); пишет sprint_set и ингест. Живое поле, не легаси.",
+"lore/LoreSprintTaskResource.java:50,1397; LoreIngestService.java:84",
+"decl"
+],
+"KnowSprint.status_raw": [
+"D",
+"Статус спринта строкой с эмодзи на вершине (из ингеста md); канон — открытая версия KnowSprintHist.",
+"lore/LoreIngestService.java:81,311",
+"ask"
+],
+"KnowSprint.priority": [
+"D",
+"Приоритет спринта на вершине (из ингеста, свободной строкой); правка через sprint_plan_set идёт в KnowSprintHist.priority.",
+"lore/LoreIngestService.java:81,311",
+"ask"
+],
+"KnowSprint.date_created": [
+"L",
+"Дата создания из ингеста (10%); канон — created_date.",
+"lore/LoreIngestService.java:311",
+"drop"
+],
+"KnowSprint.outcome_md": [
+"D",
+"Итог / ретроспектива спринта (Markdown).",
+"mcp-server/src/tools/loreWrite.ts (sprint_set: outcome_md)",
+"decl"
+],
+"KnowSprint.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowSprint.effort_days": [
+"D",
+"Фактические трудозатраты спринта в человеко-днях (1 день = 8 ч).",
+"mcp-server/src/tools/loreWrite.ts (sprint_set: effort_days)",
+"decl"
+],
+"KnowSprint.version": [
+"L",
+"Версия спринта у 2 записей; писателя нет.",
+"писатель не найден",
+"drop"
+],
+"KnowSprintHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowSprintHist.priority": [
+"D",
+"Приоритет спринта в версии (словарь priority).",
+"mcp-server/src/tools/loreWrite.ts (sprint_plan_set: priority)",
+"decl"
+],
+"KnowSprintHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowSprintHist.sprint_id": [
+"L",
+"Ключ спринта в строке истории (3 строки); связь — ребро HAS_STATE.",
+"lore/LoreStatusResource.java:710",
+"drop"
+],
+"KnowSprintHist.block_reason": [
+"D",
+"Причина блокировки спринта (при статусе blocked).",
+"lore/LoreStatusResource.java:322 (status_set)",
+"decl"
+],
+"KnowSprintHist.planned_milestone_id": [
+"L",
+"Плановая веха в истории — снята (веха связывается ребром TARGETS_MILESTONE).",
+"память проекта: planned_milestone_id удалён",
+"drop"
+],
+"KnowTask.status_raw": [
+"D",
+"Статус задачи строкой на вершине (стартовый PLANNED, ингест); канон — открытая версия KnowTaskHist.",
+"lore/LoreSprintTaskResource.java:345; LoreIngestService.java:510",
+"ask"
+],
+"KnowTask.effort_days": [
+"D",
+"Оценка трудозатрат в человеко-днях (1 день = 8 ч).",
+"mcp-server/src/tools/loreWrite.ts (task_new: effort_days)",
+"decl"
+],
+"KnowTask.note_md": [
+"D",
+"Описание задачи в Markdown (заменяется task_set; note_append — дописывает).",
+"mcp-server/src/tools/loreWrite.ts (task_new/task_set: note_md)",
+"decl"
+],
+"KnowTask.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"KnowTask.sprint_id": [
+"L",
+"Ключ спринта скаляром у 4 задач; принадлежность — ребро PART_OF и префикс task_uid.",
+"lore/LoreSprintTaskResource.java:345",
+"drop"
+],
+"KnowTask.priority": [
+"L",
+"Приоритет задачи строкой у 1 задачи из ингеста.",
+"lore/LoreIngestService.java:510",
+"drop"
+],
+"KnowTask.summary_md": [
+"L",
+"Сводка задачи у 1 задачи из ингеста.",
+"lore/LoreIngestService.java:510",
+"drop"
+],
+"KnowTaskHist.source_commit": [
+"D",
+"Коммит git, из которого строка истории пришла ингестом md; такая версия в истории показывается как kind=\"ingest\". Новые писатели поле не ставят.",
+"lore/LoreEntityHistory.java:36-37,120",
+"decl"
+],
+"KnowTaskHist.effort_days": [
+"D",
+"Оценка трудозатрат в версии задачи (то же поле, что на вершине).",
+"lore/LoreSprintTaskResource.java:349; LoreStatusResource.java:878",
+"decl"
+],
+"KnowTaskHist.state_uid": [
+"D",
+"Ключ версии SCD2 (UUID) строки истории; по нему открывают/закрывают версию и ставят ребро HAS_STATE. У легаси-строк бывает null — поэтому сопоставление по @rid.",
+"lore/LoreAdrResource.java:158-160; LoreSprintTaskResource.java:641",
+"decl"
+],
+"KnowUseCase.component_id": [
+"D",
+"Скаляр «первый компонент» сценария.",
+"lore/LoreProductResource.java:154 (feature_new)",
+"decl"
+],
+"KnowUseCase.updated_at": [
+"D",
+"Отметка правки на месте; у сценария её ставит и пересчёт готовности (UcReadinessCalculator).",
+"lore/UcReadinessCalculator.java:131; LoreChangedAt.java",
+"decl"
+],
+"LoreComponent.full_name": [
+"D",
+"Человекочитаемое полное имя компонента.",
+"mcp-server/src/tools/loreWrite.ts (component_new: full_name)",
+"decl"
+],
+"LoreComponent.area": [
+"D",
+"Командная область компонента: platform, engine, frontend…",
+"mcp-server/src/tools/loreWrite.ts (component_new: area)",
+"decl"
+],
+"LoreComponent.parent_id": [
+"D",
+"component_id родителя, если это подкомпонент.",
+"mcp-server/src/tools/loreWrite.ts (component_new: parent_id)",
+"decl"
+],
+"LoreComponent.game_icon": [
+"D",
+"Слаг иконки game-icons.net (spell-book…).",
+"mcp-server/src/tools/loreWrite.ts (component_new: game_icon)",
+"decl"
+],
+"LoreComponent.owner": [
+"D",
+"Логин владельца компонента.",
+"mcp-server/src/tools/loreWrite.ts (component_new: owner)",
+"ask"
+],
+"LoreComponent.team": [
+"D",
+"Слаг команды компонента.",
+"mcp-server/src/tools/loreWrite.ts (component_new: team)",
+"decl"
+],
+"LoreComponent.project": [
+"P",
+"Предложение: проект/продукт компонента строкой (AIDA, OMILORE…). Писателя нет; принадлежность проекту ведётся рёбрами.",
+"писатель не найден; читается 2 срезами",
+"ask"
+],
+"LoreComponent.updated_at": [
+"D",
+"Отметка правки на месте (ISO-строка) у вершины; срез сворачивает её с valid_from открытой версии в changed_at (S4-04).",
+"lore/LoreChangedAt.java:5-13; LoreResourceBase.java:378-386",
+"decl"
+],
+"PART_OF.source": [
+"P",
+"Предложение: происхождение ребра задача→спринт (plan — из плана-ингеста). Писателя нет.",
+"значения в проде; писатель не найден",
+"ask"
+],
+"QGJobTask.run_date": [
+"D",
+"Дата прогона, выявившего нарушение (YYYY-MM-DD).",
+"mcp-server/src/tools/loreWrite.ts (qg_job_new: run_date)",
+"decl"
+],
+"QGRecommendation.priority": [
+"D",
+"Приоритет рекомендации: P0 — блокирует, P1 — в этом спринте, P2 — бэклог.",
+"mcp-server/src/tools/loreWrite.ts (rec_new: priority)",
+"decl"
+],
+"QGRecommendation.severity": [
+"P",
+"Предложение: тяжесть нарушения — critical | high | medium.",
+"lore/LoreQgResource.java:194 (rec_new)",
+"decl"
+],
+"QGRecommendation.effort_days": [
+"D",
+"Оценка трудозатрат на исправление в днях.",
+"mcp-server/src/tools/loreWrite.ts (rec_new: effort_days)",
+"decl"
+],
+"QGRecommendation.tags": [
+"D",
+"Теги рекомендации через запятую.",
+"mcp-server/src/tools/loreWrite.ts (rec_new: tags)",
+"decl"
+],
+"QGRecommendation.qg_id": [
+"D",
+"Гейт, выдавший рекомендацию.",
+"lore/LoreQgResource.java:194 (rec_new)",
+"decl"
+],
+"QGRecommendation.inv_id": [
+"D",
+"Инвариант гейта, нарушение которого рекомендация чинит.",
+"lore/LoreQgResource.java:194 (rec_new)",
+"decl"
+],
+"QGRecommendation.fix_cmd": [
+"D",
+"Команда/шаги исправления.",
+"lore/LoreQgResource.java:194 (rec_new)",
+"decl"
+],
+"QGRecommendation.how_to_verify": [
+"D",
+"Как проверить, что исправлено.",
+"lore/LoreQgResource.java:194 (rec_new)",
+"decl"
+],
+"QualityGate.status": [
+"D",
+"Статус гейта: active | draft | deprecated.",
+"mcp-server/src/tools/loreWrite.ts (qg_new: status)",
+"decl"
+],
+"QualityGate.content_md": [
+"D",
+"Тело гейта в Markdown (инварианты, цели).",
+"mcp-server/src/tools/loreWrite.ts (qg_new: content_md)",
+"decl"
+],
+"QualityGate.sprint_id": [
+"D",
+"Спринт, к которому относится гейт.",
+"mcp-server/src/tools/loreWrite.ts (qg_new: sprint_id)",
+"decl"
+],
+"QualityGate.component_id": [
+"D",
+"Компонент гейта скаляром; паспорт компонента считает гейты ребром BELONGS_TO (NM-03).",
+"lore/LoreQgResource.java:44-60",
+"decl"
+],
+"StatusAdr.label": [
+"L",
+"Подпись статуса в старом справочнике Status*; справочники статусов переехали в KnowDictEntry, код этот тип только объявляет.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusAdr.sort_order": [
+"L",
+"Порядок статуса в старом справочнике Status*; заменён KnowDictEntry.sort_order.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusDecision.label": [
+"L",
+"Подпись статуса в старом справочнике Status*; справочники статусов переехали в KnowDictEntry, код этот тип только объявляет.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusDecision.sort_order": [
+"L",
+"Порядок статуса в старом справочнике Status*; заменён KnowDictEntry.sort_order.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusMilestone.label": [
+"L",
+"Подпись статуса в старом справочнике Status*; справочники статусов переехали в KnowDictEntry, код этот тип только объявляет.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusMilestone.sort_order": [
+"L",
+"Порядок статуса в старом справочнике Status*; заменён KnowDictEntry.sort_order.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusPhase.label": [
+"L",
+"Подпись статуса в старом справочнике Status*; справочники статусов переехали в KnowDictEntry, код этот тип только объявляет.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusPhase.sort_order": [
+"L",
+"Порядок статуса в старом справочнике Status*; заменён KnowDictEntry.sort_order.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusSprint.label": [
+"L",
+"Подпись статуса в старом справочнике Status*; справочники статусов переехали в KnowDictEntry, код этот тип только объявляет.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusSprint.sort_order": [
+"L",
+"Порядок статуса в старом справочнике Status*; заменён KnowDictEntry.sort_order.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusTask.label": [
+"L",
+"Подпись статуса в старом справочнике Status*; справочники статусов переехали в KnowDictEntry, код этот тип только объявляет.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+],
+"StatusTask.sort_order": [
+"L",
+"Порядок статуса в старом справочнике Status*; заменён KnowDictEntry.sort_order.",
+"lore/LoreSchemaInitializer.java:181-182; читатель не найден",
+"drop"
+]
+},
+"ptype": {
+"KnowSprint": [
+"Спринт — контейнер задач с плановыми датами, проектом, вехой и релизом; статус и тела живут в версиях KnowSprintHist.",
+[
+[
+"модель",
+"lore-model.json graph.sprint"
+]
+]
+],
+"KnowSprintHist": [
+"Версия спринта (SCD2): статус, приоритет, тела (контекст, итог), PR-ссылки на момент времени; открытая версия — valid_to пусто.",
+[
+[
+"модель",
+"graph.sprint.hist"
+]
+]
+],
+"KnowTask": [
+"Задача спринта; ключ task_uid = СПРИНТ/КОД; статус, оценка и заметка — в версиях KnowTaskHist.",
+[
+[
+"модель",
+"graph.task"
+]
+]
+],
+"KnowTaskHist": [
+"Версия задачи (SCD2): статус, оценка/факт, заметка note_md, коммиты; каждая правка закрывает прошлую версию.",
+[
+[
+"модель",
+"graph.task.hist"
+]
+]
+],
+"KnowPhase": [
+"Фаза внутри спринта — группировка задач (задача → фаза ребром IN_PHASE).",
+[]
+],
+"KnowPhaseHist": [
+"Версия фазы (SCD2): статус и итог фазы.",
+[]
+],
+"KnowMilestone": [
+"Веха дорожной карты: срок, неделя, приоритет; нацелена на продукт, к ней привязаны спринты.",
+[
+[
+"модель",
+"graph.milestone"
+]
+]
+],
+"KnowMilestoneHist": [
+"Версия вехи (SCD2): цель goal_md (и поле решений decisions_md).",
+[
+[
+"модель",
+"graph.milestone.hist"
+]
+]
+],
+"KnowRelease": [
+"Релиз проекта; ключ release_uid = проект#тег; дата, версия, признак текущего.",
+[
+[
+"модель",
+"graph.release"
+]
+]
+],
+"KnowReleaseHist": [
+"Версия релиза (SCD2): описание, признак текущего.",
+[
+[
+"модель",
+"graph.release.hist"
+]
+]
+],
+"KnowPR": [
+"Pull request Forgejo: номер, заголовок, ссылка, дата мержа; задача закрыта им (CLOSED_BY), он уехал в релиз (SHIPPED_IN).",
+[]
+],
+"KnowFile": [
+"Ссылка на файл репозитория (относительный путь, без разбора), который правился задачей (EDITED_IN).",
+[]
+],
+"KnowGitProject": [
+"Проект = git-репозиторий (slug владелец/репо, хосты); граница видимости и прав.",
+[
+[
+"модель",
+"graph.project"
+]
+]
+],
+"LoreComponent": [
+"Компонент/модуль системы; дерево через PARENT_OF; к нему привязаны ADR, спеки, решения, вопросы, гейты.",
+[
+[
+"модель",
+"graph.component"
+]
+]
+],
+"LoreTechnology": [
+"Легаси-реестр технологий (13 записей); читается только через ребро USES в паспорте компонента. Новый реестр — спеки SPEC-TECH-*.",
+[
+[
+"код",
+"lore/LoreRecordFrom.java:504 «out(USES).tech_id — не ключ паспорта (тот — spec_id SPEC-TECH-…)»"
+],
+[
+"база",
+"proof: 13 строк, 23 ребра USES"
+]
+]
+],
+"KnowDictEntry": [
+"Значение справочника (dict_type, code): статусы, типы, области, приоритеты; при dict_type=product — продукт.",
+[
+[
+"модель",
+"graph.product"
+]
+]
+],
+"KnowDictEntryHist": [
+"Версия значения справочника (SCD2): закрывается и открывается на каждой правке.",
+[]
+],
+"KnowTag": [
+"Тег-метка; записи привязываются к нему ребром TAGGED_WITH.",
+[]
+],
+"KnowADR": [
+"Архитектурное решение (ADR): код, название, статус, компоненты и проект; тела — в версиях KnowADRHist.",
+[
+[
+"модель",
+"graph.adr"
+]
+]
+],
+"KnowADRHist": [
+"Версия ADR (SCD2): статус и тела context/decision/consequences.",
+[
+[
+"модель",
+"graph.adr.hist"
+]
+]
+],
+"KnowDecision": [
+"Атомарное решение-правило; дочернее к ADR через DECIDED_IN; может закрывать вопрос (ANSWERS).",
+[
+[
+"модель",
+"graph.decision"
+]
+]
+],
+"KnowDecisionHist": [
+"Версия решения: статус (с S2-13 статус решения пишется версией).",
+[
+[
+"модель",
+"graph.decision.hist"
+]
+]
+],
+"KnowQuestion": [
+"Открытый вопрос (реестр ОВ): статус, срок, владелец, условие возврата; без SCD2 — поля на вершине.",
+[
+[
+"модель",
+"graph.question"
+]
+]
+],
+"KnowSpec": [
+"Спецификация; с ключом SPEC-TECH-… — запись реестра технологий (тип паспорта tech).",
+[
+[
+"модель",
+"graph.spec, graph.tech"
+]
+]
+],
+"KnowSpecHist": [
+"Версия спеки (SCD2): номер версии, краткое содержание, тело content_md.",
+[
+[
+"модель",
+"graph.spec.hist"
+]
+]
+],
+"KnowDoc": [
+"Документ базы знаний (MD ru/en или HTML); дерево через DOC_CHILD_OF.",
+[
+[
+"модель",
+"graph.doc"
+]
+]
+],
+"KnowDocHist": [
+"Версия документа (SCD2): тело, хеш, коммит-источник.",
+[]
+],
+"KnowRunbook": [
+"Runbook — операционная процедура (как сделать), привязан к ADR через REFERENCES_ADR.",
+[]
+],
+"KnowRunbookHist": [
+"Версия runbook (SCD2): тело content_md.",
+[]
+],
+"KnowFinding": [
+"Находка аудита/ревью с доказательствами (ingest LAL-31).",
+[]
+],
+"KnowAsset": [
+"Файл в MinIO, прикреплённый к записи; вершина и ребро ATTACHED_TO создаются вместе с файлом.",
+[]
+],
+"KnowUseCase": [
+"Сценарий или фича (одна вершина, высота — goal_level по Кокберну); иерархия DECOMPOSES_INTO.",
+[
+[
+"модель",
+"graph.feature"
+],
+[
+"спека",
+"SPEC-LORE-FIELD-LABELS"
+]
+]
+],
+"KnowProjectActor": [
+"Роль в проектируемой системе (кто действует в сценарии); прав в LORE не несёт.",
+[
+[
+"спека",
+"SPEC-LORE-FIELD-LABELS"
+]
+]
+],
+"KnowPain": [
+"Боль клиента (Остервальдер): чья (FELT_BY), что ей мешает (BLOCKS), какой сценарий её снимает.",
+[
+[
+"спека",
+"SPEC-LORE-FIELD-LABELS"
+]
+]
+],
+"KnowGain": [
+"Выгода клиента; metric_md обязателен — без метрики выгода не засчитывается в fit.",
+[
+[
+"спека",
+"SPEC-LORE-FIELD-LABELS"
+]
+]
+],
+"KnowJob": [
+"Работа клиента (job-to-be-done), глобальная, без проекта; важность — шкала priority.",
+[
+[
+"спека",
+"SPEC-LORE-FIELD-LABELS"
+]
+]
+],
+"KnowUser": [
+"Человек — пользователь LORE; ключ kc_sub (стабильная личность Keycloak), роли в проектах — HAS_PROJECT_ROLE.",
+[
+[
+"модель",
+"graph.user"
+]
+]
+],
+"KnowActor": [
+"Личность агента/учётки (client_id Keycloak); владелец-человек — OWNED_BY, машина — USES_MACHINE.",
+[
+[
+"модель",
+"graph.agent"
+]
+]
+],
+"KnowMachine": [
+"Машина, с которой работает агент (machine_id); агент → машина ребром USES_MACHINE.",
+[]
+],
+"KnowAgentSession": [
+"Журнал сессии агента (append-only), ссылается на агента LOGGED_BY.",
+[]
+],
+"KnowProjectRoleEvent": [
+"Событие выдачи/снятия роли человека в проекте (журнал, видимый постфактум).",
+[]
+],
+"KnowUserDraft": [
+"Черновик правки записи пользователя (владелец — kc_sub полем).",
+[]
+],
+"KnowUserSettings": [
+"Личные настройки пользователя.",
+[
+[
+"код",
+"lore/LoreMeResource.java:769 POST /lore/me/settings"
+]
+]
+],
+"QualityGate": [
+"Гейт качества (набор метрик) компонента.",
+[]
+],
+"QGJobTask": [
+"Задание прогона гейта (результат проверки), порождает рекомендации.",
+[]
+],
+"QGRecommendation": [
+"Рекомендация из прогона гейта; может стать задачей (PROMOTED_TO).",
+[]
+],
+"ClRoutineRun": [
+"Запуск рутины QG (run_id, дата, итог).",
+[]
+],
+"ClRoutineMetric": [
+"Значение метрики в запуске рутины, с командой-репродьюсером и доказательством.",
+[]
+],
+"ClRoutineOutput": [
+"Текстовый отчёт рутины (код-ревью, tech-watch); в репо его никто не пишет, последняя запись 2026-10-21.",
+[
+[
+"код",
+"lore/LoreSlices.java:2820 срезы routine_outputs, routine_output_by_type"
+],
+[
+"база",
+"proof: output_type code-review/tech-watch/plan-review"
+]
+]
+],
+"BragiPublication": [
+"Публикация BRAGI — мастер-текст статьи/поста (архив фактов и метрик, без SCD2).",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001 / ADR-LORE-015"
+]
+]
+],
+"BragiVariant": [
+"Вариант публикации под конкретную площадку.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiAsset": [
+"Медиафайл публикации или варианта в S3.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiChannel": [
+"Площадка/канал публикаций (справочник, без версий).",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiKeyword": [
+"Ключевое слово SEO (кластер), ведёт на целевую страницу.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiPage": [
+"Страница сайта — цель ключевого слова.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiCampaign": [
+"Кампания продвижения варианта.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiCompetitor": [
+"Конкурент (наблюдение); код только читает.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiInsight": [
+"Инсайт из аналитики BRAGI; может привести к задаче (LED_TO).",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiIntegration": [
+"Интеграция с внешней площадкой.",
+[
+[
+"спека",
+"SPEC-BRAGI-ARCHIVE-001"
+]
+]
+],
+"BragiRubric": [
+"Рубрика — фиксированный рубрикатор публикаций и ключевых слов (IN_RUBRIC).",
+[]
+],
+"PlanTrack": [
+"Трек (дорожка) плана; спринт ссылается на него полем track_id, запись проверяется на существование.",
+[]
+],
+"PlanVersion": [
+"Версия плана с changelog_md (импорт); кодом не пишется, читается срезом plan_versions и сверкой ссылок.",
+[
+[
+"код",
+"lore/LoreSlices.java:2012; lore/LoreTidyResource.java:66"
+]
+]
+],
+"TrackType": [
+"Легаси-тип трека плана (engine/service/frontend/infra/research/business); читается только срезом plan_tracks через OF_TYPE.",
+[
+[
+"код",
+"lore/LoreSlices.java:1990 plan_tracks, out(OF_TYPE)"
+],
+[
+"база",
+"proof: 6 строк, 18 рёбер OF_TYPE"
+]
+]
+],
+"PlanCheckpoint": [
+"Контрольная точка старого план-борда v1, привязанная к вехе (ON_MILESTONE).",
+[
+[
+"код",
+"lore/LoreSlices.java:2007 plan_checkpoints → src/components/lore/LorePlanBoard.tsx:221"
+]
+]
+],
+"PlanConfig": [
+"Настройка старого план-борда v1: дата нулевой недели w0_date.",
+[
+[
+"код",
+"lore/LoreSlices.java:1987 plan_config → src/components/lore/LorePlanBoard.tsx:219"
+],
+[
+"база",
+"proof: 1 строка, note «import aida-plan-v232»"
+]
+]
+],
+"PlanSection": [
+"Раздел старого план-борда v1: подпись и диапазон недель.",
+[
+[
+"код",
+"lore/LoreSlices.java:1999 plan_sections → src/components/lore/LorePlanBoard.tsx:220"
+]
+]
+],
+"LoreSchemaVersion": [
+"Журнал применённых шагов миграции схемы: шаг применяется ровно один раз, факт — эта строка.",
+[
+[
+"код",
+"lore/LoreSchemaMigrationRunner.java:391 INSERT INTO LoreSchemaVersion"
+]
+]
+],
+"KnowModelConfig": [
+"Модель LORE (lore-model) как запись базы; версии — KnowModelConfigHist через HAS_STATE.",
+[
+[
+"спека",
+"SPEC-LORE-MODEL-CONFIG-STORE"
+]
+]
+],
+"KnowModelConfigHist": [
+"Версия модели LORE (SCD2).",
+[
+[
+"спека",
+"SPEC-LORE-MODEL-CONFIG-STORE"
+]
+]
+],
+"MetricSnapshot": [
+"Временной ряд метрик (ArcadeDB TIMESERIES), в т.ч. старый журнал действий AO-01; ряд запечатан.",
+[]
+],
+"AgentActionLog": [
+"Временной ряд действий агентов с тегами client и machine (журнал AO-01 после переноса).",
+[]
+],
+"HAS_STATE": [
+"Я",
+[
+[
+"к"
+]
+]
+],
+"PART_OF": [
+"С",
+[
+[
+"о"
+]
+]
+],
+"IN_PHASE": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"PARENT_OF": [
+"К",
+[
+[
+"о"
+]
+]
+],
+"DOC_CHILD_OF": [
+"Д",
+[
+[
+"о"
+]
+]
+],
+"DECOMPOSES_INTO": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"DECIDED_IN": [
+"Р",
+[
+[
+"е"
+]
+]
+],
+"DEPENDS_ON": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"SUPERSEDES": [
+"Н",
+[
+[
+"о"
+]
+]
+],
+"ANSWERS": [
+"Р",
+[
+[
+"е"
+]
+]
+],
+"RAISED_IN": [
+"В",
+[
+[
+"о"
+]
+]
+],
+"GATES": [
+"В",
+[
+[
+"о"
+]
+]
+],
+"REFERENCES_ADR": [
+"R",
+[
+[
+"u"
+]
+]
+],
+"BELONGS_TO": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"BELONGS_TO_PROJECT": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"TAGGED_WITH": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"IN_AREA": [
+"К",
+[
+[
+"о"
+]
+]
+],
+"USES": [
+"К",
+[
+[
+"о"
+]
+]
+],
+"DOCUMENTED_IN": [
+"К",
+[
+[
+"о"
+]
+]
+],
+"IMPLEMENTED_IN": [
+"A",
+[
+[
+"D"
+]
+]
+],
+"IMPLEMENTED_IN_RELEASE": [
+"С",
+[
+[
+"п"
+]
+]
+],
+"SHIPPED_IN": [
+"P",
+[
+[
+"R"
+]
+]
+],
+"CLOSED_BY": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"TARGETS_MILESTONE": [
+"С",
+[
+[
+"п"
+]
+]
+],
+"TARGETS_PRODUCT": [
+"В",
+[
+[
+"е"
+]
+]
+],
+"IN_PRODUCT": [
+"К",
+[
+[
+"о"
+]
+]
+],
+"PARENT_PRODUCT": [
+"П",
+[
+[
+"р"
+]
+]
+],
+"SERVES": [
+"С",
+[
+[
+"е"
+]
+]
+],
+"ADDRESSES": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"RELIEVES": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"PROMISES": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"DELIVERS": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"HELPS_WITH": [
+"Ф",
+[
+[
+"и"
+]
+]
+],
+"PERFORMS": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"REALIZES": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"TRACED_TO": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"HAS_ACTOR": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"UC_INCLUDES": [
+"С",
+[
+[
+"ц"
+]
+]
+],
+"FELT_BY": [
+"Б",
+[
+[
+"о"
+]
+]
+],
+"DESIRED_BY": [
+"В",
+[
+[
+"ы"
+]
+]
+],
+"PERFORMED_BY": [
+"Р",
+[
+[
+"а"
+]
+]
+],
+"BLOCKS": [
+"Б",
+[
+[
+"о"
+]
+]
+],
+"SUCCESS_OF": [
+"В",
+[
+[
+"ы"
+]
+]
+],
+"JUSTIFIED_BY": [
+"E",
+[
+[
+"n"
+]
+]
+],
+"EDITED_IN": [
+"Ф",
+[
+[
+"а"
+]
+]
+],
+"ROLE_HELD_BY": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"PROMOTED_TO": [
+"Р",
+[
+[
+"е"
+]
+]
+],
+"LED_TO": [
+"И",
+[
+[
+"н"
+]
+]
+],
+"YIELDED": [
+"Г",
+[
+[
+"е"
+]
+]
+],
+"PRODUCED": [
+"З",
+[
+[
+"а"
+]
+]
+],
+"ATTACHED_TO": [
+"А",
+[
+[
+"с"
+]
+]
+],
+"OWNED_BY": [
+"А",
+[
+[
+"г"
+]
+]
+],
+"LOGGED_BY": [
+"С",
+[
+[
+"е"
+]
+]
+],
+"FILLS_ROLE": [
+"А",
+[
+[
+"г"
+]
+]
+],
+"USES_MACHINE": [
+"А",
+[
+[
+"г"
+]
+]
+],
+"HAS_PROJECT_ROLE": [
+"Ч",
+[
+[
+"е"
+]
+]
+],
+"HAS_VARIANT": [
+"П",
+[
+[
+"у"
+]
+]
+],
+"HAS_ASSET": [
+"П",
+[
+[
+"у"
+]
+]
+],
+"IN_CHANNEL": [
+"В",
+[
+[
+"а"
+]
+]
+],
+"TARGETS_KEY": [
+"П",
+[
+[
+"у"
+]
+]
+],
+"TARGETS_PAGE": [
+"К",
+[
+[
+"л"
+]
+]
+],
+"FOR_VARIANT": [
+"К",
+[
+[
+"а"
+]
+]
+],
+"IN_RUBRIC": [
+"П",
+[
+[
+"у"
+]
+]
+],
+"OF_TYPE": [
+"Т",
+[
+[
+"р"
+]
+]
+],
+"ON_MILESTONE": [
+"К",
+[
+[
+"о"
+]
+]
+],
+"HAS_STATUS": [
+"Л",
+[
+[
+"е"
+]
+]
+],
+"HAS_PR": [
+"Л",
+[
+[
+"е"
+]
+]
+],
+"INCLUDES": [
+"Л",
+[
+[
+"е"
+]
+]
+],
+"RELEASED_IN": [
+"Л",
+[
+[
+"е"
+]
+]
+],
+"ClRoutineHasOutput": [
+"Л",
+[
+[
+"е"
+]
+]
+]
+},
+"specf": {
+"KnowUseCase": {
+"title": "Заголовок",
+"scenario_md": "Сценарий",
+"acceptance_md": "Приёмка",
+"goal_level": "Уровень цели (Кокберн)",
+"rigor": "Вес изложения",
+"parent_uc_id": "Родитель (фича или сценарий)"
+},
+"KnowProjectActor": {
+"name": "Название",
+"kind": "Вид: human-role / system / automation",
+"body_md": "О роли"
+},
+"KnowPain": {
+"title": "Заголовок",
+"body_md": "Описание",
+"severity": "Острота (high/normal/low)"
+},
+"KnowGain": {
+"title": "Заголовок",
+"body_md": "Описание",
+"metric_md": "Метрика — чем измерим, что выгода получена",
+"rank": "Ранг"
+},
+"KnowJob": {
+"title": "Заголовок",
+"body_md": "Описание",
+"importance": "Важность",
+"kind": "Тип работы (Остервальдер)"
+},
+"KnowQuestion": {
+"due_date": "Срок ответа",
+"priority": "Приоритет",
+"trigger": "Условие возврата к вопросу (обязательно для «отложен»)",
+"owner": "Владелец вопроса",
+"raised_by": "ключ сортировки, без подписи",
+"opened_date": "ключ сортировки, без подписи",
+"closed_date": "ключ сортировки, без подписи",
+"status": "Статус"
+}
+},
+"techf": {
+"valid_from": [
+"Начало действия версии SCD2 (момент записи версии).",
+"lore/Scd2Guard.java; LoreSchemaInitializer.java:382"
+],
+"valid_to": [
+"Конец действия версии; пусто — версия открытая (текущая).",
+"lore/Scd2Guard.java:42"
+],
+"state_uid": [
+"Идентификатор версии SCD2 (ключ строки истории).",
+"lore/StatusHistoryService.java:475"
+],
+"content_hash": [
+"SHA-256 (16 hex) от тел версии: «ревизия что-то поменяла?» без пополевой сверки.",
+"lore/LoreContentHash.java:6"
+],
+"changed_by": [
+"Автор версии: client_id агента или kc_sub человека — только из проверенного токена.",
+"lore/ChangeAuthor.java:16"
+],
+"changed_by_kind": [
+"Вид автора версии: agent | human.",
+"lore/ChangeAuthor.java:22"
+],
+"status_category": [
+"Категория статуса на сервере: not_started/in_progress/in_force/finished/withdrawn/unknown.",
+"lore/LoreStatusCategory.java:10"
+],
+"status_known_from": [
+"С какого момента запись в текущем статусе (ставит только смена статуса).",
+"lore/LoreSlices.java:252"
+],
+"status_backfilled": [
+"Статус положен бэкфиллом миграции, а не живой сменой.",
+"lore/LoreSchemaMigrations.java:1508"
+],
+"source_commit": [
+"Коммит-источник версии при ingest из файлов (без точки журнала — kind=ingest).",
+"lore/LoreEntityHistory.java:37"
+],
+"status_raw": [
+"Статус строкой как записан (эмодзи + слово); в код словаря его переводит LoreStatusResource.rawToToken.",
+"lore/LoreResourceBase.java:59"
+],
+"origin": [
+"Происхождение ребра — передаёт тот, кто ставит ребро (например, авто-связь по упоминанию).",
+"lore/LoreResourceBase.java:690"
+],
+"created_at": [
+"Момент заведения записи, ISO-8601 UTC, пишется один раз при создании (у ADR, решения).",
+"lore/CreationMoment.java:21"
+],
+"updated_at": [
+"Момент последней правки вершины без истории SCD2 (ISO-строка); ставят и пути, меняющие только связи; срез отдаёт как changed_at.",
+"lore/LoreResourceBase.java:378"
+],
+"date_created": [
+"Дата заведения записи yyyy-MM-dd (рядом может быть точный момент created_at).",
+"lore/CreationMoment.java:15"
+]
+}
+}

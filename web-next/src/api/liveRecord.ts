@@ -55,9 +55,16 @@ const arr = (v: unknown): Json[] => (Array.isArray(v) ? v.filter(x => x && typeo
  *
  * Отсюда кодирование ПО СЕГМЕНТАМ: `encodeURIComponent` каждому куску между
  * слэшами. Для обычных ключов (`S4-09`, `ADR-LORE-049`) это тождество.
+ *
+ *  3. **Пустых сегментов быть не должно.** Ключ репозитория — адрес
+ *     `https://хост/владелец/имя`. Сервер склеивает `//` в `/` до разбора пути,
+ *     и `https%3A//git…` доходит как `https:/git…` — 400 «id contains illegal
+ *     characters» (проба ryzenai, 19.11.2026). Поэтому каждый слэш серии,
+ *     кроме первого, уходит как `%2F`: `https%3A/%2Fgit…` сервер принимает.
  */
 export function recordPath(id: string): string {
-  return id.split('/').map(encodeURIComponent).join('/');
+  return id.split('/').map(encodeURIComponent).join('/')
+    .replace(/\/{2,}/g, run => '/' + '%2F'.repeat(run.length - 1));
 }
 
 /** Записи нет (404). Отдельно от «нет прав»: тут нечего ждать и не у кого просить. */

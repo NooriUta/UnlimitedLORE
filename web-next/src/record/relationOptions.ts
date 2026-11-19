@@ -18,6 +18,9 @@ const SOURCES: Record<string, Source> = {
   tag: { slice: 'tags_usage', id: 'tag_id' },
   adr: { slice: 'adrs', id: 'adr_id', title: 'name' },
   spec: { slice: 'specs', id: 'spec_id', title: 'title' },
+  // Решение владелицы 19.11.2026: связи организации — продукты и люди (проекты — выше).
+  product: { slice: 'products', id: 'code', title: 'label_ru' },
+  user: { slice: 'users', id: 'kc_sub', title: 'display_name' },
 };
 
 type SliceFn = (name: string, params?: Record<string, string>) => Promise<{ rows?: Record<string, unknown>[] } | null | undefined>;

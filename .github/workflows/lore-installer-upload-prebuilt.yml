@@ -1,0 +1,61 @@
+name: LORE installer — готовый файл → kkRepo
+
+# SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 · Выкладка готового установщика без пересборки.
+# Слово владелицы 18.11.2026: «погрузи без сборки через ci-server».
+# MSI для Windows собирается на Windows (scripts/model-migration/build-msi.mjs), Linux-раннер его не соберёт.
+# Готовый файл временно отдаётся по HTTP с ci-server; здесь он скачивается, сверяется по SHA256 из входа и кладётся
+# в kkRepo учёткой из секретов KKREPO_USER / KKREPO_PASSWORD (publish-plan.mjs: каталог версии, SHA256SUMS,
+# чтение обратно). Затем — чистка по prune-plan.mjs. ТОЛЬКО ручной запуск.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Адрес готового файла (lore-installer-<версия>-win-x64.msi) в локальной сети'
+        required: true
+      sha256:
+        description: 'SHA256 файла — сверяется до выкладки'
+        required: true
+      version:
+        description: 'Версия каталога — та же, что в имени файла'
+        required: true
+
+concurrency:
+  group: lore-installer-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: lore-only
+    env:
+      KKREPO_BASE: http://192.168.3.131:8081/repository
+      KKREPO_REPO: lore-installer
+      SRC_URL: ${{ inputs.url }}
+      SRC_SHA: ${{ inputs.sha256 }}
+      VER: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Скачать готовый файл
+        run: mkdir -p prebuilt && curl -fsS --noproxy '*' -o "prebuilt/lore-installer-${VER}-win-x64.msi" "$SRC_URL"
+
+      - name: Сверить SHA256
+        run: echo "${SRC_SHA}  prebuilt/lore-installer-${VER}-win-x64.msi" | sha256sum -c -
+
+      - name: План выкладки
+        run: node scripts/model-migration/publish-plan.mjs --dir prebuilt --version "$VER" --dry
+
+      - name: Выкладка в kkRepo
+        env:
+          KKREPO_USER: ${{ secrets.KKREPO_USER }}
+          KKREPO_PASSWORD: ${{ secrets.KKREPO_PASSWORD }}
+        run: node scripts/model-migration/publish-plan.mjs --dir prebuilt --version "$VER"
+
+      - name: Чистка kkRepo
+        env:
+          KKREPO_USER: ${{ secrets.KKREPO_USER }}
+          KKREPO_PASSWORD: ${{ secrets.KKREPO_PASSWORD }}
+        run: node scripts/model-migration/publish-plan.mjs --prune-only
