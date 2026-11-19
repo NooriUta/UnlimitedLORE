@@ -41,6 +41,17 @@ experiment mart — documented on `/benchmark?tab=mcp` instead.
 | `LORE_BACKEND_FALLBACK_URL` | — | Запасной адрес (nginx фронта `:4400`); используется, только если до основного запрос не дошёл (соединение/TLS, либо ответил SPA) |
 | `LORE_SEER_ROLE` | `admin` | `X-Seer-Role` header for write tools |
 
+## Hosted (HTTP) mode
+
+On the LORE stand the server runs as service `lore-mcp` at `https://<LORE host>/mcp`
+(`LORE_MCP_TRANSPORT=http`). Each request authenticates with either
+`Authorization: Bearer <token>` or the pair `X-Lore-Client-Id` + `X-Lore-Client-Secret`
+(the server then fetches and caches the client_credentials token itself; needs
+`LORE_OIDC_ISSUER`). Claude Code: `headersHelper` →
+`node mcp-server/scripts/lore-mcp-headers.mjs`. OpenCode: `headers` with
+`{env:LORE_MCP_CLIENT_ID}` / `{env:LORE_MCP_CLIENT_SECRET}`. Full configs and
+error codes: [docs/runbooks/mcp-hosted.md](../docs/runbooks/mcp-hosted.md).
+
 ## Build & run
 
 ```bash
