@@ -1397,6 +1397,15 @@ export function registerLoreWrite(rawServer: McpServer): void {
   const CLOSED_VS_DROPPED =
     ' closed vs dropped: closed = answered/obsolete WITH a decision (set only via question_link rel="answers"; ' +
     'one decision may answer several questions); dropped = decided NOT to answer. Never use dropped for "obsolete".';
+  // MT-MCP-TRUTH A6 (владелица 19.11.2026, «1а»): ответственный — ребро ANSWERABLE_BY к записи реестра, а не текст.
+  // Прежнее «who owns getting the answer» молчало об этом и звало писать прозу.
+  const QUESTION_OWNER =
+    'responsible for getting the answer — a RECORD of the LORE registry, not free text: a person (login, e.g. ' +
+    '"omiloreadmin", or kc_sub) or an agent (actor_id, e.g. "AGENT-FULL-…"). The owner\'s spellings owner/владелец/' +
+    'владелица/alexa are mapped to the user omiloreadmin. Stored as the edge ANSWERABLE_BY (history kept: a change ' +
+    'closes the previous edge); the old text field owner is no longer written. Unknown value → 422 OWNER_UNKNOWN with ' +
+    'the reason, nothing written. When a decision answers the question (question_link rel="answers"), the decision\'s ' +
+    'author becomes the owner automatically.';
   definePostTool(server, {
     name: 'question_new',
     description: 'Create or update a KnowQuestion — an OPEN QUESTION (ADR-020/021), the "what have we not answered yet" ' +
@@ -1412,7 +1421,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       component_id: z.string().optional(),
       due_date:     z.string().optional().describe('YYYY-MM-DD — the answer deadline (drives overdue)'),
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
-      owner:        z.string().optional().describe('who owns getting the answer'),
+      owner:        z.string().optional().describe(QUESTION_OWNER),
       raised_by:    z.string().optional(),
       project:      PROJECT_PARAM,
     },
@@ -1442,7 +1451,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       component_id: z.string().optional(),
       due_date:     z.string().optional(),
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
-      owner:        z.string().optional(),
+      owner:        z.string().optional().describe(QUESTION_OWNER),
       raised_by:    z.string().optional(),
     },
     refuse: (a) => (a.status === 'closed' ? QUESTION_CLOSE_GUIDANCE : null),
@@ -1456,7 +1465,9 @@ export function registerLoreWrite(rawServer: McpServer): void {
 
   server.tool(
     'question_link',
-    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed); ' +
+    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed; ' +
+      'the decision\'s author — author of its first version — becomes the question owner, edge ANSWERABLE_BY; author ' +
+      'unknown → owner untouched, reason in owner_unchanged); ' +
       'rel="raised_in": where it was raised (needs target_type adr|sprint|task); rel="gates": it blocks a task (GATES — ' +
       'the gate that keeps the register self-cleaning); rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
       'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). Idempotent. Mutates system_aida_lore.',

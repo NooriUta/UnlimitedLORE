@@ -782,7 +782,9 @@ public final class LoreSlices {
             // Поле выдаётся, потому что по ADR-LORE-021-D3 условие возврата — это
             // ВЕСЬ смысл deferred: без него отложенный вопрос неотличим от
             // забытого, и реестр гниёт в свалку отложенного.
-            "SELECT question_id, title, body_md, status, `trigger`, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, owner, " +
+            // MT-MCP-TRUTH A6: ответственный — по ребру ANSWERABLE_BY, без ребра — прежний текст (QuestionOwner).
+            "SELECT question_id, title, body_md, status, `trigger`, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, " +
+            QuestionOwner.OWNER_COLUMNS + ", " +
             "raised_by, opened_date, closed_date, " +
             // Свежесть (вопрос №49): SCD2 у вопроса нет — последнее известное изменение
             // это закрытие, иначе заведение.
@@ -810,7 +812,7 @@ public final class LoreSlices {
         // каждому вопросу приписываются все решения (186/186). Без него — 35/204.
         // LIMIT и условие скоупа корреляцию не ломают. Сортирует потребитель.
         slice("question_hygiene",
-            "SELECT question_id, title, status, owner, priority, due_date, `trigger`, opened_date, " +
+            "SELECT question_id, title, status, " + QuestionOwner.OWNER_COLUMNS + ", priority, due_date, `trigger`, opened_date, " +
             "out('RAISED_IN').sprint_id AS raised_sprints, " +
             "out('RAISED_IN')[@type='KnowSprint'].out('HAS_STATE')[valid_to IS NULL].status_raw AS raised_sprint_status, " +
             "$d.decision_id AS decision_candidates " +
@@ -859,7 +861,7 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         slice("question_by_id",
-            "SELECT question_id, title, body_md, status, `trigger`, due_date, priority, owner, " +
+            "SELECT question_id, title, body_md, status, `trigger`, due_date, priority, " + QuestionOwner.OWNER_COLUMNS + ", " +
             "raised_by, opened_date, closed_date, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('BELONGS_TO').component_id    AS components, " +
@@ -941,7 +943,7 @@ public final class LoreSlices {
         // задуман самоочищающимся, но связь при закрытии задачи не снимается — вопрос
         // числится блокером того, что уже сделано (замер 06.11: минимум 8, среди них blocker).
         slice("questions_gating_closed_tasks",
-            "SELECT question_id, title, status, priority, owner, " +
+            "SELECT question_id, title, status, priority, " + QuestionOwner.OWNER_COLUMNS + ", " +
             "out('GATES')[out('HAS_STATE')[valid_to IS NULL AND (" +
                 LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
             ")].size() > 0].task_uid AS closed_tasks, " +
