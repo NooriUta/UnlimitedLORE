@@ -1791,7 +1791,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       file_path:      z.string().optional(),
       content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
       content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
-      content_html:   z.string().optional().describe('Legacy: HTML content (100 KB max), rendered sandboxed'),
+      content_html:   z.string().optional().describe('Legacy: HTML content; no size limit is enforced. Rendered in a sandbox (SandboxedHtmlFrame). For new docs prefer content_md_ru / content_md_en'),
       parent_doc_id:  z.string().optional().describe(
         'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
         'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
