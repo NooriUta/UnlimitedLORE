@@ -20,6 +20,24 @@ const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHis
 // Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
 const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
 
+/**
+ * MIG-02: деловой ключ записи — им раздел админки «Перенос» ведёт из строки расхождения в паспорт записи.
+ * У версий (…Hist) своего ключа нет — ссылок нет, только счёт.
+ */
+export const REF_KEYS = { KnowSprint: 'sprint_id', KnowTask: 'task_uid', KnowPhase: 'phase_uid', KnowADR: 'adr_id', KnowDecision: 'decision_id', KnowSpec: 'spec_id', KnowDoc: 'doc_id', KnowRelease: 'release_uid', KnowQuestion: 'question_id', KnowMilestone: 'milestone_id', KnowRunbook: 'runbook_id', KnowUseCase: 'uc_id' };
+const REFS_PER_VALUE = 3;
+
+/** Отпечаток итога без ссылок на записи: ссылки — подсказка экрану, итог расчёта они не меняют. */
+export function reportFingerprint(report) {
+  const types = {};
+  for (const [T, t] of Object.entries(report.types || {})) {
+    const rejects = {};
+    for (const [k, e] of Object.entries(t.rejects || {})) { const { refs, ...rest } = e; rejects[k] = rest; }
+    types[T] = { ...t, rejects };
+  }
+  return fingerprint({ ...report, types });
+}
+
 /** Пробный расчёт без записи: отчёт по типам карты. Общий для команды dry-run и интерфейса установщика. */
 export async function dryRun(db, DECISIONS) {
   const dictRows = await db.src("SELECT dict_type, code FROM KnowDictEntry WHERE dict_type IN ['sprint_status','task_status','phase_status']");
@@ -44,10 +62,14 @@ export async function dryRun(db, DECISIONS) {
       if ('status' in r.out) bump(t.statusCodes, r.out.status === null ? '(без кода)' : r.out.status);
       for (const x of r.rejects) {
         const k = `${x.field} · ${x.why}`;
-        const e = (t.rejects[k] ||= { n: 0, samples: {} });
+        const e = (t.rejects[k] ||= { n: 0, samples: {}, refs: {} });
         e.n++;
         const s = String(x.value).replace(/\s+/g, ' ').slice(0, 60);
-        if (Object.keys(e.samples).length < 12 || e.samples[s]) bump(e.samples, s);
+        if (Object.keys(e.samples).length < 12 || e.samples[s]) {
+          bump(e.samples, s);
+          const key = REF_KEYS[T] && rec[REF_KEYS[T]];
+          if (key) { const l = (e.refs[s] ||= []); if (l.length < REFS_PER_VALUE) l.push(String(key)); }
+        }
       }
     }
     report.types[T] = t;
@@ -70,5 +92,5 @@ for (const [T, t] of Object.entries(report.types)) {
   for (const [k, e] of Object.entries(t.rejects)) console.log(`   ОТКАЗ ${k}: ${e.n} — ` + Object.entries(e.samples).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([s, n]) => `«${s}»×${n}`).join(', '));
 }
 // Отпечаток для приёмки на двух машинах: одинаковые настройки и источник → одинаковый отпечаток.
-console.log(`отпечаток итога: ${fingerprint(report)}`);
+console.log(`отпечаток итога: ${reportFingerprint(report)}`);
 }
