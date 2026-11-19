@@ -1,0 +1,5011 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы всех объектов, кроме первого — владелицей не утверждено. Выведено propose-schema-all.mjs из карты map/all-objects.json, переписи полей прода и пробного расчёта: в схему попали только поля, которые перенос реально дал. Запись в приёмник по этой схеме — после её слова.",
+  "_source": "migration_src_2026_11_18",
+  "_assumed": [
+    "Имена типов прежние: ответы срезов не меняются.",
+    "Версия — отдельный тип с окончанием Hist и связью HAS_STATE, как у первого объекта.",
+    "Тип поля «как есть» — объявленный в схеме прода; не объявленное там поле — строкой (пометка у поля).",
+    "Удержанные значения (component_id, project и *_refs до шага связей) в схему не входят — они становятся связями.",
+    "Типы без записей в снимке (KnowCanvas, KnowSavedView, QGMetric и др.) получают пустой перечень полей — схема заводится, поля появятся с данными."
+  ],
+  "types": {
+    "BragiAsset": {
+      "records": 11,
+      "version_of": null,
+      "fields": {
+        "asset_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "asset_id"
+          ],
+          "filled": 11,
+          "of": 11
+        },
+        "asset_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "asset_type"
+          ],
+          "filled": 11,
+          "of": 11
+        },
+        "file_url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "file_url"
+          ],
+          "filled": 11,
+          "of": 11
+        },
+        "size_bytes": {
+          "kind": "number",
+          "db_type": "LONG",
+          "from": [
+            "size_bytes"
+          ],
+          "filled": 4,
+          "of": 11
+        },
+        "alt": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "alt"
+          ],
+          "filled": 3,
+          "of": 11
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiCampaign": {
+      "records": 1,
+      "version_of": null,
+      "fields": {
+        "campaign_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "campaign_id"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "period": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "period"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "target_url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "target_url"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "utm_campaign": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "utm_campaign"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "utm_medium": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "utm_medium"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "utm_source": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "utm_source"
+          ],
+          "filled": 1,
+          "of": 1
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiChannel": {
+      "records": 5,
+      "version_of": null,
+      "fields": {
+        "channel_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "channel_id"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "channel_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "channel_type"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "funnel_role": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "funnel_role"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "rules_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "rules_md"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "url_handle": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "url_handle"
+          ],
+          "filled": 5,
+          "of": 5
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiCompetitor": {
+      "records": 5,
+      "version_of": null,
+      "fields": {
+        "competitor_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "competitor_id"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 5,
+          "of": 5
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiInsight": {
+      "records": 30,
+      "version_of": null,
+      "fields": {
+        "insight_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "insight_date"
+          ],
+          "filled": 30,
+          "of": 30
+        },
+        "insight_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "insight_id"
+          ],
+          "filled": 30,
+          "of": 30
+        },
+        "statement_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "statement_md"
+          ],
+          "filled": 30,
+          "of": 30
+        },
+        "evidence_ref": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "evidence_ref"
+          ],
+          "filled": 22,
+          "of": 30
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiIntegration": {
+      "records": 7,
+      "version_of": null,
+      "fields": {
+        "integration_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "integration_id"
+          ],
+          "filled": 7,
+          "of": 7
+        },
+        "purpose": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "purpose"
+          ],
+          "filled": 7,
+          "of": 7
+        },
+        "secret_ref": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "secret_ref"
+          ],
+          "filled": 7,
+          "of": 7
+        },
+        "service": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "service"
+          ],
+          "filled": 7,
+          "of": 7
+        },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 7,
+          "of": 7
+        },
+        "scope": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "scope"
+          ],
+          "filled": 4,
+          "of": 7
+        },
+        "last_called_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "last_called_at"
+          ],
+          "filled": 3,
+          "of": 7
+        },
+        "endpoint": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "endpoint"
+          ],
+          "filled": 2,
+          "of": 7
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiKeyword": {
+      "records": 8,
+      "version_of": null,
+      "fields": {
+        "cluster": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "cluster"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "intent": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "intent"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "keyword_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "keyword_id"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "phrase": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "phrase"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "source": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "freq_exact": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "freq_exact"
+          ],
+          "filled": 7,
+          "of": 8
+        },
+        "measured_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "measured_at"
+          ],
+          "filled": 7,
+          "of": 8
+        },
+        "region_engine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "region_engine"
+          ],
+          "filled": 7,
+          "of": 8
+        },
+        "freq_broad": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "freq_broad"
+          ],
+          "filled": 3,
+          "of": 8
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiPage": {
+      "records": 6,
+      "version_of": null,
+      "fields": {
+        "page_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "page_id"
+          ],
+          "filled": 6,
+          "of": 6
+        },
+        "page_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "page_type"
+          ],
+          "filled": 6,
+          "of": 6
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 6,
+          "of": 6
+        },
+        "url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "url"
+          ],
+          "filled": 6,
+          "of": 6
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiPublication": {
+      "records": 8,
+      "version_of": null,
+      "fields": {
+        "main_text_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "main_text_md"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "publication_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "publication_id"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "status_general": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_general"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "topic": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "topic"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "type"
+          ],
+          "filled": 8,
+          "of": 8
+        },
+        "annotation_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "annotation_md"
+          ],
+          "filled": 1,
+          "of": 8
+        },
+        "source_file_path": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_file_path"
+          ],
+          "filled": 1,
+          "of": 8
+        },
+        "todo_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "todo_md"
+          ],
+          "filled": 1,
+          "of": 8
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiRubric": {
+      "records": 9,
+      "version_of": null,
+      "fields": {
+        "description": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "description"
+          ],
+          "filled": 9,
+          "of": 9
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 9,
+          "of": 9
+        },
+        "order_index": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "order_index"
+          ],
+          "filled": 9,
+          "of": 9
+        },
+        "rubric_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "rubric_id"
+          ],
+          "filled": 9,
+          "of": 9
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "BragiVariant": {
+      "records": 14,
+      "version_of": null,
+      "fields": {
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "variant_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "variant_id"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "published_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "published_at"
+          ],
+          "filled": 9,
+          "of": 14
+        },
+        "todo_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "todo_md"
+          ],
+          "filled": 7,
+          "of": 14
+        },
+        "annotation_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "annotation_md"
+          ],
+          "filled": 6,
+          "of": 14
+        },
+        "text_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "text_md"
+          ],
+          "filled": 6,
+          "of": 14
+        },
+        "url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "url"
+          ],
+          "filled": 6,
+          "of": 14
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "ClRoutineMetric": {
+      "records": 1722,
+      "version_of": null,
+      "fields": {
+        "metric_key": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "metric_key"
+          ],
+          "filled": 1722,
+          "of": 1722
+        },
+        "routine_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "routine_name"
+          ],
+          "filled": 1722,
+          "of": 1722
+        },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 1722,
+          "of": 1722
+        },
+        "unit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "unit"
+          ],
+          "filled": 1722,
+          "of": 1722
+        },
+        "target": {
+          "kind": "number",
+          "db_type": "FLOAT",
+          "from": [
+            "target"
+          ],
+          "filled": 1713,
+          "of": 1722
+        },
+        "run_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "run_date"
+          ],
+          "filled": 1666,
+          "of": 1722
+        },
+        "value": {
+          "kind": "number",
+          "db_type": "FLOAT",
+          "from": [
+            "value"
+          ],
+          "filled": 1635,
+          "of": 1722
+        },
+        "source": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source"
+          ],
+          "filled": 1388,
+          "of": 1722
+        },
+        "metric_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "metric_id"
+          ],
+          "filled": 1193,
+          "of": 1722
+        },
+        "run_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "run_id"
+          ],
+          "filled": 1193,
+          "of": 1722
+        },
+        "model": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "model"
+          ],
+          "filled": 195,
+          "of": 1722
+        },
+        "not_measured_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "not_measured_reason"
+          ],
+          "filled": 65,
+          "of": 1722
+        },
+        "skip_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "skip_reason"
+          ],
+          "filled": 15,
+          "of": 1722
+        },
+        "note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "note"
+          ],
+          "filled": 6,
+          "of": 1722
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "ClRoutineOutput": {
+      "records": 18,
+      "version_of": null,
+      "fields": {
+        "content_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_md"
+          ],
+          "filled": 18,
+          "of": 18
+        },
+        "output_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "output_type"
+          ],
+          "filled": 18,
+          "of": 18
+        },
+        "routine_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "routine_name"
+          ],
+          "filled": 18,
+          "of": 18
+        },
+        "run_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "run_date"
+          ],
+          "filled": 18,
+          "of": 18
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 18,
+          "of": 18
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "ClRoutineRun": {
+      "records": 905,
+      "version_of": null,
+      "fields": {
+        "routine_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "routine_name"
+          ],
+          "filled": 905,
+          "of": 905
+        },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 905,
+          "of": 905
+        },
+        "run_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "run_date"
+          ],
+          "filled": 900,
+          "of": 905
+        },
+        "run_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "run_id"
+          ],
+          "filled": 801,
+          "of": 905
+        },
+        "finished_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "finished_at"
+          ],
+          "filled": 799,
+          "of": 905
+        },
+        "started_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "started_at"
+          ],
+          "filled": 797,
+          "of": 905
+        },
+        "channel": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "channel"
+          ],
+          "filled": 754,
+          "of": 905
+        },
+        "commit_sha": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "commit_sha"
+          ],
+          "filled": 642,
+          "of": 905
+        },
+        "source_url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_url"
+          ],
+          "filled": 642,
+          "of": 905
+        },
+        "pr_number": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "pr_number"
+          ],
+          "filled": 419,
+          "of": 905
+        },
+        "flags": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "flags"
+          ],
+          "filled": 156,
+          "of": 905
+        },
+        "run_ts": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "run_ts"
+          ],
+          "filled": 50,
+          "of": 905
+        },
+        "detail_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "detail_md"
+          ],
+          "filled": 37,
+          "of": 905
+        },
+        "gates_failed_ids": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "gates_failed_ids"
+          ],
+          "filled": 36,
+          "of": 905
+        },
+        "model": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "model"
+          ],
+          "filled": 15,
+          "of": 905
+        },
+        "source": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "source"
+          ],
+          "filled": 1,
+          "of": 905
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "ClRoutineSprintFlag": {
+      "records": 1503,
+      "version_of": null,
+      "fields": {
+        "flag": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "flag"
+          ],
+          "filled": 1503,
+          "of": 1503
+        },
+        "git_status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "git_status"
+          ],
+          "filled": 1503,
+          "of": 1503
+        },
+        "lore_status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "lore_status"
+          ],
+          "filled": 1503,
+          "of": 1503
+        },
+        "run_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "run_date"
+          ],
+          "filled": 1503,
+          "of": 1503
+        },
+        "sprint_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "sprint_id"
+          ],
+          "filled": 1503,
+          "of": 1503
+        },
+        "routine_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "routine_name"
+          ],
+          "filled": 673,
+          "of": 1503
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowADR": {
+      "records": 265,
+      "version_of": null,
+      "fields": {
+        "adr_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "adr_id"
+          ],
+          "filled": 265,
+          "of": 265
+        },
+        "created_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "created_at",
+            "date_created"
+          ],
+          "filled": 265,
+          "of": 265
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 265,
+          "of": 265
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 253,
+          "of": 265
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 197,
+          "of": 265
+        },
+        "file_path": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "file_path"
+          ],
+          "filled": 68,
+          "of": 265
+        },
+        "context_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "context_md"
+          ],
+          "filled": 50,
+          "of": 265
+        },
+        "decision_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "decision_md"
+          ],
+          "filled": 50,
+          "of": 265
+        },
+        "consequences_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "consequences_md"
+          ],
+          "filled": 42,
+          "of": 265
+        }
+      },
+      "held": {
+        "component_id": 3
+      },
+      "rejects": {
+        "status · статус вне справочника": 1
+      }
+    },
+    "KnowADRHist": {
+      "records": 443,
+      "version_of": "KnowADR",
+      "fields": {
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 443,
+          "of": 443
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 443,
+          "of": 443
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 443,
+          "of": 443
+        },
+        "context_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "context_md"
+          ],
+          "filled": 438,
+          "of": 443
+        },
+        "decision_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "decision_md"
+          ],
+          "filled": 438,
+          "of": 443
+        },
+        "consequences_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "consequences_md"
+          ],
+          "filled": 419,
+          "of": 443
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 291,
+          "of": 443
+        },
+        "status_known_from": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_known_from"
+          ],
+          "filled": 289,
+          "of": 443
+        },
+        "status_backfilled": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "status_backfilled"
+          ],
+          "filled": 243,
+          "of": 443
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 178,
+          "of": 443
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 112,
+          "of": 443
+        },
+        "sprint_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "sprint_id"
+          ],
+          "filled": 94,
+          "of": 443
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 46,
+          "of": 443
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 46,
+          "of": 443
+        },
+        "adr_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "adr_id"
+          ],
+          "filled": 1,
+          "of": 443
+        },
+        "file_path": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "file_path"
+          ],
+          "filled": 1,
+          "of": 443
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 443,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 443,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 443,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 443,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {
+        "status_raw · статус вне справочника": 1
+      }
+    },
+    "KnowActor": {
+      "records": 19,
+      "version_of": null,
+      "fields": {
+        "actor_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "actor_id"
+          ],
+          "filled": 19,
+          "of": 19
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 19,
+          "of": 19
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 19,
+          "of": 19
+        },
+        "client_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "client_id"
+          ],
+          "filled": 18,
+          "of": 19
+        },
+        "agent_role": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "agent_role"
+          ],
+          "filled": 17,
+          "of": 19
+        },
+        "harness": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "harness"
+          ],
+          "filled": 12,
+          "of": 19
+        },
+        "machine_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "machine_id"
+          ],
+          "filled": 11,
+          "of": 19
+        },
+        "session_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "session_id"
+          ],
+          "filled": 2,
+          "of": 19
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 1,
+          "of": 19
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowAgentSession": {
+      "records": 124,
+      "version_of": null,
+      "fields": {
+        "last_activity_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "last_activity_at"
+          ],
+          "filled": 124,
+          "of": 124
+        },
+        "machine_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "machine_id"
+          ],
+          "filled": 124,
+          "of": 124
+        },
+        "session_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "session_id"
+          ],
+          "filled": 124,
+          "of": 124
+        },
+        "started_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "started_at"
+          ],
+          "filled": 124,
+          "of": 124
+        },
+        "entrypoint": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "entrypoint"
+          ],
+          "filled": 5,
+          "of": 124
+        },
+        "dialogue_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "dialogue_name"
+          ],
+          "filled": 4,
+          "of": 124
+        }
+      },
+      "held": {
+        "project": 123
+      },
+      "rejects": {}
+    },
+    "KnowAsset": {
+      "records": 3,
+      "version_of": null,
+      "fields": {
+        "alt": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "alt"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "asset_key": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "asset_key"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "created_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "created_at"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "entity_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "entity_id"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "entity_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "entity_type"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "mime": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "mime"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "size_bytes": {
+          "kind": "number",
+          "db_type": "LONG",
+          "from": [
+            "size_bytes"
+          ],
+          "filled": 3,
+          "of": 3
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowCanvas": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowCanvasItem": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowCanvasLink": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowDecision": {
+      "records": 1193,
+      "version_of": null,
+      "fields": {
+        "decision_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "decision_id"
+          ],
+          "filled": 1193,
+          "of": 1193
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 1193,
+          "of": 1193
+        },
+        "created_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "created_at",
+            "date_created"
+          ],
+          "filled": 1191,
+          "of": 1193
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 1146,
+          "of": 1193
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 1078,
+          "of": 1193
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 633,
+          "of": 1193
+        },
+        "refs_raw": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "refs_raw"
+          ],
+          "filled": 600,
+          "of": 1193
+        }
+      },
+      "held": {
+        "adr_refs": 103,
+        "sprint_refs": 103,
+        "pr_refs": 103,
+        "release_refs": 103,
+        "component_id": 475
+      },
+      "rejects": {}
+    },
+    "KnowDecisionHist": {
+      "records": 1147,
+      "version_of": "KnowDecision",
+      "fields": {
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 1147,
+          "of": 1147
+        },
+        "status_known_from": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_known_from"
+          ],
+          "filled": 1147,
+          "of": 1147
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 1147,
+          "of": 1147
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 1140,
+          "of": 1147
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 1140,
+          "of": 1147
+        },
+        "status_backfilled": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "status_backfilled"
+          ],
+          "filled": 1034,
+          "of": 1147
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 113,
+          "of": 1147
+        },
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 7,
+          "of": 1147
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 7,
+          "of": 1147
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness_note"
+          ],
+          "filled": 1,
+          "of": 1147,
+          "name": "Сверка harness",
+          "service": true
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 1,
+          "of": 1147
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 1147,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 1147,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 1147,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowDictEntry": {
+      "records": 180,
+      "version_of": null,
+      "fields": {
+        "code": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "code"
+          ],
+          "filled": 180,
+          "of": 180
+        },
+        "dict_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "dict_type"
+          ],
+          "filled": 180,
+          "of": 180
+        },
+        "label_ru": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "label_ru"
+          ],
+          "filled": 180,
+          "of": 180
+        },
+        "is_active": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_active"
+          ],
+          "filled": 179,
+          "of": 180
+        },
+        "sort_order": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "sort_order"
+          ],
+          "filled": 175,
+          "of": 180
+        },
+        "is_extensible": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_extensible"
+          ],
+          "filled": 173,
+          "of": 180
+        },
+        "color": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "color"
+          ],
+          "filled": 148,
+          "of": 180
+        },
+        "label_en": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "label_en"
+          ],
+          "filled": 139,
+          "of": 180
+        },
+        "icon": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "icon"
+          ],
+          "filled": 105,
+          "of": 180
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowDictEntryHist": {
+      "records": 55,
+      "version_of": "KnowDictEntry",
+      "fields": {
+        "code": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "code"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "dict_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "dict_type"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "is_active": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_active"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "is_extensible": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_extensible"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "label_ru": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "label_ru"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 55,
+          "of": 55
+        },
+        "sort_order": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "sort_order"
+          ],
+          "filled": 52,
+          "of": 55
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 42,
+          "of": 55
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 42,
+          "of": 55
+        },
+        "label_en": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "label_en"
+          ],
+          "filled": 40,
+          "of": 55
+        },
+        "color": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "color"
+          ],
+          "filled": 34,
+          "of": 55
+        },
+        "icon": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "icon"
+          ],
+          "filled": 29,
+          "of": 55
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 7,
+          "of": 55
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 55,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 55,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 55,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 55,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowDoc": {
+      "records": 460,
+      "version_of": null,
+      "fields": {
+        "doc_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "doc_id"
+          ],
+          "filled": 460,
+          "of": 460
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 460,
+          "of": 460
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 459,
+          "of": 460
+        },
+        "content_md_ru": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_md_ru"
+          ],
+          "filled": 420,
+          "of": 460
+        },
+        "content_md_ru_bytes": {
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "content_md_ru_bytes"
+          ],
+          "filled": 420,
+          "of": 460
+        },
+        "content_md_ru_sha256": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_md_ru_sha256"
+          ],
+          "filled": 420,
+          "of": 460
+        },
+        "file_path": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "file_path"
+          ],
+          "filled": 210,
+          "of": 460
+        },
+        "sort_order": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "sort_order"
+          ],
+          "filled": 205,
+          "of": 460
+        },
+        "content_md_en": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_md_en"
+          ],
+          "filled": 96,
+          "of": 460
+        },
+        "content_md_en_bytes": {
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "content_md_en_bytes"
+          ],
+          "filled": 96,
+          "of": 460
+        },
+        "content_md_en_sha256": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_md_en_sha256"
+          ],
+          "filled": 96,
+          "of": 460
+        },
+        "content_html": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_html"
+          ],
+          "filled": 4,
+          "of": 460
+        },
+        "content_html_bytes": {
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "content_html_bytes"
+          ],
+          "filled": 4,
+          "of": 460
+        },
+        "content_html_sha256": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_html_sha256"
+          ],
+          "filled": 4,
+          "of": 460
+        }
+      },
+      "held": {
+        "component_id": 122
+      },
+      "rejects": {}
+    },
+    "KnowDocHist": {
+      "records": 362,
+      "version_of": "KnowDoc",
+      "fields": {
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "content_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_md"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "doc_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "doc_id"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 362,
+          "of": 362
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 77,
+          "of": 362
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 362,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 362,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 362,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 362,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowFile": {
+      "records": 71,
+      "version_of": null,
+      "fields": {
+        "file_path": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "file_path"
+          ],
+          "filled": 71,
+          "of": 71
+        },
+        "summary_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "summary_md"
+          ],
+          "filled": 67,
+          "of": 71
+        }
+      },
+      "held": {
+        "project": 71
+      },
+      "rejects": {}
+    },
+    "KnowFinding": {
+      "records": 31,
+      "version_of": null,
+      "fields": {
+        "finding_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "finding_id"
+          ],
+          "filled": 31,
+          "of": 31
+        },
+        "type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "type"
+          ],
+          "filled": 31,
+          "of": 31
+        },
+        "source_sprint": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "source_sprint"
+          ],
+          "filled": 25,
+          "of": 31
+        },
+        "external_ref": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "external_ref"
+          ],
+          "filled": 24,
+          "of": 31
+        },
+        "summary_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "summary_md"
+          ],
+          "filled": 7,
+          "of": 31
+        },
+        "verified": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "verified"
+          ],
+          "filled": 7,
+          "of": 31
+        },
+        "summary": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "summary"
+          ],
+          "filled": 3,
+          "of": 31
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowFindingHist": {
+      "records": 0,
+      "version_of": "KnowFinding",
+      "fields": {
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowGain": {
+      "records": 25,
+      "version_of": null,
+      "fields": {
+        "created_at": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "date_created"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "gain_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "gain_id"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "metric_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "metric_md"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "rank": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "rank"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 23,
+          "of": 25
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowGitProject": {
+      "records": 28,
+      "version_of": null,
+      "fields": {
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 28,
+          "of": 28
+        },
+        "slug": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "slug"
+          ],
+          "filled": 28,
+          "of": 28
+        },
+        "hosts": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "hosts"
+          ],
+          "filled": 24,
+          "of": 28
+        },
+        "default_branch": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "default_branch"
+          ],
+          "filled": 23,
+          "of": 28
+        },
+        "description": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "description"
+          ],
+          "filled": 5,
+          "of": 28
+        },
+        "is_private": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_private"
+          ],
+          "filled": 5,
+          "of": 28
+        },
+        "full_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "full_name"
+          ],
+          "filled": 2,
+          "of": 28
+        },
+        "repo_url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "repo_url"
+          ],
+          "filled": 2,
+          "of": 28
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowJob": {
+      "records": 14,
+      "version_of": null,
+      "fields": {
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "created_at": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "date_created"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "importance": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "importance"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "job_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "job_id"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 14,
+          "of": 14
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowMachine": {
+      "records": 1,
+      "version_of": null,
+      "fields": {
+        "first_seen_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "first_seen_at"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "last_seen_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "last_seen_at"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "machine_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "machine_id"
+          ],
+          "filled": 1,
+          "of": 1
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowMilestone": {
+      "records": 46,
+      "version_of": null,
+      "fields": {
+        "date_display": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "date_display"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "label": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "label"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "milestone_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "milestone_id"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 39,
+          "of": 46
+        },
+        "week": {
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "week"
+          ],
+          "filled": 8,
+          "of": 46
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 6,
+          "of": 46
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowMilestoneHist": {
+      "records": 46,
+      "version_of": "KnowMilestone",
+      "fields": {
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "goal_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "goal_md"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 46,
+          "of": 46
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 8,
+          "of": 46
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 8,
+          "of": 46
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 6,
+          "of": 46
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 6,
+          "of": 46
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 46,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 46,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 46,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 46,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowModelConfig": {
+      "records": 1,
+      "version_of": null,
+      "fields": {
+        "config_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "config_id"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "format": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "format"
+          ],
+          "filled": 1,
+          "of": 1
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowModelConfigHist": {
+      "records": 5,
+      "version_of": "KnowModelConfig",
+      "fields": {
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "content": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "reason"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 5,
+          "of": 5
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 4,
+          "of": 5
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 5,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 5,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 5,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 5,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowPR": {
+      "records": 2115,
+      "version_of": null,
+      "fields": {
+        "pr_number": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "pr_number"
+          ],
+          "filled": 2115,
+          "of": 2115
+        },
+        "pr_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "pr_uid"
+          ],
+          "filled": 2115,
+          "of": 2115
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 1045,
+          "of": 2115
+        },
+        "url": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "url"
+          ],
+          "filled": 985,
+          "of": 2115
+        },
+        "merged_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "merged_at"
+          ],
+          "filled": 866,
+          "of": 2115
+        },
+        "base_ref": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "base_ref"
+          ],
+          "filled": 573,
+          "of": 2115
+        },
+        "head_ref": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "head_ref"
+          ],
+          "filled": 573,
+          "of": 2115
+        },
+        "pr_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "pr_id"
+          ],
+          "filled": 320,
+          "of": 2115
+        },
+        "release_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "release_id"
+          ],
+          "filled": 319,
+          "of": 2115
+        },
+        "repo": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "repo"
+          ],
+          "filled": 32,
+          "of": 2115
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "body_md"
+          ],
+          "filled": 4,
+          "of": 2115
+        },
+        "pr_state": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "pr_state"
+          ],
+          "filled": 4,
+          "of": 2115
+        }
+      },
+      "held": {
+        "git_project": 2115
+      },
+      "rejects": {}
+    },
+    "KnowPain": {
+      "records": 38,
+      "version_of": null,
+      "fields": {
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 38,
+          "of": 38
+        },
+        "created_at": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "date_created"
+          ],
+          "filled": 38,
+          "of": 38
+        },
+        "pain_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "pain_id"
+          ],
+          "filled": 38,
+          "of": 38
+        },
+        "severity": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "severity"
+          ],
+          "filled": 38,
+          "of": 38
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 38,
+          "of": 38
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowProjectActor": {
+      "records": 15,
+      "version_of": null,
+      "fields": {
+        "actor_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "actor_id"
+          ],
+          "filled": 15,
+          "of": 15
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 15,
+          "of": 15
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 15,
+          "of": 15
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 15,
+          "of": 15
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowProjectRoleEvent": {
+      "records": 87,
+      "version_of": null,
+      "fields": {
+        "action": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "action"
+          ],
+          "filled": 87,
+          "of": 87
+        },
+        "at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "at"
+          ],
+          "filled": 87,
+          "of": 87
+        },
+        "by_role": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "by_role"
+          ],
+          "filled": 87,
+          "of": 87
+        },
+        "event_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "event_uid"
+          ],
+          "filled": 87,
+          "of": 87
+        },
+        "kc_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kc_sub"
+          ],
+          "filled": 87,
+          "of": 87
+        },
+        "role": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "role"
+          ],
+          "filled": 84,
+          "of": 87
+        },
+        "batch_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "batch_id"
+          ],
+          "filled": 3,
+          "of": 87
+        },
+        "role_before": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "role_before"
+          ],
+          "filled": 1,
+          "of": 87
+        }
+      },
+      "held": {
+        "project": 87
+      },
+      "rejects": {}
+    },
+    "KnowQuestion": {
+      "records": 470,
+      "version_of": null,
+      "fields": {
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 470,
+          "of": 470
+        },
+        "opened_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "opened_date"
+          ],
+          "filled": 470,
+          "of": 470
+        },
+        "question_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "question_id"
+          ],
+          "filled": 470,
+          "of": 470
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 470,
+          "of": 470
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 470,
+          "of": 470
+        },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 425,
+          "of": 470
+        },
+        "raised_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "raised_by"
+          ],
+          "filled": 413,
+          "of": 470
+        },
+        "owner": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "owner"
+          ],
+          "filled": 349,
+          "of": 470
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 290,
+          "of": 470
+        },
+        "closed_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "closed_date"
+          ],
+          "filled": 255,
+          "of": 470
+        },
+        "trigger": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "trigger"
+          ],
+          "filled": 25,
+          "of": 470
+        },
+        "due_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "due_date"
+          ],
+          "filled": 11,
+          "of": 470
+        }
+      },
+      "held": {
+        "component_id": 215
+      },
+      "rejects": {}
+    },
+    "KnowRelease": {
+      "records": 619,
+      "version_of": null,
+      "fields": {
+        "is_current": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "is_current"
+          ],
+          "filled": 619,
+          "of": 619
+        },
+        "release_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "release_id"
+          ],
+          "filled": 619,
+          "of": 619
+        },
+        "release_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "release_uid"
+          ],
+          "filled": 619,
+          "of": 619
+        },
+        "description_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "description_md"
+          ],
+          "filled": 615,
+          "of": 619
+        },
+        "release_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "release_date"
+          ],
+          "filled": 613,
+          "of": 619
+        },
+        "git_tag": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "git_tag"
+          ],
+          "filled": 591,
+          "of": 619
+        },
+        "week": {
+          "kind": "number",
+          "db_type": "LONG",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "week"
+          ],
+          "filled": 560,
+          "of": 619
+        },
+        "type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "type"
+          ],
+          "filled": 549,
+          "of": 619
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 392,
+          "of": 619
+        },
+        "released_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "released_at"
+          ],
+          "filled": 94,
+          "of": 619
+        },
+        "version": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "version"
+          ],
+          "filled": 92,
+          "of": 619
+        },
+        "release_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "release_name"
+          ],
+          "filled": 66,
+          "of": 619
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "title"
+          ],
+          "filled": 2,
+          "of": 619
+        }
+      },
+      "held": {
+        "git_project": 619
+      },
+      "rejects": {}
+    },
+    "KnowReleaseHist": {
+      "records": 1040,
+      "version_of": "KnowRelease",
+      "fields": {
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 1040,
+          "of": 1040
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 1040,
+          "of": 1040
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 509,
+          "of": 1040
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 509,
+          "of": 1040
+        },
+        "description_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "description_md"
+          ],
+          "filled": 480,
+          "of": 1040
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 410,
+          "of": 1040
+        },
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 74,
+          "of": 1040
+        },
+        "is_current": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "is_current"
+          ],
+          "filled": 74,
+          "of": 1040
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 74,
+          "of": 1040
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness_note"
+          ],
+          "filled": 12,
+          "of": 1040,
+          "name": "Сверка harness",
+          "service": true
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_machine"
+          ],
+          "filled": 6,
+          "of": 1040,
+          "name": "Машина правки",
+          "service": true
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_session"
+          ],
+          "filled": 3,
+          "of": 1040,
+          "name": "Сессия правки",
+          "service": true
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness"
+          ],
+          "filled": 2,
+          "of": 1040,
+          "name": "Harness правки",
+          "service": true
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowRunbook": {
+      "records": 57,
+      "version_of": null,
+      "fields": {
+        "area": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "area"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "created_at": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "date_created"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "runbook_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "runbook_id"
+          ],
+          "filled": 57,
+          "of": 57
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowRunbookHist": {
+      "records": 57,
+      "version_of": "KnowRunbook",
+      "fields": {
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "content_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_md"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 57,
+          "of": 57
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 3,
+          "of": 57
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 3,
+          "of": 57
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 57,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 57,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 57,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 57,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowSavedView": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowSpec": {
+      "records": 498,
+      "version_of": null,
+      "fields": {
+        "spec_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "spec_id"
+          ],
+          "filled": 498,
+          "of": 498
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 492,
+          "of": 498
+        },
+        "content_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_md"
+          ],
+          "filled": 452,
+          "of": 498
+        },
+        "version": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "version"
+          ],
+          "filled": 349,
+          "of": 498
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 292,
+          "of": 498
+        },
+        "file_path": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "file_path"
+          ],
+          "filled": 215,
+          "of": 498
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 31,
+          "of": 498
+        }
+      },
+      "held": {
+        "component_id": 98
+      },
+      "rejects": {}
+    },
+    "KnowSpecHist": {
+      "records": 740,
+      "version_of": "KnowSpec",
+      "fields": {
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 740,
+          "of": 740
+        },
+        "state_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 740,
+          "of": 740
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 740,
+          "of": 740
+        },
+        "content_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_md"
+          ],
+          "filled": 738,
+          "of": 740
+        },
+        "spec_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "spec_id"
+          ],
+          "filled": 678,
+          "of": 740
+        },
+        "version": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "version"
+          ],
+          "filled": 628,
+          "of": 740
+        },
+        "summary": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "summary"
+          ],
+          "filled": 560,
+          "of": 740
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 248,
+          "of": 740
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 164,
+          "of": 740
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 133,
+          "of": 740
+        },
+        "status_known_from": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_known_from"
+          ],
+          "filled": 108,
+          "of": 740
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 66,
+          "of": 740
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 66,
+          "of": 740
+        },
+        "status_backfilled": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "status_backfilled"
+          ],
+          "filled": 52,
+          "of": 740
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_harness_note"
+          ],
+          "filled": 1,
+          "of": 740,
+          "name": "Сверка harness",
+          "service": true
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "changed_by_machine"
+          ],
+          "filled": 1,
+          "of": 740,
+          "name": "Машина правки",
+          "service": true
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 740,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 740,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowTag": {
+      "records": 1080,
+      "version_of": null,
+      "fields": {
+        "tag_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "tag_id"
+          ],
+          "filled": 1080,
+          "of": 1080
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUseCase": {
+      "records": 88,
+      "version_of": null,
+      "fields": {
+        "created_at": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "date_created"
+          ],
+          "filled": 88,
+          "of": 88
+        },
+        "goal_level": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "goal_level"
+          ],
+          "filled": 88,
+          "of": 88
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 88,
+          "of": 88
+        },
+        "uc_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "uc_id"
+          ],
+          "filled": 88,
+          "of": 88
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 85,
+          "of": 88
+        },
+        "rigor": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "rigor"
+          ],
+          "filled": 79,
+          "of": 88
+        },
+        "scenario_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "scenario_md"
+          ],
+          "filled": 79,
+          "of": 88
+        },
+        "acceptance_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "acceptance_md"
+          ],
+          "filled": 76,
+          "of": 88
+        },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 68,
+          "of": 88
+        },
+        "parent_uc_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "parent_uc_id"
+          ],
+          "filled": 55,
+          "of": 88
+        },
+        "shipped_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "shipped_at"
+          ],
+          "filled": 41,
+          "of": 88
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 19,
+          "of": 88
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 18,
+          "of": 88
+        },
+        "context_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "context_md"
+          ],
+          "filled": 18,
+          "of": 88
+        },
+        "feature_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "feature_id"
+          ],
+          "filled": 3,
+          "of": 88
+        }
+      },
+      "held": {
+        "component_id": 17
+      },
+      "rejects": {}
+    },
+    "KnowUser": {
+      "records": 9,
+      "version_of": null,
+      "fields": {
+        "display_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "display_name"
+          ],
+          "filled": 9,
+          "of": 9
+        },
+        "kc_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kc_sub"
+          ],
+          "filled": 9,
+          "of": 9
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUserDraft": {
+      "records": 3,
+      "version_of": null,
+      "fields": {
+        "base_record_version": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "base_record_version"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "field": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "field"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "ref_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_id"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "ref_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_type"
+          ],
+          "filled": 3,
+          "of": 3
+        },
+        "saved_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "saved_at"
+          ],
+          "filled": 3,
+          "of": 3
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUserFavorite": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUserHabit": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUserMemoryPref": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUserRecent": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "KnowUserSettings": {
+      "records": 2,
+      "version_of": null,
+      "fields": {
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 2,
+          "of": 2
+        },
+        "row_version": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "row_version"
+          ],
+          "filled": 2,
+          "of": 2
+        },
+        "settings_json": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "settings_json"
+          ],
+          "filled": 2,
+          "of": 2
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 2,
+          "of": 2
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "LoreComponent": {
+      "records": 110,
+      "version_of": null,
+      "fields": {
+        "component_id": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "component_id"
+          ],
+          "filled": 110,
+          "of": 110,
+          "name": "Код компонента"
+        },
+        "game_icon": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "game_icon"
+          ],
+          "filled": 107,
+          "of": 110
+        },
+        "full_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "full_name"
+          ],
+          "filled": 106,
+          "of": 110
+        },
+        "area": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "area"
+          ],
+          "filled": 104,
+          "of": 110
+        },
+        "parent_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "parent_id"
+          ],
+          "filled": 93,
+          "of": 110
+        },
+        "children": {
+          "kind": "list",
+          "db_type": "LIST",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "children"
+          ],
+          "filled": 84,
+          "of": 110
+        },
+        "tech": {
+          "kind": "list",
+          "db_type": "LIST",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "tech"
+          ],
+          "filled": 84,
+          "of": 110
+        },
+        "team": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "team"
+          ],
+          "filled": 24,
+          "of": 110
+        },
+        "owner": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "owner"
+          ],
+          "filled": 13,
+          "of": 110
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 10,
+          "of": 110
+        }
+      },
+      "held": {
+        "component_id": 110,
+        "project": 39
+      },
+      "rejects": {}
+    },
+    "LoreNewsReadMark": {
+      "records": 1,
+      "version_of": null,
+      "fields": {
+        "mark_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "mark_at"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "mark_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "mark_id"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 1,
+          "of": 1
+        },
+        "updated_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "updated_by"
+          ],
+          "filled": 1,
+          "of": 1
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "LoreRefDismissal": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "LoreTechnology": {
+      "records": 13,
+      "version_of": null,
+      "fields": {
+        "category": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "category"
+          ],
+          "filled": 13,
+          "of": 13
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "name"
+          ],
+          "filled": 13,
+          "of": 13
+        },
+        "tech_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "tech_id"
+          ],
+          "filled": 13,
+          "of": 13
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "QGJobTask": {
+      "records": 85,
+      "version_of": null,
+      "fields": {
+        "job_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "job_id"
+          ],
+          "filled": 85,
+          "of": 85
+        },
+        "note_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "note_md"
+          ],
+          "filled": 85,
+          "of": 85
+        },
+        "qg_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "qg_id"
+          ],
+          "filled": 85,
+          "of": 85
+        },
+        "run_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "run_date"
+          ],
+          "filled": 85,
+          "of": 85
+        },
+        "severity": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "severity"
+          ],
+          "filled": 85,
+          "of": 85
+        },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 85,
+          "of": 85
+        },
+        "inv_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "inv_id"
+          ],
+          "filled": 64,
+          "of": 85
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "QGMetric": {
+      "records": 0,
+      "version_of": null,
+      "fields": {},
+      "held": {},
+      "rejects": {}
+    },
+    "QGRecommendation": {
+      "records": 14,
+      "version_of": null,
+      "fields": {
+        "job_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "job_id"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "rec_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "rec_id"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 14,
+          "of": 14
+        },
+        "body_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "body_md"
+          ],
+          "filled": 13,
+          "of": 14
+        },
+        "effort_days": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "note": "в схеме прода не объявлено — тип по значениям",
+          "from": [
+            "effort_days"
+          ],
+          "filled": 13,
+          "of": 14
+        },
+        "inv_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "inv_id"
+          ],
+          "filled": 13,
+          "of": 14
+        },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 13,
+          "of": 14
+        },
+        "qg_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "qg_id"
+          ],
+          "filled": 13,
+          "of": 14
+        },
+        "severity": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "severity"
+          ],
+          "filled": 13,
+          "of": 14
+        },
+        "tags": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "tags"
+          ],
+          "filled": 12,
+          "of": 14
+        },
+        "fix_cmd": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "fix_cmd"
+          ],
+          "filled": 11,
+          "of": 14
+        },
+        "how_to_verify": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "how_to_verify"
+          ],
+          "filled": 11,
+          "of": 14
+        }
+      },
+      "held": {},
+      "rejects": {}
+    },
+    "QualityGate": {
+      "records": 25,
+      "version_of": null,
+      "fields": {
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "name"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "qg_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "qg_id"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 25,
+          "of": 25
+        },
+        "content_md": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "content_md"
+          ],
+          "filled": 24,
+          "of": 25
+        },
+        "last_run_status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "last_run_status"
+          ],
+          "filled": 15,
+          "of": 25
+        },
+        "routine_name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "routine_name"
+          ],
+          "filled": 15,
+          "of": 25
+        },
+        "description": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "description"
+          ],
+          "filled": 9,
+          "of": 25
+        },
+        "sprint_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "note": "в схеме прода не объявлено — строкой",
+          "from": [
+            "sprint_id"
+          ],
+          "filled": 5,
+          "of": 25
+        }
+      },
+      "held": {
+        "component_id": 20
+      },
+      "rejects": {}
+    }
+  }
+}

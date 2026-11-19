@@ -42,15 +42,20 @@ const inputs = Object.keys(res.metafile.inputs);
 console.log(`собрано: ${outfile} · ${fs.statSync(outfile).size} байт · исходных файлов ${inputs.length} (из них конфигурации .json — ${inputs.filter(f => f.endsWith('.json')).length})`);
 
 if (process.argv.includes('--exe')) {
-  // Пускач внутри исполняемого файла: модуль установщика лежит ресурсом и импортируется из памяти.
+  // Node 26+: модуль установщика — сам вход исполняемого файла (mainFormat: module). Прежний пускач с import('data:…')
+  // на Node 26 падает «No such built-in module: data:…» — import() из встроенного входа там пускает только встроенные
+  // модули (найдено 18.11.2026 при сборке .exe на Windows). Node ниже 26 (раннер — 24) — прежний пускач, он там работает.
+  const esmMain = +process.versions.node.split('.')[0] >= 26;
   const stub = path.join(OUT, 'sea-stub.cjs');
-  fs.writeFileSync(stub, [
+  if (!esmMain) fs.writeFileSync(stub, [
     "const { getAsset } = require('node:sea');",
     "const code = getAsset('lore-migrate.mjs', 'utf8');",
     "import('data:text/javascript;base64,' + Buffer.from(code).toString('base64')).catch(e => { console.error('ошибка: ' + e.message); process.exitCode = 1; });",
   ].join('\n') + '\n');
   const blob = path.join(OUT, 'sea-prep.blob'), cfg = path.join(OUT, 'sea-config.json');
-  fs.writeFileSync(cfg, JSON.stringify({ main: stub, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, assets: { 'lore-migrate.mjs': outfile } }));
+  fs.writeFileSync(cfg, JSON.stringify(esmMain
+    ? { main: outfile, mainFormat: 'module', output: blob, disableExperimentalSEAWarning: true, useCodeCache: false }
+    : { main: stub, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, assets: { 'lore-migrate.mjs': outfile } }));
   execFileSync(process.execPath, ['--experimental-sea-config', cfg], { stdio: 'inherit' });
   const exe = path.join(OUT, 'lore-migrate' + (process.platform === 'win32' ? '.exe' : ''));
   fs.copyFileSync(process.execPath, exe);
@@ -59,6 +64,10 @@ if (process.argv.includes('--exe')) {
   if (process.platform === 'darwin') args.push('--macho-segment-name', 'NODE_SEA');
   execFileSync(process.execPath, args, { stdio: 'inherit' });
   if (process.platform !== 'win32') fs.chmodSync(exe, 0o755);
-  for (const f of [stub, blob, cfg]) fs.rmSync(f);
+  for (const f of [stub, blob, cfg]) fs.rmSync(f, { force: true });
+  // Самопроверка: собранный файл обязан ответить на --help. Код возврата postject — не доказательство (18.11: .exe
+  // собрался «Injection done», а запускаться не мог).
+  const help = execFileSync(exe, ['--help'], { encoding: 'utf8', timeout: 30000 });
+  if (!/^lore-migrate /m.test(help)) throw new Error('собранный исполняемый файл не отвечает на --help: ' + help.slice(0, 300));
   console.log(`исполняемый файл: ${exe} · ${Math.round(fs.statSync(exe).size / 1048576)} МБ · ${process.platform}-${process.arch} · Node ${process.version}`);
 }

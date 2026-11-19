@@ -20,3 +20,11 @@ test('у каждого типа версий в новой схеме есть 
     }
   }
 });
+
+test('у каждого типа версий в карте переноса есть правило «как есть» для служебных полей правки — иначе снимок после 16.11 их теряет', async () => {
+  const { MAP } = await import('./resources.mjs');
+  const hist = Object.keys(MAP).filter(T => T.endsWith('Hist'));
+  assert.ok(hist.length >= 10, 'типы версий всех объектов');
+  for (const T of hist) for (const k of ['changed_by_session', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine'])
+    assert.equal(MAP[T][k] && MAP[T][k].rule, 'keep', T + '.' + k);
+});

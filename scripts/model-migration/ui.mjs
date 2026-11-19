@@ -15,9 +15,14 @@ import path from 'node:path';
 import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
-import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml } from './setup.mjs';
+import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml, volvaEmbedEnv } from './setup.mjs';
 import { INSTALL_BUNDLE } from './resources.mjs';
+import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
+import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
+import { realmPlan, applyRealm, issuerParts } from './kc-realm.mjs';
 import os from 'node:os';
+import { proposeRegroup, readRegroupInput, regroupOverrides, withRegroupOverrides } from './regroup.mjs';
+import { proposeProductKinds, readProductKindInput, productKindMap, productKindState, withProductKinds } from './product-kind.mjs';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -84,6 +89,7 @@ tr.grp td{background:var(--bg2);font-weight:700}tr.done td{opacity:.6}
 .cfg{min-width:0}.cfg td,.cfg th{border:0;padding:3px 6px}.cfg input{width:100%;border-radius:6px}
 select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:999px;padding:3px 8px;font:400 var(--fs-xs) Manrope,sans-serif}input.lbl{width:110px}
 .chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 7px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}.chip.ok{color:var(--suc);border-color:var(--suc)}
+.chip.sug{border-color:var(--acc);color:var(--acc)}.chip.on{background:var(--acc);border-color:var(--acc);color:var(--bg0)}.pkc{cursor:pointer;padding:2px 9px;font-size:var(--fs-xs)}.pkc input{margin:0 3px 0 0;vertical-align:middle}
 .themesw{display:inline-flex;border:1px solid var(--acc);border-radius:999px;overflow:hidden}.themesw button{background:transparent;border:0;color:var(--acc);font:700 var(--fs-xs) Manrope,sans-serif;padding:3px 10px;cursor:pointer}.themesw button[aria-pressed=true]{background:var(--acc);color:var(--bg0)}
 #msg{position:fixed;left:12px;right:12px;bottom:10px;background:var(--bg1);border:1px solid var(--acc);border-radius:6px;padding:6px 10px;display:none}#msg.err{border-color:var(--dng);color:var(--dng)}
 </style></head><body><div class="wrap">
@@ -96,6 +102,8 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <a href="#step-0" data-step="0"><b>0</b> Вход</a>
 <a href="#step-1" data-step="1"><b>1</b> Подключение</a>
 <a href="#step-2" data-step="2"><b>2</b> Статусы</a>
+<a href="#step-p" data-step="p"><b>П</b> Проекты</a>
+<a href="#step-k" data-step="k"><b>В</b> Вид продукта</a>
 <a href="#step-3" data-step="3"><b>3</b> Пробный расчёт</a>
 <a href="#step-4" data-step="4"><b>4</b> Перенос</a>
 <a href="#step-5" data-step="5"><b>5</b> Сверка и отчёт</a>
@@ -115,9 +123,11 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Версия (тег) или пусто</td><td><input name="version" size="16"></td></tr>
 <tr><td>Порт веба</td><td><input name="port" size="8" value="4400"></td></tr>
 <tr><td>Адрес области Keycloak</td><td><input name="issuer" size="40" placeholder="https://keycloak/realms/lore"></td></tr>
+<tr><td>Адрес веба LORE</td><td><input name="web" size="40" placeholder="https://lore.example.org"></td></tr>
+<tr><td>Администратор Keycloak (новая установка)</td><td><input name="kcAdmin" size="16" autocomplete="off" placeholder="admin"> <input name="kcPassword" type="password" size="16" autocomplete="new-password" placeholder="пароль — не сохраняется"></td></tr>
 <tr><td>Адрес Völva</td><td><input name="volva" size="40" placeholder="если Völva выбрана"></td></tr>
 <tr><td>Адрес сервера miniLORE</td><td><input name="minilore" size="40" placeholder="если miniLORE выбран"></td></tr></table>
-<div class="top"><button type="button" class="btn" id="ienv">Собрать .env</button><button type="button" class="btn" id="iplan">План установки</button><button type="button" class="btn" id="ivolva">Ключи Völva</button><button type="button" class="btn" id="ilink">Файл для link</button></div>
+<div class="top"><button type="button" class="btn" id="ienv">Собрать .env</button><button type="button" class="btn" id="iplan">План установки</button><button type="button" class="btn" id="ivolva">Ключи Völva</button><button type="button" class="btn" id="ilink">Файл для link</button><button type="button" class="btn" id="ikcplan">План области Keycloak</button><button type="button" class="btn" id="ikcapply">Завести область</button></div>
 <pre class="mono" id="iout" style="white-space:pre-wrap;max-height:360px;overflow:auto"></pre><div id="ires" class="sub"></div></form></div>
 <h3>Подключение агента на этой машине</h3>
 <div class="tw" style="padding:8px"><form id="af" autocomplete="off"><table class="cfg">
@@ -126,7 +136,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Адрес бэкенда LORE</td><td><input name="backendUrl" size="40"></td></tr>
 <tr><td>Издатель (Keycloak, область)</td><td><input name="issuer" size="40"></td></tr>
 <tr><td>Путь к серверу MCP</td><td><input name="serverPath" size="40"></td></tr></table>
-<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
+<div class="top"><button type="button" class="btn" id="apreview">Показать строку MCP</button><button type="button" class="btn" id="acheck">Проверить связь</button><button type="button" class="btn" id="amach">Завести машину в LORE</button><button type="button" class="btn pri" id="aapply" hidden>Записать в настройки Claude Code</button></div>
 <pre class="mono" id="aout" style="white-space:pre-wrap"></pre><div id="ares" class="sub"></div></form></div>
 </section>
 <section data-page="0" hidden><h2>Шаг 0. Вход и проверка владельца</h2>
@@ -137,7 +147,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <p>Переносит данные LORE в новую базу по новой модели. Действующая база не меняется: установщик читает её копию (снимок из бэкапа) и собирает рядом новую. Старая база остаётся откатом; сколько её хранить, решает владелец установки.</p>
 <h3>Что подготовить до запуска</h3>
 <ol>
-<li><b>Файл доступа</b> — текстовый файл <code>КЛЮЧ=значение</code>, его путь передаётся ключом <code>--env</code>. Нужны: <code>MIG_DB_URL</code> (сервер ArcadeDB), <code>MIG_SRC_DB</code> (база-источник — снимок), <code>MIG_SRC_USER</code>/<code>MIG_SRC_PASSWORD</code>, <code>MIG_DST_DB</code> (новая база, имя начинается с <code>migration_dst</code>), <code>MIG_DST_USER</code>/<code>MIG_DST_PASSWORD</code>. Если новая база на другом сервере — <code>MIG_DST_URL</code>. Для входа: <code>MIG_KC_URL</code>, <code>MIG_KC_REALM</code>, <code>MIG_KC_CLIENT</code>, <code>MIG_OWNER_PROJECT</code>. Пароли установщик нигде не показывает и не пишет.</li>
+<li><b>Файл доступа</b> — текстовый файл <code>КЛЮЧ=значение</code>, его путь передаётся ключом <code>--env</code>. Нужны: <code>MIG_DB_URL</code> (сервер ArcadeDB), <code>MIG_SRC_DB</code> (база-источник — снимок), <code>MIG_SRC_USER</code>/<code>MIG_SRC_PASSWORD</code>, <code>MIG_DST_DB</code> (новая база, имя начинается с <code>migration_dst</code>), <code>MIG_DST_USER</code>/<code>MIG_DST_PASSWORD</code>. Если новая база на другом сервере — <code>MIG_DST_URL</code>. Старая доска плана: <code>MIG_PLAN_BOARD=drop</code> — не переносить (по умолчанию), <code>keep</code> — перенести как есть (останется в базе неиспользуемой). Для входа: <code>MIG_KC_URL</code>, <code>MIG_KC_REALM</code>, <code>MIG_KC_CLIENT</code>, <code>MIG_OWNER_PROJECT</code>. Пароли установщик нигде не показывает и не пишет.</li>
 <li><b>Файл решений</b> — путь ключом <code>--decisions</code>. Если файла нет, он создастся; в него пишутся ваши решения, и при повторном переносе они применяются сами.</li>
 <li><b>Место на сервере</b> — на снимок и на новую базу, примерно два размера действующей базы.</li>
 </ol>
@@ -150,6 +160,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <li><b>Перенос.</b> Откроется, когда на шаге 2 не осталось строк без решения. Поставьте галочку «понимаю: новая база будет очищена» и нажмите «Перенести». Ход виден на странице; занимает несколько минут.</li>
 <li><b>Сверка и отчёт.</b> Итог сверки записей, связей и справочников и отпечаток новой базы. Отчёт сохраняется файлом рядом с файлом решений и открывается ссылкой. Если сверка не сошлась — перенос считается не выполненным: смотрите отчёт, возвращайтесь к шагам 2–3.</li>
 </ol>
+<p><b>Вид продукта</b> (шаг В). Строка на продукт: выберите tech или service; предложение установщика выделено, довод — рядом. «Принять все предложения» записывает предложенный вид всем, у кого вида ещё нет и предложение есть; строки с «?» решаются вручную. Пока у продукта нет вида, перенос не начинается.</p>
 <h3>Как сверить две установки</h3>
 <p>Два переноса из одного снимка с одним файлом решений дают один и тот же отпечаток новой базы — на Windows и на Linux. Разные решения дают разный отпечаток.</p>
 <h3>Если что-то пошло не так</h3>
@@ -174,6 +185,12 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <section data-page="2" hidden><h2>Шаг 2. Унификация статусов</h2>
 <p class="sub">В записи — код справочника (статусы заглавными); подписи на трёх языках — в справочнике. Предложение конвейера принимается кнопкой; группа — кнопкой в её заголовке. Пока есть строка без решения, перенос не начинается.</p>
 <div id="state" class="state">загрузка…</div><div class="kpis" id="kpis"></div><div id="body"></div></section>
+<section data-page="p" hidden><h2>Шаг П. Перегруппировка проектов</h2>
+<p class="sub">Предложение из данных этой установки: проект = продукт верхнего уровня (подпродукт — в родителе), дубль того же репозитория — туда же. Строку можно поправить: впишите группу или оставьте пустым — проект останется сам по себе. Старые проекты станут синонимами новой группы: записи и ссылки переезжают, ничего не теряется. Сверка — записей до = записей после по каждой группе.</p>
+<div id="rg" class="state">загрузка…</div></section>
+<section data-page="k" hidden><h2>Шаг В. Вид продукта</h2>
+<p class="sub">У каждого продукта — вид: <b>tech</b> (технологический) или <b>service</b> (сервисно-организационный, git от него не требуется), ADR-LORE-044. Решает человек; установщик только предлагает по данным этой установки. Правило предложения, первое сработавшее: вид уже задан в источнике — он; продукт служит другим продуктам (связь «служит»: продаёт, считает) — service; у проекта-владельца есть адрес репозитория — tech; в названии слова услуги (продажи, учёт, поддержка, бэк-офис) — service; подпродукт без своих признаков — как родитель; иначе «?». Пока у продукта нет вида, перенос не начинается.</p>
+<div id="pk" class="state">загрузка…</div></section>
 <section data-page="3" hidden><h2>Шаг 3. Пробный расчёт без записи</h2>
 <p class="sub">Каждая запись источника проходит через карту переноса; в новую базу ничего не пишется. Здесь — что не привелось, что удержано до решения и поля, которых карта не знает. Пока описаны спринт, фаза и задача.</p>
 <div id="s3"><button class="btn pri" id="run3">Посчитать</button> <span class="sub">чтение всего источника, около минуты</span></div></section>
@@ -225,8 +242,30 @@ byl.hidden=true;
 if(d.me){el.innerHTML='<div class="state go">Вы вошли как <b>'+esc(d.me.login)+'</b> через '+esc(d.me.kc)+' · область '+esc(d.me.realm)+'. Владелец проекта '+esc(d.me.project)+' — проверено по Keycloak и по базе.</div>';document.getElementById('who').textContent='вошли: '+d.me.login;return}
 el.innerHTML='<form action="auth/start" method="get" class="tw" style="padding:8px"><label class="sub">сервер Keycloak <input name="url" size="40" value="'+esc(d.kc.url)+'"></label> <label class="sub">область <input name="realm" value="'+esc(d.kc.realm)+'"></label> <button class="btn pri">Войти</button><div class="sub">клиент '+esc(d.kc.client)+' · проект-владелец '+esc(d.kc.project)+' · роль '+esc(d.kc.role)+'</div></form>';
 if(stepFromHash()!=='0'&&stepFromHash()!=='s')location.hash='#step-0'})}
-function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}}
-function stepFromHash(){var m=/^#step-(\d|s)$/.exec(location.hash);return m?m[1]:'s'}
+function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}if(n==='p')rg();if(n==='k')pk()}
+var PKM=null;
+function pk(){var el=document.getElementById('pk');fetch('api/product-kind').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent='не смогли прочитать продукты: '+d.error;PKM=null;gate();return}
+PKM=d.state.missing;gate();el.className='';var n=function(k){return d.rows.filter(function(r){return r.kind===k}).length};
+var h='<div class="kpis"><div class="kpi"><b>'+d.rows.length+'</b><span>продуктов</span></div><div class="kpi"><b>'+n('tech')+'</b><span>tech</span></div><div class="kpi"><b>'+n('service')+'</b><span>service</span></div><div class="kpi"><b>'+d.state.missing.length+'</b><span>без вида</span></div></div>';
+h+='<div class="state '+(d.state.ready?'go':'stop')+'">'+(d.state.ready?'У всех продуктов вид задан':'СТОП: нет вида у продуктов '+esc(d.state.missing.join(', '))+' — перенос не начинается')+'</div>';
+h+='<div class="tw"><table><thead><tr><th>продукт</th><th>предложение</th><th>довод</th><th>вид</th></tr></thead><tbody>'+d.rows.map(function(r){var c=function(k){return '<label class="chip pkc'+(r.suggested===k?' sug':'')+(r.kind===k?' on':'')+'"><input type="radio" name="pk-'+esc(r.code)+'" data-pk="'+esc(r.code)+'" value="'+k+'"'+(r.kind===k?' checked':'')+'> '+k+(r.suggested===k?' · предложение':'')+'</label> '};
+return '<tr'+(r.kind?' class="done"':'')+'><td class="mono">'+esc(r.code)+'<div class="sub">'+esc(r.label)+'</div></td><td><span class="chip'+(r.suggested==='?'?'':' ok')+'">'+esc(r.suggested)+'</span></td><td class="why">'+esc(r.why)+'</td><td>'+c('tech')+c('service')+(r.decided?'':(r.kind?'<span class="sub">из источника</span>':''))+'</td></tr>'}).join('')+'</tbody></table></div>';
+h+='<div class="top"><button class="btn pri" id="pkall">Принять все предложения</button> <span class="sub">предложенный вид — всем, у кого вида нет; строки с «?» решаются вручную</span></div>';
+el.innerHTML=h;
+function save(map){fetch('api/product-kind',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map:map,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error){el.insertAdjacentHTML('afterbegin','<div class="state stop">'+esc(x.error)+'</div>');return}pk()})}
+el.querySelectorAll('input[data-pk]').forEach(function(i){i.onchange=function(){var m={};m[i.dataset.pk]=i.value;save(m)}});
+document.getElementById('pkall').onclick=function(){var m={};d.rows.forEach(function(r){if(!r.kind&&r.suggested!=='?')m[r.code]=r.suggested});if(!Object.keys(m).length)return msg('нечего принимать: у всех строк вид уже есть или предложения нет',true);save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать продукты: '+e.message;PKM=null;gate()})}
+function stepFromHash(){var m=/^#step-(\d|s|p|k)$/.exec(location.hash);return m?m[1]:'s'}
+function rg(){var el=document.getElementById('rg');fetch('api/regroup').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent=d.error;return}
+el.className='';var gs=Object.keys(d.groups).sort();
+var h='<div class="kpis">'+gs.map(function(g){return '<div class="kpi"><b>'+esc(g)+'</b><span class="sub">'+d.groups[g].from.length+' пр. · '+d.groups[g].records+' зап.</span></div>'}).join('')+(d.unassigned.length?'<div class="kpi"><b>куда?</b><span class="sub">'+d.unassigned.length+' пр.</span></div>':'')+'</div>';
+h+='<datalist id="rgg">'+gs.map(function(g){return '<option value="'+esc(g)+'">'}).join('')+'</datalist>';
+h+='<table class="tw"><thead><tr><th>проект</th><th>записей</th><th>почему</th><th>группа</th><th></th></tr></thead><tbody>'+d.rows.map(function(r){return '<tr><td class="mono">'+esc(r.from)+'<div class="sub">'+esc(r.name)+'</div></td><td>'+r.records+'</td><td class="sub">'+esc(r.why)+'</td><td><input list="rgg" data-from="'+esc(r.from)+'" value="'+esc(r.to||'')+'" placeholder="без группы"></td><td><button class="btn" data-save="'+esc(r.from)+'">Сохранить</button></td></tr>'}).join('')+'</tbody></table>';
+h+='<div class="top"><button class="btn pri" id="rgall">Принять всю таблицу</button> <span class="sub">записывает группу каждой строки в файл решений</span></div>';
+el.innerHTML=h;
+function save(map){fetch('api/regroup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({overrides:map,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error){el.insertAdjacentHTML('afterbegin','<div class="state stop">'+esc(x.error)+'</div>');return}rg()})}
+el.querySelectorAll('[data-save]').forEach(function(b){b.onclick=function(){var i=el.querySelector('input[data-from="'+b.dataset.save+'"]');var m={};m[b.dataset.save]=i.value;save(m)}});
+document.getElementById('rgall').onclick=function(){var m={};el.querySelectorAll('input[data-from]').forEach(function(i){m[i.dataset.from]=i.value});save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать проекты: '+e.message})}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
 function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
 function splan(){fetch('api/setup/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sform())}).then(function(r){return r.json()}).then(function(d){var el=document.getElementById('splan');if(d.error){el.innerHTML='<div class="state stop">'+esc(d.error)+'</div>';return}
@@ -237,6 +276,9 @@ document.addEventListener('change',function(e){if(e.target.closest&&e.target.clo
 function iform(){var f=document.getElementById('if'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});o.choice=sform();var a=aform();o.machineId=a.machineId;return o}
 document.addEventListener('click',function(e){var map={ienv:'api/setup/env',iplan:'api/setup/install-plan',ivolva:'api/setup/volva-keys',ilink:'api/setup/link-toml'};var u=map[e.target.id];if(!u)return;
 document.getElementById('ires').textContent='…';fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(iform())}).then(function(r){return r.json()}).then(function(d){var o=document.getElementById('iout'),r=document.getElementById('ires');if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}o.textContent=d.text||'';r.innerHTML=esc(d.note||'')})});
+document.addEventListener('click',function(e){if(e.target.id!=='acheck')return;var r=document.getElementById('ares');r.textContent='…';fetch('api/setup/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(aform())}).then(function(x){return x.json()}).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}var lab={ok:'да',warn:'внимание',fail:'нет',unchecked:'не смогли проверить'};r.innerHTML=d.checks.map(function(c){return '<div><span class="chip'+(c.state==='ok'?' ok':'')+'" style="'+(c.state==='fail'?'color:var(--dng)':c.state==='ok'?'':'color:var(--wrn)')+'">'+esc(c.name)+': '+lab[c.state]+'</span> '+esc(c.reason)+'</div>'}).join('')})});
+document.addEventListener('click',function(e){if(e.target.id!=='amach')return;var r=document.getElementById('ares'),body=aform();var go=function(apply){body.apply=apply;r.textContent='…';return fetch('api/setup/machine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(x){return x.json()})};go(false).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}r.innerHTML='<span class="chip'+(d.state==='ok'?' ok':'')+'">'+esc(d.machineId||'')+'</span> '+esc(d.reason);if(d.state!=='plan')return;if(!confirm('Завести машину '+d.machineId+' в LORE? '+d.reason))return;go(true).then(function(d2){r.innerHTML=d2.error?'<b style="color:var(--dng)">'+esc(d2.error)+'</b>':'<span class="chip'+(d2.state==='ok'?' ok':'')+'">'+esc(d2.machineId||'')+'</span> '+esc(d2.reason)})})});
+document.addEventListener('click',function(e){var id=e.target.id;if(id!=='ikcplan'&&id!=='ikcapply')return;var o=iform(),a=aform(),r=document.getElementById('ires'),out=document.getElementById('iout');o.harness=a.harness;o.apply=id==='ikcapply';if(o.apply&&!confirm('Завести область и клиенты в Keycloak '+(o.issuer||'')+'? Уже существующее не трогается.'))return;r.textContent='…';fetch('api/setup/kc-realm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(function(x){return x.json()}).then(function(d){if(d.error){r.innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}if(d.plan){out.textContent=d.plan.map(function(s){return s.method+' '+s.path+'  ('+s.id+')'}).join(String.fromCharCode(10));r.textContent='план: шагов '+d.plan.length+'; ничего не записано';return}out.textContent=d.results.map(function(s){return s.id+': '+s.reason}).join(String.fromCharCode(10));r.textContent=d.results.every(function(s){return s.state==='created'||s.state==='exists'})?'область готова':'остановлено на ошибке — см. список'})});
 function aform(){var f=document.getElementById('af'),o={};Array.prototype.forEach.call(f.elements,function(x){if(x.name)o[x.name]=x.value});return o}
 document.addEventListener('click',function(e){var id=e.target.id;if(id!=='apreview'&&id!=='aapply')return;var body=aform();if(id==='aapply'){if(!confirm('Записать строку MCP aida-lore в настройки Claude Code? Прежний файл сохранится копией.'))return;body.confirm=true}
 fetch(id==='aapply'?'api/setup/mcp/apply':'api/setup/mcp/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){if(d.error){document.getElementById('ares').innerHTML='<b style="color:var(--dng)">'+esc(d.error)+'</b>';return}
@@ -261,15 +303,15 @@ held.forEach(function(k){h+='<tr><td>удержано</td><td>'+esc(k)+' — п�
 unk.forEach(function(k){h+='<tr><td>вне карты</td><td>'+esc(k)+'</td><td class="num">'+t.unknown[k]+'</td><td></td></tr>'});h+='</tbody></table></div>'}});
 el.innerHTML=h}).catch(function(e){el.innerHTML='<div class="state stop">не посчитано: '+esc(e.message)+'</div><button class="btn pri" id="run3">Посчитать</button>'})}
 document.addEventListener('click',function(e){if(e.target.id==='run3')dry()});
-function gate(){if(!D)return;var g=document.getElementById('s4gate'),b=document.getElementById('run4');var stop=D.unread&&D.unread.length?'источник прочитан не весь':(!D.ready?'на шаге 2 ждут решения '+D.summary.needs_decision+' значений ('+D.summary.records_waiting+' записей)':'');
-g.className='state '+(stop?'stop':'go');g.textContent=stop?'СТОП: '+stop+' — перенос не начинается':'Можно переносить: статусы сведены';b.disabled=!!stop||!document.getElementById('ack').checked}
+function gate(){if(!D)return;var g=document.getElementById('s4gate'),b=document.getElementById('run4');var stop=D.unread&&D.unread.length?'источник прочитан не весь':(!D.ready?'на шаге 2 ждут решения '+D.summary.needs_decision+' значений ('+D.summary.records_waiting+' записей)':(PKM===null?'вид продуктов не проверен (шаг В)':(PKM.length?'нет вида у продуктов '+PKM.join(', ')+' (шаг В)':'')));
+g.className='state '+(stop?'stop':'go');g.textContent=stop?'СТОП: '+stop+' — перенос не начинается':'Можно переносить: статусы сведены, вид у всех продуктов задан';b.disabled=!!stop||!document.getElementById('ack').checked}
 document.addEventListener('change',function(e){if(e.target.id==='ack')gate()});
 function job(){fetch('api/job').then(function(r){return r.json()}).then(function(j){var l=document.getElementById('log');if(j.lines&&j.lines.length){l.hidden=false;l.textContent=j.lines.join('\n');l.scrollTop=l.scrollHeight}
 if(j.running){var s5=document.getElementById('s5');s5.className='state';s5.textContent='идёт '+(j.what==='transfer'?'перенос':'подсчёт отпечатка')+' — строк хода: '+j.lines.length+'; итог появится здесь';setTimeout(job,2000);return}if(j.result)res5(j.result);if(j.error)msg(j.error,true)})}
 function res5(r){var el=document.getElementById('s5');var only=r.what!=='transfer';el.className='state '+(only?'':(r.ok?'go':'stop'));el.innerHTML=(only?'Посчитан только отпечаток: переноса и сверки в этот раз не было':(r.ok?'Сошлось':'НЕ сошлось')+': записи — '+(r.records?'сверка прошла':'расхождение')+', связи — '+(r.edges?'сверка прошла':'расхождение'))+(r.fingerprint?' · отпечаток содержимого <b class="mono">'+esc(r.fingerprint)+'</b>':'')+(r.reportFile?' · <a href="report.html" target="_blank">открыть отчёт</a> <span class="sub">'+esc(r.reportFile)+'</span>':'')+(r.types?'<div class="sub">'+Object.keys(r.types).map(function(k){return esc(k)+' '+r.types[k].n}).join(' · ')+'</div>':'')}
 document.addEventListener('click',function(e){if(e.target.id==='run4'){fetch('api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'transfer'})}).then(function(r){return r.json()}).then(function(d){if(d.error)return msg(d.error,true);msg('Перенос начат');job()})}
 if(e.target.id==='run5'){fetch('api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'fingerprint'})}).then(function(r){return r.json()}).then(function(d){if(d.error)return msg(d.error,true);location.hash='#step-5';job()})}});
-auth();step(stepFromHash());load();job();fetch('api/connect').then(function(r){return r.json()}).then(function(c){if(c.dstDb)document.getElementById('dstname').textContent=c.dstDb}).catch(function(){})})();
+auth();step(stepFromHash());load();job();if(stepFromHash()!=='k')pk();fetch('api/connect').then(function(r){return r.json()}).then(function(c){if(c.dstDb)document.getElementById('dstname').textContent=c.dstDb}).catch(function(){})})();
 </script></body></html>`;
 
 /** Диалог для страницы: строки с номерами, сгруппированные по типу и по предложению. */
@@ -357,6 +399,7 @@ export async function serve({ port = 2499 } = {}) {
   const redirect = `http://127.0.0.1:${port}/auth/callback`;
   const sid = req => (/(?:^|;\s*)lmsid=([A-Za-z0-9_-]+)/.exec(req.headers.cookie || '') || [])[1];
   const me = req => sessions.get(sid(req)) || null;
+  const tokens = new Map();
   const server = http.createServer(async (req, res) => {
     try {
       const full = new URL(req.url, 'http://127.0.0.1');
@@ -380,13 +423,16 @@ export async function serve({ port = 2499 } = {}) {
         const page = (title, lines) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(`<!doctype html><meta charset="utf-8"><body style="font:14px Manrope,system-ui;background:#faf6ee;color:#2a2218;padding:24px"><h2 style="color:#a8660a">${title}</h2>${lines.map(l => `<p>${String(l).replace(/</g, '&lt;')}</p>`).join('')}<p><a href="/#step-0">к шагу 0</a></p>`); };
         if (!st || Date.now() - st.at > 600000) return page('Вход не выполнен', ['состояние входа не найдено или устарело — начните вход заново']);
         if (full.searchParams.get('error')) return page('Вход не выполнен', [`Keycloak ответил: ${full.searchParams.get('error')}`]);
-        const claims = tokenClaims(await exchange(st.kc, full.searchParams.get('code') || '', redirect, st.verifier));
+        const accessToken = await exchange(st.kc, full.searchParams.get('code') || '', redirect, st.verifier);
+        const claims = tokenClaims(accessToken);
         let owner = null;
         try { owner = await ownerInDb(db, claims.sub, kc.project); } catch { owner = null; }
         const v = verdict(claims, kc.role, owner, kc.project);
         if (!v.ok) return page('Дальше нельзя', [`Вошли как ${claims.login}.`, ...v.reasons]);
         const id = crypto.randomBytes(24).toString('base64url');
         sessions.set(id, { login: claims.login, sub: claims.sub, kc: st.kc.url, realm: st.kc.realm, project: kc.project });
+        // Токен — только в памяти процесса и отдельно от сессии: /api/me отдаёт сессию браузеру, токен туда не попадает.
+        tokens.set(id, accessToken);
         res.writeHead(302, { 'Set-Cookie': `lmsid=${id}; HttpOnly; SameSite=Strict; Path=/`, Location: '/#step-1' });
         return res.end();
       }
@@ -410,9 +456,12 @@ export async function serve({ port = 2499 } = {}) {
           const env = () => installEnvText(INSTALL_BUNDLE.files['.env.example'], {
             LORE_VERSION: b.version || '', LORE_HTTP_PORT: String(b.port || 4400), LORE_AUTH_ENABLED: auth, LORE_OIDC_ISSUER: b.issuer || '',
             LORE_OIDC_ORIGIN: b.issuer ? new URL(b.issuer).origin : '',
-            ...((ch.components || []).includes('volva') && b.volva ? { LORE_VOLVA_ORIGIN: new URL(b.volva).origin, LORE_VOLVA_EMBED_SITE_URL: b.volva } : {}),
+            // встройка Völva: издатель — origin веба LORE (EMB-L6); без адреса веба — только адреса Völva, ES256 не включится
+            ...((ch.components || []).includes('volva') && b.volva ? (b.web ? volvaEmbedEnv({ web: b.web, volva: b.volva }).lore : { LORE_VOLVA_ORIGIN: new URL(b.volva).origin, LORE_VOLVA_EMBED_SITE_URL: b.volva }) : {}),
           });
-          if (req.url === '/api/setup/env') return json(res, 200, { text: env(), note: 'пароли останутся CHANGE_ME — install.sh сгенерирует их сам; вход ' + (auth === 'true' ? 'через Keycloak' : 'выключен') });
+          const volvaSide = (ch.components || []).includes('volva') && b.volva && b.web ? volvaEmbedEnv({ web: b.web, volva: b.volva }).volva : null;
+          if (req.url === '/api/setup/env') return json(res, 200, { text: env(), note: 'пароли останутся CHANGE_ME — install.sh сгенерирует их сам; вход ' + (auth === 'true' ? 'через Keycloak' : 'выключен')
+            + (volvaSide ? '. На стороне Völva: MB_EMBEDDING_JWT_ISSUERS=' + volvaSide.MB_EMBEDDING_JWT_ISSUERS + ', ключи — ' + volvaSide.jwks : (ch.components || []).includes('volva') ? '. Издатель Völva не задан — впишите «Адрес веба LORE», иначе подпись останется временной HS256' : '') });
           if (req.url === '/api/setup/install-plan') {
             const args = installArgs({ dir: b.dir, version: b.version, port: b.port, dry: true });
             const cmd = 'bash install.sh ' + args.join(' ');
@@ -440,6 +489,54 @@ export async function serve({ port = 2499 } = {}) {
             return json(res, 200, { text, note: 'файл ' + file + '; секрет пустой — он появится, когда установщик заведёт клиент minilore-link-' + b.machineId + ' в Keycloak' });
           }
         } catch (e) { return json(res, 400, { error: e.message }); }
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/kc-realm') {
+        // Новая установка: область и клиенты Keycloak (слово владелицы 17.11 «ты реинсталлишь»). Только со своей страницы;
+        // пароль администратора — только в этом запросе, не сохраняется и не пишется в журнал.
+        if (req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'только со страницы установщика' });
+        const b = await readBody(req);
+        let steps, kcUrl;
+        try { ({ kcUrl } = issuerParts(b.issuer)); steps = realmPlan({ realm: issuerParts(b.issuer).realm, webOrigin: b.web, harnesses: b.harness ? [b.harness] : [] }); }
+        catch (e) { return json(res, 400, { error: e.message }); }
+        if (!b.apply) return json(res, 200, { plan: steps.map(x => ({ id: x.id, method: x.method, path: x.path })) });
+        if (!b.kcAdmin || !b.kcPassword) return json(res, 400, { error: 'нужны логин и пароль администратора Keycloak' });
+        const writeSecrets = sec => {
+          const file = path.join(os.homedir(), 'kc-clients-' + steps[0].body.realm + '.env');
+          const NL = String.fromCharCode(10);
+          fs.writeFileSync(file, Object.entries(sec).map(([k, v]) => 'LORE_KC_SECRET_' + k.toUpperCase().replace(/[^A-Z0-9]/g, '_') + '=' + v).join(NL) + NL, { mode: 0o600 });
+          return file;
+        };
+        const out = await applyRealm({ kcUrl, adminUser: b.kcAdmin, adminPassword: b.kcPassword, steps, writeSecrets });
+        return json(res, 200, out);
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/machine') {
+        // machine_new из окна: план (dry_run), запись — только с apply:true и только со своей страницы. Вход — токен шага 0.
+        if (req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'только со страницы установщика' });
+        const b = await readBody(req), token = tokens.get(sid(req));
+        if (!token) return json(res, 400, { error: 'нужен вход на шаге 0: машину заводят от имени человека' });
+        let base, body;
+        try { base = new URL(b.backendUrl); if (!/^https?:$/.test(base.protocol)) throw new Error(); } catch { return json(res, 400, { error: 'адрес бэкенда LORE — http(s)://хост:порт' }); }
+        try { body = enrollBody({ machineId: b.machineId, harness: b.harness, dryRun: !b.apply }); } catch (e) { return json(res, 400, { error: e.message }); }
+        let r;
+        try {
+          const x = await fetch(new URL('lore/actor/machine', base), { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+          r = { status: x.status, body: await x.text() };
+        } catch (e) { r = { error: e.cause?.code || e.message }; }
+        return json(res, 200, { ...enrollVerdict(r), machineId: body.machine_id });
+      }
+      if (req.method === 'POST' && req.url === '/api/setup/check') {
+        // Только чтение: два GET к LORE. Ключ Völva для сверки — из volva-embed.env, который выдал установщик.
+        const b = await readBody(req);
+        let base;
+        try { base = new URL(b.backendUrl); if (!/^https?:$/.test(base.protocol)) throw new Error(); } catch { return json(res, 400, { error: 'адрес бэкенда LORE — http(s)://хост:порт' }); }
+        const get = async p => { try { const r = await fetch(new URL(p, base), { signal: AbortSignal.timeout(8000) }); return { status: r.status, body: await r.text() }; } catch (e) { return { error: e.cause?.code || e.message }; } };
+        let pub = '';
+        for (const d of [b.dir, os.homedir()].filter(Boolean)) { try { pub = (fs.readFileSync(path.join(d, 'volva-embed.env'), 'utf8').match(/^LORE_VOLVA_EMBED_ES256_PUBLIC_KEY=(.+)$/m) || [])[1] || ''; if (pub) break; } catch { /* нет файла */ } }
+        const [jw, wh] = await Promise.all([get('lore/embed/jwks'), get('lore/whoami')]);
+        return json(res, 200, { checks: [
+          { name: 'Völva: ключ встройки', ...jwksVerdict(jw, pub.trim() || undefined) },
+          { name: 'LORE: whoami', ...whoamiVerdict(wh, { machineId: b.machineId }) },
+        ] });
       }
       if (req.method === 'POST' && req.url === '/api/setup/plan') {
         try { return json(res, 200, { plan: planSetup(await readBody(req)) }); } catch (e) { return json(res, 400, { error: e.message }); }
@@ -496,6 +593,9 @@ export async function serve({ port = 2499 } = {}) {
         if (what === 'transfer') {
           const d = await dialog(true);
           if (!d.ready) return json(res, 409, { error: 'перенос не начинается: на шаге 2 ждут решения ' + d.summary.needs_decision + ' значений' });
+          // шаг В: вид продукта решает человек; пока у продукта нет вида — перенос не начинается
+          const pks = productKindState((await readProductKindInput(db)).products, readDoc());
+          if (!pks.ready) return json(res, 409, { error: 'перенос не начинается: нет вида у продуктов ' + pks.missing.join(', ') + ' (шаг В)' });
           runJob('transfer', readDoc(), (me(req) || {}).login);
         } else if (what === 'fingerprint') runJob('fingerprint');
         else return json(res, 400, { error: 'неизвестное задание' });
@@ -504,6 +604,32 @@ export async function serve({ port = 2499 } = {}) {
       if (req.method === 'GET' && req.url === '/api/dryrun') {
         const report = await dryRun(db, readDoc());
         return json(res, 200, { ...report, fingerprint: fingerprint(report) });
+      }
+      // Шаг В: вид продукта (владелица 19.11.2026: «продукт · вид — в wizard переноса»)
+      if (req.method === 'GET' && req.url === '/api/product-kind') {
+        const input = await readProductKindInput(db), doc = readDoc(), m = productKindMap(doc), state = productKindState(input.products, doc);
+        const rows = proposeProductKinds(input).map(r => ({ ...r, kind: state.kinds[r.code] || null, decided: Boolean(m[r.code]) }));
+        return json(res, 200, { rows, state, by: (doc.product_kind || {}).by || null, at: (doc.product_kind || {}).at || null });
+      }
+      if (req.method === 'POST' && req.url === '/api/product-kind') {
+        let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e5) throw new Error('слишком большой запрос'); }
+        const b = JSON.parse(body); const who = me(req);
+        const by = who ? who.login : (b.by || '').trim();
+        if (!by) return json(res, 400, { error: 'не записано: не сказано, кто принял (поле «кто принимает решения»)' });
+        const next = withProductKinds(readDoc(), b.map, by);
+        fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+        return json(res, 200, { ok: true });
+      }
+      // Шаг П: перегруппировка проектов (владелица 19.11.2026: «сделай отдельное меню с предложением перегруппировки»)
+      if (req.method === 'GET' && req.url === '/api/regroup') {
+        return json(res, 200, proposeRegroup({ ...(await readRegroupInput(db)), overrides: regroupOverrides(readDoc()) }));
+      }
+      if (req.method === 'POST' && req.url === '/api/regroup') {
+        let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }
+        const b = JSON.parse(body); const who = me(req);
+        const next = withRegroupOverrides(readDoc(), b.overrides, who ? who.login : (b.by || null), undefined, b.repos);
+        fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+        return json(res, 200, { ok: true });
       }
       if (req.method === 'POST' && req.url === '/api/decisions') {
         let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }

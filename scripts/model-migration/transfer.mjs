@@ -20,15 +20,19 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
+import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor } from './resources.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
+import { SESSION_EDGES } from './session-model.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
+import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
+import { mergeKeyDups } from './key-dups.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
 // Статусы задач в истории фазы — к коду фазы правилом «статус фазы по задачам» (derive.map справочника).
 const PHASE_MAP = Object.fromEntries(Object.entries(DICT_OF).map(([t, d]) => [t, ((RULES.dictionaries[d] || {}).derive || {}).map]));
-const BASES = ['KnowSprint', 'KnowPhase', 'KnowTask'];
+// Типы с версиями — все, у кого в схеме есть пара <T>Hist (18.11.2026: перенос всех объектов, не только первого).
+const BASES = Object.keys(SCHEMA).filter(T => SCHEMA[T + 'Hist']);
 const SERVICE = ['MigLeftover', 'LoreModelSchema'], EDGE = 'HAS_STATE';
 /** Типы новой базы, которые кладёт сам конвейер: записи, остаток, связь версий и связи с правилом keep (шаг связей). */
 export const keptEdges = () => Object.entries(EDGES).filter(([n, r]) => r.rule === 'keep' && n !== EDGE).map(([n]) => n);
@@ -37,7 +41,28 @@ export function modelMarker(schema, at = new Date().toISOString()) {
   const model_hash = crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0, 16);
   return { model_hash, source: 'installer', built_at: at };
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), DICT_ENTRY, DICT_LABEL];
+/** DDL поля: имя в обратных кавычках — поле с именем-ключевым словом SQL (KnowQuestion.trigger, 18.11.2026) иначе роняет перенос. */
+export function ddlProperty(T, f, dbType) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f);
+  return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType;
+}
+/**
+ * Ожидаемое значение в том виде, в каком его отдаёт база. Момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC). Дата без времени
+ * в поле DATETIME (created_at из date_created у ADR и решений — два поля источника в одно) ложится полночью.
+ */
+export function asRead(v, type) {
+  if (type !== 'DATETIME' || typeof v !== 'string') return v;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v + ' 00:00:00.000';
+  return v.replace('T', ' ').replace(/Z$/, '');
+}
+/** Поля, в которых запись приёмника разошлась с расчётом: имя, что в базе, что ждали (значения до 120 символов). */
+export function fieldDiff(got, want) {
+  const cut = v => (typeof v === 'string' && v.length > 120 ? v.slice(0, 120) : v);
+  return [...new Set([...Object.keys(got), ...Object.keys(want)])].sort()
+    .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
+    .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
+}
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, DICT_ENTRY, DICT_LABEL];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
@@ -128,6 +153,15 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
       merge.phase_status_from_tasks++;
     }
   }
+  // дубли уникального ключа справочника (D-2026-MIG-SETTING-LIST-VALUE): отличаются только организацией — одна строка
+  if (calc.KnowDictEntry) {
+    const slugs = new Set((await db.src('SELECT slug FROM KnowGitProject')).map(x => x.slug).filter(Boolean));
+    const kd = mergeKeyDups(calc.KnowDictEntry, ['dict_type', 'code'], 'label_ru', slugs);
+    calc.KnowDictEntry = kd.keep;
+    for (const x of kd.leftovers) leftovers.push({ src_type: 'KnowDictEntry', ...x });
+    report.stages.key_dups = { merged: kd.leftovers.map(x => x.src_rid), conflicts: kd.conflicts };
+    log('2 дубли ключа справочника: слито', kd.leftovers.length, '· конфликтов', kd.conflicts.length, kd.conflicts.length ? JSON.stringify(kd.conflicts) : '');
+  }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
     for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
@@ -137,7 +171,10 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
-  const mine = ownTypes();
+  // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
+  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA, notMovedFor(db.env));
+  // свои: типы карты и структуры; плюс типы «не переносить», оставленные прежней версией переноса, — их --reset удаляет
+  const mine = [...ownTypes(), ...structure.types.map(t => t.name), ...Object.keys(NOT_MOVED)];
   const clash = existing.filter(n => mine.includes(n));
   if (existing.length && !reset) throw new Error(`приёмник не пуст (${existing.length} типов): запуск с --reset удалит типы этого переноса и запишет заново`);
   if (existing.some(n => !mine.includes(n))) throw new Error('в приёмнике есть чужие типы: ' + existing.filter(n => !mine.includes(n)).join(', '));
@@ -146,10 +183,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   for (const n of [...edgesFirst, ...clash.filter(n => !edgesFirst.includes(n))]) if (existing.includes(n)) await db.dstCommand(`DROP TYPE ${n} UNSAFE`);
   for (const [T, t] of Object.entries(SCHEMA)) {
     await db.dstCommand(`CREATE VERTEX TYPE ${T}`);
-    for (const [f, e] of Object.entries(t.fields)) await db.dstCommand(`CREATE PROPERTY ${T}.${f} ${e.db_type}`);
+    for (const [f, e] of Object.entries(t.fields)) await db.dstCommand(ddlProperty(T, f, e.db_type));
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
     await db.dstCommand(`CREATE INDEX ON ${T} (mig_src_rid) UNIQUE`);
   }
+  for (const s of structure.typeDdl) await db.dstCommand(s);
   await db.dstCommand('CREATE VERTEX TYPE MigLeftover');
   await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
   await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
@@ -172,12 +210,60 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await pool(links, 8, ([v, p]) => db.dstCommand(`CREATE EDGE ${EDGE} FROM ${dstRid[p]} TO ${dstRid[v]}`));
   await pool(leftovers, 8, x => db.dstCommand('INSERT INTO MigLeftover CONTENT :c', { c: { ...x, value: typeof x.value === 'string' ? x.value : JSON.stringify(x.value) } }));
   report.stages.write = { records: written, links: links.length, leftovers: leftovers.length, fields_not_in_schema: undeclared };
+  // типы без карты — как есть (журналы, снимки метрик, планы): строка источника без @-полей + mig_src_rid; сверка счётом
+  const asIs = {};
+  const fmt = ms => new Date(ms).toISOString().replace('T', ' ').replace('Z', '');
+  // временной ряд: строк без @rid, поэтому окнами по времени; окно, упёршееся в потолок ответа базы, делится пополам
+  const tsCopy = async t => {
+    const [m] = await db.src(`SELECT min(${t.ts}) AS a, max(${t.ts}) AS b FROM ${t.name}`);
+    if (!m || m.a == null) return 0;
+    let n = 0;
+    const win = async (a, b) => {
+      const rows = await db.src(`SELECT FROM ${t.name} WHERE ${t.ts} >= '${fmt(a)}' AND ${t.ts} < '${fmt(b)}'`);
+      if (rows.length >= 20000 && b - a > 1) { const mid = Math.floor((a + b) / 2); await win(a, mid); await win(mid, b); return; }
+      await pool(rows, 8, r => db.dstCommand(`INSERT INTO ${t.name} CONTENT :c`, { c: tsContent(r, t.ts) }));
+      n += rows.length;
+    };
+    const lo = tsContent({ x: m.a }, 'x').x, hi = tsContent({ x: m.b }, 'x').x + 1, DAY = 86400000;
+    for (let a = lo; a < hi; a += DAY) await win(a, Math.min(a + DAY, hi));
+    return n;
+  };
+  for (const t of structure.types) {
+    if (t.kind === 'TIMESERIES') {
+      const n = await tsCopy(t);
+      const src = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
+      asIs[t.name] = { source: src, target: n };
+      if (src !== n) throw new Error(`перенос как есть: ${t.name} — в источнике ${src}, перенесено ${n}`);
+      continue;
+    }
+    let last = '#-1:-1', n = 0;
+    for (;;) {
+      const rows = await db.src(`SELECT FROM ${t.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
+      if (!rows.length) break;
+      await pool(rows, 8, r => db.dstCommand(`INSERT INTO ${t.name} CONTENT :c`, { c: asIsContent(r) }));
+      n += rows.length; last = rows[rows.length - 1]['@rid'];
+      if (rows.length < 5000) break;
+    }
+    const src = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
+    asIs[t.name] = { source: src, target: n };
+    if (src !== n) throw new Error(`перенос как есть: ${t.name} — в источнике ${src}, перенесено ${n}`);
+  }
+  log('3 как есть (типы без карты):', JSON.stringify(asIs));
+  // индексы источника — после записи: индекс, которому мешают данные (дубль под уникальным), не роняет перенос,
+  // а называется в отчёте с причиной базы
+  const indexFailed = [];
+  for (const s of structure.indexDdl) {
+    try { await db.dstCommand(s); } catch (e) { indexFailed.push({ ddl: s, why: String(e.message || e).slice(0, 300) }); }
+  }
+  report.stages.structure = { as_is: asIs, not_carried: structure.notCarried, indexes: structure.indexes.length - indexFailed.length, skipped: structure.skipped, failed: indexFailed };
+  log('3 структура вне карты:', structure.types.length, 'типов как есть,', structure.indexes.length - indexFailed.length, 'индексов источника,', structure.skipped.length, 'пропущено,', indexFailed.length, 'не создано (данные мешают)');
+  for (const x of indexFailed) log('  индекс не создан:', x.ddl, '—', x.why);
   log('3 запись:', JSON.stringify(report.stages.write));
 
   // ── 5. Сверка «до и после» ────────────────────────────────────────────────────────────────────────
   // Ожидаемое значение приводится к тому виду, в каком база его отдаёт: момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC).
-  const asRead = (v, type) => (type === 'DATETIME' && typeof v === 'string' ? v.replace('T', ' ').replace(/Z$/, '') : v);
   const canon = o => JSON.stringify(Object.keys(o).sort().map(k => [k, o[k]]));
+  const perType = {};
   const verify = { counts: {}, mismatched_records: {}, samples: [], links: null, leftovers: null, digest: {} };
   for (const T of Object.keys(SCHEMA)) {
     const expected = new Map();
@@ -190,7 +276,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
         n++; const got = {};
         for (const [f, v] of Object.entries(row)) if (!f.startsWith('@') && f !== 'mig_src_rid' && given(v)) got[f] = v;
         const want = expected.get(row.mig_src_rid);
-        if (!want || canon(got) !== canon(want)) { bad++; if (verify.samples.length < 5) verify.samples.push({ T, src: row.mig_src_rid, got: canon(got).slice(0, 300), want: want ? canon(want).slice(0, 300) : 'нет в расчёте' }); }
+        if (!want || canon(got) !== canon(want)) { bad++; if ((perType[T] = (perType[T] || 0) + 1) <= 2) verify.samples.push({ T, src: row.mig_src_rid, diff: want ? fieldDiff(got, want).slice(0, 4) : 'нет в расчёте' }); }
       }
       last = rows[rows.length - 1]['@rid']; if (rows.length < 2000) break;
     }

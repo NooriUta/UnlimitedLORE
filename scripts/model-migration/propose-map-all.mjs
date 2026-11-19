@@ -15,6 +15,7 @@ const FIRST = new Set(['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHi
 const SERVICE = new Set(['valid_from', 'valid_to', 'state_uid', 'content_hash', 'changed_by', 'changed_by_kind', 'changed_by_session',
   'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'status_known_from', 'status_backfilled', 'source_commit', 'origin']);
 const STATUS_TYPES = new Set(['KnowADR', 'KnowADRHist', 'KnowDecision', 'KnowDecisionHist', 'KnowSpec', 'KnowSpecHist', 'KnowMilestoneHist', 'KnowQuestion', 'KnowUseCase', 'QualityGate']);
+const OWN_KEY = { LoreComponent: 'component_id' };
 const EDGE_FIELDS = { component_id: 'связь с компонентом (BELONGS_TO)', project: 'связь с проектом (BELONGS_TO_PROJECT)', git_project: 'связь с проектом (BELONGS_TO_PROJECT)' };
 const DATE = /(^date_|_date$|^created_date$)/, DATETIME = /(^|_)(created_at|updated_at|closed_at|merged_at|retired_at|reached_at|ts|at)$/;
 const W = 'владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»';
@@ -38,6 +39,8 @@ export function ruleFor(T, f) {
   // harness агента — к кодам справочника miniLORE (её хозяйство, ADR-LORE-054 п.8; владелица 17.11: «как у minilore»).
   if (T === 'KnowActor' && f === 'harness') return { rule: 'transform', to: 'harness', how: 'harness', basis: 'owner', note: 'коды miniLORE: claude, kimi, dsh, qwen; известные codex, opencode, cursor' };
   if (f === 'priority') return { rule: 'transform', to: 'priority', how: 'priority', basis: 'owner', note: 'одна шкала, приписка — в priority_note' };
+  // ключ своего типа — не ссылка: component_id у LoreComponent — его код (18.11.2026: в новой базе он пропадал)
+  if (OWN_KEY[T] === f) return { rule: 'keep', basis: 'owner', note: 'ключ записи своего типа' };
   if (EDGE_FIELDS[f]) return { rule: 'open', question: EDGE_FIELDS[f] + ' — строится на шаге связей; до него значение удерживается' };
   if (/_refs$/.test(f)) return { rule: 'open', question: 'ссылки строкой становятся связями на шаге связей; ненайденное — текстом в заметке версии' };
   // date_display — подпись срока для людей («18 апр», «прогноз Q4 2026»), не дата (пробный расчёт 17.11).
@@ -47,6 +50,14 @@ export function ruleFor(T, f) {
   return { rule: 'keep', basis: 'delegated', note: W };
 }
 
+/**
+ * Служебные поля правки у каждого типа версий — «как есть», даже если перепись их ещё не видела (их нет в снимке 15.11:
+ * AO-SESSION-LOG пишет их с 16.11; снимок 18.11 их несёт, и без правила перенос терял бы их как «вне карты»).
+ * Основание — D-2026-LORE-SESSION-MACHINE-PLACE-MODEL; схема объявляет те же поля (propose-schema*.mjs, SERVICE).
+ */
+export const SERVICE_EDIT = ['changed_by_session', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine'];
+const SERVICE_EDIT_RULE = { rule: 'keep', basis: 'owner', note: 'служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)' };
+
 /** Карта по переписи: { types: {T: {f: правило}}, skipped: {T: почему} }. Порядок — по имени, детерминированно. */
 export function proposeMap(census) {
   const types = {}, skipped = {};
@@ -55,6 +66,7 @@ export function proposeMap(census) {
     if (!p.move) { if (!FIRST.has(T)) skipped[T] = p.why; continue; }
     types[T] = {};
     for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
+    if (T.endsWith('Hist')) for (const f of SERVICE_EDIT) if (!types[T][f]) types[T][f] = { ...SERVICE_EDIT_RULE };
   }
   return { _about: 'MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.', types, skipped };
 }
