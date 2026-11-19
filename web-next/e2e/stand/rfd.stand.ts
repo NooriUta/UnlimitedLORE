@@ -6,9 +6,11 @@
 // Не здесь: SPRINT_LORE_OWN_HOST/OH-22 (LLM на ryzenai — инфраструктура, без UI LORE) и
 // SPRINT_VIZ_EMBED/VE-8 (проверка подписи — внутри Völva, её репо и её CI).
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 /** GET под токеном сохранённого входа — как S0. */
@@ -55,7 +57,8 @@ test('RFD-AP01 Агенты: «Удалить» есть только у тес�
   const err = panel.locator('[data-testid="adm-testdel-error"]');
   const plan = panel.locator('[data-testid^="kit-diff-row-"], [data-testid="adm-testdel-blocked"]');
   await expect(err.or(plan).first(), 'план удаления (dry_run) показан').toBeVisible({ timeout: 30_000 });
-  expect(await err.count(), `план не построился: ${await err.first().innerText().catch(() => '')}`).toBe(0);
+  const errText = await textOf(err);
+  expect(await err.count(), `план не построился: ${errText}`).toBe(0);
   // Не применяем: закрыть.
   await panel.locator('[data-testid="adm-testdel-close"]').click().catch(() => {});
 });
@@ -71,7 +74,8 @@ test('RFD-VE7 Встройка Völva отвечает родителю: выс�
     .not.toBe('loading');
   const st = await box.first().getAttribute('data-embed-state');
   // «Нужен выбор» (обычно проект в шапке): встройку не просили — проверять нечего, это не поломка.
-  test.skip(st === 'needs', `встройка просит выбор: «${(await box.first().innerText()).replace(/\s+/g, ' ').slice(0, 160)}» — не выполнен`);
+  const needsText = st === 'needs' ? await textOf(box) : '';
+  test.skip(st === 'needs', `встройка просит выбор: «${needsText}» — не выполнен`);
   expect(st, 'встройка не молчит (silent = за 15 с ни frame, ни error)').not.toBe('silent');
   if (st === 'ready') {
     // Высота по metabase.frame: рамка выросла с minHeight 320 (приёмка 14.11 — осталась 320).

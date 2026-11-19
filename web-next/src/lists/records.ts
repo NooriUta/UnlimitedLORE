@@ -206,6 +206,8 @@ export function taskListRecord(row: Row): KitRecord {
       // S9-02: релизы спринта задачи (PART_OF → IMPLEMENTED_IN_RELEASE) —
       // то же имя поля, что у спринта, иначе фасеты разошлись бы.
       release: list(row.release_ids),
+      // Проекты спринта задачи (срез open_tasks/closed_tasks, project_slugs) — многозначное поле.
+      project: list(row.project_slugs),
       effort: num(row.effort_days),
       work_class: str(row.work_class),
     },

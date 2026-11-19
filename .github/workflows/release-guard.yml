@@ -60,3 +60,17 @@ jobs:
             bash .github/scripts/release-notes-guard.sh "$tag" HEAD || rc=1
           done
           exit "$rc"
+
+  # E2E-STAND · владелица 19.11.2026: проверки стенда на Playwright — шлагбаум между препродом и продом.
+  # Смоук бежит на пуш в preprod (lore-stand-e2e.yml); здесь — его итог на голове PR в main.
+  stand:
+    name: Смоук стенда зелёный на голове PR (шлагбаум прода)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Самопроверка шлагбаума
+        run: bash .github/scripts/stand-gate.sh --selftest
+      - name: Смоук стенда на голове PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/stand-gate.sh "${{ github.event.pull_request.head.sha }}"
