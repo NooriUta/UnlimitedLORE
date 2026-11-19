@@ -6950,5 +6950,23 @@
         "failed" : "не прошло испытания"
       }
     }
+  },
+  "series" : {
+    "AuditDbLogin" : {
+      "about" : "DBR-07: входы в ArcadeDB через сторожа (deploy/db-guard) — первый вход пары «пользователь × источник» за минуту. Секрета нет: из Authorization берётся только имя (Basic → пользователь, Bearer → apitoken:<имя>). Пишет сторож своим токеном с правом только на этот ряд, не root. Ряд полон, только когда прямой :2480 закрыт (Этап 6, D-2026-SETUP-BEFORE-ENFORCE).",
+      "timestamp" : "ts",
+      "tags" : {
+        "user" : "STRING",
+        "src_ip" : "STRING",
+        "src_container" : "STRING",
+        "database" : "STRING",
+        "method" : "STRING",
+        "path" : "STRING"
+      },
+      "fields" : {
+        "status" : "INTEGER"
+      },
+      "writer" : "db-guard"
+    }
   }
 }

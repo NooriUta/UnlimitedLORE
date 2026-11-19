@@ -20,7 +20,8 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor } from './resources.mjs';
+import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
+import { seriesDdl } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
@@ -62,7 +63,7 @@ export function fieldDiff(got, want) {
     .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
     .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, DICT_ENTRY, DICT_LABEL];
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
@@ -192,6 +193,8 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
   await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
   await db.dstCommand(`CREATE EDGE TYPE ${EDGE}`);
+  // DBR-07: временные ряды модели (AuditDbLogin — ряд сторожа входов); записей переноса в них нет.
+  for (const [T, s] of Object.entries(SERIES)) await db.dstCommand(seriesDdl(T, s));
 
   const dstRid = {}; // rid источника → rid приёмника
   const undeclared = {};
