@@ -200,8 +200,11 @@ public class LoreSpecResource extends LoreResourceBase {
                     if (req.summary() != null)    { hsql.append(", summary=:summary");    hp.put("summary", req.summary()); }
                     // S2-13: статус на месте больше не правится — его пишет версия выше.
                     hsql.append(" WHERE @rid=:rid");
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        hsql.toString(), hp)).await().indefinitely();
+                    // MT-MCP-TRUTH Б11: открытую версию прочитали, запись её не нашла — тело не легло, 409
+                    if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            hsql.toString(), hp)).await().indefinitely()))
+                        throw new Scd2Guard.ConflictException("spec '" + req.spec_id()
+                            + "': the open body version disappeared between read and write — nothing written, re-read and retry", Map.of());
                 } else {
                     String nsid = UUID.randomUUID().toString();
                     Map<String, Object> hp = mapOfNullable(

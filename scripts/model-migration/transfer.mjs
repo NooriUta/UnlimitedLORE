@@ -28,6 +28,7 @@ import { REPO_TYPES } from './repos.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
+import { repairVersions, addFixes } from './scd2-repair.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
@@ -102,12 +103,21 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // ── 2. Сведение ───────────────────────────────────────────────────────────────────────────────────
   const merge = { to_version_set: 0, to_version_kept_existing: 0, no_current_version: 0, phase_title_from_status: 0, phase_title_already_set: 0 };
   const leftovers = [];
+  // MT-MCP-TRUTH Б6: битая история лечится ДО сведения — пустой state_uid, лишние открытые версии, запись без
+  // текущей версии. Прежние значения — в остаток (MigLeftover), счёт — в отчёт.
+  const scd2Fixes = { state_uid_filled: 0, extra_open_closed: 0, current_reopened: 0 };
   for (const B of BASES) {
     const H = B + 'Hist';
     const versions = new Map(); // rid записи → версии
     for (const v of calc[H]) { const p = parentOf[v.rid]; if (p) (versions.get(p) || versions.set(p, []).get(p)).push(v); }
     for (const b of calc[B]) {
       const own = versions.get(b.rid) || [];
+      // лечится только то, что тип версий ведёт по схеме: у KnowMilestoneHist/KnowRunbookHist нет valid_to,
+      // у KnowFindingHist нет и state_uid
+      const hf = (SCHEMA[H] && SCHEMA[H].fields) || {};
+      const fixed = repairVersions(own, { parent: b.rid, type: H, intervals: Boolean(hf.valid_to), stateUid: Boolean(hf.state_uid) });
+      addFixes(scd2Fixes, fixed.fixes);
+      leftovers.push(...fixed.leftovers);
       const open = own.filter(v => !given(v.res.out.valid_to)).sort((a, c) => String(c.res.out.valid_from || '').localeCompare(String(a.res.out.valid_from || '')) || a.rid.localeCompare(c.rid));
       const cur = open[0];
       for (const [f, val] of Object.entries(b.res.toVersion)) {
@@ -169,6 +179,8 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
   }
   report.stages.merge = merge;
+  report.stages.scd2_repair = scd2Fixes;
+  log('2 история SCD2:', JSON.stringify(scd2Fixes));
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
