@@ -1,26 +1,34 @@
 // Экран «Модель» админки v2 (SPRINT_LORE_MODEL_AS_CONFIG/MC-06).
-// Прототип docs/prototypes/mc-06-model-screen.html (c20f9530) согласован владелицей 18.11.2026;
-// 19.11: «экран то почему переделывать если он универсальный» — строится на модели 1.18 как есть.
+// Прототип v4 — docs/prototypes/mc-06-model-screen.html из 9ed3c814 (ветка proto/mc-06-phone),
+// согласован владелицей 18.11.2026: «прототип согласован но должен строиться на объектах kit».
+// 19.11: «экран то почему переделывать если он универсальный» — строится на модели 1.18 как есть;
+// «HTML админки не адаптирован под телефон» — раскладка 360–412 px без прокрутки вбок, дифф под формой.
 //
 // Вкладки Типы / Меню и видимость / Гигиена / История; вкладка и тип — в адресе (?mtab=, ?mtype=).
-// Правится: подпись, группа, видимость, порядок. Только чтение: вид поля и свойство схемы — их
-// расхождение ловит проверка согласованности сервера (MC-03/MC-05), а не редактор.
-// Порядок правки: правка → дифф → «Проверить» (PUT dry_run; 422 — причина словами сервера) →
-// «Применить…» с обязательным «что и зачем» → новая версия. Откат — новая версия с содержимым старой.
-// Элементы — Seiðr kit: Tabs, Pill, DiffPreview, Sheet, GameIcon, Skeleton/Forbidden/LoadError/EmptyState.
+// Тип: тексты RU/EN/PL, настройки типа, раскладка паспорта, поля (порядок, подпись, группа) и экран
+// правки поля окном (на телефоне — во весь экран). Правится только то, что принимает PUT
+// /lore/model/config (MC-05, кодек LoreModelCodec) и проверяет LoreModelConsistency; смена вида поля,
+// ребра, двери записи, вершины графа — это миграция, а не настройка: только чтение с пометкой.
+// Порядок правки: правка → дифф → «Проверить» (dry_run; 422 — причина словами сервера) →
+// «Применить…» (kit ReasonDialog, «что и зачем» обязательно) → новая версия. Откат — новая версия
+// с содержимым старой.
+// Элементы — Seiðr kit: Tabs, Pill, DiffPreview, Dialog, ReasonDialog, LangTabs, SortableList, GameIcon,
+// TipTapField, Skeleton/Forbidden/LoadError/EmptyState.
 import { useMemo, useState } from 'react';
 import {
-  DiffPreview, EmptyState, Forbidden, GameIcon, LoadError, Pill, Sheet, Skeleton, Tabs,
+  Dialog, DiffPreview, EmptyState, Forbidden, GameIcon, LangTabs, LoadError, Pill, ReasonDialog, Skeleton, SortableList, Tabs,
   useKitLang, useLoadState, useUrlParam, type DiffRow,
 } from '@seidr/kit';
 import { kitMinute } from '@seidr/kit/core';
+import { TipTapField } from '@seidr/kit/content';
 import { useAppT, type AppKey } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  FIELD_GROUPS, fetchModelConfig, fetchModelHistory, fetchModelSchema, fetchModelVersion, modelDiff, modelHygiene,
-  modelTypes, moveField, navRows, rollbackRequest, saveModel, setAudience, setFieldProp, typeList,
-  type Audience, type ModelChange, type ModelConfig, type ModelDoc, type ModelVersion, type SaveAnswer, type SaveRequest,
-  type SchemaInfo,
+  FIELD_GROUPS, MODEL_LANGS, fetchModelConfig, fetchModelHistory, fetchModelSchema, fetchModelVersion, fieldLangMissing,
+  modelDiff, modelHygiene, modelTypes, moveFieldTo, movePassport, navRows, passportSlots, rollbackRequest, saveModel,
+  setAudience, setFieldProp, setFieldProps, setReadOnly, setTypeColor, setTypeProp, textKey, typeList,
+  type Audience, type ModelChange, type ModelConfig, type ModelDoc, type ModelLang, type ModelVersion, type SaveAnswer,
+  type SaveRequest, type SchemaInfo,
 } from './model';
 import './Admin.css';
 
@@ -30,9 +38,13 @@ export interface ModelScreenProps {
 
 const TABS = ['types', 'nav', 'hyg', 'hist'] as const;
 type Tab = (typeof TABS)[number];
+type Obj = Record<string, unknown>;
 
 const reasonOf = (e: unknown) =>
   e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : undefined;
+const s = (v: unknown) => (typeof v === 'string' ? v : '');
+const obj = (v: unknown): Obj => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Obj) : {});
+const LANG_LABEL: Record<ModelLang, string> = { ru: 'RU', en: 'EN', pl: 'PL' };
 
 interface Loaded { cfg: ModelConfig; schema: SchemaInfo }
 
@@ -54,7 +66,7 @@ export function ModelScreen({ fetchImpl }: ModelScreenProps) {
   else if (res.state === 'error' || !res.data) body = <LoadError error={res.error} onRetry={res.reload} />;
   else body = <ModelEditor key={res.data.cfg.hash ?? ''} data={res.data} fetchImpl={fetchImpl} onSaved={res.reload} />;
   return (
-    <section className="adm" aria-labelledby="adm-model-h" data-testid="adm-model">
+    <section className="adm adm-model" aria-labelledby="adm-model-h" data-testid="adm-model">
       <h2 id="adm-model-h" className="adm-h">{t('admin.model.title')}</h2>
       <p className="adm-lead">{t('admin.model.lead')}</p>
       {body}
@@ -82,7 +94,6 @@ function ModelEditor({ data, fetchImpl, onSaved }: { data: Loaded; fetchImpl?: t
   const [draft, setDraft] = useState<ModelDoc>(cfg.doc);
   const [check, setCheck] = useState<Check>({ state: 'idle' });
   const [pending, setPending] = useState<Pending | null>(null);
-  const [why, setWhy] = useState('');
   const [applyBusy, setApplyBusy] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
 
@@ -96,27 +107,24 @@ function ModelEditor({ data, fetchImpl, onSaved }: { data: Loaded; fetchImpl?: t
     try { return await saveModel(req, fetchImpl); }
     catch (e) { setCheck({ state: 'error', reason: reasonOf(e) ?? 'error' }); return null; }
   };
-  const verdict = (a: SaveAnswer | null) => {
+  const dryRun = async () => {
+    setCheck({ state: 'busy' });
+    const a = await run({ content: JSON.stringify(draft), dry_run: true, expected_hash: cfg.hash ?? undefined });
     if (a === null) return;
     if (a.kind === 'inconsistent') setCheck({ state: 'bad', problems: a.problems });
     else if (a.kind === 'conflict') setCheck({ state: 'conflict' });
     else setCheck({ state: 'ok' });
   };
 
-  const dryRun = async () => {
-    setCheck({ state: 'busy' });
-    verdict(await run({ content: JSON.stringify(draft), dry_run: true, expected_hash: cfg.hash ?? undefined }));
-  };
+  const openApply = (p: Pending) => { setPending(p); setApplyError(null); };
 
-  const openApply = (p: Pending) => { setPending(p); setWhy(''); setApplyError(null); };
-
-  const apply = async () => {
-    if (!pending || !why.trim()) return;
+  const apply = async (why: string) => {
+    if (!pending) return;
     setApplyBusy(true);
     setApplyError(null);
     const req = pending.kind === 'rollback'
       ? rollbackRequest(pending.content, cfg.hash, { when: pending.when ?? '', why }, false)
-      : { content: pending.content, dry_run: false, reason: why.trim(), expected_hash: cfg.hash ?? undefined };
+      : { content: pending.content, dry_run: false, reason: why, expected_hash: cfg.hash ?? undefined };
     try {
       const a = await saveModel(req, fetchImpl);
       if (a.kind === 'ok') { setPending(null); onSaved(); return; }
@@ -138,7 +146,7 @@ function ModelEditor({ data, fetchImpl, onSaved }: { data: Loaded; fetchImpl?: t
   return (
     <>
       <div className="adm-model-bar" data-testid="adm-model-bar">
-        <span className="adm-mono" title={cfg.hash ?? undefined}>{t('admin.model.version')} <b>{(cfg.hash ?? '—').slice(0, 10)}</b></span>
+        <span className="adm-mono adm-model-bar__ver" title={cfg.hash ?? undefined}>{t('admin.model.version')} <b>{(cfg.hash ?? '—').slice(0, 10)}</b></span>
         <Pill tone={cfg.source === 'lore' ? 'suc' : 'wrn'}>{cfg.source === 'lore' ? t('admin.model.src.lore') : t('admin.model.src.file')}</Pill>
         {cfg.seedDrift && <Pill tone="dng">DRIFTED</Pill>}
         <span className="adm-model-bar__grow" />
@@ -173,24 +181,20 @@ function ModelEditor({ data, fetchImpl, onSaved }: { data: Loaded; fetchImpl?: t
         )}
       </div>
 
-      <Sheet open={pending !== null} onClose={() => setPending(null)}
-        title={pending?.kind === 'rollback' ? t('admin.model.rollbackTitle', { when: pending.when ?? '' }) : t('admin.model.applyTitle')}>
-        <div className="adm-model-sheet" data-testid="adm-model-sheet">
-          <p className="adm-dim">{pending?.kind === 'rollback' ? t('admin.model.rollbackBody') : t('admin.model.applyBody', { n: changes.length })}</p>
-          <label className="adm-field">
-            <span className="adm-field__l">{t('admin.model.why')}</span>
-            <input className="adm-input" data-testid="adm-model-why" value={why} placeholder={t('admin.model.whyHint')}
-              onChange={e => setWhy(e.target.value)} />
-          </label>
-          {applyError && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-model-apply-error">{applyError}</p>}
-          <div className="adm-danger__btns">
-            <button type="button" className="adm-btn" onClick={() => setPending(null)}>{t('admin.model.cancel')}</button>
-            <button type="button" className="adm-btn" data-tone="acc" data-testid="adm-model-apply-ok" disabled={!why.trim() || applyBusy} onClick={apply}>
-              {t('admin.model.applyOk')}
-            </button>
-          </div>
-        </div>
-      </Sheet>
+      <ReasonDialog
+        key={pending ? `${pending.kind}:${pending.when ?? ''}` : 'none'}
+        open={pending !== null}
+        onClose={() => setPending(null)}
+        title={pending?.kind === 'rollback' ? t('admin.model.rollbackTitle', { when: pending.when ?? '' }) : t('admin.model.applyTitle')}
+        confirmLabel={pending?.kind === 'rollback' ? t('admin.model.rollbackOk') : t('admin.model.applyOk')}
+        reasonLabel={t('admin.model.why')}
+        placeholder={t('admin.model.whyHint')}
+        busy={applyBusy}
+        error={applyError}
+        onConfirm={apply}
+      >
+        {pending?.kind === 'rollback' ? t('admin.model.rollbackBody') : t('admin.model.applyBody', { n: changes.length })}
+      </ReasonDialog>
     </>
   );
 }
@@ -216,12 +220,24 @@ function CheckOut({ check }: { check: Check }) {
   );
 }
 
+/** Строка «только чтение»: что и почему не правится здесь. */
+function RoRow({ label, value, why }: { label: string; value: string; why: string }) {
+  return (
+    <div className="adm-model-ro">
+      <span className="adm-field__l">{label}</span>
+      <span className="adm-mono adm-model-ro__v">{value || '—'}</span>
+      <span className="adm-dim">{why}</span>
+    </div>
+  );
+}
+
 // ── Типы ─────────────────────────────────────────────────────────────
 
 function TypesTab({ doc, base, schema, onEdit }: { doc: ModelDoc; base: ModelDoc; schema: SchemaInfo; onEdit: (d: ModelDoc) => void }) {
   const t = useAppT();
   const [sel, setSel] = useUrlParam('mtype');
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<string | null>(null);
   const types = modelTypes(doc);
   const baseTypes = modelTypes(base);
   const groups = typeList(doc);
@@ -236,29 +252,37 @@ function TypesTab({ doc, base, schema, onEdit }: { doc: ModelDoc; base: ModelDoc
   if (!cur) return <EmptyState title={t('admin.model.noTypes')} />;
   const baseFields = baseTypes.find(x => x.type === cur.type)?.fields ?? [];
   const sch = schema.types?.[cur.type];
+  const changedFields = new Set(cur.fields.map((f, i) => {
+    const key = String(f.key ?? '');
+    const was = baseFields.find(b => b.key === key);
+    return !was || JSON.stringify(was) !== JSON.stringify(f) || baseFields.indexOf(was) !== i ? key : '';
+  }).filter(Boolean));
+  const editField = editing ? cur.fields.find(f => f.key === editing) : undefined;
   return (
     <div className="adm-model-types">
       <nav className="adm-model-side" aria-label={t('admin.model.typesNav')}>
         <input className="adm-input" type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={t('admin.model.search')}
           aria-label={t('admin.model.search')} data-testid="adm-model-search" />
-        {groups.map(g => {
-          const shown = g.types.filter(match);
-          if (!shown.length) return null;
-          return (
-            <div key={g.group ?? '_'}>
-              <div className="adm-field__l">{g.labelKey ? t(g.labelKey as AppKey) : t('admin.model.otherGroup')}</div>
-              {shown.map(type => {
-                const ty = types.find(x => x.type === type)!;
-                return (
-                  <button key={type} type="button" className="adm-model-side__a" aria-pressed={type === cur.type}
-                    data-testid={`adm-model-type-${type}`} onClick={() => setSel(type)}>
-                    <GameIcon slug={ty.icon} size={12} /> {ty.label}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
+        <div className="adm-model-side__list">
+          {groups.map(g => {
+            const shown = g.types.filter(match);
+            if (!shown.length) return null;
+            return (
+              <div key={g.group ?? '_'} className="adm-model-side__grp">
+                <div className="adm-field__l">{g.labelKey ? t(g.labelKey as AppKey) : t('admin.model.otherGroup')}</div>
+                {shown.map(type => {
+                  const ty = types.find(x => x.type === type)!;
+                  return (
+                    <button key={type} type="button" className="adm-model-side__a" aria-pressed={type === cur.type}
+                      data-testid={`adm-model-type-${type}`} onClick={() => setSel(type)}>
+                      <GameIcon slug={ty.icon} size={12} /> {ty.label}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </nav>
       <div className="adm-model-typebody">
         <div className="adm-dim">{t('admin.model.typeKind')} · <span className="adm-mono">{cur.type}</span></div>
@@ -267,59 +291,247 @@ function TypesTab({ doc, base, schema, onEdit }: { doc: ModelDoc; base: ModelDoc
           {cur.childOnly && <Pill>{t('admin.model.childOnly')}</Pill>}
           {sch === undefined && <Pill tone="wrn">{t('admin.model.schemaUnknown')}</Pill>}
         </p>
-        <div className="adm-tablewrap">
-          <table className="adm-table" data-testid="adm-model-fields">
-            <thead>
-              <tr>
-                <th scope="col">{t('admin.model.col.key')}</th>
-                <th scope="col">{t('admin.model.col.label')}</th>
-                <th scope="col">{t('admin.model.col.kind')}</th>
-                <th scope="col">{t('admin.model.col.group')}</th>
-                <th scope="col">{t('admin.model.col.property')}</th>
-                <th scope="col">{t('admin.model.col.order')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cur.fields.map((f, i) => {
-                const key = String(f.key ?? '');
-                const was = baseFields.find(b => b.key === key);
-                const changed = !was || was.label !== f.label || was.group !== f.group || baseFields.indexOf(was) !== i;
-                const sf = sch?.fields[key];
-                return (
-                  <tr key={key} data-testid={`adm-model-field-${key}`} data-changed={changed ? '' : undefined}>
-                    <th scope="row"><span className="adm-mono">{key}</span></th>
-                    <td>
-                      <input className="adm-input" value={String(f.label ?? '')} aria-label={t('admin.model.col.label') + ' ' + key}
-                        onChange={e => onEdit(setFieldProp(doc, cur.type, key, 'label', e.target.value))} />
-                    </td>
-                    <td className="adm-dim">{String(f.kind ?? '')}</td>
-                    <td>
-                      <select className="adm-select" value={String(f.group ?? '')} aria-label={t('admin.model.col.group') + ' ' + key}
-                        onChange={e => onEdit(setFieldProp(doc, cur.type, key, 'group', e.target.value))}>
-                        {[...new Set([...FIELD_GROUPS, String(f.group ?? '')])].filter(Boolean).map(g => <option key={g} value={g}>{g}</option>)}
-                      </select>
-                    </td>
-                    <td className="adm-mono">
-                      {sch === undefined ? <span className="adm-missing">{t('admin.model.schemaUnknownShort')}</span>
-                        : sf?.property ? `${sf.property} · ${sf.propertyType ?? '?'}`
-                          : sf?.source === 'EDGE' ? t('admin.model.viaEdge')
-                            : <span className="adm-missing">{t('admin.model.noProperty')}</span>}
-                    </td>
-                    <td className="adm-model-order">
-                      <button type="button" className="adm-btn" aria-label={t('admin.model.up', { key })} disabled={i === 0}
-                        onClick={() => onEdit(moveField(doc, cur.type, key, -1))}>↑</button>
-                      <button type="button" className="adm-btn" aria-label={t('admin.model.down', { key })} disabled={i === cur.fields.length - 1}
-                        onClick={() => onEdit(moveField(doc, cur.type, key, 1))}>↓</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+
+        <TypeText doc={doc} type={cur.type} onEdit={onEdit} />
+        <TypeSettings doc={doc} type={cur.type} childOnly={cur.childOnly} onEdit={onEdit} />
+        <PassportLayout doc={doc} base={base} type={cur.type} onEdit={onEdit} />
+
+        <h4 className="adm-model-h2">{t('admin.model.fields')}</h4>
+        <div data-testid="adm-model-fields" className="adm-model-fields">
+          <SortableList
+            label={t('admin.model.fieldsOrder')}
+            items={cur.fields.map(f => ({ id: String(f.key ?? ''), label: String(f.key ?? ''), f }))}
+            changed={changedFields}
+            onMove={(from, to) => onEdit(moveFieldTo(doc, cur.type, from, to))}
+            renderItem={({ id: key, f }) => {
+              const sf = sch?.fields[key];
+              return (
+                <div className="adm-model-field" data-testid={`adm-model-field-${key}`} data-changed={changedFields.has(key) ? '' : undefined}>
+                  <span className="adm-mono adm-model-field__key">{key}</span>
+                  <input className="adm-input adm-model-field__label" value={s(f.label)} aria-label={`${t('admin.model.col.label')} ${key}`}
+                    onChange={e => onEdit(setFieldProp(doc, cur.type, key, 'label', e.target.value))} />
+                  <span className="adm-dim adm-model-field__kind" title={t('admin.model.col.kind')}>{s(f.kind)}</span>
+                  <select className="adm-select adm-model-field__group" value={s(f.group)} aria-label={`${t('admin.model.col.group')} ${key}`}
+                    onChange={e => onEdit(setFieldProp(doc, cur.type, key, 'group', e.target.value))}>
+                    {[...new Set([...FIELD_GROUPS, s(f.group)])].filter(Boolean).map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <span className="adm-mono adm-model-field__prop" title={t('admin.model.col.property')}>
+                    {sch === undefined ? <span className="adm-missing">{t('admin.model.schemaUnknownShort')}</span>
+                      : sf?.property ? `${sf.property} · ${sf.propertyType ?? '?'}`
+                        : sf?.source === 'EDGE' ? t('admin.model.viaEdge')
+                          : <span className="adm-missing">{t('admin.model.noProperty')}</span>}
+                  </span>
+                  <button type="button" className="adm-btn adm-model-field__edit" aria-label={t('admin.model.editField', { key })}
+                    data-testid={`adm-model-edit-${key}`} onClick={() => setEditing(key)}>
+                    {t('admin.model.edit')}
+                  </button>
+                </div>
+              );
+            }}
+          />
         </div>
         <p className="adm-dim">{t('admin.model.legend')}</p>
       </div>
+      {editField && (
+        <FieldDialog key={`${cur.type}.${editing}`} type={cur.type} field={editField} schemaProp={sch?.fields[String(editField.key)]}
+          onCancel={() => setEditing(null)}
+          onApply={patch => { onEdit(setFieldProps(doc, cur.type, String(editField.key), patch)); setEditing(null); }} />
+      )}
     </div>
+  );
+}
+
+/** Тексты типа: подпись RU/EN/PL. Определения и описания типа модель 1.18 не хранит — сказано. */
+function TypeText({ doc, type, onEdit }: { doc: ModelDoc; type: string; onEdit: (d: ModelDoc) => void }) {
+  const t = useAppT();
+  const [lang, setLang] = useState<ModelLang>('ru');
+  const ty = modelTypes(doc).find(x => x.type === type);
+  const raw = obj([...(doc.types as unknown[] ?? []), ...(doc.child_only as unknown[] ?? [])].map(obj).find(x => x.type === type));
+  if (!ty) return null;
+  const key = textKey('label', lang) as 'label' | 'labelEn' | 'labelPl';
+  const langs = MODEL_LANGS.map(l => ({ id: l, label: LANG_LABEL[l], missing: l !== 'ru' && !s(raw[textKey('label', l)]).trim() }));
+  return (
+    <div className="adm-model-sect" data-testid="adm-model-typetext">
+      <h4 className="adm-model-h2">{t('admin.model.typeText')}</h4>
+      <LangTabs label={t('admin.model.textLang')} langs={langs} value={lang} onChange={l => setLang(l as ModelLang)}
+        i18nKey={s(raw.labelKey) || undefined}>
+        <label className="adm-field">
+          <span className="adm-field__l">{t('admin.model.typeLabel')}</span>
+          <input className="adm-input" value={s(raw[key])} aria-label={t('admin.model.typeLabel')}
+            placeholder={lang !== 'ru' ? t('admin.model.noTranslation') : undefined}
+            onChange={e => onEdit(setTypeProp(doc, type, key, e.target.value))} />
+        </label>
+      </LangTabs>
+      <p className="adm-note" data-tone="inf" role="note">{t('admin.model.typeTextNoApi')}</p>
+    </div>
+  );
+}
+
+function TypeSettings({ doc, type, childOnly, onEdit }: { doc: ModelDoc; type: string; childOnly: boolean; onEdit: (d: ModelDoc) => void }) {
+  const t = useAppT();
+  const raw = obj([...(doc.types as unknown[] ?? []), ...(doc.child_only as unknown[] ?? [])].map(obj).find(x => x.type === type));
+  const colors = [...new Set(Object.values(obj(doc.type_color)).map(String))].sort();
+  const color = s(obj(doc.type_color)[type]);
+  const ro = (doc.read_only as unknown[] ?? []).map(String).includes(type);
+  const g = obj(obj(doc.graph)[type]);
+  const aliases = Object.entries(obj(obj(doc.aliases)[type])).map(([k, v]) => `${k} → ${String(v)}`).join(', ');
+  const create = obj(obj(doc.create)[type]);
+  const computed = (obj(doc.computed)[type] as unknown[] ?? []).map(obj).map(c => s(c.label) || s(c.key)).join(', ');
+  const time = obj(obj(doc.time)[type]);
+  const precision = Object.entries(obj(doc.precision)).filter(([k]) => k.startsWith(`${type}.`)).map(([k, v]) => `${k.slice(type.length + 1)}: ${String(v)}`).join(', ');
+  const migration = t('admin.model.ro.migration');
+  return (
+    <div className="adm-model-sect">
+      <h4 className="adm-model-h2">{t('admin.model.typeSettings')}</h4>
+      <div className="adm-model-grid">
+        <label className="adm-field">
+          <span className="adm-field__l">{t('admin.model.icon')}</span>
+          <span className="adm-model-icon">
+            <GameIcon slug={s(raw.icon) || null} size={16} />
+            <input className="adm-input" value={s(raw.icon)} aria-label={t('admin.model.icon')}
+              onChange={e => onEdit(setTypeProp(doc, type, 'icon', e.target.value))} />
+          </span>
+        </label>
+        <label className="adm-field">
+          <span className="adm-field__l">{t('admin.model.typeColor')}</span>
+          <select className="adm-select" value={color} aria-label={t('admin.model.typeColor')}
+            onChange={e => onEdit(setTypeColor(doc, type, e.target.value || null))}>
+            <option value="">{t('admin.model.noColor')}</option>
+            {colors.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label className="adm-check">
+          <input type="checkbox" checked={ro} onChange={e => onEdit(setReadOnly(doc, type, e.target.checked))} />
+          {t('admin.model.readOnly')}
+        </label>
+      </div>
+      <div className="adm-model-rolist" data-testid="adm-model-type-readonly">
+        <RoRow label="child_only" value={childOnly ? t('admin.model.yes') : t('admin.model.no')} why={migration} />
+        <RoRow label="graph" value={[s(g.vertex), s(g.key) && `key ${s(g.key)}`, s(g.hist) && `hist ${s(g.hist)}`].filter(Boolean).join(' · ')} why={migration} />
+        <RoRow label="aliases" value={aliases} why={migration} />
+        <RoRow label="create" value={s(create.endpoint) || t('admin.model.ro.noCreate')} why={t('admin.model.ro.code')} />
+        <RoRow label="workflow" value={doc.workflow ? t('admin.model.ro.workflowShared') : '—'} why={t('admin.model.ro.code')} />
+        <RoRow label="computed" value={computed} why={t('admin.model.ro.server')} />
+        <RoRow label="time / precision" value={[s(time.history), precision].filter(Boolean).join(' · ')} why={migration} />
+      </div>
+    </div>
+  );
+}
+
+function PassportLayout({ doc, base, type, onEdit }: { doc: ModelDoc; base: ModelDoc; type: string; onEdit: (d: ModelDoc) => void }) {
+  const t = useAppT();
+  const slots = passportSlots(doc, type);
+  const was = passportSlots(base, type).map(x => x.key);
+  const changed = new Set(slots.filter((x, i) => was[i] !== x.key).map(x => x.key));
+  return (
+    <div className="adm-model-sect" data-testid="adm-model-passport">
+      <h4 className="adm-model-h2">{t('admin.model.passport')}</h4>
+      {slots.length === 0 ? <p className="adm-dim">{t('admin.model.passportEmpty')}</p> : (
+        <SortableList label={t('admin.model.passport')} items={slots.map(x => ({ id: x.key, label: x.key, slot: x.slot }))} changed={changed}
+          onMove={(from, to) => onEdit(movePassport(doc, type, from, to))}
+          renderItem={it => <span><span className="adm-mono">{it.id}</span> <span className="adm-dim">{it.slot}</span></span>} />
+      )}
+    </div>
+  );
+}
+
+// ── Правка поля окном ────────────────────────────────────────────────
+
+const BOOL_EDITABLE = ['required', 'historic', 'multi'] as const;
+
+function FieldDialog({ type, field, schemaProp, onCancel, onApply }: {
+  type: string; field: Obj; schemaProp?: { property: string | null; propertyType: string | null; source: string | null };
+  onCancel: () => void; onApply: (patch: Record<string, unknown>) => void;
+}) {
+  const t = useAppT();
+  const key = String(field.key ?? '');
+  const [f, setF] = useState<Obj>(() => structuredClone(field));
+  const [lang, setLang] = useState<ModelLang>('ru');
+  const set = (k: string, v: unknown) => setF(x => ({ ...x, [k]: v }));
+  const missing = fieldLangMissing(f);
+  const write = obj(f.write);
+  const hasWrite = !!s(write.endpoint);
+  const options = f.options ? obj(f.options) : null;
+  const patch = () => {
+    const out: Record<string, unknown> = {};
+    const keys = new Set([...Object.keys(field), ...Object.keys(f)]);
+    for (const k of keys) if (JSON.stringify(field[k]) !== JSON.stringify(f[k])) out[k] = f[k] ?? '';
+    return out;
+  };
+  const migration = t('admin.model.ro.migration');
+  return (
+    <Dialog open size="wide" className="adm-model-fe" onClose={onCancel} title={t('admin.model.fe.title', { key, type })}
+      actions={(
+        <>
+          <button type="button" className="adm-btn" data-testid="adm-model-fe-cancel" onClick={onCancel}>{t('admin.model.fe.cancel')}</button>
+          <button type="button" className="adm-btn" data-tone="acc" data-testid="adm-model-fe-apply" onClick={() => onApply(patch())}>{t('admin.model.fe.toDiff')}</button>
+        </>
+      )}>
+      <div className="adm-model-grid">
+        <label className="adm-field">
+          <span className="adm-field__l">{t('admin.model.col.group')}</span>
+          <select className="adm-select" value={s(f.group)} onChange={e => set('group', e.target.value)}>
+            {[...new Set([...FIELD_GROUPS, s(f.group)])].filter(Boolean).map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </label>
+        <label className="adm-field">
+          <span className="adm-field__l">{t('admin.model.fe.layer')}</span>
+          <select className="adm-select" value={s(f.layer)} onChange={e => set('layer', e.target.value)}>
+            <option value="">{t('admin.model.fe.layerNone')}</option>
+            <option value="stable">{t('admin.model.fe.layerStable')}</option>
+            <option value="optional">{t('admin.model.fe.layerOptional')}</option>
+          </select>
+        </label>
+        {BOOL_EDITABLE.map(k => (
+          <label key={k} className="adm-check">
+            <input type="checkbox" checked={f[k] === true} onChange={e => set(k, e.target.checked)} />
+            {t(`admin.model.fe.${k}` as AppKey)}
+          </label>
+        ))}
+        <label className="adm-check">
+          <input type="checkbox" checked={f.editable === true} disabled={!hasWrite} onChange={e => set('editable', e.target.checked)} />
+          {t('admin.model.fe.editable')}
+          {!hasWrite && <span className="adm-missing"> · {t('admin.model.fe.noWrite')}</span>}
+        </label>
+        {options && (
+          <label className="adm-field">
+            <span className="adm-field__l">{t('admin.model.fe.optionsSlice')}</span>
+            <input className="adm-input" value={s(options.slice)} onChange={e => set('options', { ...options, slice: e.target.value })} />
+          </label>
+        )}
+      </div>
+
+      <h4 className="adm-model-h2">{t('admin.model.fe.texts')}</h4>
+      <LangTabs label={t('admin.model.textLang')} value={lang} onChange={l => setLang(l as ModelLang)}
+        langs={MODEL_LANGS.map(l => ({ id: l, label: LANG_LABEL[l], missing: missing[l] }))} i18nKey={s(f.labelKey) || undefined}>
+        {(['label', 'shortLabel', 'definition'] as const).map(b => (
+          <label key={`${lang}.${b}`} className="adm-field">
+            <span className="adm-field__l">{t(`admin.model.fe.${b}` as AppKey)}</span>
+            <input className="adm-input" value={s(f[textKey(b, lang)])} aria-label={t(`admin.model.fe.${b}` as AppKey)}
+              placeholder={lang !== 'ru' ? t('admin.model.noTranslation') : undefined}
+              onChange={e => set(textKey(b, lang), e.target.value)} />
+          </label>
+        ))}
+        <div className="adm-field">
+          <span className="adm-field__l">{t('admin.model.fe.description')}</span>
+          <TipTapField key={lang} value={s(f[textKey('description', lang)])} ariaLabel={t('admin.model.fe.description')}
+            placeholder={lang !== 'ru' ? t('admin.model.noTranslation') : undefined}
+            onChange={md => set(textKey('description', lang), md)} />
+        </div>
+      </LangTabs>
+
+      <h4 className="adm-model-h2">{t('admin.model.fe.readOnly')}</h4>
+      <div className="adm-model-rolist" data-testid="adm-model-fe-readonly">
+        <RoRow label={t('admin.model.col.kind')} value={s(f.kind)} why={t('admin.model.ro.kind')} />
+        <RoRow label={t('admin.model.col.property')} value={schemaProp?.property ? `${schemaProp.property} · ${schemaProp.propertyType ?? '?'}` : ''} why={t('admin.model.ro.schema')} />
+        <RoRow label="dict" value={s(f.dict)} why={migration} />
+        <RoRow label="write" value={hasWrite ? `${s(write.endpoint)} · ${s(write.field)}` : ''} why={t('admin.model.ro.code')} />
+        <RoRow label="refType" value={s(f.refType)} why={migration} />
+        <RoRow label="rel · dir" value={[s(f.rel), s(f.dir), s(f.relation)].filter(Boolean).join(' · ')} why={migration} />
+        {options && <RoRow label="options" value={[s(options.param), s(options.value), s(options.label), s(options.group)].filter(Boolean).join(' · ')} why={t('admin.model.ro.code')} />}
+      </div>
+      <p className="adm-dim">{t('admin.model.fe.note')}</p>
+    </Dialog>
   );
 }
 
@@ -335,7 +547,7 @@ function NavTab({ doc, base, onEdit }: { doc: ModelDoc; base: ModelDoc; onEdit: 
     <>
       <p className="adm-dim">{t('admin.model.navLead')}</p>
       <div className="adm-tablewrap">
-        <table className="adm-table" data-testid="adm-model-nav">
+        <table className="adm-table adm-model-cards" data-testid="adm-model-nav">
           <thead>
             <tr>
               <th scope="col">{t('admin.model.col.navGroup')}</th>
@@ -382,7 +594,7 @@ function HygieneTab({ rows }: { rows: ReturnType<typeof modelHygiene> }) {
   if (rows.length === 0) return <div data-testid="adm-model-hyg-empty"><EmptyState title={t('admin.model.hyg.clean')} /></div>;
   return (
     <div className="adm-tablewrap">
-      <table className="adm-table" data-testid="adm-model-hyg">
+      <table className="adm-table adm-model-cards" data-testid="adm-model-hyg">
         <thead>
           <tr>
             <th scope="col">{t('admin.model.col.class')}</th>
@@ -447,7 +659,7 @@ function HistoryTab({ cfg, fetchImpl, onRollback }: { cfg: ModelConfig; fetchImp
   return (
     <div data-testid="adm-model-hist">
       <div className="adm-tablewrap">
-        <table className="adm-table">
+        <table className="adm-table adm-model-cards">
           <thead>
             <tr>
               <th scope="col">{t('admin.col.since')}</th>

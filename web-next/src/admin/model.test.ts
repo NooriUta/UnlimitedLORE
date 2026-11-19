@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   modelDiff, moveField, rollbackRequest, saveModel, setAudience, setFieldProp, modelHygiene,
   parseSchema, typeList, type ModelDoc,
+  fieldLangMissing, moveFieldTo, movePassport, passportSlots, setFieldProps, setReadOnly, setTypeColor, setTypeProp,
 } from './model';
 
 const DOC: ModelDoc = {
@@ -156,6 +157,77 @@ describe('модель: гигиена и список типов', () => {
     const rows = modelHygiene(DOC, schema, { seedDrift: true, warning: null });
     expect(rows.map(r => `${r.kind}:${r.where}`).sort()).toEqual([
       'drifted:config', 'emptyNav:nav.personal', 'unclassified:product.legacy_note', 'undeclared:product.kind',
+    ]);
+  });
+});
+
+// ── v4 прототипа (9ed3c814): экран правки поля, тексты RU/EN/PL, настройки типа, раскладка паспорта ──
+
+describe('модель v4: правка поля целиком', () => {
+  it('патч поля — строки диффа по каждому ключу; пустое снимает ключ (кодек модели пустое не хранит)', () => {
+    const next = setFieldProps(DOC, 'product', 'code', { labelEn: 'Code', definition: 'Короткий шифр', group: 'props' });
+    expect(modelDiff(DOC, next)).toEqual([
+      { path: 'types[product].fields[code].group', from: 'head', to: 'props' },
+      { path: 'types[product].fields[code].labelEn', from: '', to: 'Code' },
+      { path: 'types[product].fields[code].definition', from: '', to: 'Короткий шифр' },
+    ]);
+    const back = setFieldProps(next, 'product', 'code', { labelEn: '', definition: '  ', group: 'head' });
+    expect(modelDiff(DOC, back)).toEqual([]);
+  });
+
+  it('флаг false снимается, true ставится', () => {
+    const on = setFieldProps(DOC, 'product', 'code', { multi: true });
+    expect(modelDiff(DOC, on)).toEqual([{ path: 'types[product].fields[code].multi', from: '', to: 'true' }]);
+    expect(modelDiff(DOC, setFieldProps(on, 'product', 'code', { multi: false }))).toEqual([]);
+  });
+
+  it('перестановка перетаскиванием (из i в j)', () => {
+    expect(modelDiff(DOC, moveFieldTo(DOC, 'product', 0, 2))).toEqual([
+      { path: 'types[product].fields[order]', from: 'title, code, kind', to: 'code, kind, title' },
+    ]);
+  });
+
+  it('нет перевода — по языку: русский текст есть, а перевода нет', () => {
+    const f = { key: 'x', label: 'Икс', labelEn: 'X', definition: 'Опр', labelPl: 'X', definitionPl: 'Def' };
+    expect(fieldLangMissing(f)).toEqual({ ru: false, en: true, pl: false });
+  });
+});
+
+describe('модель v4: настройки типа и раскладка паспорта', () => {
+  const D2: ModelDoc = {
+    ...structuredClone(DOC),
+    read_only: ['product'],
+    type_color: { sprint: 'section-sprints' },
+    no_type_color: ['product'],
+    passport: { product: [{ key: 'components', slot: 'own' }, { key: 'features', slot: 'own' }, { key: 'pains', slot: 'own' }] },
+  };
+
+  it('подпись типа на трёх языках и иконка', () => {
+    const next = setTypeProp(setTypeProp(D2, 'product', 'labelPl', 'Produkt'), 'product', 'icon', 'cubes');
+    expect(modelDiff(D2, next)).toEqual([
+      { path: 'types[product].icon', from: 'bullseye', to: 'cubes' },
+      { path: 'types[product].labelPl', from: '', to: 'Produkt' },
+    ]);
+  });
+
+  it('read_only — список типов, отсортирован', () => {
+    expect(setReadOnly(D2, 'sprint', true).read_only).toEqual(['product', 'sprint']);
+    expect(setReadOnly(D2, 'product', false).read_only).toEqual([]);
+  });
+
+  it('цвет типа: задан — из no_type_color уходит; снят — туда возвращается', () => {
+    const on = setTypeColor(D2, 'product', 'section-rbjg');
+    expect(on.type_color).toEqual({ sprint: 'section-sprints', product: 'section-rbjg' });
+    expect(on.no_type_color).toEqual([]);
+    const off = setTypeColor(D2, 'sprint', null);
+    expect(off.type_color).toEqual({});
+    expect(off.no_type_color).toEqual(['product', 'sprint']);
+  });
+
+  it('раскладка паспорта: перестановка — строка порядка', () => {
+    expect(passportSlots(D2, 'product').map(s => s.key)).toEqual(['components', 'features', 'pains']);
+    expect(modelDiff(D2, movePassport(D2, 'product', 2, 0))).toEqual([
+      { path: 'passport.product[order]', from: 'components, features, pains', to: 'pains, components, features' },
     ]);
   });
 });

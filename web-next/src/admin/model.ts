@@ -230,6 +230,95 @@ export function moveField(doc: ModelDoc, type: string, key: string, delta: numbe
   });
 }
 
+export function moveFieldTo(doc: ModelDoc, type: string, from: number, to: number): ModelDoc {
+  return withType(doc, type, t => {
+    const fields = arr(t.fields);
+    if (from < 0 || from >= fields.length || to < 0 || to >= fields.length || from === to) return;
+    const [f] = fields.splice(from, 1);
+    fields.splice(to, 0, f);
+  });
+}
+
+/**
+ * Патч поля целиком (экран правки поля, v4). Пустая строка, пробелы и false снимают ключ: кодек модели
+ * пустое не хранит (LoreModelCodec опускает null/false/[]), и «было пусто → стало ''» дало бы лишнюю строку
+ * диффа и лишнюю версию.
+ */
+export function setFieldProps(doc: ModelDoc, type: string, key: string, patch: Record<string, unknown>): ModelDoc {
+  return withType(doc, type, t => {
+    const f = arr(t.fields).map(obj).find(x => x.key === key);
+    if (!f) return;
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === false || v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) delete f[k];
+      else f[k] = v;
+    }
+  });
+}
+
+export const MODEL_LANGS = ['ru', 'en', 'pl'] as const;
+export type ModelLang = (typeof MODEL_LANGS)[number];
+export const TEXT_KEYS = ['label', 'shortLabel', 'definition', 'description'] as const;
+
+/** Имя ключа текста на языке: label → labelEn / labelPl; русский — без суффикса. */
+export function textKey(base: (typeof TEXT_KEYS)[number], lang: ModelLang): string {
+  return lang === 'ru' ? base : `${base}${lang === 'en' ? 'En' : 'Pl'}`;
+}
+
+/** Нет перевода: русский текст есть, а на языке — нет (хотя бы у одного из текстов). */
+export function fieldLangMissing(f: Obj): Record<ModelLang, boolean> {
+  const has = (k: string) => typeof f[k] === 'string' && (f[k] as string).trim() !== '';
+  const out = { ru: false, en: false, pl: false } as Record<ModelLang, boolean>;
+  for (const lang of ['en', 'pl'] as const)
+    out[lang] = TEXT_KEYS.some(b => has(b) && !has(textKey(b, lang)));
+  return out;
+}
+
+export type TypeProp = 'label' | 'labelEn' | 'labelPl' | 'icon';
+
+export function setTypeProp(doc: ModelDoc, type: string, prop: TypeProp, value: string): ModelDoc {
+  return withType(doc, type, t => {
+    if (value.trim() === '') delete t[prop]; else t[prop] = value;
+  });
+}
+
+const sortedSet = (xs: unknown, add: string | null, remove: string | null) => {
+  const s = new Set(arr(xs).map(String));
+  if (remove) s.delete(remove);
+  if (add) s.add(add);
+  return [...s].sort();
+};
+
+export function setReadOnly(doc: ModelDoc, type: string, on: boolean): ModelDoc {
+  const next = structuredClone(doc);
+  next.read_only = sortedSet(next.read_only, on ? type : null, on ? null : type);
+  return next;
+}
+
+/** Цвет типа: задан — запись в type_color, из no_type_color уходит; null — наоборот. */
+export function setTypeColor(doc: ModelDoc, type: string, color: string | null): ModelDoc {
+  const next = structuredClone(doc);
+  const tc = { ...obj(next.type_color) };
+  if (color) tc[type] = color; else delete tc[type];
+  next.type_color = tc;
+  next.no_type_color = sortedSet(next.no_type_color, color ? null : type, color ? type : null);
+  return next;
+}
+
+export interface PassportSlot { key: string; slot: string }
+
+export function passportSlots(doc: ModelDoc, type: string): PassportSlot[] {
+  return arr(obj(doc.passport)[type]).map(obj).map(s => ({ key: String(s.key ?? ''), slot: String(s.slot ?? '') }));
+}
+
+export function movePassport(doc: ModelDoc, type: string, from: number, to: number): ModelDoc {
+  const next = structuredClone(doc);
+  const slots = arr(obj(next.passport)[type]);
+  if (from < 0 || from >= slots.length || to < 0 || to >= slots.length || from === to) return next;
+  const [s] = slots.splice(from, 1);
+  slots.splice(to, 0, s);
+  return next;
+}
+
 export type Audience = 'everywhere' | 'admin';
 
 export function setAudience(doc: ModelDoc, section: string, level: Audience): ModelDoc {
