@@ -2254,7 +2254,7 @@ public final class LoreSlices {
             // DS-2: версия/аннотация/статус — с открытой ревизии, как в spec_by_id.
             // Без них сверка реестра шла N вызовами spec_by_id.
             "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
-            "out('HAS_STATE').summary[0] AS summary, " +
+            "out('HAS_STATE')[valid_to IS NULL].summary[0] AS summary, " +
             "out('HAS_STATE').status[0]  AS status, " + // DS-4
             // AL-96: ребро писалось (spec_link rel=project) с самого начала, но
             // ни один слайс его не читал — привязку можно было создать и нельзя
@@ -2274,7 +2274,7 @@ public final class LoreSlices {
         slice("spec_by_id",
             "SELECT spec_id, title, file_path, " +
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
-            "out('HAS_STATE').summary[0]                          AS summary, " +
+            "out('HAS_STATE')[valid_to IS NULL].summary[0]        AS summary, " +
             "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
             "out('HAS_STATE').status[0]                           AS status, " + // DS-4
             "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
