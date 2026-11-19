@@ -417,10 +417,32 @@ public class LoreIngestService {
         params.put("date_created", nullToEmpty(rb.dateCreated()));
         params.put("content_md",  nullToEmpty(rb.contentMd()));
 
-        exec("UPDATE KnowRunbook SET " +
-                "runbook_id=:runbook_id, name=:name, area=:area, " +
-                "date_created=:date_created, content_md=:content_md " +
-                "UPSERT WHERE runbook_id=:runbook_id", params);
+        exec(runbookVertexSql(), params);
+        if (ModelSchemaAdapter.enabled() && rb.contentMd() != null) {
+            // MIG-03: в новой схеме тело ранбука живёт только в версии — открытую правим, нет её — заводим
+            List<Map<String, Object>> open = queryRows(
+                "SELECT @rid AS rid FROM KnowRunbookHist WHERE in('HAS_STATE').runbook_id[0] = :id AND valid_to IS NULL LIMIT 1",
+                Map.of("id", rb.runbookId()));
+            if (!open.isEmpty()) {
+                exec("UPDATE KnowRunbookHist SET content_md=:cnt WHERE @rid=:rid",
+                    Map.of("cnt", rb.contentMd(), "rid", open.get(0).get("rid")));
+            } else {
+                String nsid = java.util.UUID.randomUUID().toString();
+                Map<String, Object> hp = new HashMap<>();
+                hp.put("nsid", nsid); hp.put("now", java.time.Instant.now().toString());
+                hp.put("cnt", rb.contentMd()); hp.put("id", rb.runbookId());
+                execScript("INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt;" +
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
+                    "TO (SELECT FROM KnowRunbookHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);", hp);
+            }
+        }
+    }
+
+    /** Запись ранбука при инжесте md: на базе из модели — без тела (оно в версии), в старой схеме — как раньше. */
+    static String runbookVertexSql() {
+        return "UPDATE KnowRunbook SET runbook_id=:runbook_id, name=:name, area=:area, date_created=:date_created"
+            + (ModelSchemaAdapter.enabled() ? "" : ", content_md=:content_md")
+            + " UPSERT WHERE runbook_id=:runbook_id";
     }
 
     // ── QualityGate + QGMetric ingest (LAL-28) ────────────────────────────────
