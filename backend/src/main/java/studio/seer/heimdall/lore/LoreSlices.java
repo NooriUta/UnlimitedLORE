@@ -953,7 +953,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
             "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
             "out('HAS_STATE')[track_id IS NOT NULL].track_id[0]                         AS track_id, " +
-            "context_md " +
+            // MIG-03: в новой схеме тексты спринта живут в версии; открытая версия, иначе запись (старая схема)
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md " +
             "FROM KnowSprint",
             List.of(),
             // ADR-LORE-017 (T16): optional `project` filter — Tier 1 (Sprint has a direct
@@ -969,7 +970,7 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, coalesce(title, name) AS name, context_md, outcome_md, created_date, no_release_required, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md, created_date, no_release_required, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +

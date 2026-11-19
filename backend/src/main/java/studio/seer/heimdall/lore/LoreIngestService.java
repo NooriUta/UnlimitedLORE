@@ -109,6 +109,10 @@ public class LoreIngestService {
                 Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
             String priSet = "";
             if (priority != null && !priority.isBlank()) { priSet = ", priority=:pri"; hp.put("pri", priority); }
+            // MIG-03: в новой схеме тексты спринта живут только в версии — начальная версия несёт их сразу,
+            // иначе context/outcome из sprint_new на новой базе терялись (ревизия 19.11.2026)
+            if (contextMd != null) { priSet += ", context_md=:ctx"; hp.put("ctx", contextMd); }
+            if (outcomeMd != null) { priSet += ", outcome_md=:omd"; hp.put("omd", outcomeMd); }
             by.bind(hp);
             execScript(
                 "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet

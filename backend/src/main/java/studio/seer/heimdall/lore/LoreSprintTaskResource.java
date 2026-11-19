@@ -1396,7 +1396,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         String[] finalTexts = null;
         if (req.context_md() != null || req.outcome_md() != null || req.context_append() != null || req.outcome_append() != null) {
             List<Map<String, Object>> cur = ingestService.queryPublic(
-                "SELECT context_md, outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
+                "SELECT COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
             if (cur.isEmpty()) return badParams("sprint not found: " + req.sprint_id());
             String ctx0 = cur.get(0).get("context_md") == null ? null : String.valueOf(cur.get(0).get("context_md"));
             String out0 = cur.get(0).get("outcome_md") == null ? null : String.valueOf(cur.get(0).get("outcome_md"));
