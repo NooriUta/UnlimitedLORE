@@ -12,6 +12,7 @@ import { edgePlan, edgeWrites } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup } from './regroup.mjs';
+import { applyRepos } from './repos.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -93,6 +94,12 @@ export async function transferEdges(db, { log = console.log } = {}) {
     report.regroup = await applyRegroup(db, regroupPlan(proposal.rows), { log });
     if (!report.regroup.ok) ok = false;
   } else log('перегруппировка проектов: таблица не принята (нет раздела projects в файле решений) — проекты как есть');
+  // репозитории — отдельный объект (D-2026-MIG-REPOSITORY-ORGANIZATION): из адресов проектов приёмника (после
+  // перегруппировки), один основной и зеркала; тип организации заводится пустым
+  const parseHosts = h => { if (Array.isArray(h)) return h; try { return JSON.parse(h); } catch { return null; } };
+  const dstProjects = (await db.dstQuery('SELECT slug, hosts FROM KnowGitProject')).map(p => ({ slug: p.slug, hosts: parseHosts(p.hosts) }));
+  report.repositories = await applyRepos(db, dstProjects, { log });
+  if (!report.repositories.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
