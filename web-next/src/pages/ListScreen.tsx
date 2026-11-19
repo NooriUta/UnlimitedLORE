@@ -218,6 +218,13 @@ export interface ListScreenProps {
    * Заголовок — шапка экрана kit (ScreenHead): виды встают в его строку.
    */
   titleId?: string;
+  /** Экран открыт в админке: разделы «управление — только в админке» правятся здесь (ListScreenDef.manageOnlyInAdmin). */
+  manage?: boolean;
+}
+
+/** Можно ли на этом экране создавать и править: раздел «управление — в админке» правится только в ней. */
+export function screenManaged(def: ListScreenDef, manage = false): boolean {
+  return !def.manageOnlyInAdmin || manage;
 }
 
 /** Статусы и показ колонок типа из модели (K-14 п. 4); нет типа — null. */
@@ -251,8 +258,9 @@ function withModelStatuses(baseConfig: KitConfig, modelStatuses: TypeStatuses | 
   return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
 }
 
-export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId }: ListScreenProps) {
+export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId, manage = false }: ListScreenProps) {
   const def: ListScreenDef = LIST_SCREENS[screen];
+  const managed = screenManaged(def, manage);
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
@@ -551,7 +559,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // (perms.can_create паспорта `_new`). Не смогли спросить — кнопки нет:
   // кнопка, которая откажет после заполнения формы, хуже её отсутствия.
   const passportOf = PASSPORT_OF[screen];
-  const createType = isCreateType(passportOf) ? passportOf : null;
+  const createType = managed && isCreateType(passportOf) ? passportOf : null;
   const [canCreate, setCanCreate] = useState(false);
   useEffect(() => {
     if (!createType) { setCanCreate(false); return; }
@@ -720,6 +728,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             onFull={slot.full} win={urlWin} backPlace={slot.backPlace}
             // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
             onPlace={slot.setPlace}
+            readOnly={!managed}
             onClose={slot.close} />
         </Suspense>
       ) : (

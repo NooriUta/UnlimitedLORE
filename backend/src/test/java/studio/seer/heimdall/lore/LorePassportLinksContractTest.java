@@ -109,6 +109,10 @@ class LorePassportLinksContractTest {
         new Fact("component", "COMPONENT_REPOSITORY", "repository", "перенос 1.18 (MIG-03): свой репозиторий компонента"),
         new Fact("repository", "MIRRORED_TO", "repository", "перенос 1.18 (MIG-03): зеркало"),
         new Fact("repository", "USES_REPOSITORY", "repository", "перенос 1.18 (MIG-03): «использует»"),
+        // организация (решение владелицы 19.11.2026) — связи правятся в админке
+        new Fact("organization", "ORG_HAS_PROJECT", "project", "LoreOrganizationResource organization/link"),
+        new Fact("organization", "ORG_HAS_PRODUCT", "product", "LoreOrganizationResource organization/link"),
+        new Fact("organization", "ORG_MEMBER", "user", "LoreOrganizationResource organization/link"),
         // проект
         new Fact("sprint", "BELONGS_TO_PROJECT", "project", "LoreSprintTaskResource sprint_new / sprint_link"),
         new Fact("adr", "BELONGS_TO_PROJECT", "project", "LoreAdrResource adr_link(project)"),
@@ -279,7 +283,11 @@ class LorePassportLinksContractTest {
         "HAS_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
         "COMPONENT_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
         "MIRRORED_TO", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
-        "USES_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод");
+        "USES_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        // Решение владелицы 19.11.2026: связи организации; тип ребра заводит создание организации (LoreOrganizationResource).
+        "ORG_HAS_PROJECT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_HAS_PRODUCT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_MEMBER", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод");
 
     /**
      * Снятые из схемы рёбра, которые обходят только шаги миграций, убирающие их легаси-экземпляры
@@ -642,8 +650,8 @@ class LorePassportLinksContractTest {
         // (основной у проекта HAS_REPOSITORY, репозиторий компонента COMPONENT_REPOSITORY), как в прототипе; у организации связей пока нет.
         Map.entry("repository|projects", "проект репозитория — связь «основной у проекта» (HAS_REPOSITORY) во вкладке «Связи»"),
         Map.entry("repository|components", "компонент репозитория — связь COMPONENT_REPOSITORY во вкладке «Связи»"),
-        Map.entry("organization|projects", "организация пока без связей — с чем связать, решает владелица"),
-        Map.entry("organization|components", "организация пока без связей — с чем связать, решает владелица"));
+        Map.entry("organization|projects", "проекты организации — вкладка «Связи» (ORG_HAS_PROJECT), правится в админке"),
+        Map.entry("organization|components", "у организации компонентов нет: связи — проекты, продукты, люди (решение владелицы 19.11.2026)"));
 
     @Test
     void chipValuesHaveADeclaredField() {

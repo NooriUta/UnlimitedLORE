@@ -52,6 +52,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
+    @Inject LoreOrganizationResource organizationResource;
 
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
@@ -647,6 +648,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
             case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
                 new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
+            case ORG_LINK -> organizationResource.linkOrganization(
+                new LoreOrganizationResource.OrgLinkRequest(a, r.rel(), b, action), role);
         };
     }
 }

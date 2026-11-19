@@ -273,13 +273,13 @@ class LorePassportSurfaceTest {
         assertEquals(List.of("sprints", "components", "repositories", "adrs", "releases", "Люди и агенты[people+agents]",
                 // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — после 53а.
                 "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "boundAgents",
-                "files", "prs"), tabs("project"),
+                "files", "prs", "organizations"), tabs("project"),
             "проект (53а): Спринты · Компоненты · ADR · Релизы · Люди и агенты; затем прямые связи (11.11)");
     }
 
     @Test
     void product() {
-        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones"), tabs("product"),
+        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones", "organizations"), tabs("product"),
             "продукт (S4-PRODUCTS-NODE): Компоненты · Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты · Обслуживает · Обслуживается · Вехи");
     }
 

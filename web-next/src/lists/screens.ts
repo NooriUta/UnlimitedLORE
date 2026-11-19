@@ -116,6 +116,11 @@ export interface ListScreenDef {
    */
   defaultGroup?: string;
   /**
+   * Управление разделом — только в админке (организации, решение владелицы 19.11.2026): в пользовательском меню
+   * раздел только для чтения — без «+ Новая» и без правки связей в паспорте, даже у super-admin.
+   */
+  manageOnlyInAdmin?: boolean;
+  /**
    * Лента раздела (K2-FEED-VIEW): то же описание, из которого собран
    * `list.feed` конфига, — экрану оно нужно, чтобы отдать kit тело записи и
    * нижний уровень. Нет — у записи раздела нет времени, ленты нет.
@@ -934,6 +939,7 @@ export const LIST_SCREENS = {
   organizations: {
     slice: 'organizations', titleKey: 'lists.organizations.title', icon: 'castle',
     map: organizationRecord, config: lang => sectionConfig(lang, organizationsSpec), quickIcons: {},
+    manageOnlyInAdmin: true,
   },
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',

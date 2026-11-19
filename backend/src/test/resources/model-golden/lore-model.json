@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "e406cab0c9ba29ec",
+  "version" : "df3858276f7de3dd",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -8665,6 +8665,15 @@
         "target_type" : "milestone",
         "place" : "link_tab",
         "manageable" : false
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PRODUCT",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -8853,6 +8862,15 @@
         "rel" : "OWNED_BY",
         "dir" : "in",
         "target_type" : "agent",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_MEMBER",
+        "dir" : "in",
+        "target_type" : "organization",
         "place" : "link_tab",
         "manageable" : false
       } ],
@@ -11197,7 +11215,34 @@
         "property_type" : null,
         "source" : "SUPPLIES"
       } ],
-      "relations" : [ ],
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "link_tab",
+        "manageable" : true
+      }, {
+        "key" : "products",
+        "label" : "Продукты",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PRODUCT",
+        "dir" : "out",
+        "target_type" : "product",
+        "place" : "link_tab",
+        "manageable" : true
+      }, {
+        "key" : "members",
+        "label" : "Люди",
+        "relation" : "association",
+        "rel" : "ORG_MEMBER",
+        "dir" : "out",
+        "target_type" : "user",
+        "place" : "link_tab",
+        "manageable" : true
+      } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
       "computed" : [ ],
@@ -11504,6 +11549,15 @@
         "rel" : "BELONGS_TO_PROJECT",
         "dir" : "in",
         "target_type" : "pr",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PROJECT",
+        "dir" : "in",
+        "target_type" : "organization",
         "place" : "link_tab",
         "manageable" : false
       } ],
@@ -12515,6 +12569,13 @@
           "order" : 10,
           "slot" : "own",
           "group" : null
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 11,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "user" : {
@@ -12539,6 +12600,13 @@
             "key" : "agents",
             "label" : "Агенты"
           }
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 3,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "agent" : {
@@ -13008,7 +13076,37 @@
       },
       "organization" : {
         "decided" : true,
-        "sections" : [ ]
+        "sections" : [ {
+          "key" : "projects",
+          "source" : "relation",
+          "ref" : "projects",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "products",
+          "source" : "relation",
+          "ref" : "products",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "members",
+          "source" : "relation",
+          "ref" : "members",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        } ]
       },
       "project" : {
         "decided" : true,
@@ -13135,6 +13233,13 @@
           "source" : "relation",
           "ref" : "prs",
           "order" : 17,
+          "slot" : "own",
+          "group" : null
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 18,
           "slot" : "own",
           "group" : null
         } ]
@@ -13314,6 +13419,22 @@
       } ],
       "require_one_of" : [ "projects", "adr" ],
       "absent_check" : "/lore/record/decision/{id}",
+      "audience" : "everywhere"
+    },
+    "organization" : {
+      "endpoint" : "/lore/organization",
+      "id_field" : "org_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "name",
+        "after_write" : null,
+        "required" : true
+      } ],
+      "require_one_of" : [ ],
+      "absent_check" : "/lore/record/organization/{id}",
       "audience" : "everywhere"
     },
     "spec" : {

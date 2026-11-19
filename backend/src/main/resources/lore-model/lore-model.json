@@ -3707,6 +3707,14 @@
       "targetType" : "milestone",
       "relation" : "attribute",
       "place" : "link_tab"
+    }, {
+      "key" : "organizations",
+      "label" : "Организации",
+      "rel" : "ORG_HAS_PRODUCT",
+      "dir" : "in",
+      "targetType" : "organization",
+      "relation" : "association",
+      "place" : "link_tab"
     } ],
     "labelEn" : "Product",
     "labelPl" : "Produkt"
@@ -3802,6 +3810,14 @@
       "dir" : "in",
       "targetType" : "agent",
       "relation" : "aggregation",
+      "place" : "link_tab"
+    }, {
+      "key" : "organizations",
+      "label" : "Организации",
+      "rel" : "ORG_MEMBER",
+      "dir" : "in",
+      "targetType" : "organization",
+      "relation" : "association",
       "place" : "link_tab"
     } ],
     "labelEn" : "Person",
@@ -5012,6 +5028,54 @@
       "labelEn" : "Code",
       "labelPl" : "Kod"
     } ],
+    "linkTabs" : [ {
+      "key" : "links",
+      "label" : "Связи",
+      "rels" : [ {
+        "rel" : "ORG_HAS_PROJECT",
+        "dir" : "out",
+        "label" : "проекты",
+        "relation" : "association"
+      }, {
+        "rel" : "ORG_HAS_PRODUCT",
+        "dir" : "out",
+        "label" : "продукты",
+        "relation" : "association"
+      }, {
+        "rel" : "ORG_MEMBER",
+        "dir" : "out",
+        "label" : "люди",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "ORG_HAS_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "products",
+      "label" : "Продукты",
+      "rel" : "ORG_HAS_PRODUCT",
+      "dir" : "out",
+      "targetType" : "product",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "members",
+      "label" : "Люди",
+      "rel" : "ORG_MEMBER",
+      "dir" : "out",
+      "targetType" : "user",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    } ],
     "labelEn" : "Organization",
     "labelPl" : "Organizacja"
   }, {
@@ -5206,6 +5270,14 @@
       "dir" : "in",
       "targetType" : "pr",
       "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "organizations",
+      "label" : "Организации",
+      "rel" : "ORG_HAS_PROJECT",
+      "dir" : "in",
+      "targetType" : "organization",
+      "relation" : "association",
       "place" : "link_tab"
     } ],
     "labelEn" : "Project",
@@ -6288,7 +6360,16 @@
       "key" : "content",
       "slot" : "own"
     } ],
-    "organization" : [ ],
+    "organization" : [ {
+      "key" : "projects",
+      "slot" : "own"
+    }, {
+      "key" : "products",
+      "slot" : "own"
+    }, {
+      "key" : "members",
+      "slot" : "own"
+    } ],
     "pain" : [ {
       "key" : "content",
       "slot" : "own"
@@ -6341,6 +6422,9 @@
     }, {
       "key" : "milestones",
       "slot" : "own"
+    }, {
+      "key" : "organizations",
+      "slot" : "own"
     } ],
     "project" : [ {
       "key" : "sprints",
@@ -6392,6 +6476,9 @@
       "slot" : "own"
     }, {
       "key" : "prs",
+      "slot" : "own"
+    }, {
+      "key" : "organizations",
       "slot" : "own"
     } ],
     "quality_gate" : [ {
@@ -6568,6 +6655,9 @@
     }, {
       "key" : "agents",
       "slot" : "own"
+    }, {
+      "key" : "organizations",
+      "slot" : "own"
     } ]
   },
   "nav" : [ {
@@ -6720,6 +6810,14 @@
         "body" : "adr_id"
       } ],
       "require_one_of" : [ "projects", "adr" ]
+    },
+    "organization" : {
+      "endpoint" : "/lore/organization",
+      "id_field" : "org_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "name"
+      } ]
     },
     "spec" : {
       "endpoint" : "/lore/spec",

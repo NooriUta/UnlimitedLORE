@@ -101,6 +101,11 @@ export interface ListPassportProps {
    */
   onClose?: () => void;
   /**
+   * Только чтение, что бы ни разрешал сервер: правки полей и связей нет (организации в пользовательском меню —
+   * управление в админке, решение владелицы 19.11.2026).
+   */
+  readOnly?: boolean;
+  /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
    * и читает список, — адрес остаётся одной правдой о месте записи.
@@ -116,7 +121,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose, readOnly = false }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -433,7 +438,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // причина уже названа в строке замечаний.
     // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
     statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
-    hooks: { ...baseConfig.hooks, onSave, onRelation, relationOptions },
+    hooks: readOnly ? { ...baseConfig.hooks } : { ...baseConfig.hooks, onSave, onRelation, relationOptions },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
     graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
   }, data: graphData, role: 'reader',

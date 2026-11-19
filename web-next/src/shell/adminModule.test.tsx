@@ -168,13 +168,13 @@ describe('S7B-01 · модуль в оболочке', () => {
 // («Проекты», точка роста). Старые адреса с осью ведут в нужный раздел.
 describe('S7B-28 · «Люди и их проекты» и «Проекты» — два раздела', () => {
   // S7B-ACL-3: «Доступ к машинам» — сосед «Агентов» в той же группе.
-  it('в группе «Люди и агенты» — агенты, «Доступ к машинам», «Люди и их проекты», «Проекты»', () => {
+  it('в группе «Люди и агенты» — агенты, «Доступ к машинам», «Люди и их проекты», «Проекты», «Организации»', () => {
     const grp = v2Config('ru', undefined, 'admin').menu.groups.find(g => g.id === 'adm-people')!;
-    expect(grp.items.map(i => i.id)).toEqual(['adm-agents', 'adm-machines', 'adm-who', 'adm-projects']);
-    expect(grp.items.map(i => i.title)).toEqual(['Агенты', 'Доступ к машинам', 'Люди и их проекты', 'Проекты']);
+    expect(grp.items.map(i => i.id)).toEqual(['adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs']);
+    expect(grp.items.map(i => i.title)).toEqual(['Агенты', 'Доступ к машинам', 'Люди и их проекты', 'Проекты', 'Организации']);
     const icons = (gameIcons as { icons: Record<string, unknown> }).icons;
     for (const i of grp.items) expect(icons[i.icon as string], `${i.id}:${i.icon}`).toBeTruthy();
-    expect(new Set(grp.items.map(i => i.icon)).size).toBe(4);
+    expect(new Set(grp.items.map(i => i.icon)).size).toBe(5);
   });
 
   it('старый /admin?adm=who с осью «проекты» — в раздел «Проекты»; без оси или «люди» — в «Люди и их проекты»', () => {
