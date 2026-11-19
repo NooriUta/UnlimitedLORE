@@ -63,19 +63,25 @@ export function planRepos(srcProjects, anchorOf = {}, componentIds = [], overrid
  * компонента — role unassigned, чтобы не потерять), COMPONENT_REPOSITORY компонент → репозиторий, MIRRORED_TO
  * репозиторий → зеркало, пустые USES_REPOSITORY и KnowOrganization. Сверка: всё = план; у проекта ≤ 1 основного.
  */
+/** Связи организации (владелица 19.11.2026: «с проектами, продуктами и людьми»): организация → проект/продукт/человек. */
+export const ORG_EDGES = ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER'];
+
 export async function applyRepos(db, srcProjects, anchorOf, { log = console.log, overrides = {} } = {}) {
   const c = (sql, p) => db.dstCommand(sql, p);
   const q = (sql, p) => db.dstQuery(sql, p);
   const comps = (await q('SELECT component_id FROM LoreComponent')).map(x => x.component_id).filter(Boolean);
   const plan = planRepos(srcProjects, anchorOf, comps, overrides);
   const types = new Set((await q('SELECT name FROM schema:types')).map(x => x.name));
-  for (const t of ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', 'KnowRepository', 'KnowOrganization']) if (types.has(t)) await c(`DROP TYPE ${t} UNSAFE`);
+  for (const t of ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', ...ORG_EDGES, 'KnowRepository', 'KnowOrganization']) if (types.has(t)) await c(`DROP TYPE ${t} UNSAFE`);
   await c('CREATE VERTEX TYPE KnowRepository');
   for (const f of ['url', 'host', 'owner', 'name', 'full_path', 'default_branch']) await c(`CREATE PROPERTY KnowRepository.${f} STRING`);
   await c('CREATE INDEX ON KnowRepository (url) UNIQUE');
   await c('CREATE VERTEX TYPE KnowOrganization');
   await c('CREATE PROPERTY KnowOrganization.org_id STRING');
   await c('CREATE PROPERTY KnowOrganization.name STRING');
+  // Владелица 19.11.2026 («1б»): схему организации заводит перенос, а не первое создание на работающей базе.
+  await c('CREATE INDEX ON KnowOrganization (org_id) UNIQUE');
+  for (const t of ORG_EDGES) await c(`CREATE EDGE TYPE ${t}`);
   for (const t of ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY']) await c(`CREATE EDGE TYPE ${t}`);
   await c('CREATE PROPERTY HAS_REPOSITORY.role STRING');
   for (const r of plan.repos) await c('INSERT INTO KnowRepository CONTENT :r', { r });

@@ -67,3 +67,18 @@ test('правка человека: компонент (в т.ч. новый) �
   assert.deepEqual(p.componentRepos, [{ component: 'ML_QWEN_CODE_FORK', url: 'https://f/AIDA/qwen-code-fork', project: 'AIDA/miniLORE', create: true }]);
   assert.ok(p.mirrors.some(m => m.from === 'https://f/AIDA/udwe-mig-gen' && m.to === 'https://github.com/i/UDWE'), 'UDWE — зеркало основного udwe-mig-gen');
 });
+
+// Владелица 19.11.2026, ответ «1б»: типы связей организации и уникальный org_id заводит установщик переноса 1.18,
+// а не первое создание организации на работающей базе.
+test('перенос заводит организацию целиком: уникальный org_id и рёбра к проектам, продуктам и людям', async () => {
+  const { applyRepos } = await import('./repos.mjs');
+  const cmds = [];
+  const db = {
+    dstCommand: async (sql) => { cmds.push(sql); return []; },
+    dstQuery: async (sql) => (/schema:types/.test(sql) ? [{ name: 'ORG_MEMBER' }] : /count\(\*\)/.test(sql) ? [{ n: 0 }] : []),
+  };
+  await applyRepos(db, [], {}, { log: () => {} });
+  assert.ok(cmds.includes('CREATE INDEX ON KnowOrganization (org_id) UNIQUE'), 'уникальный org_id');
+  for (const e of ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER']) assert.ok(cmds.includes(`CREATE EDGE TYPE ${e}`), e);
+  assert.ok(cmds.includes('DROP TYPE ORG_MEMBER UNSAFE'), 'повторный прогон переносa не падает на уже заведённом типе');
+});
