@@ -261,7 +261,12 @@ public class LoreSchemaMigrationRunner {
     /** Есть ли в базе из модели старая доска плана (настройка установщика MIG_PLAN_BOARD). Не узнали — считаем, что есть. */
     private void markPlanBoard() {
         try {
-            boolean present = !ingest.queryPublic("SELECT name FROM schema:types WHERE name = 'PlanConfig'", Map.of()).isEmpty();
+            // Все типы схемы — для общего механизма «тип вне модели 1.18» (срез такого типа отвечает 410 с причиной).
+            java.util.Set<String> types = new java.util.HashSet<>();
+            for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:types", Map.of()))
+                if (r.get("name") != null) types.add(String.valueOf(r.get("name")));
+            if (!types.isEmpty()) ModelSchemaAdapter.schemaTypes(types);
+            boolean present = types.contains("PlanConfig");
             ModelSchemaAdapter.planBoard(present);
             if (!present) LOG.info("[LORE MIGRATE] старой доски плана в базе нет — её срезы отвечают «раздел снят»");
         } catch (RuntimeException e) {

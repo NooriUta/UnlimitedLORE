@@ -1753,6 +1753,7 @@
   "admin.tidy.recheckAll": "Перепроверить всё",
   "admin.tidy.rechecking": "Проверяем…",
   "admin.tidy.recheckFailed": "Не смогли перепроверить: {reason}. Ниже — прошлый результат, он мог устареть.",
+  "admin.tidy.notMigrated": "Не проверялось — типа нет в базе 1.18:",
   "admin.tidy.clean": "Всё чисто",
   "admin.tidy.cleanHint": "Ссылок, которые нужно чинить, нет. Внешние ссылки не считаются.",
   "admin.tidy.auto.title": "Автоматически — однозначное",

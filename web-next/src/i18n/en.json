@@ -1753,6 +1753,7 @@
   "admin.tidy.recheckAll": "Recheck all",
   "admin.tidy.rechecking": "Checking…",
   "admin.tidy.recheckFailed": "Could not recheck: {reason}. Below is the previous result; it may be stale.",
+  "admin.tidy.notMigrated": "Not checked — the type is absent in the 1.18 database:",
   "admin.tidy.clean": "All clean",
   "admin.tidy.cleanHint": "No links need fixing. External links are not counted.",
   "admin.tidy.auto.title": "Automatic — unambiguous",

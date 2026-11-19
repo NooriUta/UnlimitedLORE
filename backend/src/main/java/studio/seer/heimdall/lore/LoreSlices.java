@@ -3275,6 +3275,20 @@ public final class LoreSlices {
     private static final java.util.regex.Pattern PLAN_BOARD_TYPE =
         java.util.regex.Pattern.compile("\\bFROM\\s+Plan(Config|Track|Section|Checkpoint|Version)\\b");
 
+    /** Имя типа после FROM (не schema:…, не INDEX:…, не подзапрос). */
+    private static final java.util.regex.Pattern FROM_TYPE =
+        java.util.regex.Pattern.compile("\\bFROM\\s+([A-Z][A-Za-z0-9_]*)\\b(?!\\s*:)");
+
+    /** Типы (вершины, связи, ряды), которые читает срез; пусто — среза нет. Для сторожа «тип вне модели». */
+    static Set<String> typesOf(String id) {
+        SliceDef d = SLICES.get(id);
+        if (d == null) return Set.of();
+        Set<String> out = new java.util.LinkedHashSet<>();
+        java.util.regex.Matcher m = FROM_TYPE.matcher(d.baseSql());
+        while (m.find()) out.add(m.group(1));
+        return out;
+    }
+
     /** Срез читает типы старой доски плана (D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION). */
     static boolean usesPlanBoard(String id) {
         SliceDef d = SLICES.get(id);

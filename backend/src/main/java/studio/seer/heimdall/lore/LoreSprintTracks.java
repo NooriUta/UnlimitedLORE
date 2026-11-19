@@ -34,6 +34,15 @@ final class LoreSprintTracks {
         return trackId != null && !trackId.isBlank();
     }
 
+    /**
+     * Доски плана в базе нет (база из модели 1.18, PlanTrack не перенесён): отказ с причиной вместо 502 от базы.
+     * {@code null} — тип есть или схема старая.
+     */
+    static LoreResourceBase.LoreError unavailable() {
+        if (!ModelSchemaAdapter.typeMissing("PlanTrack")) return null;
+        return new LoreResourceBase.LoreError("TYPE_NOT_MIGRATED", "трек спринта: " + ModelSchemaAdapter.missingReason("PlanTrack"));
+    }
+
     /** Отказ, если трека нет; {@code null} — трек найден. Нет ответа — тоже «не нашли», не «можно». */
     static LoreResourceBase.LoreError refusal(String trackId, List<?> rows) {
         if (rows != null && !rows.isEmpty()) return null;
