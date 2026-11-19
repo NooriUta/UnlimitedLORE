@@ -178,6 +178,12 @@ export interface ListRowAction {
 export interface ListViewProps {
   config: KitConfig;
   data: KitData;
+  /**
+   * Адрес записи по ссылке (поле вида 'ref' с refKind): значение поля-ссылки в строке и карточке становится
+   * ссылкой на свою запись. Нет — значение текстом, как раньше. Владелица 18.11.2026: «если объект ссылка
+   * хорошо бы была возможность перехода».
+   */
+  refHref?: (ref: { id: string; type: string | null }) => string | null;
   /** Ссылка на запись (заголовок становится ссылкой). */
   href?: (id: string) => string;
   /**
@@ -575,7 +581,7 @@ const CELL_VALUES_INLINE = 1;
 export function ListView({
   config, data: dataIn, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
   quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
-  counts: serverCounts, dateFilter, missing: missingProp,
+  counts: serverCounts, dateFilter, missing: missingProp, refHref,
 }: ListViewProps) {
   // K5-RECORD-UPDATED-EVENT: правка записи, принятая сервером где-то ещё (паспорт, статус), —
   // сразу в строке, без перезагрузки списка.
@@ -1528,13 +1534,19 @@ export function ListView({
     // не зависит от числа значений (задача на 11 релизах была в 5–8 строк ростом). Спрятанное не
     // теряется: полный список — в подсказке «+N», нажатие раскрывает его на месте.
     const title = (v: string) => labelOf.get(v) ?? labels.valueTitle(key, v);
+    // поле-ссылка: значение — запись своего вида; адрес даёт приложение (refHref)
+    const fname = key.startsWith('fields.') ? key.slice(7) : key;
+    const fdef = config.kinds[r.kind]?.fields?.find(fd => fd.key === fname);
+    const refOf = (v: string): string | null => (refHref && fdef?.type === 'ref') ? refHref({ id: v, type: fdef.refKind ?? null }) : null;
     const cellKey = `${r.id}${key}`;
     const open = cellsOpen.has(cellKey);
     const shownVs = vs.length > CELL_VALUES_INLINE && !open ? vs.slice(0, CELL_VALUES_INLINE) : vs;
     return (
       <span className={`sk-list__vals${vs.length > CELL_VALUES_INLINE && !open ? ' is-folded' : ''}`}>
         {shownVs.map(v => (
-          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} /><span className="sk-list__val-t">{title(v)}</span></span>
+          <span key={v} className="sk-list__val"><ValueIconMark icon={iconOf(key, v)} />{refOf(v)
+            ? <a className="sk-list__val-t sk-list__reflink" href={refOf(v)!} onClick={e => e.stopPropagation()}>{title(v)}</a>
+            : <span className="sk-list__val-t">{title(v)}</span>}</span>
         ))}
         {vs.length > CELL_VALUES_INLINE && (
           <button

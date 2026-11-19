@@ -41,6 +41,7 @@ import { loreRefPeek } from '../../record/lorePeek';
 import { appliedPeekHover } from '../../settings/applied';
 import type { NewsSource } from './source';
 import { newsHrefV2 } from '../newsLinks';
+import { browserZone } from '../../time/browserZone';
 import {
   NEWS_AXES, NEWS_FILTER_AXES, type NewsAxis, type NewsDay, type NewsEvent, type NewsFilterAxis, type NewsReadMark, type NewsResponse,
 } from './types';
@@ -98,9 +99,6 @@ export const NEWS_SECTIONS_ALL: readonly NewsSection[] = ['dynamics', 'metrics',
 
 type T = (k: NewsKey, vars?: Record<string, string | number>) => string;
 
-function browserZone(): string {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
-}
 
 function useNewsQuery(prefix: string | null): [NewsQuery, (patch: Partial<NewsQuery>) => void] {
   const [q, setQ] = useState<NewsQuery>(() => {

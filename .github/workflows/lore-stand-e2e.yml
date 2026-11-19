@@ -41,6 +41,9 @@ jobs:
       LORE_STAND_CHANNEL: ''
     steps:
       - uses: actions/checkout@v7
+        with:
+          # история нужна ожиданию выкатки: правка только документов сборку не меняет (прогон 9044)
+          fetch-depth: 0
 
       - name: Resolve a working proxy address (or drop it)
         run: bash .github/scripts/resolve-proxy.sh
@@ -109,7 +112,20 @@ jobs:
             echo "напрямую: $(env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy curl -sS -o /dev/null --max-time 20 -w '%{http_code} %{remote_ip} %{time_total}s' "$u" 2>&1)"
           done
 
+      # На push стенд в эти минуты перезапускается (выкатка идёт параллельно): прогон 8889 упал на
+      # входе test-sa, пока бэкенд вставал. Здесь вход нужен лишь для токена ожидания — хватит любой
+      # учётки; обязательный вход — повторный, после ожидания.
+      # Два шага вместо continue-on-error: ${{ … }} — Forgejo выражение в этом поле не разбирает и отбрасывает весь
+      # файл («cannot unmarshal !!str into bool», 18.11.2026: смоук не запускался с 17.11). Сторож —
+      # web-next/src/workflowForgejoBools.test.ts.
+      - name: Автологин тестовых учёток (push — не обязателен)
+        if: github.event_name == 'push'
+        continue-on-error: true
+        working-directory: web-next
+        run: npm run e2e:stand:login
+
       - name: Автологин тестовых учёток
+        if: github.event_name != 'push'
         working-directory: web-next
         run: npm run e2e:stand:login
 
@@ -137,14 +153,20 @@ jobs:
         run: cat e2e/.stand-report/summary.md 2>/dev/null || echo "отчёта нет"
 
       # Скрины сценариев — артефактом (v3: v4 на Forgejo не работает, см. db-regression.yml).
+      # Папка отчёта скрытая (.stand-report) — upload-artifact её не видит (прогон 8832: «No files
+      # were found»); копируем в видимую.
+      - name: Отчёт — в видимую папку
+        if: always()
+        run: mkdir -p stand-report && cp -r web-next/e2e/.stand-report/. stand-report/ 2>/dev/null; ls stand-report | head -50 || true
+
       - name: Скрины и отчёт — артефакт
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: stand-report
           path: |
-            web-next/e2e/.stand-report/*.md
-            web-next/e2e/.stand-report/*.json
-            web-next/e2e/.stand-report/*.png
+            stand-report/*.md
+            stand-report/*.json
+            stand-report/*.png
           if-no-files-found: ignore
           retention-days: 14

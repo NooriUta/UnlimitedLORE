@@ -160,11 +160,19 @@ final class StatusHistoryService {
 
         StringBuilder set = new StringBuilder();
         if (openRow != null) {
+            String oldTok = LoreStatusResource.rawToToken(openRow.get("status_raw") == null ? null : String.valueOf(openRow.get("status_raw")));
+            String newTok = LoreStatusResource.rawToToken(newRaw);
+            boolean sameStatus = newTok != null && newTok.equals(oldTok);
             for (Map.Entry<String, Object> e : openRow.entrySet()) {
                 String f = e.getKey();
                 if (e.getValue() == null || f.startsWith("@") || VERSION_FIELDS.contains(f)
                         || k.noCarry().contains(f) || f.equals(k.histMirror())
                         || !FIELD_NAME.matcher(f).matches()) continue;
+                // Причина и адресат принадлежат своему статусу (аудит 19.11.2026: «Ждёт владелицу…» у задач, давно
+                // вышедших из блокировки). Переносятся, только если статус тот же и у него причина — смысл; то же
+                // правило, что прячет остатки в паспорте (LoreRecordValues.dropLeftoversOfOtherStatuses).
+                if ("status_reason".equals(f) && !(sameStatus && LoreRecordValues.REASON_STATUSES.contains(newTok))) continue;
+                if ("waiting_for".equals(f) && !(sameStatus && "waiting".equals(newTok))) continue;
                 set.append(f).append(" = :c_").append(f).append(", ");
                 p.put("c_" + f, e.getValue());
             }

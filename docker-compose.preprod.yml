@@ -13,8 +13,8 @@
 # на 131 их держат пересыльщики прод-MCP (lore4400-forward) и MinIO 131.
 # Базовый docker-compose.yml не трогаем: front-shared.test держит у v1 "4400:80".
 #
-#   v1 lore-app       4410 → 80     https://preprod.lore.odal.seidrstudio.pro
-#   v2 lore-app-next  4412 → 80     https://preprod.new.lore.odal.seidrstudio.pro
+#   v2 lore-app-next  4412 → 80     https://preprod.lore.odal.seidrstudio.pro (основное, S8-02) и preprod.new.lore… (старое имя)
+#   v1 lore-app       4410 → 80     только запасной вход по IP http://192.168.3.131:4410/ — публичного имени нет
 #   бэкенд            127.0.0.1:9110 → 9100
 #   MinIO препрода    19000 → 9000, консоль 127.0.0.1:19001 → 9001
 #
@@ -73,12 +73,9 @@ services:
       - default
       - headscale-net
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: headscale-net
-      traefik.http.routers.lore-preprod.rule: Host(`preprod.lore.odal.seidrstudio.pro`)
-      traefik.http.routers.lore-preprod.entrypoints: websecure
-      traefik.http.routers.lore-preprod.tls.certresolver: regru
-      traefik.http.services.lore-preprod.loadbalancer.server.port: "80"
+      # S8-02 (владелица 18.11.2026: «отключить v1 и все перевести на v2», «что бы не писать new», «и на препроде»):
+      # у v1 публичного имени больше нет — основное имя отдаёт v2; v1 остаётся запасным входом по IP :4410.
+      traefik.enable: "false"
 
   lore-app-next:
     image: unlimitedlore-lore-app-next:${LORE_IMAGE_TAG:?LORE_IMAGE_TAG не задан}
@@ -96,7 +93,8 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: headscale-net
-      traefik.http.routers.lore-preprod-next.rule: Host(`preprod.new.lore.odal.seidrstudio.pro`)
+      # S8-02: основное имя препрода — v2; имя с new оставлено, чтобы старые ссылки не ломались.
+      traefik.http.routers.lore-preprod-next.rule: Host(`preprod.lore.odal.seidrstudio.pro`) || Host(`preprod.new.lore.odal.seidrstudio.pro`)
       traefik.http.routers.lore-preprod-next.entrypoints: websecure
       traefik.http.routers.lore-preprod-next.tls.certresolver: regru
       traefik.http.services.lore-preprod-next.loadbalancer.server.port: "80"

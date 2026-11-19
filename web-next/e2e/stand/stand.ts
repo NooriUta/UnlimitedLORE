@@ -1,10 +1,36 @@
 // Общие шаги смоука стенда (E2E-STAND): допуск к запуску, открытие страницы с
 // распознаванием протухшего входа, скрин в отчёт.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test, type Browser, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { preflightFromEnv, readBuild, REPORT_DIR } from './paths.ts';
 import { isForbiddenStandUrl } from '../../src/standSmoke/summary.ts';
+import { parseStandAccounts } from './accounts.ts';
+import { standLogin } from './login.ts';
+import { storedSecondsLeft } from './tokens.ts';
+
+/** Запас до конца входа, при котором смоук входит заново (сценарий идёт до 8 мин). */
+export const RELOGIN_LEFT_SEC = 600;
+
+/**
+ * Вход смоука не истекает посреди прогона (E2E-STAND, прогон 9033 19.11.2026: набор шёл 31 мин на входе,
+ * который живёт ~15; всё после истечения падало «Вы не опознаны» / «нет прав» — не поломка стенда).
+ * Перед сценарием: если входу осталось меньше RELOGIN_LEFT_SEC, входим той же учёткой заново и пишем файл.
+ * Учёток нет (локальный прогон) — ничего не делаем: истёкший вход сценарий честно назовёт «не выполнен».
+ */
+export async function keepLoginFresh(browser: Browser, file = process.env.LORE_STAND_STORAGE_STATE?.trim(), login?: string): Promise<void> {
+  const url = process.env.LORE_STAND_URL?.trim();
+  if (!file || !url || !existsSync(file)) return;
+  let left: number | null;
+  try { left = storedSecondsLeft(JSON.parse(readFileSync(file, 'utf8')), Date.now() / 1000); } catch { return; }
+  if (left === null || left > RELOGIN_LEFT_SEC) return;
+  const { accounts } = parseStandAccounts(process.env.LORE_STAND_ACCOUNTS_JSON);
+  const a = login ? accounts.find(x => x.login === login)
+    : accounts.find(x => x.login === 'test-sa') ?? accounts.find(x => x.login === 'test-admin');
+  if (!a) return;
+  const r = await standLogin(browser, url, a.login, a.password, file);
+  console.log(r.ok ? `[stand] вход ${a.login} обновлён: оставалось ${Math.round(left)} с` : `[stand] вход ${a.login} обновить не удалось: ${r.reason}`);
+}
 
 /** Нет входа / адреса / адрес ведёт на прод — сценарий «не выполнен», с причиной. */
 export function requireStand(): void {
@@ -32,6 +58,7 @@ export function requireStandUrl(): void {
  */
 export async function asAccount(browser: Browser, file: string, account: string): Promise<Page> {
   test.skip(!existsSync(file), `нет сохранённого входа ${account} (${file}) — сценарий не выполнен`);
+  await keepLoginFresh(browser, file, account);
   const baseURL = process.env.LORE_STAND_URL!.trim();
   const ctx = await browser.newContext({ storageState: file, baseURL, viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
@@ -98,3 +125,13 @@ export async function pickSprintWithTasks(page: Page): Promise<SprintPick | null
 }
 
 export const attr = (v: string) => JSON.stringify(v);
+
+/**
+ * Текст первого совпадения для подписи к проверке — сразу '', если совпадений нет. Подпись к expect
+ * вычисляется ДО проверки: текст первого совпадения (innerText без срока) при 0 совпадений ждал бы элемент до конца
+ * сценария (прогоны 37831, 19.11.2026: UI-LISTS 24 мин, RFD-AP01 6 мин).
+ */
+export async function textOf(loc: Locator, max = 160): Promise<string> {
+  if ((await loc.count().catch(() => 0)) === 0) return '';
+  return (await loc.first().innerText({ timeout: 2_000 }).catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, max);
+}

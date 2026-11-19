@@ -109,7 +109,7 @@ export function withProductColumn(cfg: KitConfig, title: string): KitConfig {
     const fields = v.fields ?? [];
     kinds[k] = fields.some(f => f.key === PRODUCT_FIELD)
       ? v
-      : { ...v, fields: [...fields, { key: PRODUCT_FIELD, title, type: 'ref' }] };
+      : { ...v, fields: [...fields, { key: PRODUCT_FIELD, title, type: 'ref', refKind: 'product' }] };
   }
   const cols = list.columns ?? [];
   const columns = cols.includes(PRODUCT_COLUMN) ? cols : (() => {

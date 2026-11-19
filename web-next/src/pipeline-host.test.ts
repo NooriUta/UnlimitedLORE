@@ -81,7 +81,8 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
 
   it('адреса установки — имена препрода', () => {
     expect(cd()).toMatch(/LORE_PUBLIC_URL: https:\/\/preprod\.lore\.odal\.seidrstudio\.pro$/m);
-    expect(cd()).toMatch(/LORE_PUBLIC_URL_V2: https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro$/m);
+    // S8-02 (18.11.2026): канонический адрес v2 — основное имя препрода, без new
+    expect(cd()).toMatch(/LORE_PUBLIC_URL_V2: https:\/\/preprod\.lore\.odal\.seidrstudio\.pro$/m);
     const cors = /CORS_ORIGINS: (.+)$/m.exec(cd())?.[1] ?? '';
     expect(cors).toContain('https://preprod.lore.odal.seidrstudio.pro');
     expect(cors).toContain('https://preprod.new.lore.odal.seidrstudio.pro');
@@ -116,10 +117,17 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
 
   it('публичная страница v2 и бандлы проверяются на именах препрода', () => {
     expect(cdSteps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body))).toBeDefined();
-    const b1 = cdSteps().find((x) => /bundle-probe\.sh\b.*https:\/\/preprod\.lore\.odal\.seidrstudio\.pro/.test(x.body));
-    const b2 = cdSteps().find((x) => /bundle-probe\.sh\b.*https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body));
-    expect(b1, 'нет пробы бандла v1 по имени препрода').toBeDefined();
-    expect(b2, 'нет пробы бандла v2 по имени препрода').toBeDefined();
+    // S8-02 (владелица 18.11.2026: «отключить v1 и все перевести на v2», «что бы не писать new», «и на препроде»):
+    // основное имя препрода отдаёт v2; имя с new — тоже v2; v1 — только запасной вход по IP :4410.
+    const main = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app-next\s+https:\/\/preprod\.lore\.odal\.seidrstudio\.pro/.test(x.body));
+    const alias = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app-next\s+https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body));
+    const v1 = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app\s+http:\/\/192\.168\.3\.131:4410\//.test(x.body));
+    expect(main, 'нет пробы: основное имя препрода отдаёт бандл v2').toBeDefined();
+    expect(alias, 'нет пробы: имя с new по-прежнему отдаёт v2').toBeDefined();
+    // LORE CD 8968 (18.11.2026): v1 по IP :4410 отвечает 301 на основное имя (его LORE_PUBLIC_URL) — то есть
+    // страницы v1 больше нет вовсе, а проба «v1 отдаёт свой бандл» роняла выкатку и отменяла тег образов (PL-05).
+    expect(v1, 'v1 выключен — пробы его бандла быть не должно').toBeUndefined();
+    expect(cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app\s+https:\/\/preprod\.lore/.test(x.body)), 'v1 больше не на основном имени').toBeUndefined();
   });
 
   it('ворота препрода (база, Infisical preprod) стоят ДО любых сборок', () => {
@@ -182,6 +190,13 @@ describe('PL-04: оверлей docker-compose.preprod.yml', () => {
     const resolvers = ov().match(/tls\.certresolver: regru/g) ?? [];
     expect(resolvers.length).toBeGreaterThanOrEqual(2);
     for (const m of ov().matchAll(/traefik\.http\.routers\.([\w-]+)\./g)) expect(m[1]).toMatch(/^lore-preprod/);
+  });
+
+  it('S8-02: основное имя препрода — роутер v2 (и старое имя с new); у v1 роутера Traefik нет', () => {
+    const next = ov().match(/traefik\.http\.routers\.lore-preprod-next\.rule: (.+)/);
+    expect(next && next[1]).toMatch(/Host\(`preprod\.lore\.odal\.seidrstudio\.pro`\)/);
+    expect(next && next[1]).toMatch(/Host\(`preprod\.new\.lore\.odal\.seidrstudio\.pro`\)/);
+    expect(ov()).not.toMatch(/traefik\.http\.routers\.lore-preprod\.rule/);
   });
 
   it('база задаётся LORE_DB (lore.db) и без неё compose не соберётся', () => {

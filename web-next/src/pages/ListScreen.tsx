@@ -39,6 +39,8 @@ import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
 import { loreListPeek } from '../record/lorePeek';
 import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
+import { browserZone } from '../time/browserZone';
+import { newsRefHrefV2 } from '../news/newsLinks';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -157,9 +159,6 @@ export function mergeBodies(open: SliceAnswer, closed: SliceAnswer): SliceAnswer
   };
 }
 
-function browserZone(): string {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
-}
 
 /**
  * Диапазон «Изменены с … по …» в адресе (?changed=…, K2-DATE-RANGE): тот же
@@ -623,6 +622,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     content = (
       <ListView
         config={viewConfig}
+        // поле-ссылка (спринт, компонент, проект …) ведёт к своей записи (владелица 18.11.2026)
+        refHref={({ id, type }) => (type ? newsRefHrefV2(type, id) : null)}
         data={viewData ?? data}
         // Счётчики источника считаны БЕЗ диапазона дат — при диапазоне им не
         // место: kit считает по загруженному и говорит это (S9-01).
