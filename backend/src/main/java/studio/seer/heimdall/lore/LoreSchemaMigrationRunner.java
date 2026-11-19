@@ -267,6 +267,19 @@ public class LoreSchemaMigrationRunner {
         } catch (RuntimeException e) {
             LOG.warnf("[LORE MIGRATE] не удалось узнать, есть ли доска плана: %s — срезы доски как раньше", e.getMessage());
         }
+        // D-2026-MIG-PROJECTS-REGROUP: синонимы влитых проектов → опора группы (фильтр ?project= по старому имени)
+        try {
+            Map<String, String> aliases = new HashMap<>();
+            for (Map<String, Object> r : ingest.queryPublic("SELECT slug, aliases FROM KnowGitProject WHERE aliases IS NOT NULL", Map.of())) {
+                Object slug = r.get("slug");
+                if (slug == null || !(r.get("aliases") instanceof List<?> list)) continue;
+                for (Object a : list) if (a != null && !a.equals(slug)) aliases.put(String.valueOf(a), String.valueOf(slug));
+            }
+            ModelSchemaAdapter.projectAliases(aliases);
+            if (!aliases.isEmpty()) LOG.infof("[LORE MIGRATE] синонимов проектов: %d — фильтр по старому имени ведёт в группу", aliases.size());
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] синонимы проектов не прочитаны: %s — фильтр по старому имени не переводится", e.getMessage());
+        }
     }
 
     /** Отказ старта: lore.migrate=true на базе, собранной из модели. */

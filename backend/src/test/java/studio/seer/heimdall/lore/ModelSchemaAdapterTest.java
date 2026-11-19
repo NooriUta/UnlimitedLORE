@@ -77,6 +77,22 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void фильтр_по_старому_имени_проекта_ведёт_в_его_группу() {
+        // D-2026-MIG-PROJECTS-REGROUP: влитый проект удалён, его slug — синоним (aliases) у опоры группы.
+        // Без перевода фильтр ?project=AIDA/GLADSHEIM на новой базе дал бы пусто.
+        java.util.Map<String, String> given = new java.util.LinkedHashMap<>(java.util.Map.of("project", "AIDA/GLADSHEIM,AIDA/MIDGARD,X/y"));
+        ModelSchemaAdapter.enable(true);
+        try {
+            ModelSchemaAdapter.projectAliases(java.util.Map.of("AIDA/GLADSHEIM", "AIDA/MIDGARD", "AIDA/TEIKN", "AIDA/MIDGARD"));
+            ModelSchemaAdapter.canonicalProjects(given);
+            assertEquals("AIDA/MIDGARD,X/y", given.get("project"), "синоним → опора, повтор схлопнут, чужое — как есть");
+        } finally { ModelSchemaAdapter.enable(false); ModelSchemaAdapter.projectAliases(java.util.Map.of()); }
+        java.util.Map<String, String> old = new java.util.LinkedHashMap<>(java.util.Map.of("project", "AIDA/GLADSHEIM"));
+        ModelSchemaAdapter.canonicalProjects(old);
+        assertEquals("AIDA/GLADSHEIM", old.get("project"), "старая схема — как есть");
+    }
+
+    @Test
     void название_спринта_в_старой_схеме_пишется_и_в_name() {
         // полный прогон 19.11: sprint_new писал только title, FT-индекс старой схемы — по name, поиск не находил спринт
         assertEquals("title=:nm, name=:nm", ModelSchemaAdapter.titleSet("nm"));

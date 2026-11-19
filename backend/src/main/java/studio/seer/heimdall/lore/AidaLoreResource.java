@@ -1060,6 +1060,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
 
         LoreSlices.Composed composed;
         final SlicePage page;
@@ -1346,6 +1347,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
         LoreSlices.Composed composed;
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
@@ -1427,6 +1429,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
         final List<String> axes;
         final String groupBy;
         final Map<String, String> filters;

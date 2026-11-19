@@ -32,6 +32,23 @@ final class ModelSchemaAdapter {
 
     static void enable(boolean on) { enabled = on; }
 
+    /** Синонимы проектов (D-2026-MIG-PROJECTS-REGROUP): старый slug влитого проекта → slug опоры группы. */
+    private static volatile Map<String, String> projectAliases = Map.of();
+    static void projectAliases(Map<String, String> m) { projectAliases = m == null ? Map.of() : Map.copyOf(m); }
+
+    /**
+     * Фильтр среза по проекту на базе из модели: старые имена влитых проектов → опора группы, повторы схлопываются,
+     * незнакомое — как есть. Значение «a,b» — несколько проектов. Старая схема — не трогается.
+     */
+    static void canonicalProjects(Map<String, String> given) {
+        if (!enabled || projectAliases.isEmpty() || given == null) return;
+        String v = given.get("project");
+        if (v == null || v.isBlank()) return;
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        for (String s : v.split(",")) { String t = s.trim(); if (!t.isEmpty()) out.add(projectAliases.getOrDefault(t, t)); }
+        given.put("project", String.join(",", out));
+    }
+
     /** Есть ли в базе старая доска плана (установщик по умолчанию её не переносит, MIG_PLAN_BOARD=keep — переносит). */
     private static volatile boolean planBoard = true;
     static void planBoard(boolean present) { planBoard = present; }
