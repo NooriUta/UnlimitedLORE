@@ -7153,6 +7153,22 @@
     }
   },
   "series" : {
+    "AgentActionLog" : {
+      "about" : "AO-01, D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4: журнал действий — точка на каждый мутирующий вызов LORE с исходом (value — HTTP-статус). Теги: семейство (object_type), сущность или путь (object_id), вызывающий (source), ось agent/human/unauth (segment), client_id токена агента (client) и машина X-Lore-Machine (machine); «(unknown)» — агент без значения, «(n/a)» — не агент. Читают срезы agent_actions, admin_actions, mcp_failures, раздел админки «Журнал действий», история сущности и квоты агентов. До 1.18 заводился шагом V86.",
+      "timestamp" : "ts",
+      "tags" : {
+        "object_type" : "STRING",
+        "object_id" : "STRING",
+        "source" : "STRING",
+        "segment" : "STRING",
+        "client" : "STRING",
+        "machine" : "STRING"
+      },
+      "fields" : {
+        "value" : "DOUBLE"
+      },
+      "writer" : "server: LoreRequestStatsFilter → LoreRequestStats.journalAction"
+    },
     "AuditDbLogin" : {
       "about" : "DBR-07: входы в ArcadeDB через сторожа (deploy/db-guard) — первый вход пары «пользователь × источник» за минуту. Секрета нет: из Authorization берётся только имя (Basic → пользователь, Bearer → apitoken:<имя>). Пишет сторож своим токеном с правом только на этот ряд, не root. Ряд полон, только когда прямой :2480 закрыт (Этап 6, D-2026-SETUP-BEFORE-ENFORCE).",
       "timestamp" : "ts",
@@ -7168,6 +7184,21 @@
         "status" : "INTEGER"
       },
       "writer" : "db-guard"
+    },
+    "MetricSnapshot" : {
+      "about" : "ARC-02: метрики — счётчики запросов и сессий по вызывающим (metric lore.requests/lore.session, окно LoreRequestStats), входы через Keycloak (LoreKcLoginPoller), метрики и архив публикаций BRAGI (MCP-03), прежние точки журнала lore.action (до V86, только чтение). Читают срезы метрик и аналитика BRAGI. До 1.18 заводился схемой старой базы (LoreSchemaInitializer).",
+      "timestamp" : "ts",
+      "tags" : {
+        "object_type" : "STRING",
+        "object_id" : "STRING",
+        "metric" : "STRING",
+        "source" : "STRING",
+        "segment" : "STRING"
+      },
+      "fields" : {
+        "value" : "DOUBLE"
+      },
+      "writer" : "server: LoreRequestStats.flush, LoreKcLoginPoller, LoreBragiResource"
     }
   }
 }
