@@ -155,3 +155,38 @@ test('MA6 Телефон 390×844: раздел не шире экрана', asy
   expect(w.doc, `страница не прокручивается вбок (scrollWidth ${w.doc} при ширине ${w.view})`).toBeLessThanOrEqual(w.view + 1);
   expect(w.sec, 'правый край раздела в пределах экрана').toBeLessThanOrEqual(390 + 1);
 });
+
+// MA7 — шаг «З. Задачи без спринта» мастера переноса (установщик lore-migrate ui, SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01).
+// Владелица 19.11.2026: «без спринта реконструировать ребро в визарде предложить владельцу привязать».
+// Мастер — отдельный сервер установщика: адрес LORE_MIGRATE_UI_URL. Ответ пишется в файл решений мастера, поэтому
+// запись — только при LORE_MIGRATE_UI_WRITE=1 (прогон на копии с одноразовым файлом решений); иначе только чтение.
+test('MA7 Мастер, шаг «З»: у каждой задачи без спринта — предложение с основанием; ответ уменьшает «ждут решения»', async ({ page }) => {
+  const ui = process.env.LORE_MIGRATE_UI_URL?.trim();
+  test.skip(!ui, 'LORE_MIGRATE_UI_URL не задан — мастер переноса не запущен, шаг «З» не проверялся');
+  await page.goto(ui!.replace(/\/+$/, '') + '/#step-o');
+  const box = page.locator('#os');
+  const rows = box.locator('tr[data-os-row]');
+  await expect(rows.first().or(box.locator('.state.stop')), 'строки шага или честная ошибка чтения').toBeVisible({ timeout: 60_000 });
+  expect(await box.locator('.state.stop').count(), `шаг прочитал задачи: ${await textOf(box.locator('.state.stop'))}`).toBe(0);
+  const n = await rows.count();
+  expect(n, 'задачи без спринта есть (перепись источника: 12)').toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) {
+    const r = rows.nth(i);
+    await expect(r.locator('.chip'), 'вид предложения').toHaveText(/точно|похоже, подтвердите|возможен дубль|куда\?/);
+    expect((await textOf(r.locator('.why'))).length, 'основание не пустое').toBeGreaterThan(10);
+  }
+  const state = box.locator('[data-testid="os-state"]');
+  await expect(state, 'состояние «ждут решения» показано, не молча').toBeVisible();
+  if (process.env.LORE_MIGRATE_UI_WRITE?.trim() !== '1') return;
+  const before = numberIn(await textOf(state));
+  // строка «точно», на которую ещё нет ответа (в списке выбрано «— не решено —»)
+  const exact = rows.filter({ has: page.locator('.chip', { hasText: 'точно' }) });
+  let target = exact.first(), found = false;
+  for (let i = 0; i < (await exact.count()); i++) if ((await exact.nth(i).locator('select[data-os]').inputValue()) === '') { target = exact.nth(i); found = true; break; }
+  test.skip(!found || !Number.isFinite(before), 'строк «точно» без ответа нет — записывать нечего');
+  const sel = target.locator('select[data-os]');
+  const proposed = (await sel.locator('option').filter({ hasText: 'предложено' }).first().getAttribute('value'))!;
+  if (!(await page.locator('#by').count()) || !(await page.locator('#by').inputValue())) await page.evaluate(() => { let b = document.getElementById('by') as HTMLInputElement | null; if (!b) { b = document.createElement('input'); b.id = 'by'; b.type = 'hidden'; document.body.appendChild(b); } b.value = 'playwright-ma7'; });
+  await sel.selectOption(proposed);
+  await expect.poll(async () => numberIn(await textOf(box.locator('[data-testid="os-state"]'))) || 0, { timeout: 30_000, message: '«ждут решения» уменьшилось на 1' }).toBe(before - 1);
+});
