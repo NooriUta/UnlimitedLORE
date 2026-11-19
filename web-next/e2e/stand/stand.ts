@@ -133,5 +133,5 @@ export const attr = (v: string) => JSON.stringify(v);
  */
 export async function textOf(loc: Locator, max = 160): Promise<string> {
   if ((await loc.count().catch(() => 0)) === 0) return '';
-  return (await loc.first().innerText({ timeout: 2_000 }).catch(() => '')).replace(/s+/g, ' ').trim().slice(0, max);
+  return (await loc.first().innerText({ timeout: 2_000 }).catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, max);
 }
