@@ -183,3 +183,29 @@
 }
 .adm-tidy-applybar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .adm-btn[data-tone='acc'] { border-color: var(--acc); color: var(--acc); }
+
+/* MC-06 «Модель»: полоса версии и действий, список типов слева, дифф справа (прототип mc-06-model-screen). */
+.adm-model-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); }
+.adm-model-bar__grow { flex: 1; }
+.adm-model-body { display: flex; gap: 12px; min-width: 0; }
+.adm-model-main { flex: 1; min-width: 0; }
+.adm-model-diff { flex: 0 0 min(360px, 100%); display: flex; flex-direction: column; gap: 6px; min-width: 0; border-left: 1px solid var(--bd); padding-left: 12px; }
+.adm-model-types { display: flex; gap: 12px; min-width: 0; }
+.adm-model-side { flex: 0 0 200px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adm-model-side .adm-field__l { margin: 8px 4px 2px; }
+.adm-model-side .adm-input { width: 100%; box-sizing: border-box; }
+.adm-model-side__a { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border: 0; border-radius: 6px; background: none; color: var(--t2); font: var(--fs-sm) var(--font); text-align: left; cursor: pointer; min-height: max(var(--tap, 24px), 24px); }
+.adm-model-side__a[aria-pressed='true'] { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--t1); }
+.adm-model-typebody { flex: 1; min-width: 0; }
+.adm-model-h1 { margin: 2px 0 6px; font: 800 var(--fs-xl)/1.25 var(--display, var(--font)); color: var(--t1); }
+.adm-model-order { white-space: nowrap; }
+.adm-model-order .adm-btn + .adm-btn { margin-left: 4px; }
+.adm-table tr[data-changed] th, .adm-table tr[data-changed] td { background: color-mix(in srgb, var(--wrn) 8%, transparent); }
+.adm-table tr[data-changed] th:first-child { box-shadow: inset 2px 0 0 var(--wrn); }
+.adm-model-sheet { display: flex; flex-direction: column; gap: 8px; }
+.adm-model-sheet .adm-input { width: 100%; box-sizing: border-box; }
+@media (max-width: 900px) {
+  .adm-model-body, .adm-model-types { flex-direction: column; }
+  .adm-model-diff { flex-basis: auto; border-left: 0; padding-left: 0; border-top: 1px solid var(--bd); padding-top: 8px; }
+  .adm-model-side { flex-basis: auto; }
+}
