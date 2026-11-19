@@ -7,9 +7,11 @@
 // Запуск и вход — playwright.stand.config.ts и README рядом. Без входа каждый сценарий
 // «не выполнен» с причиной; это НЕ зелёный.
 import { expect, test } from '@playwright/test';
-import { attr, openStand, pickSprintWithTasks, requireStand, shot } from './stand.ts';
+import { attr, openStand, pickSprintWithTasks, requireStand, shot, keepLoginFresh } from './stand.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 test('S0 Сборка стенда: /lore/version отвечает под сохранённым входом', async ({ page }, info) => {

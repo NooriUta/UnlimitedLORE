@@ -41,6 +41,9 @@ jobs:
       LORE_STAND_CHANNEL: ''
     steps:
       - uses: actions/checkout@v7
+        with:
+          # история нужна ожиданию выкатки: правка только документов сборку не меняет (прогон 9044)
+          fetch-depth: 0
 
       - name: Resolve a working proxy address (or drop it)
         run: bash .github/scripts/resolve-proxy.sh
