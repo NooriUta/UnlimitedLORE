@@ -1771,6 +1771,15 @@
       "layer" : "stable",
       "labelEn" : "File",
       "labelPl" : "Plik"
+    }, {
+      "key" : "has_ext_deps",
+      "label" : "Внешние зависимости",
+      "labelKey" : "pp.field.hasExtDeps",
+      "kind" : "bool",
+      "group" : "props",
+      "layer" : "optional",
+      "labelEn" : "External dependencies",
+      "labelPl" : "Zależności zewnętrzne"
     } ],
     "body" : [ {
       "key" : "content_md_ru",
@@ -1800,7 +1809,7 @@
       "labelPl" : "Tekst (EN)"
     } ],
     "props" : [ {
-      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
     } ],
     "linkTabs" : [ {
       "key" : "children",

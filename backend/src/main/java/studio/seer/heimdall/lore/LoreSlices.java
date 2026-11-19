@@ -2784,8 +2784,9 @@ public final class LoreSlices {
                 "type", " WHERE type = :type")),
             " ORDER BY finding_id");
 
+        // MDL-05: evidence_md снят — поля нет ни в схеме, ни в модели, писателя нет, в проде пусто (0 из 31).
         slice("finding_by_id",
-            "SELECT finding_id, type, verified, source_sprint, summary_md, evidence_md " +
+            "SELECT finding_id, type, verified, source_sprint, summary_md " +
             "FROM KnowFinding WHERE finding_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 

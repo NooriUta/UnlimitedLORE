@@ -25,6 +25,7 @@ import { seriesDdl } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
+import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
@@ -163,6 +164,29 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     for (const x of kd.leftovers) leftovers.push({ src_type: 'KnowDictEntry', ...x });
     report.stages.key_dups = { merged: kd.leftovers.map(x => x.src_rid), conflicts: kd.conflicts };
     log('2 дубли ключа справочника: слито', kd.leftovers.length, '· конфликтов', kd.conflicts.length, kd.conflicts.length ? JSON.stringify(kd.conflicts) : '');
+  }
+  // задачи без спринта (шаг «З» мастера, владелица 19.11.2026: «предложить владельцу привязать»): ребро ставит
+  // шаг связей по ответу человека; ответ «дубль» — задача и её версии не переносятся, уходят в остаток с причиной;
+  // без ответа задача переносится без спринта, в отчёте — «ждёт решения»
+  if (calc.KnowTask) {
+    const loose = await db.src("SELECT @rid AS rid, task_uid FROM KnowTask WHERE out('PART_OF').size() = 0");
+    const st = orphanSprintState(loose, orphanSprintAnswers(DECISIONS));
+    const ridOf = new Map(loose.map(x => [x.task_uid, x.rid]));
+    const dropRid = new Set();
+    for (const d of st.duplicate) {
+      const rid = ridOf.get(d.task_uid);
+      dropRid.add(rid);
+      leftovers.push({ src_type: 'KnowTask', src_rid: rid, field: 'task_uid', value: d.task_uid, kind: 'merged_duplicate',
+        why: `дубль: задача без спринта ${d.task_uid} — та же задача, что ${d.of} (ответ человека в мастере, шаг «З»); вторая задача с тем же кодом не заводится` });
+      for (const [v, p] of Object.entries(parentOf)) if (p === rid) {
+        dropRid.add(v);
+        leftovers.push({ src_type: 'KnowTaskHist', src_rid: v, field: 'parent', value: rid, kind: 'merged_duplicate', why: `версия задачи-дубля ${d.task_uid} (см. ${d.of})` });
+      }
+    }
+    calc.KnowTask = calc.KnowTask.filter(x => !dropRid.has(x.rid));
+    if (calc.KnowTaskHist) calc.KnowTaskHist = calc.KnowTaskHist.filter(x => !dropRid.has(x.rid));
+    report.stages.orphan_sprints = { without_sprint: loose.length, to_link: st.link.length, duplicate: st.duplicate, keep: st.keep, waiting: st.waiting, state: st.waiting.length ? 'ждёт решения' : 'решено' };
+    log('2 задачи без спринта:', loose.length, '· привяжет шаг связей', st.link.length, '· дубль', st.duplicate.map(d => `${d.task_uid} = ${d.of}`).join(', ') || '—', '· без спринта по ответу', st.keep.length, st.waiting.length ? '· ЖДУТ РЕШЕНИЯ (шаг «З»): ' + st.waiting.join(', ') : '');
   }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });

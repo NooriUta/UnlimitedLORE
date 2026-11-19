@@ -2,7 +2,7 @@
 // Слово владелицы 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты».
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ruleFor, typePlan, proposeMap } from './propose-map-all.mjs';
+import { ruleFor, typePlan, proposeMap, RETIRED_V89 } from './propose-map-all.mjs';
 
 test('правило поля: служебные — как есть; статус и приоритет — к справочнику; даты — настоящим типом', () => {
   assert.equal(ruleFor('KnowADRHist', 'valid_from').rule, 'keep');
@@ -42,7 +42,8 @@ test('карта по переписи: каждое поле каждого п�
   assert.deepEqual(Object.keys(m.types), ['KnowADRHist']);
   // + служебные поля правки у каждого типа версий (снимок 18.11.2026: без правила перенос терял их как «вне карты»)
   assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'changed_by_session', 'hist_for', 'status_raw', 'valid_from']);
-  assert.deepEqual(m.skipped, { PlanTrack: m.skipped.PlanTrack });
+  // + снятые V89 легаси-словари — всегда, даже если перепись их не видела (MD-02)
+  assert.deepEqual(Object.keys(m.skipped), ['PlanTrack', ...RETIRED_V89].sort());
   assert.equal(JSON.stringify(proposeMap(census)), JSON.stringify(m));
 });
 

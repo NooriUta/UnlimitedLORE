@@ -323,6 +323,7 @@
   "pp.field.supersedes": "Supersedes",
   "pp.field.tags": "Tags",
   "pp.field.file": "File",
+  "pp.field.hasExtDeps": "External dependencies",
   "pp.field.version": "Version",
   "pp.field.summary": "Summary",
   "pp.field.title": "Title",

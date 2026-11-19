@@ -6458,6 +6458,30 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "has_ext_deps",
+        "label" : "Внешние зависимости",
+        "label_key" : "pp.field.hasExtDeps",
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "External dependencies",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zależności zewnętrzne",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "content_md_ru",
         "label" : "Текст",
         "label_key" : "pp.field.body",
@@ -6532,7 +6556,7 @@
         } ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {
@@ -6862,6 +6886,30 @@
         "required_level" : null,
         "required_rules" : [ ]
       }, {
+        "key" : "has_ext_deps",
+        "label" : "Внешние зависимости",
+        "label_key" : "pp.field.hasExtDeps",
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "External dependencies",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zależności zewnętrzne",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
         "key" : "content_md_ru",
         "label" : "Текст",
         "label_key" : "pp.field.body",
@@ -6936,7 +6984,7 @@
         } ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+          "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {
