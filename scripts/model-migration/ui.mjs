@@ -224,7 +224,7 @@ function msg(t,err){var m=document.getElementById('msg');m.textContent=t;m.class
 function load(){document.getElementById('state').textContent='читаю источник…';fetch('api/dialog').then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);D=d;draw();gate()}).catch(function(e){document.getElementById('state').className='state stop';document.getElementById('state').textContent='не смогли прочитать: '+e.message})}
 function draw(){var s=D.summary;document.getElementById('src').textContent=D.source;document.getElementById('fp').textContent='отпечаток итога '+D.fingerprint;
 var st=document.getElementById('state');if(D.unread&&D.unread.length){st.className='state stop';st.textContent='СТОП: источник прочитан не весь ('+D.unread.length+' полей) — проверка не выполнена'}else if(D.ready){st.className='state go';st.textContent='ГОТОВО: статусы сведены, перенос можно начинать'}else{st.className='state stop';st.textContent='СТОП: ждут решения '+s.needs_decision+' значений ('+s.records_waiting+' записей) — перенос не начинается'}
-document.getElementById('kpis').innerHTML=[[D.rows.length,'разных значений'],[s.unified,'свелось само'],[s.decided,'закрыто решением'],[s.needs_decision,'ждут решения'],[s.records_waiting,'записей за ними']].map(function(k){return '<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>'}).join('');
+document.getElementById('kpis').innerHTML=[[D.rows.length,'разных значений'],[s.unified,'свелось само'],[s.decided,'закрыто решением'],[s.defaulted||0,'пусто → начальный (правило 19.11)'],[s.needs_decision,'ждут решения'],[s.records_waiting,'записей за ними']].map(function(k){return '<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>'}).join('');
 var html='';D.groups.forEach(function(t){html+='<h3>'+esc(NAME[t.type]||t.type)+' <span class="sub">'+esc(t.dict)+' · ждут '+t.waiting+'</span></h3><div class="tw"><table><thead><tr><th>Значение в старой базе</th><th>Записей</th><th>Предложение</th><th>Решение</th></tr></thead><tbody>';
 t.groups.forEach(function(g){var ids=g.rows.filter(function(r){return r.state==='needs_decision'}).map(function(r){return r.i});html+='<tr class="grp"><td colspan="2">'+(g.code?'→ '+esc(g.code):'без предложения')+' · '+g.rows.length+' знач. · '+g.n+' зап.</td><td colspan="2">'+(g.code&&ids.length?'<button class="btn pri" data-group="'+ids.join(',')+'" data-to="'+esc(g.code)+'">Принять группу → '+esc(g.code)+'</button>':'')+'</td></tr>';
 g.rows.forEach(function(r){var done=r.state!=='needs_decision';var opts=r.codes.map(function(c){return '<option'+(c===r.code?' selected':'')+'>'+esc(c)+'</option>'}).join('');
@@ -350,7 +350,8 @@ function forPage(dialog, rules) {
   // у закрытых строк список кодов тоже нужен: решение можно переиграть
   const flat = dialog.rows.map((r, i) => ({ ...r, i, codes: r.codes || (r.dict ? rules.dictionaries[r.dict].codes.map(c => c.code) : []) }));
   const byType = new Map();
-  for (const r of flat) if (r.state === 'needs_decision' || r.state === 'decided') (byType.get(r.type) || byType.set(r.type, []).get(r.type)).push(r);
+  // defaulted — пустой статус, начальный по справочнику (правило владелицы 19.11): виден, и его можно переиграть решением
+  for (const r of flat) if (r.state === 'needs_decision' || r.state === 'decided' || r.state === 'defaulted') (byType.get(r.type) || byType.set(r.type, []).get(r.type)).push(r);
   const groups = [...byType.entries()].map(([type, rows]) => ({
     type, dict: rows[0].dict, waiting: rows.filter(r => r.state === 'needs_decision').length,
     groups: groupBySuggestion(rows),

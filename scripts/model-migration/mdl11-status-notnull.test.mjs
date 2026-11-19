@@ -57,10 +57,11 @@ test('перенос: версия задачи без статуса получ
   }
 });
 
-test('перенос: без решения о пустом статусе пустота не прячется — несоответствие «пусто» в остатке', () => {
+test('перенос: без решения о пустом статусе — начальный статус справочника, подстановка видна (правило владелицы 19.11)', () => {
   const r = applyMap('KnowTaskHist', MAP.KnowTaskHist, { state_uid: 'u1' }, { ...ctx, decisions: undefined });
-  assert.ok(!('status' in r.out));
-  assert.deepEqual(r.rejects, [{ field: 'status_raw', value: '', why: 'пусто' }]);
+  assert.equal(r.out.status, 'BACKLOG');
+  assert.deepEqual(r.rejects, []);
+  assert.deepEqual(r.filled.map(f => [f.how, f.basis]), [['по умолчанию', 'правило владелицы 19.11']]);
 });
 
 test('перенос: заданный статус не трогается — ни решением о пустоте, ни сторожем', () => {

@@ -21,7 +21,7 @@ if (outArg > 0) fs.writeFileSync(process.argv[outArg + 1], JSON.stringify(dialog
 
 const s = dialog.summary;
 console.log(`источник ${dialog.source}${dialog.unread.length ? ' (ПРОЧИТАН НЕ ВЕСЬ)' : ''}: значений ${dialog.rows.length}, записей ${s.records}`);
-console.log(`  свелось само: ${s.unified} · закрыто решением: ${s.decided} · ждёт решения: ${s.needs_decision} · без правила: ${s.no_rule} · записей ждёт: ${s.records_waiting}`);
+console.log(`  свелось само: ${s.unified} · закрыто решением: ${s.decided} · пусто → начальный (правило 19.11): ${s.defaulted || 0} ·ждёт решения: ${s.needs_decision} · без правила: ${s.no_rule} · записей ждёт: ${s.records_waiting}`);
 for (const u of dialog.unread) console.log(`  НЕ ПРОЧИТАНО ${u.type}.${u.field}: ${u.error}`);
 const short = v => v === null ? '(пусто)' : String(v).replace(/\s+/g, ' ').slice(0, 50);
 const byType = {};
