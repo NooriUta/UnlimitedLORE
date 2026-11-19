@@ -296,6 +296,12 @@ public final class LoreSlices {
         "out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids";
 
     /**
+     * Проекты задачи — проекты её спринта (PART_OF → BELONGS_TO_PROJECT), многозначное поле. Владелица 19.11.2026:
+     * группировка по проекту везде, где есть проект; задача в нескольких проектах — в каждой группе.
+     */
+    private static final String TASK_PROJECTS_SQL = "out('PART_OF').out('BELONGS_TO_PROJECT').slug AS project_slugs";
+
+    /**
      * RM-P17: как зовётся родитель строки истории — одна пара на цепочку SCD2.
      *
      * <p>Нужно срезу {@code history_hygiene}: находка без {@code ref_id}
@@ -2701,6 +2707,7 @@ public final class LoreSlices {
             // бывает в нескольких релизах — поле многозначное. Без него у раздела
             // «Задачи» не было оси «Релиз» вовсе.
             TASK_RELEASES_SQL + ", " +
+            TASK_PROJECTS_SQL + ", " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
             // «Открытая» = не закрытая и не отменённая. Оба словаря берутся из
@@ -2729,6 +2736,7 @@ public final class LoreSlices {
             "out('PART_OF').sprint_id[0] AS sprint_id, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
             TASK_RELEASES_SQL + ", " +
+            TASK_PROJECTS_SQL + ", " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
             "WHERE (" + LoreStatusVocabulary.anySql(OPEN_TASK_STATUS_EXPR, "done", "cancelled") + ")",

@@ -351,6 +351,8 @@ function tasksConfig(lang: KitLang): KitConfig {
           { key: 'sprint', title: f(lang, 'sprint'), type: 'ref', refKind: 'sprint' },
           { key: 'components', title: f(lang, 'components'), type: 'ref', refKind: 'component' },
           { key: 'release', title: f(lang, 'release'), type: 'ref', refKind: 'release' },
+          // Проект задачи — проекты её спринта; задача в нескольких — в каждой группе (правило 19.11.2026).
+          { key: 'project', title: f(lang, 'project'), type: 'ref', refKind: 'project' },
           { key: 'effort', title: f(lang, 'effort'), type: 'number' },
         ],
       },
@@ -373,8 +375,8 @@ function tasksConfig(lang: KitLang): KitConfig {
         { id: 'blocked', title: appT(lang, 'lists.status.blocked'), filter: { status: 'blocked' } },
         { id: 'no-sprint', title: appT(lang, 'lists.quick.noSprint'), filter: { sprint: '' } },
       ],
-      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component],
-      groupings: ['status', LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
+      filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.component, LORE_FILTER_FIELDS.project],
+      groupings: ['status', LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint, LORE_FILTER_FIELDS.project],
       // Спринтов и релизов много — эти разрезы свёрнуты с первого показа (S9-02).
       collapsedGroupings: [LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.sprint],
       columns: ['id', 'title', 'status', 'release', 'sprint', 'components', 'effort', 'updated_at'],
@@ -434,6 +436,16 @@ function refKindOf(kind: string, key: string): string | undefined {
   return key === 'parent' || key === 'children' ? kind : REF_KIND[key];
 }
 
+/**
+ * Правило владелицы 19.11.2026: «везде где есть проект делай группировку по проекту … если проектов несколько в
+ * каждую группу». Есть поле-ссылка на проект — есть разрез по проекту; запись в нескольких проектах kit кладёт в
+ * каждую группу сам (grouping.ts). Сторож — groupByProject.test.ts.
+ */
+function withProjectGrouping(groupings: string[], hasProject: boolean): string[] {
+  if (!hasProject || groupings.some(g => g === 'project' || g === LORE_FILTER_FIELDS.project)) return groupings;
+  return [...groupings, LORE_FILTER_FIELDS.project];
+}
+
 function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
   return {
     ...BASE,
@@ -449,7 +461,7 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
       ...(spec.showClosed ? { showClosed: spec.showClosed } : {}),
       ...(spec.quick ? { quick: spec.quick.map(([id, titleKey, filter]) => ({ id, title: appT(lang, titleKey), filter })) } : {}),
       filters: spec.filters,
-      groupings: spec.groupings,
+      groupings: withProjectGrouping(spec.groupings, spec.fields.some(([key, type]) => key === 'project' && type === 'ref')),
       ...(spec.collapsedGroupings ? { collapsedGroupings: spec.collapsedGroupings } : {}),
       columns: spec.columns,
       ...(spec.tree ? { tree: spec.tree } : {}),

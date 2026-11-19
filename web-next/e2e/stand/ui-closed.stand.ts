@@ -11,9 +11,12 @@
 //   «Failed to fetch dynamically imported module» — SPRINT_UXR_S4_UI_SHELL_LISTS/S4-STALE-CHUNK
 //   горизонтальная прокрутка страницы на телефоне — SPRINT_UXR_MOBILE_POLISH/MP2-*, S4-MOBILE-EDGE
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot, textOf } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
+import { ap09Verdict } from '../../src/standSmoke/identityCheck.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 const BROKEN: [RegExp, string][] = [
@@ -124,6 +127,18 @@ const ADMIN = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', '
 test('UI-ADMIN Все разделы админки открываются под super-admin (S7B-01…31, S7B-ACL-*, PU-03, PU-04, PU-05, PU-13, PU-20, AP-08, AP-09)', async ({ page }) => {
   test.setTimeout(8 * 60_000);
   const failed: string[] = [];
+  const notes: string[] = [];
+  // AP-09 проверяем только у заведённой учётки: whoami: unknown — сообщение «Вы не опознаны» честное (смоук 37997).
+  await openStand(page, '/?mod=admin&sec=adm-home', page.locator('[data-testid^="adm-"]'));
+  const identity = await page.evaluate(async () => {
+    const key = Object.keys(localStorage).find(k => k.includes('oidc.user:'));
+    const token = key ? (JSON.parse(localStorage.getItem(key) ?? '{}') as { access_token?: string }).access_token : undefined;
+    try {
+      const r = await fetch('/lore/whoami', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const b = r.ok ? await r.json() as { identity?: { state?: string } } : null;
+      return b?.identity?.state;
+    } catch { return undefined; }
+  }).catch(() => undefined);
   for (const sec of ADMIN) {
     try {
       const body = page.locator('main, [role="main"]').first();
@@ -136,12 +151,16 @@ test('UI-ADMIN Все разделы админки открываются по�
       expect(await page.locator('[data-state="forbidden"]').count(), `${sec}: «нет прав» у super-admin`).toBe(0);
       const text = await body.innerText().catch(() => '');
       if (sec === 'adm-log') expect(text, 'PU-03: «время не записано» в журнале').not.toMatch(/время не записано/);
-      expect(text, 'AP-09: «Вы не опознаны» у заведённой учётки').not.toMatch(/Вы не опознаны/);
+      const v = ap09Verdict(identity, /Вы не опознаны/.test(text));
+      if (v.kind === 'defect') throw new Error('AP-09: «Вы не опознаны» у заведённой учётки');
+      if (v.kind === 'not-enrolled' && !notes.length) notes.push('AP-09 не проверен: учётка входа не заведена в графе LORE стенда (whoami: unknown) — сообщение «Вы не опознаны» честное');
       await screenHealth(page, sec);
     } catch (e) {
       failed.push(`${sec}: ${(e as Error).message.split('\n')[0]}`);
     }
   }
+  for (const n of notes) test.info().annotations.push({ type: 'note', description: n });
+  if (notes.length) console.log(`[UI-ADMIN] ${notes.join('; ')}`);
   expect(failed, 'разделы админки с ошибкой').toEqual([]);
 });
 
