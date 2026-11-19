@@ -45,6 +45,16 @@ test('предложение: задача с тем же кодом в друг
   assert.match(x.why, /возможен дубль/);
 });
 
+// Репетиция 19.11.2026: MOBILEPOC/UX-SERVER-PROBE — и «возможен дубль» (SPRINT_MINILORE_UX/UX-SERVER-PROBE),
+// и похожий спринт SPRINT_MOBILEPOC_MVP. Дубль сильнее, но похожий спринт показывается рядом — выбирает человек.
+test('предложение: при «возможен дубль» похожий спринт тоже в кандидатах и в основании', () => {
+  const by = new Map([['UX-SERVER-PROBE', ['SPRINT_MINILORE_UX/UX-SERVER-PROBE']]]);
+  const [x] = proposeOrphanSprints({ tasks: [{ task_uid: 'MOBILEPOC/UX-SERVER-PROBE', task_id: 'UX-SERVER-PROBE' }], sprints: [...SPRINTS, 'SPRINT_MINILORE_UX'], uidsByCode: by });
+  assert.equal(x.kind, 'duplicate');
+  assert.deepEqual(x.candidates, ['SPRINT_MINILORE_UX', 'SPRINT_MOBILEPOC_MVP']);
+  assert.match(x.why, /похожий спринт по коду — SPRINT_MOBILEPOC_MVP/);
+});
+
 test('предложение: ничего не нашлось — «куда?»; порядок по task_uid и не зависит от порядка строк', () => {
   const r = proposeOrphanSprints({ tasks: TASKS, sprints: SPRINTS, uidsByCode: BY_CODE });
   assert.equal(row(r, 'ZZZ/Q-1').kind, 'where');

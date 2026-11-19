@@ -30,12 +30,6 @@ export function proposeOrphanSprints({ tasks, sprints, uidsByCode }) {
     const p = prefixOf(t.task_uid);
     const exact = [p, 'SPRINT_' + p].find(s => t.task_uid.includes('/') && reg.has(s));
     if (exact) return { ...base, kind: 'exact', sprint: exact, candidates: [exact], why: `приставка ${p} — спринт ${exact} из реестра` };
-    const same = ((uidsByCode && uidsByCode.get(t.task_id)) || []).filter(u => u !== t.task_uid).sort();
-    if (same.length) {
-      const of = same[0], sprint = prefixOf(of);
-      return { ...base, kind: 'duplicate', sprint: reg.has(sprint) ? sprint : null, duplicate_of: of, candidates: same.map(prefixOf).filter(s => reg.has(s)),
-        why: `возможен дубль: задача с тем же кодом ${t.task_id} есть в спринте — ${same.join(', ')}` };
-    }
     const w = words(p);
     let best = 0, cands = [];
     for (const s of sorted) {
@@ -44,8 +38,16 @@ export function proposeOrphanSprints({ tasks, sprints, uidsByCode }) {
       if (!hit || hit * 2 < w.length) continue;
       if (hit > best) { best = hit; cands = [s]; } else if (hit === best) cands.push(s);
     }
+    cands.sort((a, b) => words(a).length - words(b).length || a.localeCompare(b));
+    const same = ((uidsByCode && uidsByCode.get(t.task_id)) || []).filter(u => u !== t.task_uid).sort();
+    if (same.length) {
+      const of = same[0], sprint = prefixOf(of);
+      // похожий спринт показывается рядом: человек сравнивает «дубль» и «похоже» сам
+      const alt = cands.filter(s => !same.map(prefixOf).includes(s));
+      return { ...base, kind: 'duplicate', sprint: reg.has(sprint) ? sprint : null, duplicate_of: of, candidates: [...same.map(prefixOf).filter(s => reg.has(s)), ...alt],
+        why: `возможен дубль: задача с тем же кодом ${t.task_id} есть в спринте — ${same.join(', ')}` + (alt.length ? `; похожий спринт по коду — ${alt.join(', ')}` : '') };
+    }
     if (cands.length) {
-      cands.sort((a, b) => words(a).length - words(b).length || a.localeCompare(b));
       return { ...base, kind: 'similar', sprint: cands[0], candidates: cands, why: `похоже, подтвердите: общие слова кода ${best} из ${w.length} — ${cands.join(', ')}` };
     }
     return { ...base, kind: 'where', sprint: null, candidates: [], why: 'ни спринта с этой приставкой, ни задачи с тем же кодом, ни похожего спринта — «куда?»' };

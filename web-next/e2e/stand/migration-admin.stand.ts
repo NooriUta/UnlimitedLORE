@@ -166,8 +166,10 @@ test('MA7 Мастер, шаг «З»: у каждой задачи без сп�
   await page.goto(ui!.replace(/\/+$/, '') + '/#step-o');
   const box = page.locator('#os');
   const rows = box.locator('tr[data-os-row]');
-  await expect(rows.first().or(box.locator('.state.stop')), 'строки шага или честная ошибка чтения').toBeVisible({ timeout: 60_000 });
-  expect(await box.locator('.state.stop').count(), `шаг прочитал задачи: ${await textOf(box.locator('.state.stop'))}`).toBe(0);
+  // ошибка чтения — сам блок шага в состоянии stop (а не плашка «ждут решения» внутри него)
+  const failed = page.locator('#os.state.stop');
+  await expect(rows.first().or(failed), 'строки шага или честная ошибка чтения').toBeVisible({ timeout: 60_000 });
+  expect(await failed.count(), `шаг прочитал задачи: ${await textOf(failed)}`).toBe(0);
   const n = await rows.count();
   expect(n, 'задачи без спринта есть (перепись источника: 12)').toBeGreaterThan(0);
   for (let i = 0; i < n; i++) {
