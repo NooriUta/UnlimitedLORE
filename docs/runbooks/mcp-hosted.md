@@ -86,14 +86,23 @@ SPRINT_LORE_AGENT_OBSERVABILITY/AO-MCP-HOSTED. Владелица 19.11.2026: «
         "X-Lore-Client-Secret": "{env:LORE_MCP_CLIENT_SECRET}",
         "X-Lore-Mcp-Profile": "full",
         "X-Lore-Harness": "opencode",
-        "X-Lore-Machine": "{env:LORE_MACHINE_ID}"
+        "X-Lore-Machine": "{env:LORE_MACHINE_ID}",
+        "X-Lore-Session-Id": "opencode-{env:OPENCODE_PID}"
       }
     }
   }
 }
 ```
 
-Гипотеза, не проверено на живом OpenCode: `"oauth": false` нужен, чтобы OpenCode на первый 401 не запускал свой OAuth-поиск. Секрет едет в каждом запросе, поэтому адрес — только `https://`.
+Секрет едет в каждом запросе, поэтому адрес — только `https://`.
+
+**Сессия OpenCode.** У OpenCode один процесс — одна сессия, поэтому номер сессии — `OPENCODE_PID`. Проба 19.11 показала, что `{env:OPENCODE_PID}` в заголовках раскрывается. Номера процессов повторяются: после перезагрузки или просто со временем тот же PID достанется другой сессии. Поэтому один `X-Lore-Session-Id` сессию не определяет: её нужно склеивать из `X-Lore-Harness` + `X-Lore-Machine` + `X-Lore-Session-Id` + `Mcp-Session-Id` первого initialize.
+
+**Проба OpenCode 1.19.6** (заметка задачи SPRINT_LORE_AGENT_OBSERVABILITY/AO-MCP-HOSTED):
+
+- `"oauth": false` обязателен. Без него OpenCode на 401 запускает OAuth-поиск и отправляет секретные заголовки на `/.well-known/…` и `/register`.
+- Короткий Bearer через `{env:…}` не обновляется: переменная читается один раз при старте, и токен протухает посреди сессии. Для OpenCode подходит только пара client_id/секрет.
+- Пустая переменная превращается в пустую строку, и сервер отвечает 401. Если OpenCode получает 401 сразу при подключении, проверьте, что `LORE_MCP_CLIENT_ID` и `LORE_MCP_CLIENT_SECRET` заданы в окружении, из которого запущен OpenCode.
 
 ## Проверка
 

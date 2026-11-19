@@ -48,9 +48,18 @@ On the LORE stand the server runs as service `lore-mcp` at `https://<LORE host>/
 `Authorization: Bearer <token>` or the pair `X-Lore-Client-Id` + `X-Lore-Client-Secret`
 (the server then fetches and caches the client_credentials token itself; needs
 `LORE_OIDC_ISSUER`). Claude Code: `headersHelper` →
-`node mcp-server/scripts/lore-mcp-headers.mjs`. OpenCode: `headers` with
-`{env:LORE_MCP_CLIENT_ID}` / `{env:LORE_MCP_CLIENT_SECRET}`. Full configs and
-error codes: [docs/runbooks/mcp-hosted.md](../docs/runbooks/mcp-hosted.md).
+`node mcp-server/scripts/lore-mcp-headers.mjs`. OpenCode (`"oauth": false` is
+mandatory, otherwise the secret headers go to `/.well-known` and `/register`):
+
+```json
+{ "mcp": { "aida-lore": { "type": "remote", "url": "https://<LORE host>/mcp", "enabled": true, "oauth": false,
+  "headers": { "X-Lore-Client-Id": "{env:LORE_MCP_CLIENT_ID}", "X-Lore-Client-Secret": "{env:LORE_MCP_CLIENT_SECRET}",
+    "X-Lore-Mcp-Profile": "full", "X-Lore-Harness": "opencode", "X-Lore-Machine": "{env:LORE_MACHINE_ID}",
+    "X-Lore-Session-Id": "opencode-{env:OPENCODE_PID}" } } } }
+```
+
+Full configs, the OpenCode 1.19.6 probe and error codes:
+[docs/runbooks/mcp-hosted.md](../docs/runbooks/mcp-hosted.md).
 
 ## Build & run
 
