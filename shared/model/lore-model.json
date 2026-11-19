@@ -2798,6 +2798,14 @@
       "relation" : "attribute",
       "place" : "link_tab"
     }, {
+      "key" : "repositories",
+      "label" : "Репозитории",
+      "rel" : "COMPONENT_REPOSITORY",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
       "key" : "adrs",
       "label" : "ADR",
       "rel" : "BELONGS_TO",
@@ -4827,6 +4835,186 @@
     "labelEn" : "Quality gate",
     "labelPl" : "Bramka jakości"
   }, {
+    "type" : "repository",
+    "label" : "Репозиторий",
+    "labelKey" : "pp.kind.repository",
+    "icon" : "chest",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "full_path",
+      "label" : "Полный путь",
+      "labelKey" : "pp.field.fullPath",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+      "layer" : "stable",
+      "labelEn" : "Full path",
+      "labelPl" : "Pełna ścieżka"
+    }, {
+      "key" : "host",
+      "label" : "Хост",
+      "labelKey" : "pp.field.host",
+      "kind" : "text",
+      "group" : "props",
+      "layer" : "stable",
+      "labelEn" : "Host",
+      "labelPl" : "Host"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец на хосте",
+      "labelKey" : "pp.field.hostOwner",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Пространство на хосте (AIDA, NooriUta) — вместе с хостом и именем даёт полный путь. Это не организация.",
+      "layer" : "stable",
+      "labelEn" : "Owner on host",
+      "labelPl" : "Właściciel na hoście"
+    }, {
+      "key" : "default_branch",
+      "label" : "Ветка по умолчанию",
+      "labelKey" : "pp.field.defaultBranch",
+      "kind" : "text",
+      "group" : "props",
+      "layer" : "stable",
+      "labelEn" : "Default branch",
+      "labelPl" : "Gałąź domyślna"
+    }, {
+      "key" : "url",
+      "label" : "Адрес",
+      "labelKey" : "pp.field.url",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Ключ репозитория — адрес уникален.",
+      "layer" : "stable",
+      "labelEn" : "Address",
+      "labelPl" : "Adres"
+    } ],
+    "props" : [ {
+      "fields" : [ "full_path", "host", "owner", "default_branch", "url" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "links",
+      "label" : "Связи",
+      "rels" : [ {
+        "rel" : "HAS_REPOSITORY",
+        "dir" : "in",
+        "label" : "основной у проекта",
+        "relation" : "association"
+      }, {
+        "rel" : "COMPONENT_REPOSITORY",
+        "dir" : "in",
+        "label" : "репозиторий компонента",
+        "relation" : "association"
+      }, {
+        "rel" : "MIRRORED_TO",
+        "dir" : "out",
+        "label" : "зеркала",
+        "relation" : "association"
+      }, {
+        "rel" : "MIRRORED_TO",
+        "dir" : "in",
+        "label" : "зеркало репозитория",
+        "relation" : "association"
+      }, {
+        "rel" : "USES_REPOSITORY",
+        "dir" : "out",
+        "label" : "использует",
+        "relation" : "association"
+      }, {
+        "rel" : "USES_REPOSITORY",
+        "dir" : "in",
+        "label" : "используется в",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Основной у проекта",
+      "rel" : "HAS_REPOSITORY",
+      "dir" : "in",
+      "targetType" : "project",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Репозиторий компонента",
+      "rel" : "COMPONENT_REPOSITORY",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "mirrors",
+      "label" : "Зеркала",
+      "rel" : "MIRRORED_TO",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "mirrorOf",
+      "label" : "Зеркало репозитория",
+      "rel" : "MIRRORED_TO",
+      "dir" : "in",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "uses",
+      "label" : "Использует",
+      "rel" : "USES_REPOSITORY",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "usedBy",
+      "label" : "Используется в",
+      "rel" : "USES_REPOSITORY",
+      "dir" : "in",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "Repository",
+    "labelPl" : "Repozytorium"
+  }, {
+    "type" : "organization",
+    "label" : "Организация",
+    "labelKey" : "pp.kind.organization",
+    "icon" : "castle",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    } ],
+    "labelEn" : "Organization",
+    "labelPl" : "Organizacja"
+  }, {
     "type" : "project",
     "label" : "Проект",
     "labelKey" : "pp.kind.project",
@@ -4898,6 +5086,14 @@
       "dir" : "in",
       "targetType" : "component",
       "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "repositories",
+      "label" : "Репозитории",
+      "rel" : "HAS_REPOSITORY",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
       "place" : "link_tab"
     }, {
       "key" : "adrs",
@@ -5146,7 +5342,7 @@
     "labelEn" : "Decision",
     "labelPl" : "Decyzja"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "pain", "product", "project", "quality_gate", "question", "release", "runbook", "tech", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -5191,6 +5387,10 @@
       "hist" : "KnowMilestoneHist",
       "key" : "milestone_id"
     },
+    "organization" : {
+      "vertex" : "KnowOrganization",
+      "key" : "org_id"
+    },
     "pain" : {
       "vertex" : "KnowPain",
       "key" : "pain_id"
@@ -5216,6 +5416,10 @@
       "vertex" : "KnowRelease",
       "hist" : "KnowReleaseHist",
       "key" : "release_uid"
+    },
+    "repository" : {
+      "vertex" : "KnowRepository",
+      "key" : "url"
     },
     "runbook" : {
       "vertex" : "KnowRunbook",
@@ -5288,6 +5492,10 @@
       "date" : "date_display",
       "title" : "label"
     },
+    "organization" : {
+      "code" : "org_id",
+      "title" : "name"
+    },
     "pain" : {
       "date" : "date_created"
     },
@@ -5312,6 +5520,9 @@
       "code" : "release_id",
       "date" : "release_date",
       "description_md" : "description_md"
+    },
+    "repository" : {
+      "title" : "name"
     },
     "runbook" : {
       "date" : "date_created",
@@ -5357,7 +5568,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "product", "project", "quality_gate", "question", "runbook", "spec", "task", "user" ],
+  "no_type_color" : [ "agent", "doc", "organization", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "user" ],
   "precision" : {
     "adr.date" : "date",
     "decision.date" : "date",
@@ -5507,6 +5718,11 @@
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       } ]
     },
+    "organization" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
     "pain" : {
       "history" : "none",
       "created" : [ {
@@ -5585,6 +5801,11 @@
         "source" : "release_date",
         "precision" : "date"
       } ]
+    },
+    "repository" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "runbook" : {
       "history" : "scd2",
@@ -5878,6 +6099,9 @@
       "key" : "tech",
       "slot" : "own"
     }, {
+      "key" : "repositories",
+      "slot" : "own"
+    }, {
       "key" : "children",
       "slot" : "own"
     }, {
@@ -6064,6 +6288,7 @@
       "key" : "content",
       "slot" : "own"
     } ],
+    "organization" : [ ],
     "pain" : [ {
       "key" : "content",
       "slot" : "own"
@@ -6122,6 +6347,9 @@
       "slot" : "own"
     }, {
       "key" : "components",
+      "slot" : "own"
+    }, {
+      "key" : "repositories",
       "slot" : "own"
     }, {
       "key" : "adrs",
@@ -6212,6 +6440,25 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "repository" : [ {
+      "key" : "projects",
+      "slot" : "own"
+    }, {
+      "key" : "components",
+      "slot" : "own"
+    }, {
+      "key" : "mirrors",
+      "slot" : "own"
+    }, {
+      "key" : "mirrorOf",
+      "slot" : "own"
+    }, {
+      "key" : "uses",
+      "slot" : "own"
+    }, {
+      "key" : "usedBy",
       "slot" : "own"
     } ],
     "runbook" : [ {
@@ -6411,6 +6658,12 @@
     }, {
       "section" : "tech",
       "icon" : "gears"
+    }, {
+      "section" : "repository",
+      "icon" : "chest"
+    }, {
+      "section" : "organization",
+      "icon" : "castle"
     } ]
   }, {
     "id" : "personal",
@@ -6435,6 +6688,7 @@
     "machine" : "admin",
     "milestone" : "everywhere",
     "news" : "everywhere",
+    "organization" : "everywhere",
     "pain" : "everywhere",
     "people" : "admin",
     "product" : "everywhere",
@@ -6442,6 +6696,7 @@
     "quality_gate" : "everywhere",
     "question" : "everywhere",
     "release" : "everywhere",
+    "repository" : "everywhere",
     "runbook" : "everywhere",
     "settings" : "everywhere",
     "spec" : "everywhere",

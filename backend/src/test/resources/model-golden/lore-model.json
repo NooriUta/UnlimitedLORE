@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "5ebf7cac4f12cde6",
+  "version" : "e406cab0c9ba29ec",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -6891,6 +6891,15 @@
         "place" : "link_tab",
         "manageable" : false
       }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "COMPONENT_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
         "key" : "adrs",
         "label" : "ADR",
         "relation" : "attribute",
@@ -10829,6 +10838,372 @@
       "unclassified" : [ ],
       "internal" : [ ]
     },
+    "repository" : {
+      "type" : "repository",
+      "label" : "Репозиторий",
+      "label_key" : "pp.kind.repository",
+      "label_en" : "Repository",
+      "label_pl" : "Repozytorium",
+      "icon" : "chest",
+      "color" : null,
+      "key" : "url",
+      "vertex" : "KnowRepository",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "full_path",
+        "label" : "Полный путь",
+        "label_key" : "pp.field.fullPath",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Full path",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Pełna ścieżka",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "host",
+        "label" : "Хост",
+        "label_key" : "pp.field.host",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Host",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Host",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "owner",
+        "label" : "Владелец на хосте",
+        "label_key" : "pp.field.hostOwner",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Owner on host",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Właściciel na hoście",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Пространство на хосте (AIDA, NooriUta) — вместе с хостом и именем даёт полный путь. Это не организация.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "default_branch",
+        "label" : "Ветка по умолчанию",
+        "label_key" : "pp.field.defaultBranch",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Default branch",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Gałąź domyślna",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "url",
+        "label" : "Адрес",
+        "label_key" : "pp.field.url",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Address",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Adres",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Ключ репозитория — адрес уникален.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Основной у проекта",
+        "relation" : "association",
+        "rel" : "HAS_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "project",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "components",
+        "label" : "Репозиторий компонента",
+        "relation" : "association",
+        "rel" : "COMPONENT_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "component",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "mirrors",
+        "label" : "Зеркала",
+        "relation" : "association",
+        "rel" : "MIRRORED_TO",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "mirrorOf",
+        "label" : "Зеркало репозитория",
+        "relation" : "association",
+        "rel" : "MIRRORED_TO",
+        "dir" : "in",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "uses",
+        "label" : "Использует",
+        "relation" : "association",
+        "rel" : "USES_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "usedBy",
+        "label" : "Используется в",
+        "relation" : "association",
+        "rel" : "USES_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
+    },
+    "organization" : {
+      "type" : "organization",
+      "label" : "Организация",
+      "label_key" : "pp.kind.organization",
+      "label_en" : "Organization",
+      "label_pl" : "Organizacja",
+      "icon" : "castle",
+      "color" : null,
+      "key" : "org_id",
+      "vertex" : "KnowOrganization",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "s",
+          "overflow" : "none"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
+    },
     "project" : {
       "type" : "project",
       "label" : "Проект",
@@ -10994,6 +11369,15 @@
         "rel" : "BELONGS_TO_PROJECT",
         "dir" : "in",
         "target_type" : "component",
+        "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "HAS_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "link_tab",
         "manageable" : false
       }, {
@@ -11742,66 +12126,73 @@
           "slot" : "own",
           "group" : null
         }, {
+          "key" : "repositories",
+          "source" : "relation",
+          "ref" : "repositories",
+          "order" : 4,
+          "slot" : "own",
+          "group" : null
+        }, {
           "key" : "children",
           "source" : "relation",
           "ref" : "children",
-          "order" : 4,
+          "order" : 5,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "decisions",
           "source" : "relation",
           "ref" : "decisions",
-          "order" : 5,
+          "order" : 6,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "questions",
           "source" : "relation",
           "ref" : "questions",
-          "order" : 6,
+          "order" : 7,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "features",
           "source" : "relation",
           "ref" : "features",
-          "order" : 7,
+          "order" : 8,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "docs",
           "source" : "relation",
           "ref" : "docs",
-          "order" : 8,
+          "order" : 9,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "qgs",
           "source" : "relation",
           "ref" : "qgs",
-          "order" : 9,
+          "order" : 10,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "tasks",
           "source" : "relation",
           "ref" : "tasks",
-          "order" : 10,
+          "order" : 11,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "sprints",
           "source" : "relation",
           "ref" : "sprints",
-          "order" : 11,
+          "order" : 12,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "refsOut",
           "source" : "relation",
           "ref" : "refsOut",
-          "order" : 12,
+          "order" : 13,
           "slot" : "own",
           "group" : {
             "key" : "refs",
@@ -11811,7 +12202,7 @@
           "key" : "refsIn",
           "source" : "relation",
           "ref" : "refsIn",
-          "order" : 13,
+          "order" : 14,
           "slot" : "own",
           "group" : {
             "key" : "refs",
@@ -12551,6 +12942,74 @@
           }
         } ]
       },
+      "repository" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "projects",
+          "source" : "relation",
+          "ref" : "projects",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "components",
+          "source" : "relation",
+          "ref" : "components",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "mirrors",
+          "source" : "relation",
+          "ref" : "mirrors",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "mirrorOf",
+          "source" : "relation",
+          "ref" : "mirrorOf",
+          "order" : 4,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "uses",
+          "source" : "relation",
+          "ref" : "uses",
+          "order" : 5,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "usedBy",
+          "source" : "relation",
+          "ref" : "usedBy",
+          "order" : 6,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        } ]
+      },
+      "organization" : {
+        "decided" : true,
+        "sections" : [ ]
+      },
       "project" : {
         "decided" : true,
         "sections" : [ {
@@ -12568,24 +13027,31 @@
           "slot" : "own",
           "group" : null
         }, {
+          "key" : "repositories",
+          "source" : "relation",
+          "ref" : "repositories",
+          "order" : 3,
+          "slot" : "own",
+          "group" : null
+        }, {
           "key" : "adrs",
           "source" : "relation",
           "ref" : "adrs",
-          "order" : 3,
+          "order" : 4,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "releases",
           "source" : "relation",
           "ref" : "releases",
-          "order" : 4,
+          "order" : 5,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "people",
           "source" : "relation",
           "ref" : "people",
-          "order" : 5,
+          "order" : 6,
           "slot" : "own",
           "group" : {
             "key" : "people",
@@ -12595,7 +13061,7 @@
           "key" : "agents",
           "source" : "relation",
           "ref" : "agents",
-          "order" : 6,
+          "order" : 7,
           "slot" : "own",
           "group" : {
             "key" : "people",
@@ -12605,70 +13071,70 @@
           "key" : "specs",
           "source" : "relation",
           "ref" : "specs",
-          "order" : 7,
+          "order" : 8,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "decisions",
           "source" : "relation",
           "ref" : "decisions",
-          "order" : 8,
+          "order" : 9,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "questions",
           "source" : "relation",
           "ref" : "questions",
-          "order" : 9,
+          "order" : 10,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "features",
           "source" : "relation",
           "ref" : "features",
-          "order" : 10,
+          "order" : 11,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "docs",
           "source" : "relation",
           "ref" : "docs",
-          "order" : 11,
+          "order" : 12,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "runbooks",
           "source" : "relation",
           "ref" : "runbooks",
-          "order" : 12,
+          "order" : 13,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "actors",
           "source" : "relation",
           "ref" : "actors",
-          "order" : 13,
+          "order" : 14,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "boundAgents",
           "source" : "relation",
           "ref" : "boundAgents",
-          "order" : 14,
+          "order" : 15,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "files",
           "source" : "relation",
           "ref" : "files",
-          "order" : 15,
+          "order" : 16,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "prs",
           "source" : "relation",
           "ref" : "prs",
-          "order" : 16,
+          "order" : 17,
           "slot" : "own",
           "group" : null
         } ]
@@ -12766,6 +13232,12 @@
       }, {
         "section" : "tech",
         "icon" : "gears"
+      }, {
+        "section" : "repository",
+        "icon" : "chest"
+      }, {
+        "section" : "organization",
+        "icon" : "castle"
       } ]
     }, {
       "id" : "personal",
@@ -12792,6 +13264,7 @@
     "machine" : "admin",
     "milestone" : "everywhere",
     "news" : "everywhere",
+    "organization" : "everywhere",
     "pain" : "everywhere",
     "people" : "admin",
     "product" : "everywhere",
@@ -12799,6 +13272,7 @@
     "quality_gate" : "everywhere",
     "question" : "everywhere",
     "release" : "everywhere",
+    "repository" : "everywhere",
     "runbook" : "everywhere",
     "settings" : "everywhere",
     "spec" : "everywhere",
@@ -13477,11 +13951,11 @@
     } ]
   },
   "field_texts" : {
-    "fields" : 198,
-    "without_definition" : 178,
+    "fields" : 206,
+    "without_definition" : 183,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 198
+    "without_definition_en" : 206
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }

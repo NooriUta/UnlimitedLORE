@@ -2115,6 +2115,7 @@ public final class LoreSlices {
         slice("repos_of_component", REPO_COLUMNS + "FROM KnowRepository WHERE in('COMPONENT_REPOSITORY').component_id CONTAINS :id ORDER BY full_path",
             List.of("id"), Map.of(), "");
         slice("organizations", "SELECT org_id, name FROM KnowOrganization ORDER BY org_id");
+        slice("org_by_id", "SELECT org_id, name FROM KnowOrganization WHERE org_id = :id LIMIT 1", List.of("id"), Map.of(), "");
 
         // Спринты компонента — по ребру BELONGS_TO (спринт → компонент), и только по нему.
         // S4-29: был LIMIT 30 и подбор по имени (sprint_id LIKE '%ключ%' у спринтов без
@@ -3483,7 +3484,10 @@ public final class LoreSlices {
         Map.entry("gain_by_id", "паспорт выгоды (MD-04): общий продуктовый профиль, как gains"),
         Map.entry("job_by_id", "паспорт работы (MD-04): глобальная вершина (AL-113), как jobs"),
         Map.entry("role_profile_coverage", "AO-06: агрегат покрытия ролей профилем — числа по корпусу, без записей проектов"),
-        Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая")
+        Map.entry("model_config_history", "MC-05: модель LORE одна на всю студию — история её версий общая"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: организация — самостоятельный объект студии, с проектами не связана.
+        Map.entry("organizations", "организации — самостоятельные объекты студии, связей с проектами нет (D-2026-MIG-REPOSITORY-ORGANIZATION)"),
+        Map.entry("org_by_id", "паспорт организации — та же выборка, что organizations")
     );
 
     /**
@@ -3525,6 +3529,11 @@ public final class LoreSlices {
         Map.entry("findings", "находки — решение владелицы"),
         Map.entry("finding_by_id", "находки — решение владелицы"),
         Map.entry("quality_gates", "QG — общие или проектные (SPRINT_QG_REBUILD/QG-04)"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий связан с проектом, но путь двойной (свой основной и через компонент).
+        Map.entry("repositories", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
+        Map.entry("repo_by_id", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
+        Map.entry("repos_of_project", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
+        Map.entry("repos_of_component", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
         Map.entry("quality_gate_by_id", "QG — QG-04"),
         Map.entry("qg_metrics", "QG — QG-04"),
         Map.entry("qg_job_tasks", "QG — QG-04"),

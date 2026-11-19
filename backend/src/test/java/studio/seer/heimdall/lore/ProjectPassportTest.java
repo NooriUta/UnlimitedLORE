@@ -33,6 +33,8 @@ class ProjectPassportTest {
             "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "files", "prs"))
             SLICE.put(k, "project_" + k);
         SLICE.put("boundAgents", "project_bound_agents");
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории проекта — своим срезом (основной + репозитории компонентов).
+        SLICE.put("repositories", "repos_of_project");
     }
 
     /** Новые вкладки 11.11: прямое ребро BELONGS_TO_PROJECT → тип цели. */
@@ -184,7 +186,9 @@ class ProjectPassportTest {
         @SuppressWarnings("unchecked") List<Map<String, Object>> sections = (List<Map<String, Object>>) t.get("sections");
         List<String> keys = new ArrayList<>();
         for (Map<String, Object> m : sections) keys.add((String) m.get("key"));
-        assertEquals(TABS, keys, "Спринты · Компоненты · ADR · Релизы · Люди и агенты (53а), затем прямые связи (11.11)");
+        List<String> order = new java.util.ArrayList<>(TABS);
+        order.add(2, "repositories");   // D-2026-MIG-REPOSITORY-ORGANIZATION: после компонентов, как в прототипе
+        assertEquals(order, keys, "Спринты · Компоненты · ADR · Релизы · Люди и агенты (53а), затем прямые связи (11.11)");
         for (Map<String, Object> m : sections) {
             Object g = m.get("group");
             if (List.of("people", "agents").contains(m.get("key"))) {
