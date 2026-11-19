@@ -8,10 +8,12 @@
 // Ожидания по данным берутся из среза repositories того же сервера; число «у MIDGARD 4» — данные
 // репетиции на ryzenai (перенос 19.11.2026), на другой базе сценарий скажет, сколько увидел.
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot, textOf } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
 import { writeCopyRefusal, type WhoamiAuth } from './writeGuard.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 const MIDGARD = 'AIDA/MIDGARD';

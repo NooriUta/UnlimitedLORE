@@ -8,10 +8,12 @@
 // Роль: на копии вход выключен, и роль берётся из заголовка X-Seer-Role — сценарий подставляет нужную.
 // На адресе со входом роль задаёт сохранённая учётка; сценарий, которому нужна другая роль, «не выполнен».
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot, textOf } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
 import { writeCopyRefusal, type WhoamiAuth } from './writeGuard.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 const SECTION = '/?mod=admin&sec=adm-migration';
