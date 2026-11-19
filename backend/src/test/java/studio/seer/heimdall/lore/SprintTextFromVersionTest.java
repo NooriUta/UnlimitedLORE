@@ -34,6 +34,16 @@ class SprintTextFromVersionTest {
     }
 
     @Test
+    void бэкфилл_автосвязей_и_гигиена_видят_тексты_спринта_в_версии() {
+        String b = LoreLinkResource.BACKFILL_BODIES.get("sprint");
+        assertTrue(b.contains("COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md"), b);
+        assertTrue(b.contains("COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md"), b);
+        LoreTidyResource.Target t = LoreTidyResource.TARGETS.stream()
+            .filter(x -> x.type().equals("KnowSprint")).findFirst().orElseThrow();
+        assertTrue(t.histFields().contains("context_md"), "context_md спринта сверяется с версией: " + t);
+    }
+
+    @Test
     void список_спринтов_читает_контекст_из_открытой_версии() {
         String s = sql("sprints", Map.of());
         assertTrue(s.contains("COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md"), s);
