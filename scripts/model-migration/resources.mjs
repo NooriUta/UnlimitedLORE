@@ -9,6 +9,7 @@ import schema from './schema/sprint-phase-task.json' with { type: 'json' };
 import rules from './rules/status-unification.json' with { type: 'json' };
 import statuses from '../../shared/lore-statuses.json' with { type: 'json' };
 import installBundle from './rules/install-bundle.json' with { type: 'json' };
+import loreModel from '../../shared/model/lore-model.json' with { type: 'json' };
 
 // Первый объект — своей картой; все остальные — картой, выведенной правилами (propose-map-all.mjs, 17.11.2026).
 export const MAP = { ...map.types, ...allObjects.types };
@@ -19,3 +20,5 @@ export const RULES = rules;
 export const VOCAB = statuses.statusMatch;
 export const CODE_CASE = rules.code_case.status;
 export const INSTALL_BUNDLE = installBundle;
+// DBR-07: временные ряды модели 1.18 (AuditDbLogin — сторож входов в ArcadeDB); заводит их шаг 3 переноса.
+export const SERIES = loreModel.series || {};

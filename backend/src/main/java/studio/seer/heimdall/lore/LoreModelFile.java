@@ -58,7 +58,9 @@ final class LoreModelFile {
         // S4-24: паспорт создания _new — путь записи, поля формы, обязательное «одно из» (LoreModelCreate).
         Map<String, LoreModelCreate.Spec> create,
         // WK-05: переходы ядра и виды работы со стадиями и доказательством done (LoreModelWorkflow).
-        LoreModelWorkflow.Workflow workflow) {}
+        LoreModelWorkflow.Workflow workflow,
+        // DBR-07: временные ряды модели 1.18 (AuditDbLogin) — DDL строится из модели (LoreModelSeries).
+        Map<String, LoreModelSeries.Series> series) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -157,7 +159,7 @@ final class LoreModelFile {
             strMap(doc.get("type_color"), "type_color"), set(doc, "no_type_color"), strMap(doc.get("precision"), "precision"),
             ro(time), ro(display), ro(computed), strMap(doc.get("edge_fields"), "edge_fields"),
             set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"), ro(create),
-            LoreModelWorkflow.parse(doc.get("workflow")));
+            LoreModelWorkflow.parse(doc.get("workflow")), ro(LoreModelSeries.parse(doc.get("series"))));
         check(c);
         return c;
     }
@@ -285,6 +287,7 @@ final class LoreModelFile {
         c.create().forEach((k, v) -> create.put(k, LoreModelCodec.encode(v)));
         d.put("create", create);
         d.put("workflow", LoreModelWorkflow.render(c.workflow()));
+        d.put("series", LoreModelSeries.render(c.series()));
         return new JsonObject(d).encodePrettily().replace("\r\n", "\n") + "\n";
     }
 

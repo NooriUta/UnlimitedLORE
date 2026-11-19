@@ -20,7 +20,8 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES } from './resources.mjs';
+import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, SERIES } from './resources.mjs';
+import { seriesDdl } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
@@ -37,7 +38,7 @@ export function modelMarker(schema, at = new Date().toISOString()) {
   const model_hash = crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0, 16);
   return { model_hash, source: 'installer', built_at: at };
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), DICT_ENTRY, DICT_LABEL];
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
@@ -154,6 +155,8 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
   await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
   await db.dstCommand(`CREATE EDGE TYPE ${EDGE}`);
+  // DBR-07: временные ряды модели (AuditDbLogin — ряд сторожа входов); записей переноса в них нет.
+  for (const [T, s] of Object.entries(SERIES)) await db.dstCommand(seriesDdl(T, s));
 
   const dstRid = {}; // rid источника → rid приёмника
   const undeclared = {};

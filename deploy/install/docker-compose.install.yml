@@ -31,6 +31,35 @@ services:
     # Порт наружу не публикуется: бэкенд ходит по сети compose, инсталлятор —
     # одноразовым curl-контейнером в той же сети.
 
+  # Сторож входов в ArcadeDB (SPRINT_LORE_PRODUCT_BACKLOG/DBR-07, deploy/db-guard/README.md).
+  # Прокси перед arcadedb:2480: из Authorization берёт только имя, пишет первый вход пары
+  # «пользователь × источник» за минуту в ряд AuditDbLogin своим токеном (не root), root вне
+  # GUARD_ROOT_SOURCES — тревога (канал пока не подключён — только журнал).
+  # ЭТАП 6 (D-2026-SETUP-BEFORE-ENFORCE, с разрешения владелицы): пустить бэкенд через сторожа
+  # (LORE_DB_ENDPOINT=lore-db-guard) и закрыть прямой :2480. До этого клиенты ходят мимо — ряд неполон.
+  # Включается профилем: COMPOSE_PROFILES=guard (образ собирается из исходников; в ghcr его нет).
+  lore-db-guard:
+    profiles: ["guard"]
+    image: ${LORE_DB_GUARD_IMAGE:-lore-install-db-guard:${LORE_VERSION:-local}}
+    build:
+      context: ${LORE_SRC:-../..}/deploy/db-guard
+    restart: unless-stopped
+    depends_on:
+      - arcadedb
+    environment:
+      - GUARD_UPSTREAM=http://arcadedb:2480
+      - GUARD_DB=${LORE_DB:-system_aida_lore}
+      # Токен ArcadeDB группы db-guard (только createRecord на AuditDbLogin). Пусто — сторож видит
+      # входы и тревожит, но ряд не пишет (громко в журнале). Под root сторож не стартует.
+      - GUARD_DB_AUTH=${LORE_DB_GUARD_AUTH:-}
+      - GUARD_ROOT_SOURCES=${LORE_DB_GUARD_ROOT_SOURCES:-lore-backend}
+      - GUARD_TOKEN_NAMES=${LORE_DB_GUARD_TOKEN_NAMES:-}
+      # Имя контейнера по адресу — через docker API. Сокет по умолчанию не подключён: доступ к нему —
+      # это доступ ко всему docker; подключать осознанно (volumes ниже) и задать путь здесь.
+      - GUARD_DOCKER_SOCKET=${LORE_DB_GUARD_DOCKER_SOCKET:-}
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock:ro
+
   minio:
     image: minio/minio:${MINIO_VERSION:-latest}
     command: server /data --console-address ":9001"
@@ -61,7 +90,8 @@ services:
       - arcadedb
       - minio
     environment:
-      - MART_ARCADE_URL=http://arcadedb:2480
+      # DBR-07: lore-db-guard вместо arcadedb — Этап 6, с разрешения владелицы; по умолчанию напрямую.
+      - MART_ARCADE_URL=http://${LORE_DB_ENDPOINT:-arcadedb}:2480
       - ARCADEDB_USER=root
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD}
       - LORE_DB=${LORE_DB:-system_aida_lore}
