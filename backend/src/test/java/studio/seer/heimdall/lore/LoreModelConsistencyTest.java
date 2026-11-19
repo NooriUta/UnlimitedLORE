@@ -49,6 +49,21 @@ class LoreModelConsistencyTest {
         assertTrue(p.stream().allMatch(s -> s.contains("REFERENCES")), p.toString());
     }
 
+    /**
+     * D-2026-MIG-REPOSITORY-ORGANIZATION: рёбра репозитория живут в схеме, собранной из модели (MIG-01); в старой
+     * схеме шагов V их нет. Сохранение модели на старой базе не должно из-за них отказывать (полный прогон 19.11:
+     * LoreModelStoreLiveDbTest — 422 MODEL_INCONSISTENT на любой правке), а прочие пропавшие рёбра — называются.
+     */
+    @Test
+    void edgesOfSchemaFromModelAreNotRefusedOnOldSchema() throws Exception {
+        LoreModelFile.Content c = parse(LoreModelLiveReplaceTest.canon());
+        Set<String> schema = new java.util.HashSet<>(edgesOf(c));
+        schema.removeAll(Set.of("HAS_REPOSITORY", "COMPONENT_REPOSITORY", "MIRRORED_TO", "USES_REPOSITORY"));
+        assertEquals(List.of(), LoreModelConsistency.problems(c, schema, null, SLICES));
+        schema.remove("REFERENCES");
+        assertFalse(LoreModelConsistency.problems(c, schema, null, SLICES).isEmpty(), "положительный контроль: прочее ребро называется");
+    }
+
     @Test
     void passportSlotWithoutSectionIsNamed() throws Exception {
         LoreModelFile.Content c = parse(LoreModelLiveReplaceTest.canon().replaceFirst(

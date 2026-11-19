@@ -68,7 +68,8 @@ class ComponentReleaseSlicesPagedTest {
             assertEquals("in", r.dir());
             assertEquals(t[2], r.targetType());
         }
-        assertEquals(Map.of("tasks", "component_tasks", "sprints", "component_sprints"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: + свой репозиторий компонента (repos_of_component).
+        assertEquals(Map.of("tasks", "component_tasks", "sprints", "component_sprints", "repositories", "repos_of_component"),
             LoreRecordValues.READ_BY_SLICE.get("component"));
     }
 }

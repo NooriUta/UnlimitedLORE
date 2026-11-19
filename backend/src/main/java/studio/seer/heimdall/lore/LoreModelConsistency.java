@@ -30,6 +30,17 @@ final class LoreModelConsistency {
     static final Map<String, String> KIND_EXEMPT = Map.of();
 
     /**
+     * D-2026-MIG-REPOSITORY-ORGANIZATION: рёбра, которые есть только в схеме, собранной из модели (установщик MIG-01,
+     * перенос 1.18). В старой схеме шагов V их нет, и новый шаг V накатил бы их на прод — поэтому их отсутствие в
+     * схеме базы правку модели не останавливает. Ребро → причина. Сторож описания рёбер — LorePassportLinksContractTest.
+     */
+    static final Map<String, String> MODEL_SCHEMA_EDGES = Map.of(
+        "HAS_REPOSITORY", "основной репозиторий проекта — схема из модели (MIG-01)",
+        "COMPONENT_REPOSITORY", "репозиторий компонента — схема из модели (MIG-01)",
+        "MIRRORED_TO", "зеркало репозитория — схема из модели (MIG-01)",
+        "USES_REPOSITORY", "«использует» между репозиториями — схема из модели (MIG-01)");
+
+    /**
      * @param schemaNames имена типов схемы графа (вершины и рёбра); {@code null} — схема не читалась,
      *                    правило 2 не проверено (и так и названо в ответе)
      * @param declared    объявленные типы свойств: тип вершины → свойство → тип схемы; {@code null} — не читались
@@ -48,7 +59,7 @@ final class LoreModelConsistency {
                     out.add(t + "." + f.key() + ": варианты из среза «" + f.options().slice() + "», которого нет");
             if (schemaNames != null)
                 for (LoreRecordRegistry.Relation r : d.relations())
-                    if (!schemaNames.contains(r.rel()))
+                    if (!schemaNames.contains(r.rel()) && !MODEL_SCHEMA_EDGES.containsKey(r.rel()))
                         out.add(t + "." + r.key() + ": ребра «" + r.rel() + "» в схеме графа нет");
             Set<String> sections = new LinkedHashSet<>();
             if (!d.body().isEmpty()) sections.add(LorePassportSurface.CONTENT);
