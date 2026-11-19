@@ -139,9 +139,9 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
         const same = await q(`SELECT count(*) AS n FROM ${t} WHERE @out = ${o} AND @in = ${i}` + (props.role !== undefined ? ' AND role = :role' : ''), props.role !== undefined ? { role: props.role } : {});
         if (Number(same[0]?.n) > 0) merged++;
         else { await c(`CREATE EDGE ${t} FROM ${o} TO ${i} CONTENT :c`, { c: props }); moved++; }
-        await c(`DELETE EDGE ${e['@rid']}`);
+        await c(`DELETE FROM ${e['@rid']}`);
       }
-      await c(`DELETE VERTEX ${m}`);
+      await c(`DELETE FROM ${m}`);
     }
     await c(`UPDATE ${anchor} SET aliases = :a, regroup = :g, hosts = :h`, { a: p.aliases, g, h: hosts.length ? hosts : null });
     const after = await members(anchor);
