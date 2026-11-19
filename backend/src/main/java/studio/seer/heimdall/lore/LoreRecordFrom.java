@@ -296,6 +296,8 @@ final class LoreRecordFrom {
             s("parent", "parent_doc_id"),
             list("sprints", "sprint_ids"),
             s("file_path", "file_path"),
+            // MDL-05: признак внешнего CDN в HTML — поле читал срез, а в модели его не было.
+            s("has_ext_deps", "has_ext_deps"),
             when("body_redacted", "body_redacted", "body_redacted"),
             when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
         // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта, профиль клиента и ранбук — шапка и тело из
@@ -338,6 +340,7 @@ final class LoreRecordFrom {
         Map.entry("quality_gate", List.of(
             v("title", Transform.FIRST_OF, "name", "qg_id"),
             s("status", "status"),
+            s("scope", "scope"), // QG-01: общий (global) или проектный (project)
             s("last_run_status", "last_run_status"),
             v("date", Transform.DATE10, "date_created"),
             v("retired_at", Transform.DATE10, "retired_at"),

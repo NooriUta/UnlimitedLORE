@@ -3,7 +3,7 @@
 # (заказ MIG-01, SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01).
 #
 # Что делает (прод только читается):
-#   1. lore-host: BACKUP DATABASE system_aida_lore кредом работающего прод-бэкенда — тем же
+#   1. lore-host: BACKUP DATABASE system_aida_lore кредом сервиса lore-migrate (DBR-01) — тем же
 #      путём, что migrate-live-check.sh (fresh). Пароль хоста не покидает, агенту не виден.
 #   2. архив потоком по ssh сюда, сверка sha256 с lore-host;
 #   3. счёт записей по типам — в своей одноразовой ArcadeDB той же версии, что на проде
@@ -49,9 +49,7 @@ docker exec "$PREPROD_YGG" test -e "$DB_DIR/$NAME" && deny "база $NAME на 
 prod_img="$(r "docker inspect -f '{{.Config.Image}}' $REMOTE_YGG")" || skip "lore-host: контейнер $REMOTE_YGG не найден"
 prod_ver="${prod_img##*:}"
 say "lore-host: BACKUP DATABASE $SOURCE_DB (данные прода не меняются)"
-bcid="$(r "cd $REMOTE_BACKEND_DIR && docker compose ps -q lore-backend" | head -1)"
-[ -n "$bcid" ] || skip "бэкенд прода на lore-host не запущен — снимок его кредом невозможен"
-out="$(r "docker exec $bcid sh -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
+out="$(r "cd $REMOTE_BACKEND_DIR && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
 grep -q '"result":"OK"' <<< "$out" || skip "BACKUP DATABASE на проде не подтверждён: $(printf '%s' "$out" | head -c 300)"
 bfile="$(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
 remote="$(r "docker exec $REMOTE_YGG sh -c 'find /home/arcadedb/backups -name \"$(basename "$bfile")\" -type f | head -1'")"

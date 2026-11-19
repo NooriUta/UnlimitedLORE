@@ -7664,3 +7664,48 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-attn__list .sk-pill--id { display: none; }
 .sk-attn__list .sk-mention { max-width: 100%; }
 .sk-attn__list .sk-mention__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+
+/* MC-06 (SPRINT_LORE_MODEL_AS_CONFIG): окно по центру, подтверждение с причиной, порядок строк, языки текстов.
+   Узкий экран — общий порог kit (NARROW_QUERY): окно во весь экран. */
+.sk-dialog-backdrop { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--bg0) 60%, transparent); }
+.sk-dialog {
+  position: fixed; z-index: 81; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; width: min(460px, calc(100vw - 24px)); max-height: 90vh; overflow: auto;
+  background: var(--bg1); border: 1px solid var(--bd); border-radius: 10px;
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg0) 70%, transparent);
+}
+.sk-dialog--wide { width: min(680px, calc(100vw - 24px)); }
+.sk-dialog:focus { outline: none; }
+.sk-dialog__head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--bd); position: sticky; top: 0; background: var(--bg1); z-index: 1; }
+.sk-dialog__title { flex: 1; margin: 0; min-width: 0; font: 800 var(--fs-md)/1.3 var(--display, var(--font)); color: var(--t1); overflow-wrap: anywhere; }
+.sk-dialog__body { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--bd); position: sticky; bottom: 0; background: var(--bg1); }
+.sk-dialog__lead { color: var(--t2); font-size: var(--fs-sm); }
+.sk-dialog__field { color: var(--t3); font-size: var(--fs-xs); }
+.sk-dialog__input { width: 100%; box-sizing: border-box; background: var(--bg0); border: 1px solid var(--bd); border-radius: 6px; color: var(--t1); padding: 4px 8px; font: var(--fs-sm) var(--font); }
+.sk-dialog__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-dialog__error { margin: 0; color: var(--dng); font-size: var(--fs-xs); }
+
+.sk-sortable { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-sortable__row { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border: 1px solid transparent; border-bottom-color: var(--bd); border-radius: 6px; min-width: 0; }
+.sk-sortable__row[data-changed] { background: color-mix(in srgb, var(--wrn) 8%, transparent); box-shadow: inset 2px 0 0 var(--wrn); }
+.sk-sortable__row[data-over] { border-top: 2px solid var(--acc); }
+.sk-sortable__grip { color: var(--t3); cursor: grab; user-select: none; font-size: var(--fs-sm); }
+.sk-sortable__body { flex: 1; min-width: 0; }
+.sk-sortable__btns { display: inline-flex; gap: 2px; flex: 0 0 auto; }
+.sk-sortable__up, .sk-sortable__down { flex: 0 0 auto; }
+
+.sk-langtabs { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-langtabs__list { display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-langtabs__tab { border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); color: var(--t2); font: 600 var(--fs-xs) var(--font); padding: 2px 10px; cursor: pointer; min-height: max(var(--tap, 24px), 24px); }
+.sk-langtabs__tab[aria-selected='true'] { border-color: var(--acc); color: var(--t1); }
+.sk-langtabs__tab:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-langtabs__miss { color: var(--wrn); margin-left: 2px; }
+.sk-langtabs__panel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-langtabs__key { color: var(--t3); font-size: var(--fs-2xs); }
+.sk-langtabs__key code { font-family: var(--mono); }
+
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-dialog, .sk-dialog--wide { top: 0; left: 0; transform: none; width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border-width: 0; }
+  .sk-sortable__row { align-items: flex-start; }
+}

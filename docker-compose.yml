@@ -368,7 +368,9 @@ services:
   # как сервис стенда. Наружу — ТОЛЬКО через nginx фронта (location /mcp в общем
   # nginx.conf.template → http://lore-mcp:9200), своего опубликованного порта нет.
   # Секретов нет: токен клиента приходит в каждом запросе и этим же токеном MCP
-  # идёт в бэкенд (права агента, не сервиса).
+  # идёт в бэкенд (права агента, не сервиса). Клиенты без headersHelper (OpenCode)
+  # шлют X-Lore-Client-Id/Secret — токен по ним сервер берёт у Keycloak, поэтому
+  # ему нужен issuer (адрес realm, не секрет).
   lore-mcp:
     restart: unless-stopped          # см. комментарий у minio
     build:
@@ -384,6 +386,9 @@ services:
       # forgejo_* ходят через мост бэкенда (токен Forgejo — только у бэкенда);
       # true — инструменты видны. Выключить: LORE_MCP_FORGEJO=false.
       LORE_FORGEJO: ${LORE_MCP_FORGEJO:-true}
+      # Вариант «г» (AO-MCP-HOSTED): token endpoint = <issuer>/protocol/openid-connect/token.
+      # Пусто — вход по паре id/секрет отвечает 503, Bearer работает как прежде.
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
     depends_on:
       lore-backend:
         condition: service_healthy
