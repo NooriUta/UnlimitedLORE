@@ -369,7 +369,7 @@ public class LoreRecordResource extends LoreResourceBase {
                     if (sprint != null) inherit(SPRINT_AXES + "sprint_id = :id", Map.of("id", sprint), "sprint",
                         scope, inhP, inhC, true, true);
                 }
-                case "milestone" -> inherit(SPRINT_AXES + "out('TARGETS_MILESTONE').milestone_id CONTAINS :id",
+                case "milestone" -> inherit(SPRINT_AXES + "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id CONTAINS :id",
                     Map.of("id", id), "sprint", scope, inhP, inhC, true, true);
                 case "component" -> inherit(SPRINT_AXES + "out('BELONGS_TO').component_id CONTAINS :id",
                     Map.of("id", id), "sprint", scope, inhP, inhC, true, false);

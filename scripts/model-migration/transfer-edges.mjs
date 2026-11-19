@@ -14,6 +14,7 @@ import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
+import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
@@ -22,7 +23,7 @@ const NOT_MACHINES = ['legion'];
 const VERSION_EDGE = 'HAS_STATE';
 
 /** Перенос связей и их сверка. log — куда писать ход. */
-export async function transferEdges(db, { log = console.log } = {}) {
+export async function transferEdges(db, { log = console.log, at = new Date().toISOString() } = {}) {
   if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
   const pool = async (items, n, fn) => { let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) await fn(items[i++]); })); };
   const pages = async (query, sql, fn, key = 'r') => {
@@ -61,6 +62,12 @@ export async function transferEdges(db, { log = console.log } = {}) {
       list.push({ r: row['@rid'], o: row['@out'], i: row['@in'], props });
     }, '@rid');
   }
+  // MDL-02: у историчной связи (edge_history модели) читаются ещё моменты записи-начала, из которых выводится valid_from
+  const outMoments = new Map();
+  for (const [e, p] of Object.entries(plan)) {
+    if (p.rule === 'drop' || e === VERSION_EDGE || !isHistoric(p.rule === 'convert' ? p.to : e)) continue;
+    await pages(q => db.src(q), last => outMomentsQuery(e, last), x => outMoments.set(x.r, x));
+  }
   const planNoVersions = Object.fromEntries(Object.entries(plan).filter(([e]) => e !== VERSION_EDGE));
   const { writes, missingEnds, duplicates } = edgeWrites(src, dstRid, planNoVersions);
 
@@ -71,12 +78,14 @@ export async function transferEdges(db, { log = console.log } = {}) {
     if (dstTypes.has(T)) await db.dstCommand(`DROP TYPE ${T} UNSAFE`);
     await db.dstCommand(`CREATE EDGE TYPE ${T}`);
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
+    for (const ddl of edgeHistoryDdl(T)) await db.dstCommand(ddl);
+    const sources = stampEdgeHistory(T, list, outMoments, at);
     await pool(list, 8, w => db.dstCommand(`CREATE EDGE ${T} FROM ${w.from} TO ${w.to} CONTENT :c`, { c: w.content }));
     // сверка: каждая связь приёмника соединяет те записи, что дал расчёт
     const want = new Map(list.map(w => [w.content.mig_src_rid, `${w.from}>${w.to}`]));
     let got = 0, bad = 0;
     await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s, @out AS o, @in AS i FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => { got++; if (want.get(x.s) !== `${x.o}>${x.i}`) bad++; });
-    report.moved[T] = { expected: list.length, target: got, wrong_ends: bad };
+    report.moved[T] = { expected: list.length, target: got, wrong_ends: bad, ...(sources ? { valid_from_source: sources } : {}) };
     if (got !== list.length || bad) ok = false;
   }
   // версии: пишет этап записи; здесь — что число связей версий в приёмнике не меньше расчётного по своим типам
@@ -111,7 +120,7 @@ export async function transferEdges(db, { log = console.log } = {}) {
   // решение → веха (владелица 19.11.2026): с ADR — не связываем; без ADR — веха вычисляется при переносе
   // (спринт → окно по времени → «куда?» в мастере) и хранится ребром TARGETS_MILESTONE; довод computed-at-transfer
   const dmPlan = planDecisionMilestones({ rules: decisionMilestoneRules(DECISION_MILESTONES), doc: decisions, ...(await readDecisionMilestoneInput(db)) });
-  report.decision_milestones = await applyDecisionMilestones(db, dmPlan, { log });
+  report.decision_milestones = await applyDecisionMilestones(db, dmPlan, { log, at });
   if (!report.decision_milestones.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);

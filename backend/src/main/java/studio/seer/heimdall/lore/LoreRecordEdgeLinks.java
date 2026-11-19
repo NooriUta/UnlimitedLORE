@@ -72,7 +72,9 @@ final class LoreRecordEdgeLinks {
             + "coalesce(" + String.join(", ", TITLE_FIELDS) + ") AS end_title, "
             + "coalesce(status, status_raw, status_general) AS end_status, "
             + "unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects "
-            + "FROM (SELECT expand(" + dir + "('" + r.rel() + "')) FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
+            // MDL-02: у историчной связи — только текущие рёбра (valid_to IS NULL), закрытые — история.
+            + "FROM (SELECT expand(" + ("out".equals(dir) ? LoreEdgeHistory.out(r.rel()) : LoreEdgeHistory.in(r.rel()))
+            + ") FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
             + "LIMIT " + (LIMIT + 1);
     }
 

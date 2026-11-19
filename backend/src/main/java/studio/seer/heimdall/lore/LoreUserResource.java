@@ -95,7 +95,7 @@ public class LoreUserResource extends LoreResourceBase {
         String caller = callerKcSub();
         boolean callerIsHuman = callerClientId() == null && caller != null;
         if (callerIsHuman && caller.equals(kcSub)) {
-            long mine = countRows("SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+            long mine = countRows("SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub",
                 Map.of("sub", kcSub));
             if (mine <= 1) {
                 return "Это ваша единственная проектная роль. Сняв её, вы потеряете доступ "
@@ -104,11 +104,11 @@ public class LoreUserResource extends LoreResourceBase {
             }
         }
         String role = firstString(
-            "SELECT role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub AND @in.slug = :proj",
+            "SELECT role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub AND @in.slug = :proj",
             Map.of("sub", kcSub, "proj", project));
         if ("owner".equals(role)) {
             long owners = countRows(
-                "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @in.slug = :proj AND role = 'owner'",
+                "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :proj AND role = 'owner'",
                 Map.of("proj", project));
             if (owners <= 1) {
                 return "Это последний владелец проекта " + project + ". Без владельца проектом "
@@ -184,7 +184,7 @@ public class LoreUserResource extends LoreResourceBase {
         try {
             Map<String, String> current = new java.util.LinkedHashMap<>();
             for (Map<String, Object> r : ingestService.queryPublic(
-                    "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+                    "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub",
                     Map.of("sub", req.kc_sub())))
                 if (r.get("slug") != null) current.put(String.valueOf(r.get("slug")), String.valueOf(r.get("role")));
             List<Map<String, Object>> plan = LoreRoleBatch.plan(current, req.changes());
@@ -201,7 +201,7 @@ public class LoreUserResource extends LoreResourceBase {
                     if ("remove".equals(p.get("kind")) && "owner".equals(p.get("before"))) {
                         String proj = String.valueOf(p.get("project"));
                         owners.put(proj, countRows(
-                            "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @in.slug = :proj AND role = 'owner'",
+                            "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :proj AND role = 'owner'",
                             Map.of("proj", proj)));
                     }
                 }
@@ -695,7 +695,7 @@ public class LoreUserResource extends LoreResourceBase {
                 return targetNotFound("проект " + req.project() + " не зарегистрирован — заведите его project_new");
             Map<String, Object> pair = Map.of("sub", req.kc_sub(), "proj", req.project());
             List<Map<String, Object>> existing = ingestService.queryPublic(
-                "SELECT @rid AS rid, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj", pair);
+                "SELECT @rid AS rid, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub=:sub AND @in.slug=:proj", pair);
             if (remove) {
                 // Снимать нечего — законный повтор: ни блокировок, ни события в журнале.
                 if (existing.isEmpty())
@@ -712,9 +712,9 @@ public class LoreUserResource extends LoreResourceBase {
                 // ArcadeDB грамматика: DELETE EDGE не существует ни в одной форме
                 // (памятка feedback_arcadedb_edge_delete) — DELETE FROM по @rid,
                 // @out/@in для матча по свойствам соседних вершин.
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj", pair))
-                    .await().indefinitely();
+                // MDL-02: роль в проекте историчная — снятие закрывает ребро (valid_to), а не стирает:
+                // «кто и до какого времени имел роль» остаётся в графе.
+                closeProjectRole(req.kc_sub(), req.project());
                 boolean gone = !edgeExists("HAS_PROJECT_ROLE", "kc_sub", req.kc_sub(), "slug", req.project());
                 if (gone) logRoleEvent(req.kc_sub(), req.project(), null, "remove", role, // AL-102
                     batchId, roleOf(existing));
@@ -747,20 +747,15 @@ public class LoreUserResource extends LoreResourceBase {
                     out.put("hint", "роль уже такая — повторять вызов не нужно");
                     return noStore(Response.ok(out));
                 }
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE HAS_PROJECT_ROLE SET role=:r WHERE @out.kc_sub=:sub AND @in.slug=:proj",
-                    Map.of("r", req.role(), "sub", req.kc_sub(), "proj", req.project())))
-                    .await().indefinitely();
+                // MDL-02: смена роли — новая версия ребра: прежнее закрывается, новое открывается.
+                closeProjectRole(req.kc_sub(), req.project());
+                openProjectRole(req.kc_sub(), req.project(), req.role());
                 logRoleEvent(req.kc_sub(), req.project(), req.role(), "update", role, // AL-102
                     batchId, roleOf(existing));
                 out.put("outcome", LoreOutcome.UPDATED);
                 out.put("previous_role", existing.get(0).get("role"));
             } else {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
-                    "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role=:r",
-                    Map.of("sub", req.kc_sub(), "proj", req.project(), "r", req.role())))
-                    .await().indefinitely();
+                openProjectRole(req.kc_sub(), req.project(), req.role());
                 if (!edgeExists("HAS_PROJECT_ROLE", "kc_sub", req.kc_sub(), "slug", req.project())) {
                     out.put("outcome", LoreOutcome.NOOP);
                     out.put("reason", "ребро HAS_PROJECT_ROLE не создано: пользователь или проект не найден");
@@ -775,6 +770,22 @@ public class LoreUserResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }
+    }
+
+    /** MDL-02: закрыть текущую роль человека в проекте — ребро остаётся версией с valid_to. */
+    private void closeProjectRole(String kcSub, String project) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "UPDATE HAS_PROJECT_ROLE SET valid_to = :now WHERE @out.kc_sub = :sub AND @in.slug = :proj AND valid_to IS NULL",
+            Map.of("now", java.time.Instant.now().toString(), "sub", kcSub, "proj", project))).await().indefinitely();
+    }
+
+    /** MDL-02: открыть роль человека в проекте — новое ребро с valid_from = сейчас. */
+    private void openProjectRole(String kcSub, String project, String projectRole) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
+            "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role=:r, valid_from=:now",
+            Map.of("sub", kcSub, "proj", project, "r", projectRole, "now", java.time.Instant.now().toString())))
+            .await().indefinitely();
     }
 
     /**

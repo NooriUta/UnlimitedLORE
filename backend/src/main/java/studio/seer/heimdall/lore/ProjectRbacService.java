@@ -89,7 +89,7 @@ public class ProjectRbacService {
     public List<Map<String, Object>> delegationForOwner(String kcSub, String agentScope) {
         if (kcSub == null) return List.of();
         return delegationPlan(ingestService.queryPublic(
-            "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+            "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub",
             Map.of("sub", kcSub)), agentScope);
     }
 
@@ -116,7 +116,7 @@ public class ProjectRbacService {
     String ownerRoleInProject(String kcSub, String project) {
         if (kcSub == null || project == null) return null;
         var rows = ingestService.queryPublic(
-            "SELECT role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub AND @in.slug = :proj",
+            "SELECT role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub AND @in.slug = :proj",
             Map.of("sub", kcSub, "proj", project));
         if (rows.isEmpty()) return null;
         return String.valueOf(rows.get(0).get("role"));
@@ -151,7 +151,7 @@ public class ProjectRbacService {
     public Set<String> allowedProjectsForUser(String kcSub) {
         if (kcSub == null || kcSub.isBlank()) return Set.of();
         var rows = ingestService.queryPublic(
-            "SELECT out('HAS_PROJECT_ROLE').slug AS slugs FROM KnowUser WHERE kc_sub = :sub",
+            "SELECT outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS slugs FROM KnowUser WHERE kc_sub = :sub",
             Map.of("sub", kcSub));
         if (rows.isEmpty()) return Set.of();
         return distinct(rows.get(0).get("slugs"));
@@ -222,7 +222,7 @@ public class ProjectRbacService {
         String owner = ownerKcSub(clientId);
         if (owner == null || agentScope == null) return Set.of();
         var rows = ingestService.queryPublic(
-            "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+            "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub",
             Map.of("sub", owner));
         var out = new java.util.LinkedHashSet<String>();
         for (var r : rows) {

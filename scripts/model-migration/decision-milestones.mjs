@@ -13,6 +13,8 @@
 //          ({ map: { РЕШЕНИЕ: ВЕХА | null }, by, at }; null — «без вехи», связи нет).
 // Вычисление детерминированное: результат не зависит от порядка строк источника.
 
+import { edgeHistoryDdl } from './edge-history.mjs';
+
 const LEGACY = /^M[0-7]$/;
 const day = x => (x ? String(x).slice(0, 10) : null);
 const isDay = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -159,7 +161,11 @@ export async function readDecisionMilestoneInput(db) {
  */
 export async function applyDecisionMilestones(db, plan, { at = new Date().toISOString(), log = console.log } = {}) {
   const types = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
-  if (!types.has('TARGETS_MILESTONE')) await db.dstCommand('CREATE EDGE TYPE TARGETS_MILESTONE');
+  if (!types.has('TARGETS_MILESTONE')) {
+    await db.dstCommand('CREATE EDGE TYPE TARGETS_MILESTONE');
+    // MDL-02: связь историчная — поля версии объявляются, как у остальных историчных связей шага
+    for (const ddl of edgeHistoryDdl('TARGETS_MILESTONE')) await db.dstCommand(ddl);
+  }
   await db.dstCommand("DELETE FROM TARGETS_MILESTONE WHERE mig_rule = 'decision-milestone'");
   const dRid = new Map((await db.dstQuery('SELECT @rid AS r, decision_id AS id FROM KnowDecision')).map(x => [x.id, x.r]));
   const mRid = new Map((await db.dstQuery('SELECT @rid AS r, milestone_id AS id FROM KnowMilestone')).map(x => [x.id, x.r]));

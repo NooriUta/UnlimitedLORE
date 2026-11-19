@@ -153,6 +153,8 @@ final class LoreModel {
         content.put("dictionaries", dictionaries);
         // MDL-02: счётчик текстов полей — сколько полей в модели и у скольких нет определения.
         content.put("field_texts", LoreModelFile.fieldTextsCount(LoreModelFile.content()));
+        // MDL-02: историчные связи — какие связи ведут историю в самом ребре и какими полями.
+        content.put("edge_history", LoreEdgeHistory.surface(LoreModelFile.content()));
         content.put("warnings", warnings);
 
         Map<String, Object> doc = new LinkedHashMap<>();

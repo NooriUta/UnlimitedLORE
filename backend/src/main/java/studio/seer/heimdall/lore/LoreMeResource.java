@@ -82,7 +82,7 @@ public class LoreMeResource extends LoreResourceBase {
         Set<String> roles = new HashSet<>();
         if (headerRole != null) roles.add(headerRole);
         for (Map<String, Object> r : ingestService.queryPublic(
-                "SELECT role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub", Map.of("sub", me))) {
+                "SELECT role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub", Map.of("sub", me))) {
             if (r.get("role") != null) roles.add(String.valueOf(r.get("role")));
         }
         return roles;
@@ -570,7 +570,7 @@ public class LoreMeResource extends LoreResourceBase {
         if (me == null) return noIdentity();
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :me ORDER BY slug",
+                "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :me ORDER BY slug",
                 Map.of("me", me));
             List<Map<String, Object>> projects = new ArrayList<>();
             for (Map<String, Object> r : rows) {

@@ -1215,15 +1215,21 @@ public class LoreProductResource extends LoreResourceBase {
             if (!"agent".equals(agentRows.get(0).get("kind")))
                 return badParams("actor '" + req.actor_id() + "' не kind=agent — FILLS_ROLE заводится от агента к роли");
 
-            // Один агент — одна действующая роль в любой момент: снести старое
-            // ребро, поставить новое (тот же паттерн, что OWNED_BY/
-            // HAS_PROJECT_ROLE reassign) — не накапливать историю рёбер.
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM (SELECT expand(outE('FILLS_ROLE')) FROM KnowActor WHERE actor_id=:id)",
-                Map.of("id", req.actor_id()))).await().indefinitely();
+            // Один агент — одна действующая роль в любой момент. MDL-02: связь историчная —
+            // прежнее ребро не сносится, а закрывается (valid_to), новое открывается
+            // (valid_from); видно, кто исполнял роль раньше. Та же роль — без новой версии.
+            List<Map<String, Object>> current = ingest.queryPublic(
+                "SELECT @in.actor_id AS t FROM FILLS_ROLE WHERE @out.actor_id = :id AND valid_to IS NULL",
+                Map.of("id", req.actor_id()));
+            boolean same = !remove && current != null && current.size() == 1
+                && req.target_id().equals(current.get(0).get("t"));
+            if (!same)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE FILLS_ROLE SET valid_to = :now WHERE @out.actor_id = :id AND valid_to IS NULL",
+                    Map.of("id", req.actor_id(), "now", java.time.Instant.now().toString()))).await().indefinitely();
 
-            boolean linked = false;
-            if (!remove) {
+            boolean linked = same;
+            if (!remove && !same) {
                 // AC-03: цель ребра — РОЛЬ, а она после развода живёт в
                 // KnowProjectActor. FILLS_ROLE стало межтиповым, и это не
                 // побочный эффект, а точная запись смысла: личность исполняет
@@ -1240,7 +1246,7 @@ public class LoreProductResource extends LoreResourceBase {
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) IF NOT EXISTS",
+                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) SET valid_from = '" + java.time.Instant.now() + "'",
                         Map.of("id", req.actor_id(), "t", req.target_id())))
                     .await().indefinitely().result();
                 linked = created != null && !created.isEmpty();
@@ -1541,9 +1547,13 @@ public class LoreProductResource extends LoreResourceBase {
                         // одно ребро, а писалось бы другое (ADR-LORE-043).
             boolean had = edgeExists(edge, "uc_id", req.feature_id(), inField, req.target_id());
 
+            boolean historic = LoreEdgeHistory.historic(edge);
             if (remove) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
+                // MDL-02: историчная связь (веха фичи) закрывается valid_to, а не стирается.
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", historic
+                    ? "UPDATE " + edge + " SET valid_to = '" + java.time.Instant.now() + "' "
+                        + "WHERE @out.uc_id = :fid AND @in." + inField + " = :tid AND valid_to IS NULL"
+                    : "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid OR @in.uc_id=:tid", p))
                     .await().indefinitely();
@@ -1551,11 +1561,13 @@ public class LoreProductResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "feature_id", req.feature_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
+            // MDL-02: у историчной связи IF NOT EXISTS увидел бы и закрытое ребро — повтор
+            // решает проба текущей связи (had), новое ребро получает valid_from.
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> created = (List<Map<String, Object>>)
+            List<Map<String, Object>> created = historic && had ? List.of() : (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE " + edge + " FROM (SELECT FROM KnowUseCase WHERE uc_id=:fid) " +
-                    "TO " + toSql + " IF NOT EXISTS", p))
+                    "TO " + toSql + (historic ? " SET valid_from = '" + java.time.Instant.now() + "'" : " IF NOT EXISTS"), p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
             if (linked && !had) touchUpdatedAt("KnowUseCase", "uc_id", req.feature_id());
