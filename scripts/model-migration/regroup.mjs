@@ -20,7 +20,7 @@ function primaryRepo(p) {
  * @returns {{ rows: {from:string,name:string,records:number,to:string|null,why:string}[],
  *             groups: Record<string,{from:string[],records:number}>, unassigned: string[] }}
  */
-export function proposeRegroup({ projects, products, counts = {}, overrides = {} }) {
+export function proposeRegroup({ projects, products, counts = {}, overrides = {}, members = {} }) {
   const byCode = new Map(products.map(p => [p.code, p]));
   const top = code => { // корень цепочки родителей; цикл не роняет — останавливаемся на повторе
     const seen = new Set(); let c = code;
@@ -50,6 +50,30 @@ export function proposeRegroup({ projects, products, counts = {}, overrides = {}
     const twin = rows.find(x => x !== r && x.to && x.repo === r.repo);
     if (twin) { r.to = twin.to; r.why = `тот же репозиторий, что у ${twin.from}`; }
   }
+  // сходство по данным (владелица 19.11.2026: «надо сделать алгоритм или предложить сгруппировать проекты»):
+  // проект без группы — к группе, с которой у него общие записи и/или похожее имя или описание; признак слабый — «куда?»
+  const desc = new Map(projects.map(p => [p.slug, `${p.slug} ${p.name || ''} ${p.description || ''}`.toLowerCase()]));
+  const words = s => new Set(s.toLowerCase().split(/[^a-zа-яё0-9]+/i).filter(w => w.length >= 4));
+  const assigned = rows.filter(r => r.to);
+  for (const r of rows) {
+    if (r.to) continue;
+    const mine = new Set(members[r.from] || []);
+    let best = null;
+    for (const g of [...new Set(assigned.map(x => x.to))]) {
+      const peers = assigned.filter(x => x.to === g);
+      const theirs = new Set(peers.flatMap(x => members[x.from] || []));
+      const shared = [...mine].filter(x => theirs.has(x)).length;
+      const text = desc.get(r.from) || '';
+      const hit = peers.map(x => x.from.split('/').pop().toLowerCase()).concat([g.toLowerCase()])
+        .find(n => n.length >= 5 && (text.includes(n) || [...words(text)].some(w => w.startsWith(n) || n.startsWith(w) && w.length >= 6)));
+      const score = shared * 2 + (hit ? 3 : 0);
+      if (score >= 3 && (!best || score > best.score)) best = { g, shared, hit, score };
+    }
+    if (best) {
+      r.to = best.g; r.suggested = true;
+      r.why = `похоже на группу ${best.g}: ` + [best.shared ? `общих записей ${best.shared}` : null, best.hit ? `имя/описание — «${best.hit}»` : null].filter(Boolean).join('; ');
+    }
+  }
   for (const r of rows) {
     if (Object.prototype.hasOwnProperty.call(overrides, r.from)) { r.to = overrides[r.from] || null; r.why = 'решение человека'; }
     delete r.repo;
@@ -65,13 +89,15 @@ export function proposeRegroup({ projects, products, counts = {}, overrides = {}
 
 /** Данные для предложения из источника (только чтение): проекты, продукты с владельцами, число записей проекта. */
 export async function readRegroupInput(db) {
-  const projects = await db.src('SELECT slug, name, hosts, in(\'BELONGS_TO_PROJECT\').size() AS n FROM KnowGitProject ORDER BY slug');
+  const projects = await db.src("SELECT slug, name, description, hosts, in('BELONGS_TO_PROJECT').size() AS n, in('BELONGS_TO_PROJECT').@rid AS m FROM KnowGitProject ORDER BY slug");
   const prods = await db.src("SELECT code, out('PARENT_PRODUCT').code[0] AS parent, outE('BELONGS_TO_PROJECT')[role = 'owner'].inV().slug AS owners FROM KnowDictEntry WHERE dict_type = 'product'");
   const parseHosts = h => { if (Array.isArray(h)) return h; try { return JSON.parse(h); } catch { return null; } };
   return {
-    projects: projects.map(p => ({ slug: p.slug, name: p.name, hosts: parseHosts(p.hosts) })),
+    projects: projects.map(p => ({ slug: p.slug, name: p.name, description: p.description || '', hosts: parseHosts(p.hosts) })),
     products: prods.map(p => ({ code: p.code, parent: p.parent || null, owners: Array.isArray(p.owners) ? p.owners : [] })),
     counts: Object.fromEntries(projects.map(p => [p.slug, Number(p.n) || 0])),
+    // записи проекта (адреса источника): по общим записям проект без продукта получает предложение группы
+    members: Object.fromEntries(projects.map(p => [p.slug, Array.isArray(p.m) ? p.m.map(String) : []])),
   };
 }
 

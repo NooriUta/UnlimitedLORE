@@ -78,3 +78,25 @@ test('план слияния: опора — проект с наибольши
   assert.deepEqual(p.VOLVA, { anchor: 'NooriUta/volva', merge: [], aliases: ['NooriUta/volva'], records: 138 });
   assert.equal(p[null], undefined);
 });
+
+// Владелица 19.11.2026: «ты наши зашила строго надо сделать алгоритм или предложить сгруппировать проекты» —
+// проект без продукта получает предложение группы по данным: общие записи, имя и описание; слабый признак — «куда?».
+test('без продукта: группа по общим записям и сходству имени, с основанием; нет признака — «куда?»', () => {
+  const projects = [
+    { slug: 'AIDA/miniLORE', name: 'miniLORE' }, { slug: 'AIDA/miniLoremobilekit', name: 'mobilekit', description: 'Flutter-пакет (модуль miniLORE)' },
+    { slug: 'AIDA/qwen-code-fork', name: 'qwen-code-fork', description: 'Windows named-pipe inbox для miniLORE' },
+    { slug: 'NooriUta/UnlimitedLORE', name: 'UnlimitedLORE' }, { slug: 'AIDA/forgejo-mcp', name: 'forgejo-mcp' },
+    { slug: 'AIDA/lonely', name: 'lonely' },
+  ];
+  const products = [{ code: 'MINILORE', parent: null, owners: ['AIDA/miniLORE'] }, { code: 'OMILORE', parent: null, owners: ['NooriUta/UnlimitedLORE'] }];
+  const members = { 'AIDA/miniLORE': ['#1', '#2', '#3'], 'NooriUta/UnlimitedLORE': ['#7', '#8', '#9'], 'AIDA/forgejo-mcp': ['#7', '#8'], 'AIDA/qwen-code-fork': ['#1'], 'AIDA/lonely': ['#99'] };
+  const r = proposeRegroup({ projects, products, members });
+  const row = s => r.rows.find(x => x.from === s);
+  assert.equal(row('AIDA/forgejo-mcp').to, 'OMILORE');
+  assert.match(row('AIDA/forgejo-mcp').why, /общих записей 2/);
+  assert.equal(row('AIDA/miniLoremobilekit').to, 'MINILORE');
+  assert.match(row('AIDA/miniLoremobilekit').why, /имя|описание/);
+  assert.equal(row('AIDA/qwen-code-fork').to, 'MINILORE');
+  assert.equal(row('AIDA/lonely').to, null);
+  assert.ok(row('AIDA/forgejo-mcp').suggested, 'предложение помечено — человек подтверждает');
+});
