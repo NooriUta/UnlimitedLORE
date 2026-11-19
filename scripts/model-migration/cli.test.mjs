@@ -40,7 +40,7 @@ test('ошибки строки запуска называются словам
 test('независимость от операционки: в коде установщика нет оболочки, внешних программ и путей машины', () => {
   const dir = new URL('.', import.meta.url);
   const own = ['cli.mjs', 'resources.mjs', 'env.mjs', 'db.mjs', 'apply-map.mjs', 'decisions.mjs', 'status-unify.mjs', 'fingerprint.mjs',
-    'probe.mjs', 'dst-fingerprint.mjs', 'ui.mjs', 'status-run.mjs', 'auth.mjs', 'report.mjs', 'dicts.mjs', 'edge-census.mjs', 'orphan-census.mjs', 'status-check.mjs', 'dry-run.mjs', 'transfer.mjs', 'transfer-edges.mjs'];
+    'probe.mjs', 'dst-fingerprint.mjs', 'ui.mjs', 'status-run.mjs', 'auth.mjs', 'report.mjs', 'dicts.mjs', 'edge-census.mjs', 'orphan-census.mjs', 'status-check.mjs', 'dry-run.mjs', 'transfer.mjs', 'transfer-edges.mjs', 'edge-history.mjs'];
   for (const f of own) {
     const s = fs.readFileSync(new URL(f, dir), 'utf8');
     assert.ok(!/node:child_process|execSync|spawn\(/.test(s), f + ': запуск внешней программы');
@@ -55,7 +55,7 @@ test('независимость от операционки: в коде уст
 test('код установщика не ищет файлы рядом с собой: в исполняемом файле модуль живёт в памяти, import.meta.url — не путь', () => {
   const dir = new URL('.', import.meta.url);
   for (const f of ['cli.mjs', 'resources.mjs', 'env.mjs', 'db.mjs', 'apply-map.mjs', 'decisions.mjs', 'status-unify.mjs', 'fingerprint.mjs',
-    'probe.mjs', 'dst-fingerprint.mjs', 'ui.mjs', 'status-run.mjs', 'auth.mjs', 'report.mjs', 'dicts.mjs', 'edge-census.mjs', 'orphan-census.mjs', 'status-check.mjs', 'dry-run.mjs', 'transfer.mjs', 'transfer-edges.mjs']) {
+    'probe.mjs', 'dst-fingerprint.mjs', 'ui.mjs', 'status-run.mjs', 'auth.mjs', 'report.mjs', 'dicts.mjs', 'edge-census.mjs', 'orphan-census.mjs', 'status-check.mjs', 'dry-run.mjs', 'transfer.mjs', 'transfer-edges.mjs', 'edge-history.mjs']) {
     const s = fs.readFileSync(new URL(f, dir), 'utf8').replace(/^\s*\/\/.*$/gm, '');
     assert.ok(!/import\.meta\.url/.test(s), f + ': поиск файла рядом с модулем');
   }

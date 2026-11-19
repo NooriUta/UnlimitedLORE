@@ -8,9 +8,10 @@ import fs from 'node:fs';
 import { connect } from './db.mjs';
 
 import { EDGES } from './resources.mjs';
+import { isHistoric, SOURCE_COLUMNS, edgeVersion, edgeHistoryDdl } from './edge-history.mjs';
 const OWN = ['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHist', 'KnowTask', 'KnowTaskHist'];
 /** Перенос связей и их сверка. log — куда писать ход. */
-export async function transferEdges(db, { log = console.log } = {}) {
+export async function transferEdges(db, { log = console.log, at = new Date().toISOString() } = {}) {
   if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
   const pool = async (items, n, fn) => { let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) await fn(items[i++]); })); };
 
@@ -53,10 +54,13 @@ export async function transferEdges(db, { log = console.log } = {}) {
     }
     // keep: читаем связи источника, у которых оба конца — записи первого объекта
     const props = rule.props || [];
+    // MDL-02: у историчной связи (edge_history модели) читаются ещё моменты, из которых выводится valid_from
+    const historic = isHistoric(e.name);
+    const cols = [...props, ...(historic ? SOURCE_COLUMNS.filter(c => !props.includes(c)) : [])];
     const list = [];
     let last = '#-1:-1';
     for (;;) {
-      const rows = await db.src(`SELECT @rid AS r, @out AS o, @in AS i${props.map(p => `, ${p}`).join('')} FROM ${e.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
+      const rows = await db.src(`SELECT @rid AS r, @out AS o, @in AS i${cols.map(p => `, ${p}`).join('')} FROM ${e.name} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
       if (!rows.length) break;
       for (const x of rows) list.push(x);
       last = rows[rows.length - 1].r; if (rows.length < 5000) break;
@@ -66,9 +70,17 @@ export async function transferEdges(db, { log = console.log } = {}) {
     if (dstTypes.has(e.name)) await db.dstCommand(`DROP TYPE ${e.name} UNSAFE`);
     await db.dstCommand(`CREATE EDGE TYPE ${e.name}`);
     await db.dstCommand(`CREATE PROPERTY ${e.name}.mig_src_rid STRING`);
+    for (const ddl of edgeHistoryDdl(e.name)) await db.dstCommand(ddl);
+    const sources = {};
     await pool(inside, 8, x => {
       const c = { mig_src_rid: x.r };
       for (const p of props) if (x[p] !== undefined && x[p] !== null && x[p] !== '') c[p] = x[p];
+      if (historic) {
+        const v = edgeVersion(x, at);
+        c.valid_from = v.valid_from;
+        if (v.valid_to) c.valid_to = v.valid_to; else delete c.valid_to;
+        sources[v.source] = (sources[v.source] || 0) + 1;
+      }
       return db.dstCommand(`CREATE EDGE ${e.name} FROM ${dstRid.get(x.o)} TO ${dstRid.get(x.i)} CONTENT :c`, { c });
     });
     // сверка: каждая связь приёмника соединяет те же записи, что в источнике
@@ -80,7 +92,7 @@ export async function transferEdges(db, { log = console.log } = {}) {
       for (const x of rows) { got++; if (want.get(x.s) !== `${x.o}>${x.i}`) bad++; }
       last = rows[rows.length - 1].r; if (rows.length < 5000) break;
     }
-    report.moved[e.name] = { source: inside.length, target: got, wrong_ends: bad, props, to_other_objects: outside };
+    report.moved[e.name] = { source: inside.length, target: got, wrong_ends: bad, props, to_other_objects: outside, ...(historic ? { valid_from_source: sources } : {}) };
     if (got !== inside.length || bad) ok = false;
   }
   report.ok = ok;

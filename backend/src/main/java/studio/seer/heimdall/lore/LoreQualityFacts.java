@@ -81,7 +81,7 @@ public class LoreQualityFacts {
             + "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]     AS planned_end_date, "
             + "out('BELONGS_TO_PROJECT').slug        AS projects, "
             + "out('BELONGS_TO').component_id        AS components, "
-            + "out('TARGETS_MILESTONE').milestone_id AS milestones"),
+            + "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestones"),
         ADR("adr", "KnowADR", "adr_id",
             "status, "
             + "out('BELONGS_TO').component_id AS components, "
@@ -138,7 +138,7 @@ public class LoreQualityFacts {
             + "parent_id, "
             + "out('PARENT_OF').component_id AS parent_edge"),
         MILESTONE("milestone", "KnowMilestone", "milestone_id",
-            "label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints, "
+            "label, date_display, inE('TARGETS_MILESTONE')[valid_to IS NULL].outV().sprint_id AS sprints, "
             // RM-S3: продукт вехи — факт отсюда, а не своей копией проекции по
             // месту. Правило уже трижды нарушалось до его введения (v1.7.1:
             // статус решения читался не из того поля, у спеки проверялось

@@ -540,7 +540,8 @@ public abstract class LoreResourceBase {
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(
                 "SELECT count(*) AS n FROM " + edgeType
-                + " WHERE @out." + outField + " = :o AND @in." + inField + " = :i",
+                + " WHERE @out." + outField + " = :o AND @in." + inField + " = :i"
+                + LoreEdgeHistory.andCurrent(edgeType),
                 Map.of("o", outValue, "i", inValue));
             return !rows.isEmpty()
                 && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
@@ -560,7 +561,7 @@ public abstract class LoreResourceBase {
         if (outValue == null) return false;
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT count(*) AS n FROM " + edgeType + " WHERE @out." + outField + " = :o",
+                "SELECT count(*) AS n FROM " + edgeType + " WHERE @out." + outField + " = :o" + LoreEdgeHistory.andCurrent(edgeType),
                 Map.of("o", outValue));
             return !rows.isEmpty()
                 && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
@@ -818,18 +819,29 @@ public abstract class LoreResourceBase {
         return m;
     }
 
+    /**
+     * Снять связи по условию. У историчной связи (MDL-02, {@link LoreEdgeHistory}) ребро не стирается,
+     * а закрывается {@code valid_to = сейчас}; снимаются только текущие.
+     */
     int deleteEdges(String edgeType, String where, Map<String, Object> params) {
         List<Map<String, Object>> edges = ingestService.queryPublic(
-            "SELECT @rid FROM " + edgeType + " WHERE " + where, params);
+            "SELECT @rid FROM " + edgeType + " WHERE " + where + LoreEdgeHistory.andCurrent(edgeType), params);
         int removed = 0;
         for (Map<String, Object> e : edges) {
             Object rid = e.get("@rid");
             if (rid == null) continue;
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM " + edgeType + " WHERE @rid=" + rid)).await().indefinitely();
+                closeOrDeleteEdge(edgeType, String.valueOf(rid)))).await().indefinitely();
             removed++;
         }
         return removed;
+    }
+
+    /** Снятие одного ребра по @rid: историчное закрывается {@code valid_to}, остальное удаляется. */
+    static String closeOrDeleteEdge(String edgeType, String rid) {
+        return LoreEdgeHistory.historic(edgeType)
+            ? "UPDATE " + rid + " SET valid_to = '" + java.time.Instant.now() + "' WHERE " + LoreEdgeHistory.CURRENT
+            : "DELETE FROM " + edgeType + " WHERE @rid=" + rid;
     }
 
     /**

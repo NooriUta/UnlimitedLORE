@@ -108,7 +108,7 @@ public class LoreWhoamiResource extends LoreResourceBase {
     private List<Map<String, Object>> projectRoles(String kcSub) {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : ingestService.queryPublic(
-                "SELECT @in.slug AS project, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :s ORDER BY project",
+                "SELECT @in.slug AS project, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :s ORDER BY project",
                 Map.of("s", kcSub))) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("project", r.get("project"));

@@ -364,10 +364,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "bk", req.bookkeeping() != null && req.bookkeeping());
                 p.put("st0", createStatusRaw);
                 by.bind(p);
-                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
+                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads outE('IN_PHASE')[valid_to IS NULL].inV())
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
-                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid);");
+                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid) SET valid_from = :now;");
                     p.put("puid", phase);
                 }
                 // PL-14 (D16): uc-задача обязана нести REALIZES. Ребро создаётся В ТОМ
@@ -828,23 +828,18 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 Map<String, Object> params = req.phase_uid() != null
                     ? Map.of("t", req.task_uid(), "p", req.phase_uid())
                     : Map.of("t", req.task_uid());
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE " + where, params);
-                for (Map<String, Object> e : edges) {
-                    String rid = e.get("@rid").toString();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM IN_PHASE WHERE @rid=" + rid, null)).await().indefinitely();
-                }
+                // MDL-02: IN_PHASE историчная — снятие закрывает ребро (valid_to), а не стирает его.
+                deleteEdges("IN_PHASE", where, params);
             } else {
                 List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p",
+                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p AND valid_to IS NULL",
                     Map.of("t", req.task_uid(), "p", req.phase_uid()));
                 if (existing.isEmpty()) {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         String.format(
                             "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
-                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s')",
-                            req.task_uid(), req.phase_uid()),
+                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s') SET valid_from = '%s'",
+                            req.task_uid(), req.phase_uid(), Instant.now()),
                         null)).await().indefinitely();
                 }
             }

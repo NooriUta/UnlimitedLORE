@@ -62,7 +62,7 @@ final class LoreNewsV2Collector {
         LoreSlices.DONE_DATE_SQL + " AS done_date, " +
         "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
         "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
-        "out('TARGETS_MILESTONE').milestone_id AS milestone_ids FROM KnowSprint";
+        "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestone_ids FROM KnowSprint";
     static final String SQL_RELEASES =
         "SELECT release_id, release_uid, release_date, git_project, out('BELONGS_TO_PROJECT').slug AS projects " +
         "FROM KnowRelease WHERE release_date IS NOT NULL";

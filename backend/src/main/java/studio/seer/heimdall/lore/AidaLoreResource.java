@@ -983,7 +983,7 @@ public class AidaLoreResource extends LoreResourceBase {
     static final String MACHINE_ACL = "machine_acl";
     /** Проекты владельцев машин — по ролям {@code HAS_PROJECT_ROLE} (S7B-ACL-3). */
     static final String MACHINE_ACL_OWNER_ROLES_SQL =
-        "SELECT kc_sub, out('HAS_PROJECT_ROLE').slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
+        "SELECT kc_sub, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
     /** Агенты и их машины — для harness машины (S7B-ACL-3; те же поля, что agent_owners). */
     static final String MACHINE_ACL_AGENTS_SQL =
         "SELECT actor_id, client_id, machine_id, harness, out('USES_MACHINE').machine_id AS machines "
