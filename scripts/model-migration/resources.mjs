@@ -15,6 +15,14 @@ import installBundle from './rules/install-bundle.json' with { type: 'json' };
 export const MAP = { ...map.types, ...allObjects.types };
 /** Типы, которые карта решила не переносить: тип → почему (план-доска снята, журнал шагов V …). */
 export const NOT_MOVED = allObjects.skipped || {};
+/**
+ * «Не переносить» с учётом настройки установки (D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION): MIG_PLAN_BOARD=keep —
+ * типы старой доски плана (Plan*) копируются как есть; drop или пусто — не переносятся (по умолчанию).
+ */
+export function notMovedFor(env = {}) {
+  if ((env.MIG_PLAN_BOARD || 'drop').trim().toLowerCase() !== 'keep') return NOT_MOVED;
+  return Object.fromEntries(Object.entries(NOT_MOVED).filter(([t]) => !t.startsWith('Plan')));
+}
 // Общая карта связей всех объектов (map/all.edges.json, MIG-01 18.11.2026).
 export const EDGES = edges.edges;
 // 18.11.2026: схема первого объекта + предложение схемы всех остальных (владелица: «а так ок» на пять правил переноса).
