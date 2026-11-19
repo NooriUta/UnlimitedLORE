@@ -7,7 +7,7 @@
 # окружением (R, ARCADEDB_ROOT_PASSWORD).
 #
 # Что делает:
-#   1. на lore-host: BACKUP DATABASE <source> кредом работающего бэкенда прода
+#   1. на lore-host: BACKUP DATABASE <source> кредом сервиса lore-migrate прода (DBR-01)
 #      (пароль прода lore-host не покидает); архив читается из контейнера
 #      LORE-ygg и потоком по ssh переносится на 131, сверка sha256;
 #   2. на 131: бэкенд препрода (compose-проект lore-preprod) останавливается,
@@ -91,9 +91,7 @@ if [ "${CREATE_ONLY:-false}" = true ] && [ "$had_target" = yes ]; then
 fi
 docker exec "$LOCAL_YGG" sh -c "command -v unzip >/dev/null && df -h $DB_DIR | tail -1" || die "в $LOCAL_YGG нет unzip или каталога $DB_DIR"
 
-say "lore-host: бэкенд прода и база $SOURCE_DB"
-bcid="$(r "cd $REMOTE_BACKEND_DIR && docker compose ps -q lore-backend" | head -1)"
-[ -n "$bcid" ] || die "бэкенд прода на lore-host не запущен — снимок его кредом невозможен"
+say "lore-host: база $SOURCE_DB"
 r "docker exec $REMOTE_YGG sh -c 'du -sh $DB_DIR/$SOURCE_DB'" || die "на lore-host нет $DB_DIR/$SOURCE_DB в контейнере $REMOTE_YGG"
 
 pcid="$(docker ps -q --filter "label=com.docker.compose.project=$PREPROD_PROJECT" --filter "label=com.docker.compose.service=lore-backend" | head -1)"
@@ -106,7 +104,7 @@ fi
 
 # ── 2. снимок прода ─────────────────────────────────────────────────────────
 say "lore-host: BACKUP DATABASE $SOURCE_DB"
-out="$(r "docker exec $bcid sh -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
+out="$(r "cd $REMOTE_BACKEND_DIR && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
 grep -q '"result":"OK"' <<< "$out" || die "BACKUP DATABASE на проде не подтверждён: $(printf '%s' "$out" | head -c 300)"
 bfile="$(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
 [ -n "$bfile" ] || die "имя файла бэкапа не прочитано из ответа: $(printf '%s' "$out" | head -c 300)"
@@ -120,7 +118,7 @@ rsum="$(r "docker exec $REMOTE_YGG sha256sum '$bpath'" | awk '{print $1}')"
 lsum="$(sha256sum "$SNAP" | awk '{print $1}')"
 [ -n "$rsum" ] && [ "$rsum" = "$lsum" ] || die "sha256 снимка не совпал: lore-host $rsum, 131 $lsum"
 echo "снимок на 131: $SNAP ($(du -h "$SNAP" | cut -f1)), sha256 совпал"
-src_ver="$(r "docker exec $bcid sh -c 'curl -s -m 60 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"SELECT max(version) AS v FROM LoreSchemaVersion\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'" | tr -d '\n ' | sed -nE 's/.*"v":([0-9]+).*/\1/p')"
+src_ver="$(r "cd $REMOTE_BACKEND_DIR && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 60 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"SELECT max(version) AS v FROM LoreSchemaVersion\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'" | tr -d '\n ' | sed -nE 's/.*"v":([0-9]+).*/\1/p')"
 echo "схема прода: v${src_ver:-?}"
 
 # ── 3. замена базы препрода ─────────────────────────────────────────────────

@@ -7,8 +7,8 @@
 # версии SCD2, там зелёный.
 #
 # Что делает:
-#   1. снимок прода (lore-host): `fresh` — BACKUP DATABASE кредом работающего
-#      бэкенда прода (данные прода не меняются, в каталоге бэкапов LORE-ygg
+#   1. снимок прода (lore-host): `fresh` — BACKUP DATABASE кредом lore-migrate (DBR-01; у
+#      рантайма root-пароля нет; данные прода не меняются, в каталоге бэкапов LORE-ygg
 #      lore-host появляется ещё один архив — как у PL-04); `latest` — самый
 #      свежий уже лежащий архив, ничего на проде не делается; `auto` (по
 #      умолчанию) — latest, если он моложе MAX_AGE_H часов И снят после старта
@@ -174,9 +174,7 @@ else
     && say "архив $(basename "$latest") снят до старта прод-бэкенда ($st) — схема в нём может быть старше прода, снимаю свежий"
   if [ "$mode" = fresh ]; then
     say "lore-host: BACKUP DATABASE $SOURCE_DB (данные прода не меняются)"
-    bcid="$(r "cd $REMOTE_BACKEND_DIR && docker compose ps -q lore-backend" | head -1)"
-    [ -n "$bcid" ] || skip "бэкенд прода на lore-host не запущен — снимок его кредом невозможен"
-    out="$(r "docker exec $bcid sh -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
+    out="$(r "cd $REMOTE_BACKEND_DIR && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 600 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"BACKUP DATABASE\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'")"
     grep -q '"result":"OK"' <<< "$out" || skip "BACKUP DATABASE на проде не подтверждён: $(printf '%s' "$out" | head -c 300)"
     bfile="$(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
     latest="$(r "docker exec $REMOTE_YGG sh -c 'find /home/arcadedb/backups -name \"$(basename "$bfile")\" -type f | head -1'")"
