@@ -11,7 +11,7 @@
 //   «Failed to fetch dynamically imported module» — SPRINT_UXR_S4_UI_SHELL_LISTS/S4-STALE-CHUNK
 //   горизонтальная прокрутка страницы на телефоне — SPRINT_UXR_MOBILE_POLISH/MP2-*, S4-MOBILE-EDGE
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot, keepLoginFresh } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
 
 test.beforeEach(() => requireStand());
 // Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
@@ -49,7 +49,8 @@ async function openSection(page: Page, sec: string): Promise<string | null> {
   await openStand(page, `/?sec=${sec}`, settled);
   await expect(settled.first(), `раздел ${sec} загрузился`).toBeVisible({ timeout: 30_000 });
   const alert = page.locator('[role="alert"]').filter({ hasText: /ошибк|не удалось|error|403|500/i });
-  expect(await alert.count(), `раздел ${sec}: ошибка вместо списка — ${await alert.first().innerText().catch(() => '')}`).toBe(0);
+  const alertText = await textOf(alert);
+  expect(await alert.count(), `раздел ${sec}: ошибка вместо списка — ${alertText}`).toBe(0);
   return rows.first().getAttribute('data-record-id').catch(() => null);
 }
 
