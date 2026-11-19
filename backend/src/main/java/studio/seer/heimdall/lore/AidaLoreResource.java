@@ -1045,6 +1045,11 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
         }
+        // D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION: доску плана при установке не перенесли — раздел снят, словами.
+        if (ModelSchemaAdapter.planSectionRemoved(id)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
+                .entity(new LoreError("SECTION_REMOVED", "срез " + id + " — старая доска плана: при установке её не перенесли (MIG_PLAN_BOARD=drop)"))));
+        }
         // AP-08: админские журналы — только admin/superadmin, отказ словами, а не «0» в выдаче.
         if (LoreSlices.adminOnlyDenied(id, role)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)

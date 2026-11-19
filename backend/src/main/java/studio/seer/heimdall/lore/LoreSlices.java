@@ -3233,6 +3233,15 @@ public final class LoreSlices {
 
     public static SliceDef get(String id) { return SLICES.get(id); }
 
+    private static final java.util.regex.Pattern PLAN_BOARD_TYPE =
+        java.util.regex.Pattern.compile("\\bFROM\\s+Plan(Config|Track|Section|Checkpoint|Version)\\b");
+
+    /** Срез читает типы старой доски плана (D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION). */
+    static boolean usesPlanBoard(String id) {
+        SliceDef d = SLICES.get(id);
+        return d != null && PLAN_BOARD_TYPE.matcher(d.baseSql()).find();
+    }
+
     /**
      * AL-94: слайсы, у которых сущность несёт ребро BELONGS_TO_PROJECT напрямую,
      * и потому read-скоуп применим (значение — выражение траверса до slug'ов).

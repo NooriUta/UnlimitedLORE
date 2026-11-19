@@ -171,6 +171,7 @@ public class LoreSchemaMigrationRunner {
             LOG.infof("[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется");
             ModelSchemaAdapter.enable(true);
             LOG.infof("[LORE MIGRATE] переходник чтения новой схемы включён (status_raw → status)");
+            markPlanBoard();
             return;
         }
         if (dbVersion == 0) {
@@ -254,6 +255,17 @@ public class LoreSchemaMigrationRunner {
         } catch (RuntimeException e) {
             LOG.warnf("[LORE MIGRATE] не удалось определить, собрана ли схема из модели: %s — прежний путь старта", e.getMessage());
             return false;
+        }
+    }
+
+    /** Есть ли в базе из модели старая доска плана (настройка установщика MIG_PLAN_BOARD). Не узнали — считаем, что есть. */
+    private void markPlanBoard() {
+        try {
+            boolean present = !ingest.queryPublic("SELECT name FROM schema:types WHERE name = 'PlanConfig'", Map.of()).isEmpty();
+            ModelSchemaAdapter.planBoard(present);
+            if (!present) LOG.info("[LORE MIGRATE] старой доски плана в базе нет — её срезы отвечают «раздел снят»");
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] не удалось узнать, есть ли доска плана: %s — срезы доски как раньше", e.getMessage());
         }
     }
 
@@ -341,6 +353,7 @@ public class LoreSchemaMigrationRunner {
             if (migrate) throw new IllegalStateException(modelMigrateRefusal());
             ModelSchemaAdapter.enable(true);
             LOG.info("[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)");
+            markPlanBoard();
             return;
         }
         if (!migrate) {

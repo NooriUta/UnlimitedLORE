@@ -32,6 +32,15 @@ final class ModelSchemaAdapter {
 
     static void enable(boolean on) { enabled = on; }
 
+    /** Есть ли в базе старая доска плана (установщик по умолчанию её не переносит, MIG_PLAN_BOARD=keep — переносит). */
+    private static volatile boolean planBoard = true;
+    static void planBoard(boolean present) { planBoard = present; }
+
+    /** Срез доски на базе из модели, куда доску не перенесли: отвечать «раздел снят», а не 502. */
+    static boolean planSectionRemoved(String sliceId) {
+        return enabled && !planBoard && LoreSlices.usesPlanBoard(sliceId);
+    }
+
     /** Коды справочников плана и фаз → строка старого вида; остальные коды не трогаются. */
     private static final Map<String, String> DISPLAY = Map.ofEntries(
         Map.entry("TODO", "⬜ TODO"),
