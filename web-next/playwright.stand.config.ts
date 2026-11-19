@@ -34,6 +34,8 @@ export default defineConfig({
   retries: 0,
   timeout: 60_000,
   use: {
+    // Ни одно действие не ждёт бесконечно (19.11.2026: innerText без срока съедал весь сценарий и вход).
+    actionTimeout: 15_000,
     baseURL: pre.run ? process.env.LORE_STAND_URL : undefined,
     // Без входа не передаём файл вовсе: Playwright упал бы на несуществующем пути
     // до того, как сценарий успел бы честно сказать «не выполнен».
