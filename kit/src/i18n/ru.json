@@ -1254,5 +1254,12 @@
   "kit.attn.approx": "Посчитано по загруженным записям — выдача обрезана, настоящее число может быть больше",
   "kit.attn.more": "ещё {n}",
   "kit.attn.noGroups": "Групп нет",
-  "kit.attn.noGroupsHint": "Группы сводки — быстрые фильтры списка; у этого раздела их не назвали."
+  "kit.attn.noGroupsHint": "Группы сводки — быстрые фильтры списка; у этого раздела их не назвали.",
+  "kit.sortable.up": "Выше: {name}",
+  "kit.sortable.down": "Ниже: {name}",
+  "kit.dialog.close": "Закрыть",
+  "kit.dialog.cancel": "Отмена",
+  "kit.dialog.reason": "Причина",
+  "kit.lang.missing": "нет перевода — показывается язык по умолчанию",
+  "kit.lang.key": "ключ локализации:"
 }

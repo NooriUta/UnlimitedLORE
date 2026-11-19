@@ -7,7 +7,9 @@
 #
 # Режим — Streamable HTTP (LORE_MCP_TRANSPORT=http): токен и профиль присылает
 # клиент в каждом запросе, своего OIDC client_credentials у сервера нет, поэтому
-# секретов в образе и окружении нет вовсе.
+# секретов в образе и окружении нет вовсе. Клиент без headersHelper может прислать
+# пару X-Lore-Client-Id/Secret — тогда токен по ней берёт сервер (нужен только
+# LORE_OIDC_ISSUER из compose, это адрес realm, а не секрет).
 FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

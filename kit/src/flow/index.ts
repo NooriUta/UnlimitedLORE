@@ -16,3 +16,4 @@ export {
 } from './unknownOutcome';
 export { wordDiff, type WordChunk, type WordChunkKind, type WordDiffOptions, type WordDiffResult } from './wordDiff';
 export { ContentRelease, type ActivationEntry, type ContentChangedItem, type ContentDiff, type ContentFieldChange, type ContentItem, type ContentReleaseProps } from './ContentRelease';
+export { SortableList, type SortableItem, type SortableListProps } from './SortableList';

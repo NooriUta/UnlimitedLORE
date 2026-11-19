@@ -175,11 +175,14 @@ public class LoreRunbookResource extends LoreResourceBase {
                 // (state_uid can be null on legacy rows — same silent-no-op class as the
                 // ADR fix above), and only SET content_md when provided (LH-44) — a
                 // metadata-only upsert must not wipe the runbook body.
-                if (req.content_md() != null) {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "UPDATE KnowRunbookHist SET content_md=:cnt WHERE @rid=:rid",
-                        Map.of("cnt", req.content_md(), "rid", histRows.get(0).get("rid"))))
-                        .await().indefinitely();
+                if (req.content_md() != null
+                        && WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "UPDATE KnowRunbookHist SET content_md=:cnt WHERE @rid=:rid",
+                            Map.of("cnt", req.content_md(), "rid", histRows.get(0).get("rid"))))
+                        .await().indefinitely())) {
+                    // MT-MCP-TRUTH Б11: открытую строку прочитали, а запись её не нашла — тело не легло
+                    return WriteCount.conflict("STALE_VERSION", "runbook", req.runbook_id(),
+                        "открытая строка истории runbook исчезла между чтением и записью — content_md не записан; повторите");
                 }
                 histCreated = false;
             } else {

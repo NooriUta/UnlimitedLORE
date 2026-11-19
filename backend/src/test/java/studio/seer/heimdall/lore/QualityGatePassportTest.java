@@ -76,6 +76,37 @@ class QualityGatePassportTest {
         assertEquals("BELONGS_TO", ((Map<String, Object>) fields.get("components").get("ref")).get("rel"));
     }
 
+    /**
+     * SPRINT_QG_REBUILD/QG-01, решение владелицы 19.11.2026 «2а»: признак scope = global | project.
+     * Его пишет путь записи гейта — значит, он объявлен в модели (правило двух слоёв) и доходит до
+     * паспорта и списка.
+     */
+    @Test
+    void modelAndSlicesCarryScope() {
+        Map<String, Map<String, Object>> fields = fieldsOf(T);
+        assertNotNull(fields.get("scope"), "признака общий/проектный нет в модели гейта");
+        assertEquals("enum", fields.get("scope").get("kind"));
+        for (String slice : List.of("quality_gates", "quality_gate_by_id"))
+            assertTrue(LoreSlices.get(slice).baseSql().contains(" scope"), slice + " не отдаёт scope");
+    }
+
+    /**
+     * Повод решения: проектный скоуп прятал общий гейт от участника другого проекта. Под скоупом
+     * гейт виден, если он общий ИЛИ хотя бы один его проект разрешён.
+     */
+    @Test
+    void globalGateIsVisibleUnderAnyProjectScope() {
+        for (String slice : List.of("quality_gates", "quality_gate_by_id")) {
+            assertTrue(LoreSlices.PROJECT_SCOPED.containsKey(slice), slice + " не под проектным скоупом");
+            assertFalse(LoreSlices.SCOPE_PENDING.containsKey(slice), slice + " всё ещё в списке «скоуп не решён»");
+            java.util.Map<String, String> given = new java.util.HashMap<>();
+            for (String r : LoreSlices.get(slice).required()) given.put(r, "x");
+            String sql = LoreSlices.compose(slice, given, java.util.Set.of("org/a")).sql();
+            assertTrue(sql.contains("scope = 'global'"), "общий гейт отрезан скоупом: " + sql);
+            assertTrue(sql.contains("out('BELONGS_TO_PROJECT').slug CONTAINS :__scope0"), sql);
+        }
+    }
+
     /** Гейт — в общем меню, в группе «Работа», после релизов. */
     @Test
     void gateIsAWorkSection() {

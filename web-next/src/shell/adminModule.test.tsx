@@ -64,7 +64,7 @@ describe('S7B-01 · конфиг модуля admin', () => {
     // S7B-31 п.1 (решение 1а): «Словари» — в «Языке графа», рядом с правилами CLAUDE:
     // правка справочника меняет подписи и цвета на каждом экране — это язык системы,
     // а группа получает тон риска, как «Доступ» (раньше — нейтральный успех).
-    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-rules', 'adm-tidy', 'adm-migration']);
+    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration']);
     expect(groups.find(g => g.id === 'adm-lang')!.tone).toBe('var(--wrn)');
     // Личные «Мои виды» и «Недавние» — про записи Forseti, в админке их нет.
     expect(cfg.menu.myViews).toBeFalsy();
@@ -99,6 +99,8 @@ describe('S7B-01 · старые адреса /admin?adm=…', () => {
     expect(legacyAdminHref('?section=admin&tab=settings')).toBe('/?mod=admin&sec=adm-flags');
     expect(legacyAdminHref('?section=admin&tab=quick')).toBe('/?mod=admin&sec=adm-mcp');
     expect(legacyAdminHref('?section=admin&tab=claudeRules')).toBe('/?mod=admin&sec=adm-rules');
+    // MC-06: адрес прототипа экрана «Модель» (?section=admin&tab=model&mtab=…) ведёт в раздел, вкладка сохраняется.
+    expect(legacyAdminHref('?section=admin&tab=model&mtab=hist')).toBe('/?mod=admin&sec=adm-model&mtab=hist');
     // Неизвестная вкладка v1 — Главная, а не пустой экран.
     expect(legacyAdminHref('?section=admin&tab=projects')).toBe('/?mod=admin&sec=adm-home');
   });
