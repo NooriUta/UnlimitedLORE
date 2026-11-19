@@ -450,6 +450,30 @@ describe.skipIf(!bashBin)('ci-scope.sh cd: что выкатывать', () => {
     expect(cd(['mcp-server/src/a.ts'], { EVENT_NAME: 'push' }).backend).toBe('false');
   });
 
+  // AO-MCP-HOSTED: MCP выкатывается CD как сервис lore-mcp (https://<хост LORE>/mcp).
+  it('пуш только MCP → выкатывается lore-mcp, бэкенд и v2 — нет', () => {
+    const kv = cd(['mcp-server/src/a.ts'], { EVENT_NAME: 'push' });
+    expect(kv.mcp).toBe('true');
+    expect(kv.backend).toBe('false');
+  });
+
+  it('пуш web-next или документации → lore-mcp не трогается', () => {
+    expect(cd(['web-next/src/App.tsx'], { EVENT_NAME: 'push' }).mcp).toBe('false');
+    expect(cd(['docs/x.md'], { EVENT_NAME: 'push' }).mcp).toBe('false');
+  });
+
+  it('пуш backend / compose → lore-mcp тоже (тот же стенд, тот же коммит)', () => {
+    expect(cd(['backend/x.java'], { EVENT_NAME: 'push' }).mcp).toBe('true');
+    expect(cd(['docker-compose.yml'], { EVENT_NAME: 'push' }).mcp).toBe('true');
+  });
+
+  it('ручной both → и lore-mcp; ручной mcp → только он', () => {
+    expect(cd([], { EVENT_NAME: 'workflow_dispatch', SERVICE: 'both' }).mcp).toBe('true');
+    expect({ ...pick(cd([], { EVENT_NAME: 'workflow_dispatch', SERVICE: 'mcp' })), mcp: cd([], { EVENT_NAME: 'workflow_dispatch', SERVICE: 'mcp' }).mcp })
+      .toEqual({ backend: 'false', frontend: 'false', frontend_next: 'false', mcp: 'true' });
+    expect(cd([], { EVENT_NAME: 'workflow_dispatch', SERVICE: 'frontend' }).mcp).toBe('false');
+  });
+
   it('пуш с правкой src/ → v1 не выкатывается, но это сказано вслух', () => {
     const r = scope(['src/App.tsx'], 'cd', { EVENT_NAME: 'push' });
     expect(r.kv.frontend).toBe('false');
