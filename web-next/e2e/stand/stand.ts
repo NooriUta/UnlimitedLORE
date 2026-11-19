@@ -98,3 +98,13 @@ export async function pickSprintWithTasks(page: Page): Promise<SprintPick | null
 }
 
 export const attr = (v: string) => JSON.stringify(v);
+
+/**
+ * Текст первого совпадения для подписи к проверке — сразу '', если совпадений нет. Подпись к expect
+ * вычисляется ДО проверки: текст первого совпадения (innerText без срока) при 0 совпадений ждал бы элемент до конца
+ * сценария (прогоны 37831, 19.11.2026: UI-LISTS 24 мин, RFD-AP01 6 мин).
+ */
+export async function textOf(loc: Locator, max = 160): Promise<string> {
+  if ((await loc.count().catch(() => 0)) === 0) return '';
+  return (await loc.first().innerText({ timeout: 2_000 }).catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, max);
+}
