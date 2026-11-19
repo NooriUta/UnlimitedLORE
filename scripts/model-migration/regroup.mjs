@@ -108,10 +108,19 @@ export function regroupOverrides(doc) {
 }
 
 /** Записать правки в документ решений: кто и когда — рядом; пустая строка — «оставить без группы». */
-export function withRegroupOverrides(doc, overrides, by, at = new Date().toISOString()) {
+export function withRegroupOverrides(doc, overrides, by, at = new Date().toISOString(), repos = null) {
   const map = { ...regroupOverrides(doc) };
   for (const [k, v] of Object.entries(overrides || {})) map[k] = v ? String(v).trim() : null;
-  return { ...doc, projects: { map, by: by || null, at } };
+  // правки репозиториев: проект → { component } | { mirror: true }; прежние сохраняются
+  const prevRepos = (doc && doc.projects && doc.projects.repos) || {};
+  const nextRepos = { ...prevRepos, ...(repos || {}) };
+  return { ...doc, projects: { map, ...(Object.keys(nextRepos).length ? { repos: nextRepos } : {}), by: by || null, at } };
+}
+
+/** Правки репозиториев из файла решений: проект → { component } | { mirror: true }. */
+export function repoOverrides(doc) {
+  const r = doc && doc.projects && doc.projects.repos;
+  return r && typeof r === 'object' ? r : {};
 }
 
 /**

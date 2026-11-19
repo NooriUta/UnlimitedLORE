@@ -23,7 +23,7 @@ export function parseRepo(h) {
  * componentIds — компоненты приёмника. Основной влитого проекта — репозиторий компонента с тем же именем;
  * компонента нет — unassigned («куда?»), группа не выдумывается.
  */
-export function planRepos(srcProjects, anchorOf = {}, componentIds = []) {
+export function planRepos(srcProjects, anchorOf = {}, componentIds = [], overrides = {}) {
   const repos = new Map(), projectRepos = [], componentRepos = [], mirrors = [], unassigned = [], warnings = [];
   const norm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_');
   const comps = new Map(componentIds.map(c => [norm(c), c]));
@@ -39,6 +39,15 @@ export function planRepos(srcProjects, anchorOf = {}, componentIds = []) {
     for (const r of parsed) if (r.url !== primary.url && !mirrors.some(m => m.from === primary.url && m.to === r.url)) mirrors.push({ from: primary.url, to: r.url });
     const anchor = anchorOf[p.slug] || p.slug;
     if (anchor === p.slug) { projectRepos.push({ project: p.slug, url: primary.url }); continue; }
+    // правка человека (файл решений, projects.repos): «это зеркало» — репозиторий только зеркало, связь уже есть
+    // у основного; компонент — по слову, новый заводится переносом (create)
+    const ov = overrides[p.slug];
+    if (ov && ov.mirror) continue;
+    if (ov && ov.component) {
+      const known = comps.get(norm(ov.component));
+      componentRepos.push({ component: known || ov.component, url: primary.url, project: anchor, ...(known ? {} : { create: true }) });
+      continue;
+    }
     const comp = comps.get(norm(primary.name)) || comps.get(norm(p.name));
     if (comp) componentRepos.push({ component: comp, url: primary.url, project: anchor });
     else unassigned.push({ url: primary.url, from: p.slug, project: anchor, why: `нет компонента ${primary.name}` });
@@ -54,11 +63,11 @@ export function planRepos(srcProjects, anchorOf = {}, componentIds = []) {
  * компонента — role unassigned, чтобы не потерять), COMPONENT_REPOSITORY компонент → репозиторий, MIRRORED_TO
  * репозиторий → зеркало, пустые USES_REPOSITORY и KnowOrganization. Сверка: всё = план; у проекта ≤ 1 основного.
  */
-export async function applyRepos(db, srcProjects, anchorOf, { log = console.log } = {}) {
+export async function applyRepos(db, srcProjects, anchorOf, { log = console.log, overrides = {} } = {}) {
   const c = (sql, p) => db.dstCommand(sql, p);
   const q = (sql, p) => db.dstQuery(sql, p);
   const comps = (await q('SELECT component_id FROM LoreComponent')).map(x => x.component_id).filter(Boolean);
-  const plan = planRepos(srcProjects, anchorOf, comps);
+  const plan = planRepos(srcProjects, anchorOf, comps, overrides);
   const types = new Set((await q('SELECT name FROM schema:types')).map(x => x.name));
   for (const t of ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', 'KnowRepository', 'KnowOrganization']) if (types.has(t)) await c(`DROP TYPE ${t} UNSAFE`);
   await c('CREATE VERTEX TYPE KnowRepository');
@@ -75,6 +84,8 @@ export async function applyRepos(db, srcProjects, anchorOf, { log = console.log 
   const projRid = async s => (await q('SELECT @rid AS r FROM KnowGitProject WHERE slug = :s', { s }))[0]?.r;
   for (const l of plan.projectRepos) { const pr = await projRid(l.project); if (!pr) { miss++; continue; } await c(`CREATE EDGE HAS_REPOSITORY FROM ${pr} TO ${repo} SET role = 'primary'`, { u: l.url }); }
   for (const l of plan.unassigned) { const pr = await projRid(l.project); if (!pr) { miss++; continue; } await c(`CREATE EDGE HAS_REPOSITORY FROM ${pr} TO ${repo} SET role = 'unassigned'`, { u: l.url }); }
+  // компонент по слову человека, которого нет в базе, — заводится (только код; описание — потом в LORE)
+  for (const l of plan.componentRepos.filter(x => x.create)) await c('INSERT INTO LoreComponent SET component_id = :cid, name = :cid, mig_created_by = :why', { cid: l.component, why: 'решение владелицы: репозиторий ' + l.url });
   for (const l of plan.componentRepos) await c(`CREATE EDGE COMPONENT_REPOSITORY FROM (SELECT FROM LoreComponent WHERE component_id = :cid) TO ${repo}`, { cid: l.component, u: l.url });
   for (const m of plan.mirrors) await c(`CREATE EDGE MIRRORED_TO FROM (SELECT FROM KnowRepository WHERE url = :a) TO (SELECT FROM KnowRepository WHERE url = :b)`, { a: m.from, b: m.to });
   const n = async sql => Number((await q(sql))[0]?.n) || 0;

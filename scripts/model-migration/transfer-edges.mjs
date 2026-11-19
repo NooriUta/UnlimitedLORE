@@ -11,7 +11,7 @@ import { EDGES, SCHEMA } from './resources.mjs';
 import { edgePlan, edgeWrites } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
-import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup } from './regroup.mjs';
+import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
@@ -100,7 +100,7 @@ export async function transferEdges(db, { log = console.log } = {}) {
   } else log('перегруппировка проектов: таблица не принята (нет раздела projects в файле решений) — проекты как есть');
   // репозитории (D-2026-MIG-REPOSITORY-ORGANIZATION, владелица 19.11): по адресам проектов ИСТОЧНИКА — проект →
   // основной, влитый проект → репозиторий его компонента, зеркала — связью репозиторий → репозиторий
-  report.repositories = await applyRepos(db, regroupInput.projects, anchorOf, { log });
+  report.repositories = await applyRepos(db, regroupInput.projects, anchorOf, { log, overrides: repoOverrides(decisions) });
   if (!report.repositories.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);

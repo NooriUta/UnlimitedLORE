@@ -114,3 +114,11 @@ test('адреса группы объединяются из строки и м
   assert.equal(mergeHosts([null, undefined]).value, null);
   assert.ok(Array.isArray(mergeHosts([b]).value), 'опора хранила массив — пишем массив');
 });
+
+test('правки репозиториев (компонент / зеркало) хранятся рядом с группами и не теряются при правке групп', () => {
+  let doc = { format: 'mig-decisions/1', decisions: [] };
+  doc = withRegroupOverrides(doc, { 'AIDA/x': 'G' }, 'o', 't', { 'AIDA/qwen-code-fork': { component: 'ML_QWEN_CODE_FORK' } });
+  doc = withRegroupOverrides(doc, { 'AIDA/y': 'G' }, 'o', 't');
+  assert.deepEqual(doc.projects.repos, { 'AIDA/qwen-code-fork': { component: 'ML_QWEN_CODE_FORK' } });
+  assert.deepEqual(regroupOverrides(doc), { 'AIDA/x': 'G', 'AIDA/y': 'G' });
+});

@@ -590,7 +590,7 @@ export async function serve({ port = 2499 } = {}) {
       if (req.method === 'POST' && req.url === '/api/regroup') {
         let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e6) throw new Error('слишком большой запрос'); }
         const b = JSON.parse(body); const who = me(req);
-        const next = withRegroupOverrides(readDoc(), b.overrides, who ? who.login : (b.by || null));
+        const next = withRegroupOverrides(readDoc(), b.overrides, who ? who.login : (b.by || null), undefined, b.repos);
         fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
         return json(res, 200, { ok: true });
       }

@@ -52,3 +52,18 @@ test('дубль проекта с тем же основным адресом �
   assert.deepEqual(p.unassigned, []);
   assert.equal(p.repos.length, 1);
 });
+
+// Владелица 19.11.2026: «mobilekit seidr studio kit … qwen ml_qwen code_fork, Forgejo mcp так и оставь,
+// udwe GitHub это зеркало, aida tpg» — правки человека: компонент репозитория или «это зеркало».
+test('правка человека: компонент (в т.ч. новый) или «зеркало» сильнее «куда?»', () => {
+  const src = [
+    { slug: 'AIDA/udwe-mig-gen', name: 'udwe-mig-gen', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/udwe-mig-gen' }, { role: 'mirror', base_url: 'https://github.com/i/UDWE' }] },
+    { slug: 'ivanovalex32/UDWE', name: 'UDWE', hosts: [{ role: 'primary', base_url: 'https://github.com/i/UDWE' }] },
+    { slug: 'AIDA/qwen-code-fork', name: 'qwen-code-fork', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/qwen-code-fork' }] },
+  ];
+  const anchor = { 'ivanovalex32/UDWE': 'AIDA/udwe-mig-gen', 'AIDA/qwen-code-fork': 'AIDA/miniLORE' };
+  const p = planRepos(src, anchor, ['MIGCORE'], { 'ivanovalex32/UDWE': { mirror: true }, 'AIDA/qwen-code-fork': { component: 'ML_QWEN_CODE_FORK' } });
+  assert.deepEqual(p.unassigned, []);
+  assert.deepEqual(p.componentRepos, [{ component: 'ML_QWEN_CODE_FORK', url: 'https://f/AIDA/qwen-code-fork', project: 'AIDA/miniLORE', create: true }]);
+  assert.ok(p.mirrors.some(m => m.from === 'https://f/AIDA/udwe-mig-gen' && m.to === 'https://github.com/i/UDWE'), 'UDWE — зеркало основного udwe-mig-gen');
+});
