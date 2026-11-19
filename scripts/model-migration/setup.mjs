@@ -187,3 +187,18 @@ export function installArgs({ dir, version = '', port = '', dry = false }) {
   if (dry) a.push('--dry-run');
   return a;
 }
+
+/**
+ * Встройка Völva (EMB-L6, ADR-LORE-055-D7): что положить в .env LORE и что вписать на стороне Völva. Издатель (iss)
+ * токена — origin веба/бэкенда LORE своей среды; Völva принимает его в MB_EMBEDDING_JWT_ISSUERS и проверяет подпись
+ * открытым ключом с <издатель>/lore/embed/jwks. Без издателя бэкенд остаётся на временном HS256.
+ */
+export function volvaEmbedEnv({ web, volva }) {
+  let w, v;
+  try { w = new URL(web); } catch { throw new Error('для встройки Völva нужен адрес веба LORE — http(s)://хост[:порт]'); }
+  try { v = new URL(volva); } catch { throw new Error('адрес Völva — http(s)://хост[:порт][/путь]'); }
+  return {
+    lore: { LORE_VOLVA_ORIGIN: v.origin, LORE_VOLVA_EMBED_SITE_URL: String(volva).trim(), LORE_VOLVA_EMBED_ISSUER: w.origin },
+    volva: { MB_EMBEDDING_JWT_ISSUERS: w.origin, jwks: w.origin + '/lore/embed/jwks' },
+  };
+}

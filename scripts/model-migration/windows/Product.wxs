@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 · MSI установщика LORE для Windows, ставится без сети.
+  Слова владелицы 18.11.2026: «Node.js должен устанавливаться в сборке если его нет и не переустанавливаться если он
+  есть на машине»; «все данные должны быть в пакете чтобы можно было поставить offline для windows»; «лучше msi».
+  MSI не может запустить внутри себя второй MSI (Node.js), поэтому Node входит файлами: если на машине есть Node 20+
+  (реестр Node.js → node.exe с версией файла не ниже 20), компонент Node не ставится; если нет — node.exe кладётся в
+  папку установщика, в PATH не попадает и удаляется вместе с ним. Собирает build-msi.mjs (WiX 5).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="LORE Installer" Manufacturer="Seidr Studio" Version="$(var.Version)"
+           UpgradeCode="7C5D3B0E-4F1A-4E7B-9C2D-5A8E6F1B3D47" Scope="perMachine" Compressed="yes">
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer LORE Installer is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Node.js 20+ уже стоит? Официальный MSI Node.js пишет InstallPath; версия — по файлу node.exe. -->
+    <Property Id="SYSNODE">
+      <RegistrySearch Id="NodeInstallPath" Root="HKLM" Key="SOFTWARE\Node.js" Name="InstallPath" Type="directory" Bitness="always64">
+        <FileSearch Id="NodeExe" Name="node.exe" MinVersion="20.0.0.0" />
+      </RegistrySearch>
+    </Property>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="LORE Installer">
+        <Directory Id="NODEDIR" Name="node" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="MENUDIR" Name="LORE" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="App" Directory="INSTALLFOLDER">
+      <Component Id="Bundle"><File Id="LoreMigrate" Source="$(var.Src)\lore-migrate.mjs" KeyPath="yes" /></Component>
+      <Component Id="Launcher"><File Id="LauncherCmd" Source="$(var.Src)\lore-installer.cmd" KeyPath="yes" /></Component>
+      <Component Id="EnvExample"><File Id="EnvExampleFile" Source="$(var.Src)\lore-migrate.env.example" KeyPath="yes" /></Component>
+    </ComponentGroup>
+
+    <!-- Свой Node — только если подходящего на машине нет. -->
+    <ComponentGroup Id="PrivateNode" Directory="NODEDIR">
+      <Component Id="NodeRuntime" Condition="NOT SYSNODE">
+        <File Id="NodeExePrivate" Source="$(var.NodeSrc)\node.exe" KeyPath="yes" />
+        <File Id="NodeLicense" Source="$(var.NodeSrc)\LICENSE" Name="LICENSE.txt" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="Menu" Directory="MENUDIR">
+      <Component Id="MenuShortcut">
+        <Shortcut Id="StartLoreInstaller" Name="LORE Installer" Description="LORE: install, migrate, connect an agent"
+                  Target="[INSTALLFOLDER]lore-installer.cmd" WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="RemoveMenuDir" On="uninstall" />
+        <RegistryValue Root="HKMU" Key="Software\Seidr Studio\LORE Installer" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="LORE Installer" Level="1">
+      <ComponentGroupRef Id="App" />
+      <ComponentGroupRef Id="PrivateNode" />
+      <ComponentGroupRef Id="Menu" />
+    </Feature>
+  </Package>
+</Wix>

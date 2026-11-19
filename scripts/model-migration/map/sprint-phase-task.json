@@ -228,6 +228,26 @@
         "rule": "keep",
         "basis": "proposal",
         "note": "живое поле: «text» — версия открыта правкой текста, статус тот же (MT-NOTE-APPEND); срезы считают версии статуса по пустому значению"
+      },
+      "changed_by_session": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness_note": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_machine": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
       }
     },
     "KnowPhase": {
@@ -341,6 +361,26 @@
         "rule": "keep",
         "basis": "delegated",
         "note": "владелица 16.11.2026: «по максимуму сама» — решила исполнитель, замер прода 16.11; заметка версии «почему изменили», как у остальных типов (декларация: «оставить»)"
+      },
+      "changed_by_session": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness_note": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_machine": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
       }
     },
     "KnowTask": {
@@ -565,6 +605,26 @@
         "rule": "keep",
         "basis": "proposal",
         "note": "живое поле: «text» — версия открыта правкой текста, статус тот же (MT-NOTE-APPEND); срезы считают версии статуса по пустому значению"
+      },
+      "changed_by_session": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_harness_note": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "changed_by_machine": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
       }
     }
   }

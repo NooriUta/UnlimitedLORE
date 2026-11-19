@@ -122,3 +122,11 @@ test('команда установки: каталог абсолютный, в
   assert.throws(() => installArgs({ dir: '/opt/lore', version: 'latest' }), /версия/);
   assert.throws(() => installArgs({ dir: '/opt/lore', port: '70000' }), /порт/);
 });
+
+test('встройка Völva: издатель — origin веба LORE своей среды, у Völva — тот же издатель и адрес JWKS (EMB-L6)', async () => {
+  const { volvaEmbedEnv } = await import('./setup.mjs');
+  const v = volvaEmbedEnv({ web: 'https://lore.example.org/', volva: 'https://volva.example.org/embed' });
+  assert.deepEqual(v.lore, { LORE_VOLVA_ORIGIN: 'https://volva.example.org', LORE_VOLVA_EMBED_SITE_URL: 'https://volva.example.org/embed', LORE_VOLVA_EMBED_ISSUER: 'https://lore.example.org' });
+  assert.deepEqual(v.volva, { MB_EMBEDDING_JWT_ISSUERS: 'https://lore.example.org', jwks: 'https://lore.example.org/lore/embed/jwks' });
+  assert.throws(() => volvaEmbedEnv({ web: '', volva: 'https://v' }), /веба LORE/);
+});

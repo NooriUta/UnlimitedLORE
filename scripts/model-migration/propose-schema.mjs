@@ -18,6 +18,7 @@ const DB_TYPE = { date: 'DATE', datetime: 'DATETIME', number: 'DOUBLE', bool: 'B
 
 const types = {};
 for (const [T, t] of Object.entries(report.types)) {
+  if (!MAP[T]) continue; // отчёт пробного расчёта всех объектов: остальные типы — propose-schema-all.mjs
   // откуда пришло новое поле: имя старого поля по карте
   const from = {};
   for (const [f, e] of Object.entries(MAP[T])) {
@@ -57,7 +58,8 @@ for (const [T, t] of Object.entries(types)) {
 const DECLARED_SERVICE = { changed_by_session: { kind: 'text', db_type: 'STRING', name: 'Сессия правки' }, changed_by_harness: { kind: 'text', db_type: 'STRING', name: 'Harness правки' }, changed_by_harness_note: { kind: 'text', db_type: 'STRING', name: 'Сверка harness' }, changed_by_machine: { kind: 'text', db_type: 'STRING', name: 'Машина правки' } };
 for (const [T, t] of Object.entries(types)) {
   if (!T.endsWith('Hist')) continue;
-  for (const [f, d] of Object.entries(DECLARED_SERVICE)) if (!t.fields[f]) t.fields[f] = { ...d, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
+  // Служебное поле служебное и с данными (снимок 18.11: changed_by_session заполнен у 52 версий задач).
+  for (const [f, d] of Object.entries(DECLARED_SERVICE)) t.fields[f] = t.fields[f] ? { ...t.fields[f], ...d, service: true } : { ...d, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
 }
 const out = {
   _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы первого объекта (спринт, фаза, задача) — владелицей не утверждено. Выведено из карты переноса и сухого прогона по снимку прода: в схему попали только поля, которые перенос реально дал. Запись в базу-приёмник по этой схеме начинается после её слова.',

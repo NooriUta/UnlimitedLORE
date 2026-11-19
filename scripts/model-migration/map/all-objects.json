@@ -721,6 +721,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowActor": {
@@ -1120,6 +1140,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowDictEntry": {
@@ -1244,6 +1284,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowDoc": {
@@ -1372,6 +1432,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowFile": {
@@ -1447,6 +1527,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowGain": {
@@ -1664,6 +1764,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowModelConfig": {
@@ -1718,6 +1838,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowPR": {
@@ -2077,6 +2217,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowRunbook": {
@@ -2142,6 +2302,26 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowSavedView": {
@@ -2335,6 +2515,26 @@
     "rule": "keep",
     "basis": "delegated",
     "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
    }
   },
   "KnowTag": {
@@ -2653,8 +2853,9 @@
     "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
    },
    "component_id": {
-    "rule": "open",
-    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+    "rule": "keep",
+    "basis": "owner",
+    "note": "ключ записи своего типа"
    },
    "full_name": {
     "rule": "keep",

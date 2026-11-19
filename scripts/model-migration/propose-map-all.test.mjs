@@ -40,7 +40,8 @@ test('карта по переписи: каждое поле каждого п�
   const census = { KnowADRHist: { fields: [{ name: 'status_raw', filled: 3 }, { name: 'valid_from', filled: 3 }, { name: 'hist_for', filled: 1 }] }, PlanTrack: { fields: [{ name: 'label', filled: 1 }] } };
   const m = proposeMap(census);
   assert.deepEqual(Object.keys(m.types), ['KnowADRHist']);
-  assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['hist_for', 'status_raw', 'valid_from']);
+  // + служебные поля правки у каждого типа версий (снимок 18.11.2026: без правила перенос терял их как «вне карты»)
+  assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'changed_by_session', 'hist_for', 'status_raw', 'valid_from']);
   assert.deepEqual(m.skipped, { PlanTrack: m.skipped.PlanTrack });
   assert.equal(JSON.stringify(proposeMap(census)), JSON.stringify(m));
 });
@@ -64,4 +65,10 @@ test('harness агента — к кодам miniLORE (владелица 17.11:
   assert.equal(applyMap('KnowActor', m, { harness: 'kimi-code' }, {}).out.harness, 'kimi');
   assert.equal(applyMap('KnowActor', m, { harness: 'codex' }, {}).out.harness, 'codex');
   assert.deepEqual(applyMap('KnowActor', m, { harness: 'vim' }, {}).rejects.map(r => r.why), ['harness вне справочника miniLORE']);
+});
+
+test('ключ своего типа — не «связь»: component_id у LoreComponent остаётся полем (18.11.2026: в новой базе component_id = null)', () => {
+  // Правило «компонент и проект — только связью» про ССЫЛКУ на компонент из другой записи, а не про ключ самого компонента.
+  assert.equal(ruleFor('LoreComponent', 'component_id').rule, 'keep');
+  assert.equal(ruleFor('KnowADR', 'component_id').rule, 'open', 'у ADR component_id по-прежнему ссылка → связь');
 });
