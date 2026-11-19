@@ -58,7 +58,7 @@ describe('паспорт вехи: прогноз и поток', () => {
   it('прогноз (линии с трендом) и CFD; закрытий одна неделя — «мало данных для тренда»', async () => {
     window.history.replaceState(null, '', '/?pch=1');
     render(<KitLangProvider lang="ru"><MilestoneCharts milestoneId="M" now={NOW} load={load} /></KitLangProvider>);
-    await waitFor(() => expect(kinds()).toEqual(['line', 'line']));
+    await waitFor(() => expect(kinds()).toEqual(['line', 'line', 'bar'])); // №6 (пачка 2): velocity по задачам
     expect(screen.getByTestId('forecast-verdict').textContent).toMatch(/мало/i);
   });
 

@@ -30,7 +30,7 @@ describe('Аналитика v2', () => {
     ui(async s => DATA[s]);
     await waitFor(() => expect(screen.getByText(/Velocity/)).toBeTruthy());
     fireEvent.click(screen.getByRole('tab', { name: 'Поток' }));
-    expect(blocks()).toEqual(['throughput', 'lead', 'cycle']);
+    expect(blocks()).toEqual(['throughput', 'lead', 'cycle', 'blocked']);
     fireEvent.click(screen.getByRole('tab', { name: 'Моя сводка' }));
     expect(blocks()).toEqual(['velocity', 'throughput', 'burnup', 'lead', 'cycle']);
     expect([...document.querySelectorAll('.an-block__src')].map(e => e.textContent)).toEqual(['Прогресс', 'Поток', 'Прогресс', 'Поток', 'Поток']);
@@ -53,6 +53,22 @@ describe('Аналитика v2', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Поток' }));
     await waitFor(() => expect(document.querySelectorAll('[data-block="cycle"] [data-point]').length).toBe(1));
     expect(asked).toContain('task_status_versions');
+  });
+
+  it('пачка 2 (графики 19.11): вкладки «Люди и агенты», «Релизы», «Архитектура», «Качество» — свои блоки и свои срезы', async () => {
+    const asked: string[] = [];
+    ui(async s => { asked.push(s); return DATA[s] ?? { rows: [] }; });
+    await waitFor(() => expect(screen.getByText(/Velocity/)).toBeTruthy());
+    fireEvent.click(screen.getByRole('tab', { name: 'Люди и агенты' }));
+    expect(blocks()).toEqual(['wip']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Релизы' }));
+    expect(blocks()).toEqual(['rhythm', 'ship']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Архитектура' }));
+    expect(blocks()).toEqual(['decisions']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Качество' }));
+    expect(blocks()).toEqual(['gates']);
+    expect(new URL(window.location.href).searchParams.get('atab')).toBe('quality');
+    await waitFor(() => expect(asked).toEqual(expect.arrayContaining(['all_tasks', 'releases', 'pr_ship_lag', 'decision_status_versions', 'qg_run_outcomes'])));
   });
 
   it('срез обрезан — так и сказано над графиками', async () => {
