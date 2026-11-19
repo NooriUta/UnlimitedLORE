@@ -6,7 +6,7 @@
     "Версия остаётся отдельным типом с окончанием Hist и связью «имеет состояние»: так записано решение «тип версии выводится из типа записи». Ключи записи в версии не хранятся.",
     "Удержанные значения (поля без решения) в новую схему не входят; при пробной записи они складываются в отдельный служебный тип отчёта, чтобы не потеряться.",
     "Связи первого объекта в это предложение не входят — их карта ещё не составлена.",
-    "Служебные моменты версий (valid_from, valid_to, status_known_from) в карте стоят «оставить» и сейчас переносятся строкой; по решению «даты настоящим типом» их тоже нужно приводить — в исполнитель это ещё не включено."
+    "Служебные моменты версий (valid_from, valid_to, status_known_from) — DATETIME: перенос приводит их к моменту UTC, неразбираемое уходит в остаток MigLeftover (MDL-06, «даты переводи», 19.11.2026)."
   ],
   "types": {
     "KnowSprint": {
@@ -278,8 +278,8 @@
           "service": true
         },
         "status_known_from": {
-          "kind": "text",
-          "db_type": "STRING",
+          "kind": "datetime",
+          "db_type": "DATETIME",
           "from": [
             "status_known_from"
           ],
@@ -558,8 +558,8 @@
           "name": "Заметка (Markdown)"
         },
         "status_known_from": {
-          "kind": "text",
-          "db_type": "STRING",
+          "kind": "datetime",
+          "db_type": "DATETIME",
           "from": [
             "status_known_from"
           ],
@@ -859,8 +859,8 @@
           "service": true
         },
         "status_known_from": {
-          "kind": "text",
-          "db_type": "STRING",
+          "kind": "datetime",
+          "db_type": "DATETIME",
           "from": [
             "status_known_from"
           ],

@@ -44,9 +44,9 @@ class LoreModelDateKindsMatchSchemaTest {
      * Поля, у которых вид в модели и тип в схеме переноса расходятся сознательно, — с причиной.
      * Исправляется установщиком, не моделью: тогда поле уходит из списка (сторож напомнит).
      */
-    static final Map<String, String> SCHEMA_DIFFERS = Map.of(
-        "feature.shipped_at", "день по смыслу (путь записи ставит LocalDate), а перенос делает DATETIME по окончанию имени _at "
-            + "(propose-map-all.mjs); правило установщика — на решение владелицы");
+    static final Map<String, String> SCHEMA_DIFFERS = Map.of();
+    // Было: feature.shipped_at (DATETIME по окончанию _at). Владелица 19.11.2026 «даты переводи»: shipped_at — DATE,
+    // поправлено правилом установщика (propose-map-all.mjs, DAY_AT) — модель и схема сошлись.
 
     static Map<String, Map<String, String>> schema() throws Exception {
         try (InputStream in = LoreModelDateKindsMatchSchemaTest.class.getResourceAsStream("/model-v2-schema/schema-types.json")) {
@@ -130,6 +130,37 @@ class LoreModelDateKindsMatchSchemaTest {
         List<String> stale = ABSENT.keySet().stream().filter(id -> !absent.contains(id)).sorted().toList();
         assertTrue(unlisted.isEmpty(), "поле-дата без свойства в схеме переноса и без причины: " + unlisted);
         assertTrue(stale.isEmpty(), "у поля появилось свойство в схеме — убрать из списка ABSENT: " + stale);
+    }
+
+    /**
+     * Снимок не отстаёт от схемы установщика: свойство, которое есть и в снимке, и в
+     * {@code scripts/model-migration/schema/*.json}, — одного типа. Правило установщика поменяли, а снимок нет —
+     * сторож выше сверял бы модель с прошлой схемой.
+     */
+    @Test
+    void snapshotAgreesWithInstallerSchema() throws Exception {
+        Map<String, Map<String, String>> snap = schema();
+        ObjectMapper m = new ObjectMapper();
+        List<String> bad = new ArrayList<>();
+        int compared = 0;
+        for (String file : List.of("sprint-phase-task.json", "all-objects.json")) {
+            JsonNode types = m.readTree(java.nio.file.Path.of("..", "scripts", "model-migration", "schema", file).toFile()).get("types");
+            for (var t = types.fields(); t.hasNext(); ) {
+                var e = t.next();
+                Map<String, String> props = snap.get(e.getKey());
+                if (props == null) continue;
+                for (var f = e.getValue().get("fields").fields(); f.hasNext(); ) {
+                    var p = f.next();
+                    String had = props.get(p.getKey());
+                    if (had == null) continue;
+                    compared++;
+                    String now = p.getValue().get("db_type").asText();
+                    if (!now.equals(had)) bad.add(e.getKey() + "." + p.getKey() + ": снимок " + had + ", установщик " + now);
+                }
+            }
+        }
+        assertTrue(compared > 300, "сверено свойств: " + compared);
+        assertTrue(bad.isEmpty(), "снимок схемы отстал от установщика — переснять:\n  " + String.join("\n  ", bad));
     }
 
     @Test

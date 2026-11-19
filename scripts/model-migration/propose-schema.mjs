@@ -13,7 +13,7 @@ const MAP = J(here('./map/sprint-phase-task.json')).types;
 const TEXTS = J(here('./texts/sprint-phase-task.json')).types;
 
 // Вид нового поля: что делает преобразование — то и хранится.
-const NEW_KIND = { created_at: 'date', updated_at: 'datetime', planned_start_date: 'date', planned_end_date: 'date', status: 'enum', status_note: 'text', priority: 'enum', priority_note: 'text', title: 'text' };
+const NEW_KIND = { created_at: 'date', updated_at: 'datetime', planned_start_date: 'date', planned_end_date: 'date', status_known_from: 'datetime', status: 'enum', status_note: 'text', priority: 'enum', priority_note: 'text', title: 'text' };
 const DB_TYPE = { date: 'DATE', datetime: 'DATETIME', number: 'DOUBLE', bool: 'BOOLEAN', list: 'LIST' };
 
 const types = {};
@@ -69,7 +69,7 @@ const out = {
     'Версия остаётся отдельным типом с окончанием Hist и связью «имеет состояние»: так записано решение «тип версии выводится из типа записи». Ключи записи в версии не хранятся.',
     'Удержанные значения (поля без решения) в новую схему не входят; при пробной записи они складываются в отдельный служебный тип отчёта, чтобы не потеряться.',
     'Связи первого объекта в это предложение не входят — их карта ещё не составлена.',
-    'Служебные моменты версий (valid_from, valid_to, status_known_from) в карте стоят «оставить» и сейчас переносятся строкой; по решению «даты настоящим типом» их тоже нужно приводить — в исполнитель это ещё не включено.',
+    'Служебные моменты версий (valid_from, valid_to, status_known_from) — DATETIME: перенос приводит их к моменту UTC, неразбираемое уходит в остаток MigLeftover (MDL-06, «даты переводи», 19.11.2026).',
   ],
   types,
 };

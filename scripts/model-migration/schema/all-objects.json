@@ -1238,8 +1238,8 @@
           "of": 443
         },
         "status_known_from": {
-          "kind": "text",
-          "db_type": "STRING",
+          "kind": "datetime",
+          "db_type": "DATETIME",
           "from": [
             "status_known_from"
           ],
@@ -1704,8 +1704,8 @@
           "of": 1147
         },
         "status_known_from": {
-          "kind": "text",
-          "db_type": "STRING",
+          "kind": "datetime",
+          "db_type": "DATETIME",
           "from": [
             "status_known_from"
           ],
@@ -4102,8 +4102,8 @@
           "of": 740
         },
         "status_known_from": {
-          "kind": "text",
-          "db_type": "STRING",
+          "kind": "datetime",
+          "db_type": "DATETIME",
           "from": [
             "status_known_from"
           ],
@@ -4297,8 +4297,8 @@
           "of": 88
         },
         "shipped_at": {
-          "kind": "datetime",
-          "db_type": "DATETIME",
+          "kind": "date",
+          "db_type": "DATE",
           "from": [
             "shipped_at"
           ],
