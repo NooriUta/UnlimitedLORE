@@ -64,7 +64,7 @@ final class ModelSchemaAdapter {
 
     /**
      * Типы вне модели 1.18 — тип → почему его может не быть в базе из модели. Каждый тип, который читает срез или
-     * раздел гигиены, либо входит в модель (схема установщика), либо записан здесь — сторож
+     * раздел гигиены, либо входит в модель (схема установщика, карта связей, ряды раздела series модели), либо записан здесь — сторож
      * {@code OutsideModelTypesGuardTest}. На базе из модели, где типа нет, чтение отвечает этой причиной, а не 502.
      */
     static final Map<String, String> OUTSIDE_MODEL = Map.of(
@@ -72,9 +72,7 @@ final class ModelSchemaAdapter {
         "PlanTrack", PLAN_BOARD,
         "PlanSection", PLAN_BOARD,
         "PlanCheckpoint", PLAN_BOARD,
-        "PlanVersion", PLAN_BOARD,
-        "MetricSnapshot", "временной ряд метрик (ARC-02) в модель 1.18 не входит; легаси — заводится шагами старой схемы",
-        "AgentActionLog", "журнал действий агентов в модель 1.18 не входит — сервер заводит его при первой записи");
+        "PlanVersion", PLAN_BOARD);
 
     /** Типы схемы базы (schema:types) на базе из модели; null — не прочитали, и тогда «типа нет» не утверждаем. */
     private static volatile Set<String> schemaTypes;

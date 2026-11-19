@@ -63,10 +63,35 @@ class OutsideModelTypesGuardTest {
         }
     }
 
+    /**
+     * Ряды (TIMESERIES) раздела series модели 1.18 ({@code shared/model/lore-model.json}): живые журналы — их пишут
+     * журнал действий, квоты агентов, LoreRequestStats, KcLoginPoller, BRAGI. Это часть модели, а не «вне модели».
+     */
+    static Set<String> seriesTypes() throws Exception {
+        JsonNode series = new ObjectMapper().readTree(java.nio.file.Path.of("..", "shared", "model", "lore-model.json").toFile()).get("series");
+        Set<String> out = new HashSet<>();
+        if (series != null) series.fieldNames().forEachRemaining(out::add);
+        out.addAll(SERIES_PENDING);
+        return out;
+    }
+
+    /**
+     * Ряды, которые объявляет в series PR #1633 (fix/series-agent-action-log-118). Пока он не влит, сторож берёт
+     * их отсюда; после слияния они придут из модели, и этот набор удалить.
+     */
+    static final Set<String> SERIES_PENDING = Set.of("AgentActionLog", "MetricSnapshot");
+
     static Set<String> known() throws Exception {
         Set<String> s = new HashSet<>(modelTypes());
         s.addAll(snapshotTypes());
+        s.addAll(seriesTypes());
         return s;
+    }
+
+    @Test
+    void живые_ряды_не_помечены_вне_модели() throws Exception {
+        for (String t : SERIES_PENDING) assertFalse(ModelSchemaAdapter.OUTSIDE_MODEL.containsKey(t), t + " — живой ряд модели 1.18");
+        assertTrue(seriesTypes().contains("AuditDbLogin"), "раздел series модели прочитан");
     }
 
     @Test
