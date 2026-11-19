@@ -263,6 +263,11 @@
     "shape_basis": "proposal"
    }
   },
+  "HAS_STATUS": {
+   "rule": "drop",
+   "basis": "owner",
+   "note": "снята V89 (#1401): статус — код в строке версии (status_raw), словари Status* сняты; MD-02"
+  },
   "HAS_VARIANT": {
    "rule": "keep",
    "basis": "delegated",
@@ -407,6 +412,11 @@
    "rule": "keep",
    "basis": "delegated",
    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "OF_TYPE": {
+   "rule": "drop",
+   "basis": "owner",
+   "note": "снята V89 (#1401): вид трека — поле PlanTrack.area, словарь TrackType снят; MD-02"
   },
   "ON_MILESTONE": {
    "rule": "drop",

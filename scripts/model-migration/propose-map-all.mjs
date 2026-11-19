@@ -20,12 +20,20 @@ const EDGE_FIELDS = { component_id: 'связь с компонентом (BELON
 const DATE = /(^date_|_date$|^created_date$)/, DATETIME = /(^|_)(created_at|updated_at|closed_at|merged_at|retired_at|reached_at|ts|at)$/;
 /** Поля с окончанием _at, которые по смыслу — день, а не момент (MDL-06). */
 const DAY_AT = new Set(['shipped_at']);
+/**
+ * MD-02 «что выключаем»: легаси-словари статусов, вид трека (сняты V89, #1401, LoreSchemaMigrations.RETIRED_LEGACY_STATUS_TYPES).
+ * В переписи прода их уже нет, но источник без V89 их несёт — без правила структура вне карты воссоздала бы их «как есть».
+ * Поэтому они в «не переносится» всегда, а не только когда их видела перепись.
+ */
+export const RETIRED_V89 = ['StatusAdr', 'StatusDecision', 'StatusMilestone', 'StatusPhase', 'StatusSprint', 'StatusTask', 'TrackType'];
+const RETIRED_WHY = 'снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»';
 const W = 'владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»';
 
 /** Судьба типа целиком. */
 export function typePlan(T) {
   if (FIRST.has(T)) return { move: false, why: 'первый объект — своей картой (sprint-phase-task.json)' };
   if (/^Plan/.test(T)) return { move: false, why: 'план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)' };
+  if (RETIRED_V89.includes(T)) return { move: false, why: RETIRED_WHY };
   if (T === 'LoreSchemaVersion') return { move: false, why: 'журнал шагов V заменён отметкой LoreModelSchema (MIG-03)' };
   return { move: true };
 }
@@ -75,7 +83,9 @@ export function proposeMap(census) {
     for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
     if (T.endsWith('Hist')) for (const f of SERVICE_EDIT) if (!types[T][f]) types[T][f] = { ...SERVICE_EDIT_RULE };
   }
-  return { _about: 'MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.', types, skipped };
+  for (const T of RETIRED_V89) skipped[T] ||= RETIRED_WHY;
+  const sortedSkipped = Object.fromEntries(Object.entries(skipped).sort(([a], [b]) => a.localeCompare(b)));
+  return { _about: 'MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.', types, skipped: sortedSkipped };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('propose-map-all.mjs')) {
