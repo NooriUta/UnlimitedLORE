@@ -39,4 +39,16 @@ describe('qg_new: владелец и причина отмены доходят
     await tool!.handler({ qg_id: 'QG-X', name: 'x', qg_type: 'perf' });
     expect(sent[0].body).toMatchObject({ qg_type: 'perf' });
   });
+
+  // SPRINT_QG_REBUILD/QG-01, решение владелицы 19.11.2026 «2а»: признак scope = global | project
+  it('scope объявлен в схеме (только global | project) и уходит в тело', async () => {
+    expect(Object.keys(tool!.schema)).toContain('scope');
+    const z = tool!.schema.scope as { safeParse: (v: unknown) => { success: boolean } };
+    expect(z.safeParse('global').success).toBe(true);
+    expect(z.safeParse('project').success).toBe(true);
+    expect(z.safeParse('shared').success).toBe(false);
+    sent.length = 0;
+    await tool!.handler({ qg_id: 'QG-X', name: 'x', scope: 'global' });
+    expect(sent[0].body).toMatchObject({ scope: 'global' });
+  });
 });

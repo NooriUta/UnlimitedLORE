@@ -2552,7 +2552,7 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, sprint_id, content_md, " +
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, scope, last_run_status, date_created, sprint_id, content_md, " +
             "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate",
             List.of(),
@@ -2565,7 +2565,7 @@ public final class LoreSlices {
             // (ADR-LORE-053 D7), компонент — связью списком; retired_at и retired_reason пишет путь
             // записи при переходе в retired. component_id (первый) оставлен прежним читателям.
             "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id, " +
-            "retired_at, retired_reason, " +
+            "retired_at, retired_reason, scope, " +
             "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
@@ -3317,6 +3317,12 @@ public final class LoreSlices {
         + "|in('DECOMPOSES_INTO').in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug"
         + "|in('DECOMPOSES_INTO').in('DECOMPOSES_INTO').in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug";
 
+    /**
+     * Скоуп гейта качества (QG-01): своё ребро проекта ИЛИ признак общего гейта. «?» — условие-литерал,
+     * не зависящее от проекта вызывающего (см. {@link #scopeClause}).
+     */
+    static final String QG_SCOPE = "out('BELONGS_TO_PROJECT').slug|?scope = 'global'";
+
     static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
         Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
         // Решение владелицы 11.11.2026: зависимость видна, только если видны ОБА спринта
@@ -3345,6 +3351,10 @@ public final class LoreSlices {
         Map.entry("questions", QUESTION_SCOPE),
         // MT-MCP-TRUTH A4/A8/A10: гигиена вопросов видна тем же, кому видны сами вопросы.
         Map.entry("question_hygiene", QUESTION_SCOPE),
+        // SPRINT_QG_REBUILD/QG-01 (решение владелицы 19.11.2026 «2а»): гейт виден, если он общий
+        // (scope = 'global', проекта у него нет по построению) ИЛИ разрешён его проект.
+        Map.entry("quality_gates", QG_SCOPE),
+        Map.entry("quality_gate_by_id", QG_SCOPE),
         // AL-SCOPE-HOLES (06.11.2026): выпадающий список проектов — по самому slug («=» — скалярное поле).
         Map.entry("git_projects", "=slug"),
         // S4-29 (53а): паспорт проекта — тем же правилом, что выпадающий список проектов.
@@ -3540,13 +3550,11 @@ public final class LoreSlices {
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
         Map.entry("findings", "находки — решение владелицы"),
         Map.entry("finding_by_id", "находки — решение владелицы"),
-        Map.entry("quality_gates", "QG — общие или проектные (SPRINT_QG_REBUILD/QG-04)"),
         // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий связан с проектом, но путь двойной (свой основной и через компонент).
         Map.entry("repositories", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
         Map.entry("repo_by_id", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
         Map.entry("repos_of_project", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
         Map.entry("repos_of_component", "репозитории — общий реестр (как components) или по проекту (HAS_REPOSITORY / компонент → продукт → проект): решение владелицы"),
-        Map.entry("quality_gate_by_id", "QG — QG-04"),
         Map.entry("qg_metrics", "QG — QG-04"),
         Map.entry("qg_job_tasks", "QG — QG-04"),
         Map.entry("qg_recommendations", "QG — QG-04"),
@@ -3782,8 +3790,12 @@ public final class LoreSlices {
      * ни один из них не содержит слова WHERE внутри литерала. Если такой
      * появится, честнее будет завести ему явный флаг, чем городить парсер.
      */
-    /** «=field» — скалярное поле (равенство); иначе — обход рёбер (CONTAINS). */
+    /**
+     * «=field» — скалярное поле (равенство); «?условие» — литерал, видимый под любым скоупом (общий гейт
+     * QG-01); иначе — обход рёбер (CONTAINS).
+     */
     static String scopeClause(String traversal, String key) {
+        if (traversal.startsWith("?")) return traversal.substring(1);
         return traversal.startsWith("=")
             ? traversal.substring(1) + " = :" + key
             : traversal + " CONTAINS :" + key;
