@@ -30,8 +30,7 @@ if (!token) { console.error('в сохранённом входе нет access_
 /** Файлы между сборкой стенда и ожидаемым коммитом; git недоступен или коммита нет в истории — null. */
 function changedFiles(from: string, to: string): string[] | null {
   try {
-    return execFileSync('git', ['diff', '--name-only', from, to], { encoding: 'utf8' }).split('
-').map(x => x.trim()).filter(Boolean);
+    return execFileSync('git', ['diff', '--name-only', from, to], { encoding: 'utf8' }).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   } catch { return null; }
 }
 
