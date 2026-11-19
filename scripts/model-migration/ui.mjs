@@ -16,13 +16,14 @@ import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
 import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml, volvaEmbedEnv } from './setup.mjs';
-import { INSTALL_BUNDLE } from './resources.mjs';
+import { INSTALL_BUNDLE, DECISION_MILESTONES } from './resources.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
 import { realmPlan, applyRealm, issuerParts } from './kc-realm.mjs';
 import os from 'node:os';
 import { proposeRegroup, readRegroupInput, regroupOverrides, withRegroupOverrides } from './regroup.mjs';
 import { proposeProductKinds, readProductKindInput, productKindMap, productKindState, withProductKinds } from './product-kind.mjs';
+import { decisionMilestoneRules, decisionMilestoneMap, planDecisionMilestones, readDecisionMilestoneInput, withDecisionMilestones } from './decision-milestones.mjs';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -104,6 +105,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <a href="#step-2" data-step="2"><b>2</b> Статусы</a>
 <a href="#step-p" data-step="p"><b>П</b> Проекты</a>
 <a href="#step-k" data-step="k"><b>В</b> Вид продукта</a>
+<a href="#step-m" data-step="m"><b>Р</b> Решения → вехи</a>
 <a href="#step-3" data-step="3"><b>3</b> Пробный расчёт</a>
 <a href="#step-4" data-step="4"><b>4</b> Перенос</a>
 <a href="#step-5" data-step="5"><b>5</b> Сверка и отчёт</a>
@@ -191,6 +193,9 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <section data-page="k" hidden><h2>Шаг В. Вид продукта</h2>
 <p class="sub">У каждого продукта — вид: <b>tech</b> (технологический), <b>service</b> (сервисно-организационный, git от него не требуется) или оба сразу, ADR-LORE-044; пустым вид быть не может. Решает человек; установщик только предлагает по данным этой установки. Правило предложения, первое сработавшее: вид уже задан в источнике — он; у проекта-владельца есть адрес репозитория — tech; продукт служит другим продуктам (связь «служит»: продаёт, считает) или в названии слова услуги (продажи, учёт, поддержка, бэк-офис) — service; есть оба признака — предлагаются оба; подпродукт без своих признаков — как родитель; иначе «?». Пока у продукта нет вида, перенос не начинается.</p>
 <div id="pk" class="state">загрузка…</div></section>
+<section data-page="m" hidden><h2>Шаг Р. Решения → вехи</h2>
+<p class="sub">Связь решения с вехой — ребро TARGETS_MILESTONE, как у спринта. Решение с ADR вехой не связывается: оно уже связано через ADR. Решению без ADR веха вычисляется при переносе по данным этой установки, первое сработавшее: спринт решения (код SPRINT_… в тексте или спринт вопроса, на который оно отвечает) → веха спринта; иначе окно по времени — дата решения попала в окно вехи (даты её спринтов и решений, срок вехи); сначала вехи продукта или проекта решения, потом любые; при пересечении окон — ближайший конец после даты. Нет ни спринта, ни окна — строка «куда?»: выберите веху или «без вехи». Выбор пишется в файл решений и сильнее вычисления.</p>
+<div id="dm" class="state">загрузка…</div></section>
 <section data-page="3" hidden><h2>Шаг 3. Пробный расчёт без записи</h2>
 <p class="sub">Каждая запись источника проходит через карту переноса; в новую базу ничего не пишется. Здесь — что не привелось, что удержано до решения и поля, которых карта не знает. Пока описаны спринт, фаза и задача.</p>
 <div id="s3"><button class="btn pri" id="run3">Посчитать</button> <span class="sub">чтение всего источника, около минуты</span></div></section>
@@ -242,7 +247,17 @@ byl.hidden=true;
 if(d.me){el.innerHTML='<div class="state go">Вы вошли как <b>'+esc(d.me.login)+'</b> через '+esc(d.me.kc)+' · область '+esc(d.me.realm)+'. Владелец проекта '+esc(d.me.project)+' — проверено по Keycloak и по базе.</div>';document.getElementById('who').textContent='вошли: '+d.me.login;return}
 el.innerHTML='<form action="auth/start" method="get" class="tw" style="padding:8px"><label class="sub">сервер Keycloak <input name="url" size="40" value="'+esc(d.kc.url)+'"></label> <label class="sub">область <input name="realm" value="'+esc(d.kc.realm)+'"></label> <button class="btn pri">Войти</button><div class="sub">клиент '+esc(d.kc.client)+' · проект-владелец '+esc(d.kc.project)+' · роль '+esc(d.kc.role)+'</div></form>';
 if(stepFromHash()!=='0'&&stepFromHash()!=='s')location.hash='#step-0'})}
-function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}if(n==='p')rg();if(n==='k')pk()}
+function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}if(n==='p')rg();if(n==='k')pk();if(n==='m')dm()}
+function dm(){var el=document.getElementById('dm');fetch('api/decision-milestones').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent='не смогли посчитать вехи решений: '+d.error;return}
+el.className='';var c=d.counts;var opts=function(cur,cands){var o='<option value="">— не решено —</option><option value="-"'+(cur===null?' selected':'')+'>без вехи</option>';var seen={};(cands||[]).concat(d.milestones).forEach(function(m){if(seen[m])return;seen[m]=1;o+='<option value="'+esc(m)+'"'+(cur===m?' selected':'')+'>'+esc(m)+((cands||[]).indexOf(m)>=0?' · веха продукта':'')+'</option>'});return o};
+var h='<div class="kpis"><div class="kpi"><b>'+c.sprint+'</b><span>по спринту</span></div><div class="kpi"><b>'+c.time+'</b><span>по времени</span></div><div class="kpi"><b>'+c.waiting+'</b><span>«куда?»</span></div><div class="kpi"><b>'+c.human+'</b><span>решил человек</span></div><div class="kpi"><b>'+c.with_adr_skipped+'</b><span>с ADR — не связываются</span></div></div>';
+h+='<div class="state '+(c.waiting?'stop':'go')+'">'+(c.waiting?'«Куда?» — '+c.waiting+' решений без вехи: без выбора они переносятся без связи':'У всех решений без ADR веха есть или решена')+'</div>';
+var row=function(r,cur,why,cands){return '<tr><td class="mono">'+esc(r.decision)+'<div class="sub">'+esc(r.title||'')+'</div></td><td class="why">'+esc(why)+'</td><td><select data-dm="'+esc(r.decision)+'">'+opts(cur,cands)+'</select></td></tr>'};
+h+='<h3>«Куда?» — ждут решения</h3><div class="tw"><table><thead><tr><th>решение</th><th>почему</th><th>веха</th></tr></thead><tbody>'+(d.waiting.length?d.waiting.map(function(r){return row(r,undefined,r.why,r.candidates)}).join(''):'<tr><td colspan="3" class="sub">таких нет</td></tr>')+'</tbody></table></div>';
+h+='<h3>Решено человеком</h3><div class="tw"><table><thead><tr><th>решение</th><th>выбор</th><th>веха</th></tr></thead><tbody>'+(d.human.length?d.human.map(function(r){return row(r,r.milestone,r.milestone===null?'без вехи':'выбор человека',[])}).join(''):'<tr><td colspan="3" class="sub">пока нет</td></tr>')+'</tbody></table></div>';
+h+='<h3>По времени — проверьте</h3><div class="tw"><table><thead><tr><th>решение</th><th>довод</th><th>веха</th></tr></thead><tbody>'+(d.time.length?d.time.map(function(r){return row(r,r.milestone,r.reason+(r.alternatives.length?' · ещё '+r.alternatives.join(', '):''),r.alternatives.concat([r.milestone]))}).join(''):'<tr><td colspan="3" class="sub">таких нет</td></tr>')+'</tbody></table></div>';
+el.innerHTML=h;
+el.querySelectorAll('select[data-dm]').forEach(function(s){s.onchange=function(){if(!s.value)return;var m={};m[s.dataset.dm]=s.value==='-'?null:s.value;fetch('api/decision-milestones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map:m,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error)return msg(x.error,true);dm()})}})}).catch(function(e){el.className='state stop';el.textContent='не смогли посчитать вехи решений: '+e.message})}
 var PKM=null;
 function pk(){var el=document.getElementById('pk');fetch('api/product-kind').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent='не смогли прочитать продукты: '+d.error;PKM=null;gate();return}
 PKM=d.state.missing;gate();el.className='';var has=function(v,k){return Array.isArray(v)&&v.indexOf(k)>=0};var n=function(k){return d.rows.filter(function(r){return Array.isArray(r.kind)&&r.kind.join()===k}).length};
@@ -255,7 +270,7 @@ el.innerHTML=h;
 function save(map){fetch('api/product-kind',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map:map,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error){el.insertAdjacentHTML('afterbegin','<div class="state stop">'+esc(x.error)+'</div>');return}pk()})}
 el.querySelectorAll('input[data-pk]').forEach(function(i){i.onchange=function(){var v=[];el.querySelectorAll('input[data-pk]').forEach(function(x){if(x.dataset.pk===i.dataset.pk&&x.checked)v.push(x.value)});if(!v.length){i.checked=true;return msg('вид продукта '+i.dataset.pk+' не может быть пустым: оставьте tech, service или оба',true)}var m={};m[i.dataset.pk]=v;save(m)}});
 document.getElementById('pkall').onclick=function(){var m={};d.rows.forEach(function(r){if(!r.kind&&Array.isArray(r.suggested))m[r.code]=r.suggested});if(!Object.keys(m).length)return msg('нечего принимать: у всех строк вид уже есть или предложения нет',true);save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать продукты: '+e.message;PKM=null;gate()})}
-function stepFromHash(){var m=/^#step-(\d|s|p|k)$/.exec(location.hash);return m?m[1]:'s'}
+function stepFromHash(){var m=/^#step-(\d|s|p|k|m)$/.exec(location.hash);return m?m[1]:'s'}
 function rg(){var el=document.getElementById('rg');fetch('api/regroup').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent=d.error;return}
 el.className='';var gs=Object.keys(d.groups).sort();
 var h='<div class="kpis">'+gs.map(function(g){return '<div class="kpi"><b>'+esc(g)+'</b><span class="sub">'+d.groups[g].from.length+' пр. · '+d.groups[g].records+' зап.</span></div>'}).join('')+(d.unassigned.length?'<div class="kpi"><b>куда?</b><span class="sub">'+d.unassigned.length+' пр.</span></div>':'')+'</div>';
@@ -618,6 +633,24 @@ export async function serve({ port = 2499 } = {}) {
         if (!by) return json(res, 400, { error: 'не записано: не сказано, кто принял (поле «кто принимает решения»)' });
         const next = withProductKinds(readDoc(), b.map, by);
         fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+        return json(res, 200, { ok: true });
+      }
+      // Шаг Р: решения → вехи (владелица 19.11.2026: «веху храним, просто при переносе вычисляем»; с ADR — не связываем)
+      if (req.method === 'GET' && req.url === '/api/decision-milestones') {
+        const doc = readDoc(), input = await readDecisionMilestoneInput(db);
+        const plan = planDecisionMilestones({ rules: decisionMilestoneRules(DECISION_MILESTONES), doc, ...input });
+        const titles = new Map(input.decisions.map(d => [d.decision_id, d.title]));
+        const human = Object.entries(decisionMilestoneMap(doc)).filter(([id]) => titles.has(id) && !plan.with_adr_skipped.includes(id)).map(([decision, milestone]) => ({ decision, milestone, title: titles.get(decision) }));
+        return json(res, 200, { counts: plan.counts, waiting: plan.waiting, human,
+          time: plan.edges.filter(e => e.method === 'time-window').map(e => ({ ...e, title: titles.get(e.decision) })),
+          milestones: input.milestones.map(m => m.milestone_id).sort(), by: (doc.decision_milestones || {}).by || null, at: (doc.decision_milestones || {}).at || null });
+      }
+      if (req.method === 'POST' && req.url === '/api/decision-milestones') {
+        let body = ''; for await (const ch of req) { body += ch; if (body.length > 1e5) throw new Error('слишком большой запрос'); }
+        const b = JSON.parse(body); const who = me(req);
+        const by = who ? who.login : (b.by || '').trim();
+        if (!by) return json(res, 400, { error: 'не записано: не сказано, кто принял (поле «кто принимает решения»)' });
+        fs.writeFileSync(file, JSON.stringify(withDecisionMilestones(readDoc(), b.map, by), null, 2) + '\n');
         return json(res, 200, { ok: true });
       }
       // Шаг П: перегруппировка проектов (владелица 19.11.2026: «сделай отдельное меню с предложением перегруппировки»)

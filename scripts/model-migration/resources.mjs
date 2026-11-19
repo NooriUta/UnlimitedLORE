@@ -10,6 +10,7 @@ import schema from './schema/sprint-phase-task.json' with { type: 'json' };
 import rules from './rules/status-unification.json' with { type: 'json' };
 import statuses from '../../shared/lore-statuses.json' with { type: 'json' };
 import installBundle from './rules/install-bundle.json' with { type: 'json' };
+import decisionMilestones from './rules/decision-milestones.json' with { type: 'json' };
 
 // Первый объект — своей картой; все остальные — картой, выведенной правилами (propose-map-all.mjs, 17.11.2026).
 export const MAP = { ...map.types, ...allObjects.types };
@@ -31,3 +32,5 @@ export const RULES = rules;
 export const VOCAB = statuses.statusMatch;
 export const CODE_CASE = rules.code_case.status;
 export const INSTALL_BUNDLE = installBundle;
+// Решение → веха (владелица 19.11.2026, «по вехам ок»): хранимые рёбра TARGETS_MILESTONE решений с ADR.
+export const DECISION_MILESTONES = decisionMilestones;

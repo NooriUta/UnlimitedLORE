@@ -7,13 +7,14 @@
 // Сверка: число связей каждого вида и концы каждой связи (по адресам приёмника) совпали с расчётом.
 import fs from 'node:fs';
 import { connect } from './db.mjs';
-import { EDGES, SCHEMA } from './resources.mjs';
+import { EDGES, SCHEMA, DECISION_MILESTONES } from './resources.mjs';
 import { edgePlan, edgeWrites } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
+import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -107,6 +108,11 @@ export async function transferEdges(db, { log = console.log } = {}) {
   // приёмника; сверка — у всех продуктов вид задан
   report.product_kind = await applyProductKinds(db, (await readProductKindInput(db)).products, decisions, { log });
   if (!report.product_kind.ok) ok = false;
+  // решение → веха (владелица 19.11.2026): с ADR — не связываем; без ADR — веха вычисляется при переносе
+  // (спринт → окно по времени → «куда?» в мастере) и хранится ребром TARGETS_MILESTONE; довод computed-at-transfer
+  const dmPlan = planDecisionMilestones({ rules: decisionMilestoneRules(DECISION_MILESTONES), doc: decisions, ...(await readDecisionMilestoneInput(db)) });
+  report.decision_milestones = await applyDecisionMilestones(db, dmPlan, { log });
+  if (!report.decision_milestones.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
