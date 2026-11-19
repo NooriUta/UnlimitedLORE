@@ -21,6 +21,22 @@ class PlanBoardRemovedSliceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void поле_с_выбором_из_снятого_раздела_паспорт_не_получает() {
+        // проба на ryzenai 19.11: паспорт спринта звал track_options (поле «трек» — выбор из доски) и получал 410
+        java.util.function.Supplier<java.util.List<String>> keys = () -> ((java.util.List<java.util.Map<String, Object>>)
+            LoreRecordRegistry.schemaJson("sprint").get("fields")).stream().map(m -> String.valueOf(m.get("key"))).toList();
+        assertTrue(keys.get().contains("track"), "старая схема — поле есть");
+        ModelSchemaAdapter.enable(true);
+        try {
+            ModelSchemaAdapter.planBoard(false);
+            assertFalse(keys.get().contains("track"), "доски нет — поля «трек» нет");
+            ModelSchemaAdapter.planBoard(true);
+            assertTrue(keys.get().contains("track"), "доску оставили — поле есть");
+        } finally { ModelSchemaAdapter.enable(false); ModelSchemaAdapter.planBoard(true); }
+    }
+
+    @Test
     void раздел_снят_только_на_базе_из_модели_без_доски() {
         assertFalse(ModelSchemaAdapter.planSectionRemoved("plan_config"), "старая схема");
         ModelSchemaAdapter.enable(true);
