@@ -13,7 +13,7 @@
 //          ({ map: { РЕШЕНИЕ: ВЕХА | null }, by, at }; null — «без вехи», связи нет).
 // Вычисление детерминированное: результат не зависит от порядка строк источника.
 
-import { edgeHistoryDdl } from './edge-history.mjs';
+import { edgeHistoryDdl, lastUpdate } from './edge-history.mjs';
 
 const LEGACY = /^M[0-7]$/;
 const day = x => (x ? String(x).slice(0, 10) : null);
@@ -167,13 +167,21 @@ export async function applyDecisionMilestones(db, plan, { at = new Date().toISOS
     for (const ddl of edgeHistoryDdl('TARGETS_MILESTONE')) await db.dstCommand(ddl);
   }
   await db.dstCommand("DELETE FROM TARGETS_MILESTONE WHERE mig_rule = 'decision-milestone'");
-  const dRid = new Map((await db.dstQuery('SELECT @rid AS r, decision_id AS id FROM KnowDecision')).map(x => [x.id, x.r]));
-  const mRid = new Map((await db.dstQuery('SELECT @rid AS r, milestone_id AS id FROM KnowMilestone')).map(x => [x.id, x.r]));
+  const decRows = await db.dstQuery("SELECT @rid AS r, decision_id AS id, created_at AS c, updated_at AS u, out('HAS_STATE').valid_from AS v FROM KnowDecision");
+  const msRows = await db.dstQuery("SELECT @rid AS r, milestone_id AS id, created_at AS c, updated_at AS u, out('HAS_STATE').valid_from AS v FROM KnowMilestone");
+  const dRid = new Map(decRows.map(x => [x.id, x.r]));
+  const mRid = new Map(msRows.map(x => [x.id, x.r]));
+  // владелица 19.11.2026: новое ребро действует с последнего обновления обоих концов; неизвестно — момент снимка
+  const upd = new Map([...decRows, ...msRows].map(x => [x.r, [x.v, x.u, x.c]]));
+  const valid_from_source = {};
   const missing = [], want = new Map(), by_method = {};
   for (const e of plan.edges) {
     const a = dRid.get(e.decision), b = mRid.get(e.milestone);
     if (!a || !b) { missing.push({ decision: e.decision, milestone: e.milestone, why: [!a && `нет решения ${e.decision} в приёмнике`, !b && `нет вехи ${e.milestone} в приёмнике`].filter(Boolean).join('; ') }); continue; }
-    await db.dstCommand(`CREATE EDGE TARGETS_MILESTONE FROM ${a} TO ${b} CONTENT :c`, { c: { mig_rule: 'decision-milestone', mig_decision: e.decision, mig_basis: e.basis || null, mig_method: e.method || null, mig_reason: e.reason || null, mig_alternatives: e.alternatives || [], valid_from: at } });
+    const ends = lastUpdate(...(upd.get(a) || []), ...(upd.get(b) || []));
+    const src = ends ? 'ends.last_update' : 'transfer';
+    valid_from_source[src] = (valid_from_source[src] || 0) + 1;
+    await db.dstCommand(`CREATE EDGE TARGETS_MILESTONE FROM ${a} TO ${b} CONTENT :c`, { c: { mig_rule: 'decision-milestone', mig_decision: e.decision, mig_basis: e.basis || null, mig_method: e.method || null, mig_reason: e.reason || null, mig_alternatives: e.alternatives || [], valid_from: ends || at, mig_valid_from_source: src } });
     want.set(e.decision, `${a}>${b}`);
     by_method[e.method] = (by_method[e.method] || 0) + 1;
   }
@@ -185,5 +193,5 @@ export async function applyDecisionMilestones(db, plan, { at = new Date().toISOS
   for (const m of missing) log(`решение → веха: НЕ перенесено ${m.decision} → ${m.milestone}: ${m.why}`);
   log(`решение → веха (computed-at-transfer): рёбер ${got.length} из ${plan.edges.length} · по способу ${JSON.stringify(by_method)} · «куда?» ждут решения ${(plan.waiting || []).length} · с ADR не связываются ${(plan.with_adr_skipped || []).length}`);
   log('сверка «решение → веха»:', ok ? 'сошлась' : 'НЕ сошлась');
-  return { ok, rules: plan.edges.length, edges: got.length, wrong_ends: wrong, missing, duplicates, by_method, counts: plan.counts, waiting: (plan.waiting || []).length, waiting_list: plan.waiting || [] };
+  return { ok, rules: plan.edges.length, edges: got.length, valid_from_source, wrong_ends: wrong, missing, duplicates, by_method, counts: plan.counts, waiting: (plan.waiting || []).length, waiting_list: plan.waiting || [] };
 }

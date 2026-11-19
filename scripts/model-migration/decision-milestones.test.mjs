@@ -115,8 +115,8 @@ function fakeDb({ dec, ms }) {
     edges,
     env: { MIG_DST_DB: 'migration_dst_test' },
     async dstQuery(q) {
-      if (/FROM KnowDecision/.test(q)) return dec.map(([id, r]) => ({ r, id }));
-      if (/FROM KnowMilestone/.test(q)) return ms.map(([id, r]) => ({ r, id }));
+      if (/FROM KnowDecision/.test(q)) return dec.map(([id, r, m]) => ({ r, id, ...(m || {}) }));
+      if (/FROM KnowMilestone/.test(q)) return ms.map(([id, r, m]) => ({ r, id, ...(m || {}) }));
       if (/FROM TARGETS_MILESTONE/.test(q)) return edges.filter(e => e.c.mig_rule === 'decision-milestone').map(e => ({ o: e.from, i: e.to, s: e.c.mig_decision }));
       if (/schema:types/.test(q)) return [{ name: 'TARGETS_MILESTONE' }];
       throw new Error('запрос не ожидался: ' + q);
@@ -157,4 +157,22 @@ test('отсутствующая веха или решение — в отчё�
   assert.deepEqual(r.missing, [{ decision: 'N-7', milestone: 'M-NOPE', why: 'нет решения N-7 в приёмнике; нет вехи M-NOPE в приёмнике' }, { decision: 'N-8', milestone: 'M-A1', why: 'нет решения N-8 в приёмнике' }]);
   assert.equal(r.waiting, 1);
   assert.ok(logs.some(s => /M-NOPE/.test(s)), 'отсутствующая веха — в журнале, не молча');
+});
+
+// Владелица 19.11.2026 (ответ «2 дата новых связей последняя дата обновления объектов», подтверждено «да»):
+// новое ребро «решение → веха» действует с самой поздней даты обновления двух его концов; ничего не известно —
+// момент снимка источника (at), и это видно в mig_valid_from_source.
+test('valid_from нового ребра — последнее обновление концов (решение, веха), иначе момент снимка', async () => {
+  const db = fakeDb({
+    dec: [['N-2', '#10:1', { c: '2026-08-01T00:00:00Z', u: '2026-10-01T00:00:00Z' }], ['N-1', '#10:2']],
+    ms: [['M-A1', '#20:1', { v: ['2026-09-01T00:00:00Z', '2026-11-10T00:00:00Z'] }], ['M-A2', '#20:2']],
+  });
+  const p = { edges: [{ decision: 'N-2', milestone: 'M-A1', method: 'sprint' }, { decision: 'N-1', milestone: 'M-A2', method: 'sprint' }], waiting: [] };
+  const r = await applyDecisionMilestones(db, p, { at: '2026-11-18T10:22:09.589Z', log: () => {} });
+  assert.equal(r.ok, true);
+  assert.equal(db.edges[0].c.valid_from, '2026-11-10T00:00:00.000Z');
+  assert.equal(db.edges[0].c.mig_valid_from_source, 'ends.last_update');
+  assert.equal(db.edges[1].c.valid_from, '2026-11-18T10:22:09.589Z');
+  assert.equal(db.edges[1].c.mig_valid_from_source, 'transfer');
+  assert.deepEqual(r.valid_from_source, { 'ends.last_update': 1, transfer: 1 });
 });

@@ -77,3 +77,14 @@ test('шаг связей читает моменты записи-начала 
   assert.match(src, /stampEdgeHistory\(T, list, outMoments, at\)/, 'записям связи ставятся поля версии до CREATE EDGE');
 });
 
+
+// Владелица 19.11.2026: дата новой связи — последнее обновление её объектов (обоих концов), до момента снимка.
+test('нет своего момента и момента записи-начала — последнее обновление концов, не момент переноса', () => {
+  assert.deepEqual(edgeVersion({ in_versions: ['2026-10-02T00:00:00Z', '2026-11-01T00:00:00Z'], in_updated: '2026-10-15' }, AT),
+    { valid_from: '2026-11-01T00:00:00.000Z', valid_to: null, source: 'ends.last_update' });
+  assert.equal(edgeVersion({ out_updated: '2026-11-05', in_created: '2026-09-01' }, AT).valid_from, '2026-11-05T00:00:00.000Z');
+  assert.equal(edgeVersion({}, AT).source, 'transfer', 'ничего не известно — момент снимка, как раньше');
+  const list = [{ content: { mig_src_rid: '#9:0' } }];
+  assert.deepEqual(stampEdgeHistory('ROLE_HELD_BY', list, new Map([['#9:0', { in_versions: ['2026-10-20T00:00:00Z'] }]]), AT), { 'ends.last_update': 1 });
+  assert.match(outMomentsQuery('IN_PHASE', '#-1:-1'), /in_versions/);
+});

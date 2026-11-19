@@ -8,7 +8,9 @@
 //   edge.created_at    — ребро помнит момент создания;
 //   out.first_version  — первая версия записи, от которой идёт связь (раньше неё связи быть не могло);
 //   out.created_at     — момент создания этой записи;
-//   transfer           — ничего не известно: момент переноса (так же поступил шаг V старой базы для ролей).
+//   ends.last_update   — последнее обновление объектов на обоих концах (последняя версия, updated_at, created_at;
+//                        владелица 19.11.2026: «дата новых связей последняя дата обновления объектов» — «да»);
+//   transfer           — ничего не известно: момент снимка источника.
 // Источник считается в отчёте переноса по каждой связи — подставленное видно, а не выдаётся за известное.
 import model from '../../shared/model/lore-model.json' with { type: 'json' };
 import { toDateTime } from './apply-map.mjs';
@@ -23,6 +25,13 @@ export const isHistoric = edge => HISTORIC_EDGES.includes(edge);
 /** Колонки, которые нужно прочитать у ребра источника, чтобы вывести его версию. */
 export const SOURCE_COLUMNS = ['valid_from', 'valid_to', 'created_at', '@out.created_at AS out_created', "@out.out('HAS_STATE').valid_from AS out_versions"];
 
+const list = v => (Array.isArray(v) ? v : [v]);
+/** Самый поздний момент среди значений (строки, списки строк); ничего нет — null. */
+export function lastUpdate(...values) {
+  const all = values.flatMap(list).map(moment).filter(Boolean).sort();
+  return all.length ? all[all.length - 1] : null;
+}
+
 const moment = v => (v === undefined || v === null || v === '' ? null : toDateTime(v));
 
 /** Версия ребра: valid_from, valid_to и откуда взят valid_from. at — момент переноса (ISO). */
@@ -36,6 +45,8 @@ export function edgeVersion(row, at) {
   if (versions.length) return { valid_from: versions[0], valid_to: to, source: 'out.first_version' };
   const outCreated = moment(row.out_created);
   if (outCreated) return { valid_from: outCreated, valid_to: to, source: 'out.created_at' };
+  const ends = lastUpdate(row.out_versions, row.out_updated, row.in_versions, row.in_updated, row.in_created);
+  if (ends) return { valid_from: ends, valid_to: to, source: 'ends.last_update' };
   return { valid_from: at, valid_to: to, source: 'transfer' };
 }
 
@@ -58,7 +69,7 @@ export async function sourceMoment(db, histTypes) {
 }
 
 /** Запрос моментов записи-начала у ребра источника (для valid_from), страница после last. */
-export const outMomentsQuery = (edge, last) => `SELECT @rid AS r, @out.created_at AS out_created, @out.out('HAS_STATE').valid_from AS out_versions FROM ${edge} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`;
+export const outMomentsQuery = (edge, last) => `SELECT @rid AS r, @out.created_at AS out_created, @out.updated_at AS out_updated, @out.out('HAS_STATE').valid_from AS out_versions, @in.created_at AS in_created, @in.updated_at AS in_updated, @in.out('HAS_STATE').valid_from AS in_versions FROM ${edge} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`;
 
 /**
  * Поля версии в записях рёбер шага связей (list = [{ content: { mig_src_rid, …свойства ребра } }]):
@@ -70,7 +81,7 @@ export function stampEdgeHistory(T, list, outMoments, at) {
   const sources = {};
   for (const w of list) {
     const m = outMoments.get(w.content.mig_src_rid) || {};
-    const v = edgeVersion({ ...w.content, out_created: m.out_created, out_versions: m.out_versions }, at);
+    const v = edgeVersion({ ...w.content, out_created: m.out_created, out_updated: m.out_updated, out_versions: m.out_versions, in_created: m.in_created, in_updated: m.in_updated, in_versions: m.in_versions }, at);
     w.content.valid_from = v.valid_from;
     if (v.valid_to) w.content.valid_to = v.valid_to; else delete w.content.valid_to;
     sources[v.source] = (sources[v.source] || 0) + 1;
