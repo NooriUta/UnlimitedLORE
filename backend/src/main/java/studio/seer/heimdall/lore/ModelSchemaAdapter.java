@@ -135,7 +135,11 @@ final class ModelSchemaAdapter {
     /** Позиция в списке выборки: после последнего SELECT ещё не было FROM/WHERE/ORDER … */
     private static boolean inProjection(String left) {
         Matcher m = LAST_SELECT.matcher(left);
-        return m.matches() && !CLAUSE.matcher(m.group(1)).find();
+        if (!m.matches() || CLAUSE.matcher(m.group(1)).find()) return false;
+        // только верхний уровень выборки: внутри скобок функции (coalesce(a, status_raw, …)) псевдоним — синтаксическая ошибка
+        int depth = 0;
+        for (char c : m.group(1).toCharArray()) { if (c == '(' || c == '[') depth++; else if (c == ')' || c == ']') depth--; }
+        return depth == 0;
     }
 
     private static String rewriteUnquoted(String part, CharSequence before) {

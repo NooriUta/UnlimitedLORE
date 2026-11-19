@@ -77,6 +77,16 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void поле_внутри_скобок_функции_без_псевдонима() {
+        // проба 19.11 (LoreRecordEdgeLinks): coalesce(status, status_raw, status_general) превратился в
+        // coalesce(status, status AS status_raw, …) — «extraneous input 'AS'»; псевдоним — только на верхнем уровне выборки
+        assertEquals("SELECT coalesce(status, status, status_general) AS end_status FROM X",
+            ModelSchemaAdapter.rewriteSql("SELECT coalesce(status, status_raw, status_general) AS end_status FROM X"));
+        assertEquals("SELECT a, status AS status_raw FROM X",
+            ModelSchemaAdapter.rewriteSql("SELECT a, status_raw FROM X"), "на верхнем уровне — по-прежнему с псевдонимом");
+    }
+
+    @Test
     void псевдоним_и_текст_в_кавычках_не_трогаются() {
         String sql = "SELECT first(x) AS status_raw, 'status_raw' AS k FROM KnowTask WHERE note_md LIKE '%status_raw%'";
         assertEquals(sql, ModelSchemaAdapter.rewriteSql(sql));
