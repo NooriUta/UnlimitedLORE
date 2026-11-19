@@ -8,10 +8,19 @@
 // Контракт:
 //   POST/GET/DELETE /mcp — Streamable HTTP (MCP SDK), сессия на клиента;
 //   GET /mcp/health      — без входа, отметка сборки (как у /lore/version);
-//   Authorization: Bearer <токен клиента> — ОБЯЗАТЕЛЕН на каждом запросе к /mcp.
-//     Этим же токеном MCP идёт в бэкенд: права и скоуп — ровно агента, своего
-//     client_credentials в этом режиме нет. Токен живёт в контексте запроса
+//   Вход на каждом запросе к /mcp — одно из двух:
+//     а) Authorization: Bearer <токен клиента> — для клиентов с headersHelper
+//        (Claude Code: scripts/lore-mcp-headers.mjs);
+//     г) X-Lore-Client-Id + X-Lore-Client-Secret — для клиентов со статичными
+//        заголовками (OpenCode и др.): токен у Keycloak берёт сервер
+//        (client_credentials, clientCreds.ts), кэширует до истечения минус запас.
+//        Нужен LORE_OIDC_ISSUER у сервера (не секрет). Секрет в журнал не пишется.
+//     Bearer важнее пары. Нет ни того, ни другого — 401.
+//     Полученным токеном MCP идёт в бэкенд: права и скоуп — ровно агента, своих
+//     client_credentials у сервера нет. Токен живёт в контексте запроса
 //     (AsyncLocalStorage, backend.ts), в журнал не пишется;
+//   Mcp-Session-Id — сессия ТРАНСПОРТА (меняется при каждом переподключении,
+//     проба 19.11), а не сессия агента: в бэкенд как X-Lore-Session-Id не уходит;
 //   X-Lore-Mcp-Profile — профиль поверхности (по умолчанию full), сверяется со
 //     списком agent-profiles; неизвестный — 400. Задаётся при initialize и
 //     действует всю сессию.
@@ -21,7 +30,8 @@ import type { AddressInfo } from 'node:net';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { runWithClientAuth } from './backend.js';
+import { oidcTokenUrl, runWithClientAuth } from './backend.js';
+import { CredsRejected, TokenEndpointUnavailable, createTokenBroker } from './clientCreds.js';
 import { readBuildInfo } from './buildInfo.js';
 import { knownProfiles, profileNameFromJwt } from './profile.js';
 import { createLoreServer, resolveSurface } from './server.js';
@@ -44,12 +54,17 @@ export type HttpOptions = {
   /** Предел тела запроса: base64-вложения (bragi_asset_up, asset_up) бывают крупными. */
   maxBodyBytes?: number;
   log?: (m: string) => void;
+  /** Issuer realm для варианта «г»; по умолчанию LORE_OIDC_ISSUER. Пусто — вариант «г» выключен. */
+  oidcIssuer?: string;
+  /** Часы для кэша токенов (тесты). */
+  now?: () => number;
 };
 
 type Session = { transport: StreamableHTTPServerTransport; server: McpServer; lastSeen: number; profile: string };
 
 /** Заголовки наблюдаемости, которые клиент может прислать и которые уходят в бэкенд как есть
- *  (тот же вид, что у stdio-режима из env: машина, сессия Claude Code, harness, act-as). */
+ *  (тот же вид, что у stdio-режима из env: машина, сессия агента, harness, act-as).
+ *  X-Lore-Session-Id — только если клиент прислал его САМ; Mcp-Session-Id сюда не подставляется. */
 const FORWARDED = ['x-lore-machine', 'x-lore-session-id', 'x-lore-harness', 'x-lore-act-as'] as const;
 const FORWARDED_NAME: Record<(typeof FORWARDED)[number], string> = {
   'x-lore-machine': 'X-Lore-Machine',
@@ -109,6 +124,43 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
   const legacy = process.env.LORE_MCP_LEGACY === '1';
   const build = readBuildInfo();
   const sessions = new Map<string, Session>();
+  const issuer = (opts.oidcIssuer ?? process.env.LORE_OIDC_ISSUER ?? '').trim();
+  const broker = createTokenBroker({ tokenUrl: issuer ? oidcTokenUrl(issuer) : '', now: opts.now, log });
+
+  /** Токен запроса: Bearer как есть либо (вариант «г») выданный Keycloak по паре id/секрет.
+   *  null — ответ клиенту уже отправлен. */
+  async function resolveToken(req: IncomingMessage, res: ServerResponse): Promise<string | null> {
+    const bearer = bearerOf(req);
+    if (bearer) return bearer;
+    const id = header(req, 'x-lore-client-id');
+    const secret = header(req, 'x-lore-client-secret');
+    const challenge = { 'WWW-Authenticate': 'Bearer realm="lore-mcp"' };
+    if (!id && !secret) {
+      jsonError(res, 401,
+        'Нужен вход: заголовок Authorization: Bearer <токен клиента> (клиенты с headersHelper, ' +
+        'scripts/lore-mcp-headers.mjs) либо пара X-Lore-Client-Id + X-Lore-Client-Secret ' +
+        '(клиент Keycloak lore-mcp-*, токен возьмёт сервер), см. docs/runbooks/mcp-hosted.md', challenge);
+      return null;
+    }
+    if (!id || !secret) {
+      jsonError(res, 401, `Пара неполная: нет заголовка ${id ? 'X-Lore-Client-Secret' : 'X-Lore-Client-Id'}`, challenge);
+      return null;
+    }
+    const clientId = id.replace(/[^A-Za-z0-9_.:-]/g, '-').slice(0, 128);
+    try {
+      return await broker.token(clientId, secret);
+    } catch (e) {
+      if (e instanceof CredsRejected) { jsonError(res, 401, e.message, challenge); return null; }
+      if (e instanceof TokenEndpointUnavailable) {
+        jsonError(res, broker.configured ? 502 : 503, broker.configured
+          ? e.message
+          : 'Вход по X-Lore-Client-Id/X-Lore-Client-Secret на этом сервере не настроен: у MCP-сервера нет LORE_OIDC_ISSUER. ' +
+            'Используйте Authorization: Bearer или попросите администратора стенда задать LORE_OIDC_ISSUER');
+        return null;
+      }
+      throw e;
+    }
+  }
 
   async function closeSession(id: string, why: string): Promise<void> {
     const s = sessions.get(id);
@@ -120,14 +172,8 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
   }
 
   async function handleMcp(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const token = bearerOf(req);
-    if (!token) {
-      jsonError(res, 401,
-        'Нужен заголовок Authorization: Bearer <токен клиента>. MCP идёт в LORE этим же токеном — ' +
-        'токен выдаёт Keycloak (client_credentials вашего клиента lore-mcp-*), см. docs/runbooks/mcp-hosted.md',
-        { 'WWW-Authenticate': 'Bearer realm="lore-mcp"' });
-      return;
-    }
+    const token = await resolveToken(req, res);
+    if (!token) return;
     const auth = { token, headers: forwardedHeaders(req) };
     const sid = header(req, 'mcp-session-id');
 

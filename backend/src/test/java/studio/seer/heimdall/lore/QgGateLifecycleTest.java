@@ -56,4 +56,47 @@ class QgGateLifecycleTest {
         assertTrue(bad.contains("qg_type") && bad.contains("perf"), bad);
         assertNotNull(QgGateLifecycle.checkType("lineage", codes));
     }
+
+    /**
+     * SPRINT_QG_REBUILD/QG-01, решение владелицы 19.11.2026 «2а» (D-2026-MIG-118-OWNER-ANSWERS-1119):
+     * у гейта явный признак scope. global — общий, без проекта (виден всем и проверяет все проекты);
+     * project — привязан ровно к одному проекту. Повод: четыре гейта гигиены LORE были привязаны к
+     * NooriUta/UnlimitedLORE, и участник другого проекта их не видел.
+     */
+    @Test
+    void scope_словарьИзДвухЗначений() {
+        assertNull(QgGateLifecycle.checkScope(null, false, 0), "scope не прислан — поле не трогаем");
+        assertNull(QgGateLifecycle.checkScope("global", false, 0));
+        assertNull(QgGateLifecycle.checkScope("project", false, 1));
+        String bad = QgGateLifecycle.checkScope("GLOBAL", false, 0);
+        assertNotNull(bad, "регистр не угадываем");
+        assertTrue(bad.contains("global") && bad.contains("project"), bad);
+        assertNotNull(QgGateLifecycle.checkScope("shared", false, 0), "вне словаря — отказ");
+    }
+
+    @Test
+    void scopeGlobal_сПроектом_отказ() {
+        String e = QgGateLifecycle.checkScope("global", true, 1);
+        assertNotNull(e, "общий гейт с проектом — противоречие, а не тихое игнорирование project");
+        assertTrue(e.contains("project"), e);
+    }
+
+    @Test
+    void scopeProject_ровноОдинПроект() {
+        assertNotNull(QgGateLifecycle.checkScope("project", false, 0), "проектный без проекта — отказ");
+        String many = QgGateLifecycle.checkScope("project", false, 2);
+        assertNotNull(many, "проектный гейт двух проектов — неоднозначный владелец");
+        assertTrue(many.contains("2"), many);
+    }
+
+    /** Общий гейт — законный владелец сам по себе: active без проекта разрешён, если scope = global. */
+    @Test
+    void activeОбщегоГейта_безПроекта_законно() {
+        assertNull(QgGateLifecycle.check("active", QgGateLifecycle.hasOwner("global", 0), null));
+        assertNotNull(QgGateLifecycle.check("active", QgGateLifecycle.hasOwner("project", 0), null));
+        assertNotNull(QgGateLifecycle.check("active", QgGateLifecycle.hasOwner(null, 0), null));
+        assertNull(QgGateLifecycle.check("active", QgGateLifecycle.hasOwner(null, 1), null));
+        String e = QgGateLifecycle.check("active", false, null);
+        assertTrue(e.contains("scope=global"), "текст отказа называет второй законный путь: " + e);
+    }
 }

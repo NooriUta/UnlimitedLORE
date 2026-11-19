@@ -17,8 +17,9 @@
 #   compose  бэкап docker-compose.yml.bak-<тег> в обоих каталогах, замена ТОЛЬКО
 #            тегов образов. .env не трогается.
 #   db       если код новее схемы прода (или версия прода неизвестна) — бэкап
-#            базы прода и накатка отдельным `compose run` с LORE_MIGRATE_ONLY и
-#            LORE_MART_AUTH=basic (как шаг CD). Упала — compose возвращается из
+#            базы прода и накатка отдельным `compose run lore-migrate` (сервис
+#            профиля migrate: root, basic, LORE_MIGRATE_ONLY — DBR-01 шаг 4.2,
+#            у рантайма root-пароля нет). Упала — compose возвращается из
 #            бэкапа, работающие контейнеры не тронуты.
 #   up       compose up -d по сервисам: бэкенд → ждём healthy → v1 → v2.
 #   theme    тема Keycloak из дерева тега → /home/nooriuta/keycloak/themes/lore,
@@ -27,8 +28,8 @@
 #            /lore/version = коммит сборки через nginx v1 И v2, в логе «БД vN = код vN».
 #   swap-file <файл> <сервис> <тег>   — замена тега образа в одном compose-файле
 #            (её же выполняет compose на lore-host: скрипт уходит туда по stdin).
-#   remote-backup <каталог> <база>    — BACKUP DATABASE кредом работающего
-#            бэкенда (выполняется на lore-host; пароль хоста не покидает).
+#   remote-backup <каталог> <база>    — BACKUP DATABASE кредом сервиса lore-migrate
+#            (разовый compose run; выполняется на lore-host; пароль хоста не покидает).
 #
 # Окружение: TAG, DEPLOY_STATE, LORE_HOST, LORE_HOST_USER, LORE_HOST_FP,
 # LORE_HOST_SSH_KEY (ssh), R (ssh-команда, ставит шаг ssh), DRY_RUN.
@@ -75,11 +76,11 @@ swap_file() {
 
 # ── remote-backup (выполняется НА lore-host) ─────────────────────────────────
 remote_backup() {
-  local dir="$1" db="$2" cid out
-  cid="$(cd "$dir" && docker compose ps -q lore-backend | head -1)"
-  [ -n "$cid" ] || die "бэкенд прода не запущен — бэкап его кредом невозможен, накатка отменена"
-  # shellcheck disable=SC2016 # переменные раскрываются ВНУТРИ контейнера бэкенда
-  out="$(docker exec "$cid" sh -c 'curl -s -m 600 -u "$ARCADEDB_USER:$ARCADEDB_ROOT_PASSWORD" -H "Content-Type: application/json" -d "{\"language\":\"sql\",\"command\":\"BACKUP DATABASE\"}" "$MART_ARCADE_URL/api/v1/command/'"$db"'"')"
+  local dir="$1" db="$2" out
+  # DBR-01 шаг 4.2: root-пароль есть только у сервиса lore-migrate (профиль migrate) — у рантайма
+  # его нет, поэтому не docker exec в работающий бэкенд, а разовый compose run.
+  # shellcheck disable=SC2016 # переменные раскрываются ВНУТРИ контейнера lore-migrate
+  out="$(cd "$dir" && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 600 -u "$ARCADEDB_USER:$ARCADEDB_ROOT_PASSWORD" -H "Content-Type: application/json" -d "{\"language\":\"sql\",\"command\":\"BACKUP DATABASE\"}" "$MART_ARCADE_URL/api/v1/command/'"$db"'"')"
   grep -q '"result":"OK"' <<< "$out" || die "BACKUP DATABASE $db не подтверждён: $(printf '%s' "$out" | head -c 300)"
   echo "бэкап $db: $(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
 }
@@ -276,9 +277,9 @@ db() {
   [ "$need" = yes ] || return 0
   echo "── бэкап базы прода $PROD_DB"
   r "bash -s -- remote-backup $DIR_BE $PROD_DB" < "$SELF" || { restore_compose; die "без бэкапа накатка на прод не выполняется"; }
-  echo "── накатка схемы (compose run, LORE_MIGRATE_ONLY, LORE_MART_AUTH=basic)"
+  echo "── накатка схемы (compose run lore-migrate: root, basic, LORE_MIGRATE_ONLY)"
   local rc=0
-  r "cd $DIR_BE && LORE_MIGRATE=true LORE_MIGRATE_ONLY=true LORE_MART_AUTH=basic timeout 1800 docker compose run --rm --no-deps -T lore-backend" > /tmp/migrate.log 2>&1 || rc=$?
+  r "cd $DIR_BE && timeout 1800 docker compose run --rm --no-deps -T lore-migrate" > /tmp/migrate.log 2>&1 || rc=$?
   grep -E "LORE MIGRATE|LORE MART|ERROR|Exception" /tmp/migrate.log | tail -80 || true
   if [ "$rc" != 0 ] || ! grep -q "lore.migrate.only=true — схема накатана" /tmp/migrate.log; then
     err "накатка на проде не подтверждена (код $rc) — работающие контейнеры НЕ подменены, compose возвращается из бэкапа"

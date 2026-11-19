@@ -12,6 +12,7 @@ import { FlagsScreen } from './FlagsScreen';
 import { AdminHome } from './HomeScreen';
 import { MachinesScreen } from './MachinesScreen';
 import { McpScreen } from './McpScreen';
+import { ModelScreen } from './ModelScreen';
 import { MigrationScreen } from './MigrationScreen';
 import { RolesScreen } from './RolesScreen';
 import { RulesScreen } from './RulesScreen';
@@ -37,6 +38,8 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-orgs': () => <ListScreen screen="organizations" manage />,
   'adm-roles': () => <RolesScreen />,
   'adm-dicts': () => <DictsScreen />,
+  // MC-06: модель LORE — типы, поля, меню и видимость; правка версией с dry_run и откатом.
+  'adm-model': () => <ModelScreen />,
   'adm-rules': () => <RulesScreen />,
   // PU-20: ссылки в текстах — автопочинка пачкой и ручной список.
   'adm-tidy': () => <TidyScreen />,

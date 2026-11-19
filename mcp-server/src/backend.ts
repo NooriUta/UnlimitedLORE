@@ -182,6 +182,12 @@ async function fetchWithRetry(
   }
 }
 
+/** Token endpoint Keycloak для issuer realm — один для stdio-режима и для HTTP-режима
+ *  (вариант «г», clientCreds.ts), чтобы адрес не разъехался. */
+export function oidcTokenUrl(issuer: string): string {
+  return `${issuer.trim().replace(/\/+$/, '')}/protocol/openid-connect/token`;
+}
+
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
 /** Bearer token for the lore-mcp service account, cached until near expiry
@@ -189,7 +195,7 @@ let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 async function serviceAccountToken(): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now) return cachedToken.accessToken;
-  const res = await loreFetch('OIDC token request', `${OIDC_ISSUER}/protocol/openid-connect/token`, {
+  const res = await loreFetch('OIDC token request', oidcTokenUrl(OIDC_ISSUER as string), {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
