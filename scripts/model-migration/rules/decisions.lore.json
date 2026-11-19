@@ -147,7 +147,7 @@
     }
   ],
   "product_kind": {
-    "_about": "Вид продукта (enum multi, ADR-LORE-044): ответы владелицы 19.11.2026 на шаге «В. Вид продукта»; BOKVIT ещё ждёт решения.",
+    "_about": "Вид продукта (enum multi, ADR-LORE-044): ответы владелицы 19.11.2026 на шаге «В. Вид продукта», BOKVIT — service («бокvit service»).",
     "map": {
       "BRAGI": [
         "service"
@@ -166,6 +166,9 @@
       ],
       "DW": [
         "tech",
+        "service"
+      ],
+      "BOKVIT": [
         "service"
       ]
     },

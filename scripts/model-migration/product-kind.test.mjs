@@ -122,13 +122,13 @@ test('предложение — набор: служит другим прод�
   assert.deepEqual(proposeProductKinds({ products: [{ code: 'T', components: ['T'] }] })[0].suggested, '?');
 });
 
-test('пример файла решений: ответы владелицы по виду продукта, BOKVIT — ещё нет; файл годен', async () => {
+test('пример файла решений: ответы владелицы по виду продукта (BOKVIT — service, «бокvit service»); файл годен', async () => {
   const { checkDecisions } = await import('./decisions.mjs');
   const doc = JSON.parse(fs.readFileSync(new URL('./rules/decisions.lore.json', import.meta.url), 'utf8'));
   assert.deepEqual(checkDecisions(doc), []);
   const m = productKindMap(doc);
   for (const [k, v] of Object.entries(OWNER)) assert.deepEqual(m[k], v, k);
-  assert.equal(m.BOKVIT, undefined);
+  assert.deepEqual(m.BOKVIT, ['service']);
 });
 
 test('мастер: две галочки tech и service вместо одного выбора', () => {
