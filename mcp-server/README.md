@@ -40,6 +40,7 @@ experiment mart — documented on `/benchmark?tab=mcp` instead.
 | `LORE_BACKEND_URL` | `http://localhost:9100` | UnlimitedLORE backend base URL (на стенде — прямой маршрут `https://lore.odal.seidrstudio.pro/_backend`, S2-08) |
 | `LORE_BACKEND_FALLBACK_URL` | — | Запасной адрес (nginx фронта `:4400`); используется, только если до основного запрос не дошёл (соединение/TLS, либо ответил SPA) |
 | `LORE_SEER_ROLE` | `admin` | `X-Seer-Role` header for write tools |
+| `LORE_MCP_FILE_ROOTS` | рабочая папка процесса MCP | Корни, из которых `doc_new` / `entity_upsert type=doc` читают `content_html_file`, `content_md_ru_file`, `content_md_en_file` (через `;` на Windows, `:` на POSIX). Сверка после realpath, предел 20 МБ, только UTF-8. В режиме `LORE_MCP_TRANSPORT=http` `*_file` всегда отказ — файлы клиента серверу недоступны |
 
 ## Build & run
 
