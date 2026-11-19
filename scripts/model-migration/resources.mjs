@@ -12,6 +12,7 @@ import statuses from '../../shared/lore-statuses.json' with { type: 'json' };
 import installBundle from './rules/install-bundle.json' with { type: 'json' };
 import decisionMilestones from './rules/decision-milestones.json' with { type: 'json' };
 import loreModel from '../../shared/model/lore-model.json' with { type: 'json' };
+import outsideModel from './rules/outside-model.json' with { type: 'json' };
 
 // Первый объект — своей картой; все остальные — картой, выведенной правилами (propose-map-all.mjs, 17.11.2026).
 export const MAP = { ...map.types, ...allObjects.types };
@@ -37,3 +38,5 @@ export const INSTALL_BUNDLE = installBundle;
 export const DECISION_MILESTONES = decisionMilestones;
 // DBR-07: временные ряды модели 1.18 (AuditDbLogin — сторож входов в ArcadeDB); заводит их шаг 3 переноса.
 export const SERIES = loreModel.series || {};
+// MD-02 8а: типы и связи, которые трогает код сервера, но которых нет в модели 1.18, — каждый с причиной (сторож в md02-empty-types.test.mjs).
+export const OUTSIDE_MODEL = outsideModel.types;

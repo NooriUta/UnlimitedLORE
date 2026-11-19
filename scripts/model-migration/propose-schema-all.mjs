@@ -6,6 +6,8 @@
 // Запуск: node propose-schema-all.mjs <отчёт пробного расчёта.json>
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { CODE_FIELDS } from './propose-map-all.mjs';
+import { declaredDdl, LORE_JAVA } from './code-types.mjs';
 
 const KIND_OF = { STRING: 'text', INTEGER: 'number', LONG: 'number', DOUBLE: 'number', FLOAT: 'number', BOOLEAN: 'bool', DATE: 'date', DATETIME: 'datetime', MAP: 'map', LIST: 'list' };
 
@@ -37,6 +39,28 @@ export function sourcesOf(map, f) {
   return Object.entries(map).filter(([k, e]) => (e.rule === 'keep' && k === f) || ((e.rule === 'transform' || e.rule === 'rename') && e.to === f)).map(([k]) => k);
 }
 
+const SERVICE_NAMES = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки' };
+
+/**
+ * MD-02 8а · схема пустого типа «только схема» (тип нужен живому коду, данных нет). Источники свойства по порядку
+ * (владелица 19.11.2026): старая схема (объявленный тип в переписи прода) → спека → вывод из кода → мягкий тип;
+ * у каждого свойства назван источник. Индексы — из старой схемы: DDL шагов V в коде сервера (declaredDdl).
+ * Пробного расчёта у такого типа нет (записей 0), поэтому схема выводится не из него, а отсюда.
+ */
+export function schemaOnlyType(T, mapT, censusT, ddlT = {}) {
+  const declared = Object.fromEntries((censusT.fields || []).map(f => [f.name, f.declared]));
+  const fields = {};
+  for (const f of Object.keys(mapT).sort((a, b) => a.localeCompare(b))) {
+    const code = (CODE_FIELDS[T] || {})[f];
+    if (declared[f] && KIND_OF[declared[f]]) fields[f] = { kind: KIND_OF[declared[f]], db_type: declared[f], from: [f], filled: 0, of: 0, source: 'старая схема' };
+    else if (code) fields[f] = { kind: KIND_OF[code.db_type] || 'text', db_type: code.db_type, from: [f], filled: 0, of: 0, source: code.source };
+    else if (SERVICE_NAMES[f] && T.endsWith('Hist')) fields[f] = { kind: 'text', db_type: 'STRING', name: SERVICE_NAMES[f], from: [], filled: 0, of: 0, service: true, source: 'общий перечень служебных полей версии' };
+    else fields[f] = { kind: 'text', db_type: 'STRING', from: [f], filled: 0, of: 0, source: 'по умолчанию (неоднозначно)' };
+  }
+  const indexes = ((ddlT && ddlT.indexes) || []).filter(ix => ix.fields.every(f => fields[f])).map(ix => ({ fields: [...ix.fields], kind: ix.kind, source: 'старая схема (DDL шагов V в коде сервера)' }));
+  return { records: 0, schema_only: true, version_of: T.endsWith('Hist') ? T.slice(0, -4) : null, fields, indexes, held: {}, rejects: {} };
+}
+
 function main() {
   const J = p => JSON.parse(fs.readFileSync(p, 'utf8'));
   const here = p => new URL(p, import.meta.url);
@@ -46,7 +70,11 @@ function main() {
   const FIRST = new Set(Object.keys(J(here('./schema/sprint-phase-task.json')).types));
   const SERVICE = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки' };
   const types = {};
+  const MAPDOC = J(here('./map/all-objects.json'));
+  const DDL = declaredDdl(fileURLToPath(LORE_JAVA));
+  for (const T of Object.keys(MAPDOC.schema_only || {})) types[T] = schemaOnlyType(T, MAP[T], CENSUS[T], DDL[T]);
   for (const [T, t] of Object.entries(report.types)) {
+    if (types[T]) continue;
     if (FIRST.has(T) || !MAP[T]) continue;
     const declared = Object.fromEntries((CENSUS[T]?.fields || []).map(f => [f.name, f.declared]));
     const fields = {};
@@ -67,7 +95,7 @@ function main() {
       'Версия — отдельный тип с окончанием Hist и связью HAS_STATE, как у первого объекта.',
       'Тип поля «как есть» — объявленный в схеме прода; не объявленное там поле — строкой (пометка у поля).',
       'Удержанные значения (component_id, project и *_refs до шага связей) в схему не входят — они становятся связями.',
-      'Типы без записей в снимке (KnowCanvas, KnowSavedView, QGMetric и др.) получают пустой перечень полей — схема заводится, поля появятся с данными.',
+      'Пустые типы, которые трогает код (KnowCanvas, KnowSavedView, QGMetric и др.), — «только схема»: свойства и индексы старой схемы, у каждого свойства назван источник (MD-02 8а, 19.11.2026).',
     ],
     types,
   };

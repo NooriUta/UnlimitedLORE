@@ -70,6 +70,13 @@ export function fieldDiff(got, want) {
  * Остаток по несоответствию, которое не закрыто решением человека. MD-02 7а (владелица 19.11.2026): перенос честно
  * пишет «ждёт решения» (или «отложено человеком», если человек выбрал «решу позже»), а не подставляет значение молча.
  */
+/** DDL индексов, объявленных схемой 1.18 у типа (indexes: [{fields, kind}]); IF NOT EXISTS — индекс источника не дублируется. */
+export function schemaIndexDdl(schema) {
+  const out = [];
+  for (const [T, t] of Object.entries(schema)) for (const ix of t.indexes || [])
+    out.push(`CREATE INDEX IF NOT EXISTS ON ${T} (${ix.fields.map(f => '`' + f + '`').join(', ')}) ${ix.kind}`);
+  return out;
+}
 export function rejectLeftover(T, rid, x) {
   return { src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why, state: x.deferred ? 'отложено человеком' : 'ждёт решения' };
 }
@@ -217,11 +224,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
   // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
-  // MD-02 8а: пустой тип не переносится — число записей считает сам установщик по источнику (count, как и сверка
-  // «как есть» ниже), а не берёт счётчик схемы: у временного ряда он не обязан совпадать с числом строк
-  const srcTypes = await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types');
-  for (const t of srcTypes) if (t.type !== 'edge' && !SCHEMA[t.name]) t.records = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
-  const structure = structurePlan(srcTypes, SCHEMA, notMovedFor(db.env));
+  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA, notMovedFor(db.env));
   // свои: типы карты и структуры; плюс типы «не переносить», оставленные прежней версией переноса, — их --reset удаляет
   const mine = [...ownTypes(), ...structure.types.map(t => t.name), ...Object.keys(NOT_MOVED)];
   const clash = existing.filter(n => mine.includes(n));
@@ -303,6 +306,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // индексы источника — после записи: индекс, которому мешают данные (дубль под уникальным), не роняет перенос,
   // а называется в отчёте с причиной базы
   const indexFailed = [];
+  // MD-02 8а: у типа «только схема» (пустой, но его трогает код) индексы старой схемы объявлены в схеме 1.18 —
+  // UPSERT кода требует уникального индекса, и он не должен зависеть от того, есть ли индекс в источнике
+  for (const s of schemaIndexDdl(SCHEMA)) structure.indexDdl.push(s);
   for (const s of structure.indexDdl) {
     try { await db.dstCommand(s); } catch (e) { indexFailed.push({ ddl: s, why: String(e.message || e).slice(0, 300) }); }
   }

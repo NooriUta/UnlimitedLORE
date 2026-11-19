@@ -1,18 +1,13 @@
 // SPRINT_LORE_MODEL_DOCS_TIDY/MD-02 · ответы владелицы 19.11.2026 «7-9а» по таблице вопросов 1.18.
 //  7а — статусы вне словаря (419 спек, 50 решений) сводятся диалогом унификации в мастере «Перенос»: установщик
 //       подсказывает код, человек подтверждает группами; без ответа перенос пишет «ждёт решения», а не подставляет молча.
-//  8а — пустые типы (0 записей в источнике) не переносятся ни один; возврат — из бэкапа. Список считает установщик
-//       по переписи источника, а не жёсткий список.
+//  8а — пустые типы: md02-empty-types.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildDialog, groupBySuggestion } from './status-unify.mjs';
 import { applyMap, requiredStatusField } from './apply-map.mjs';
-import { proposeMap, EMPTY_WHY } from './propose-map-all.mjs';
-import { structurePlan } from './structure-plan.mjs';
 import { rejectLeftover } from './transfer.mjs';
-import { MAP, RULES, VOCAB, CODE_CASE, SCHEMA, NOT_MOVED } from './resources.mjs';
-import census from './tools/census/fields-all.json' with { type: 'json' };
-import allObjects from './map/all-objects.json' with { type: 'json' };
+import { MAP, RULES, VOCAB, CODE_CASE } from './resources.mjs';
 
 const NONE = { format: 'mig-decisions/1', decisions: [] };
 const dictOf = T => (RULES.sources.find(s => s.type === T && (s.field === 'status' || s.field === 'status_raw')) || {}).dict;
@@ -81,46 +76,6 @@ test('7а: ответ человека из диалога применяетс�
   const defer = { format: 'mig-decisions/1', decisions: [{ id: 'ST-99', scope: { type: 'KnowDecisionHist', field: 'status_raw', value: 'fixed' }, action: 'defer', by: 'владелица', at: '2026-11-19T10:00:00Z' }] };
   const df = applyMap('KnowDecisionHist', MAP.KnowDecisionHist, { status_raw: 'fixed' }, ctxOf('KnowDecisionHist', defer));
   assert.equal(rejectLeftover('KnowDecisionHist', '#2:1', df.rejects[0]).state, 'отложено человеком');
-});
-
-test('8а: генератор карты — пустой тип (0 записей по переписи) не переносится, причина названа', () => {
-  const c = { KnowA: { total: 0, fields: [{ name: 'x', filled: 0 }] }, KnowB: { total: 2, fields: [{ name: 'x', filled: 2 }] } };
-  const m = proposeMap(c);
-  assert.deepEqual(Object.keys(m.types), ['KnowB']);
-  assert.equal(m.skipped.KnowA, EMPTY_WHY);
-  assert.match(EMPTY_WHY, /пустой тип/);
-  assert.match(EMPTY_WHY, /19\.11/);
-  assert.match(EMPTY_WHY, /бэкап/);
-  // список — из переписи, а не жёсткий: тот же тип с записями переносится
-  const m2 = proposeMap({ KnowA: { total: 3, fields: [{ name: 'x', filled: 3 }] }, KnowB: { total: 0, fields: [] } });
-  assert.deepEqual(Object.keys(m2.types), ['KnowA']);
-  assert.equal(m2.skipped.KnowB, EMPTY_WHY);
-  // правила посильнее (план-доска, первый объект) — со своей причиной
-  assert.match(proposeMap({ PlanTrack: { total: 0, fields: [] } }).skipped.PlanTrack, /план-доск/);
-});
-
-test('8а: карта и схема выведены из переписи — ни один тип с 0 записей не переносится', () => {
-  const empty = Object.keys(census).filter(T => census[T].total === 0).sort();
-  assert.ok(empty.length > 0, 'в переписи есть пустые типы');
-  assert.equal(JSON.stringify(proposeMap(census)), JSON.stringify(allObjects), 'карта = вывод генератора по переписи (не правлена руками)');
-  for (const T of empty) {
-    assert.ok(!MAP[T], T + ': не в карте');
-    assert.ok(!SCHEMA[T], T + ': не в схеме приёмника');
-    assert.ok(NOT_MOVED[T], T + ': в «не переносится»');
-  }
-});
-
-test('8а: установщик сам по переписи источника — пустой тип вне карты не заводится; «пустой по снимку», но с записями — переносится как есть', () => {
-  const src = [
-    { name: 'Journal', type: 'document', records: 0, properties: [{ name: 'a', type: 'STRING' }], indexes: [] },
-    { name: 'Snap', type: 'document', records: 4, properties: [{ name: 'a', type: 'STRING' }], indexes: [] },
-    { name: 'KnowLate', type: 'vertex', records: 2, properties: [{ name: 'b', type: 'STRING' }], indexes: [] },
-  ];
-  const plan = structurePlan(src, {}, { KnowLate: EMPTY_WHY });
-  assert.deepEqual(plan.types.map(t => t.name), ['KnowLate', 'Snap'], 'данные не теряются: тип, пустой в снимке, но с записями, переносится');
-  assert.deepEqual(plan.notCarried, [{ type: 'Journal', why: EMPTY_WHY }]);
-  // число записей неизвестно — тип не считается пустым
-  assert.deepEqual(structurePlan([{ name: 'X', type: 'document', properties: [], indexes: [] }], {}, {}).types.map(t => t.name), ['X']);
 });
 
 test('12а: определение doc.has_ext_deps — текст, принятый владелицей 19.11.2026, на трёх языках; копия бэкенда та же', async () => {

@@ -1,0 +1,17 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MD-02 8а. Типы и связи, которые трогает код сервера (code-types.mjs), но которых нет в модели 1.18 (схема установщика, карта связей, служебные типы переноса). У каждого — причина. Сторож: md02-empty-types.test.mjs — тип, который код трогает, обязан быть в модели или здесь; запись здесь, которой код больше не трогает или которая уже в модели, — ошибка.",
+  "types": {
+    "AgentActionLog": "вне карты: временной ряд журнала действий — переносится как есть структурой источника (structure-plan.mjs), со своими свойствами и индексами",
+    "MetricSnapshot": "вне карты: снимки метрик — переносятся как есть структурой источника (structure-plan.mjs), со своими свойствами и индексами",
+    "KnowFeature": "легаси: читает только шаг V13 накатки на старой схеме (LoreSchemaMigrationRunner); на базе из модели шаги V не идут",
+    "LoreTag": "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner); на базе из модели шаги V не идут",
+    "HAS_STATUS": "снят V89 (#1401): читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)",
+    "OF_TYPE": "снят V89 (#1401): читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)",
+    "LoreSchemaVersion": "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал читает и пишет только накатка на старой схеме",
+    "PlanCheckpoint": "план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED); срез на базе 1.18 должен отвечать причиной, а не 502 — PR #1630 (ModelSchemaAdapter.OUTSIDE_MODEL)",
+    "PlanConfig": "план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED); срез на базе 1.18 должен отвечать причиной, а не 502 — PR #1630 (ModelSchemaAdapter.OUTSIDE_MODEL)",
+    "PlanSection": "план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED); срез на базе 1.18 должен отвечать причиной, а не 502 — PR #1630 (ModelSchemaAdapter.OUTSIDE_MODEL)",
+    "PlanTrack": "план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED); срез и трек спринта на базе 1.18 должны отвечать причиной, а не 502 — PR #1630 (ModelSchemaAdapter.OUTSIDE_MODEL)",
+    "PlanVersion": "план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED); срез на базе 1.18 должен отвечать причиной, а не 502 — PR #1630 (ModelSchemaAdapter.OUTSIDE_MODEL)"
+  }
+}
