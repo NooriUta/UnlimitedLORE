@@ -231,6 +231,17 @@ class LoreMigrationResourceTest {
         assertTrue(Files.readString(dir.resolve("decisions.json")).contains("other"));
     }
 
+    // ── Копия с выключенным входом: логин-заглушка (как lore.dev.mock-sub) ──
+
+    @Test
+    void mockLoginOnlyWithAuthOffAndMockSub() {
+        assertEquals("alice", LoreMigrationResource.resolveLogin("alice", true, null, "rehearsal"), "логин токена — всегда он");
+        assertNull(LoreMigrationResource.resolveLogin(null, true, "sub-1", "rehearsal"), "вход включён — заглушки нет");
+        assertNull(LoreMigrationResource.resolveLogin(null, false, null, "rehearsal"), "без mock-sub — заглушки нет");
+        assertNull(LoreMigrationResource.resolveLogin(null, false, "sub-1", " "), "логин-заглушка не задана");
+        assertEquals("rehearsal", LoreMigrationResource.resolveLogin(null, false, "sub-1", "rehearsal"));
+    }
+
     // ── Запуск конвейера — точка расширения ──────────────────────────────
 
     @Test

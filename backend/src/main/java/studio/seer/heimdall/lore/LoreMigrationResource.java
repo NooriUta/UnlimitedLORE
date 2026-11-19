@@ -263,9 +263,26 @@ public class LoreMigrationResource extends LoreResourceBase {
     /** Логин человека из проверенного токена; null — не человек (агент) или токена нет. Как у «Привести в порядок». */
     String humanLogin() {
         if (callerClientId() != null || callerKcSub() == null) return null;
-        if (identity == null || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) return null;
-        Object u = jwt.getClaim("preferred_username");
-        return u == null || String.valueOf(u).isBlank() ? null : String.valueOf(u);
+        String token = null;
+        if (identity != null && identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt) {
+            Object u = jwt.getClaim("preferred_username");
+            token = u == null ? null : String.valueOf(u);
+        }
+        org.eclipse.microprofile.config.Config cfg = org.eclipse.microprofile.config.ConfigProvider.getConfig();
+        return resolveLogin(token, cfg.getOptionalValue("quarkus.oidc.enabled", Boolean.class).orElse(true),
+            cfg.getOptionalValue("lore.dev.mock-sub", String.class).orElse(null),
+            cfg.getOptionalValue("lore.dev.mock-login", String.class).orElse(null));
+    }
+
+    /**
+     * Логин человека: из токена; без токена — заглушка {@code lore.dev.mock-login}, но ТОЛЬКО на копии с
+     * выключенным входом и заданным {@code lore.dev.mock-sub} (то же правило, что {@link #resolveSub}). На
+     * включённом входе заглушки нет вовсе.
+     */
+    static String resolveLogin(String tokenLogin, boolean oidcEnabled, String mockSub, String mockLogin) {
+        if (tokenLogin != null && !tokenLogin.isBlank()) return tokenLogin;
+        if (oidcEnabled || mockSub == null || mockSub.isBlank() || mockLogin == null || mockLogin.isBlank()) return null;
+        return mockLogin.strip();
     }
 
     private Response forbiddenHuman() {

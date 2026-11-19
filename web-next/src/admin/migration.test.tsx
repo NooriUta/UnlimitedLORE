@@ -82,7 +82,10 @@ describe('экран', () => {
     const rows = screen.getAllByTestId('adm-mig-row');
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByText('medium')).toBeTruthy();
-    expect(within(rows[0]).getByTestId('adm-mig-ref').getAttribute('href')).toContain('SPRINT_A');
+    const href = within(rows[0]).getByTestId('adm-mig-ref').getAttribute('href')!;
+    expect(href).toContain('SPRINT_A');
+    // Паспорт живёт в модуле записей, не в админке: ссылка с mod=admin открывала Главную админки (MA3, 19.11).
+    expect(new URLSearchParams(href.split('?')[1]).get('mod')).not.toBe('admin');
   });
 
   it('правило у строки: выбор, окно с подтверждением своим логином, счётчик убывает, отмена последнего', async () => {

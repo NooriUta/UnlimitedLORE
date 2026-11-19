@@ -269,7 +269,7 @@ function RejectRow({ row, canDecide, onAccept }: { row: MigRow; canDecide: boole
       <td className="adm-tidy-num">{fmt(row.n)}</td>
       <td>
         {row.refs.length === 0 ? <span className="adm-dim">{t('admin.mig.noRefs')}</span> : row.refs.map(ref => {
-          const href = recordHref(ref.type, ref.id, new URLSearchParams(window.location.search));
+          const href = recordHref(ref.type, ref.id, recordFrom());
           return href
             ? <a key={ref.id} className="adm-link adm-mono" href={href} target="_blank" rel="noopener noreferrer" data-testid="adm-mig-ref">{ref.id} ↗</a>
             : <span key={ref.id} className="adm-mono adm-dim">{ref.id}</span>;
@@ -298,6 +298,17 @@ function RejectRow({ row, canDecide, onAccept }: { row: MigRow; canDecide: boole
       </td>
     </tr>
   );
+}
+
+/**
+ * Откуда строить ссылку на паспорт: текущий адрес без модуля админки и её параметров. Паспорт живёт в модуле
+ * записей; с mod=admin ссылка открывала Главную админки (найдено сценарием MA3 на копии 19.11.2026).
+ */
+function recordFrom(): URLSearchParams {
+  const p = new URLSearchParams(window.location.search);
+  p.delete('mod');
+  p.delete('mig');
+  return p;
 }
 
 const ACTION_KEYS: Record<string, true> = { map_to: true, to_note: true, drop: true, defer: true, add_code: true };
