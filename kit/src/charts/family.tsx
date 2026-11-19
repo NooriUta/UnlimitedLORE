@@ -294,6 +294,9 @@ export function BarChart(p: BarChartProps) {
   const band = (W - PAD.l - PAD.r) / Math.max(1, p.data.length);
   const bw = Math.min(28, (band * 0.7) / Math.max(1, p.groups.length));
   const nulls = p.data.flatMap(d => p.groups.map(g => d.values[g.key])).filter(v => v === null || v === undefined).length;
+  // Подписи категорий не теснее ~40 px (графики 19.11.2026: 30 дней на телефоне слипались в кашу) —
+  // через одну-две, как у линии; все категории — в «Таблицей».
+  const every = Math.max(1, Math.ceil(p.data.length / Math.max(1, Math.floor((W - PAD.l - PAD.r) / 40))));
   return (
     <ChartFrame {...p} kind="bar" empty={p.data.length === 0 || vals.length === 0}
       summary={summaryText(lang, vals, undefined, p.unit)}
@@ -321,7 +324,7 @@ export function BarChart(p: BarChartProps) {
                 if (typeof v !== 'number') return null;
                 return <rect key={g.key} data-bar="" x={x0 + gi * bw} width={bw - 2} y={y(v)} height={Math.max(0, y(0) - y(v))} fill={tone(gi)} />;
               })}
-              <text x={PAD.l + ci * band + band / 2} y={H - 6} textAnchor="middle" className="sk-chart__tick">{d.category}</text>
+              {ci % every === 0 && <text data-cat="" x={PAD.l + ci * band + band / 2} y={H - 6} textAnchor="middle" className="sk-chart__tick">{d.category}</text>}
             </g>
           );
         })}

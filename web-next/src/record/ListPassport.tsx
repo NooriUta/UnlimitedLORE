@@ -23,6 +23,7 @@ import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { ProjectExportButton } from './ProjectExportButton';
 import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { MilestoneCharts, SprintCharts } from '../charts/TaskFlowCharts';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
@@ -465,6 +466,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
         />
       )}
+      {/* Графики 19.11.2026 (пачка 1): веха — прогноз (№7) и поток (№2); спринт — поток (№2) и время цикла (№1). Свёрнуты строкой. */}
+      {type === 'milestone' && <MilestoneCharts milestoneId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
+      {type === 'sprint' && <SprintCharts sprintId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
