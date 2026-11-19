@@ -2,6 +2,7 @@ package studio.seer.heimdall.lore;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,7 +56,50 @@ final class ModelSchemaAdapter {
 
     /** Срез доски на базе из модели, куда доску не перенесли: отвечать «раздел снят», а не 502. */
     static boolean planSectionRemoved(String sliceId) {
-        return enabled && !planBoard && LoreSlices.usesPlanBoard(sliceId);
+        return enabled && (!planBoard || sliceUnavailable(sliceId) != null) && LoreSlices.usesPlanBoard(sliceId);
+    }
+
+    private static final String PLAN_BOARD = "старая доска плана снята (D-2026-LORE-PLAN-BOARD-REMOVED), установщик её не "
+        + "переносит (MIG_PLAN_BOARD=drop); легаси — читается только на старой схеме или при MIG_PLAN_BOARD=keep";
+
+    /**
+     * Типы вне модели 1.18 — тип → почему его может не быть в базе из модели. Каждый тип, который читает срез или
+     * раздел гигиены, либо входит в модель (схема установщика, карта связей, ряды раздела series модели), либо записан здесь — сторож
+     * {@code OutsideModelTypesGuardTest}. На базе из модели, где типа нет, чтение отвечает этой причиной, а не 502.
+     */
+    static final Map<String, String> OUTSIDE_MODEL = Map.of(
+        "PlanConfig", PLAN_BOARD,
+        "PlanTrack", PLAN_BOARD,
+        "PlanSection", PLAN_BOARD,
+        "PlanCheckpoint", PLAN_BOARD,
+        "PlanVersion", PLAN_BOARD);
+
+    /** Типы схемы базы (schema:types) на базе из модели; null — не прочитали, и тогда «типа нет» не утверждаем. */
+    private static volatile Set<String> schemaTypes;
+
+    static void schemaTypes(Set<String> types) { schemaTypes = types == null ? null : Set.copyOf(types); }
+
+    /** Типа точно нет в базе из модели (схему прочитали, его там нет). Старая схема и «не знаем» — false. */
+    static boolean typeMissing(String type) {
+        Set<String> s = schemaTypes;
+        return enabled && s != null && type != null && !s.contains(type);
+    }
+
+    /** Причина словами: «нет данных: тип X не перенесён в 1.18 — почему». */
+    static String missingReason(String type) {
+        String why = OUTSIDE_MODEL.getOrDefault(type, "типа нет в схеме базы, собранной из модели");
+        return "нет данных: тип " + type + " не перенесён в 1.18 — " + why;
+    }
+
+    /**
+     * Срез на базе из модели читает тип, которого в схеме нет: причина словами (ответ 410), иначе null.
+     * Общий механизм для любого среза — не только доски плана.
+     */
+    static String sliceUnavailable(String sliceId) {
+        if (!enabled || schemaTypes == null) return null;
+        for (String t : LoreSlices.typesOf(sliceId))
+            if (typeMissing(t)) return "срез " + sliceId + ": " + missingReason(t);
+        return null;
     }
 
     /** Коды справочников плана и фаз → строка старого вида; остальные коды не трогаются. */

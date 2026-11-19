@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 import { registerEntity } from './entity.js';
 import { recordingInputKeys } from './toolInputKeys.js';
+import { bodyFileDescription, resolveBodyFiles } from './bodyFile.js';
 
 // ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
 // WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
@@ -1396,6 +1397,15 @@ export function registerLoreWrite(rawServer: McpServer): void {
   const CLOSED_VS_DROPPED =
     ' closed vs dropped: closed = answered/obsolete WITH a decision (set only via question_link rel="answers"; ' +
     'one decision may answer several questions); dropped = decided NOT to answer. Never use dropped for "obsolete".';
+  // MT-MCP-TRUTH A6 (владелица 19.11.2026, «1а»): ответственный — ребро ANSWERABLE_BY к записи реестра, а не текст.
+  // Прежнее «who owns getting the answer» молчало об этом и звало писать прозу.
+  const QUESTION_OWNER =
+    'responsible for getting the answer — a RECORD of the LORE registry, not free text: a person (login, e.g. ' +
+    '"omiloreadmin", or kc_sub) or an agent (actor_id, e.g. "AGENT-FULL-…"). The owner\'s spellings owner/владелец/' +
+    'владелица/alexa are mapped to the user omiloreadmin. Stored as the edge ANSWERABLE_BY (history kept: a change ' +
+    'closes the previous edge); the old text field owner is no longer written. Unknown value → 422 OWNER_UNKNOWN with ' +
+    'the reason, nothing written. When a decision answers the question (question_link rel="answers"), the decision\'s ' +
+    'author becomes the owner automatically.';
   definePostTool(server, {
     name: 'question_new',
     description: 'Create or update a KnowQuestion — an OPEN QUESTION (ADR-020/021), the "what have we not answered yet" ' +
@@ -1411,7 +1421,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       component_id: z.string().optional(),
       due_date:     z.string().optional().describe('YYYY-MM-DD — the answer deadline (drives overdue)'),
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
-      owner:        z.string().optional().describe('who owns getting the answer'),
+      owner:        z.string().optional().describe(QUESTION_OWNER),
       raised_by:    z.string().optional(),
       project:      PROJECT_PARAM,
     },
@@ -1441,7 +1451,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       component_id: z.string().optional(),
       due_date:     z.string().optional(),
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
-      owner:        z.string().optional(),
+      owner:        z.string().optional().describe(QUESTION_OWNER),
       raised_by:    z.string().optional(),
     },
     refuse: (a) => (a.status === 'closed' ? QUESTION_CLOSE_GUIDANCE : null),
@@ -1455,7 +1465,9 @@ export function registerLoreWrite(rawServer: McpServer): void {
 
   server.tool(
     'question_link',
-    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed); ' +
+    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed; ' +
+      'the decision\'s author — author of its first version — becomes the question owner, edge ANSWERABLE_BY; author ' +
+      'unknown → owner untouched, reason in owner_unchanged); ' +
       'rel="raised_in": where it was raised (needs target_type adr|sprint|task); rel="gates": it blocks a task (GATES — ' +
       'the gate that keeps the register self-cleaning); rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
       'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). Idempotent. Mutates system_aida_lore.',
@@ -1782,7 +1794,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'Idempotent — upserts by doc_id (only provided fields are set; omitted fields keep their ' +
       'existing value). Mutates system_aida_lore. ' +
       'Prefer content_md_en/content_md_ru (clean Markdown, rendered in-DOM with mermaid support) ' +
-      'over content_html, which is a legacy field kept for pre-existing HTML-fragment docs.',
+      'over content_html, which is a legacy field kept for pre-existing HTML-fragment docs. ' +
+      'Large bodies: pass content_md_ru_file / content_md_en_file / content_html_file (absolute path on the machine ' +
+      'running this MCP, inside LORE_MCP_FILE_ROOTS, max 20 MB, UTF-8) instead of the inline field — the MCP reads ' +
+      'the file itself. Not available in host mode (LORE_MCP_TRANSPORT=http): pass the content inline there.',
     {
       doc_id:         z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
       title:          z.string().optional().describe('required on first creation; omit on a content-only update to leave the existing title unchanged'),
@@ -1793,6 +1808,9 @@ export function registerLoreWrite(rawServer: McpServer): void {
       content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
       content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
       content_html:   z.string().optional().describe('Legacy: HTML content; no size limit is enforced. Rendered in a sandbox (SandboxedHtmlFrame). For new docs prefer content_md_ru / content_md_en'),
+      content_md_en_file: z.string().optional().describe(bodyFileDescription('content_md_en')),
+      content_md_ru_file: z.string().optional().describe(bodyFileDescription('content_md_ru')),
+      content_html_file:  z.string().optional().describe(bodyFileDescription('content_html')),
       parent_doc_id:  z.string().optional().describe(
         'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
         'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
@@ -1803,8 +1821,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
     },
     async ({ project, ...p }) => {
       if (projectMissing(project)) return projectRequired();
+      const body = await resolveBodyFiles(p);
+      if (typeof body === 'string') return err(new Error(body));
       try {
-        const res = (await lorePost('/lore/doc', p)) as Record<string, unknown>;
+        const res = (await lorePost('/lore/doc', body)) as Record<string, unknown>;
         return json({ ...res, ...(await inlineProject('doc', p.doc_id, project)) });
       } catch (e) { return err(e); }
     },

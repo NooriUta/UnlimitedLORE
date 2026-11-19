@@ -93,6 +93,8 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   OWNED_BY: { ru: 'владелец', en: 'owned by', color: '--t2' },
   HAS_PROJECT_ROLE: { ru: 'роль в проекте', en: 'has project role', color: '--t2' },
   ROLE_HELD_BY: { ru: 'роль у', en: 'role held by', color: '--t2' },
+  // MT-MCP-TRUTH A6: ответственный вопроса — ребро к человеку или агенту реестра.
+  ANSWERABLE_BY: { ru: 'ответственный', en: 'answerable by', color: '--t2' },
   FILLS_ROLE: { ru: 'исполняет роль', en: 'fills role', color: '--t2' },
   LOGGED_BY: { ru: 'записано агентом', en: 'logged by', color: '--t2' },
   USES_MACHINE: { ru: 'работает на машине', en: 'uses machine', color: '--t2' },
