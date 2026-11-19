@@ -87,3 +87,70 @@ export function withRegroupOverrides(doc, overrides, by, at = new Date().toISOSt
   for (const [k, v] of Object.entries(overrides || {})) map[k] = v ? String(v).trim() : null;
   return { ...doc, projects: { map, by: by || null, at } };
 }
+
+/**
+ * План слияния по принятой таблице: группа → опора (проект с наибольшим числом записей; равенство — по имени),
+ * проекты, которые вливаются в опору, и синонимы (все старые slug группы). Строки без группы не трогаются.
+ */
+export function regroupPlan(rows) {
+  const plan = {};
+  for (const r of rows) {
+    if (!r.to) continue;
+    (plan[r.to] ||= []).push(r);
+  }
+  return Object.fromEntries(Object.entries(plan).map(([g, list]) => {
+    const sorted = [...list].sort((a, b) => (b.records - a.records) || a.from.localeCompare(b.from));
+    const anchor = sorted[0].from;
+    return [g, { anchor, merge: sorted.slice(1).map(x => x.from), aliases: sorted.map(x => x.from), records: list.reduce((a, x) => a + x.records, 0) }];
+  }));
+}
+
+/**
+ * Применить план в приёмнике: связи проектов, которые вливаются, переводятся на опору (повтор той же связи —
+ * сливается, считается), хосты объединяются, опора получает синонимы (aliases) и группу (regroup), влитые
+ * проекты удаляются. Сверка по каждой группе: множество записей, связанных с проектами группы до, равно
+ * множеству записей у опоры после. Источник не трогается.
+ */
+export async function applyRegroup(db, plan, { log = console.log } = {}) {
+  const q = (sql, p) => db.dstQuery(sql, p);
+  const c = (sql, p) => db.dstCommand(sql, p);
+  await c('CREATE PROPERTY KnowGitProject.aliases IF NOT EXISTS LIST');
+  await c('CREATE PROPERTY KnowGitProject.regroup IF NOT EXISTS STRING');
+  const ridOf = async slug => (await q('SELECT @rid AS r FROM KnowGitProject WHERE slug = :s', { s: slug }))[0]?.r || null;
+  const members = async rid => new Set((await q(`SELECT @rid AS r FROM (SELECT expand(in('BELONGS_TO_PROJECT')) FROM ${rid})`)).map(x => x.r));
+  const report = { groups: {}, ok: true };
+  for (const [g, p] of Object.entries(plan)) {
+    const anchor = await ridOf(p.anchor);
+    if (!anchor) { report.groups[g] = { error: `нет опоры ${p.anchor}` }; report.ok = false; continue; }
+    const before = new Set(await members(anchor));
+    const hosts = [];
+    const pushHosts = h => { for (const x of Array.isArray(h) ? h : []) if (x && x.base_url && !hosts.some(y => y.base_url === x.base_url)) hosts.push(x); };
+    pushHosts((await q(`SELECT hosts FROM ${anchor}`))[0]?.hosts);
+    let moved = 0, merged = 0, missing = [];
+    for (const slug of p.merge) {
+      const m = await ridOf(slug);
+      if (!m) { missing.push(slug); continue; }
+      for (const r of await members(m)) before.add(r);
+      pushHosts((await q(`SELECT hosts FROM ${m}`))[0]?.hosts);
+      const edges = await q(`SELECT FROM (SELECT expand(bothE()) FROM ${m})`);
+      for (const e of edges) {
+        const t = e['@type'], o = e['@out'] === m ? anchor : e['@out'], i = e['@in'] === m ? anchor : e['@in'];
+        const props = Object.fromEntries(Object.entries(e).filter(([k, v]) => !k.startsWith('@') && k !== 'out' && k !== 'in' && v !== null && v !== undefined));
+        const same = await q(`SELECT count(*) AS n FROM ${t} WHERE @out = ${o} AND @in = ${i}` + (props.role !== undefined ? ' AND role = :role' : ''), props.role !== undefined ? { role: props.role } : {});
+        if (Number(same[0]?.n) > 0) merged++;
+        else { await c(`CREATE EDGE ${t} FROM ${o} TO ${i} CONTENT :c`, { c: props }); moved++; }
+        await c(`DELETE EDGE ${e['@rid']}`);
+      }
+      await c(`DELETE VERTEX ${m}`);
+    }
+    await c(`UPDATE ${anchor} SET aliases = :a, regroup = :g, hosts = :h`, { a: p.aliases, g, h: hosts.length ? hosts : null });
+    const after = await members(anchor);
+    const lost = [...before].filter(r => !after.has(r)).length;
+    const extra = [...after].filter(r => !before.has(r)).length;
+    report.groups[g] = { anchor: p.anchor, merged_projects: p.merge.length - missing.length, missing, edges_moved: moved, edges_merged: merged, records_before: before.size, records_after: after.size, lost, extra };
+    if (lost || extra || missing.length) report.ok = false;
+    log(`группа ${g}: опора ${p.anchor}, влито ${p.merge.length - missing.length}, записей ${before.size} → ${after.size}, связей перенесено ${moved}, слито повторов ${merged}` + (missing.length ? `, нет в приёмнике: ${missing.join(', ')}` : ''));
+  }
+  log('сверка перегруппировки:', report.ok ? 'сошлась' : 'НЕ сошлась');
+  return report;
+}

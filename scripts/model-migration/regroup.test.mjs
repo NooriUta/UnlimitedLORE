@@ -65,3 +65,16 @@ test('правки перегруппировки живут в файле ре�
   assert.equal(next.projects.by, 'omiloreadmin');
   assert.deepEqual(regroupOverrides({}), {});
 });
+
+import { regroupPlan } from './regroup.mjs';
+test('план слияния: опора — проект с наибольшим числом записей, остальные — в неё; без группы и одиночки — не трогаем', () => {
+  const rows = [
+    { from: 'AIDA/MIDGARD', records: 380, to: 'MIDGARD' }, { from: 'AIDA/GLADSHEIM', records: 87, to: 'MIDGARD' },
+    { from: 'AIDA/BOKVIT', records: 5, to: 'MIDGARD' }, { from: 'NooriUta/volva', records: 138, to: 'VOLVA' },
+    { from: 'AIDA/studio', records: 10, to: null },
+  ];
+  const p = regroupPlan(rows);
+  assert.deepEqual(p.MIDGARD, { anchor: 'AIDA/MIDGARD', merge: ['AIDA/GLADSHEIM', 'AIDA/BOKVIT'], aliases: ['AIDA/MIDGARD', 'AIDA/GLADSHEIM', 'AIDA/BOKVIT'], records: 472 });
+  assert.deepEqual(p.VOLVA, { anchor: 'NooriUta/volva', merge: [], aliases: ['NooriUta/volva'], records: 138 });
+  assert.equal(p[null], undefined);
+});

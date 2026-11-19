@@ -10,6 +10,8 @@ import { connect } from './db.mjs';
 import { EDGES, SCHEMA } from './resources.mjs';
 import { edgePlan, edgeWrites } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
+import { loadDecisions } from './decisions.mjs';
+import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup } from './regroup.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -83,6 +85,14 @@ export async function transferEdges(db, { log = console.log } = {}) {
   const sm = await sessionModel(db, { pages });
   report.session_model = sm;
   if (!sm.ok) ok = false;
+  // перегруппировка проектов (шаг П установщика): только если таблица принята человеком — в файле решений
+  // есть раздел projects; иначе проекты переносятся как есть (группа не выдумывается)
+  const decisions = loadDecisions();
+  if (decisions && decisions.projects && Object.keys(regroupOverrides(decisions)).length) {
+    const proposal = proposeRegroup({ ...(await readRegroupInput(db)), overrides: regroupOverrides(decisions) });
+    report.regroup = await applyRegroup(db, regroupPlan(proposal.rows), { log });
+    if (!report.regroup.ok) ok = false;
+  } else log('перегруппировка проектов: таблица не принята (нет раздела projects в файле решений) — проекты как есть');
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
