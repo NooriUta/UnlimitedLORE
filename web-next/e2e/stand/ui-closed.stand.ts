@@ -11,9 +11,11 @@
 //   «Failed to fetch dynamically imported module» — SPRINT_UXR_S4_UI_SHELL_LISTS/S4-STALE-CHUNK
 //   горизонтальная прокрутка страницы на телефоне — SPRINT_UXR_MOBILE_POLISH/MP2-*, S4-MOBILE-EDGE
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh } from './stand.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 const BROKEN: [RegExp, string][] = [

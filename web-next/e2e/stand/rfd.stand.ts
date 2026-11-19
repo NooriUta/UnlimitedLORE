@@ -6,9 +6,11 @@
 // Не здесь: SPRINT_LORE_OWN_HOST/OH-22 (LLM на ryzenai — инфраструктура, без UI LORE) и
 // SPRINT_VIZ_EMBED/VE-8 (проверка подписи — внутри Völva, её репо и её CI).
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot } from './stand.ts';
+import { openStand, requireStand, shot, keepLoginFresh } from './stand.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 /** GET под токеном сохранённого входа — как S0. */
