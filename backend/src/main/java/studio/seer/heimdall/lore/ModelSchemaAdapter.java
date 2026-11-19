@@ -167,11 +167,25 @@ final class ModelSchemaAdapter {
         Map.entry("uat", "UAT"), Map.entry("done", "DONE"), Map.entry("failed", "FAILED"),
         Map.entry("blocked", "BLOCKED"), Map.entry("cancelled", "CANCELLED"));
 
+    /** Узнаётся ли строка словарём плана: значок или слово в начале (без отката на «todo»). */
+    static boolean looksLikePlan(String t) {
+        String up = t.stripLeading().toUpperCase(java.util.Locale.ROOT);
+        for (LoreStatusVocabulary.Entry e : LoreStatusVocabulary.ENTRIES) {
+            if (t.stripLeading().startsWith(e.marker())) return true;
+            for (String w : e.words()) if (up.startsWith(w)) return true;
+        }
+        return false;
+    }
+
     /** Строка статуса старого вида («🔄 IN PROGRESS», «🟡 PARTIAL — …») → код справочника; код остаётся кодом. */
     static String toCode(String raw) {
         if (raw == null) return null;
         String t = raw.strip();
         if (DISPLAY.containsKey(t)) return t;
+        // строка плана узнаётся значком или словом; иначе это код другого справочника (ADR, решение …) —
+        // заглавными, как хранит новая схема. classify() откатывается на «todo» для незнакомого слова —
+        // без этой проверки «accepted» у ADR становился бы TODO.
+        if (!looksLikePlan(t)) return t.matches("[A-Za-z][A-Za-z_]*") ? t.toUpperCase(java.util.Locale.ROOT) : raw;
         String canon = LoreStatusVocabulary.classify(t);
         return CANON_TO_CODE.getOrDefault(canon, raw);
     }

@@ -127,6 +127,16 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void запись_статуса_не_плана_через_status_raw_не_превращается_в_TODO() {
+        // StatusHistoryService пишет status_raw = :ns и для ADR/решения («accepted»); словарь плана слова не знает
+        // и откатился бы на «todo» — ADR стал бы TODO. Статус не плана — код справочника заглавными.
+        assertEquals("ACCEPTED", ModelSchemaAdapter.toCode("accepted"));
+        assertEquals("SUPERSEDED", ModelSchemaAdapter.toCode("superseded"));
+        assertEquals("ACTIVE", ModelSchemaAdapter.toCode("🔄 IN PROGRESS"), "план — по-прежнему код плана");
+        assertEquals("TODO", ModelSchemaAdapter.toCode("⬜ TODO"));
+    }
+
+    @Test
     void ответ_базы_целиком_json_приводится_к_прежнему_виду() {
         String json = "{\"result\":[{\"task_uid\":\"A/1\",\"status_raw\":\"BLOCKED\"},{\"n\":3}]}";
         String out = ModelSchemaAdapter.adaptJson(json);
