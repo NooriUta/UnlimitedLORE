@@ -75,6 +75,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится спринт; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -88,6 +89,7 @@
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Релизы, в которые вошла работа.",
       "labelEn" : "Releases",
       "labelPl" : "Wydania"
     }, {
@@ -117,6 +119,7 @@
       "rel" : "TARGETS_MILESTONE",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Вехи плана, к которым привязана запись.",
       "labelEn" : "Milestones",
       "labelPl" : "Kamienie milowe"
     }, {
@@ -209,6 +212,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     } ],
@@ -522,6 +526,7 @@
       "labelKey" : "pp.field.waiting_for",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Кого или что ждёт задача: человек, решение, внешний ответ. Пишется вместе со статусом «ждёт» и снимается при смене статуса.",
       "labelEn" : "Waiting for",
       "labelPl" : "Czekamy na"
     }, {
@@ -530,6 +535,7 @@
       "labelKey" : "pp.field.status_reason",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Почему у задачи такой статус — словами, обычно при «заблокировано». Живёт только в версии этого статуса.",
       "labelEn" : "Status reason",
       "labelPl" : "Powód statusu"
     }, {
@@ -538,6 +544,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код задачи — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "labelEn" : "Code",
       "labelPl" : "Kod"
     }, {
@@ -551,6 +558,7 @@
       "rel" : "PART_OF",
       "dir" : "out",
       "relation" : "composition",
+      "definition" : "Спринт, в который входит запись.",
       "labelEn" : "Sprint",
       "labelPl" : "Sprint"
     }, {
@@ -568,6 +576,7 @@
       "rel" : "IN_PHASE",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Фаза спринта, в которой стоит задача.",
       "labelEn" : "Phase",
       "labelPl" : "Faza"
     }, {
@@ -586,6 +595,7 @@
       "rel" : "TAGGED_WITH",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     }, {
@@ -597,6 +607,7 @@
       "multi" : true,
       "refType" : "project",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -749,6 +760,7 @@
       "rel" : "REALIZES",
       "dir" : "out",
       "relation" : "realization",
+      "definition" : "Сценарий (UC), который реализует задача.",
       "labelEn" : "Use case",
       "labelPl" : "Scenariusz (UC)"
     }, {
@@ -767,6 +779,7 @@
       "rel" : "CLOSED_BY",
       "dir" : "out",
       "relation" : "realization",
+      "definition" : "PR, которыми сделана работа.",
       "labelEn" : "PRs",
       "labelPl" : "PR"
     }, {
@@ -780,6 +793,7 @@
       "rel" : "EDITED_IN",
       "dir" : "in",
       "relation" : "attribute",
+      "definition" : "Файлы репозитория, которые правились в рамках задачи (путь относительно репозитория).",
       "labelEn" : "Files",
       "labelPl" : "Pliki"
     } ],
@@ -1034,6 +1048,7 @@
         "field" : "name"
       },
       "required" : true,
+      "definition" : "Короткая формулировка архитектурного решения: по ней ADR ищут и узнают в списках.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -1049,6 +1064,7 @@
         "endpoint" : "/lore/status",
         "field" : "status"
       },
+      "definition" : "Состояние решения: предложено, принято, отложено или заменено другим.",
       "labelEn" : "Status",
       "labelPl" : "Status"
     }, {
@@ -1062,6 +1078,7 @@
         "endpoint" : "/lore/adr",
         "field" : "date_created"
       },
+      "definition" : "Дата, когда ADR заведён.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Data"
@@ -1081,6 +1098,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты системы, которых касается решение.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     }, {
@@ -1099,6 +1117,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты (репозитории), к которым относится ADR.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -1117,6 +1136,7 @@
       "rel" : "TAGGED_WITH",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Свободные метки для поиска и группировки.",
       "labelEn" : "Tags",
       "labelPl" : "Tagi"
     }, {
@@ -1130,6 +1150,7 @@
         "endpoint" : "/lore/adr",
         "field" : "file_path"
       },
+      "definition" : "Путь к файлу ADR в репозитории, если текст ведётся и там.",
       "labelEn" : "File",
       "labelPl" : "Plik"
     } ],
@@ -1142,6 +1163,7 @@
         "endpoint" : "/lore/adr",
         "field" : "context_md"
       },
+      "definition" : "Что болит и почему решение понадобилось: причины, ограничения, рассмотренные варианты.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Context",
@@ -1155,6 +1177,7 @@
         "endpoint" : "/lore/adr",
         "field" : "decision_md"
       },
+      "definition" : "Что выбрано: правила решения по пунктам.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Decision",
@@ -1168,6 +1191,7 @@
         "endpoint" : "/lore/adr",
         "field" : "consequences_md"
       },
+      "definition" : "Что меняется после решения: что получаем, что теряем и что становится обязательным.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Consequences",
@@ -1427,6 +1451,7 @@
         "field" : "title"
       },
       "required" : true,
+      "definition" : "Название спецификации: что она описывает.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -1442,6 +1467,7 @@
         "endpoint" : "/lore/spec",
         "field" : "status"
       },
+      "definition" : "Состояние спеки: черновик, предложена, принята или заменена.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
@@ -1457,6 +1483,7 @@
         "endpoint" : "/lore/spec",
         "field" : "version"
       },
+      "definition" : "Номер редакции спеки; новая редакция сохраняет прежнюю в истории.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Version",
@@ -1472,6 +1499,7 @@
         "endpoint" : "/lore/spec",
         "field" : "summary"
       },
+      "definition" : "Итог одной-двумя фразами: о чём спека и что изменилось в последней редакции.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Summary",
@@ -1491,6 +1519,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компонент системы, который описывает спека.",
       "labelEn" : "Component",
       "labelPl" : "Komponent"
     }, {
@@ -1509,6 +1538,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты (репозитории), к которым относится спека.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -1522,6 +1552,7 @@
         "endpoint" : "/lore/spec",
         "field" : "file_path"
       },
+      "definition" : "Путь к файлу спеки в репозитории, если текст ведётся и там.",
       "layer" : "stable",
       "labelEn" : "File",
       "labelPl" : "Plik"
@@ -1535,6 +1566,7 @@
         "endpoint" : "/lore/spec",
         "field" : "content_md"
       },
+      "definition" : "Полный текст спецификации.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Text",
@@ -1636,6 +1668,7 @@
         "field" : "title"
       },
       "required" : true,
+      "definition" : "Название документа.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -1650,6 +1683,7 @@
         "endpoint" : "/lore/doc",
         "field" : "kind"
       },
+      "definition" : "Вид документа: отчёт, справка, правила, передача дел и другие.",
       "layer" : "stable",
       "labelEn" : "Kind",
       "labelPl" : "Rodzaj"
@@ -1668,6 +1702,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компонент системы, к которому относится документ.",
       "labelEn" : "Component",
       "labelPl" : "Komponent"
     }, {
@@ -1686,6 +1721,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты (репозитории), к которым относится документ.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -1703,6 +1739,7 @@
       "rel" : "DOC_CHILD_OF",
       "dir" : "out",
       "relation" : "composition",
+      "definition" : "Документ, частью которого является этот.",
       "labelEn" : "Parent document",
       "labelPl" : "Dokument nadrzędny"
     }, {
@@ -1716,6 +1753,7 @@
       "rel" : "IMPLEMENTED_IN",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Спринты, в которых документ создан или использован.",
       "labelEn" : "Sprints",
       "labelPl" : "Sprinty"
     }, {
@@ -1729,6 +1767,7 @@
         "endpoint" : "/lore/doc",
         "field" : "file_path"
       },
+      "definition" : "Путь к файлу документа в репозитории, если он ведётся и там.",
       "layer" : "stable",
       "labelEn" : "File",
       "labelPl" : "Plik"
@@ -1742,6 +1781,7 @@
         "endpoint" : "/lore/doc",
         "field" : "content_md_ru"
       },
+      "definition" : "Текст документа на русском языке.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Tekst"
@@ -1754,6 +1794,7 @@
         "endpoint" : "/lore/doc",
         "field" : "content_md_en"
       },
+      "definition" : "Текст документа на английском языке, если он есть.",
       "layer" : "stable",
       "labelEn" : "Text (EN)",
       "labelPl" : "Tekst (EN)"
@@ -1866,6 +1907,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Правило одной фразой: что решено.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -1876,6 +1918,7 @@
       "kind" : "enum",
       "group" : "head",
       "dict" : "decision_status",
+      "definition" : "Состояние решения: предложено, принято, отложено или заменено.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
@@ -1886,6 +1929,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код решения, по которому на него ссылаются.",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
@@ -1895,6 +1939,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Дата, когда решение записано.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Data"
@@ -1908,6 +1953,7 @@
       "rel" : "DECIDED_IN",
       "dir" : "out",
       "relation" : "aggregation",
+      "definition" : "ADR, в рамках которого решение принято.",
       "labelEn" : "ADR",
       "labelPl" : "ADR"
     }, {
@@ -1921,6 +1967,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты системы, которых касается решение.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     }, {
@@ -1939,6 +1986,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты (репозитории), к которым относится решение.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -1952,6 +2000,7 @@
       "rel" : "TAGGED_WITH",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Свободные метки для поиска и группировки.",
       "labelEn" : "Tags",
       "labelPl" : "Tagi"
     } ],
@@ -1959,6 +2008,7 @@
       "key" : "body_md",
       "label" : "Решение",
       "labelKey" : "pp.field.body",
+      "definition" : "Полный текст правила: что именно решено и в каких границах действует.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Decyzja"
@@ -1966,6 +2016,7 @@
       "key" : "rationale_md",
       "label" : "Обоснование",
       "labelKey" : "pp.field.rationale",
+      "definition" : "Почему решено так: причина и то, от чего отказались.",
       "labelEn" : "Rationale",
       "labelPl" : "Uzasadnienie"
     } ],
@@ -2091,6 +2142,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название вопроса: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -2100,6 +2152,7 @@
       "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
+      "definition" : "Статус вопроса: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
       "labelPl" : "Status"
@@ -2109,6 +2162,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код вопроса — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
@@ -2119,6 +2173,7 @@
       "kind" : "enum",
       "group" : "props",
       "dict" : "priority",
+      "definition" : "Приоритет вопроса: насколько срочно его делать относительно других.",
       "layer" : "stable",
       "labelEn" : "Priority",
       "labelPl" : "Priorytet"
@@ -2128,6 +2183,7 @@
       "labelKey" : "pp.field.dueDate",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Срок, к которому на вопрос нужен ответ.",
       "layer" : "stable",
       "labelEn" : "Due date",
       "labelPl" : "Termin"
@@ -2137,6 +2193,7 @@
       "labelKey" : "pp.field.responsible",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Владелец записи: кто за неё отвечает.",
       "labelEn" : "Responsible",
       "labelPl" : "Odpowiedzialny"
     }, {
@@ -2145,6 +2202,7 @@
       "labelKey" : "pp.field.raisedBy",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Кто поднял вопрос.",
       "labelEn" : "Raised by",
       "labelPl" : "Zgłosił"
     }, {
@@ -2153,6 +2211,7 @@
       "labelKey" : "pp.field.opened",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда вопрос открыт.",
       "layer" : "stable",
       "labelEn" : "Opened",
       "labelPl" : "Otwarto"
@@ -2162,6 +2221,7 @@
       "labelKey" : "pp.field.closed",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда вопрос закрыт решением или снят.",
       "layer" : "stable",
       "labelEn" : "Closed",
       "labelPl" : "Zamknięto"
@@ -2176,6 +2236,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     }, {
@@ -2194,6 +2255,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     } ],
@@ -2201,6 +2263,7 @@
       "key" : "body_md",
       "label" : "Суть",
       "labelKey" : "pp.field.body",
+      "definition" : "Текст вопроса в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Istota"
@@ -2295,6 +2358,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название вехи: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -2304,6 +2368,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код вехи — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
@@ -2321,6 +2386,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Срок вехи: к какой дате она должна быть достигнута.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Termin"
@@ -2331,6 +2397,7 @@
       "kind" : "enum",
       "group" : "props",
       "dict" : "priority",
+      "definition" : "Приоритет вехи: насколько срочно его делать относительно других.",
       "layer" : "stable",
       "labelEn" : "Priority",
       "labelPl" : "Priorytet"
@@ -2340,6 +2407,7 @@
       "labelKey" : "pp.field.products",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Продукты, к которым относится запись.",
       "labelEn" : "Products",
       "labelPl" : "Produkty"
     }, {
@@ -2351,6 +2419,7 @@
       "multi" : true,
       "refType" : "project",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -2362,6 +2431,7 @@
       "multi" : true,
       "refType" : "component",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     } ],
@@ -2369,6 +2439,7 @@
       "key" : "goal_md",
       "label" : "Цель",
       "labelKey" : "pp.field.goal",
+      "definition" : "Цель вехи: что должно быть достигнуто к ней.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Goal",
@@ -2430,6 +2501,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название релиза: под ним запись видна в списках и по нему её ищут.",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
     }, {
@@ -2438,6 +2510,7 @@
       "labelKey" : "pp.field.tag",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код релиза — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "labelEn" : "Tag",
       "labelPl" : "Tag"
@@ -2447,6 +2520,7 @@
       "labelKey" : "pp.field.kind",
       "kind" : "enum",
       "group" : "props",
+      "definition" : "Вид релиза: patch, minor или major.",
       "labelEn" : "Kind",
       "labelPl" : "Rodzaj"
     }, {
@@ -2455,6 +2529,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Дата выпуска релиза (тег поставлен).",
       "labelEn" : "Date",
       "labelPl" : "Data"
     }, {
@@ -2463,6 +2538,7 @@
       "labelKey" : "pp.field.isCurrent",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Признак: это текущий выпущенный релиз проекта.",
       "labelEn" : "Current",
       "labelPl" : "Bieżący"
     }, {
@@ -2471,6 +2547,7 @@
       "labelKey" : "pp.field.week",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Номер недели года, на которую пришёлся выпуск релиза.",
       "labelEn" : "Week",
       "labelPl" : "Tydzień"
     }, {
@@ -2484,6 +2561,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -2495,6 +2573,7 @@
       "multi" : true,
       "refType" : "component",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     } ],
@@ -2502,6 +2581,7 @@
       "key" : "description_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "definition" : "Описание релиза: фичи и апгрейды технологий, у каждой — причина и ценность.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Text",
@@ -2604,6 +2684,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название компонента: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -2613,6 +2694,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код компонента — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
@@ -2622,6 +2704,7 @@
       "labelKey" : "pp.field.area",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Техническое направление компонента: фронтенд, платформа, движок, данные, IoT, ИИ и т. п.",
       "layer" : "stable",
       "labelEn" : "Area",
       "labelPl" : "Obszar"
@@ -2635,6 +2718,7 @@
       "rel" : "PARENT_OF",
       "dir" : "out",
       "relation" : "composition",
+      "definition" : "Родительская запись, в которую вложен этот компонент.",
       "labelEn" : "Parent",
       "labelPl" : "Nadrzędny"
     }, {
@@ -2643,6 +2727,7 @@
       "labelKey" : "pp.field.ownerPerson",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Владелец записи: кто за неё отвечает.",
       "labelEn" : "Owner",
       "labelPl" : "Właściciel"
     }, {
@@ -2651,6 +2736,7 @@
       "labelKey" : "pp.field.team",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Команда, которая ведёт компонент.",
       "layer" : "stable",
       "labelEn" : "Team",
       "labelPl" : "Zespół"
@@ -2660,6 +2746,7 @@
       "labelKey" : "pp.field.icon",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Значок записи в интерфейсе (набор game-icons).",
       "layer" : "stable",
       "labelEn" : "Icon",
       "labelPl" : "Ikona"
@@ -2674,6 +2761,7 @@
       "rel" : "PARENT_OF",
       "dir" : "in",
       "relation" : "composition",
+      "definition" : "Дочерние записи этого компонента (вложенные в него).",
       "labelEn" : "Subcomponents",
       "labelPl" : "Podkomponenty"
     }, {
@@ -2696,6 +2784,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "relation" : "attribute",
+      "definition" : "ADR, относящиеся к компоненту.",
       "labelEn" : "ADR",
       "labelPl" : "ADR"
     }, {
@@ -2709,6 +2798,7 @@
       "rel" : "DOCUMENTED_IN",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Спеки, которые документируют компонент.",
       "labelEn" : "Specs",
       "labelPl" : "Specyfikacje"
     }, {
@@ -2720,6 +2810,7 @@
       "multi" : true,
       "refType" : "project",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -2733,6 +2824,7 @@
       "rel" : "IN_PRODUCT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Продукты, к которым относится запись.",
       "labelEn" : "Products",
       "labelPl" : "Produkty"
     } ],
@@ -2908,6 +3000,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название технологии: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -2917,6 +3010,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код технологии — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Code",
@@ -2927,6 +3021,7 @@
       "labelKey" : "pp.field.version",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Версия технологии, которая сейчас используется.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Version",
@@ -2937,6 +3032,7 @@
       "labelKey" : "pp.field.checkedAt",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда версию последний раз сверяли с актуальной.",
       "labelEn" : "Checked",
       "labelPl" : "Sprawdzono"
     }, {
@@ -2949,6 +3045,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компонент, в котором используется технология.",
       "labelEn" : "Component",
       "labelPl" : "Komponent"
     } ],
@@ -2956,6 +3053,7 @@
       "key" : "content_md",
       "label" : "Сведения",
       "labelKey" : "pp.field.body",
+      "definition" : "Содержание технологии в Markdown.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Text",
@@ -3026,6 +3124,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название фичи: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -3035,6 +3134,7 @@
       "labelKey" : "pp.field.status",
       "kind" : "enum",
       "group" : "head",
+      "definition" : "Статус фичи: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
       "labelPl" : "Status"
@@ -3044,6 +3144,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код фичи — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
@@ -3054,6 +3155,7 @@
       "kind" : "enum",
       "group" : "props",
       "dict" : "uc_goal_level",
+      "definition" : "Уровень цели сценария по Коберну: облако — стратегическая цель, воздушный змей — сводная цель, уровень моря — цель пользователя за один раз, рыба — подфункция.",
       "layer" : "stable",
       "labelEn" : "Goal level",
       "labelPl" : "Poziom celu"
@@ -3063,6 +3165,7 @@
       "labelKey" : "pp.field.rigor",
       "kind" : "enum",
       "group" : "props",
+      "definition" : "Насколько подробно оформлен сценарий по Коберну: полное описание (fully-dressed) или неформальное (casual).",
       "layer" : "stable",
       "labelEn" : "Rigor",
       "labelPl" : "Stopień opracowania"
@@ -3072,6 +3175,7 @@
       "labelKey" : "pp.field.priority",
       "kind" : "enum",
       "group" : "props",
+      "definition" : "Приоритет фичи: насколько срочно его делать относительно других.",
       "layer" : "stable",
       "labelEn" : "Priority",
       "labelPl" : "Priorytet"
@@ -3081,6 +3185,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда запись фичи заведена в LORE.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Utworzono"
@@ -3090,6 +3195,7 @@
       "labelKey" : "pp.field.shippedAt",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда фича выпущена.",
       "layer" : "stable",
       "labelEn" : "Shipped",
       "labelPl" : "Wydano"
@@ -3103,6 +3209,7 @@
       "rel" : "DECOMPOSES_INTO",
       "dir" : "in",
       "relation" : "composition",
+      "definition" : "Родительская запись, в которую вложен этот объект.",
       "labelEn" : "Parent",
       "labelPl" : "Nadrzędny"
     }, {
@@ -3116,6 +3223,7 @@
       "rel" : "DECOMPOSES_INTO",
       "dir" : "out",
       "relation" : "composition",
+      "definition" : "Дочерние записи этого фичи (вложенные в него).",
       "labelEn" : "Scenarios",
       "labelPl" : "Scenariusze"
     }, {
@@ -3129,6 +3237,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     }, {
@@ -3142,6 +3251,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -3155,6 +3265,7 @@
       "rel" : "REALIZES",
       "dir" : "in",
       "relation" : "realization",
+      "definition" : "Задачи, которые реализуют фичу.",
       "labelEn" : "Tasks",
       "labelPl" : "Zadania"
     } ],
@@ -3162,6 +3273,7 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "definition" : "Текст фичи в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Opis"
@@ -3169,6 +3281,7 @@
       "key" : "context_md",
       "label" : "Контекст",
       "labelKey" : "pp.adr.context",
+      "definition" : "Контекст фичи: зачем она, кому и в какой ситуации.",
       "layer" : "stable",
       "labelEn" : "Context",
       "labelPl" : "Kontekst"
@@ -3176,6 +3289,7 @@
       "key" : "scenario_md",
       "label" : "Сценарий",
       "labelKey" : "pp.field.scenario",
+      "definition" : "Сценарий: шаги пользователя и системы.",
       "layer" : "stable",
       "labelEn" : "Scenario",
       "labelPl" : "Scenariusz"
@@ -3183,6 +3297,7 @@
       "key" : "acceptance_md",
       "label" : "Критерии приёмки",
       "labelKey" : "pp.field.acceptance",
+      "definition" : "Критерии приёмки: по чему видно, что фича готова.",
       "layer" : "stable",
       "labelEn" : "Acceptance criteria",
       "labelPl" : "Kryteria akceptacji"
@@ -3489,6 +3604,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название продукта: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Title",
@@ -3499,6 +3615,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код продукта — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Code",
@@ -3509,6 +3626,7 @@
       "labelKey" : "pp.field.color",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Цвет продукта в интерфейсе (метки и группы).",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Color",
@@ -3519,6 +3637,7 @@
       "labelKey" : "pp.field.labelEn",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Название продукта по-английски.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Name (en)",
@@ -3529,6 +3648,7 @@
       "labelKey" : "pp.field.icon",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Значок записи в интерфейсе (набор game-icons).",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Icon",
@@ -3539,6 +3659,7 @@
       "labelKey" : "pp.field.sortOrder",
       "kind" : "number",
       "group" : "props",
+      "definition" : "Порядок продукта в списках.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Order",
@@ -3557,6 +3678,7 @@
       "labelKey" : "pp.field.isActive",
       "kind" : "bool",
       "group" : "props",
+      "definition" : "Признак: продукт в работе (выключенный скрыт из выбора).",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Active",
@@ -3571,6 +3693,7 @@
       "rel" : "PARENT_PRODUCT",
       "dir" : "out",
       "relation" : "composition",
+      "definition" : "Родительская запись, в которую вложен этот объект.",
       "labelEn" : "Parent",
       "labelPl" : "Nadrzędny"
     }, {
@@ -3584,6 +3707,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -3597,6 +3721,7 @@
       "rel" : "IN_PRODUCT",
       "dir" : "in",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     } ],
@@ -3714,6 +3839,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название человека: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Imię"
@@ -3728,6 +3854,7 @@
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     }, {
@@ -3736,6 +3863,7 @@
       "labelKey" : "pp.field.login",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Логин человека в Keycloak.",
       "layer" : "stable",
       "labelEn" : "Login",
       "labelPl" : "Login"
@@ -3745,6 +3873,7 @@
       "labelKey" : "pp.field.avatar",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Картинка человека в интерфейсе.",
       "layer" : "stable",
       "labelEn" : "Avatar",
       "labelPl" : "Awatar"
@@ -3810,6 +3939,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название агента: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Imię"
@@ -3819,6 +3949,7 @@
       "labelKey" : "pp.field.clientId",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Учётка агента в Keycloak (клиент), под которой он ходит в LORE.",
       "layer" : "stable",
       "labelEn" : "Account",
       "labelPl" : "Konto"
@@ -3828,6 +3959,7 @@
       "labelKey" : "pp.field.agentRole",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Профиль агента: набор разрешённых ему инструментов MCP (full, developer, tester…).",
       "layer" : "stable",
       "labelEn" : "Profile",
       "labelPl" : "Profil"
@@ -3837,6 +3969,7 @@
       "labelKey" : "pp.field.harness",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Оболочка, в которой работает агент: Claude Code, Codex, Kimi Code… (из справочника).",
       "layer" : "stable",
       "labelEn" : "Harness",
       "labelPl" : "Powłoka"
@@ -3850,6 +3983,7 @@
       "rel" : "OWNED_BY",
       "dir" : "out",
       "relation" : "aggregation",
+      "definition" : "Владелец записи: кто за неё отвечает.",
       "labelEn" : "Owner",
       "labelPl" : "Właściciel"
     }, {
@@ -3863,6 +3997,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     } ],
@@ -3952,6 +4087,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название роли: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -3961,6 +4097,7 @@
       "labelKey" : "pp.field.roleKind",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Вид роли: человек, автоматизация или система.",
       "layer" : "stable",
       "labelEn" : "Role kind",
       "labelPl" : "Rodzaj roli"
@@ -3975,6 +4112,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     } ],
@@ -3982,6 +4120,7 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "definition" : "Текст роли в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Opis"
@@ -4102,6 +4241,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название боли: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -4111,6 +4251,7 @@
       "labelKey" : "pp.field.severity",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Острота боли: насколько сильно она мешает клиенту — высокая или обычная.",
       "layer" : "stable",
       "labelEn" : "Severity",
       "labelPl" : "Dotkliwość"
@@ -4120,6 +4261,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда запись боли заведена в LORE.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Utworzono"
@@ -4128,6 +4270,7 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "definition" : "Текст боли в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Opis"
@@ -4241,6 +4384,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название выгоды: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -4250,6 +4394,7 @@
       "labelKey" : "pp.field.rank",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Ранг выгоды по канве ценности: обязательная, ожидаемая, желательная или неожиданная для клиента.",
       "layer" : "stable",
       "labelEn" : "Rank",
       "labelPl" : "Ranga"
@@ -4259,6 +4404,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда запись выгоды заведена в LORE.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Utworzono"
@@ -4267,6 +4413,7 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "definition" : "Текст выгоды в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Opis"
@@ -4274,6 +4421,7 @@
       "key" : "metric_md",
       "label" : "Метрика",
       "labelKey" : "pp.field.metric",
+      "definition" : "Как измеряется выгода: метрика и порог.",
       "layer" : "stable",
       "labelEn" : "Metric",
       "labelPl" : "Metryka"
@@ -4387,6 +4535,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название работы: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -4396,6 +4545,7 @@
       "labelKey" : "pp.field.jobKind",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Вид работы клиента: функциональная, социальная или поддерживающая.",
       "layer" : "stable",
       "labelEn" : "Job kind",
       "labelPl" : "Rodzaj pracy"
@@ -4405,6 +4555,7 @@
       "labelKey" : "pp.field.importance",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Важность работы для клиента — высокая или обычная.",
       "layer" : "stable",
       "labelEn" : "Importance",
       "labelPl" : "Ważność"
@@ -4414,6 +4565,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда запись работы заведена в LORE.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Utworzono"
@@ -4422,6 +4574,7 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "definition" : "Текст работы в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
       "labelPl" : "Opis"
@@ -4548,6 +4701,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название ранбука: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -4557,6 +4711,7 @@
       "labelKey" : "pp.field.area",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Область работ, к которой относится ранбук: эксплуатация, инфраструктура, выкатка, вход, база, восстановление и т. п.",
       "layer" : "stable",
       "labelEn" : "Area",
       "labelPl" : "Obszar"
@@ -4566,6 +4721,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда запись ранбука заведена в LORE.",
       "layer" : "stable",
       "labelEn" : "Date",
       "labelPl" : "Utworzono"
@@ -4585,6 +4741,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
     } ],
@@ -4592,6 +4749,7 @@
       "key" : "content_md",
       "label" : "Текст",
       "labelKey" : "pp.field.body",
+      "definition" : "Содержание ранбука в Markdown.",
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Text",
@@ -4671,6 +4829,7 @@
       "kind" : "enum",
       "group" : "head",
       "dict" : "qg_status",
+      "definition" : "Статус гейта качества: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "labelEn" : "State",
       "labelPl" : "Stan"
     }, {
@@ -4689,6 +4848,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название гейта качества: под ним запись видна в списках и по нему её ищут.",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
     }, {
@@ -4697,6 +4857,7 @@
       "labelKey" : "pp.field.lastRunStatus",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Итог последнего прогона гейта: прошёл, упал или не выполнен.",
       "labelEn" : "Last run result",
       "labelPl" : "Wynik ostatniego przebiegu"
     }, {
@@ -4710,6 +4871,7 @@
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Owner project",
       "labelPl" : "Projekt-właściciel"
     }, {
@@ -4723,6 +4885,7 @@
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "relation" : "attribute",
+      "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
     }, {
@@ -4731,6 +4894,7 @@
       "labelKey" : "pp.field.sprint",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Спринт, в который входит запись.",
       "labelEn" : "Sprint",
       "labelPl" : "Sprint"
     }, {
@@ -4739,6 +4903,7 @@
       "labelKey" : "pp.field.date",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда запись гейта качества заведена в LORE.",
       "labelEn" : "Date",
       "labelPl" : "Utworzono"
     }, {
@@ -4747,6 +4912,7 @@
       "labelKey" : "pp.field.retiredAt",
       "kind" : "date",
       "group" : "props",
+      "definition" : "Когда гейт выведен из работы.",
       "labelEn" : "Retired",
       "labelPl" : "Wycofano"
     }, {
@@ -4755,6 +4921,7 @@
       "labelKey" : "pp.field.retiredReason",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Почему гейт выведен из работы.",
       "labelEn" : "Retirement reason",
       "labelPl" : "Powód wycofania"
     } ],
@@ -4762,12 +4929,14 @@
       "key" : "description",
       "label" : "Что проверяет",
       "labelKey" : "pp.field.whatChecks",
+      "definition" : "Что проверяет гейт и почему это важно.",
       "labelEn" : "What it checks",
       "labelPl" : "Co sprawdza"
     }, {
       "key" : "content_md",
       "label" : "Текст",
       "labelKey" : "pp.field.body",
+      "definition" : "Содержание гейта качества в Markdown.",
       "labelEn" : "Text",
       "labelPl" : "Tekst"
     } ],
@@ -4838,6 +5007,7 @@
       "kind" : "text",
       "group" : "head",
       "required" : true,
+      "definition" : "Название проекта: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
       "labelEn" : "Title",
       "labelPl" : "Nazwa"
@@ -4847,6 +5017,7 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
+      "definition" : "Код проекта — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
@@ -4856,6 +5027,7 @@
       "labelKey" : "pp.field.defaultBranch",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Основная ветка репозитория проекта (куда сливаются PR).",
       "layer" : "stable",
       "labelEn" : "Default branch",
       "labelPl" : "Gałąź główna"
@@ -4865,6 +5037,7 @@
       "labelKey" : "pp.field.isPrivate",
       "kind" : "text",
       "group" : "props",
+      "definition" : "Признак: репозиторий проекта закрытый.",
       "layer" : "stable",
       "labelEn" : "Private",
       "labelPl" : "Prywatny"
