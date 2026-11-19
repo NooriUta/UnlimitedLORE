@@ -94,12 +94,104 @@ final class ModelSchemaAdapter {
     /** SQL под новую схему; текст внутри кавычек остаётся как есть. */
     static String rewriteSql(String sql) {
         if (sql == null) return null;
-        return upperStatusLiterals(renameFields(sql));
+        return upperStatusLiterals(renameFields(withStatusNote(sql)));
+    }
+
+    // ── MT-MCP-TRUTH Б7: приписка статуса — в status_note ────────────────────────────────────────────
+
+    /** Суффикс параметра приписки: {@code :ns} → {@code :ns__note}. */
+    static final String NOTE_SUFFIX = "__note";
+
+    private static final Pattern STATUS_SET = Pattern.compile("(?<![\\w])status_raw\\s*=\\s*:(\\w+)");
+    private static final Pattern HIST_WRITE_HEAD = Pattern.compile("(?is)^\\s*(?:UPDATE|INSERT\\s+INTO)\\s+\\w+Hist\\b(.*)$");
+
+    /**
+     * Параметры, которые присваиваются полю статуса ВЕРСИИ (UPDATE/INSERT INTO *Hist … SET status_raw = :p, до WHERE).
+     * Сравнение в условии ({@code WHERE … status_raw = :expected}) — не присваивание; у вершины status_note нет.
+     */
+    static java.util.Set<String> statusNoteParams(String sql) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        if (sql == null || !sql.contains("status_raw")) return out;
+        Matcher m = STATUS_SET.matcher(sql);
+        while (m.find()) {
+            int stmt = sql.lastIndexOf(';', m.start()) + 1;
+            Matcher head = HIST_WRITE_HEAD.matcher(sql.substring(stmt, m.start()));
+            if (!head.matches()) continue;
+            String before = head.group(1);
+            if (!Pattern.compile("(?i)\\bSET\\b").matcher(before).find()) continue;
+            if (Pattern.compile("(?i)\\bWHERE\\b").matcher(before).find()) continue;
+            out.add(m.group(1));
+        }
+        return out;
+    }
+
+    /** SQL: рядом с присваиванием статуса версии — присваивание приписки {@code status_note = :p__note}. */
+    private static String withStatusNote(String sql) {
+        java.util.Set<String> names = statusNoteParams(sql);
+        if (names.isEmpty()) return sql;
+        Matcher m = STATUS_SET.matcher(sql);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String rep = m.group();
+            if (names.contains(m.group(1))) {
+                int stmt = sql.lastIndexOf(';', m.start()) + 1;
+                Matcher head = HIST_WRITE_HEAD.matcher(sql.substring(stmt, m.start()));
+                if (head.matches() && Pattern.compile("(?i)\\bSET\\b").matcher(head.group(1)).find()
+                        && !Pattern.compile("(?i)\\bWHERE\\b").matcher(head.group(1)).find())
+                    rep = m.group() + ", status_note = :" + m.group(1) + NOTE_SUFFIX;
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(rep));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    /** Головы статуса плана: слова строк старого вида и словаря, длинные первыми (READY FOR DEPLOY раньше READY). */
+    private static final List<String> HEAD_WORDS;
+    static {
+        java.util.Set<String> w = new java.util.LinkedHashSet<>();
+        for (String d : DISPLAY.values()) { int sp = d.indexOf(' '); if (sp > 0) w.add(d.substring(sp + 1).toUpperCase(java.util.Locale.ROOT)); }
+        for (LoreStatusVocabulary.Entry e : LoreStatusVocabulary.ENTRIES) w.addAll(e.words());
+        w.addAll(DISPLAY.keySet());
+        List<String> l = new java.util.ArrayList<>(w);
+        l.sort((a, b) -> b.length() - a.length());
+        HEAD_WORDS = List.copyOf(l);
+    }
+
+    /**
+     * Приписка строки статуса плана — то, что после значка и слова статуса («🟡 PARTIAL — ждём CI» → «ждём CI»).
+     * Нет приписки, не статус плана — {@code null}. Слово считается головой только целиком: «✅ Закрыто вручную» —
+     * приписка «Закрыто вручную» (ЗАКРЫТ — начало другого слова). Тот же разбор, что у установщика (apply-map.mjs).
+     */
+    static String noteOf(String raw) {
+        if (raw == null) return null;
+        String t = raw.strip();
+        if (t.isEmpty() || DISPLAY.containsKey(t) || DISPLAY.containsValue(t) || !looksLikePlan(t)) return null;
+        String rest = t;
+        for (LoreStatusVocabulary.Entry e : LoreStatusVocabulary.ENTRIES) {
+            if (rest.startsWith(e.marker())) {
+                rest = rest.substring(e.marker().length());
+                if (rest.startsWith("️")) rest = rest.substring(1);
+                rest = rest.stripLeading();
+                break;
+            }
+        }
+        String up = rest.toUpperCase(java.util.Locale.ROOT);
+        for (String w : HEAD_WORDS) {
+            if (up.startsWith(w) && (up.length() == w.length() || !Character.isLetterOrDigit(up.charAt(w.length())))) {
+                rest = rest.substring(w.length());
+                break;
+            }
+        }
+        rest = rest.replaceFirst("^[\\s—–\\-:·,]+", "").strip();
+        return rest.isEmpty() ? null : rest;
     }
 
     private static final Pattern STATUS_CMP = Pattern.compile("(?<![\\w])(status\\s*(?:=|<>|!=)\\s*)'([a-z][a-z_]*)'");
     private static final Pattern STATUS_IN = Pattern.compile("(?i)(?<![\\w])(status\\s+(?:NOT\\s+)?IN\\s*\\[)([^\\]]*)(\\])");
-    private static final Pattern LOWER_LIT = Pattern.compile("'([a-z][a-z_]*)'");
+    private static final Pattern STATUS_CASE = Pattern.compile("(?is)(?<![\\w.])CASE\\s+status\\s+WHEN\\b.*?\\bEND\\b");
+    private static final Pattern WHEN_LIT = Pattern.compile("(?i)(\\bWHEN\\s+)'([a-z][a-z_]*)'");
+    private static final Pattern LOWER_LIT =Pattern.compile("'([a-z][a-z_]*)'");
 
     /**
      * Коды статусов в новой схеме — заглавными (слово владелицы 16.11.2026: «статусная модель uppercase остальные в
@@ -119,6 +211,9 @@ final class ModelSchemaAdapter {
     static String upperStatusLiterals(String sql) {
         if (!sql.contains("status") || touchesTextStatus(sql)) return sql;
         String s = STATUS_CMP.matcher(sql).replaceAll(m -> Matcher.quoteReplacement(m.group(1) + "'" + m.group(2).toUpperCase(java.util.Locale.ROOT) + "'"));
+        // MT-MCP-TRUTH A3: CASE status WHEN 'open' … END — то же сравнение с кодом (ранг среза questions)
+        s = STATUS_CASE.matcher(s).replaceAll(m -> Matcher.quoteReplacement(
+            WHEN_LIT.matcher(m.group()).replaceAll(x -> Matcher.quoteReplacement(x.group(1) + "'" + x.group(2).toUpperCase(java.util.Locale.ROOT) + "'"))));
         return STATUS_IN.matcher(s).replaceAll(m -> Matcher.quoteReplacement(m.group(1)
             + LOWER_LIT.matcher(m.group(2)).replaceAll(x -> Matcher.quoteReplacement("'" + x.group(1).toUpperCase(java.util.Locale.ROOT) + "'"))
             + m.group(3)));
@@ -246,6 +341,12 @@ final class ModelSchemaAdapter {
     static Map<String, Object> rewriteParams(String sql, Map<String, Object> params) {
         if (sql == null || params == null || params.isEmpty() || !sql.contains("status")) return params;
         Map<String, Object> out = null;
+        // MT-MCP-TRUTH Б7: приписка статуса версии — в status_note (rewriteSql добавил присваивание :p__note)
+        for (String name : statusNoteParams(sql)) {
+            // параметр есть всегда: SQL уже ссылается на :p__note, а пропущенный параметр — ошибка движка
+            if (out == null) out = new java.util.HashMap<>(params);
+            out.put(name + NOTE_SUFFIX, params.get(name) instanceof String s ? noteOf(s) : null);
+        }
         Matcher m = STATUS_ASSIGN.matcher(sql);
         while (m.find()) {
             String name = m.group(1);

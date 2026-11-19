@@ -31,6 +31,9 @@ export default defineConfig({
     // Узкий телефон (SPRINT_UXR_S13_KIT4/K4-PHONE-PAGE-OVERFLOW): приёмка 14.11 мерила
     // витрину на 300 px — на 412 сетка с колонкой 320 ещё помещалась, на 300 уже нет.
     { name: 'phone-300', testMatch: /kit-showcase\.spec\.ts/, use: { viewport: { width: 300, height: 800 }, isMobile: true, hasTouch: true } },
+    // Экран «Модель» админки (SPRINT_LORE_MODEL_AS_CONFIG/MC-06): владелица работает с телефона 19.11 —
+    // «HTML админки не адаптирован под телефон». 390×844; сценарий сам проверяет и 360.
+    { name: 'phone-390', testMatch: /model-admin\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Планшет (жалобы владелицы 08.11 и 10.11 — скрины с планшета): палец, а не
     // мышь, поэтому невидимые зоны касания 44 px включены. Только экраны
     // новостей: остальные e2e под планшет не размечены.

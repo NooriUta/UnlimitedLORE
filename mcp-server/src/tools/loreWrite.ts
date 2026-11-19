@@ -1748,6 +1748,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       project:      z.string().optional().describe('owner project slug (KnowGitProject) — creates BELONGS_TO_PROJECT; required before status=active'),
       retired_reason: z.string().optional().describe('why the gate is retired — required with status=retired'),
       qg_type:      z.string().optional().describe('SPRINT_QG_REBUILD/QG-04: gate type, code of dictionary qg_type — universal: code | cicd | sec | know | doc; project: test | perf | data | ops | ux (lowercase)'),
+      scope:        z.enum(['global', 'project']).optional().describe('SPRINT_QG_REBUILD/QG-01: global = common gate, no owner project (its project links are removed; visible to every project, checks all projects; may be active without project); project = bound to exactly one project (pass project or have one already)'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/quality-gate', p)); }
@@ -1795,7 +1796,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       file_path:      z.string().optional(),
       content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
       content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
-      content_html:   z.string().optional().describe('Legacy: HTML content (100 KB max), rendered sandboxed'),
+      content_html:   z.string().optional().describe('Legacy: HTML content; no size limit is enforced. Rendered in a sandbox (SandboxedHtmlFrame). For new docs prefer content_md_ru / content_md_en'),
       content_md_en_file: z.string().optional().describe(bodyFileDescription('content_md_en')),
       content_md_ru_file: z.string().optional().describe(bodyFileDescription('content_md_ru')),
       content_html_file:  z.string().optional().describe(bodyFileDescription('content_html')),

@@ -540,7 +540,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
 
     // ── ADR-LORE-013: move a task between sprints (cancel + recreate) ────────
     // Creates a fresh copy in the target sprint (title/note_md/effort_days +
-    // TAGGED_WITH component links, initial PLANNED state) and cancels the source
+    // TAGGED_WITH component links, status carried from the source — none → BACKLOG) and cancels the source
     // (stays as a ❌ tombstone in the old sprint, note carried forward per #88).
     // No PK re-key / SCD2 surgery — reuses the create + status write paths.
     public record TaskMoveRequest(String task_uid, String target_sprint_id, String new_task_id) {}
@@ -548,11 +548,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     /**
      * MT-TASK-MV-HISTORY (Völva 05.11.2026): перенос задачи создавал новую с историей
      * «📋 PLANNED» — статус терялся, его восстанавливали руками у каждой перенесённой
-     * задачи. Переносится статус открытой строки истории; нет его — PLANNED, как раньше.
+     * задачи. Переносится статус открытой строки истории.
+     *
+     * <p>MT-MCP-TRUTH Б5 (MDL-11, ST-08): статуса нет — первый статус задачи, бэклог ({@link TaskCreateStatus#DEFAULT}),
+     * как при создании без статуса; прежний PLANNED выдумывал «запланирована» для задачи, о которой это неизвестно.
      */
     static String carriedStatus(Object statusRaw) {
         String v = statusRaw == null ? null : String.valueOf(statusRaw).strip();
-        return (v == null || v.isEmpty()) ? "📋 PLANNED" : v;
+        return (v == null || v.isEmpty()) ? TaskCreateStatus.raw(null) : v;
     }
 
     /**
@@ -902,10 +905,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 String note = req.note_append() != null
                     ? appendText(currentTaskNote(req.task_uid()), req.note_append())
                     : req.note_md();
-                writeClient.command(db, basicAuth(),
+                // MT-MCP-TRUTH Б11: пункт с несуществующей задачей — ошибка пункта, а не «updated»
+                if (WriteCount.missed(writeClient.command(db, basicAuth(),
                     taskVertexUpdate(req.task_uid(), req.title(), note, req.effort_days(), req.actual_days(), req.bookkeeping(),
                         req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
-                    .await().indefinitely();
+                    .await().indefinitely())) {
+                    errors.add("skipped (NOT_FOUND): задача " + req.task_uid() + " не найдена — ни одна строка не изменена");
+                    continue;
+                }
                 writeTaskHist(req.task_uid(), note, req.effort_days(), batchAuthor);
                 if (note != null)
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.task_uid());
@@ -1063,7 +1070,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 throw new Scd2Guard.ConflictException(c.detail(), c.current());
             if (o instanceof StatusHistoryService.Outcome.Ok) return;
         }
-        mirrorTaskHist(uid, note, effortDays).await().indefinitely();
+        // MT-MCP-TRUTH Б11: открытой строки нет (её закрыли между пробой и записью) — правка истории не легла
+        if (WriteCount.missed(mirrorTaskHist(uid, note, effortDays).await().indefinitely()))
+            throw new WriteCount.MissedException(WriteCount.conflict("NO_OPEN_STATE", "task", uid,
+                "у задачи " + uid + " нет открытой строки истории: note_md/effort_days легли только на вершину, "
+                    + "срезы их не покажут. Сначала status_set (откроет строку), затем повтори task_set."));
     }
 
     @POST
@@ -1120,7 +1131,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
             .chain(__ -> writeClient.command(db, basicAuth(),
                 taskVertexUpdate(uid, req.title(), note[0], req.effort_days(), req.actual_days(), req.bookkeeping(),
-                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class())))
+                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
+                // MT-MCP-TRUTH Б11: правка несуществующей задачи — 404, а не ok:true (UPDATE задел 0 строк)
+                .map(r -> WriteCount.requireHit(r, "task", uid, "правка задачи (task_set)")))
             // The vertex note_md/effort_days above are denormalisations the UI never reads.
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
@@ -1164,6 +1177,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
+                if (ex instanceof WriteCount.MissedException me) return me.response();
                 if (ex instanceof Scd2Guard.ConflictException ce) return ce.response();
                 if (Scd2Guard.isConcurrentModification(ex))
                     return Scd2Guard.conflict("task '" + uid + "': concurrent write to the same version — re-read and retry", Map.of());
@@ -1246,9 +1260,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 }
             }
             String updated = sb.toString().trim();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE " + rid + " SET pr_refs = :refs",
-                Map.of("refs", updated))).await().indefinitely();
+            // MT-MCP-TRUTH Б11: строку прочитали по @rid, но записать в неё не вышло (удалена между чтением и записью)
+            if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE " + rid + " SET pr_refs = :refs",
+                    Map.of("refs", updated))).await().indefinitely()))
+                return WriteCount.conflict("STALE_VERSION", "sprint", req.sprint_id(),
+                    "открытая строка истории спринта исчезла между чтением и записью — pr_refs не записаны; перечитайте и повторите");
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
@@ -1426,8 +1443,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         p.put("upd", java.time.Instant.now().toString());
         p.put("sid", req.sprint_id());
         try {
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                set + " WHERE sprint_id=:sid", p)).await().indefinitely();
+            // MT-MCP-TRUTH Б11: правка несуществующего спринта — 404, а не ok:true
+            if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    set + " WHERE sprint_id=:sid", p)).await().indefinitely()))
+                return WriteCount.notFound("sprint", req.sprint_id(), "правка спринта (sprint_set)");
             // MT-NOTE-APPEND п.4 (+ основа п.3): тела — и на открытую строку истории, затем хэш.
             // Без этого content_hash спринта считался по пустым полям строки (одинаков при любом
             // тексте), а смена статуса переносила на новую версию null вместо текста.
@@ -1442,9 +1461,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     texts, changeAuthor());
                 if (tv instanceof StatusHistoryService.Outcome.Conflict c)
                     return Scd2Guard.conflict(c.detail() + " (sprint vertex already updated; repeat the call)", c.current());
-                if (!(tv instanceof StatusHistoryService.Outcome.Ok))
-                    writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
-                        .await().indefinitely();
+                // MT-MCP-TRUTH Б11: зеркало не нашло открытую строку — тексты легли только на вершину
+                if (!(tv instanceof StatusHistoryService.Outcome.Ok)
+                        && WriteCount.missed(writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
+                            .await().indefinitely()))
+                    return WriteCount.conflict("NO_OPEN_STATE", "sprint", req.sprint_id(),
+                        "у спринта " + req.sprint_id() + " нет открытой строки истории: context_md/outcome_md легли только "
+                            + "на вершину (sprint vertex already updated), история их не хранит. Откройте строку сменой статуса "
+                            + "(status_set) и повторите правку.");
                 hashStamper.stampOpenHist("KnowSprintHist", "KnowSprint", "sprint_id", req.sprint_id());
             }
             Map<String, Object> out = new LinkedHashMap<>();
