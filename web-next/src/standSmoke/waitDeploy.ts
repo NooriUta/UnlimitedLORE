@@ -16,3 +16,14 @@ export function deployState(httpStatus: number, body: unknown, expected: string)
     && (a.startsWith(b) || b.startsWith(a));
   return { reached, seen };
 }
+
+/** Сколько раз за одно ожидание можно войти заново: токен живёт ~15 мин, ожидание — до 40. */
+export const MAX_RELOGINS = 6;
+
+/**
+ * 401 — токен сохранённого входа истёк (прогон 9017, 18.11.2026: 15 мин выкатки в очереди — и до конца ожидания
+ * сплошные 401). Повод войти заново, пока не исчерпан запас; иначе — честный отказ по сроку.
+ */
+export function shouldRelogin(httpStatus: number, reloginsDone: number): boolean {
+  return httpStatus === 401 && reloginsDone < MAX_RELOGINS;
+}
