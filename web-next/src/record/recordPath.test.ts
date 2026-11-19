@@ -43,6 +43,21 @@ describe('recordPath: ключ записи в пути', () => {
     expect(recordPath('A?b')).toBe('A%3Fb');
   });
 
+  // Ключ репозитория — адрес `https://хост/владелец/имя` (D-2026-MIG-REPOSITORY-ORGANIZATION). Сервер склеивает
+  // пустой сегмент `//` в `/` ДО сопоставления пути: `https%3A//git…` доходит как `https:/git…`, не проходит
+  // REPO_URL и даёт 400 «id contains illegal characters» (проба ryzenai :9192, 19.11.2026: `https%3A//…` → 400,
+  // `https%3A/%2F…` → 200). Правило общее: пустых сегментов в пути быть не должно — второй слэш подряд уходит как %2F.
+  it('двойной слэш (адрес репозитория) не оставляет пустого сегмента — второй слэш как %2F', () => {
+    const out = recordPath('https://git.seidrstudio.pro/AIDA/MIDGARD');
+    expect(out).toBe('https%3A/%2Fgit.seidrstudio.pro/AIDA/MIDGARD');
+    expect(out).not.toContain('//');
+  });
+
+  it('любая серия слэшей подряд — без пустых сегментов', () => {
+    expect(recordPath('a///b')).toBe('a/%2F%2Fb');
+    expect(recordPath('SPRINT_X/CO-11')).toBe('SPRINT_X/CO-11');
+  });
+
   it('пустой ключ — пустая строка, а не «undefined» в пути', () => {
     expect(recordPath('')).toBe('');
   });
