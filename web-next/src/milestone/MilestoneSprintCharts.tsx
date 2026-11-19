@@ -5,8 +5,8 @@
 // эти графики — про спринты.
 // Честно: срез не прочитан — причина и «Повторить»; спринтов у вехи нет — словами; часть спринтов вехи не пришла
 // или без даты — «показана часть N из M» у графиков.
-import { useMemo } from 'react';
-import { BarChart, LineChart, rowsOf, useLoadState } from '@seidr/kit';
+import { useMemo, useState } from 'react';
+import { BarChart, GameIcon, LineChart, rowsOf, useLoadState } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
 import { milestoneSprintSeries, type MilestoneSprintRow } from './milestoneSprintSeries';
@@ -19,6 +19,11 @@ export interface MilestoneSprintChartsProps {
   fetchImpl?: typeof fetch;
   /** «Сегодня» (тесты). */
   now?: number;
+  /**
+   * Свёрнуто под вехой (телефон, «можно и на дорожную карту» 19.11): кнопка «Графики вехи», раскрытие — по нажатию.
+   * До раскрытия срезы не грузятся.
+   */
+  fold?: boolean;
 }
 
 /** Спринты вехи из строки milestone_by_id: дыры (null) отбрасываются. */
@@ -27,7 +32,23 @@ function sprintIds(row: { direct_sprint_ids?: unknown } | undefined): string[] {
   return [...new Set(v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim()))];
 }
 
-export function MilestoneSprintCharts({ milestoneId, load, fetchImpl, now }: MilestoneSprintChartsProps) {
+export function MilestoneSprintCharts({ fold, ...p }: MilestoneSprintChartsProps) {
+  const t = useAppT();
+  const [open, setOpen] = useState(false);
+  if (!fold) return <ChartsBody {...p} />;
+  return (
+    <div className="ms-fold" data-testid="milestone-charts-fold">
+      <button type="button" className="sk-btn ms-fold__btn" aria-expanded={open} onClick={() => setOpen(v => !v)}>
+        <GameIcon slug="histogram" size={14} />
+        <span>{t('milestoneCharts.fold')}</span>
+        <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <ChartsBody {...p} />}
+    </div>
+  );
+}
+
+function ChartsBody({ milestoneId, load, fetchImpl, now }: Omit<MilestoneSprintChartsProps, 'fold'>) {
   const t = useAppT();
   const fetcher = useMemo(() => sliceFetcher(fetchImpl ? { fetchImpl } : {}), [fetchImpl]);
   const get: MilestoneChartsLoader = load ?? ((s, p, signal) => fetcher(s, p, signal));

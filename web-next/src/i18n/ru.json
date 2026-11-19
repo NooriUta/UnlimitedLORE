@@ -2047,6 +2047,7 @@
   "analytics.dyn.decisions": "решения",
   "analytics.dyn.current": "{period} — период ещё идёт, сравнивать с полным прошлым осторожно.",
   "milestoneCharts.title": "Графики спринтов вехи",
+  "milestoneCharts.fold": "Графики вехи: Velocity и Burnup по спринтам",
   "milestoneCharts.velocity": "Velocity вехи — закрыто спринтов за неделю",
   "milestoneCharts.burnup": "Burnup вехи — спринты: объём и сделано, накопленно",
   "milestoneCharts.noSprints": "У вехи нет спринтов — графиков по спринтам нет",

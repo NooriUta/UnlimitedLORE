@@ -2047,6 +2047,7 @@
   "analytics.dyn.decisions": "decisions",
   "analytics.dyn.current": "{period} — the period is still running; compare with the full previous one carefully.",
   "milestoneCharts.title": "Milestone sprint charts",
+  "milestoneCharts.fold": "Milestone charts: velocity and burnup by sprint",
   "milestoneCharts.velocity": "Milestone velocity — sprints closed per week",
   "milestoneCharts.burnup": "Milestone burnup — sprints: scope and done, cumulative",
   "milestoneCharts.noSprints": "The milestone has no sprints — no sprint charts",

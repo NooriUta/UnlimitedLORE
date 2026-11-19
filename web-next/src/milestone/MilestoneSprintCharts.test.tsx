@@ -2,7 +2,7 @@
 // K4-CHARTS (вопрос 11 владелицы 19.11.2026): в паспорте вехи — графики её спринтов на kit (Velocity, Burnup),
 // как в v1 по фильтру «Веха». Честные состояния: сбой с «Повторить», «нет спринтов», «показана часть».
 import { describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { KitLangProvider } from '@seidr/kit';
 import { MilestoneSprintCharts } from './MilestoneSprintCharts';
 
@@ -32,6 +32,20 @@ describe('паспорт вехи: графики спринтов вехи на
     ui(async () => { throw new Error('502 шлюз'); });
     await waitFor(() => expect(screen.getAllByRole('button', { name: /Повторить/ }).length).toBeGreaterThan(0));
     expect(screen.getAllByText(/502 шлюз/).length).toBeGreaterThan(0);
+  });
+
+  // «можно и на дорожную карту» (19.11): на телефоне графики под вехой — раскрытием; до раскрытия срезы не грузятся.
+  it('свёрнуто (телефон) — кнопка «Графики вехи», без запросов; раскрыл — два графика', async () => {
+    const asked: string[] = [];
+    render(<KitLangProvider lang="ru"><MilestoneSprintCharts milestoneId="M7" now={TODAY} fold
+      load={async s => { asked.push(s); return s === 'milestone_by_id' ? MS : SPRINTS; }} /></KitLangProvider>);
+    const btn = screen.getByRole('button', { name: /Графики вехи/ });
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelectorAll('[data-testid="kit-chart"]').length).toBe(0);
+    expect(asked).toEqual([]);
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    await waitFor(() => expect(document.querySelectorAll('[data-testid="kit-chart"]').length).toBe(2));
   });
 
   it('у вехи нет спринтов — так и сказано, графиков нет', async () => {

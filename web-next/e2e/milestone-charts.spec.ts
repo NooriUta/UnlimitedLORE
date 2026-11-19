@@ -38,6 +38,8 @@ for (const w of [1280, 390]) {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
     });
     await page.goto(`/?mod=forseti&sec=milestone&open=${M}&place=full`);
+    // На телефоне графики под вехой свёрнуты кнопкой «Графики вехи» (19.11, «можно и на дорожную карту»).
+    if (w < 720) await page.getByRole('button', { name: /Графики вехи/ }).click({ timeout: 20_000 });
     const box = page.getByTestId('milestone-charts');
     await expect(box).toBeVisible({ timeout: 20_000 });
     const charts = box.getByTestId('kit-chart');

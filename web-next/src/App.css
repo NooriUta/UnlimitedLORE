@@ -249,4 +249,8 @@
 .an-note { margin: 0; color: var(--t3); font-size: var(--fs-2xs); }
 /* Графики спринтов вехи в паспорте (вопрос 11, 19.11): та же сетка блоков, отступ от строки сгорания. */
 .ms-charts { margin: 8px 0 12px; }
+/* «можно и на дорожную карту» (19.11): на телефоне — кнопка «Графики вехи» под вехой; в раскрытии строки — под сгоранием. */
+.ms-fold { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+.ms-fold__btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
+.ms-row { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .an-block__src { align-self: flex-start; font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--t3); border: 1px solid var(--bd); border-radius: 999px; padding: 1px 8px; }
