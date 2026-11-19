@@ -323,6 +323,7 @@
   "pp.field.supersedes": "Заменяет",
   "pp.field.tags": "Теги",
   "pp.field.file": "Файл",
+  "pp.field.hasExtDeps": "Внешние зависимости",
   "pp.field.version": "Версия",
   "pp.field.summary": "Кратко",
   "pp.field.title": "Название",
