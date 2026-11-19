@@ -1,7 +1,7 @@
 // E2E-STAND: смоук после выкатки в preprod ждёт, пока стенд отдаст ТОТ ЖЕ коммит,
 // иначе проверил бы прошлую сборку и выдал бы её зелёный за новую.
 import { describe, expect, it } from 'vitest';
-import { deployState, shouldRelogin, MAX_RELOGINS, docsOnlyChange } from './waitDeploy';
+import { deployState, shouldRelogin, MAX_RELOGINS, docsOnlyChange, backendDeployExpected } from './waitDeploy';
 
 const SHA = '949044fd8a1b2c3d4e5f60718293a4b5c6d7e8f9';
 
@@ -54,5 +54,20 @@ describe('docsOnlyChange', () => {
     expect(docsOnlyChange(['RELEASE-v1.17.28.md', 'web-next/src/App.tsx'])).toBe(false);
     expect(docsOnlyChange(['.github/workflows/lore-cd.yml'])).toBe(false);
     expect(docsOnlyChange([])).toBe(false);
+  });
+});
+
+// Прогон 37943 (19.11.2026): промо меняло только тесты, CD по ci-scope.sh пересобрал v2 и НЕ выкатывал бэкенд
+// (backend=false), а /lore/version отдаёт коммит бэкенда — ожидание 40 мин ждало коммит, который не придёт.
+// Правило одно с CD: решает сам ci-scope.sh, здесь только чтение его вывода.
+describe('backendDeployExpected', () => {
+  it('backend=false в выводе ci-scope — бэкенд не выкатывается, старый коммит законен', () => {
+    expect(backendDeployExpected('cd-scope: …\nbackend=false\nfrontend=false\nfrontend_next=true\n')).toBe(false);
+  });
+  it('backend=true — ждём новый коммит бэкенда', () => {
+    expect(backendDeployExpected('backend=true\nfrontend_next=true\n')).toBe(true);
+  });
+  it('вывод не разобран — не знаем (null), ожидание как раньше', () => {
+    expect(backendDeployExpected('ошибка')).toBe(null);
   });
 });

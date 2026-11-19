@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
-import { deployState, docsOnlyChange, shouldRelogin } from '../../src/standSmoke/waitDeploy.ts';
+import { backendDeployExpected, deployState, docsOnlyChange, shouldRelogin } from '../../src/standSmoke/waitDeploy.ts';
 import { parseStandAccounts } from './accounts.ts';
 import { standLogin } from './login.ts';
 import { isForbiddenStandUrl } from '../../src/standSmoke/summary.ts';
@@ -32,6 +32,15 @@ function changedFiles(from: string, to: string): string[] | null {
   try {
     return execFileSync('git', ['diff', '--name-only', from, to], { encoding: 'utf8' }).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   } catch { return null; }
+}
+
+/** Вывод `ci-scope.sh cd` для набора файлов — то же решение «что выкатывать», что принимает LORE CD. Сбой — ''. */
+function cdScope(files: string[]): string {
+  try {
+    return execFileSync('bash', ['../.github/scripts/ci-scope.sh', 'cd'], {
+      encoding: 'utf8', env: { ...process.env, CI_SCOPE_FILES: files.join('\n'), EVENT_NAME: 'push', GITHUB_OUTPUT: '' },
+    });
+  } catch { return ''; }
 }
 
 let relogins = 0;
@@ -63,6 +72,10 @@ for (;;) {
       const files = changedFiles(st.seen, expected);
       if (files && docsOnlyChange(files)) {
         console.log(`стенд на ${st.seen.slice(0, 8)}; до ${expected.slice(0, 8)} изменились только документы (${files.length}) — сборка та же, запускаем смоук`);
+        process.exit(0);
+      }
+      if (files && files.length > 0 && backendDeployExpected(cdScope(files)) === false) {
+        console.log(`стенд на ${st.seen.slice(0, 8)}; до ${expected.slice(0, 8)} бэкенд по правилам CD не выкатывается (${files.length} файл(ов)) — /lore/version законно на прежнем коммите, запускаем смоук`);
         process.exit(0);
       }
     }
