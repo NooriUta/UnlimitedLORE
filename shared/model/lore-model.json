@@ -40,7 +40,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "backlog"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -520,7 +521,8 @@
       "historic" : true,
       "labelEn" : "Status",
       "labelPl" : "Status",
-      "notnull" : true
+      "notnull" : true,
+      "initial" : "backlog"
     }, {
       "key" : "waiting_for",
       "label" : "Ждём",
@@ -1067,7 +1069,8 @@
       },
       "definition" : "Состояние решения: предложено, принято, отложено или заменено другим.",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "DRAFT"
     }, {
       "key" : "date",
       "label" : "Дата",
@@ -1472,7 +1475,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "version",
       "label" : "Версия",
@@ -1932,7 +1936,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -2165,7 +2170,8 @@
       "definition" : "Статус вопроса: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "open"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -3155,7 +3161,8 @@
       "definition" : "Статус фичи: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -4865,7 +4872,8 @@
       "dict" : "qg_status",
       "definition" : "Статус гейта качества: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "labelEn" : "State",
-      "labelPl" : "Stan"
+      "labelPl" : "Stan",
+      "initial" : "draft"
     }, {
       "key" : "qg_type",
       "label" : "Тип",
@@ -5477,7 +5485,8 @@
       "group" : "head",
       "dict" : "task_status",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "backlog"
     }, {
       "key" : "title",
       "label" : "Название",
@@ -5518,7 +5527,8 @@
       "kind" : "enum",
       "group" : "head",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "open"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -5567,7 +5577,8 @@
       "group" : "head",
       "dict" : "decision_status",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",

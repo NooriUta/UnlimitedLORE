@@ -85,9 +85,17 @@ public class LoreQuestionResource extends LoreResourceBase {
             StringBuilder sql = new StringBuilder("UPDATE KnowQuestion SET question_id=:qid");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("qid", req.question_id());
+            // Правило владелицы 19.11.2026: вопрос без статуса (новый или со статусом null) получает начальный
+            // статус типа по модели (question.status.initial), подстановка — в ответе (defaulted).
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> had = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql", "SELECT status FROM KnowQuestion WHERE question_id=:qid",
+                    Map.of("qid", req.question_id()))).await().indefinitely().result();
+            boolean noStatusYet = had == null || had.isEmpty() || had.get(0).get("status") == null;
+            final CreateDefaultStatus.Pick statusPick = noStatusYet ? CreateDefaultStatus.pick("question", req.status()) : null;
             putIf(sql, p, "title",        ":title", req.title());
             putIf(sql, p, "body_md",      ":body",  req.body_md());
-            putIf(sql, p, "status",       ":status", req.status());
+            putIf(sql, p, "status",       ":status", statusPick != null ? statusPick.value() : req.status());
             // `trigger` В ОБРАТНЫХ КАВЫЧКАХ — зарезервированное слово SQL ArcadeDB.
             // Без них запрос не парсится вовсе:
             //   CommandSQLParsingException: mismatched input ',' … trigger=:trig
@@ -110,10 +118,7 @@ public class LoreQuestionResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE question_id=:qid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
-            // Defaults on fresh insert: status=open, opened_date=today (only where null).
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowQuestion SET status='open' WHERE question_id=:qid AND status IS NULL",
-                Map.of("qid", req.question_id()))).await().indefinitely();
+            // Default on fresh insert: opened_date=today (only where null). Статус — выше, из модели.
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowQuestion SET opened_date=:d WHERE question_id=:qid AND opened_date IS NULL",
                 Map.of("d", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "qid", req.question_id()))).await().indefinitely();
@@ -129,6 +134,7 @@ public class LoreQuestionResource extends LoreResourceBase {
             // он висит прочитанный и никем не взятый.
             WorkQuality.Result quality = questionQuality(req.question_id());
             if (quality != null) out.put("quality", WorkQuality.compact(quality));
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION CREATE] %s: %s", req.question_id(), e.getMessage());

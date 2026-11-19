@@ -104,7 +104,8 @@ public class LoreSpecResource extends LoreResourceBase {
                 new LoreCommandClient.LoreCommand("sql", "SELECT count(*) AS n FROM KnowSpec WHERE spec_id=:id",
                     Map.of("id", req.spec_id()))).await().indefinitely().result();
             boolean isNewSpec = had == null || had.isEmpty() || !(had.get(0).get("n") instanceof Number hn) || hn.intValue() == 0;
-            final String st = isNewSpec ? CreateDefaultStatus.forNew("spec", req.status()) : req.status();
+            final CreateDefaultStatus.Pick statusPick = isNewSpec ? CreateDefaultStatus.pick("spec", req.status()) : null;
+            final String st = statusPick != null ? statusPick.value() : req.status();
             StringBuilder sql = new StringBuilder("UPDATE KnowSpec SET spec_id=:id");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("id", req.spec_id());
@@ -246,6 +247,7 @@ public class LoreSpecResource extends LoreResourceBase {
             // тема покрыта. Advisory, на запись не влияет.
             WorkQuality.Result quality = specQuality(req.spec_id());
             if (quality != null) out.put("quality", WorkQuality.compact(quality));
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Scd2Guard.ConflictException c) {
             return c.response(); // S2-09
