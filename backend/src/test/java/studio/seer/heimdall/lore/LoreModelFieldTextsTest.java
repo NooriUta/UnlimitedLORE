@@ -27,8 +27,24 @@ class LoreModelFieldTextsTest {
         LoreModelFile.replace(LoreModelFile.parse(LoreModelLiveReplaceTest.canon()));
     }
 
+    /**
+     * Канон, у двух подопытных полей гейта которого снято определение. В самом каноне определения
+     * у них есть (MDL-04), а тестам нужно поле «без текста»: снимаем строку {@code definition}
+     * внутри объекта поля, остальное — как в каноне. Не зависит от формулировки определения.
+     */
+    static String bareCanon() throws Exception {
+        String s = LoreModelLiveReplaceTest.canon();
+        for (String anchor : List.of(FIELD, BODY)) {
+            assertTrue(s.contains(anchor), "положительный контроль: якорь есть в каноне — " + anchor);
+            s = java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(anchor)
+                    + "(,?(?:\\n {6}\"(?!definition\")[^\\n]*)*)\\n {6}\"definition\" : \"(?:[^\"\\\\]|\\\\.)*\",")
+                .matcher(s).replaceFirst(java.util.regex.Matcher.quoteReplacement(anchor) + "$1");
+        }
+        return s;
+    }
+
     static String canonWith(String anchor, String extra) throws Exception {
-        String canon = LoreModelLiveReplaceTest.canon();
+        String canon = bareCanon();
         assertTrue(canon.contains(anchor), "положительный контроль: якорь есть в каноне — " + anchor);
         return canon.replace(anchor, anchor + extra);
     }
@@ -63,7 +79,8 @@ class LoreModelFieldTextsTest {
     }
 
     @Test
-    void fieldWithoutTextsKeepsKeysWithNull() {
+    void fieldWithoutTextsKeepsKeysWithNull() throws Exception {
+        LoreModelFile.replace(LoreModelFile.parse(bareCanon()));
         Map<String, Object> f = fieldOf("quality_gate", "retired_reason");
         for (String k : List.of("short_label", "definition", "description", "layer", "historic"))
             assertTrue(f.containsKey(k), "ключ «" + k + "» есть всегда: клиент отличает «не задано» от «старый сервер»");
@@ -98,6 +115,7 @@ class LoreModelFieldTextsTest {
     @Test
     @SuppressWarnings("unchecked")
     void modelCountsFieldsWithoutDefinition() throws Exception {
+        LoreModelFile.replace(LoreModelFile.parse(bareCanon()));
         Map<String, Object> before = (Map<String, Object>) content(LoreModel.build(List.of())).get("field_texts");
         assertNotNull(before, "счётчик текстов полей есть в ответе модели");
         int total = (int) before.get("fields");
