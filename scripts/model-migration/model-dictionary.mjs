@@ -136,7 +136,7 @@ export function buildDictionary({ model, edgesMap, objectsMap, triples, code, so
       audience: (model.audience && model.audience[t.type]) || '',
       readOnly: (model.read_only || []).includes(t.type),
       blocks: ((model.passport && model.passport[t.type]) || []).map(b => b.key),
-      transfer: g.vertex ? (objectsMap.types[g.vertex] ? 'переносится по карте' : (objectsMap.skipped[g.vertex] ? 'не переносится: ' + objectsMap.skipped[g.vertex] : 'первый объект — своей картой')) : '',
+      transfer: transferOfType(g.vertex, objectsMap),
       writers: c.writers, readers: c.readers, fields,
     });
   }
@@ -178,6 +178,16 @@ export function buildDictionary({ model, edgesMap, objectsMap, triples, code, so
   });
 
   return { types, edges, others, pages: renderPages({ types, edges, others, source, model }) };
+}
+
+const FIRST = new Set(['KnowSprint', 'KnowPhase', 'KnowTask']);
+/** Судьба типа при переносе по карте 1.18. */
+export function transferOfType(T, objectsMap) {
+  if (!T) return '—';
+  if (objectsMap.types[T]) return 'переносится по карте';
+  if (objectsMap.skipped[T]) return 'не переносится: ' + objectsMap.skipped[T];
+  if (FIRST.has(T)) return 'первый объект — своей картой (sprint-phase-task)';
+  return 'в карте переноса нет: тип новой модели, данных в источнике нет';
 }
 
 const ROOT = 'lore_model_dictionary';

@@ -1,7 +1,7 @@
 // SPRINT_LORE_MODEL_DOCS_TIDY/MD-01 · словарь типов, полей и рёбер — генерируется из модели 1.18 и кода, не пишется руками.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDictionary, scanCode, classifyLine } from './model-dictionary.mjs';
+import { buildDictionary, scanCode, classifyLine, transferOfType } from './model-dictionary.mjs';
 import loreModel from '../../shared/model/lore-model.json' with { type: 'json' };
 import edgesMap from './map/all.edges.json' with { type: 'json' };
 import objectsMap from './map/all-objects.json' with { type: 'json' };
@@ -74,4 +74,11 @@ test('выход детерминирован и делится на стран�
     assert.ok(p.title && p.md.length > 100, p.doc_id);
     assert.ok(Buffer.byteLength(p.md) < 95000, p.doc_id + ' меньше 95 КБ');
   }
+});
+
+test('судьба типа: первый объект — своей картой, новый тип модели без карты — так и сказано', () => {
+  assert.match(transferOfType('KnowSprint', objectsMap), /первый объект/);
+  assert.match(transferOfType('KnowRepository', objectsMap), /в карте переноса нет/);
+  assert.match(transferOfType('PlanTrack', objectsMap), /не переносится/);
+  assert.equal(transferOfType('KnowADR', objectsMap), 'переносится по карте');
 });
