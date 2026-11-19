@@ -137,6 +137,19 @@ class ModelSchemaAdapterTest {
     }
 
     @Test
+    void статус_в_ответе_двери_записи_в_прежнем_виде() {
+        // проба 19.11: /lore/status по ADR отвечал old_status=PROPOSED, new_status=ACCEPTED — клиенты знают «proposed»
+        ModelSchemaAdapter.enable(true);
+        try {
+            assertEquals("accepted", ModelSchemaAdapter.forClient("ACCEPTED"));
+            assertEquals("🔄 IN PROGRESS", ModelSchemaAdapter.forClient("ACTIVE"));
+            assertEquals("🟡 PARTIAL", ModelSchemaAdapter.forClient("🟡 PARTIAL"));
+            assertEquals(null, ModelSchemaAdapter.forClient(null));
+        } finally { ModelSchemaAdapter.enable(false); }
+        assertEquals("ACCEPTED", ModelSchemaAdapter.forClient("ACCEPTED"), "старая схема — как есть");
+    }
+
+    @Test
     void ответ_базы_целиком_json_приводится_к_прежнему_виду() {
         String json = "{\"result\":[{\"task_uid\":\"A/1\",\"status_raw\":\"BLOCKED\"},{\"n\":3}]}";
         String out = ModelSchemaAdapter.adaptJson(json);

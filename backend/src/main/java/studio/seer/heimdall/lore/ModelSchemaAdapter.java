@@ -167,6 +167,16 @@ final class ModelSchemaAdapter {
         Map.entry("uat", "UAT"), Map.entry("done", "DONE"), Map.entry("failed", "FAILED"),
         Map.entry("blocked", "BLOCKED"), Map.entry("cancelled", "CANCELLED"));
 
+    /**
+     * Статус для ответа клиенту (двери записи: old_status/new_status): на базе из модели код плана — прежняя строка
+     * («🔄 IN PROGRESS»), код другого справочника — строчными («accepted»), как до переноса. Старая схема — как есть.
+     */
+    static String forClient(String v) {
+        if (v == null || !enabled) return v;
+        if (DISPLAY.containsKey(v)) return DISPLAY.get(v);
+        return v.matches("[A-Z][A-Z_]*") ? v.toLowerCase(java.util.Locale.ROOT) : v;
+    }
+
     /** Узнаётся ли строка словарём плана: значок или слово в начале (без отката на «todo»). */
     static boolean looksLikePlan(String t) {
         String up = t.stripLeading().toUpperCase(java.util.Locale.ROOT);
