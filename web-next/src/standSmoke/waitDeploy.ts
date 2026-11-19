@@ -27,3 +27,12 @@ export const MAX_RELOGINS = 6;
 export function shouldRelogin(httpStatus: number, reloginsDone: number): boolean {
   return httpStatus === 401 && reloginsDone < MAX_RELOGINS;
 }
+
+/**
+ * Изменились только документы: файлы *.md и всё под docs/. Тогда выкатка сборку не меняет, и стенд на прошлом
+ * коммите — это и есть сборка головы. Прогон 9044 (19.11.2026): мерж #1600 правил одно RELEASE-v1.17.28.md, стенд
+ * остался на 03de99d0, смоук 40 мин ждал d8c099e6 и упал без единого сценария. Пустой список — «не знаем», не «да».
+ */
+export function docsOnlyChange(files: string[]): boolean {
+  return files.length > 0 && files.every(f => /\.md$/i.test(f) || f.startsWith('docs/'));
+}

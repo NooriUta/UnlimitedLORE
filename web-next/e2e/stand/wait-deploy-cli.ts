@@ -6,8 +6,9 @@
 // /lore/version закрыт входом — берём access_token из сохранённого входа (автологин шагом раньше).
 // Код выхода: 0 — стенд на нужном коммите; 1 — не дождались (стенд остался на другой сборке).
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { chromium } from '@playwright/test';
-import { deployState, shouldRelogin } from '../../src/standSmoke/waitDeploy.ts';
+import { deployState, docsOnlyChange, shouldRelogin } from '../../src/standSmoke/waitDeploy.ts';
 import { parseStandAccounts } from './accounts.ts';
 import { standLogin } from './login.ts';
 import { isForbiddenStandUrl } from '../../src/standSmoke/summary.ts';
@@ -26,6 +27,14 @@ if (!token) { console.error('в сохранённом входе нет access_
 
 // Токен входа живёт ~15 мин, ожидание — до 40: на 401 входим заново той же учёткой (test-sa, иначе test-admin) и
 // перечитываем токен. Прогон 9017 (18.11.2026) упал «стенд не дошёл» именно на истёкшем токене.
+/** Файлы между сборкой стенда и ожидаемым коммитом; git недоступен или коммита нет в истории — null. */
+function changedFiles(from: string, to: string): string[] | null {
+  try {
+    return execFileSync('git', ['diff', '--name-only', from, to], { encoding: 'utf8' }).split('
+').map(x => x.trim()).filter(Boolean);
+  } catch { return null; }
+}
+
 let relogins = 0;
 async function relogin(): Promise<boolean> {
   const { accounts } = parseStandAccounts(process.env.LORE_STAND_ACCOUNTS_JSON);
@@ -51,6 +60,13 @@ for (;;) {
     const body = res.ok ? await res.json().catch(() => null) : null;
     const st = deployState(res.status, body, expected);
     if (st.reached) { console.log(`стенд на ${expected.slice(0, 8)} — запускаем смоук`); process.exit(0); }
+    if (res.status === 200 && st.seen) {
+      const files = changedFiles(st.seen, expected);
+      if (files && docsOnlyChange(files)) {
+        console.log(`стенд на ${st.seen.slice(0, 8)}; до ${expected.slice(0, 8)} изменились только документы (${files.length}) — сборка та же, запускаем смоук`);
+        process.exit(0);
+      }
+    }
     last = `HTTP ${res.status}, коммит ${st.seen?.slice(0, 8) ?? '—'}`;
     if (shouldRelogin(res.status, relogins)) {
       relogins++;
