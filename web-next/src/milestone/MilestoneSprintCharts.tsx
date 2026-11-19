@@ -6,7 +6,7 @@
 // Честно: срез не прочитан — причина и «Повторить»; спринтов у вехи нет — словами; часть спринтов вехи не пришла
 // или без даты — «показана часть N из M» у графиков.
 import { useMemo, useState } from 'react';
-import { BarChart, GameIcon, LineChart, rowsOf, useLoadState } from '@seidr/kit';
+import { BarChart, GameIcon, ICON_CANON, LineChart, rowsOf, useLoadState } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
 import { milestoneSprintSeries, type MilestoneSprintRow } from './milestoneSprintSeries';
@@ -39,7 +39,7 @@ export function MilestoneSprintCharts({ fold, ...p }: MilestoneSprintChartsProps
   return (
     <div className="ms-fold" data-testid="milestone-charts-fold">
       <button type="button" className="sk-btn ms-fold__btn" aria-expanded={open} onClick={() => setOpen(v => !v)}>
-        <GameIcon slug="histogram" size={14} />
+        <GameIcon slug={ICON_CANON.recAnalytics} size={14} />
         <span>{t('milestoneCharts.fold')}</span>
         <span aria-hidden="true">{open ? '▾' : '▸'}</span>
       </button>
