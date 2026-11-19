@@ -50,6 +50,26 @@ test('шаг связей: закрытое ребро сохраняет valid_
   assert.equal(list[1].content.valid_from, AT);
 });
 
+// Найдено 19.11.2026 на репетиции 1.18-rc: два переноса с одними настройками дали разные отпечатки
+// (FILLS_ROLE, HAS_PROJECT_ROLE, TARGETS_MILESTONE) — «момент переноса» брался часами машины. Теперь это момент
+// снимка источника: самая поздняя версия записей источника. Те же данные → тот же момент → тот же отпечаток.
+test('момент переноса для связей без своего момента — снимок источника, а не часы машины', async () => {
+  const { sourceMoment } = await import('./edge-history.mjs');
+  const asked = [];
+  const db = { async src(q) {
+    asked.push(q);
+    if (/FROM KnowTaskHist/.test(q)) return [{ m: '2026-11-18 10:22:09.589' }];
+    if (/FROM KnowSprintHist/.test(q)) return [{ m: '2026-11-17 07:23:01.638' }];
+    if (/FROM KnowGone/.test(q)) throw new Error('нет типа');
+    return [{ m: null }];
+  } };
+  assert.equal(await sourceMoment(db, ['KnowTaskHist', 'KnowSprintHist', 'KnowPhaseHist', 'KnowGone']), '2026-11-18T10:22:09.589Z');
+  assert.ok(asked.every(q => /max\(valid_from\)/.test(q)));
+  await assert.rejects(sourceMoment({ async src() { return [{ m: null }]; } }, ['KnowTaskHist']), /момент/);
+  const src = fs.readFileSync(new URL('./transfer-edges.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /at = new Date\(\)/, 'шаг связей не берёт момент с часов машины');
+});
+
 test('шаг связей читает моменты записи-начала у историчной связи и объявляет поля версии', () => {
   assert.match(outMomentsQuery('IN_PHASE', '#-1:-1'), /out_created.*out_versions.*FROM IN_PHASE WHERE @rid > #-1:-1/);
   const src = fs.readFileSync(new URL('./transfer-edges.mjs', import.meta.url), 'utf8');

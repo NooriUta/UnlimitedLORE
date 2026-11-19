@@ -38,6 +38,18 @@ test('новые связи модели сессий — свои типы: п�
   for (const t of ['NEW_ON_MACHINE', 'NEW_IN_PROJECT', 'NEW_RUNS_IN', 'NEW_CHANGED_IN']) assert.ok(own.includes(t), t);
 });
 
+// Найдено 19.11.2026 на репетиции 1.18-rc (ryzenai, migration_dst_rc118): второй перенос с --reset отказал —
+// «чужие типы: COMPONENT_REPOSITORY, HAS_REPOSITORY, KnowOrganization, KnowRepository, MIRRORED_TO, ORG_HAS_*,
+// ORG_MEMBER, USES_REPOSITORY». Их кладёт шаг связей (репозитории и организация) — значит, они свои.
+test('типы шага репозиториев и организации — свои: повторный перенос с --reset их пересоздаёт', async () => {
+  const { REPO_TYPES } = await import('./repos.mjs');
+  const own = ownTypes();
+  for (const t of ['KnowRepository', 'KnowOrganization', 'HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', 'ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER']) {
+    assert.ok(REPO_TYPES.includes(t), t + ' в списке типов шага');
+    assert.ok(own.includes(t), t);
+  }
+});
+
 test('сверка называет поле расхождения: какое поле, что в базе, что ждали — а не обрезанные 300 символов записи', async () => {
   const { fieldDiff } = await import('./transfer.mjs');
   assert.deepEqual(fieldDiff({ a: 1, b: 'x', c: true }, { a: 1, b: 'y', d: 5 }), [

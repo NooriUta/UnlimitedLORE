@@ -65,6 +65,8 @@ export function planRepos(srcProjects, anchorOf = {}, componentIds = [], overrid
  */
 /** Связи организации (владелица 19.11.2026: «с проектами, продуктами и людьми»): организация → проект/продукт/человек. */
 export const ORG_EDGES = ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER'];
+/** Все типы, которые пересоздаёт этот шаг: свои для приёмника (повторный перенос с --reset их не считает чужими). */
+export const REPO_TYPES = ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', ...ORG_EDGES, 'KnowRepository', 'KnowOrganization'];
 
 export async function applyRepos(db, srcProjects, anchorOf, { log = console.log, overrides = {} } = {}) {
   const c = (sql, p) => db.dstCommand(sql, p);
@@ -72,7 +74,7 @@ export async function applyRepos(db, srcProjects, anchorOf, { log = console.log,
   const comps = (await q('SELECT component_id FROM LoreComponent')).map(x => x.component_id).filter(Boolean);
   const plan = planRepos(srcProjects, anchorOf, comps, overrides);
   const types = new Set((await q('SELECT name FROM schema:types')).map(x => x.name));
-  for (const t of ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', ...ORG_EDGES, 'KnowRepository', 'KnowOrganization']) if (types.has(t)) await c(`DROP TYPE ${t} UNSAFE`);
+  for (const t of REPO_TYPES) if (types.has(t)) await c(`DROP TYPE ${t} UNSAFE`);
   await c('CREATE VERTEX TYPE KnowRepository');
   for (const f of ['url', 'host', 'owner', 'name', 'full_path', 'default_branch']) await c(`CREATE PROPERTY KnowRepository.${f} STRING`);
   await c('CREATE INDEX ON KnowRepository (url) UNIQUE');

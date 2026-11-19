@@ -14,7 +14,7 @@ import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
-import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory } from './edge-history.mjs';
+import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
@@ -23,7 +23,7 @@ const NOT_MACHINES = ['legion'];
 const VERSION_EDGE = 'HAS_STATE';
 
 /** Перенос связей и их сверка. log — куда писать ход. */
-export async function transferEdges(db, { log = console.log, at = new Date().toISOString() } = {}) {
+export async function transferEdges(db, { log = console.log, at: atGiven } = {}) {
   if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
   const pool = async (items, n, fn) => { let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) await fn(items[i++]); })); };
   const pages = async (query, sql, fn, key = 'r') => {
@@ -41,6 +41,8 @@ export async function transferEdges(db, { log = console.log, at = new Date().toI
   const dstRid = new Map();
   for (const T of OWN) await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => dstRid.set(x.s, x.r));
   if (!dstRid.size) throw new Error('в приёмнике нет перенесённых записей — сначала transfer.mjs');
+  // момент переноса для связей без своего момента — снимок источника (детерминизм), не часы машины
+  const at = atGiven || await sourceMoment(db, OWN.filter(T => T.endsWith('Hist')));
 
   // перепись связей источника: вид, тип начала, тип конца, число
   const srcTypes = await db.src('SELECT name, type, records FROM schema:types');
@@ -71,7 +73,7 @@ export async function transferEdges(db, { log = console.log, at = new Date().toI
   const planNoVersions = Object.fromEntries(Object.entries(plan).filter(([e]) => e !== VERSION_EDGE));
   const { writes, missingEnds, duplicates } = edgeWrites(src, dstRid, planNoVersions);
 
-  const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, plan: Object.fromEntries(Object.entries(plan).map(([e, p]) => [e, { rule: p.rule, to: p.to, reverse: p.reverse || undefined, dropped_ends: p.dropped_ends.length ? p.dropped_ends : undefined }])), moved: {}, missing_ends: missingEnds, duplicates };
+  const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, plan: Object.fromEntries(Object.entries(plan).map(([e, p]) => [e, { rule: p.rule, to: p.to, reverse: p.reverse || undefined, dropped_ends: p.dropped_ends.length ? p.dropped_ends : undefined }])), transfer_at: at, moved: {}, missing_ends: missingEnds, duplicates };
   let ok = true;
   const dstTypes = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
   for (const [T, list] of Object.entries(writes)) {

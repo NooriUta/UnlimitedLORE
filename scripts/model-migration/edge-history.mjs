@@ -39,6 +39,24 @@ export function edgeVersion(row, at) {
   return { valid_from: at, valid_to: to, source: 'transfer' };
 }
 
+/**
+ * «Момент переноса» для связей без своего момента — момент снимка источника: самая поздняя версия (valid_from)
+ * среди типов версий источника. Не часы машины: те же данные дают тот же момент и тот же отпечаток переноса
+ * (детерминизм, репетиция 1.18-rc 19.11.2026). Тип, которого нет в источнике, пропускается; нет ни одного
+ * момента — ошибка, а не подстановка.
+ */
+export async function sourceMoment(db, histTypes) {
+  let best = null;
+  for (const T of histTypes) {
+    let rows;
+    try { rows = await db.src(`SELECT max(valid_from) AS m FROM ${T}`); } catch { continue; }
+    const m = rows && rows[0] ? moment(rows[0].m) : null;
+    if (m && (!best || m > best)) best = m;
+  }
+  if (!best) throw new Error('момент снимка источника не найден: ни у одного типа версий нет valid_from');
+  return best;
+}
+
 /** Запрос моментов записи-начала у ребра источника (для valid_from), страница после last. */
 export const outMomentsQuery = (edge, last) => `SELECT @rid AS r, @out.created_at AS out_created, @out.out('HAS_STATE').valid_from AS out_versions FROM ${edge} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`;
 
