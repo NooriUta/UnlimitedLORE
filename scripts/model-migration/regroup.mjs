@@ -159,15 +159,13 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
     const anchor = await ridOf(p.anchor);
     if (!anchor) { report.groups[g] = { error: `нет опоры ${p.anchor}` }; report.ok = false; continue; }
     const before = new Set(await members(anchor));
-    const hosts = [];
-    const pushHosts = h => { for (const x of Array.isArray(h) ? h : []) if (x && x.base_url && !hosts.some(y => y.base_url === x.base_url)) hosts.push(x); };
-    pushHosts((await q(`SELECT hosts FROM ${anchor}`))[0]?.hosts);
+    const hostValues = [(await q(`SELECT hosts FROM ${anchor}`))[0]?.hosts]; // адреса опоры и влитых — mergeHosts
     let moved = 0, merged = 0, missing = [];
     for (const slug of p.merge) {
       const m = await ridOf(slug);
       if (!m) { missing.push(slug); continue; }
       for (const r of await members(m)) before.add(r);
-      pushHosts((await q(`SELECT hosts FROM ${m}`))[0]?.hosts);
+      hostValues.push((await q(`SELECT hosts FROM ${m}`))[0]?.hosts);
       const edges = await q(`SELECT FROM (SELECT expand(bothE()) FROM ${m})`);
       for (const e of edges) {
         const t = e['@type'], o = e['@out'] === m ? anchor : e['@out'], i = e['@in'] === m ? anchor : e['@in'];
@@ -182,13 +180,17 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
       await c(`DELETE FROM ${m}`);
       removedProjects++;
     }
-    await c(`UPDATE ${anchor} SET aliases = :a, regroup = :g, hosts = :h`, { a: p.aliases, g, h: hosts.length ? hosts : null });
+    const hostsMerged = mergeHosts(hostValues);
+    await c(`UPDATE ${anchor} SET aliases = :a, regroup = :g, hosts = :h`, { a: p.aliases, g, h: hostsMerged.value });
+    // адреса не теряются: у опоры после — столько, сколько разных адресов было у проектов группы
+    const hostsAfter = mergeHosts([(await q(`SELECT hosts FROM ${anchor}`))[0]?.hosts]).count;
+    if (hostsAfter !== hostsMerged.count) { report.ok = false; log(`группа ${g}: адресов репозиториев было ${hostsMerged.count}, у опоры ${hostsAfter}`); }
     const after = await members(anchor);
     const lost = [...before].filter(r => !after.has(r)).length;
     const extra = [...after].filter(r => !before.has(r)).length;
-    report.groups[g] = { anchor: p.anchor, merged_projects: p.merge.length - missing.length, missing, edges_moved: moved, edges_merged: merged, records_before: before.size, records_after: after.size, lost, extra };
+    report.groups[g] = { anchor: p.anchor, merged_projects: p.merge.length - missing.length, missing, edges_moved: moved, edges_merged: merged, hosts: hostsMerged.count, records_before: before.size, records_after: after.size, lost, extra };
     if (lost || extra || missing.length) report.ok = false;
-    log(`группа ${g}: опора ${p.anchor}, влито ${p.merge.length - missing.length}, записей ${before.size} → ${after.size}, связей перенесено ${moved}, слито повторов ${merged}` + (missing.length ? `, нет в приёмнике: ${missing.join(', ')}` : ''));
+    log(`группа ${g}: опора ${p.anchor}, влито ${p.merge.length - missing.length}, записей ${before.size} → ${after.size}, связей перенесено ${moved}, слито повторов ${merged}, адресов репозиториев ${hostsMerged.count}` + (missing.length ? `, нет в приёмнике: ${missing.join(', ')}` : ''));
   }
   // все связи: после = до − слитые повторы, по каждому типу; проектов меньше ровно на влитые
   const edgesAfter = await edgeTotals();
@@ -205,4 +207,23 @@ export async function applyRegroup(db, plan, { log = console.log } = {}) {
   log(`проекты: ${projectsBefore} → ${projectsAfter} (влито ${removedProjects})`);
   log('сверка перегруппировки:', report.ok ? 'сошлась' : 'НЕ сошлась');
   return report;
+}
+
+/**
+ * Адреса группы: объединение hosts всех проектов группы, повтор адреса — один раз. hosts хранится то строкой JSON,
+ * то массивом; формат результата — как у первого непустого значения (опоры). Репетиция 19.11: строку принимали за
+ * «нет адресов» и опоре писали null — адреса репозиториев пропадали.
+ */
+export function mergeHosts(values) {
+  const list = [];
+  let asString = null;
+  for (const v of values) {
+    let arr = null;
+    if (Array.isArray(v)) arr = v;
+    else if (typeof v === 'string') { try { const p = JSON.parse(v); if (Array.isArray(p)) arr = p; } catch { /* не адреса */ } }
+    if (!arr) continue;
+    if (asString === null) asString = typeof v === 'string';
+    for (const x of arr) if (x && x.base_url && !list.some(y => y.base_url === x.base_url)) list.push(x);
+  }
+  return { value: list.length ? (asString ? JSON.stringify(list) : list) : null, count: list.length };
 }

@@ -100,3 +100,17 @@ test('без продукта: группа по общим записям и с
   assert.equal(row('AIDA/lonely').to, null);
   assert.ok(row('AIDA/forgejo-mcp').suggested, 'предложение помечено — человек подтверждает');
 });
+
+// Репетиция 19.11 (вечер): в приёмнике hosts — JSON-строка; перегруппировка ждала массив, не видела адресов и
+// записывала опоре hosts = null — адреса репозиториев пропадали (вышел 1 репозиторий вместо 20+).
+import { mergeHosts } from './regroup.mjs';
+test('адреса группы объединяются из строки и массива, повтор — один раз, формат хранения прежний', () => {
+  const a = JSON.stringify([{ role: 'primary', base_url: 'https://f/AIDA/x' }, { role: 'mirror', base_url: 'https://g/N/x' }]);
+  const b = [{ role: 'primary', base_url: 'https://f/AIDA/x' }, { role: 'primary', base_url: 'https://f/AIDA/y' }];
+  const m = mergeHosts([a, b, null, 'не json']);
+  assert.equal(typeof m.value, 'string', 'опора хранила строку — пишем строку');
+  assert.deepEqual(JSON.parse(m.value).map(x => x.base_url), ['https://f/AIDA/x', 'https://g/N/x', 'https://f/AIDA/y']);
+  assert.equal(m.count, 3);
+  assert.equal(mergeHosts([null, undefined]).value, null);
+  assert.ok(Array.isArray(mergeHosts([b]).value), 'опора хранила массив — пишем массив');
+});
