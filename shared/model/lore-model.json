@@ -5642,8 +5642,8 @@
   },
   "no_type_color" : [ "agent", "doc", "organization", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "user" ],
   "precision" : {
-    "adr.date" : "date",
-    "decision.date" : "date",
+    "adr.date" : "datetime",
+    "decision.date" : "datetime",
     "feature.date" : "date",
     "feature.shipped_at" : "date",
     "gain.date" : "date",
@@ -5656,7 +5656,7 @@
     "question.opened" : "date",
     "release.date" : "date",
     "runbook.date" : "date",
-    "sprint.created" : "datetime",
+    "sprint.created" : "date",
     "sprint.planned_end_date" : "date",
     "sprint.planned_start" : "date",
     "tech.checked_at" : "datetime"
@@ -5913,7 +5913,7 @@
       "history" : "scd2",
       "created" : [ {
         "source" : "created_date",
-        "precision" : "datetime",
+        "precision" : "date",
         "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
       } ],
       "changed" : [ {
@@ -5925,7 +5925,7 @@
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       }, {
         "source" : "created_date",
-        "precision" : "datetime"
+        "precision" : "date"
       } ]
     },
     "task" : {

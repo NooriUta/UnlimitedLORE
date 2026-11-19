@@ -87,7 +87,7 @@ test('снимаемое поле названо в dropped, а не исчез�
 test('нерешённое поле и несогласованное преобразование удерживаются с исходным значением', () => {
   // version решено 16.11 (delegated: keep); pr_refs — преобразование без согласованного кода, удерживается
   const r = applyMap('KnowSprint', MAP.KnowSprint, { sprint_id: 'S', version: '2', pr_refs: '#101, #102' }, ctx);
-  assert.equal(r.held.pr_refs, '#101, #102');
+  assert.deepEqual(r.held.pr_refs, { prs: ['#101', '#102'] }, 'MDL-06: удержанное значение pr_refs — одного вида');
   assert.ok(!('pr_refs' in r.out));
   assert.equal(r.out.version, '2', 'решённое поле переносится');
 });

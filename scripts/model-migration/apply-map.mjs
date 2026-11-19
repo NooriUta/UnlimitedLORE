@@ -43,6 +43,38 @@ export function toDateTime(v) {
   return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
 
+/**
+ * MDL-06 · ссылки на PR (pr_refs) — к одному виду. В проде поле лежит числом, строкой номеров, списком,
+ * ссылками markdown на PR (GitHub, Forgejo) и вперемешку со ссылками на релизы. Вид результата один:
+ * { prs: ['хост/владелец/репозиторий#N' | '#N', …], note?: 'остаток' }. Номер без адреса — '#N', репозиторий
+ * не угадывается (его решит шаг связей, MD-05). Остаток — ссылки на релизы и приписки — в note, не теряется.
+ */
+export function toPrRefs(v) {
+  const prs = [], rest = [];
+  const add = p => { if (!prs.includes(p)) prs.push(p); };
+  const LINK = /\[([^\]]*)\]\(([^)\s]*)\)/g;
+  const FILLER = /^(?:PR|[^\p{L}\p{N}]+)$/iu; // «PR», «·», «→», «,» — связки между ссылками
+  const one = x => {
+    if (typeof x === 'number') { add(`#${x}`); return; }
+    const s = String(x);
+    const text = s.replace(LINK, (all, label, url) => {
+      const u = url.match(/^https?:\/\/([^/]+)\/([^/]+)\/([^/]+)(?:\/pulls?)?\/(\d+)\/?$/);
+      const n = label.match(/#\s*(\d+)/);
+      if (u && (n || /\/pulls?\//.test(url))) { add(`${u[1]}/${u[2]}/${u[3]}#${/\/pulls?\//.test(url) ? u[4] : n[1]}`); return ' '; }
+      rest.push(all); return ' ';
+    });
+    for (const t of text.split(/[\s,;]+/).filter(Boolean)) {
+      const m = t.match(/^(?:PR)?#?(\d+)$/i);
+      if (m) add(`#${m[1]}`); else if (!FILLER.test(t)) rest.push(t);
+    }
+  };
+  for (const x of Array.isArray(v) ? v : [v]) one(x);
+  const note = rest.join(' ').trim();
+  return note ? { prs, note } : { prs };
+}
+// Вид удержанного значения: поле ждёт шага связей, но в остаток ложится уже приведённым (MDL-06).
+const HELD_FORM = { pr_refs: toPrRefs };
+
 const lead = s => String(s).trim().replace(/^[^\p{L}\p{N}]+/u, ''); // значок и пробелы в начале
 const tail = s => s.replace(/^[\s—–\-:·,]+/, '').trim();
 
@@ -153,7 +185,7 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     if (e.rule === 'transform' && TYPE_ONLY[e.how] && !TRANSFORMS[k]) { TYPE_ONLY[e.how](f, v, r, e.to || f); continue; }
     // delegated — владелица поручила решить исполнителю (16.11.2026: «по максимуму сама»): действует как её решение,
     // но в карте остаётся различимым, чтобы его можно было переиграть.
-    if (e.rule === 'open' || (e.rule === 'transform' && !DECIDED.has(e.basis))) { r.held[f] = v; continue; }
+    if (e.rule === 'open' || (e.rule === 'transform' && !DECIDED.has(e.basis))) { r.held[f] = HELD_FORM[f] ? HELD_FORM[f](v) : v; continue; }
     if (e.rule === 'keep') { r.out[f] = v; continue; }
     if (e.rule === 'rename') {
       const nv = RENAMES[k] ? RENAMES[k](v, record) : v;

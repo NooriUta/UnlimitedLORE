@@ -701,9 +701,11 @@
     "basis": "owner"
    },
    "status_known_from": {
-    "rule": "keep",
+    "rule": "transform",
+    "to": "status_known_from",
+    "how": "DATETIME",
     "basis": "owner",
-    "note": "служебное"
+    "note": "служебное; момент UTC — «даты переводи» (19.11.2026)"
    },
    "status_raw": {
     "rule": "transform",
@@ -1120,9 +1122,11 @@
     "basis": "owner"
    },
    "status_known_from": {
-    "rule": "keep",
+    "rule": "transform",
+    "to": "status_known_from",
+    "how": "DATETIME",
     "basis": "owner",
-    "note": "служебное"
+    "note": "служебное; момент UTC — «даты переводи» (19.11.2026)"
    },
    "status_raw": {
     "rule": "transform",
@@ -2486,9 +2490,11 @@
     "basis": "owner"
    },
    "status_known_from": {
-    "rule": "keep",
+    "rule": "transform",
+    "to": "status_known_from",
+    "how": "DATETIME",
     "basis": "owner",
-    "note": "служебное"
+    "note": "служебное; момент UTC — «даты переводи» (19.11.2026)"
    },
    "status_raw": {
     "rule": "drop",
@@ -2610,8 +2616,9 @@
    "shipped_at": {
     "rule": "transform",
     "to": "shipped_at",
-    "how": "DATETIME",
-    "basis": "owner"
+    "how": "DATE",
+    "basis": "owner",
+    "note": "день, хоть и _at — «даты переводи» (19.11.2026)"
    },
    "status": {
     "rule": "transform",

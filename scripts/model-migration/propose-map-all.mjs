@@ -18,6 +18,8 @@ const STATUS_TYPES = new Set(['KnowADR', 'KnowADRHist', 'KnowDecision', 'KnowDec
 const OWN_KEY = { LoreComponent: 'component_id' };
 const EDGE_FIELDS = { component_id: 'связь с компонентом (BELONGS_TO)', project: 'связь с проектом (BELONGS_TO_PROJECT)', git_project: 'связь с проектом (BELONGS_TO_PROJECT)' };
 const DATE = /(^date_|_date$|^created_date$)/, DATETIME = /(^|_)(created_at|updated_at|closed_at|merged_at|retired_at|reached_at|ts|at)$/;
+/** Поля с окончанием _at, которые по смыслу — день, а не момент (MDL-06). */
+const DAY_AT = new Set(['shipped_at']);
 const W = 'владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»';
 
 /** Судьба типа целиком. */
@@ -34,6 +36,9 @@ export function ruleFor(T, f) {
   // В версиях спеки status_raw не встречается без status (замер прода 17.11: 0 из 102) — дубль.
   if (T === 'KnowSpecHist' && f === 'status_raw') return { rule: 'drop', why: 'дубль status: без него не встречается (0 из 102, прод 17.11)', basis: 'delegated', note: W };
   if (f === 'status_category') return { rule: 'drop', why: 'категория выводится из кода статуса и справочника', basis: 'owner' };
+  // MDL-06, владелица 19.11.2026 «даты переводи»: служебный момент «в текущем статусе с» — DATETIME у всех версий
+  // (раньше — «как есть», строкой); неразбираемое значение — в остаток с причиной.
+  if (f === 'status_known_from') return { rule: 'transform', to: f, how: 'DATETIME', basis: 'owner', note: 'служебное; момент UTC — «даты переводи» (19.11.2026)' };
   if (SERVICE.has(f)) return { rule: 'keep', basis: 'owner', note: 'служебное' };
   if ((f === 'status_raw' || f === 'status') && STATUS_TYPES.has(T)) return { rule: 'transform', to: 'status', how: 'status', basis: 'owner', note: 'код справочника, приписка — в status_note' };
   // harness агента — к кодам справочника miniLORE (её хозяйство, ADR-LORE-054 п.8; владелица 17.11: «как у minilore»).
@@ -45,6 +50,8 @@ export function ruleFor(T, f) {
   if (/_refs$/.test(f)) return { rule: 'open', question: 'ссылки строкой становятся связями на шаге связей; ненайденное — текстом в заметке версии' };
   // date_display — подпись срока для людей («18 апр», «прогноз Q4 2026»), не дата (пробный расчёт 17.11).
   if (f === 'date_display') return { rule: 'keep', basis: 'delegated', note: 'подпись срока, не дата; ' + W };
+  // MDL-06, 19.11.2026: «выпущено» сценария — день (путь записи ставит LocalDate); окончание _at здесь не момент.
+  if (DAY_AT.has(f)) return { rule: 'transform', to: f, how: 'DATE', basis: 'owner', note: 'день, хоть и _at — «даты переводи» (19.11.2026)' };
   if (DATE.test(f)) return { rule: 'transform', to: f === 'created_date' || f === 'date_created' ? 'created_at' : f, how: 'DATE', basis: 'owner' };
   if (DATETIME.test(f)) return { rule: 'transform', to: f, how: 'DATETIME', basis: 'owner' };
   return { rule: 'keep', basis: 'delegated', note: W };

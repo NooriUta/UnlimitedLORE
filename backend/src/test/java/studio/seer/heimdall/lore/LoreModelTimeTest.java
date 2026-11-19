@@ -100,7 +100,9 @@ class LoreModelTimeTest {
                 if ("date".equals(f.get("kind")))
                     assertTrue(Set.of("date", "datetime").contains(f.get("precision")),
                         t + "." + f.get("key") + ": точность не названа — " + f.get("precision"));
-        assertEquals("datetime", field("sprint", "created").get("precision"), "created_date спринта — ISO-момент");
+        // MDL-06: в схеме 1.18 created_date спринта — KnowSprint.created_at DATE (перенос сводит created_date и
+        // date_created к дню, решение владелицы «одно «создано»»); было «ISO-момент» по старой схеме.
+        assertEquals("date", field("sprint", "created").get("precision"), "created_at спринта в схеме переноса — день");
         assertEquals("date", field("release", "date").get("precision"), "release_date — день");
         assertEquals("datetime", field("tech", "checked_at").get("precision"), "проверено = valid_from версии");
         assertEquals("date", field("feature", "shipped_at").get("precision"), "shipped_at ставится LocalDate — день, хоть и _at");
