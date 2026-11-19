@@ -1,6 +1,7 @@
-// D-2026-MIG-REPOSITORY-ORGANIZATION · владелица 19.11.2026: «aida nooriuta это характеристики репозитария и там
-// должны быть они вместе с указанием github и репозитария дают полный путь», «репозиторий отдельный объект у проекта
-// может быть несколько репо но один основной сколько угодно зеркал и репозитории от который он зависит».
+// D-2026-MIG-REPOSITORY-ORGANIZATION · владелица 19.11.2026: «aida nooriuta это характеристики репозитария … дают
+// полный путь», «у проекта … один основной сколько угодно зеркал и репозитории от которых он зависит», «посложнее
+// элемент (компонент) у него связь с основным репозиторием в проекте. а у того может быть доп связи использует кит
+// или зеркалит в github».
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRepo, planRepos } from './repos.mjs';
@@ -8,32 +9,36 @@ import { parseRepo, planRepos } from './repos.mjs';
 test('адрес репозитория → хост, владелец на хосте, имя, полный путь', () => {
   assert.deepEqual(parseRepo({ role: 'primary', base_url: 'https://git.seidrstudio.pro/AIDA/UnlimitedLORE/', default_branch: 'develop' }),
     { url: 'https://git.seidrstudio.pro/AIDA/UnlimitedLORE', host: 'git.seidrstudio.pro', owner: 'AIDA', name: 'UnlimitedLORE', full_path: 'git.seidrstudio.pro/AIDA/UnlimitedLORE', default_branch: 'develop', role: 'primary' });
-  assert.equal(parseRepo({ base_url: 'https://github.com/NooriUta/AIDA' }).role, 'mirror', 'без роли — зеркало, основной объявляется явно');
+  assert.equal(parseRepo({ base_url: 'https://github.com/NooriUta/AIDA' }).role, 'mirror');
   assert.equal(parseRepo({ base_url: 'не адрес' }), null);
   assert.equal(parseRepo(null), null);
 });
 
-test('проект → один основной и зеркала; репозиторий — один объект на адрес; без адресов — 0 репозиториев', () => {
-  const p = planRepos([
-    { slug: 'NooriUta/UnlimitedLORE', hosts: [{ role: 'primary', base_url: 'https://git.seidrstudio.pro/AIDA/UnlimitedLORE' }, { role: 'mirror', base_url: 'https://github.com/NooriUta/UnlimitedLORE' }] },
-    { slug: 'AIDA/udwe-mig-gen', hosts: [{ role: 'primary', base_url: 'https://git.seidrstudio.pro/AIDA/udwe-mig-gen' }, { role: 'mirror', base_url: 'https://github.com/ivanovalex32/UDWE' }] },
-    { slug: 'ivanovalex32/UDWE', hosts: [{ role: 'primary', base_url: 'https://github.com/ivanovalex32/UDWE' }] },
-    { slug: 'AIDA/studio', hosts: null },
+const SRC = [
+  { slug: 'AIDA/MIDGARD', name: 'MIDGARD', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/MIDGARD' }] },
+  { slug: 'AIDA/GLADSHEIM', name: 'GLADSHEIM', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/GLADSHEIM' }, { role: 'mirror', base_url: 'https://github.com/N/GLADSHEIM' }] },
+  { slug: 'AIDA/TEIKN', name: 'TEIKN', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/TEIKN' }] },
+  { slug: 'NooriUta/UnlimitedLORE', name: 'UnlimitedLORE', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/UnlimitedLORE' }, { role: 'mirror', base_url: 'https://github.com/NooriUta/UnlimitedLORE' }] },
+  { slug: 'AIDA/studio', name: 'studio', hosts: null },
+];
+const ANCHOR = { 'AIDA/MIDGARD': 'AIDA/MIDGARD', 'AIDA/GLADSHEIM': 'AIDA/MIDGARD', 'AIDA/TEIKN': 'AIDA/MIDGARD', 'NooriUta/UnlimitedLORE': 'NooriUta/UnlimitedLORE', 'AIDA/studio': 'AIDA/studio' };
+const COMPONENTS = ['GLADSHEIM', 'MIDGARD', 'OMILORE'];
+
+test('проект → только свой основной; зеркало — связь репозиторий → репозиторий', () => {
+  const p = planRepos(SRC, ANCHOR, COMPONENTS);
+  assert.deepEqual(p.projectRepos, [
+    { project: 'AIDA/MIDGARD', url: 'https://f/AIDA/MIDGARD' },
+    { project: 'NooriUta/UnlimitedLORE', url: 'https://f/AIDA/UnlimitedLORE' },
   ]);
-  assert.equal(p.repos.length, 4, 'GitHub ivanovalex32/UDWE — один объект, хотя у двух проектов');
-  assert.deepEqual(p.links.filter(l => l.project === 'NooriUta/UnlimitedLORE').map(l => l.role).sort(), ['mirror', 'primary']);
-  assert.equal(p.links.filter(l => l.project === 'AIDA/studio').length, 0);
-  // один адрес у двух проектов: основной у одного, зеркало у другого — честно показывается, не прячется
-  assert.deepEqual(p.shared.map(s => s.url), ['https://github.com/ivanovalex32/UDWE']);
+  assert.deepEqual(p.mirrors, [
+    { from: 'https://f/AIDA/GLADSHEIM', to: 'https://github.com/N/GLADSHEIM' },
+    { from: 'https://f/AIDA/UnlimitedLORE', to: 'https://github.com/NooriUta/UnlimitedLORE' },
+  ]);
+  assert.equal(p.repos.length, 6, 'репозиторий — один объект на адрес, зеркала тоже репозитории');
 });
 
-test('у проекта ровно один основной: два основных — первый основной, второй зеркало и предупреждение; нет основного — первый становится основным', () => {
-  const p = planRepos([
-    { slug: 'X/two', hosts: [{ role: 'primary', base_url: 'https://h/a/one' }, { role: 'primary', base_url: 'https://h/a/two' }] },
-    { slug: 'X/none', hosts: [{ role: 'mirror', base_url: 'https://h/b/one' }] },
-  ]);
-  const roles = s => p.links.filter(l => l.project === s).map(l => l.role);
-  assert.deepEqual(roles('X/two'), ['primary', 'mirror']);
-  assert.deepEqual(roles('X/none'), ['primary']);
-  assert.equal(p.warnings.length, 2);
+test('влитый проект: его основной — репозиторий компонента с тем же именем; компонента нет — «куда?», не выдумываем', () => {
+  const p = planRepos(SRC, ANCHOR, COMPONENTS);
+  assert.deepEqual(p.componentRepos, [{ component: 'GLADSHEIM', url: 'https://f/AIDA/GLADSHEIM', project: 'AIDA/MIDGARD' }]);
+  assert.deepEqual(p.unassigned, [{ url: 'https://f/AIDA/TEIKN', from: 'AIDA/TEIKN', project: 'AIDA/MIDGARD', why: 'нет компонента TEIKN' }]);
 });

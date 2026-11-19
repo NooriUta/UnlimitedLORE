@@ -89,16 +89,18 @@ export async function transferEdges(db, { log = console.log } = {}) {
   // перегруппировка проектов (шаг П установщика): только если таблица принята человеком — в файле решений
   // есть раздел projects; иначе проекты переносятся как есть (группа не выдумывается)
   const decisions = loadDecisions();
+  const regroupInput = await readRegroupInput(db); // проекты источника — и для перегруппировки, и для репозиториев
+  const anchorOf = {};
   if (decisions && decisions.projects && Object.keys(regroupOverrides(decisions)).length) {
-    const proposal = proposeRegroup({ ...(await readRegroupInput(db)), overrides: regroupOverrides(decisions) });
-    report.regroup = await applyRegroup(db, regroupPlan(proposal.rows), { log });
+    const proposal = proposeRegroup({ ...regroupInput, overrides: regroupOverrides(decisions) });
+    const rp = regroupPlan(proposal.rows);
+    for (const g of Object.values(rp)) for (const m of g.merge) anchorOf[m] = g.anchor;
+    report.regroup = await applyRegroup(db, rp, { log });
     if (!report.regroup.ok) ok = false;
   } else log('перегруппировка проектов: таблица не принята (нет раздела projects в файле решений) — проекты как есть');
-  // репозитории — отдельный объект (D-2026-MIG-REPOSITORY-ORGANIZATION): из адресов проектов приёмника (после
-  // перегруппировки), один основной и зеркала; тип организации заводится пустым
-  const parseHosts = h => { if (Array.isArray(h)) return h; try { return JSON.parse(h); } catch { return null; } };
-  const dstProjects = (await db.dstQuery('SELECT slug, hosts FROM KnowGitProject')).map(p => ({ slug: p.slug, hosts: parseHosts(p.hosts) }));
-  report.repositories = await applyRepos(db, dstProjects, { log });
+  // репозитории (D-2026-MIG-REPOSITORY-ORGANIZATION, владелица 19.11): по адресам проектов ИСТОЧНИКА — проект →
+  // основной, влитый проект → репозиторий его компонента, зеркала — связью репозиторий → репозиторий
+  report.repositories = await applyRepos(db, regroupInput.projects, anchorOf, { log });
   if (!report.repositories.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
