@@ -70,7 +70,9 @@ function edgePurpose(name, model, edgesMap) {
 function transferOf(rule) {
   if (!rule) return 'нет правила в карте';
   const head = rule.rule + (rule.to ? ` → ${rule.to}${rule.reverse ? ' (разворот)' : ''}` : '');
-  return `${head} · ${rule.basis || '—'}${rule.note ? ' · ' + rule.note : ''}`;
+  // поручение владелицы 17.11 «перенеси … все объекты» стоит у большинства связей — пишется коротко, текст в легенде
+  const note = rule.note && /^владелица 17.11.2026: «перенеси/.test(rule.note) ? 'поручение 17.11' : rule.note;
+  return `${head} · ${rule.basis || '—'}${note ? ' · ' + note : ''}`;
 }
 
 /** Где поле показано в паспорте типа. */
@@ -92,7 +94,7 @@ function writerOf(f, createFields) {
 }
 
 function readerOf(t, f, model) {
-  const out = ['паспорт /lore/record'];
+  const out = ['паспорт'];
   if (f.historic) out.push('история версий');
   if (f.dict) out.push(`справочник ${f.dict}`);
   // столбцы частей других типов — срезы, которые показывают это поле
@@ -191,7 +193,7 @@ export function transferOfType(T, objectsMap) {
 }
 
 const ROOT = 'lore_model_dictionary';
-const LEGEND = `Метки происхождения: **модель** — \`shared/model/lore-model.json\`; **карта** — карта переноса 1.18 (\`scripts/model-migration/map\`); **перепись** — снимок связей прода (\`tools/census/edge-triples.tsv\`); **код** — поиск имени в строках SQL кода (\`backend/src/main\`, \`mcp-server/src\`). Поиск по тексту не видит имён, собранных склейкой строк: «${NOT_FOUND}» значит «не нашли», а не «никто не пишет». «${NO_PURPOSE}» — у поля нет определения в модели; назначение не выдумано.`;
+const LEGEND = `Метки происхождения: **модель** — \`shared/model/lore-model.json\`; **карта** — карта переноса 1.18 (\`scripts/model-migration/map\`); **перепись** — снимок связей прода (\`tools/census/edge-triples.tsv\`); **код** — поиск имени в строках SQL кода (\`backend/src/main\`, \`mcp-server/src\`). Поиск по тексту не видит имён, собранных склейкой строк: «${NOT_FOUND}» значит «не нашли», а не «никто не пишет». «${NO_PURPOSE}» — у поля нет определения в модели; назначение не выдумано. «поручение 17.11» — слово владелицы 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты». «паспорт» в колонке «кто читает» — GET /lore/record и /lore/model.`;
 
 function renderPages({ types, edges, others, source }) {
   const pages = [];
