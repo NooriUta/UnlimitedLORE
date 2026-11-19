@@ -46,9 +46,27 @@ export function modelMarker(schema, at = new Date().toISOString()) {
   return { model_hash, source: 'installer', built_at: at };
 }
 /** DDL поля: имя в обратных кавычках — поле с именем-ключевым словом SQL (KnowQuestion.trigger, 18.11.2026) иначе роняет перенос. */
-export function ddlProperty(T, f, dbType) {
+// MDL-11 (ответ владелицы 19.11.2026 «5а»): поле схемы с notnull — MANDATORY + NOTNULL, пустое значение база не примет.
+export function ddlProperty(T, f, dbType, { notnull = false } = {}) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f);
-  return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType;
+  return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType + (notnull ? ' (MANDATORY true, NOTNULL true)' : '');
+}
+/** DDL полей типа по схеме переноса (без CREATE VERTEX TYPE и служебного mig_src_rid). */
+export function schemaDdl(T, t) {
+  return Object.entries(t.fields).map(([f, e]) => ddlProperty(T, f, e.db_type, { notnull: e.notnull === true }));
+}
+/**
+ * MDL-11 · сторож перед записью: записи, у которых пусто обязательное (notnull) поле схемы. База такую запись
+ * не примет, и перенос оборвался бы посреди записи; поэтому — поимённо и до первой команды в приёмник.
+ */
+export function notNullMissing(calc, schema) {
+  const out = [];
+  for (const [T, t] of Object.entries(schema)) for (const [f, e] of Object.entries(t.fields)) {
+    if (e.notnull !== true) continue;
+    const rids = (calc[T] || []).filter(x => { const v = x.res.out[f]; return v === undefined || v === null || v === ''; }).map(x => x.rid);
+    if (rids.length) out.push({ type: T, field: f, rids });
+  }
+  return out;
 }
 /**
  * Ожидаемое значение в том виде, в каком его отдаёт база. Момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC). Дата без времени
@@ -208,6 +226,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
+  // MDL-11: обязательное поле пусто — запись не начинается (пустой статус версии задачи решает человек, ST-08)
+  const missing = notNullMissing(calc, SCHEMA);
+  if (missing.length) throw new Error('обязательное поле пусто — нужно решение в разделе «Перенос» (несоответствие «пусто» или «вне справочника»): ' + missing.map(m => `${m.type}.${m.field} — ${m.rids.length} (${m.rids.slice(0, 5).join(', ')}${m.rids.length > 5 ? ', …' : ''})`).join('; '));
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
   // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
   const srcTypes = await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types');
@@ -225,7 +246,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   for (const n of [...edgesFirst, ...clash.filter(n => !edgesFirst.includes(n))]) if (existing.includes(n)) await db.dstCommand(`DROP TYPE ${n} UNSAFE`);
   for (const [T, t] of Object.entries(SCHEMA)) {
     await db.dstCommand(`CREATE VERTEX TYPE ${T}`);
-    for (const [f, e] of Object.entries(t.fields)) await db.dstCommand(ddlProperty(T, f, e.db_type));
+    for (const s of schemaDdl(T, t)) await db.dstCommand(s);
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
     await db.dstCommand(`CREATE INDEX ON ${T} (mig_src_rid) UNIQUE`);
   }
