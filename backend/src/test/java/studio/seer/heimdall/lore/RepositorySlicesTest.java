@@ -28,4 +28,15 @@ class RepositorySlicesTest {
         assertTrue(s.contains("in('HAS_REPOSITORY').slug CONTAINS :project"), s);
         assertTrue(s.contains("in('COMPONENT_REPOSITORY').out('IN_PRODUCT').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), s);
     }
+
+    /**
+     * Группировка раздела «Репозитории» по проекту (прототип): репозиторий компонента — в группе проекта
+     * компонента (компонент → IN_PRODUCT → продукт → BELONGS_TO_PROJECT), зеркало — в группе проекта оригинала.
+     */
+    @Test
+    void список_несёт_проект_компонента_и_проект_оригинала_зеркала() {
+        String s = LoreSlices.compose("repositories", Map.of()).sql();
+        assertTrue(s.contains("in('COMPONENT_REPOSITORY').out('IN_PRODUCT').out('BELONGS_TO_PROJECT').slug AS component_projects"), s);
+        assertTrue(s.contains("in('MIRRORED_TO').in('HAS_REPOSITORY').slug AS mirror_projects"), s);
+    }
 }

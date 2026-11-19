@@ -286,7 +286,11 @@ public final class LoreSlices {
         + "in('HAS_REPOSITORY').slug AS projects, inE('HAS_REPOSITORY').role AS project_roles, "
         + "in('COMPONENT_REPOSITORY').component_id AS components, "
         + "out('MIRRORED_TO').url AS mirrors, in('MIRRORED_TO').url AS mirror_of, "
-        + "out('USES_REPOSITORY').url AS uses, in('USES_REPOSITORY').url AS used_by ";
+        + "out('USES_REPOSITORY').url AS uses, in('USES_REPOSITORY').url AS used_by, "
+        // Группировка списка по проекту (прототип): репозиторий компонента — в группе проекта компонента,
+        // зеркало — в группе проекта оригинала.
+        + "in('COMPONENT_REPOSITORY').out('IN_PRODUCT').out('BELONGS_TO_PROJECT').slug AS component_projects, "
+        + "in('MIRRORED_TO').in('HAS_REPOSITORY').slug AS mirror_projects ";
 
     private static final String TASK_RELEASES_SQL =
         "out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids";

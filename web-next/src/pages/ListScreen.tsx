@@ -81,6 +81,8 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роли, боли, выгоды и работы пришли в v2 раньше паспорта —
   // теперь у каждого свой паспорт (только чтение); ранбук — раздел и паспорт.
   actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job', runbooks: 'runbook', quality_gates: 'quality_gate',
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: паспорта репозитория и организации (только чтение).
+  repositories: 'repository', organizations: 'organization',
 };
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
@@ -457,11 +459,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     // (S4-STATUS-AXIS-CONFIG, 11.11): ось доходила до конфига, но не до чтения строки.
     () => {
       if (!body) return null;
-      const d = sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes });
+      const d = sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes, lang });
       // S4-PRODUCT-HILITE: продукт записи — полем `product` (правило одно на все разделы).
       return paintIdx ? { ...d, records: paintRecords(d.records, paintIdx) } : d;
     },
-    [body, def, modelCodes, paintIdx],
+    [body, def, modelCodes, paintIdx, lang],
   );
   // Переход на запись вне фильтра (слово владелицы 11.11.2026): открыта запись,
   // которой в загруженном нет, а закрытые скрыты, — фильтр снимается сам
@@ -651,6 +653,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           // MP2-12: legacy-вход `?lib=1` — начальный вид «Библиотека».
           ...(libInitial && libSpec ? { view: 'library' as ListViewKind } : {}),
           ...(def.defaultSort ? { sort: def.defaultSort } : {}),
+          // Группировка по умолчанию (репозитории — по проекту, прототип 19.11); `lg` в адресе главнее.
+          ...(def.defaultGroup ? { group: def.defaultGroup } : {}),
           ...(listKey ? { closed: closedMode } : {}),
         }}
         library={libraryProp}

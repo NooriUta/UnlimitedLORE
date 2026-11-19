@@ -32,6 +32,8 @@ export const V2_SECTIONS = [
   // MD-04, второй заход по QG: гейты качества — раздел «Работа» с паспортом (только чтение).
   'quality_gate',
   'component', 'tech', 'feature', 'project',
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — раздел «Система» с паспортом (только чтение).
+  'repository', 'organization',
   // S9-05 A: люди и агенты — паспорта «шапка + таблица детей».
   'user', 'agent',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
@@ -185,7 +187,9 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Устройство» — из чего система сделана: проекты, компоненты, технологии.
         {
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
-          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears')],
+          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears'),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий — отдельный объект; организация — самостоятельный, пока пустой.
+            item('repository', 'chest'), item('organization', 'castle')],
         },
         // S9-05 A: «Участники» — кто делает работу: люди и агенты, у каждого паспорт с его задачами.
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', ICON_CANON.sectionSettings, 'settings')] },

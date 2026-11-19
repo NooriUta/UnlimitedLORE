@@ -72,7 +72,7 @@ const RECORD_KEYS = ['id', 'kind', 'title', 'status', 'fields', 'body_md', 'upda
  */
 export const LIST_KEYS = [
   'views', 'timeline', 'calendar', 'quick', 'filters', 'groupings', 'fieldLabels', 'collapsedGroupings',
-  'feed', 'columns', 'columnDisplay', 'tree', 'showClosed', 'fresh',
+  'feed', 'columns', 'columnDisplay', 'tree', 'showClosed', 'fresh', 'empty',
 ] as const;
 /** Ключи, подпись которых kit знает сам (groupLabel.ts BUILTIN_KEY_TITLES). */
 export const KIT_BUILTIN_KEYS = ['title', 'id', 'status', 'kind', 'updated_at'] as const;
@@ -445,6 +445,9 @@ export function validateKitConfig(input: unknown, opts: ValidateConfigOptions = 
       c.enumOf(tree, 'rollup', 'list.tree', ['verdict', 'status'], false);
     }
     c.enumOf(list, 'showClosed', 'list', ['below', 'all', 'days30', 'hide'], false);
+    // list.empty — слова проверенного ноля раздела: обе строки необязательны, но если есть — строки.
+    const empty = c.obj(list, 'empty', 'list', false);
+    if (empty) for (const k of ['title', 'hint'] as const) if (k in empty) c.str(empty, k, 'list.empty');
     const timeline = c.obj(list, 'timeline', 'list', false);
     if (timeline) c.str(timeline, 'start', 'list.timeline');
     if (views?.includes('timeline') && !timeline) c.err('list.timeline', 'timeline-config', 'вид timeline требует list.timeline {start}');

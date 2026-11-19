@@ -30,7 +30,7 @@ describe('типы с паспортом', () => {
     expect([...PASSPORT_TYPES]).toEqual([
       'sprint', 'task', 'adr', 'spec', 'doc', 'decision', 'question', 'milestone', 'release',
       'component', 'tech', 'feature', 'product', 'user', 'agent',
-      'actor', 'pain', 'gain', 'job', 'runbook', 'quality_gate', 'project',
+      'actor', 'pain', 'gain', 'job', 'runbook', 'quality_gate', 'repository', 'organization', 'project',
     ]);
   });
 

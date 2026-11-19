@@ -51,6 +51,8 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     tech: { title: t('shell.sec.tech'), icon: 'gears' },
     feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge', inherited: t('shell.inherited.feature') },
     project: { title: t('shell.sec.project'), icon: 'open-folder' },
+    repository: { title: t('shell.sec.repository'), icon: 'chest' },
+    organization: { title: t('shell.sec.organization'), icon: 'castle' },
     user: { title: t('shell.sec.user'), icon: 'person' },
     agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
     product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
