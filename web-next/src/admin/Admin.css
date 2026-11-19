@@ -25,8 +25,10 @@
    в узкой колонке он рвался на две строки и читался как две подписи. */
 .adm-missing { color: var(--wrn); font-size: var(--fs-xs); white-space: nowrap; }
 .adm-err { display: block; color: var(--dng); font-size: var(--fs-xs); }
+/* Высота поля и выпадающего списка — общая цель касания (--hit kit на сенсоре): раньше .adm-select перебивал
+   её своим min-height 24, и в фильтрах «Журнала» поля ввода были 44, а списки 24 (телефон 390, 1.18). */
 .adm-select {
-  min-height: max(var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
+  min-height: max(var(--hit, 0px), var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
   background: var(--bg1); color: var(--t1); font: 600 var(--fs-xs) var(--mono);
 }
 .adm-select[data-none] { color: var(--wrn); border-style: dashed; }
@@ -56,7 +58,7 @@
 .adm-field__l { color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; }
 .adm-field--btns { flex-direction: row; gap: 6px; align-items: center; }
 .adm-input {
-  min-height: max(var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
+  min-height: max(var(--hit, 0px), var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
   background: var(--bg2); color: var(--t1); font: 600 var(--fs-xs) var(--font); min-width: 0; width: 14ch;
 }
 .adm-btn {
@@ -183,3 +185,28 @@
 }
 .adm-tidy-applybar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .adm-btn[data-tone='acc'] { border-color: var(--acc); color: var(--acc); }
+
+/* Обёртка раздела (подписи клеток для карточек) — не влияет на раскладку. */
+.adm-root { display: contents; }
+
+/* Телефон (админка 1.18, снимки с ryzenai 19.11: на 390 таблицы шире экрана, колонки обрезаны) — общий порог kit
+   NARROW_QUERY. Любая .adm-table — карточками: строка — карточка, клетка — блок с подписью колонки (data-label,
+   tableCards.ts). Фильтры — по полю в строку, поля одной высоты и во всю ширину: подсказки не режутся. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .adm-tablewrap { overflow-x: visible; }
+  .adm-table, .adm-table tbody, .adm-table tr, .adm-table td, .adm-table tbody th { display: block; width: 100%; box-sizing: border-box; }
+  .adm-table thead { display: none; }
+  .adm-table tbody tr { border: 1px solid var(--bd); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; background: var(--bg1); }
+  .adm-table td, .adm-table tbody th { border: 0; padding: 2px 0; overflow-wrap: anywhere; min-width: 0; }
+  .adm-table td[data-label]::before, .adm-table tbody th[data-label]::before {
+    content: attr(data-label); display: inline-block; margin-right: 6px; color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase;
+  }
+  .adm-table .adm-missing { white-space: normal; }
+  .adm-table .adm-select, .adm-table .adm-input { max-width: 100%; }
+  .adm-filters { flex-direction: column; align-items: stretch; }
+  .adm-filters .adm-field { width: 100%; }
+  .adm-filters .adm-field--btns { flex-wrap: wrap; }
+  .adm-filters .adm-input, .adm-filters .adm-select {
+    width: 100%; box-sizing: border-box;
+  }
+}

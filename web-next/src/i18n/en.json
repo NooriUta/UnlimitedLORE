@@ -1369,6 +1369,7 @@
   "admin.mcp.fails.emptyHint": "no agent writes answered with code ≥ 400 were observed",
   "admin.mcp.fails.shown": "Showing {n} of {m} — the count on the Home screen",
   "admin.mcp.fails.shownNoTotal": "Showing {n}; the total could not be read",
+  "admin.mcp.fails.more": "Show {n} more ({shown} of {m} on screen)",
   "admin.mcp.fails.col.ts": "When",
   "admin.mcp.fails.col.family": "Family",
   "admin.mcp.fails.col.entity": "Record",
