@@ -13,6 +13,7 @@ import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
+import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -102,6 +103,10 @@ export async function transferEdges(db, { log = console.log } = {}) {
   // основной, влитый проект → репозиторий его компонента, зеркала — связью репозиторий → репозиторий
   report.repositories = await applyRepos(db, regroupInput.projects, anchorOf, { log, overrides: repoOverrides(decisions) });
   if (!report.repositories.ok) ok = false;
+  // вид продукта (шаг В установщика, владелица 19.11.2026): решение человека из файла решений — в запись продукта
+  // приёмника; сверка — у всех продуктов вид задан
+  report.product_kind = await applyProductKinds(db, (await readProductKindInput(db)).products, decisions, { log });
+  if (!report.product_kind.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
