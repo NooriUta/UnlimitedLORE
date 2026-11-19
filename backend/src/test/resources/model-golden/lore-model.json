@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "7705424baf2a2e55",
+  "version" : "826de0770e3b3538",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -5004,8 +5004,8 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Владелец записи: кто за неё отвечает.",
-        "description" : null,
+        "definition" : "Кто отвечает за то, чтобы вопрос получил ответ: человек или агент реестра LORE (связь ANSWERABLE_BY).",
+        "description" : "Ответственный — связь с записью реестра людей или агентов, не свободный текст. Когда вопрос закрывают решением (связь «отвечает»), ответственным становится автор решения. У вопросов, где связи нет, показывается прежний текст поля — только для чтения.",
         "layer" : null,
         "historic" : false,
         "write" : null,
@@ -5025,7 +5025,8 @@
         },
         "property" : null,
         "property_type" : null,
-        "source" : "SUPPLIES"
+        "source" : "EDGE",
+        "edge" : "ANSWERABLE_BY"
       }, {
         "key" : "raised_by",
         "label" : "Поднял",
@@ -5270,6 +5271,15 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "responsible",
+        "label" : "Ответственный",
+        "relation" : "attribute",
+        "rel" : "ANSWERABLE_BY",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "prop",
         "manageable" : false
       }, {
         "key" : "components",
@@ -14081,6 +14091,7 @@
   "edge_history" : {
     "fields" : [ "valid_from", "valid_to" ],
     "edges" : {
+      "ANSWERABLE_BY" : "Ответственный за вопрос (человек или агент реестра): при закрытии вопроса решением ответственным становится автор решения; по связи видно, кто отвечал раньше и с какого времени (MT-MCP-TRUTH A6, владелица 19.11.2026).",
       "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
       "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
