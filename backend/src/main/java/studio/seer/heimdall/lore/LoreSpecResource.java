@@ -59,6 +59,10 @@ public class LoreSpecResource extends LoreResourceBase {
         return upsertSpec(req, role, null);
     }
 
+
+    /** MIG-03: на базе из модели тело спеки живёт только в версии; на записи — лишь в старой схеме. */
+    static boolean bodyOnVertex() { return !ModelSchemaAdapter.enabled(); }
+
     @POST
     @Path("spec")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -107,7 +111,7 @@ public class LoreSpecResource extends LoreResourceBase {
             if (req.title() != null)        { sql.append(", title=:title");             p.put("title", req.title()); }
             if (req.version() != null)      { sql.append(", version=:version");         p.put("version", req.version()); }
             if (req.component_id() != null) { sql.append(", component_id=:cid");        p.put("cid", req.component_id()); }
-            if (req.content_md() != null)   { sql.append(", content_md=:content");      p.put("content", req.content_md()); }
+            if (req.content_md() != null && bodyOnVertex())   { sql.append(", content_md=:content");      p.put("content", req.content_md()); }
             if (req.file_path() != null)    { sql.append(", file_path=:fp");            p.put("fp", req.file_path()); }
             // S4-04 (свежесть): тело без checkpoint и поля вершины версию не открывают —
             // момент правки на вершине; changed_at — максимум с открытой версией.
