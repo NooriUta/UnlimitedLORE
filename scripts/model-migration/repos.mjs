@@ -43,7 +43,10 @@ export function planRepos(srcProjects, anchorOf = {}, componentIds = []) {
     if (comp) componentRepos.push({ component: comp, url: primary.url, project: anchor });
     else unassigned.push({ url: primary.url, from: p.slug, project: anchor, why: `нет компонента ${primary.name}` });
   }
-  return { repos: [...repos.values()], projectRepos, componentRepos, mirrors, unassigned, warnings };
+  // тот же адрес уже чей-то основной или репозиторий компонента — это дубль проекта, не «куда?»
+  const placed = new Set([...projectRepos.map(x => x.url), ...componentRepos.map(x => x.url)]);
+  const open = unassigned.filter(u => !placed.has(u.url) && unassigned.findIndex(v => v.url === u.url) === unassigned.indexOf(u));
+  return { repos: [...repos.values()], projectRepos, componentRepos, mirrors, unassigned: open, warnings };
 }
 
 /**

@@ -42,3 +42,13 @@ test('влитый проект: его основной — репозитор�
   assert.deepEqual(p.componentRepos, [{ component: 'GLADSHEIM', url: 'https://f/AIDA/GLADSHEIM', project: 'AIDA/MIDGARD' }]);
   assert.deepEqual(p.unassigned, [{ url: 'https://f/AIDA/TEIKN', from: 'AIDA/TEIKN', project: 'AIDA/MIDGARD', why: 'нет компонента TEIKN' }]);
 });
+
+test('дубль проекта с тем же основным адресом не попадает в «куда?» — это тот же репозиторий', () => {
+  const src = [
+    { slug: 'AIDA/udwe-mig-gen', name: 'udwe-mig-gen', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/udwe-mig-gen' }] },
+    { slug: 'ciadmin/udwe-mig-gen', name: 'udwe-mig-gen', hosts: [{ role: 'primary', base_url: 'https://f/AIDA/udwe-mig-gen' }] },
+  ];
+  const p = planRepos(src, { 'ciadmin/udwe-mig-gen': 'AIDA/udwe-mig-gen' }, []);
+  assert.deepEqual(p.unassigned, []);
+  assert.equal(p.repos.length, 1);
+});
