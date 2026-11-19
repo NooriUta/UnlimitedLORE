@@ -5,9 +5,11 @@
 // preprod → main не сливается, пока смоук на его голове не зелёный (release-guard.yml).
 // Сценарии только читают стенд. Первое слово заголовка — код сценария в отчёте (R1…).
 import { expect, test } from '@playwright/test';
-import { openStand, pickSprintWithTasks, requireStand, shot } from './stand.ts';
+import { keepLoginFresh, openStand, pickSprintWithTasks, requireStand, shot } from './stand.ts';
 
 test.beforeEach(() => requireStand());
+// Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
+test.beforeEach(({ browser }) => keepLoginFresh(browser));
 test.afterEach(async ({ page }, info) => shot(page, info));
 
 test('R1 Стенд на v2: оболочка v2, а не v1 (SPRINT_UXR_S8_SWITCH/S8-02)', async ({ page }) => {
