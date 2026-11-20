@@ -8,7 +8,8 @@
 // Браузер — установленный Chrome (channel), скачивать Playwright-сборку не нужно.
 import { defineConfig } from '@playwright/test';
 
-const PORT = 4419;
+// E2E_PORT — свой порт для параллельной сессии (reuseExistingServer иначе подхватит чужой vite с чужим кодом).
+const PORT = Number(process.env.E2E_PORT ?? 4419);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -36,6 +37,8 @@ export default defineConfig({
     // Экран «Модель» админки (SPRINT_LORE_MODEL_AS_CONFIG/MC-06): владелица работает с телефона 19.11 —
     // «HTML админки не адаптирован под телефон». 390×844; сценарий сам проверяет и 360.
     { name: 'phone-390', testMatch: /model-admin\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    // Паспорт не сбрасывает список (SPRINT_UXR_S13_KIT4/K4-PASSPORT-NO-LIST-RESET): телефон 390×844.
+    { name: 'list-390', testMatch: /list-no-reset\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Планшет (жалобы владелицы 08.11 и 10.11 — скрины с планшета): палец, а не
     // мышь, поэтому невидимые зоны касания 44 px включены. Только экраны
     // новостей: остальные e2e под планшет не размечены.
