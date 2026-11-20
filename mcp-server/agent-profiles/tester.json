@@ -11,6 +11,8 @@
     "search": "allow",
     "search_similar": "allow",
     "graph": "allow",
+    "graph_path": "allow",
+    "find": "allow",
     "qg_*": "allow",
     "task_*": "allow",
     "status_set": "allow",
