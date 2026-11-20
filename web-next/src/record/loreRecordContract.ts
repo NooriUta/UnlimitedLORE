@@ -5,7 +5,7 @@
 // Честность: эмуляция помечена в meta.facade; упавший блок — meta.sources[].state='error', не «пусто».
 import { bodyMdIsOwnSection as kitBodyMdIsOwnSection, passportFromDoc } from '@seidr/kit';
 import type { KitConfig, KitLang, KitRelation } from '@seidr/kit';
-import { appT } from '../i18n';
+import { appT, type AppKey } from '../i18n';
 import { baseConfig, type PassportLoad } from './passportAdapters';
 import { SPRINT_FACTS } from './loreRecord';
 import { ABSENT_NUMBERS, sumOfRow, type ServerSum } from '../sprints/sprintTotals';
@@ -263,10 +263,60 @@ const SPRINT_SUMS = [
 /** `body_md` — свой раздел тела или копия другого (правило kit, `bodyMdIsOwnSection`). */
 export const bodyMdIsOwnSection = (c: LoreRecord1): boolean => kitBodyMdIsOwnSection(c);
 
-export function fromLoreRecord(c: LoreRecord1, lang: KitLang): PassportLoad {
+/**
+ * Метрики гейта (часть `metrics`, тип qg_metric — спека LORE_SCHEMA_V12_NEW_TYPES): все поля спеки колонками.
+ * Владелица 20.11.2026: если значения нет — пишется словами, а не пустой ячейкой и не нулём.
+ */
+export const QG_METRIC_COLUMNS = ['fields.code', 'fields.current_value', 'fields.result', 'fields.threshold', 'fields.unit', 'fields.direction'] as const;
+
+const QG_DIRECTIONS = ['gte', 'lte', 'eq'] as const;
+const QG_RESULTS = ['pass', 'fail', 'unknown'] as const;
+
+/** Часть метрик гейта → вид для таблицы: коды и пустые значения словами; прочие части — как есть. */
+export function qgMetricPartForView(p: LorePart, lang: KitLang): LorePart {
+  if (p.type !== 'qg_metric') return p;
+  const has = (v: unknown) => v !== null && v !== undefined && String(v).trim() !== '';
+  const items = p.items.map(i => {
+    const v = i.values ?? {};
+    const dir = QG_DIRECTIONS.find(d => d === v.direction);
+    const res = QG_RESULTS.find(r => r === v.status) ?? 'unknown';
+    return {
+      ...i,
+      // итог — колонкой словами; чип статуса LORE у метрики не к месту (pass/fail — не статус плана)
+      status: '',
+      values: {
+        ...v,
+        result: appT(lang, `pp.qgMetric.result.${res}`),
+        threshold: has(v.threshold) ? v.threshold : appT(lang, 'pp.qgMetric.noThreshold'),
+        unit: has(v.unit) ? v.unit : appT(lang, 'pp.qgMetric.noUnit'),
+        direction: dir ? appT(lang, `pp.qgMetric.direction.${dir}`) : appT(lang, 'pp.qgMetric.noDirection'),
+        current_value: typeof v.current_value === 'number' ? v.current_value : appT(lang, 'pp.qgMetric.noValue'),
+      },
+    };
+  });
+  return { ...p, items };
+}
+
+const QG_METRIC_LABELS: Record<(typeof QG_METRIC_COLUMNS)[number], AppKey> = {
+  'fields.code': 'pp.field.code',
+  'fields.result': 'pp.field.qgMetricStatus',
+  'fields.threshold': 'pp.field.threshold',
+  'fields.unit': 'pp.field.unit',
+  'fields.direction': 'pp.field.direction',
+  'fields.current_value': 'pp.field.currentValue',
+};
+
+export function fromLoreRecord(c0: LoreRecord1, lang: KitLang): PassportLoad {
+  const c: LoreRecord1 = c0.parts?.some(p => p.type === 'qg_metric')
+    ? { ...c0, parts: c0.parts.map(p => qgMetricPartForView(p, lang)) }
+    : c0;
   const { type } = c.record;
   const doc = passportFromDoc(c, {
     lang,
+    // Метрики — свой набор колонок целиком: статус плана, вид и полный ключ строки у метрики — шум.
+    partColumns: p => (p.type === 'qg_metric'
+      ? { base: false as const, columns: ['title', ...QG_METRIC_COLUMNS.map(key => ({ key, label: appT(lang, QG_METRIC_LABELS[key]) }))] }
+      : undefined),
     childColumns: target => (CHILD_COLUMNS[target]
       ? { columns: [...CHILD_COLUMNS[target]], kind: { title: appT(lang, target === 'task' ? 'pp.kind.task' : 'pp.kind.sprint'), icon: target, fields: childFieldsOf(target, lang) } }
       : undefined),

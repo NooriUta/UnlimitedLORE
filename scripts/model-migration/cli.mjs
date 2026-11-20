@@ -5,6 +5,7 @@
 // запущенный с теми же ключами. Файл доступа и файл решений передаются путём, а не лежат в репозитории.
 //
 // Запуск: lore-migrate <команда> --env <файл доступа> [--decisions <файл решений>] [ключи команды]
+import fs from 'node:fs';
 import path from 'node:path';
 
 export const VERSION = '0.1.0';
@@ -56,7 +57,15 @@ export function parseArgs(argv) {
   const known = COMMANDS.find(c => c.name === command);
   if (!known) return { error: `команды «${command}» нет; есть: ${COMMANDS.map(c => c.name).join(', ')}` };
   if (!env && !process.env.MIG_ENV_FILE) return { error: 'не указан файл доступа: --env <файл>' };
+  // MIG-01 (проба MDL-08, 20.11.2026): шаг связей без файла решений молча шёл «без решений» — вид продукта,
+  // перегруппировка, задачи без спринта не применялись, а сверка говорила «без вида 17». Пишущая команда без него не идёт.
+  if (known.write && !decisions && !process.env.MIG_DECISIONS_FILE) return { error: `команда «${known.name}» пишет в новую базу по решениям человека (статусы, вид продукта, перегруппировка, задачи без спринта): нужен --decisions <файл решений>` };
   return { command: known, env, decisions, rest };
+}
+
+/** Файл решений указан, но его нет — ошибка с путём (loadDecisions без файла молча отдал бы «решений нет»). */
+export function checkDecisionsFile(file) {
+  return file && !fs.existsSync(file) ? `файла решений нет: ${file}` : null;
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -64,6 +73,8 @@ export async function main(argv = process.argv.slice(2)) {
   if (a.version) { console.log(VERSION); return 0; }
   if (a.help) { console.log(help()); return 0; }
   if (a.error) { console.error(a.error + '\n\n' + help()); return 2; }
+  const noFile = a.command.write ? checkDecisionsFile(a.decisions || process.env.MIG_DECISIONS_FILE) : null;
+  if (noFile) { console.error(noFile); return 2; }
   if (a.env) process.env.MIG_ENV_FILE = a.env;
   if (a.decisions) process.env.MIG_DECISIONS_FILE = a.decisions;
   // Сценарии читают свои ключи из строки запуска — подставляем её так, будто сценарий запущен напрямую.

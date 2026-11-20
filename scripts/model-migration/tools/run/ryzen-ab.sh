@@ -8,6 +8,6 @@ for S in A B; do
   $R connect --env access.env --create-dst > /dev/null 2>&1
   $R statuses --env access.env --decisions $B/decisions-$S.json 2>&1 | grep -E "отпечаток|ГОТОВО|СТОП" | sed "s/^/linux $S statuses: /"
   $R transfer --env access.env --decisions $B/decisions-$S.json --reset > tr-$S.txt 2>&1; echo "linux $S transfer exit=$?"
-  $R edges --env access.env > ed-$S.txt 2>&1; echo "linux $S edges exit=$? $(tail -1 ed-$S.txt)"
+  $R edges --env access.env --decisions $B/decisions-$S.json > ed-$S.txt 2>&1; echo "linux $S edges exit=$? $(tail -1 ed-$S.txt)"
   $R dst-fingerprint --env access.env --out fp-$S.json 2>&1 | tail -1 | sed "s/^/linux $S /"
 done

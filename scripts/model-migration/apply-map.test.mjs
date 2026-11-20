@@ -85,11 +85,14 @@ test('снимаемое поле названо в dropped, а не исчез�
 });
 
 test('нерешённое поле и несогласованное преобразование удерживаются с исходным значением', () => {
-  // version решено 16.11 (delegated: keep); pr_refs — преобразование без согласованного кода, удерживается
+  // pr_refs — преобразование без согласованного кода, удерживается. version решено 16.11 (delegated: keep), а 20.11
+  // снято как легаси (MDL-08, «мы же утвердили уже, все поля»): значение — в корзину legacy, оттуда в остаток.
   const r = applyMap('KnowSprint', MAP.KnowSprint, { sprint_id: 'S', version: '2', pr_refs: '#101, #102' }, ctx);
   assert.deepEqual(r.held.pr_refs, { prs: ['#101', '#102'] }, 'MDL-06: удержанное значение pr_refs — одного вида');
   assert.ok(!('pr_refs' in r.out));
-  assert.equal(r.out.version, '2', 'решённое поле переносится');
+  assert.equal(r.out.sprint_id, 'S', 'решённое поле переносится');
+  assert.ok(!('version' in r.out), 'легаси-поле не переносится');
+  assert.equal(r.legacy.version, '2', 'MDL-08: значение легаси — в остаток, не молча');
 });
 
 test('значение, которое не удалось привести, попадает в rejects, а не в null молча', () => {

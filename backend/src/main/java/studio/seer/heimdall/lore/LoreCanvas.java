@@ -153,6 +153,83 @@ final class LoreCanvas {
         return new GraphPlan(from, to, edge, null);
     }
 
+    // ── Ссылка стикера на запись: название и состояние (SPEC-LORE-UXR-WHY-CANVAS-TECH) ─────────────
+    //
+    // Привязка — пара ref_type + ref_id, а не @rid: пара переживает перенос и пересборку базы, @rid — нет
+    // (решение владелицы 19–20.11.2026). Чтобы стикер показал название записи и открыл её паспорт, GET холста
+    // дописывает к привязанному стикеру ref_title и ref_state: found · missing («запись не найдена») ·
+    // unknown_type · unchecked (чтение не удалось — «не смогли проверить» ≠ «записи нет»).
+
+    static final String REF_FOUND = "found";
+    static final String REF_MISSING = "missing";
+    static final String REF_UNKNOWN_TYPE = "unknown_type";
+    static final String REF_UNCHECKED = "unchecked";
+
+    /** Как прочитать названия записей типа: один запрос на тип ({@code :ids} — список кодов). */
+    record RefSource(String type, String sql) {}
+
+    /** Источник названий: ветка поиска (вершина, ключ, поле названия), иначе тип «Связать» — только существование. */
+    static RefSource refSource(String type) {
+        LoreSearchResource.Branch b = LoreSearchResource.branchByType(type);
+        if (b != null)
+            return new RefSource(type, "SELECT " + b.idField() + " AS ref_id, " + b.titleField() + " AS title FROM "
+                + b.vertexClass() + " WHERE " + b.idField() + " IN :ids");
+        LoreLinkTypes.Entity e = LoreLinkTypes.entity(type);
+        if (e != null)
+            return new RefSource(type, "SELECT " + e.idField() + " AS ref_id FROM " + e.vertexClass() + " WHERE " + e.idField() + " IN :ids");
+        return null;
+    }
+
+    /** Коды привязанных стикеров по типу, без повторов, в порядке появления. */
+    static Map<String, List<String>> refIdsByType(List<Map<String, Object>> items) {
+        Map<String, List<String>> out = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> it : items) {
+            if (!(it.get("ref_type") instanceof String t) || !(it.get("ref_id") instanceof String id)) continue;
+            List<String> ids = out.computeIfAbsent(t, k -> new java.util.ArrayList<>());
+            if (!ids.contains(id)) ids.add(id);
+        }
+        return out;
+    }
+
+    /** Дописывает к привязанным стикерам ref_title / ref_state (и ref_error при сбое чтения). */
+    static void annotateRefs(List<Map<String, Object>> items,
+            java.util.function.BiFunction<String, Map<String, Object>, List<Map<String, Object>>> query) {
+        Map<String, Map<String, Object>> titles = new java.util.HashMap<>();   // type → (id → title|"")
+        Map<String, String> state = new java.util.HashMap<>();                 // type → unknown_type | unchecked
+        Map<String, String> errors = new java.util.HashMap<>();
+        refIdsByType(items).forEach((type, ids) -> {
+            RefSource src = refSource(type);
+            if (src == null) { state.put(type, REF_UNKNOWN_TYPE); return; }
+            try {
+                Map<String, Object> m = new java.util.HashMap<>();
+                for (Map<String, Object> r : query.apply(src.sql(), Map.of("ids", ids)))
+                    if (r.get("ref_id") != null) m.put(String.valueOf(r.get("ref_id")), r.get("title") == null ? "" : r.get("title"));
+                titles.put(type, m);
+            } catch (RuntimeException e) {
+                state.put(type, REF_UNCHECKED);
+                errors.put(type, e.getMessage());
+            }
+        });
+        for (Map<String, Object> it : items) {
+            if (!(it.get("ref_type") instanceof String t) || !(it.get("ref_id") instanceof String id)) continue;
+            if (state.containsKey(t)) {
+                it.put("ref_state", state.get(t));
+                it.put("ref_title", null);
+                if (errors.containsKey(t)) it.put("ref_error", errors.get(t));
+                continue;
+            }
+            Map<String, Object> m = titles.getOrDefault(t, Map.of());
+            if (m.containsKey(id)) {
+                Object title = m.get(id);
+                it.put("ref_state", REF_FOUND);
+                it.put("ref_title", title == null || "".equals(title) ? null : String.valueOf(title));
+            } else {
+                it.put("ref_state", REF_MISSING);
+                it.put("ref_title", null);
+            }
+        }
+    }
+
     /** Метка стрелки на её ребре графа: по ней удаление стрелки находит своё ребро. */
     static String canvasRef(String canvasUid, String linkUid) {
         return canvasUid + "/" + linkUid;

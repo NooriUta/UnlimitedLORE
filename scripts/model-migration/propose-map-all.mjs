@@ -10,6 +10,7 @@
 // (owner, «план доску удаляем»); журнал шагов — заменён отметкой схемы; остальное — как есть (delegated).
 // Запуск: node propose-map-all.mjs <перепись.json> → map/all-objects.json
 import fs from 'node:fs';
+import { legacyRule } from './legacy.mjs';
 import { fileURLToPath } from 'node:url';
 import { codeTypes, LORE_JAVA } from './code-types.mjs';
 
@@ -42,6 +43,9 @@ export function typePlan(T) {
 
 /** Правило одного поля. */
 export function ruleFor(T, f) {
+  // MDL-08 (владелица 20.11.2026): легаси-поле не переносится, значение — в остаток MigLeftover; правило старше прочих.
+  const legacy = legacyRule(T, f);
+  if (legacy) return legacy;
   if (f === 'hist_for') return { rule: 'drop', why: 'ключ записи в версии повторяет связь HAS_STATE', basis: 'delegated', note: W };
   // В версиях спеки status_raw не встречается без status (замер прода 17.11: 0 из 102) — дубль.
   if (T === 'KnowSpecHist' && f === 'status_raw') return { rule: 'drop', why: 'дубль status: без него не встречается (0 из 102, прод 17.11)', basis: 'delegated', note: W };
@@ -96,6 +100,11 @@ export const CODE_FIELDS = {
   QGMetric: {
     name: { db_type: 'STRING', source: 'выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка' },
     threshold: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка' },
+    // 20.11.2026, «доделать функции, чтобы все поля работали»: остальные поля спеки пишет QgMetricState.UPSERT_SQL.
+    unit: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: unit — «% · s · MB/s · count», строка; пишет QgMetricState (из порога, иначе из прогона)' },
+    direction: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: direction — «gte · lte · eq», код-строка; пишет QgMetricState (из текста порога)' },
+    current_value: { db_type: 'DOUBLE', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: current_value — «последнее измерение (NULL если нет)», число; пишет QgMetricState (значение метрики последнего прогона гейта, ClRoutineMetric.value — DOUBLE)' },
+    status: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: status — «pass · fail · unknown», код-строка; пишет QgMetricState (по порогу и направлению)' },
   },
 };
 

@@ -60,7 +60,9 @@ final class LoreRecordFrom {
          * задач, всего): готово — статус с токеном плана {@code done} (тот же словарь, что факт
          * «готово x/y» паспорта спринта). Числа «всего» нет — null («не посчитали»), а не 0/0.
          */
-        PROGRESS
+        PROGRESS,
+        /** Код строки таблицы гейта из metric_id «{qg_id}:{ID}:{номер}» ({@link QgMetricState#rowCode}). */
+        ROW_CODE
     }
 
     /**
@@ -124,6 +126,7 @@ final class LoreRecordFrom {
             case FIRST_OF -> firstOf(f.columns(), row);
             case HEAD_OR -> headOr(f.columns(), row);
             case PROGRESS -> progress(f.columns(), row);
+            case ROW_CODE -> QgMetricState.rowCode(LoreRecordValues.str(first));
         };
     }
 
@@ -509,7 +512,17 @@ final class LoreRecordFrom {
             v("status", Transform.DOC_TOKEN, "status_raw"),
             s("code", "decision_id"),
             s("title", "title"),
-            s("date", "date_created"))));
+            s("date", "date_created"))),
+        // Метрика гейта — все поля спеки LORE_SCHEMA_V12_NEW_TYPES (срез qg_metrics). Измерения нет —
+        // current_value null, status unknown: «не измерено» словами рисует клиент, не ноль.
+        "qg_metric", new ItemDef("metric_id", "name", List.of(
+            s("status", "status"),
+            v("code", Transform.ROW_CODE, "metric_id"),
+            s("title", "name"),
+            s("threshold", "threshold"),
+            s("unit", "unit"),
+            s("direction", "direction"),
+            v("current_value", Transform.RAW, "current_value"))));
 
     /**
      * SPRINT_UXR_S9_SCALE_OPT/S9-05, решение владелицы D14 «колонки по типу ребёнка»: значения

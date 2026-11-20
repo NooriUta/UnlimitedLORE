@@ -94,6 +94,11 @@ test('8а: свойство, которое пишет код, но старая
   assert.equal(SCHEMA.KnowCanvasLink.fields.graph_state.db_type, 'STRING');
   assert.equal(SCHEMA.QGMetric.fields.name.db_type, 'STRING');
   assert.match(SCHEMA.QGMetric.fields.threshold.source, /LORE_SCHEMA_V12_NEW_TYPES/);
+  // 20.11.2026, «чтобы все поля работали»: поля спеки LORE_SCHEMA_V12_NEW_TYPES — с типами, источник — спека
+  for (const [f, t] of [['unit', 'STRING'], ['direction', 'STRING'], ['current_value', 'DOUBLE'], ['status', 'STRING']]) {
+    assert.equal(SCHEMA.QGMetric.fields[f]?.db_type, t, 'QGMetric.' + f);
+    assert.match(SCHEMA.QGMetric.fields[f].source, /^спека LORE_SCHEMA_V12_NEW_TYPES/, 'QGMetric.' + f + ': источник');
+  }
 });
 
 test('8а: пустые связи, которые пишет код (MEASURED_BY, MACHINE_ACCESS, SOURCED_FROM), — в схеме 1.18 со свойствами старой схемы', () => {
