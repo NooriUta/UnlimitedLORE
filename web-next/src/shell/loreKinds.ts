@@ -37,6 +37,8 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
     // K4-CHARTS: раздел «Аналитика» (вкладки и «Моя сводка») — вид нужен палитре и «Недавнему».
     analytics: { title: t('shell.sec.analytics'), icon: 'lucide:chart-column' },
+    // SUPERTAGS-SPIKE: раздел «Теги» (сущности по тегу) — вид нужен палитре и «Недавнему», как у «Аналитики».
+    tags: { title: t('shell.sec.tags'), icon: ICON_CANON.sectionTags },
     // S4-V2-SECTIONS: виды записей новых разделов. Нужны палитре и
     // «Недавнему» — без вида запись в них рисуется безымянной.
     milestone: { title: t('shell.sec.milestone'), icon: 'crossed-axes' },

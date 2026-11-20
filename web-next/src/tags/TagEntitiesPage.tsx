@@ -15,6 +15,8 @@ export interface TagEntitiesPageProps {
   fetchImpl?: typeof fetch;
   win?: Window;
   narrow?: boolean;
+  /** Внутри оболочки v2 (раздел «Теги»): h1 подписан id оболочки, корень — не второй <main>. */
+  titleId?: string;
 }
 
 type Load<T> = { state: 'idle' } | { state: 'loading' } | { state: 'ok'; data: T } | { state: 'error'; error: unknown };
@@ -27,7 +29,7 @@ function readParams(w: Window | undefined) {
   return { tag: p.get('tag') ?? '', type: p.get('type') ?? '', f: p.get('f') ?? '' };
 }
 
-export function TagEntitiesPage({ fetchImpl, win, narrow }: TagEntitiesPageProps) {
+export function TagEntitiesPage({ fetchImpl, win, narrow, titleId }: TagEntitiesPageProps) {
   const lang = useKitLang();
   const t = (k: AppKey, v?: Record<string, string | number>) => appT(lang, k, v);
   const isNarrow = useNarrow(narrow);
@@ -78,10 +80,12 @@ export function TagEntitiesPage({ fetchImpl, win, narrow }: TagEntitiesPageProps
     return table.data.rows.filter(r => (fVal === '' ? !r.fields[fKey] : r.fields[fKey] === fVal));
   }, [table, fKey, fVal]);
 
+  const Root = titleId ? 'div' : 'main';
+  const headId = titleId ?? 'tg-title';
   return (
-    <main className="tg" aria-labelledby="tg-title">
+    <Root className={titleId ? 'tg tg--in-shell' : 'tg'} aria-labelledby={headId}>
       <header className="tg__head">
-        <h1 id="tg-title" className="tg__title">{t('tags.title')}</h1>
+        <h1 id={headId} className="tg__title">{t('tags.title')}</h1>
         <p className="tg__lead">{t('tags.lead')}</p>
       </header>
 
@@ -186,7 +190,7 @@ export function TagEntitiesPage({ fetchImpl, win, narrow }: TagEntitiesPageProps
           <p className="tg__note">{t('tags.colsNote')}</p>
         </>
       )}
-    </main>
+    </Root>
   );
 }
 

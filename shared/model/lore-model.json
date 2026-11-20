@@ -7184,6 +7184,9 @@
     }, {
       "section" : "question",
       "icon" : "help"
+    }, {
+      "section" : "tags",
+      "icon" : "price-tag"
     } ]
   }, {
     "id" : "product",
@@ -7264,6 +7267,7 @@
     "settings" : "everywhere",
     "spec" : "everywhere",
     "sprint" : "everywhere",
+    "tags" : "everywhere",
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"

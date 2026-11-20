@@ -11,6 +11,8 @@ export const ICON_CANON = {
   sectionNews: 'lucide:megaphone',
   /** Раздел «Настройки» (S4-32, выбор владелицы 14.11: «3e»). */
   sectionSettings: 'material-symbols:settings-outline',
+  /** Раздел «Теги» — сущности по тегу (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE). game-icons price-tag; предложено агентом 20.11.2026, ждёт подтверждения владелицы. */
+  sectionTags: 'price-tag',
   /** Сегменты полосы списка. */
   segFilter: 'lucide:filter',
   segGroup: 'lucide:group',

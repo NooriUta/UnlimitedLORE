@@ -2042,6 +2042,7 @@
   "kitPage.attn.review": "На согласовании",
   "kitPage.attn.active": "В работе",
   "shell.sec.analytics": "Аналитика",
+  "shell.sec.tags": "Теги",
   "analytics.title": "Аналитика",
   "analytics.tab.progress": "Прогресс",
   "analytics.tab.flow": "Поток",

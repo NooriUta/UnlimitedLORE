@@ -2042,6 +2042,7 @@
   "kitPage.attn.review": "Under review",
   "kitPage.attn.active": "In progress",
   "shell.sec.analytics": "Analytics",
+  "shell.sec.tags": "Tags",
   "analytics.title": "Analytics",
   "analytics.tab.progress": "Progress",
   "analytics.tab.flow": "Flow",
