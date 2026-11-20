@@ -19,6 +19,7 @@
 //   facts.tasks {done,total}        {done,total,open}
 import { describe, expect, it } from 'vitest';
 import { fetchLoreRecord, recordFromServer, RecordNotFound, RecordForbidden, RecordShape } from './liveRecord';
+import { fromLoreRecord } from '../record/loreRecordContract';
 
 const LOADED = '2026-11-09T04:00:00.000Z';
 
@@ -177,6 +178,23 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.links[0].values).toEqual({ kind: 'hard', reason: 'ждём схему' });
     b.schema.relations = [{ key: 'adrs', label: 'ADR', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'adr', place: 'link_tab', manageable: false }];
     expect(recordFromServer(b, LOADED).schema.relations[0]).not.toHaveProperty('props');
+  });
+
+  // MDL-13: признак «привязка требует причины» — из модели (reason_required связи); kit по нему открывает ReasonDialog.
+  it('reason_required связи доходит до kit как reasonRequired; нет признака — нет ключа', () => {
+    const b = sprintBody();
+    b.links = [];
+    b.schema.relations = [
+      { key: 'dependsOn', label: 'Зависит от', relation: 'association', rel: 'DEPENDS_ON', dir: 'out', target_type: 'any', place: 'link_tab', manageable: true, reason_required: true, target_types: ['task', 'sprint', 'milestone'] },
+      { key: 'adrs', label: 'ADR', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'adr', place: 'link_tab', manageable: false },
+    ] as never;
+    const c = recordFromServer(b, LOADED);
+    expect(c.schema.relations[0].reasonRequired).toBe(true);
+    expect(c.schema.relations[0].target_types).toEqual(['task', 'sprint', 'milestone']);
+    expect(c.schema.relations[1]).not.toHaveProperty('reasonRequired');
+    const view = fromLoreRecord(c, 'ru');
+    const kind = Object.values(view.config.kinds).find(k => (k.relations ?? []).some(r => r.key === 'dependsOn'));
+    expect(kind?.relations?.find(r => r.key === 'dependsOn')?.reasonRequired).toBe(true);
   });
 
   it('одно ребро в двух связях — счётчик по типу цели', () => {

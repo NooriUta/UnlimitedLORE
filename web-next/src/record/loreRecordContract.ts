@@ -93,7 +93,11 @@ export interface LoreRelation { key: string; label: string; relation: KitRelatio
   /** Тип на другом конце (сервер: target_type) — для подписи и иконки. */
   target_type?: string;
   /** MDL-13: свойства ребра с подписями (у «зависит от» — вид и причина): kit рисует их колонками связи. */
-  props?: { key: string; label: string }[] }
+  props?: { key: string; label: string }[];
+  /** MDL-13: привязка требует причины (сервер: reason_required) — kit спросит её ReasonDialog. */
+  reasonRequired?: boolean;
+  /** MDL-13: типы другого конца у связи с target_type any (сервер: target_types) — откуда брать варианты выбора. */
+  target_types?: string[] }
 export interface LoreLink { rel: string; dir: 'out' | 'in'; id: string; type: string; title: string; status: string;
   /** Вид концов ребра (сервер: fromKind/toKind) — идёт в KitEdge, чтобы kit не угадывал вид по записям. */
   fromKind?: string; toKind?: string;

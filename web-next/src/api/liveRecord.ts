@@ -327,6 +327,10 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // MDL-13: свойства ребра (у «зависит от» — вид и причина) — подписи из модели; kit покажет их
       // колонками вкладки связей, значения — из values каждой связи.
       ...(propsOf(r.props) ? { props: propsOf(r.props)! } : {}),
+      // MDL-13: привязка требует причины — признак модели; kit по нему открывает ReasonDialog.
+      ...(r.reason_required === true ? { reasonRequired: true } : {}),
+      // MDL-13: типы другого конца связи к нескольким типам — для выбора с поиском.
+      ...(Array.isArray(r.target_types) && r.target_types.length ? { target_types: r.target_types.map(String) } : {}),
     };
   });
 

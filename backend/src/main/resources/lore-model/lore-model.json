@@ -375,7 +375,9 @@
       }, {
         "key" : "reason",
         "label" : "Причина"
-      } ]
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ]
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
@@ -392,7 +394,9 @@
       }, {
         "key" : "reason",
         "label" : "Причина"
-      } ]
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ]
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -1030,7 +1034,9 @@
       }, {
         "key" : "reason",
         "label" : "Причина"
-      } ]
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ]
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
@@ -1047,7 +1053,9 @@
       }, {
         "key" : "reason",
         "label" : "Причина"
-      } ]
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ]
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -2596,7 +2604,8 @@
       }, {
         "key" : "reason",
         "label" : "Причина"
-      } ]
+      } ],
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ]
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
@@ -2612,7 +2621,8 @@
       }, {
         "key" : "reason",
         "label" : "Причина"
-      } ]
+      } ],
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ]
     }, {
       "key" : "products",
       "label" : "Продукты",

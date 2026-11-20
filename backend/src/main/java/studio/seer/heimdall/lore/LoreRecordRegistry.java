@@ -138,7 +138,11 @@ final class LoreRecordRegistry {
      * привязки через {@code POST /lore/record/{type}/{id}/relation}.
      */
     record Relation(String key, String label, String rel, String dir, String targetType,
-                    String relation, String place, boolean manageable, List<EdgeProp> props) {}
+                    String relation, String place, boolean manageable, List<EdgeProp> props,
+                    /* MDL-13: привязка требует причины — kit открывает ReasonDialog, причина уходит в запись связи */
+                    boolean reasonRequired,
+                    /* MDL-13: типы другого конца у связи с targetType any — откуда клиенту брать варианты выбора */
+                    List<String> targetTypes) {}
 
     /**
      * MDL-13: свойство самого ребра, которое паспорт показывает колонкой связи (у DEPENDS_ON — вид и причина).
@@ -239,6 +243,8 @@ final class LoreRecordRegistry {
                 }
                 m.put("props", edgeProps);
             }
+            if (r.reasonRequired()) m.put("reason_required", true);
+            if (!r.targetTypes().isEmpty()) m.put("target_types", r.targetTypes());
             rels.add(m);
         }
         out.put("relations", rels);

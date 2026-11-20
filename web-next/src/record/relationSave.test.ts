@@ -67,3 +67,26 @@ describe('S4-MODEL-PASSPORT-LIST · путь привязки связи', () =>
     await expect(call(http)).rejects.toThrow(/502/);
   });
 });
+
+// SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: связь с обязательной причиной — причина из ReasonDialog kit уходит
+// в тело того же пути (`RelationRequest.reason`), сервер передаёт её обработчику зависимостей (/lore/dep).
+describe('MDL-13 · причина связи доходит до сервера', () => {
+  const capture = () => {
+    const seen: unknown[] = [];
+    const http = (async (_url: unknown, init?: RequestInit) => { seen.push(JSON.parse(String(init?.body))); return json({ ok: true }, 200); }) as unknown as typeof fetch;
+    return { seen, http };
+  };
+  it('с причиной — reason в теле', async () => {
+    const { seen, http } = capture();
+    await saveRelation({ type: 'sprint', id: 'SPRINT_A', rel: 'DEPENDS_ON', dir: 'out', target: 'SPRINT_B', action: 'add', reason: 'ждём схему' }, http);
+    expect(seen[0]).toEqual({ rel: 'DEPENDS_ON', dir: 'out', target: 'SPRINT_B', action: 'add', reason: 'ждём схему' });
+  });
+  it('без причины — ключа reason нет (прежнее тело)', async () => {
+    const { seen, http } = capture();
+    await saveRelation({ type: 'sprint', id: 'SPRINT_A', rel: 'DEPENDS_ON', dir: 'out', target: 'SPRINT_B', action: 'remove' }, http);
+    expect(seen[0]).toEqual({ rel: 'DEPENDS_ON', dir: 'out', target: 'SPRINT_B', action: 'remove' });
+  });
+  it('отказ 422 «укажите причину» — словами сервера', async () => {
+    await expect(call(net(json({ error: 'REASON_REQUIRED', detail: 'укажите причину зависимости' }, 422)))).rejects.toThrow('укажите причину зависимости');
+  });
+});

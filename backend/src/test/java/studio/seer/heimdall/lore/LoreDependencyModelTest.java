@@ -44,6 +44,8 @@ class LoreDependencyModelTest {
                 // веха — тип только для чтения (паспорт правку не обещает, LoreRecordFacadeLiveDbTest): её зависимости
                 // ставятся через MCP и путь /relation, но форма в паспорте вехи не рисуется
                 assertEquals(!"milestone".equals(type), r.manageable(), type + "." + r.key() + ": управление из паспорта");
+                // привязка из паспорта требует причины — признак модели, kit спрашивает её ReasonDialog
+                assertEquals(r.manageable(), r.reasonRequired(), type + "." + r.key() + ": reason_required");
                 assertEquals(List.of("kind", "reason"), r.props().stream().map(LoreRecordRegistry.EdgeProp::key).toList());
                 assertEquals(LoreDependency.DICT, r.props().get(0).dict());
                 if ("milestone".equals(type)) {
@@ -71,6 +73,9 @@ class LoreDependencyModelTest {
         assertEquals("reason", props.get(1).get("key"));
         Map<String, Object> phase = rels.stream().filter(r -> "phase".equals(r.get("key"))).findFirst().orElseThrow();
         assertFalse(phase.containsKey("props"), "у связи без свойств ребра ключа нет");
+        assertEquals(Boolean.TRUE, dep.get("reason_required"), "признак для kit: «Привязать» спросит причину");
+        assertEquals(List.of("task", "phase", "sprint", "milestone"), dep.get("target_types"), "типы другого конца — для выбора с поиском");
+        assertFalse(phase.containsKey("reason_required"), "у прочих связей признака нет");
     }
 
     @Test

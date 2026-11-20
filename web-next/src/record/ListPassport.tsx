@@ -411,8 +411,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Какими связями управлять можно, решает сервер (`manageable` из фасада), а
   // не вид UML: путь привязки есть не у всех. Отказ доходит словами — kit
   // печатает причину рядом с управлением.
-  const onRelation = async ({ rel, dir, target, action }: { rel: string; dir: 'out' | 'in'; target: string; action: 'add' | 'remove' }) => {
-    await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
+  // MDL-13: у связи с обязательной причиной kit сперва спрашивает её (ReasonDialog) — причина идёт тем же путём.
+  const onRelation = async ({ rel, dir, target, action, reason }: { rel: string; dir: 'out' | 'in'; target: string; action: 'add' | 'remove'; reason?: string }) => {
+    await saveRelation({ type, id: view.record.id, rel, dir, target, action, ...(reason !== undefined ? { reason } : {}) }, fetchImpl);
     pp.reload();
   };
   // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,

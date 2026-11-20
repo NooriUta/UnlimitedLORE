@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "598933a31cae81a3",
+  "version" : "3bf34f82656fff8b",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -1209,7 +1209,9 @@
         }, {
           "key" : "reason",
           "label" : "Причина"
-        } ]
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
         "label" : "От неё зависят",
@@ -1226,7 +1228,9 @@
         }, {
           "key" : "reason",
           "label" : "Причина"
-        } ]
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -2381,7 +2385,9 @@
         }, {
           "key" : "reason",
           "label" : "Причина"
-        } ]
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
         "label" : "От неё зависят",
@@ -2398,7 +2404,9 @@
         }, {
           "key" : "reason",
           "label" : "Причина"
-        } ]
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -5859,7 +5867,8 @@
         }, {
           "key" : "reason",
           "label" : "Причина"
-        } ]
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
         "label" : "От неё зависят",
@@ -5876,7 +5885,8 @@
         }, {
           "key" : "reason",
           "label" : "Причина"
-        } ]
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
         "label" : "Продукты",
