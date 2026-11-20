@@ -5,7 +5,8 @@
 //   • пустой и не используемый кодом — не создаётся, причина «пустой и не используется кодом»;
 //   • свойства: старая схема → спека → вывод из кода → мягкий тип; даты не переводятся, где код пишет строку;
 //   • индексы — из старой схемы (DDL шагов V в коде);
-//   • сторож: каждый тип и связь, которые трогает код сервера, есть в модели 1.18 или в списке «вне модели» с причиной.
+//   • сторож «тип, который трогает код, — в модели 1.18 или вне модели с причиной» один: OutsideModelTypesGuardTest (бэкенд),
+//     список — ModelSchemaAdapter.OUTSIDE_MODEL; разбор кода тот же, что здесь (code-types.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
@@ -13,8 +14,7 @@ import { proposeMap, SCHEMA_ONLY_WHY, EMPTY_UNUSED_WHY, CODE_FIELDS } from './pr
 import { schemaOnlyType } from './propose-schema-all.mjs';
 import { codeTypes, declaredDdl, codeWrittenFields, LORE_JAVA } from './code-types.mjs';
 import { structurePlan } from './structure-plan.mjs';
-import { MAP, SCHEMA, EDGES, NOT_MOVED, OUTSIDE_MODEL } from './resources.mjs';
-import { ownTypes } from './transfer.mjs';
+import { MAP, SCHEMA, EDGES, NOT_MOVED } from './resources.mjs';
 import census from './tools/census/fields-all.json' with { type: 'json' };
 import allObjects from './map/all-objects.json' with { type: 'json' };
 
@@ -104,17 +104,6 @@ test('8а: пустые связи, которые пишет код (MEASURED_B
   }
   assert.deepEqual(EDGES.MACHINE_ACCESS.props, { role: 'STRING', projects: 'LIST', harnesses: 'LIST', granted_by: 'STRING', granted_at: 'STRING' });
   assert.deepEqual(EDGES.SOURCED_FROM.props, { at: 'STRING', via: 'STRING' });
-});
-
-test('8а: сторож — каждый тип и связь, которые трогает код сервера, есть в модели 1.18 или «вне модели» с причиной', () => {
-  const known = new Set([...Object.keys(SCHEMA), ...ownTypes(), ...Object.entries(EDGES).filter(([, r]) => r.rule !== 'drop').map(([e, r]) => r.rule === 'convert' ? r.to : e)]);
-  const bad = [...USED.keys()].filter(t => !known.has(t) && !OUTSIDE_MODEL[t]).map(t => t + ' ← ' + [...USED.get(t)].join(', '));
-  assert.deepEqual(bad, [], 'код трогает тип вне модели 1.18 без пометки (rules/outside-model.json):\n' + bad.join('\n'));
-  for (const [t, why] of Object.entries(OUTSIDE_MODEL)) {
-    assert.ok(why && why.length > 10, t + ': причина');
-    assert.ok(!known.has(t), t + ': есть в модели — пометка «вне модели» лишняя');
-    assert.ok(USED.has(t), t + ': код его не трогает — пометка устарела');
-  }
 });
 
 test('8а: перенос связей заводит пустую связь «только схема» со свойствами старой схемы; связь с данными — своим путём', async () => {

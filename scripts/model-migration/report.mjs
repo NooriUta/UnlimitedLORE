@@ -28,7 +28,7 @@ h1{font:800 24px/1.2 Unbounded,sans-serif;color:var(--acc);margin:0 0 6px}h2{fon
 <p>Отпечаток содержимого новой базы: <b class="m">${esc(fingerprint && fingerprint.total)}</b>. Отпечаток диалога статусов: <span class="m">${esc(dialog && dialog.fingerprint)}</span>. Две новые базы, собранные с одинаковыми настройками из одного источника, дают один отпечаток.</p>
 
 <h2>Статусы</h2>
-<p>Свелось само: ${num(sum.unified)} · закрыто решением: ${num(sum.decided)} · ждёт решения: ${num(sum.needs_decision)} · записей в источнике: ${num(sum.records)}.</p>
+<p>Свелось само: ${num(sum.unified)} · закрыто решением: ${num(sum.decided)} · пусто → начальный статус (правило владелицы 19.11): ${num(sum.defaulted || 0)} ·ждёт решения: ${num(sum.needs_decision)} · записей в источнике: ${num(sum.records)}.</p>
 
 <h2>Решения (${decisions.length})</h2>
 ${tbl(['Код', 'Тип · поле', 'Значение', 'Решение', 'Кто', 'Когда'], decisions.map(d => [

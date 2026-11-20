@@ -8322,8 +8322,8 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Владелец записи: кто за неё отвечает.",
-        "description" : null,
+        "definition" : "Кто отвечает за то, чтобы вопрос получил ответ: человек или агент реестра LORE (связь ANSWERABLE_BY).",
+        "description" : "Ответственный — связь с записью реестра людей или агентов, не свободный текст. Когда вопрос закрывают решением (связь «отвечает»), ответственным становится автор решения. У вопросов, где связи нет, показывается прежний текст поля — только для чтения.",
         "layer" : null,
         "historic" : false,
         "write" : null,
@@ -8556,6 +8556,15 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "responsible",
+        "label" : "Ответственный",
+        "relation" : "attribute",
+        "rel" : "ANSWERABLE_BY",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "prop",
         "manageable" : false
       }, {
         "key" : "components",
@@ -8784,8 +8793,8 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Владелец записи: кто за неё отвечает.",
-        "description" : null,
+        "definition" : "Кто отвечает за то, чтобы вопрос получил ответ: человек или агент реестра LORE (связь ANSWERABLE_BY).",
+        "description" : "Ответственный — связь с записью реестра людей или агентов, не свободный текст. Когда вопрос закрывают решением (связь «отвечает»), ответственным становится автор решения. У вопросов, где связи нет, показывается прежний текст поля — только для чтения.",
         "layer" : null,
         "historic" : false,
         "write" : null,
@@ -9018,6 +9027,15 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
+        "manageable" : false
+      }, {
+        "key" : "responsible",
+        "label" : "Ответственный",
+        "relation" : "attribute",
+        "rel" : "ANSWERABLE_BY",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "prop",
         "manageable" : false
       }, {
         "key" : "components",

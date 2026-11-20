@@ -38,6 +38,7 @@ import {
   type ProjectKind,
 } from './loreWrite.js';
 import { ignoredFields } from './toolInputKeys.js';
+import { resolveBodyFiles } from './bodyFile.js';
 
 const rec = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -69,6 +70,8 @@ type UpsertDef = {
   humanApproval?: boolean;
   /** своя сборка body (по умолчанию: fields + id); строка результата = текст отказа */
   build?: (id: string | undefined, fields: Record<string, unknown>) => Record<string, unknown> | string;
+  /** асинхронная подготовка полей до build (doc: *_file → содержимое); строка результата = текст отказа */
+  prepare?: (fields: Record<string, unknown>) => Promise<Record<string, unknown> | string>;
   /** Поля, которые build переводит сам, хотя в схеме заменённого инструмента их нет (не «ignored»). */
   extraKeys?: readonly string[];
   /** свой второй шаг после записи (по умолчанию для project-kind: inlineProject) */
@@ -120,6 +123,8 @@ const UPSERT_DEFS = {
   doc: {
     idField: 'doc_id', path: '/lore/doc', project: 'doc', stripProject: true, guardProject: true,
     replaces: ['doc_new'],
+    // Паритет doc_new: content_*_file читает MCP (корни, предел, отказ в HTTP-режиме — bodyFile.ts).
+    prepare: f => resolveBodyFiles(f),
   },
   feature: {
     idField: 'feature_id', path: '/lore/feature', project: 'uc', stripProject: true, guardProject: true,
@@ -571,7 +576,9 @@ export function registerEntity(server: McpServer): void {
       if (def.refuseClosed && fields.status === 'closed') {
         return { content: [{ type: 'text' as const, text: QUESTION_CLOSE_GUIDANCE }], isError: true };
       }
-      const body = def.build ? def.build(id, fields) : { ...omit(fields, def.stripProject ? 'project' : ''), [def.idField!]: id };
+      const prepared = def.prepare ? await def.prepare(fields) : fields;
+      if (typeof prepared === 'string') return err(new Error(prepared));
+      const body = def.build ? def.build(id, prepared) : { ...omit(prepared, def.stripProject ? 'project' : ''), [def.idField!]: id };
       if (typeof body === 'string') return err(new Error(body));
       try {
         const headers = def.humanApproval && str(fields.human_approval)?.trim()

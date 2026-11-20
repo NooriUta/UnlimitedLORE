@@ -111,6 +111,7 @@ public class LoreQgResource extends LoreResourceBase {
                 out.put("project", project);
             }
             if (status != null) out.put("status", status);
+            if (!exists) CreateDefaultStatus.report(out, CreateDefaultStatus.pick("quality_gate", req.status())); // правило 19.11
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());

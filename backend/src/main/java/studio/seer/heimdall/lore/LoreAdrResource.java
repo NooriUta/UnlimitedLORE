@@ -81,8 +81,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
             boolean isNewAdr = existingAdr == null || existingAdr.isEmpty();
+            // начальный статус типа по модели (16.11.2026; правило владелицы 19.11.2026) — только у нового ADR
+            final CreateDefaultStatus.Pick statusPick = isNewAdr ? CreateDefaultStatus.pick("adr", req.status()) : null;
             String resolvedStatus = (req.status() != null && !req.status().isBlank())
-                ? req.status() : (isNewAdr ? CreateDefaultStatus.forNew("adr", null) : null); // первый статус справочника (16.11.2026)
+                ? req.status() : (statusPick != null ? statusPick.value() : null);
             // LH-44: date_created/component_id only SET when provided (or on first
             // insert) — previously a partial amend call with neither field would reset
             // date_created to today and null out component_id. Found alongside the
@@ -363,6 +365,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     + "(несуществующая цель даёт тихий no-op, а не ошибку)");
             }
             hashStamper.stampOpenHist("KnowADRHist", "KnowADR", "adr_id", req.adr_id());
+            CreateDefaultStatus.report(out, statusPick);
             return noStore(Response.ok(out));
         } catch (Scd2Guard.ConflictException c) {
             return c.response(); // S2-09

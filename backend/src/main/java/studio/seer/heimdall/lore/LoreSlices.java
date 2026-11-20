@@ -48,6 +48,7 @@ public final class LoreSlices {
      */
     static final Map<String, Map<String, String>> TYPED_PARAMS = Map.of(
         "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"),
+        "agent_action_points", Map.of("since", "epoch_ms"),
         "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"));
 
     static Object typedValue(String name, String kind, String value) {
@@ -782,7 +783,9 @@ public final class LoreSlices {
             // Поле выдаётся, потому что по ADR-LORE-021-D3 условие возврата — это
             // ВЕСЬ смысл deferred: без него отложенный вопрос неотличим от
             // забытого, и реестр гниёт в свалку отложенного.
-            "SELECT question_id, title, body_md, status, `trigger`, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, owner, " +
+            // MT-MCP-TRUTH A6: ответственный — по ребру ANSWERABLE_BY, без ребра — прежний текст (QuestionOwner).
+            "SELECT question_id, title, body_md, status, `trigger`, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, " +
+            QuestionOwner.OWNER_COLUMNS + ", " +
             "raised_by, opened_date, closed_date, " +
             // Свежесть (вопрос №49): SCD2 у вопроса нет — последнее известное изменение
             // это закрытие, иначе заведение.
@@ -810,7 +813,7 @@ public final class LoreSlices {
         // каждому вопросу приписываются все решения (186/186). Без него — 35/204.
         // LIMIT и условие скоупа корреляцию не ломают. Сортирует потребитель.
         slice("question_hygiene",
-            "SELECT question_id, title, status, owner, priority, due_date, `trigger`, opened_date, " +
+            "SELECT question_id, title, status, " + QuestionOwner.OWNER_COLUMNS + ", priority, due_date, `trigger`, opened_date, " +
             "out('RAISED_IN').sprint_id AS raised_sprints, " +
             "out('RAISED_IN')[@type='KnowSprint'].out('HAS_STATE')[valid_to IS NULL].status_raw AS raised_sprint_status, " +
             "$d.decision_id AS decision_candidates " +
@@ -859,7 +862,7 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         slice("question_by_id",
-            "SELECT question_id, title, body_md, status, `trigger`, due_date, priority, owner, " +
+            "SELECT question_id, title, body_md, status, `trigger`, due_date, priority, " + QuestionOwner.OWNER_COLUMNS + ", " +
             "raised_by, opened_date, closed_date, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('BELONGS_TO').component_id    AS components, " +
@@ -941,7 +944,7 @@ public final class LoreSlices {
         // задуман самоочищающимся, но связь при закрытии задачи не снимается — вопрос
         // числится блокером того, что уже сделано (замер 06.11: минимум 8, среди них blocker).
         slice("questions_gating_closed_tasks",
-            "SELECT question_id, title, status, priority, owner, " +
+            "SELECT question_id, title, status, priority, " + QuestionOwner.OWNER_COLUMNS + ", " +
             "out('GATES')[out('HAS_STATE')[valid_to IS NULL AND (" +
                 LoreStatusVocabulary.anySql("status_raw", "done", "cancelled") +
             ")].size() > 0].task_uid AS closed_tasks, " +
@@ -2479,6 +2482,22 @@ public final class LoreSlices {
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
+        // Графики 19.11.2026 (предложение «добавляй графики», №2 CFD и №1 время цикла; дальше №4, №5):
+        // ВСЕ версии статуса задач SCD2 с обоими концами — на них стоят накопительный поток и
+        // время цикла. task_starts — моменты без статуса, task_done_dates — только открытая
+        // DONE-версия, history_task — одна задача за запрос: ни одного не хватает.
+        // version_kind = 'text' — версия открыта правкой текста, статус тот же (MT-NOTE-APPEND п.3).
+        // Фильтры — двойным хопом через ребро (как у release_tasks_by_tag), без [0] в WHERE.
+        slice("task_status_versions",
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "status_raw, valid_from, valid_to, version_kind " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
+            List.of(), new LinkedHashMap<>(Map.of(
+                "sprint", " WHERE in('HAS_STATE').out('PART_OF').sprint_id CONTAINS :sprint",
+                "project", " WHERE in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
+            "");
+
         // SPRINT_PLANITEM_RETIRE/T-23: history_plan_item removed — PlanItem is
         // deprecated (T-14) and this slice's only consumer (LoreEvolutionView.tsx)
         // was removed in T-22. Sprint plan-field history now lives on
@@ -3076,6 +3095,18 @@ public final class LoreSlices {
                 "code", " WHERE value = :code")),
             " ORDER BY ts DESC LIMIT 500");
 
+        // Графики 19.11.2026 (№13 действия агентов по дням, №14 отказы MCP по кодам): действия агентов
+        // ТОЧКАМИ за период. agent_actions — 500 последних строк всех исходов (за месяц — пара дней),
+        // mcp_failure_rows — только отказы; здесь все исходы агента с since (epoch-мс числом, TYPED_PARAMS).
+        // Свёртка по дням — у потребителя: GROUP BY по моменту TIMESERIES здесь не проверен.
+        slice("agent_action_points",
+            "SELECT ts, source AS caller, client, value AS status " +
+            "FROM AgentActionLog WHERE segment = 'agent'",
+            List.of(), new LinkedHashMap<>(Map.of(
+                "since", " WHERE ts >= :since",
+                "caller", " WHERE source = :caller")),
+            " ORDER BY ts DESC");
+
         // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
         // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
         // там — догадка LORE по первому запросу после паузы. source = clientId,
@@ -3283,6 +3314,20 @@ public final class LoreSlices {
     private static final java.util.regex.Pattern PLAN_BOARD_TYPE =
         java.util.regex.Pattern.compile("\\bFROM\\s+Plan(Config|Track|Section|Checkpoint|Version)\\b");
 
+    /** Имя типа после FROM (не schema:…, не INDEX:…, не подзапрос). */
+    private static final java.util.regex.Pattern FROM_TYPE =
+        java.util.regex.Pattern.compile("\\bFROM\\s+([A-Z][A-Za-z0-9_]*)\\b(?!\\s*:)");
+
+    /** Типы (вершины, связи, ряды), которые читает срез; пусто — среза нет. Для сторожа «тип вне модели». */
+    static Set<String> typesOf(String id) {
+        SliceDef d = SLICES.get(id);
+        if (d == null) return Set.of();
+        Set<String> out = new java.util.LinkedHashSet<>();
+        java.util.regex.Matcher m = FROM_TYPE.matcher(d.baseSql());
+        while (m.find()) out.add(m.group(1));
+        return out;
+    }
+
     /** Срез читает типы старой доски плана (D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION). */
     static boolean usesPlanBoard(String id) {
         SliceDef d = SLICES.get(id);
@@ -3409,6 +3454,7 @@ public final class LoreSlices {
         Map.entry("task_done_dates", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_created_dates", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_starts", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("phases_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // Спринты мимо sprints.
         Map.entry("timeline_sprints", "out('BELONGS_TO_PROJECT').slug"),
@@ -3529,7 +3575,7 @@ public final class LoreSlices {
      * пометкой «админский/журнал/телеметрия» без места здесь не проходит.
      */
     public static final Set<String> ADMIN_ONLY = Set.of(
-        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions",
+        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points",
         "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix");
 
     /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
@@ -3601,6 +3647,7 @@ public final class LoreSlices {
         Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
         Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
         Map.entry("mcp_failure_rows", "отказы записей агентов построчно (S7B-30) — ряд AO-01, админский; решение"),
+        Map.entry("agent_action_points", "действия агентов точками для графиков (19.11) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
         Map.entry("sessions_recent", "журнал сессий — решение")

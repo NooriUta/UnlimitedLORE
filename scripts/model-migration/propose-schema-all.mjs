@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CODE_FIELDS } from './propose-map-all.mjs';
 import { declaredDdl, LORE_JAVA } from './code-types.mjs';
+import { markNotNull } from './notnull.mjs';
 
 const KIND_OF = { STRING: 'text', INTEGER: 'number', LONG: 'number', DOUBLE: 'number', FLOAT: 'number', BOOLEAN: 'bool', DATE: 'date', DATETIME: 'datetime', MAP: 'map', LIST: 'list' };
 
@@ -87,6 +88,8 @@ function main() {
     if (T.endsWith('Hist')) for (const [f, name] of Object.entries(SERVICE)) fields[f] = fields[f] ? { ...fields[f], kind: 'text', db_type: 'STRING', name, service: true } : { kind: 'text', db_type: 'STRING', name, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
     types[T] = { records: t.records, version_of: T.endsWith('Hist') ? T.slice(0, -4) : null, fields, held: t.held, rejects: Object.fromEntries(Object.entries(t.rejects).map(([k, e]) => [k, e.n ?? e])) };
   }
+  // MDL-11: обязательные поля (MANDATORY + NOTNULL) — из модели
+  markNotNull(types, J(here('../../shared/model/lore-model.json')));
   const out = {
     _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы всех объектов, кроме первого — владелицей не утверждено. Выведено propose-schema-all.mjs из карты map/all-objects.json, переписи полей прода и пробного расчёта: в схему попали только поля, которые перенос реально дал. Запись в приёмник по этой схеме — после её слова.',
     _source: report.source,

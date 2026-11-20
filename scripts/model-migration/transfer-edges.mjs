@@ -17,6 +17,7 @@ import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
 import { applyOrphanSprints } from './orphan-sprints.mjs';
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
+import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -141,6 +142,12 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   const dmPlan = planDecisionMilestones({ rules: decisionMilestoneRules(DECISION_MILESTONES), doc: decisions, ...(await readDecisionMilestoneInput(db)) });
   report.decision_milestones = await applyDecisionMilestones(db, dmPlan, { log, at });
   if (!report.decision_milestones.ok) ok = false;
+  // ответственный вопроса (MT-MCP-TRUTH A6, владелица 19.11.2026 «1а»): текст owner → ребро ANSWERABLE_BY к человеку
+  // или агенту реестра; пять написаний владелицы → omiloreadmin; несовпавшее — в остаток с причиной, счёт по случаям
+  const qoIn = await readQuestionOwnerInput(db);
+  report.question_owner = await applyQuestionOwners(db, planQuestionOwners(qoIn), { log, at,
+    moments: new Map(qoIn.questions.map(x => [x.rid, [x.updated_at, x.opened_date]])) });
+  if (!report.question_owner.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));
