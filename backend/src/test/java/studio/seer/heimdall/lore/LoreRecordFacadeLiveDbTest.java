@@ -120,7 +120,7 @@ class LoreRecordFacadeLiveDbTest {
     void relationEndpointDispatchesToExistingLinkAndRefusesUnknown() {
         sprint("SPRINT_REC_DEP_A");
         sprint("SPRINT_REC_DEP_B");
-        admin().body("{\"rel\":\"DEPENDS_ON\",\"dir\":\"out\",\"target\":\"SPRINT_REC_DEP_B\",\"action\":\"add\"}")
+        admin().body("{\"rel\":\"DEPENDS_ON\",\"dir\":\"out\",\"target\":\"SPRINT_REC_DEP_B\",\"action\":\"add\",\"reason\":\"проверка пути\"}")
             .post("/lore/record/sprint/SPRINT_REC_DEP_A/relation").then().statusCode(200);
         JsonPath a = record("sprint", "SPRINT_REC_DEP_A");
         assertTrue(a.getList("links.id").contains("SPRINT_REC_DEP_B"), a.getList("links").toString());
