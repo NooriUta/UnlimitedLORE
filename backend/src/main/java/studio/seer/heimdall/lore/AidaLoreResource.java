@@ -1046,6 +1046,12 @@ public class AidaLoreResource extends LoreResourceBase {
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
         }
         // D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION: доску плана при установке не перенесли — раздел снят, словами.
+        // Общий случай: срез читает тип вне модели 1.18, которого в базе из модели нет, — 410 с причиной, а не 502.
+        String notMigrated = ModelSchemaAdapter.sliceUnavailable(id);
+        if (notMigrated != null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
+                .entity(new LoreError("TYPE_NOT_MIGRATED", notMigrated))));
+        }
         if (ModelSchemaAdapter.planSectionRemoved(id)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
                 .entity(new LoreError("SECTION_REMOVED", "срез " + id + " — старая доска плана: при установке её не перенесли (MIG_PLAN_BOARD=drop)"))));

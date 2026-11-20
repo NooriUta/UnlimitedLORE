@@ -42,19 +42,26 @@ public class LoreQuestionResource extends LoreResourceBase {
         + "Не путай с dropped: dropped = «решили НЕ отвечать»; «устарел, и вот доказательство» = closed через решение.";
 
     /**
-     * MT-MCP-TRUTH A6: одна личность владелицы — пять написаний в owner
-     * (omiloreadmin 74, owner 21, владелец 19, владелица 9, alexa 4 на 06.11).
-     * Синонимы сводятся при записи; прочие значения (сессии, агенты, составные)
-     * не трогаются — их смысл решает человек, а не словарь.
+     * MT-MCP-TRUTH A6 (решение владелицы 19.11.2026, «1а»): ответственный — ребро ANSWERABLE_BY к человеку или
+     * агенту реестра, а не текст. Прежде здесь пять написаний владелицы сводились к строке omiloreadmin и
+     * писались в поле owner; теперь значение сопоставляется с реестром ({@link QuestionOwner#resolve}), незнакомое —
+     * 422 с причиной, текст поля больше не пишется (остаётся только для чтения старых записей).
      */
-    static final String OWNER_IDENTITY = "omiloreadmin";
-    private static final java.util.Set<String> OWNER_ALIASES =
-        java.util.Set.of("omiloreadmin", "owner", "владелец", "владелица", "alexa");
+    private QuestionOwner.Graph ownerGraph() {
+        return new QuestionOwner.Graph() {
+            @Override
+            public List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                return ingestService.queryPublic(sql, params);
+            }
+            @Override
+            public void exec(String sql, Map<String, Object> params) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
+            }
+        };
+    }
 
-    static String normalizeOwner(String owner) {
-        if (owner == null) return null;
-        String t = owner.strip();
-        return OWNER_ALIASES.contains(t.toLowerCase(java.util.Locale.ROOT)) ? OWNER_IDENTITY : owner;
+    private static Response ownerRefused(String why) {
+        return noStore(Response.status(422).entity(new LoreError("OWNER_UNKNOWN", why)));
     }
 
     public record QuestionCreateRequest(
@@ -81,6 +88,20 @@ public class LoreQuestionResource extends LoreResourceBase {
         // deferred without a trigger is exactly the rot ADR-021 warns against.
         if ("deferred".equals(req.status()) && (req.trigger() == null || req.trigger().isBlank()))
             return badParams("status='deferred' requires a non-empty trigger");
+        // MT-MCP-TRUTH A6: ответственный сопоставляется с реестром ДО записи — незнакомый не оставляет
+        // полузаписанного вопроса и не пишется текстом.
+        QuestionOwner.Target ownerTarget = null;
+        if (req.owner() != null) {
+            QuestionOwner.Resolved r;
+            try {
+                r = QuestionOwner.resolve(ownerGraph(), req.owner());
+            } catch (Exception e) {
+                LOG.warnf("[LORE QUESTION OWNER] %s: %s", req.question_id(), e.getMessage());
+                return upstream(e);
+            }
+            if (r.refusal() != null) return ownerRefused(r.refusal());
+            ownerTarget = r.target();
+        }
         try {
             StringBuilder sql = new StringBuilder("UPDATE KnowQuestion SET question_id=:qid");
             Map<String, Object> p = new java.util.HashMap<>();
@@ -100,7 +121,7 @@ public class LoreQuestionResource extends LoreResourceBase {
             putIf(sql, p, "component_id", ":comp",  req.component_id());
             putIf(sql, p, "due_date",     ":due",   req.due_date());
             putIf(sql, p, "priority",     ":prio",  req.priority());
-            putIf(sql, p, "owner",        ":owner", normalizeOwner(req.owner()));
+            // owner текстом не пишется (A6): ответственный — ребро ANSWERABLE_BY, ниже.
             putIf(sql, p, "raised_by",    ":rb",    req.raised_by());
             putIf(sql, p, "opened_date",  ":od",    req.opened_date());
             putIf(sql, p, "closed_date",  ":cd",    req.closed_date());
@@ -125,6 +146,9 @@ public class LoreQuestionResource extends LoreResourceBase {
             // показывает. Отдельная ирония: реестр открытых вопросов ровно за
             // тем и нужен, чтобы ничего не терялось.
             linkComponentEdge("KnowQuestion", "question_id", req.question_id(), req.component_id(), out);
+            if (ownerTarget != null)
+                out.put("owner", QuestionOwner.assign(ownerGraph(), req.question_id(), ownerTarget,
+                    "question:" + callerLabel(), java.time.Instant.now().toString()));
             // Вердикт полноты (ADR-LORE-039): вопрос без владельца не закрывается —
             // он висит прочитанный и никем не взятый.
             WorkQuality.Result quality = questionQuality(req.question_id());
@@ -200,8 +224,28 @@ public class LoreQuestionResource extends LoreResourceBase {
                     Map.of("cd", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "q", req.question_id()))).await().indefinitely();
             }
             if (remove ? had : (linked && !had)) touchUpdatedAt("KnowQuestion", "question_id", req.question_id());
-            Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
-                "decision_id", req.decision_id(), "action", remove ? "removed" : "added");
+            Map<String, Object> base = new LinkedHashMap<>(Map.of("ok", true, "question_id", req.question_id(),
+                "decision_id", req.decision_id(), "action", remove ? "removed" : "added"));
+            // MT-MCP-TRUTH A6 (владелица 19.11.2026): вопрос закрыт решением — ответственным становится автор
+            // решения. Только на НОВОЙ связи: повтор старой не должен перетягивать ответственного назад.
+            // Автор неизвестен — ребро не трогается, причина в ответе (не молча).
+            if (!remove && linked && !had) {
+                // Повтор связи придёт с had=true и автора уже не переведёт — поэтому сбой перевода не роняет
+                // ответ (связь записана), а называется в нём.
+                try {
+                    QuestionOwner.Graph g = ownerGraph();
+                    QuestionOwner.Resolved author = QuestionOwner.decisionAuthor(g, req.decision_id());
+                    if (author.target() != null)
+                        base.put("owner", QuestionOwner.assign(g, req.question_id(), author.target(),
+                            "answers:" + req.decision_id(), java.time.Instant.now().toString()));
+                    else
+                        base.put("owner_unchanged", author.refusal() + " — ответственный вопроса не менялся");
+                } catch (Exception e) {
+                    LOG.warnf("[LORE QUESTION ANSWERS OWNER] %s: %s", req.question_id(), e.getMessage());
+                    base.put("owner_unchanged", "ответственного не удалось перевести на автора решения: " + e.getMessage()
+                        + " — связь answers записана, ответственный вопроса не менялся (question_set owner=…)");
+                }
+            }
             return remove ? unlinkOutcome(base, had)
                 : linkOutcome(had, base, linked, "ANSWERS", "decision_id", req.decision_id(),
                     "question_id", req.question_id(), "решение " + req.decision_id() + " или вопрос " + req.question_id());

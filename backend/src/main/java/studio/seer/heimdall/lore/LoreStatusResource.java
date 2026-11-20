@@ -688,8 +688,11 @@ public class LoreStatusResource extends LoreResourceBase {
 
         // S4-24: track_id — ссылка на вершину PlanTrack. Несуществующий трек — отказ с причиной
         // до чтения и записи версии (раньше опечатка молча уходила в план). Пусто — снятие трека.
+        LoreError noBoard = LoreSprintTracks.needsCheck(req.track_id()) ? LoreSprintTracks.unavailable() : null;
         Uni<Response> trackGate = !LoreSprintTracks.needsCheck(req.track_id())
             ? Uni.createFrom().item((Response) null)
+            : noBoard != null
+            ? Uni.createFrom().item(noStore(Response.status(Response.Status.GONE).entity(noBoard)))
             : client.query(db, basicAuth(), new MartQuery("sql", LoreSprintTracks.EXISTS_SQL,
                     Map.of("track_id", req.track_id()), -1))
                 .map(t -> {

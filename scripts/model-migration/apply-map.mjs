@@ -1,6 +1,12 @@
-import { classify as classifyRules } from './status-unify.mjs';
+import { classify as classifyRules, EMPTY } from './status-unify.mjs';
 import HARNESS_RULES_FILE from './rules/status-unification.json' with { type: 'json' };
+import LORE_MODEL from '../../shared/model/lore-model.json' with { type: 'json' };
+import { notNullOfModel } from './notnull.mjs';
 const HARNESS_RULES = HARNESS_RULES_FILE.dictionaries.harness;
+// MDL-11 (ответ владелицы 19.11.2026 «5а»): обязательное по модели поле (notnull — в базе MANDATORY + NOTNULL) пустым
+// не пропускается молча, а становится несоответствием «пусто»; его закрывает решение человека (у LORE: ST-08 — версия
+// задачи без статуса → BACKLOG). Без решения запись не пишется: сторож notNullMissing в transfer.mjs.
+const NOT_NULL = notNullOfModel(LORE_MODEL);
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Исполнитель карты переноса.
 //
 // Чистая функция: запись старой базы + карта её типа → запись новой базы. Базы не касается, поэтому
@@ -200,6 +206,12 @@ export function applyMap(T, typeMap, record, ctx = {}) {
       continue;
     }
     throw new Error(`${k}: неизвестное правило «${e.rule}»`);
+  }
+  for (const to of NOT_NULL[T] || []) {
+    if (given(r.out[to])) continue;
+    const src = Object.keys(typeMap).filter(f => (typeMap[f].to || f) === to && typeMap[f].rule !== 'drop');
+    if (src.some(f => given(record[f]))) continue; // значение было, но не привелось — несоответствие уже названо
+    reject(r, src[0] || to, '', EMPTY, { bucket: 'out', field: to, ...(to === 'status' ? { note: 'status_note' } : {}) });
   }
   // MIG-02: решения человека о несоответствиях данных (раздел «Перенос») — после расчёта по карте.
   if (ctx.decisions) resolveRejects(T, r, ctx.decisions);
