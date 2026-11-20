@@ -141,6 +141,7 @@
     "/lore/sprint/component",
     "/lore/sprint/dep",
     "/lore/sprint/project",
+    "/lore/tag/apply",
     "/lore/task/adr",
     "/lore/task/component",
     "/lore/task/file",
