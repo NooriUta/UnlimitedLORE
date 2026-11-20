@@ -10,6 +10,9 @@
 // (owner, «план доску удаляем»); журнал шагов — заменён отметкой схемы; остальное — как есть (delegated).
 // Запуск: node propose-map-all.mjs <перепись.json> → map/all-objects.json
 import fs from 'node:fs';
+import { legacyRule } from './legacy.mjs';
+import { fileURLToPath } from 'node:url';
+import { codeTypes, LORE_JAVA } from './code-types.mjs';
 
 const FIRST = new Set(['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHist', 'KnowTask', 'KnowTaskHist']);
 const SERVICE = new Set(['valid_from', 'valid_to', 'state_uid', 'content_hash', 'changed_by', 'changed_by_kind', 'changed_by_session',
@@ -40,6 +43,9 @@ export function typePlan(T) {
 
 /** Правило одного поля. */
 export function ruleFor(T, f) {
+  // MDL-08 (владелица 20.11.2026): легаси-поле не переносится, значение — в остаток MigLeftover; правило старше прочих.
+  const legacy = legacyRule(T, f);
+  if (legacy) return legacy;
   if (f === 'hist_for') return { rule: 'drop', why: 'ключ записи в версии повторяет связь HAS_STATE', basis: 'delegated', note: W };
   // В версиях спеки status_raw не встречается без status (замер прода 17.11: 0 из 102) — дубль.
   if (T === 'KnowSpecHist' && f === 'status_raw') return { rule: 'drop', why: 'дубль status: без него не встречается (0 из 102, прод 17.11)', basis: 'delegated', note: W };
@@ -73,25 +79,60 @@ export function ruleFor(T, f) {
 export const SERVICE_EDIT = ['changed_by_session', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine'];
 const SERVICE_EDIT_RULE = { rule: 'keep', basis: 'owner', note: 'служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)' };
 
-/** Карта по переписи: { types: {T: {f: правило}}, skipped: {T: почему} }. Порядок — по имени, детерминированно. */
-export function proposeMap(census) {
-  const types = {}, skipped = {};
+/**
+ * MD-02 8а — пустой тип (0 записей по переписи). Владелица 19.11.2026: «по коду восстанови и по данным что выбрать»,
+ * «функции оставить, алгоритмами и здравым смыслом подобрать типы». Тип, который трогает код сервера (code-types.mjs),
+ * переходит в 1.18 «только схемой»: без данных, со свойствами старой схемы как есть (дата строкой остаётся строкой —
+ * её так пишет код) и с её индексами. Пустой и не используемый кодом — не создаётся.
+ */
+export const SCHEMA_ONLY_WHY = 'пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)';
+export const EMPTY_UNUSED_WHY = 'пустой и не используется кодом — не создаётся (решение владелицы 19.11.2026, MD-02 8а)';
+const SCHEMA_ONLY_RULE = { rule: 'keep', basis: 'owner', note: 'тип «только схема»: свойство старой схемы как есть (MD-02 8а)' };
+/**
+ * Свойства, которые код пишет, а старая схема не задаёт. Порядок источников (владелица 19.11.2026): старая схема →
+ * спека → вывод из кода → мягкий тип. Сторож (md02-empty-types.test.mjs) находит каждое такое свойство по SQL кода
+ * (codeWrittenFields) и требует запись здесь — с типом и источником.
+ */
+export const CODE_FIELDS = {
+  KnowCanvasLink: {
+    graph_state: { db_type: 'STRING', source: 'выведено из кода: LoreCanvasResource.java — UPSERT graph_state = :g, значения «drawing» | «created», чтение ifnull(graph_state, \'drawing\')' },
+  },
+  QGMetric: {
+    name: { db_type: 'STRING', source: 'выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка' },
+    threshold: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка' },
+  },
+};
+
+/**
+ * Карта по переписи: { types: {T: {f: правило}}, skipped: {T: почему}, schema_only: {T: почему} }. Порядок — по имени.
+ * opts.codeTypes — типы, которые трогает код сервера; не передан — пустой тип не выбрасывается (функцию не теряем по незнанию).
+ */
+export function proposeMap(census, opts = {}) {
+  const types = {}, skipped = {}, schemaOnly = {};
+  const used = opts.codeTypes;
   for (const T of Object.keys(census).sort()) {
     const p = typePlan(T);
     if (!p.move) { if (!FIRST.has(T)) skipped[T] = p.why; continue; }
+    const empty = census[T].total === 0;
+    if (empty && used && !used.has(T)) { skipped[T] = EMPTY_UNUSED_WHY; continue; }
     types[T] = {};
-    for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
+    if (empty) {
+      schemaOnly[T] = SCHEMA_ONLY_WHY;
+      const fields = [...(census[T].fields || []).map(f => f.name), ...Object.keys(CODE_FIELDS[T] || {})].sort((a, b) => a.localeCompare(b));
+      for (const f of fields) types[T][f] = CODE_FIELDS[T] && CODE_FIELDS[T][f] ? { rule: 'keep', basis: 'owner', note: 'тип «только схема»: ' + CODE_FIELDS[T][f].source } : { ...SCHEMA_ONLY_RULE };
+    } else for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
     if (T.endsWith('Hist')) for (const f of SERVICE_EDIT) if (!types[T][f]) types[T][f] = { ...SERVICE_EDIT_RULE };
   }
   for (const T of RETIRED_V89) skipped[T] ||= RETIRED_WHY;
   const sortedSkipped = Object.fromEntries(Object.entries(skipped).sort(([a], [b]) => a.localeCompare(b)));
-  return { _about: 'MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.', types, skipped: sortedSkipped };
+  return { _about: 'MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.', types, skipped: sortedSkipped, schema_only: schemaOnly };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('propose-map-all.mjs')) {
   const census = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-  const m = proposeMap(census);
+  // какие типы трогает код сервера — по SQL исходников (имена переписи — для реестров вида HIST_PARENT)
+  const m = proposeMap(census, { codeTypes: new Set(codeTypes(fileURLToPath(LORE_JAVA), new Set(Object.keys(census))).keys()) });
   fs.writeFileSync(new URL('./map/all-objects.json', import.meta.url), JSON.stringify(m, null, 1) + '\n');
   const n = Object.values(m.types).reduce((a, t) => a + Object.keys(t).length, 0);
-  console.log(`карта: типов ${Object.keys(m.types).length}, полей ${n}; не переносятся: ${Object.keys(m.skipped).join(', ')}`);
+  console.log(`карта: типов ${Object.keys(m.types).length}, полей ${n}; не переносятся: ${Object.keys(m.skipped).join(', ')}; только схема: ${Object.keys(m.schema_only).join(', ')}`);
 }

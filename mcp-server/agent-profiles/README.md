@@ -6,10 +6,11 @@ server's tools. `full` is the `primary` mode profile (Claude / backfill sessions
 the tool-name-prefix categories that role owns (permission keys are glob patterns matched against
 the MCP tool name — see [MIGRATION.md](./MIGRATION.md) for the current tool name list).
 
-Read tools (`list_slices`, `query_slice`, `changed`, `run_block`, `search`, `search_similar`, `graph`) are allowed on
-every profile — reading the graph never needs restricting, only writes do. All seven are GET
-(`/lore/slice`, `/lore/changed`, `/lore/search`, `/lore/graph`); `AgentProfilesMatchMatrixTest.everyProfileReadsTheGraph` keeps
-every subagent profile carrying them (S6-08).
+Read tools (`list_slices`, `query_slice`, `changed`, `run_block`, `search`, `search_similar`, `graph`, `graph_path`, `find`) are
+allowed on every profile — reading the graph never needs restricting, only writes do. All but `find` are GET
+(`/lore/slice`, `/lore/changed`, `/lore/search`, `/lore/graph`, `/lore/graph/path`); `find` is `POST /lore/find` only because its
+condition tree does not fit a query string — it writes nothing, and its `find` family is open to every profile in
+`AgentScopeFilter` (GC-05). `AgentProfilesMatchMatrixTest.everyProfileReadsTheGraph` keeps every subagent profile carrying them (S6-08).
 
 | Profile | Owns |
 |---|---|
@@ -61,7 +62,7 @@ The MCP server itself now narrows its registered tool surface by these same prof
 
 The backend (`AgentScopeFilter`) remains the security boundary — it denies with a reason even if a hidden tool is called from a stale session. The MCP filter is about payload size and an honest "what you may use" picture. Snapshot test: `src/tools/profileSurface.test.ts` (regenerate: `UPDATE_PROFILE_SURFACE=1`).
 
-Read-only `core` profile: `list_slices query_slice changed run_block search search_similar task_shape machine_acl harness_list graph quality_check lore_version`.
+Read-only `core` profile: `list_slices query_slice changed run_block search search_similar task_shape machine_acl harness_list graph graph_path find quality_check lore_version`.
 
 ## Entity consolidation (`entity_*`, MCPV2-3, 13.11.2026)
 

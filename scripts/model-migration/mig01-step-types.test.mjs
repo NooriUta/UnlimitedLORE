@@ -37,6 +37,7 @@ const LOOP_SITES = {
   'transfer.mjs': 'T — типы схемы переноса (SCHEMA)',
   'transfer-edges.mjs': 'T — связи карты (keptEdges), E — связи модели сессий (SESSION_EDGES)',
   'repos.mjs': 't — ORG_EDGES и связи репозиториев (REPO_TYPES)',
+  'edge-plan.mjs': 'e — связи карты «только схема» (MD-02 8а, schema_only) — проверяются отдельным тестом ниже',
 };
 test('сторож: любой тип, который заводит код установщика, — в ownTypes', () => {
   const own = new Set(ownTypes());
@@ -47,13 +48,20 @@ test('сторож: любой тип, который заводит код ус
     for (const m of src.matchAll(/CREATE (?:EDGE|VERTEX|DOCUMENT) TYPE (\$\{(\w+)\}|[A-Za-z_]\w*)/g)) {
       const name = m[2] ? (CONST[m[2]] ?? null) : m[1];
       seen.push(f + ':' + m[1]);
-      if (name === null) { if (!LOOP_SITES[f] || !/^[TEt]$/.test(m[2])) bad.push(`${f}: имя ${m[1]} — не литерал и не известная константа`); continue; }
+      if (name === null) { if (!LOOP_SITES[f] || !/^[TEte]$/.test(m[2])) bad.push(`${f}: имя ${m[1]} — не литерал и не известная константа`); continue; }
       if (name === 'IF' || name === 'LoreBootProbe') continue;
       if (!own.has(name)) bad.push(`${f}: ${name} вне ownTypes`);
     }
   }
   assert.ok(seen.length >= 10, 'сторож нашёл места создания типов: ' + seen.length);
   assert.deepEqual(bad, []);
+});
+
+test('связи «только схема» (MD-02 8а, их заводит schemaOnlyEdgeDdl) — свои типы переноса', async () => {
+  const { EDGES } = await import('./resources.mjs');
+  const so = Object.entries(EDGES).filter(([, r]) => r.schema_only).map(([e]) => e);
+  assert.ok(so.length > 0);
+  for (const e of so) assert.ok(ownTypes().includes(e), e);
 });
 
 test('пишущая команда без файла решений не запускается: решения шага молча не применились бы', () => {
