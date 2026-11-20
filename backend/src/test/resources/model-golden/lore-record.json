@@ -19422,7 +19422,8 @@
         "dir" : "out",
         "target_type" : "qg_metric",
         "place" : "part",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -19864,7 +19865,8 @@
         "dir" : "out",
         "target_type" : "qg_metric",
         "place" : "part",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
