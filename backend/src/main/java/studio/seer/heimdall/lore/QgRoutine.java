@@ -32,6 +32,18 @@ public interface QgRoutine {
     /** Сырьё → метрики единого контракта: значение, порог, статус, причина неизмеренности. */
     List<LoreQgResource.QGMetricEntry> normalize(List<RawFact> raw);
 
+    /**
+     * Запрос суждения аналитика по УЖЕ нормализованным метрикам (И-3: аналитик не
+     * производит числа, инструментов у него нет). Пусто — у рутины аналитика нет,
+     * модель не вызывается, поле {@code model} прогона пустое осмысленно.
+     * Модель и потолок расхода задаёт владелица конфигом ({@link QgLlmSettings}),
+     * а не рутина. task:SPRINT_QG_REBUILD/QG-15.
+     */
+    default java.util.Optional<studio.seer.heimdall.lore.llm.LlmRequest> analystRequest(
+            List<LoreQgResource.QGMetricEntry> metrics) {
+        return java.util.Optional.empty();
+    }
+
     record RawFact(String key, Object value, String source) {}
 
     /** {@code reason} — из {@link LoreQgRunWriter#NOT_MEASURED_REASONS}; свободный текст запрещён. */

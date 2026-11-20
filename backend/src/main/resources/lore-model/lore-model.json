@@ -1782,9 +1782,12 @@
       "labelKey" : "pp.field.hasExtDeps",
       "kind" : "bool",
       "group" : "props",
+      "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
       "layer" : "optional",
       "labelEn" : "External dependencies",
-      "labelPl" : "Zależności zewnętrzne"
+      "definitionEn" : "The document references external resources (CDN): without internet access it may not render fully.",
+      "labelPl" : "Zależności zewnętrzne",
+      "definitionPl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości."
     } ],
     "body" : [ {
       "key" : "content_md_ru",

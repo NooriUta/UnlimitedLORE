@@ -72,7 +72,11 @@ final class ModelSchemaAdapter {
         "PlanTrack", PLAN_BOARD,
         "PlanSection", PLAN_BOARD,
         "PlanCheckpoint", PLAN_BOARD,
-        "PlanVersion", PLAN_BOARD);
+        "PlanVersion", PLAN_BOARD,
+        // MD-02 8а: типы, которые трогает только накатка шагов V на старой схеме — на базе из модели шаги V не идут
+        "KnowFeature", "легаси: читает только шаг V13 накатки на старой схеме (KnowFeature растворён в KnowUseCase, PL-28)",
+        "LoreTag", "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)",
+        "LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме");
 
     /** Типы схемы базы (schema:types) на базе из модели; null — не прочитали, и тогда «типа нет» не утверждаем. */
     private static volatile Set<String> schemaTypes;
