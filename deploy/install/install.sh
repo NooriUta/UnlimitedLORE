@@ -4,6 +4,7 @@
 #   install.sh [--dir DIR] --version vX.Y.0 [--build] [--port N] [--bind ADDR] [--dry-run]
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
 #     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
+#   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -57,11 +58,16 @@ FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на наш�
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
 FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
 FORGEJO_MCP_BUILD=0
+# Сборка из архива исходников пакета (MIG-04, владелица 20.11.2026: «архивом наш проект для собственной сборки если
+# что»): src/lore-<версия>.tar.gz и .sha256 рядом с install.sh (или LORE_SRC_ARCHIVE). Без флага — как раньше.
+FROM_SOURCE=0
+SRC_ARCHIVE=""
+SRC_TAG=""
 
 say()  { printf '── %s\n' "$*"; }
 warn() { printf 'ВНИМАНИЕ: %s\n' "$*" >&2; }
 die()  { printf 'ОШИБКА: %s\n' "$1" >&2; exit "${2:-1}"; }
-usage() { sed -n '3,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '3,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # Мажорная версия: vX.Y.0 — то же правило, что у публикации образов и зеркала GitHub.
 is_major() { [[ "$1" =~ ^v[0-9]+\.[0-9]+\.0$ ]]; }
@@ -96,6 +102,7 @@ parse_args() {
       --dry-run)   DRY=1; shift ;;
       --build)     BUILD=1; shift ;;
       --forgejo-mcp-build) FORGEJO_MCP_BUILD=1; shift ;;
+      --build-from-source) FROM_SOURCE=1; BUILD=1; shift ;;
       --selftest)  MODE="selftest"; shift ;;
       -h|--help)   usage; exit 0 ;;
       *) die "неизвестный аргумент: $1 (см. --help)" 2 ;;
@@ -105,6 +112,11 @@ parse_args() {
   if [ -n "$PORT" ]; then
     case "$PORT" in *[!0-9]*) die "--port: нужно число, а не «$PORT»" 2 ;; esac
     [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || die "--port вне 1..65535" 2
+  fi
+  if [ "$FROM_SOURCE" = 1 ]; then
+    [ -z "$VERSION" ] || die "--build-from-source: версия берётся из архива пакета (src/lore-<версия>.tar.gz) — --version не задавайте" 2
+    { [ -z "${LORE_BACKEND_IMAGE:-}" ] && [ -z "${LORE_WEB_IMAGE:-}" ]; } \
+      || die "--build-from-source и готовые образы (LORE_BACKEND_IMAGE / LORE_WEB_IMAGE) — одно из двух" 2
   fi
   if [ -n "$VERSION" ]; then
     is_major "$VERSION" || die "--version $VERSION: инсталлятор — только для мажорных версий vX.Y.0 (например v1.18.0); патчи vX.Y.Z (Z>0) и rc — нет" 2
@@ -201,6 +213,19 @@ check_prereq() {
 # Исходники для сборки: на теге — выгрузка git archive в $DIR/src/<тег>
 # (рабочий чекаут не трогается); без тега — каталог --src как есть.
 prepare_src() {
+  if [ "$FROM_SOURCE" = 1 ]; then
+    local out="$DIR/src/$SRC_TAG"
+    if [ "$DRY" = 1 ]; then
+      printf '[dry-run] mkdir -p %s && tar -xzf %s -C %s\n' "$out" "$SRC_ARCHIVE" "$out"
+    elif [ ! -f "$out/backend/Dockerfile.local" ]; then
+      mkdir -p "$out"
+      tar -xzf "$SRC_ARCHIVE" -C "$out"
+      [ -f "$out/backend/Dockerfile.local" ] || die "в архиве $SRC_ARCHIVE нет исходников LORE (backend/Dockerfile.local)"
+    fi
+    LORE_SRC_RESOLVED="$out"; VERSION="$SRC_TAG"
+    say "сборка из исходников пакета: $(basename "$SRC_ARCHIVE") → $out"
+    return 0
+  fi
   if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "готовые образы: $LORE_BACKEND_IMAGE, $LORE_WEB_IMAGE — сборки нет"
     LORE_SRC_RESOLVED=""; return 0
@@ -327,6 +352,28 @@ forgejo_mcp_image() {
   fi
 }
 
+# Архив исходников пакета: LORE_SRC_ARCHIVE или единственный src/lore-<версия>.tar.gz рядом с install.sh.
+# Как у архива forgejo-mcp: без .sha256 или при несовпадении — отказ, непроверенные исходники не собираются.
+src_archive() {
+  local a="" f n=0 want got base
+  if [ -n "${LORE_SRC_ARCHIVE:-}" ]; then
+    a="$LORE_SRC_ARCHIVE"
+  else
+    for f in "$SCRIPT_DIR"/src/lore-*.tar.gz; do [ -f "$f" ] && { a="$f"; n=$((n + 1)); }; done
+    [ "$n" -le 1 ] || die "в $SCRIPT_DIR/src/ несколько архивов исходников — нужный задайте в LORE_SRC_ARCHIVE"
+  fi
+  [ -n "$a" ] && [ -f "$a" ] || die "нет архива исходников ${a:-$SCRIPT_DIR/src/lore-<версия>.tar.gz}. Положите каталог src/ из каталога версии пакета рядом с install.sh или задайте LORE_SRC_ARCHIVE"
+  base="$(basename "$a")"
+  [[ "$base" =~ ^lore-([0-9A-Za-z][0-9A-Za-z.+-]*)\.tar\.gz$ ]] || die "архив исходников не по образцу lore-<версия>.tar.gz: $base"
+  SRC_TAG="${BASH_REMATCH[1]}"
+  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенные исходники не собираю"
+  want="$(awk '{print $1; exit}' "$a.sha256")"
+  got="$(sha256sum "$a" | awk '{print $1}')"
+  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не собираю"
+  say "sha256 архива исходников сходится ($base)"
+  SRC_ARCHIVE="$a"
+}
+
 wait_db() {
   local db i
   db="$(env_get LORE_DB "$DIR/.env")"; db="${db:-system_aida_lore}"
@@ -397,6 +444,7 @@ verify() {
 }
 
 do_install() {
+  [ "$FROM_SOURCE" = 0 ] || src_archive
   check_prereq
   default_images
   prepare_src
@@ -554,6 +602,33 @@ selftest() {
     grep -q -- "- $k=\${$k:-" "$c" || fail "бэкенд: $k не передаётся"; ok
   done
   grep -q 'host.docker.internal:host-gateway' "$c" || fail "бэкенд: модель на этой машине не видна из контейнера"; ok
+  # 11. сборка из архива исходников пакета (MIG-04, владелица 20.11.2026: «архивом наш проект для собственной сборки
+  #     если что»): --build-from-source сверяет sha256, распаковывает в <dir>/src/<версия>/ и собирает образы;
+  #     без флага всё как раньше — архив не трогается.
+  mkdir -p "$t/pkg/src/x/backend"; printf 'FROM scratch\n' > "$t/pkg/src/x/backend/Dockerfile.local"
+  ( cd "$t/pkg/src" && tar -czf lore-9.1.0.tar.gz -C x . && sha256sum lore-9.1.0.tar.gz > lore-9.1.0.tar.gz.sha256 )
+  local sa="$t/pkg/src/lore-9.1.0.tar.gz"
+  LORE_SRC_ARCHIVE="$sa" expect_rc 0 --dry-run --dir "$t/inst" --build-from-source
+  printf '%s' "$out" | grep -q 'sha256 архива исходников сходится' || fail "--build-from-source: нет сверки sha256: $out"; ok
+  printf '%s' "$out" | grep -qF "tar -xzf $sa -C $t/inst/src/9.1.0" || fail "--build-from-source: нет распаковки в <dir>/src/<версия>: $out"; ok
+  printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "--build-from-source: образы не собираются: $out"; ok
+  printf '%s' "$out" | grep -q 'ghcr.io' && fail "--build-from-source: план тянет готовые образы ghcr"; ok
+  [ ! -e "$t/inst" ] || fail "dry-run --build-from-source создал каталог установки"; ok
+  printf 'подмена' >> "$sa"
+  LORE_SRC_ARCHIVE="$sa" expect_rc 1 --dry-run --dir "$t/inst" --build-from-source
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый архив исходников: отказ без причины: $out"; ok
+  rm -f "$sa.sha256"
+  LORE_SRC_ARCHIVE="$sa" expect_rc 1 --dry-run --dir "$t/inst" --build-from-source
+  printf '%s' "$out" | grep -q 'нет файла sha256' || fail "архив исходников без sha256 принят молча: $out"; ok
+  LORE_SRC_ARCHIVE="$t/none.tar.gz" expect_rc 1 --dry-run --dir "$t/inst" --build-from-source
+  printf '%s' "$out" | grep -q 'нет архива исходников' || fail "нет архива исходников: отказ без причины: $out"; ok
+  LORE_SRC_ARCHIVE="$t/pkg/src/x/backend/Dockerfile.local" expect_rc 1 --dry-run --dir "$t/inst" --build-from-source
+  printf '%s' "$out" | grep -q 'lore-<версия>.tar.gz' || fail "архив с чужим именем: отказ без образца: $out"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --build-from-source --version v9.0.0
+  printf '%s' "$out" | grep -q 'из архива' || fail "--version с --build-from-source: причина не названа: $out"; ok
+  LORE_BACKEND_IMAGE=r/b:1 LORE_WEB_IMAGE=r/w:1 expect_rc 2 --dry-run --dir "$t/inst" --build-from-source
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'tar -xzf' && fail "без --build-from-source план распаковывает архив исходников"; ok
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }

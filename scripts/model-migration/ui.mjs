@@ -18,6 +18,7 @@ import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
 import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml, volvaEmbedEnv, forgejoEnv, llmEnv } from './setup.mjs';
 import { INSTALL_BUNDLE, DECISION_MILESTONES } from './resources.mjs';
+import { helpHtml } from './install-help.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
 import { realmPlan, applyRealm, issuerParts } from './kc-realm.mjs';
@@ -59,6 +60,9 @@ export function decisionFromForm(f, id, at, caseOf = () => 'upper') {
 const sameScope = (a, b) => a.type === b.type && a.field === b.field && a.value === b.value && a.why === b.why;
 
 /** Добавить решение; решение по той же области заменяет прежнее (код прежнего сохраняется). */
+/** Страница окна: справка «Что нужно и как настроить» — разделы README пакета (install-help.mjs), один источник. */
+export function pageHtml() { return PAGE.replace('<!--HELP-->', () => helpHtml(INSTALL_BUNDLE.files['README.md'] || '')); }
+
 export function addDecision(doc, form, at = new Date().toISOString(), caseOf) {
   const list = [...(doc.decisions || [])];
   const probe = decisionFromForm(form, 'ST-00', at, caseOf);
@@ -98,6 +102,9 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 .chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 7px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}.chip.ok{color:var(--suc);border-color:var(--suc)}
 .chip.sug{border-color:var(--acc);color:var(--acc)}.chip.on{background:var(--acc);border-color:var(--acc);color:var(--bg0)}.pkc{cursor:pointer;padding:2px 9px;font-size:var(--fs-xs)}.pkc input{margin:0 3px 0 0;vertical-align:middle}
 .themesw{display:inline-flex;border:1px solid var(--acc);border-radius:999px;overflow:hidden}.themesw button{background:transparent;border:0;color:var(--acc);font:700 var(--fs-xs) Manrope,sans-serif;padding:3px 10px;cursor:pointer}.themesw button[aria-pressed=true]{background:var(--acc);color:var(--bg0)}
+.help h3{font-size:var(--fs-sm)}.help h4{font-size:var(--fs-xs);margin:8px 0 4px;font-family:Unbounded,Manrope,sans-serif}.help pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg0);border:1px solid var(--bd);border-radius:6px;padding:6px 8px;margin:4px 0}.help code{overflow-wrap:anywhere}.help p,.help li{overflow-wrap:anywhere}
+.htw{border:1px solid var(--bd);border-radius:6px;margin:6px 0;overflow-x:auto}.htab{min-width:0;font-size:var(--fs-xs)}.htab td{vertical-align:top}.hsteps{margin:4px 0 6px}
+@media (max-width:700px){.htab,.htab tbody,.htab tr,.htab td{display:block;width:auto!important}.htab thead{display:none}.htab tr{border-top:1px solid var(--bd);padding:4px 0}.htab td{border:0;padding:2px 8px}.htab td::before{content:attr(data-th);display:block;color:var(--t3);font:700 var(--fs-2xs) Manrope,sans-serif;letter-spacing:.08em;text-transform:uppercase}}
 #msg{position:fixed;left:12px;right:12px;bottom:10px;background:var(--bg1);border:1px solid var(--acc);border-radius:6px;padding:6px 10px;display:none}#msg.err{border-color:var(--dng);color:var(--dng)}
 </style></head><body><div class="wrap">
 <div class="top"><h1>Установщик LORE</h1><span class="themesw"><button data-theme-set="light">Светлая</button><button data-theme-set="dark">Тёмная</button></span></div>
@@ -125,9 +132,11 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <div><b>Хранилище секретов</b> <label><input type="radio" name="secrets" value="own" checked> есть своё</label> <label><input type="radio" name="secrets" value="none"> нет — скачать и настроить</label></div>
 <div><b>Forgejo</b> <label><input type="radio" name="forgejo" value="none" checked> без Forgejo</label> <label><input type="radio" name="forgejo" value="install"> поставить Forgejo нашей версии</label> <label><input type="radio" name="forgejo" value="own"> есть свой — указать адрес</label></div>
 <div><b>LLM (по выбору)</b> <label><input type="radio" name="llm" value="none" checked> без модели</label> <label><input type="radio" name="llm" value="local"> своя локальная модель — указать сервер</label></div>
+<div><b>Образы</b> <label><input type="radio" name="images" value="ready" checked> готовые образы</label> <label><input type="radio" name="images" value="source"> собрать из исходников пакета</label> <a class="sub" href="#help-start">как</a></div>
 <div><b>Режим</b> <label><input type="radio" name="mode" value="new" checked> новая установка</label> <label><input type="radio" name="mode" value="migrate"> перенос на новую модель</label></div>
 </form></div>
 <div id="splan"></div>
+<!--HELP-->
 <h3>Установка</h3>
 <div class="tw" style="padding:8px"><form id="if" autocomplete="off"><table class="cfg">
 <tr><td>Каталог установки (Linux)</td><td><input name="dir" size="30" value="/opt/lore"></td></tr>
@@ -336,9 +345,12 @@ function save(map){fetch('api/regroup',{method:'POST',headers:{'Content-Type':'a
 el.querySelectorAll('[data-save]').forEach(function(b){b.onclick=function(){var i=el.querySelector('input[data-from="'+b.dataset.save+'"]');var m={};m[b.dataset.save]=i.value;save(m)}});
 document.getElementById('rgall').onclick=function(){var m={};el.querySelectorAll('input[data-from]').forEach(function(i){m[i.dataset.from]=i.value});save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать проекты: '+e.message})}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
-function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','forgejo','llm','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
+function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','forgejo','llm','images','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
+function helpOf(id){if(/keycloak|kc-/.test(id))return 'keycloak';if(/volva/.test(id))return 'volva';if(/forgejo/.test(id))return 'forgejo';if(/llm/.test(id))return 'llm';if(/secrets/.test(id))return 'secrets';if(id==='install-lore')return 'start';if(id==='agent')return 'check';return ''}
+function helpOpen(){var m=/^#help-([a-z]+)$/.exec(location.hash);document.querySelectorAll('.hsteps a').forEach(function(a){a.classList.toggle('on',!!m&&a.dataset.help===m[1])});if(!m)return;var d=document.getElementById('help-'+m[1]);if(d){d.open=true;d.scrollIntoView({block:'start'})}}
+window.addEventListener('hashchange',helpOpen);setTimeout(helpOpen,0);
 function splan(){fetch('api/setup/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sform())}).then(function(r){return r.json()}).then(function(d){var el=document.getElementById('splan');if(d.error){el.innerHTML='<div class="state stop">'+esc(d.error)+'</div>';return}
-el.innerHTML='<h3>План</h3><ol>'+d.plan.map(function(p){return '<li><b>'+esc(p.title)+'</b><ul>'+p.howto.map(function(h){return '<li>'+esc(h)+'</li>'}).join('')+'</ul>'+(p.links.length?'<div class="sub">'+p.links.map(function(l){return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.title)+'</a>'}).join(' · ')+'</div>':'')+(p.env.length?'<div class="sub mono">'+p.env.map(esc).join(' · ')+'</div>':'')+'</li>'}).join('')+'</ol>'})}
+el.innerHTML='<h3>План</h3><ol>'+d.plan.map(function(p){var hp=helpOf(p.id);return '<li><b>'+esc(p.title)+'</b>'+(hp?' <a class="sub" href="#help-'+hp+'">что нужно и как настроить</a>':'')+'<ul>'+p.howto.map(function(h){return '<li>'+esc(h)+'</li>'}).join('')+'</ul>'+(p.links.length?'<div class="sub">'+p.links.map(function(l){return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.title)+'</a>'}).join(' · ')+'</div>':'')+(p.env.length?'<div class="sub mono">'+p.env.map(esc).join(' · ')+'</div>':'')+'</li>'}).join('')+'</ol>'})}
 fetch('api/setup/defaults').then(function(r){return r.json()}).then(function(d){document.getElementById('scomp').innerHTML=d.components.map(function(c){return '<label style="display:block"><input type="checkbox" name="comp" value="'+esc(c.id)+'"'+(c.required?' checked disabled':'')+'> <b>'+esc(c.name)+'</b> <span class="sub">'+esc(c.about)+'</span></label>'}).join('');
 var a=document.getElementById('af');Object.keys(d.agent).forEach(function(k){if(a.elements[k])a.elements[k].value=d.agent[k]});splan()}).catch(function(){});
 document.addEventListener('change',function(e){if(e.target.closest&&e.target.closest('#sf'))splan()});
@@ -491,7 +503,7 @@ export async function serve({ port = 2499, db: givenDb = null, decisionsFile = n
     try {
       const full = new URL(req.url, 'http://127.0.0.1');
       req.url = full.pathname; // путь без строки запроса: ?… не должен давать «нет такой страницы»
-      if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(PAGE); }
+      if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(pageHtml()); }
       if (req.method === 'GET' && req.url === '/api/me') {
         return json(res, 200, { configured: kc.configured, kc: { url: kc.url, realm: kc.realm, client: kc.client, project: kc.project, role: kc.role }, me: me(req) });
       }
@@ -555,7 +567,8 @@ export async function serve({ port = 2499, db: givenDb = null, decisionsFile = n
             + (ch.forgejo === 'install' || ch.forgejo === 'own' ? '. Forgejo: токены FORGEJO_API_TOKEN (мост LORE) и FORGEJO_MCP_TOKEN (forgejo-mcp) впишите в .env сами; ключ FORGEJO_MCP_API_KEY сгенерирует install.sh' : '')
             + (volvaSide ? '. На стороне Völva: MB_EMBEDDING_JWT_ISSUERS=' + volvaSide.MB_EMBEDDING_JWT_ISSUERS + ', ключи — ' + volvaSide.jwks : (ch.components || []).includes('volva') ? '. Издатель Völva не задан — впишите «Адрес веба LORE», иначе подпись останется временной HS256' : '') });
           if (req.url === '/api/setup/install-plan') {
-            const args = installArgs({ dir: b.dir, version: b.version, port: b.port, dry: true });
+            const fromSource = ch.images === 'source';
+            const args = installArgs({ dir: b.dir, version: b.version, port: b.port, dry: true, fromSource });
             const cmd = 'bash install.sh ' + args.join(' ');
             // Правило владелицы 16.11: установщик не зависит от операционки и не запускает программ. Поэтому пакет
             // установки с готовым .env выкладывается в папку, а запуск install.sh — команда для Linux-машины.
@@ -563,7 +576,8 @@ export async function serve({ port = 2499, db: givenDb = null, decisionsFile = n
             fs.mkdirSync(out, { recursive: true });
             for (const [n, t] of Object.entries(INSTALL_BUNDLE.files)) if (n !== '.env.example') fs.writeFileSync(path.join(out, n), t, { mode: n.endsWith('.sh') ? 0o755 : 0o644 });
             fs.writeFileSync(path.join(out, '.env.example'), env(), { mode: 0o600 });
-            return json(res, 200, { text: cmd + String.fromCharCode(10) + 'bash install.sh ' + installArgs({ dir: b.dir, version: b.version, port: b.port }).join(' '), note: 'пакет установки с вашим .env выложен в ' + out + '. Скопируйте папку на Linux-машину с Docker и выполните сначала план (первая строка), потом установку (вторая).' });
+            return json(res, 200, { text: cmd + String.fromCharCode(10) + 'bash install.sh ' + installArgs({ dir: b.dir, version: b.version, port: b.port, fromSource }).join(' '), note: 'пакет установки с вашим .env выложен в ' + out + '. Скопируйте папку на Linux-машину с Docker и выполните сначала план (первая строка), потом установку (вторая).'
+              + (fromSource ? ' Сборка из исходников: рядом с install.sh положите каталог src/ из каталога версии пакета (src/lore-<версия>.tar.gz и .sha256) — без него install.sh остановится и назовёт причину.' : '') });
           }
           if (req.url === '/api/setup/volva-keys') {
             const dir = b.dir && fs.existsSync(b.dir) ? b.dir : os.homedir();

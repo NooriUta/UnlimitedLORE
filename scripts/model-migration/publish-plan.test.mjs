@@ -40,3 +40,11 @@ test('готовый MSI для Windows кладётся под своим им�
   assert.throws(() => publishPlan({ base: 'http://h/repository', repo: 'lore-installer', version: '1.0.0',
     files: [{ name: 'lore-installer-0.9.0-win-x64.msi', bytes: Buffer.from('m') }] }), /версия/);
 });
+
+test('архив исходников (src/lore-<версия>.tar.gz и .sha256) — каталогом src/ версии; чужая версия — отказ', () => {
+  const p = publishPlan({ base: 'http://h/repository', repo: 'lore-installer', version: '1.18.0',
+    files: [{ name: 'lore-1.18.0.tar.gz', bytes: Buffer.from('s') }, { name: 'lore-1.18.0.tar.gz.sha256', bytes: Buffer.from('h') }] });
+  assert.deepEqual(p.map(x => x.url.replace('http://h/repository/lore-installer/1.18.0/', '')), ['src/lore-1.18.0.tar.gz', 'src/lore-1.18.0.tar.gz.sha256', 'SHA256SUMS']);
+  assert.throws(() => publishPlan({ base: 'http://h/repository', repo: 'lore-installer', version: '1.18.0',
+    files: [{ name: 'lore-1.17.0.tar.gz', bytes: Buffer.from('s') }] }), /версия/);
+});

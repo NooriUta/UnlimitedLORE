@@ -37,6 +37,7 @@ export function checkChoice(c) {
   if (!['new', 'migrate'].includes(c.mode)) bad.push('режим: new (новая установка) или migrate (перенос)');
   if (!FORGEJO_MODES.includes(c.forgejo ?? 'none')) bad.push('Forgejo: install, own или none');
   if (!LLM_MODES.includes(c.llm ?? 'none')) bad.push('LLM: none или local');
+  if (!['ready', 'source'].includes(c.images ?? 'ready')) bad.push('образы: ready (готовые) или source (собрать из исходников пакета)');
   return bad;
 }
 
@@ -111,6 +112,8 @@ export function planSetup(c) {
       'Установщик заполняет .env и запускает deploy/install/install.sh (Linux, Docker): база, бэкенд, веб, MinIO.',
       'Сначала показывает план (--dry-run), ставит после подтверждения.',
       'Первый старт на пустой базе поднимает схему сам; дальше — первый владелец и проект.',
+      // «архивом наш проект для собственной сборки если что» (владелица 20.11.2026)
+      ...(c.images === 'source' ? ['Образы собираются из исходников пакета: каталог src/ из каталога версии (src/lore-<версия>.tar.gz и .sha256) положите рядом с install.sh; install.sh --build-from-source сверит sha256 и соберёт образы на месте.'] : []),
     ] });
   } else {
     p.push({ id: 'migrate', title: 'Перенос на новую модель', links: [], env: [], howto: ['Шаги 0–5: вход, подключение, статусы, пробный расчёт, перенос, сверка.'] });
@@ -250,13 +253,15 @@ export function installEnvText(example, values) {
 }
 
 /** Аргументы deploy/install/install.sh из формы. Строгая проверка: аргументы уходят в процесс, а не в оболочку, но каталог и версия — всё равно только безопасные символы. */
-export function installArgs({ dir, version = '', port = '', dry = false }) {
+export function installArgs({ dir, version = '', port = '', dry = false, fromSource = false }) {
   if (!dir || !dir.startsWith('/')) throw new Error('каталог установки — абсолютный путь Linux, например /opt/lore');
   if (!/^\/[A-Za-z0-9._\/-]*$/.test(dir)) throw new Error('каталог: только буквы, цифры, точка, дефис, подчёркивание и /');
   if (version && !/^v\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$/.test(version)) throw new Error('версия — тег вида v1.18.0 или пусто (сборка из исходников)');
+  if (fromSource && version) throw new Error('сборка из исходников пакета: версия берётся из архива src/lore-<версия>.tar.gz — поле версии оставьте пустым');
   if (port !== '' && port !== undefined && !(Number.isInteger(+port) && +port >= 1 && +port <= 65535)) throw new Error('порт — число от 1 до 65535');
   const a = ['--dir', dir];
   if (version) a.push('--version', version);
+  if (fromSource) a.push('--build-from-source');
   if (port !== '' && port !== undefined) a.push('--port', String(+port));
   if (dry) a.push('--dry-run');
   return a;

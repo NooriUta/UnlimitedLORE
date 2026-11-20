@@ -123,6 +123,16 @@ test('команда установки: каталог абсолютный, в
   assert.throws(() => installArgs({ dir: '/opt/lore', port: '70000' }), /порт/);
 });
 
+test('образы: готовые или собрать из исходников пакета (--build-from-source); версия тогда берётся из архива', async () => {
+  const { installArgs } = await import('./setup.mjs');
+  assert.deepEqual(installArgs({ dir: '/opt/lore', fromSource: true, dry: true }), ['--dir', '/opt/lore', '--build-from-source', '--dry-run']);
+  assert.throws(() => installArgs({ dir: '/opt/lore', version: 'v1.18.0', fromSource: true }), /архив/);
+  assert.deepEqual(checkChoice({ components: ['lore'], kc: 'own', secrets: 'own', mode: 'new', images: 'source' }), []);
+  assert.deepEqual(checkChoice({ components: ['lore'], kc: 'own', secrets: 'own', mode: 'new', images: 'maybe' }), ['образы: ready (готовые) или source (собрать из исходников пакета)']);
+  const step = planSetup({ components: ['lore'], kc: 'own', secrets: 'own', mode: 'new', images: 'source' }).find(s => s.id === 'install-lore');
+  assert.ok(step.howto.some(h => /src\/lore-/.test(h) && /--build-from-source/.test(h)), 'план называет архив исходников и флаг');
+});
+
 test('встройка Völva: издатель — origin веба LORE своей среды, у Völva — тот же издатель и адрес JWKS (EMB-L6)', async () => {
   const { volvaEmbedEnv } = await import('./setup.mjs');
   const v = volvaEmbedEnv({ web: 'https://lore.example.org/', volva: 'https://volva.example.org/embed' });

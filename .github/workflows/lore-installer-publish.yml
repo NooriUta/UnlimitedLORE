@@ -32,6 +32,12 @@ on:
         default: 'include'
         type: choice
         options: ['include', 'skip']
+      source_archive:
+        description: 'include — положить исходники LORE архивом src/lore-<версия>.tar.gz (собственная сборка); skip — без него'
+        required: true
+        default: 'include'
+        type: choice
+        options: ['include', 'skip']
 
 concurrency:
   group: lore-installer-publish
@@ -81,6 +87,13 @@ jobs:
         env:
           FORGEJO_MCP_CLONE_TOKEN: ${{ secrets.FORGEJO_MCP_CLONE_TOKEN }}
         run: node scripts/model-migration/forgejo-mcp-image.mjs --out build
+
+      # Исходники LORE архивом в build/src/ (слово владелицы 20.11.2026: «так же там же архивом наш проект для собственной
+      # сборки если что»). git archive этого коммита, без .env*/*.secret/*.key (.gitattributes export-ignore + сверка
+      # путей в source-archive.mjs). Ни push, ни реестров: архив едет каталогом src/ версии рядом с установщиком.
+      - name: Архив исходников → src/
+        if: inputs.source_archive == 'include'
+        run: node scripts/model-migration/source-archive.mjs --out build --version "${{ inputs.version }}"
 
       - name: План выкладки
         run: node scripts/model-migration/publish-plan.mjs --dir build --version "${{ inputs.version }}" --dry

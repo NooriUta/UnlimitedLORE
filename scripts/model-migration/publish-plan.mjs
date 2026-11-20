@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 · Выкладка установщика в kkRepo (raw-hosted репозиторий, PUT по адресу файла).
-// Каталог версии: <base>/<repo>/<версия>/lore-migrate-<версия>.mjs, …-linux-x64, …-win-x64.exe и SHA256SUMS.
+// Каталог версии: <base>/<repo>/<версия>/lore-migrate-<версия>.mjs, …-linux-x64, …-win-x64.exe, images/ (forgejo-mcp),
+// src/lore-<версия>.tar.gz (исходники для собственной сборки) и SHA256SUMS.
 // Учётка — KKREPO_USER / KKREPO_PASSWORD из секретов CI; в лог не печатаются.
 // Запуск: node publish-plan.mjs --dir build --version 0.1.0 [--dry]   (адрес и репозиторий — KKREPO_BASE, KKREPO_REPO)
 import crypto from 'node:crypto';
@@ -34,6 +35,13 @@ function published(name, version) {
   }
   // Образ forgejo-mcp архивом docker save (20.11.2026: «не публиковать, включить в инсталятор») — каталогом images/ версии.
   if (name === FMCP_TAR || name === FMCP_TAR + '.sha256') return 'images/' + name;
+  // Архив исходников LORE для собственной сборки (20.11.2026: «архивом наш проект для собственной сборки если что») —
+  // каталогом src/ версии (source-archive.mjs); версия в имени обязана совпасть с каталогом.
+  const src = /^lore-(.+)\.tar\.gz(\.sha256)?$/.exec(name);
+  if (src) {
+    if (src[1] !== version) throw new Error('версия в имени архива исходников (' + src[1] + ') не совпадает с версией каталога ' + version);
+    return 'src/' + name;
+  }
   throw new Error('неизвестный файл установщика: ' + name);
 }
 
@@ -108,6 +116,8 @@ async function main() {
   for (const n of [FORGEJO_MCP_ARCHIVE, FORGEJO_MCP_ARCHIVE + '.sha256']) {
     if (fs.existsSync(path.join(dir, n))) files.push({ name: path.basename(n), bytes: fs.readFileSync(path.join(dir, n)) });
   }
+  const srcDir = path.join(dir, 'src');
+  if (fs.existsSync(srcDir)) for (const n of fs.readdirSync(srcDir).filter(n => /^lore-.+\.tar\.gz(\.sha256)?$/.test(n)).sort()) files.push({ name: n, bytes: fs.readFileSync(path.join(srcDir, n)) });
   if (!files.length) throw new Error('в ' + dir + ' нет файлов установщика — сначала build-installer.mjs или готовый MSI');
   const plan = publishPlan({ base: process.env.KKREPO_BASE || 'http://192.168.3.131:8081/repository', repo: process.env.KKREPO_REPO || 'lore-installer', version, files });
   const user = process.env.KKREPO_USER, pass = process.env.KKREPO_PASSWORD;

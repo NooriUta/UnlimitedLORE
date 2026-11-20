@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 
 const DIR = new URL('../../deploy/install/', import.meta.url);
-const FILES = ['install.sh', 'docker-compose.install.yml', '.env.example'];
+const FILES = ['install.sh', 'docker-compose.install.yml', '.env.example', 'README.md']; // README — источник справки окна (install-help.mjs)
 const out = { _about: 'Копия deploy/install для установщика (MIG-04). Не править руками: node scripts/model-migration/install-bundle-sync.mjs', files: {} };
 for (const f of FILES) out.files[f] = fs.readFileSync(new URL(f, DIR), 'utf8');
 fs.writeFileSync(new URL('./rules/install-bundle.json', import.meta.url), JSON.stringify(out, null, 1) + '\n');

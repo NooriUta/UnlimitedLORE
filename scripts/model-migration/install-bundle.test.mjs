@@ -9,7 +9,8 @@ import { installEnvText } from './setup.mjs';
 const DIR = new URL('../../deploy/install/', import.meta.url);
 
 test('вшитая копия пакета установки совпадает с deploy/install (иначе: node install-bundle-sync.mjs)', () => {
-  for (const f of ['install.sh', 'docker-compose.install.yml', '.env.example']) {
+  // README.md — источник справки окна (install-help.mjs): шаги окна показывают его разделы
+  for (const f of ['install.sh', 'docker-compose.install.yml', '.env.example', 'README.md']) {
     assert.equal(INSTALL_BUNDLE.files[f], fs.readFileSync(new URL(f, DIR), 'utf8'), f + ' разошёлся с копией');
   }
 });
