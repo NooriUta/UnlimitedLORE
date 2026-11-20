@@ -35,7 +35,11 @@ export interface KitSavedListView {
 }
 
 /** Тело создания вида: POST /lore/views. Владельца ставит сервер по токену. */
-export type KitViewDraft = Pick<KitSavedListView, 'name' | 'section' | 'query' | 'visibility'> & { personal_default?: boolean };
+export type KitViewDraft = Pick<KitSavedListView, 'name' | 'section' | 'query' | 'visibility'> & {
+  personal_default?: boolean;
+  /** Командный вид раздела по умолчанию: заводит только админ — право проверяет сервер (403), панель лишь не предлагает его без права. */
+  team_default?: boolean;
+};
 /** Тело правки вида: PATCH /lore/views/{id}. */
 export type KitViewPatch = Partial<Pick<KitSavedListView, 'name' | 'query' | 'visibility' | 'personal_default'>>;
 

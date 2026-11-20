@@ -23,7 +23,8 @@ export const AREAS = [
   { id: 'people', nav: null, title: 'Люди и агенты' },
 ];
 // Типы, которых нет в model.nav: часть паспорта и админские. Новый тип без места здесь и в nav валит тест.
-const EXTRA_AREA = { phase: 'work', user: 'people', agent: 'people' };
+// qg_metric — часть паспорта гейта (20.11.2026), область гейта — «Работа».
+const EXTRA_AREA = { phase: 'work', qg_metric: 'work', user: 'people', agent: 'people' };
 
 /** Область типа модели: группа навигации либо EXTRA_AREA; null — места нет. */
 export function areaOf(type, model) {
