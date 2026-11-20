@@ -68,12 +68,22 @@ public class LoreIngestService {
      * Idempotent — if the sprint already exists its fields are updated but no
      * duplicate HAS_STATE row is created.
      */
+    /**
+     * Строка хранения статуса спринта. Не назван — начальный статус по модели (sprint.status.initial,
+     * правило владелицы 19.11.2026); раньше — «todo» → «📋 PLANNED» своей строкой. Названный — как было.
+     */
+    static String sprintStatusRaw(String status) {
+        if (status == null || status.isBlank())
+            return LoreResourceBase.SCD2_STATUS_RAW.get(CreateDefaultStatus.forNew("sprint", null));
+        return SPRINT_STATUS_RAW.getOrDefault(status, LoreResourceBase.SCD2_STATUS_RAW.getOrDefault(status, "📋 PLANNED"));
+    }
+
     public CreateSprintResult createSprint(String sprintId, String name, String status,
                                            String planId,
                                            String priority, String outcomeMd, String contextMd,
                                            ChangeAuthor author) {
         final ChangeAuthor by = author == null ? ChangeAuthor.UNKNOWN : author; // S2-12
-        String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "todo" : status, "📋 PLANNED");
+        String statusRaw = sprintStatusRaw(status);
         String nm = (name != null && !name.isBlank()) ? name : sprintId;
 
         // 1. Upsert KnowSprint

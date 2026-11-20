@@ -6,6 +6,7 @@
 // «добавить код в справочник», обязательно с подписями на всех языках.
 import { FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 
+import { initialStatus, OWNER_RULE } from './empty-fill.mjs';
 export const FORMAT = 'mig-status-rules/1';
 export const LANGS = ['ru', 'en', 'pl'];
 export const KINDS = ['status', 'other'];
@@ -164,7 +165,9 @@ export function buildDialog(counts, rules, decisionsDoc) {
     const st = classify(c.value, dict);
     row.dict = src.dict;
     if (st.kind === 'known') { rows.push({ ...row, state: 'unified', code: st.code }); continue; }
-    if (st.kind === 'empty' && !src.required) { rows.push({ ...row, state: 'unified', code: null }); continue; }
+    // Пустой статус (правило владелицы 19.11.2026) решения не ждёт: начальный статус справочника, а решение человека
+    // из файла (если есть) — поверх него. Пустое не-статусное необязательное поле остаётся пустым.
+    if (st.kind === 'empty' && !src.required && initialStatus(dict) === null && !dict.derive) { rows.push({ ...row, state: 'unified', code: null }); continue; }
     // Справочник с правилом вывода (фаза — по задачам): код считается при переносе, решения человека не ждёт.
     if (dict.derive) { rows.push({ ...row, state: 'unified', code: null, derived: dict.derive.from }); continue; }
     const why = st.kind === 'empty' ? EMPTY : dict.kind === 'status' ? UNKNOWN : 'значение вне справочника';
@@ -185,6 +188,11 @@ export function buildDialog(counts, rules, decisionsDoc) {
       } else throw new Error(`${at}: действие «${d.action}» к статусу неприменимо`);
       continue;
     }
+    if (why === EMPTY && initialStatus(dict) !== null) {
+      const sg = suggest(c.value, dict, rules.hints || [], src.dict);
+      rows.push({ ...row, state: 'defaulted', code: initialStatus(dict), basis: OWNER_RULE, why, ...(d ? { deferred: d.id } : {}), suggest: sg.code, suggestWhy: sg.why, codes });
+      continue;
+    }
     rows.push({
       ...row, state: 'needs_decision', why, ...(d ? { deferred: d.id } : {}),
       ...(() => { const sg = suggest(c.value, dict, rules.hints || [], src.dict); return { suggest: sg.code, suggestWhy: sg.why, codes }; })(),
@@ -196,7 +204,7 @@ export function buildDialog(counts, rules, decisionsDoc) {
   return {
     rows, added,
     summary: {
-      unified: count('unified'), decided: count('decided'), needs_decision: count('needs_decision'), no_rule: count('no_rule'),
+      unified: count('unified'), defaulted: count('defaulted'), decided: count('decided'), needs_decision: count('needs_decision'), no_rule: count('no_rule'),
       records: rows.reduce((s, r) => s + r.n, 0), records_waiting: waiting.reduce((s, r) => s + r.n, 0),
     },
     ready: waiting.length === 0,
