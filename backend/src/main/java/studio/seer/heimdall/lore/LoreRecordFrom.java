@@ -478,6 +478,8 @@ final class LoreRecordFrom {
             s("icon", "icon"),
             v("sort_order", Transform.RAW, "sort_order"),
             v("is_active", Transform.BOOL, "is_active"),
+            // WK-01: вид продукта — набор tech | service (ADR-LORE-044); прежняя строка — список из одного.
+            list("kind", "kind"),
             v("parent", Transform.HEAD_OR, "parent_code"),
             list("projects", "git_projects"),
             list("components", "components"))));

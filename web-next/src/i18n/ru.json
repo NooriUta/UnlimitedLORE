@@ -1205,11 +1205,18 @@
   "admin.dicts.col.label": "подпись",
   "admin.dicts.col.look": "вид",
   "admin.dicts.col.uses": "использований",
-  "admin.dicts.col.kind": "Вид",
+  "admin.dicts.col.kind": "Вид продукта",
   "admin.dicts.f.kind": "Вид продукта",
   "admin.dicts.kind.tech": "ИТ (tech)",
   "admin.dicts.kind.service": "не ИТ (service)",
   "admin.dicts.kind.none": "не задан",
+  "admin.dicts.kind.hint": "Можно оба: продукт бывает и ИТ, и не ИТ",
+  "admin.dicts.kind.empty": "Выберите хотя бы один вид — пустым вид продукта быть не может",
+  "admin.dicts.kind.reasonTitle": "Смена вида продукта {code}",
+  "admin.dicts.kind.reasonOk": "Сохранить вид",
+  "admin.dicts.kind.reasonLabel": "Зачем меняется вид",
+  "admin.dicts.kind.reasonPh": "например: HARPA продаёт и услуги",
+  "admin.dicts.kind.reasonLead": "Вид: {from} → {to}. Причина уйдёт в историю статьи.",
   "admin.dicts.col.order": "поряд.",
   "admin.dicts.col.active": "акт.",
   "admin.dicts.col.act": "действия",
@@ -2291,5 +2298,6 @@
   "charts.fails.title": "Отказы MCP по кодам ответа",
   "charts.fails.note": "Код ≥ 400 у записи агента: 401 — вход, 403 — права, 409 — конфликт версии, 422 — данные не прошли проверку.",
   "charts.fails.none": "Отказов за период нет — ряд прочитан, кодов ≥ 400 не было",
-  "charts.undatedRows": "Строк без отметки времени: {n} — не в счёте"
+  "charts.undatedRows": "Строк без отметки времени: {n} — не в счёте",
+  "lists.field.product_kind": "Вид продукта"
 }

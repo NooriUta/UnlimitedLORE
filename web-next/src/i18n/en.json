@@ -1205,11 +1205,18 @@
   "admin.dicts.col.label": "label",
   "admin.dicts.col.look": "look",
   "admin.dicts.col.uses": "uses",
-  "admin.dicts.col.kind": "Kind",
+  "admin.dicts.col.kind": "Product kind",
   "admin.dicts.f.kind": "Product kind",
   "admin.dicts.kind.tech": "IT (tech)",
   "admin.dicts.kind.service": "non-IT (service)",
   "admin.dicts.kind.none": "not set",
+  "admin.dicts.kind.hint": "Both are allowed: a product can be IT and non-IT",
+  "admin.dicts.kind.empty": "Pick at least one kind — a product kind cannot be empty",
+  "admin.dicts.kind.reasonTitle": "Change product kind {code}",
+  "admin.dicts.kind.reasonOk": "Save kind",
+  "admin.dicts.kind.reasonLabel": "Why the kind changes",
+  "admin.dicts.kind.reasonPh": "e.g. HARPA also sells services",
+  "admin.dicts.kind.reasonLead": "Kind: {from} → {to}. The reason goes into the entry history.",
   "admin.dicts.col.order": "order",
   "admin.dicts.col.active": "on",
   "admin.dicts.col.act": "actions",
@@ -2291,5 +2298,6 @@
   "charts.fails.title": "MCP refusals by response code",
   "charts.fails.note": "Code ≥ 400 on an agent write: 401 — login, 403 — permissions, 409 — version conflict, 422 — data failed validation.",
   "charts.fails.none": "No refusals in the period — the series was read, no codes ≥ 400",
-  "charts.undatedRows": "Rows without a timestamp: {n} — not counted"
+  "charts.undatedRows": "Rows without a timestamp: {n} — not counted",
+  "lists.field.product_kind": "Product kind"
 }

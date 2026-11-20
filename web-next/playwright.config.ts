@@ -36,6 +36,8 @@ export default defineConfig({
     // Экран «Модель» админки (SPRINT_LORE_MODEL_AS_CONFIG/MC-06): владелица работает с телефона 19.11 —
     // «HTML админки не адаптирован под телефон». 390×844; сценарий сам проверяет и 360.
     { name: 'phone-390', testMatch: /model-admin\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    // Правка вида продукта (SPRINT_LORE_WORK_ANY_KIND/WK-01): владелица правит с телефона — 390×844.
+    { name: 'kind-390', testMatch: /product-kind\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Планшет (жалобы владелицы 08.11 и 10.11 — скрины с планшета): палец, а не
     // мышь, поэтому невидимые зоны касания 44 px включены. Только экраны
     // новостей: остальные e2e под планшет не размечены.

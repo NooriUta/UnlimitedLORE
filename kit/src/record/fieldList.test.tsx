@@ -65,6 +65,18 @@ describe('K5-FIELD-LIST · показ значения', () => {
     expect(container.textContent).toBe('—');
   });
 
+  // SPRINT_LORE_WORK_ANY_KIND/WK-01: вид продукта в модели — text, а значение с сервера — набор
+  // (["tech","service"]). Правило общее: массив в поле text/enum — пунктами списка, а не сырым JSON.
+  it('массив в поле text или enum — пунктами, а не «["tech","service"]»', () => {
+    const { container } = render(<FieldValue type="text" value={['tech', 'service']} ctx={ctx} title="Вид" />);
+    expect(screen.getAllByRole('listitem').map(li => li.textContent)).toEqual(['tech', 'service']);
+    expect(container.textContent).not.toMatch(/\[|"/);
+    const e = render(<FieldValue type="enum" value={['tech']} ctx={ctx} title="Вид" />);
+    expect(e.container.textContent).toBe('tech');
+    const z = render(<FieldValue type="text" value={[]} ctx={ctx} title="Вид" />);
+    expect(z.container.textContent).toBe('—');
+  });
+
   it('пункт-объект показан своим текстом, а не «[object Object]»', () => {
     render(<FieldValue type="list" value={[{ id: 'a', text: 'Альфа' }, { title: 'Бета' }]} ctx={ctx} title="Варианты" />);
     expect(screen.getByText('Альфа')).toBeTruthy();
