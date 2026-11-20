@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пустые вкладки связей</title>
+<!-- Прототип SPRINT_UXR_S14_KIT5/K5-EMPTY-LINK-TABS: ряд вкладок паспорта «было / стало»,
+     широкий экран (1280) и телефон (390). Самодостаточный файл, открывать через file://. -->
+<style>
+:root {
+  --bg0: #14110d; --bg1: #1c1813; --bg2: #252019; --bd: #3a3227;
+  --t1: #f1e6d2; --t2: #c2b49b; --t3: #8a7d68;
+  --acc: #e0a040; --dng: #e06a5a; --wrn: #d9b24a; --suc: #7fb069;
+  --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 15px; --fs-xl: 18px;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg0); color: var(--t1); font: var(--fs-sm)/1.45 Manrope, "Segoe UI", system-ui, sans-serif; padding: 16px; }
+h1 { font: 800 var(--fs-xl)/1.2 Unbounded, "Segoe UI", sans-serif; margin: 0 0 4px; }
+h2 { font: 800 var(--fs-md)/1.2 Unbounded, "Segoe UI", sans-serif; text-transform: uppercase; letter-spacing: .04em; color: var(--t2); margin: 24px 0 8px; }
+p { color: var(--t2); max-width: 760px; margin: 4px 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.cap { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.frame { background: var(--bg1); border: 1px solid var(--bd); border-radius: 8px; padding: 12px; overflow: hidden; }
+.frame.wide { width: 100%; max-width: 1280px; }
+.frame.phone { width: 390px; max-width: 100%; }
+.head { font-weight: 700; font-size: var(--fs-lg); margin-bottom: 8px; }
+.head small { font-family: var(--mono); color: var(--t3); font-weight: 400; margin-left: 6px; }
+.tabs { display: flex; flex-wrap: nowrap; gap: 14px; border-bottom: 1px solid var(--bd); overflow: hidden; }
+.tab { flex: 0 0 auto; white-space: nowrap; padding: 6px 0; color: var(--t2); border-bottom: 2px solid transparent; display: inline-flex; gap: 5px; align-items: center; }
+.tab.on { color: var(--t1); border-bottom-color: var(--acc); }
+.tab .n { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); background: var(--bg2); border-radius: 999px; padding: 0 6px; }
+.tab .n.q { color: var(--wrn); }
+.tab.zero { color: var(--t3); }
+.tab.more { color: var(--acc); }
+.menu { margin-top: 6px; background: var(--bg2); border: 1px solid var(--bd); border-radius: 6px; padding: 4px; width: 220px; }
+.menu div { padding: 4px 8px; display: flex; justify-content: space-between; color: var(--t2); }
+.menu div .n { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.note { font-size: var(--fs-xs); color: var(--t3); margin-top: 8px; }
+.bad { color: var(--dng); }
+.good { color: var(--suc); }
+table { border-collapse: collapse; margin-top: 8px; font-size: var(--fs-xs); }
+th, td { border: 1px solid var(--bd); padding: 4px 8px; text-align: left; vertical-align: top; }
+th { text-transform: uppercase; color: var(--t3); font-weight: 600; letter-spacing: .04em; }
+</style>
+</head>
+<body>
+<h1>Пустые вкладки связей уходят под «Ещё»</h1>
+<p>Задача SPRINT_UXR_S14_KIT5/K5-EMPTY-LINK-TABS. Пример — карточка темы пилота «Дата-странники»: три связи, у двух ноль. Правило: вкладка связи с <b>успешно прочитанным нулём</b> уходит под «Ещё» и остаётся там со своим «0». Вкладка, которую <b>не удалось прочитать</b> или к которой <b>нет доступа</b>, остаётся в ряду со счётчиком «?». Открытая вкладка в ряду всегда, даже пустая.</p>
+
+<table>
+  <tr><th>Состояние вкладки связи</th><th>Было</th><th>Стало</th></tr>
+  <tr><td>есть связи (N &gt; 0)</td><td>в ряду, N</td><td>в ряду, N</td></tr>
+  <tr><td>прочитано, связей нет (0)</td><td>в ряду, 0</td><td class="good">под «Ещё», 0</td></tr>
+  <tr><td>не загрузилось / нет доступа</td><td>в ряду, «?»</td><td>в ряду, «?» (без изменений)</td></tr>
+  <tr><td>открыта человеком, 0</td><td>в ряду</td><td>в ряду (выбранную не прячем)</td></tr>
+  <tr><td>группа связей, сумма 0</td><td>в ряду, 0</td><td class="good">под «Ещё», 0</td></tr>
+</table>
+
+<h2>Широкий экран · 1280</h2>
+<div class="grid">
+  <div>
+    <div class="cap bad">Было</div>
+    <div class="frame wide">
+      <div class="head">Тема 0.1 <small>topic:0.1</small></div>
+      <div class="tabs">
+        <span class="tab on">Контент</span>
+        <span class="tab">⇢ Ссылается <span class="n">3</span></span>
+        <span class="tab zero">⇢ Требует <span class="n">0</span></span>
+        <span class="tab zero">◇ Подтема <span class="n">0</span></span>
+        <span class="tab">Связи <span class="n">3</span></span>
+        <span class="tab">Граф</span>
+        <span class="tab">Журнал <span class="n">5</span></span>
+      </div>
+      <div class="note">Два места из семи заняты вкладками, где нечего открыть.</div>
+    </div>
+  </div>
+  <div>
+    <div class="cap good">Стало</div>
+    <div class="frame wide">
+      <div class="head">Тема 0.1 <small>topic:0.1</small></div>
+      <div class="tabs">
+        <span class="tab on">Контент</span>
+        <span class="tab">⇢ Ссылается <span class="n">3</span></span>
+        <span class="tab">Связи <span class="n">3</span></span>
+        <span class="tab">Граф</span>
+        <span class="tab">Журнал <span class="n">5</span></span>
+        <span class="tab more">Ещё <span class="n">2</span></span>
+      </div>
+      <div class="menu"><div>⇢ Требует <span class="n">0</span></div><div>◇ Подтема <span class="n">0</span></div></div>
+      <div class="note">Пустые доступны под «Ещё» со своим «0» — это перенос, а не удаление.</div>
+    </div>
+  </div>
+</div>
+
+<h2>Телефон · 390</h2>
+<div class="grid">
+  <div>
+    <div class="cap bad">Было</div>
+    <div class="frame phone">
+      <div class="head">Тема 0.1</div>
+      <div class="tabs">
+        <span class="tab on">Контент</span>
+        <span class="tab">⇢ Ссылается <span class="n">3</span></span>
+        <span class="tab zero">⇢ Требует <span class="n">0</span></span>
+        <span class="tab more">Ещё <span class="n">4</span></span>
+      </div>
+      <div class="note">«Требует 0» занимает одно из четырёх мест, «Связи» и «Журнал» — под «Ещё».</div>
+    </div>
+  </div>
+  <div>
+    <div class="cap good">Стало</div>
+    <div class="frame phone">
+      <div class="head">Тема 0.1</div>
+      <div class="tabs">
+        <span class="tab on">Контент</span>
+        <span class="tab">⇢ Ссылается <span class="n">3</span></span>
+        <span class="tab">Связи <span class="n">3</span></span>
+        <span class="tab more">Ещё <span class="n">4</span></span>
+      </div>
+      <div class="menu"><div>Граф</div><div>Журнал <span class="n">5</span></div><div>⇢ Требует <span class="n">0</span></div><div>◇ Подтема <span class="n">0</span></div></div>
+      <div class="note">Порядок внутри «Ещё» — порядок модели; пустые идут после того, что просто не влезло.</div>
+    </div>
+  </div>
+</div>
+
+<h2>Не загрузилось · нет доступа — без изменений</h2>
+<div class="frame wide">
+  <div class="head">Тема 0.1 <small>topic:0.1</small></div>
+  <div class="tabs">
+    <span class="tab on">Контент</span>
+    <span class="tab">⇢ Ссылается <span class="n">3</span></span>
+    <span class="tab">⇢ Требует <span class="n q" title="не смогли посчитать">?</span></span>
+    <span class="tab">Связи <span class="n">3</span></span>
+    <span class="tab">Граф</span>
+    <span class="tab">Журнал <span class="n">5</span></span>
+    <span class="tab more">Ещё <span class="n">1</span></span>
+  </div>
+  <div class="note">«Требует» не прочиталась (502 или 403) — вкладка в ряду со знаком «?», под «Ещё» уходит только «Подтема 0». «Не смогли проверить» не выглядит как «пусто».</div>
+</div>
+
+<h2>Что не меняется</h2>
+<p>Вкладки приложения (части записи, например «Задачи» спринта) и служебные («Связи», «Граф», «Журнал», «История») этим правилом не трогаются — оно только про вкладки связей и группы связей. Расширить на пустые части (методика §7.4.2) — отдельным согласием.</p>
+</body>
+</html>

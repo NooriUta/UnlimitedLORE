@@ -16,7 +16,7 @@
 //    служебными. Потолок — семь (shell/tabRow.ts); здесь проверяется, что он
 //    доходит до живого паспорта, а не живёт в отдельной функции.
 //
-// 3) «0 ПРОВЕРЕНО» ≠ «НЕ ПРОВЕРЕНО». Пустая вкладка остаётся на месте с нулём.
+// 3) «0 ПРОВЕРЕНО» ≠ «НЕ ПРОВЕРЕНО». Пустая вкладка уходит под «Ещё» с нулём (K5-EMPTY-LINK-TABS).
 //    Но раздел, про который фасад данных сказал «не читал» (`meta.data_state`
 //    строкой `{source: "relation:<ключ>", part: "<ключ>", state: "error"}`),
 //    показывается знаком вопроса с причиной. Ложный ноль здесь — худший из
@@ -39,6 +39,9 @@ const edges = [
   { from: 'H-1', to: 'K-1', type: 'HAS_PART' },
   { from: 'H-1', to: 'K-2', type: 'HAS_NOTE' },
   { from: 'H-1', to: 'K-3', type: 'HAS_NOTE' },
+  // Разделы R0…R8 блока «потолок семь» непусты: пустые вкладки связей уходят под «Ещё»
+  // (K5-EMPTY-LINK-TABS), а там проверяется потолок, а не пустота.
+  ...Array.from({ length: 9 }, (_, i) => ({ from: 'H-1', to: 'K-1', type: 'R' + i })),
 ];
 
 const rel = (key: string, label: string, rl: string): KitRelationDef =>
@@ -93,7 +96,9 @@ describe('1) группа разделов — ОДНА вкладка с под
   it('положительный контроль: без группы каждый раздел — своя вкладка', () => {
     view();
     expect(rowNames().some(n => n.startsWith('Заметки'))).toBe(true);
-    expect(rowNames().some(n => n.startsWith('Вложения'))).toBe(true);
+    // «Вложения» пусты — своя вкладка есть, но под «Ещё» (K5-EMPTY-LINK-TABS).
+    fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
+    expect(within(screen.getByRole('menu', { name: 'Ещё' })).getByRole('menuitem', { name: /Вложения/ })).toBeTruthy();
     expect(tabOf('Окружение')).toBeUndefined();
   });
 
@@ -211,7 +216,7 @@ describe('2) «Ещё» в живом паспорте: потолок семь'
     fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
     const menu = screen.getByRole('menu', { name: 'Ещё' });
     const item = within(menu).getByRole('menuitem', { name: /Раздел 8/ });
-    expect(item.querySelector('.sk-tab__count')?.textContent).toBe('0');
+    expect(item.querySelector('.sk-tab__count')?.textContent).toBe('1');
   });
 
   it('открытая вкладка в ряду, даже если по порядку она в хвосте', () => {
@@ -222,10 +227,14 @@ describe('2) «Ещё» в живом паспорте: потолок семь'
 });
 
 describe('3) «0 проверено» и «не проверено» — разные ответы', () => {
-  it('положительный контроль: пустая вкладка остаётся на месте и говорит «0»', () => {
+  // Было «пустая вкладка остаётся на месте с нулём» (10.11.2026). K5-EMPTY-LINK-TABS: проверенный
+  // ноль уходит под «Ещё», но остаётся доступен и говорит «0»; «?» — по-прежнему в ряду.
+  it('положительный контроль: пустая вкладка — под «Ещё» и говорит «0»', () => {
     view();
-    expect(rowNames().some(n => n.startsWith('Вложения'))).toBe(true);
-    expect(countOf('Вложения')).toBe('0');
+    expect(rowNames().some(n => n.startsWith('Вложения'))).toBe(false);
+    fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
+    const item = within(screen.getByRole('menu', { name: 'Ещё' })).getByRole('menuitem', { name: /Вложения/ });
+    expect(item.querySelector('.sk-tab__count')?.textContent).toBe('0');
   });
 
   it('фасад данных раздел не читал — «?» с причиной, а не «0»', () => {

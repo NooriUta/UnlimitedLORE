@@ -136,13 +136,16 @@ final class LoreRecordRegistry {
      * Ребро типа с видом UML и местом в паспорте. {@code place}: part | link_tab |
      * prop | head | history | body | links. {@code manageable} — у ребра есть путь
      * привязки через {@code POST /lore/record/{type}/{id}/relation}.
+     * {@code inverseLabel} — подпись связи с ДРУГОГО конца («Зависит от» ↔ «Блокирует»), K5-MODEL-NAV-EDGE-LABELS,
+     * решение владелицы 20.11.2026 (вариант «а»); в ответе — {@code inverse_label}, {@code null} — не задана.
      */
     record Relation(String key, String label, String rel, String dir, String targetType,
                     String relation, String place, boolean manageable, List<EdgeProp> props,
                     /* MDL-13: привязка требует причины — kit открывает ReasonDialog, причина уходит в запись связи */
                     boolean reasonRequired,
                     /* MDL-13: типы другого конца у связи с targetType any — откуда клиенту брать варианты выбора */
-                    List<String> targetTypes) {}
+                    List<String> targetTypes,
+                    String inverseLabel) {}
 
     /**
      * MDL-13: свойство самого ребра, которое паспорт показывает колонкой связи (у DEPENDS_ON — вид и причина).
@@ -232,6 +235,8 @@ final class LoreRecordRegistry {
             m.put("target_type", r.targetType());
             m.put("place", r.place());
             m.put("manageable", r.manageable());
+            // K5-MODEL-NAV-EDGE-LABELS: ключ есть всегда; null — обратной подписи в модели нет.
+            m.put("inverse_label", r.inverseLabel());
             if (!r.props().isEmpty()) {
                 List<Map<String, Object>> edgeProps = new ArrayList<>();
                 for (EdgeProp p : r.props()) {

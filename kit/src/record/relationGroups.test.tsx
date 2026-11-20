@@ -12,7 +12,7 @@ beforeAll(() => registerGameIcons(gameIcons));
 const ctxOf = (kind: KindConfig): KitCtx => ({
   config: { modules: [], menu: { groups: [] }, kinds: { quiz: kind }, statuses: { items: [{ code: 'open', title: 'Открыто', category: 'in_progress', icon: 'progression', color: 'var(--acc)' }] } },
   data: { records: [{ id: 'Q-1', kind: 'quiz', title: 'Квиз', status: 'open', fields: {} }, { id: 'T-1', kind: 'topic', title: 'Тема', status: 'open', fields: {} }],
-    edges: [{ from: 'Q-1', to: 'T-1', type: 'QUIZ_OF' }], journal: [], meta: { generated_at: '' } },
+    edges: [{ from: 'Q-1', to: 'T-1', type: 'QUIZ_OF' }, { from: 'Q-1', to: 'T-1', type: 'ON_TRAIL' }], journal: [], meta: { generated_at: '' } },
   href: id => '#' + id, esc: s => s, md: s => s,
 });
 const base: KindConfig = { title: 'Квиз', icon: 'checkbox-tree', relations: [{ key: 'topic', label: 'Тема', relation: 'association', rel: 'QUIZ_OF', dir: 'out' }] };
