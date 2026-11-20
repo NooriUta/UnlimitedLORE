@@ -76,9 +76,10 @@ final class LoreMeDrafts {
         d.put("ref_id", row.get("ref_id"));
         d.put("field", row.get("field"));
         d.put("body_md", row.get("body_md") == null ? "" : row.get("body_md"));
-        // Один тип наружу — строка. Новое свойство главнее; у старых черновиков —
-        // прежнее целое строкой. Нет ни того, ни другого — null, без придуманной версии.
-        Object v = row.get("base_record_version") != null ? row.get("base_record_version") : row.get("base_version");
+        // Наружу ключом base_version (имя поля API) — строка из base_record_version. Прежнее
+        // целое свойство base_version снято (MDL-08, владелица 20.11.2026: «а) снять base_version
+        // при переносе 1.18»; в проде 0 из 3) — запасного чтения нет. Версии нет — null.
+        Object v = row.get("base_record_version");
         d.put("base_version", v == null ? null : String.valueOf(v));
         d.put("saved_at", row.get("saved_at"));
         return d;

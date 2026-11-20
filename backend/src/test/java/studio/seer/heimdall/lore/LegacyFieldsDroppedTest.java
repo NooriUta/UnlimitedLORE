@@ -32,7 +32,10 @@ class LegacyFieldsDroppedTest {
      * по дрейф-гарду. На базе 1.18 шаги v1 не исполняются (схема собирается из модели, lore.migrate=false).
      */
     private static final java.util.Set<String> V1_APPLIED = java.util.Set.of(
-        "KnowDoc.content_md ← LoreSchemaMigrations.java"); // шаг 3 fulltext_md_sweep_rest
+        "KnowDoc.content_md ← LoreSchemaMigrations.java", // шаг 3 fulltext_md_sweep_rest
+        // MDL-08 ч.3: шаг V72 user_drafts (LoreMeDrafts.SCHEMA_SQL) выпущен в 1.17 и стоит в ledger прода;
+        // в эталон v1 (шаги 1..62) не входит, но его SQL — в checksum, правка уронила бы старт.
+        "KnowUserDraft.base_version ← LoreMeDrafts.java");
 
     private static List<String> legacy() {
         try {
@@ -50,7 +53,17 @@ class LegacyFieldsDroppedTest {
 
     @Test
     void listIsNotEmpty() {
-        assertEquals(19, legacy().size(), "список MDL-08 — 17 полей первой пачки + KnowRelease.version и KnowDoc.content_md второй");
+        assertEquals(20, legacy().size(), "список MDL-08 — 17 полей первой пачки + KnowRelease.version и KnowDoc.content_md второй "
+            + "+ KnowUserDraft.base_version третьей");
+    }
+
+    /** MDL-08 ч.3: объявление base_version осталось только в выпущенном шаге V72 — никакой новый шаг его не заводит. */
+    @Test
+    void draftBaseVersionDeclaredOnlyByReleasedStep72() {
+        assertTrue(LoreMeDrafts.SCHEMA_SQL.contains("CREATE PROPERTY KnowUserDraft.base_version IF NOT EXISTS INTEGER"),
+            "шаг V72 не правится — checksum выпущенного шага неизменяем");
+        assertTrue(LoreSchemaMigrations.STEPS.stream().anyMatch(s -> s.version() == 72 && s.sql() == LoreMeDrafts.SCHEMA_SQL));
+        assertTrue(LoreMeDrafts.SCHEMA_SQL_V74.stream().noneMatch(d -> d.contains("base_version ")));
     }
 
     /** «Тип.поле» эталона v1 — схема, на которой обязан работать v1. */
