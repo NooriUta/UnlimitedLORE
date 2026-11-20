@@ -4,6 +4,7 @@ import LORE_MODEL from '../../shared/model/lore-model.json' with { type: 'json' 
 import { notNullOfModel } from './notnull.mjs';
 import { statusSourceOf, fillEmptyStatus } from './empty-fill.mjs';
 import { RULES as STATUS_RULES } from './resources.mjs';
+import { legacyGiven } from './legacy.mjs';
 const HARNESS_RULES = HARNESS_RULES_FILE.dictionaries.harness;
 // MDL-11 (ответ владелицы 19.11.2026 «5а»): обязательное по модели поле (notnull — в базе MANDATORY + NOTNULL) пустым
 // не пропускается молча. Пустой статус закрывает общее правило (empty-fill.mjs, правило владелицы 19.11): вычислить →
@@ -20,6 +21,7 @@ const NOT_NULL = notNullOfModel(LORE_MODEL);
 //   toVersion     — значения, которые живут в текущей версии, а не на записи (кладёт вызывающий код,
 //                   если в текущей версии пусто);
 //   dropped       — поля, которые по карте не переносятся (имена);
+//   legacy        — значения снятых легаси-полей (MDL-08, правило drop + legacy): вызывающий код кладёт их в остаток;
 //   held          — поля без решения владелицы и преобразования-предложения: исходное значение удержано;
 //   rejects       — значения, которые не удалось привести к виду: поле, значение, причина;
 //   titleFallback — не-статус из статуса версии фазы: вызывающий код кладёт его в название, если оно пусто.
@@ -182,12 +184,13 @@ const RENAMES = {
 };
 
 export function applyMap(T, typeMap, record, ctx = {}) {
-  const r = { out: {}, toVersion: {}, dropped: [], held: {}, rejects: [], titleFallback: null, filled: [] };
+  const r = { out: {}, toVersion: {}, dropped: [], legacy: {}, held: {}, rejects: [], titleFallback: null, filled: [] };
   for (const [f, v] of Object.entries(record)) {
     if (ENGINE.test(f)) continue;
     const e = typeMap[f];
     if (!e) throw new Error(`${T}.${f}: поля нет в карте переноса`);
     const k = `${T}.${f}`;
+    if (e.rule === 'drop' && e.legacy) { if (legacyGiven(v)) { r.dropped.push(f); r.legacy[f] = v; } continue; }
     if (e.rule === 'drop') { if (given(v)) r.dropped.push(f); continue; }
     if (!given(v)) continue;
     // Смена только вида хранения (дата, момент) — общее решение владелицы, от согласованности самого поля не зависит.
