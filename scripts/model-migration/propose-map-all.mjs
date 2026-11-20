@@ -10,6 +10,7 @@
 // (owner, «план доску удаляем»); журнал шагов — заменён отметкой схемы; остальное — как есть (delegated).
 // Запуск: node propose-map-all.mjs <перепись.json> → map/all-objects.json
 import fs from 'node:fs';
+import { legacyRule } from './legacy.mjs';
 import { fileURLToPath } from 'node:url';
 import { codeTypes, LORE_JAVA } from './code-types.mjs';
 
@@ -42,6 +43,9 @@ export function typePlan(T) {
 
 /** Правило одного поля. */
 export function ruleFor(T, f) {
+  // MDL-08 (владелица 20.11.2026): легаси-поле не переносится, значение — в остаток MigLeftover; правило старше прочих.
+  const legacy = legacyRule(T, f);
+  if (legacy) return legacy;
   if (f === 'hist_for') return { rule: 'drop', why: 'ключ записи в версии повторяет связь HAS_STATE', basis: 'delegated', note: W };
   // В версиях спеки status_raw не встречается без status (замер прода 17.11: 0 из 102) — дубль.
   if (T === 'KnowSpecHist' && f === 'status_raw') return { rule: 'drop', why: 'дубль status: без него не встречается (0 из 102, прод 17.11)', basis: 'delegated', note: W };
