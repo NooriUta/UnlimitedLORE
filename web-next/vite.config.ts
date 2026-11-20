@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { searchForWorkspaceRoot } from 'vite';
+import { defaultClientConditions, defaultServerConditions, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // LORE v2 (SPRINT_UXR_S3_V2_INFRA/S3-01, D-2026-UXR-V2-FOLDER-V1-FROZEN).
@@ -22,7 +22,12 @@ export default defineConfig({
   // ProseMirror держат состояние в модуле (две копии @tiptap/pm = «схема из
   // чужого экземпляра»), а в образе у kit своего node_modules нет вовсе —
   // импорт из исходников kit обязан разрешаться от web-next.
+  // SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY: kit стал пакетом со сборкой (dist), а это приложение
+  // живёт в том же репозитории и берёт kit ИСХОДНИКАМИ — по своему условию exports «seidr-source».
+  // Без него вход kit вёл бы в dist, которого в репозитории нет (собирается только в пакет).
+  ssr: { resolve: { conditions: ['seidr-source', ...defaultServerConditions] } },
   resolve: {
+    conditions: ['seidr-source', ...defaultClientConditions],
     dedupe: [
       'react', 'react-dom', '@iconify/react',
       '@tiptap/core', '@tiptap/react', '@tiptap/pm', '@tiptap/starter-kit', '@tiptap/extension-image',

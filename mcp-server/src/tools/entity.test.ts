@@ -336,3 +336,28 @@ describe('совместимость: legacy-флаг и профили меня
     expect(names).toContain('quality_check');
   });
 });
+
+// SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE — тег со свободными полями на ребре TAGGED_WITH: та же дверь
+// entity_link rel=tag, поля тега — в fields; голый тег у ADR идёт прежним путём (паритет с adr_link).
+describe('entity_link rel=tag: поля тега на ребре', () => {
+  it('adr + fields → /lore/tag/apply с полями ребра', async () => {
+    const c = await run('entity_link', { type: 'adr', id: 'ADR-LORE-050', rel: 'tag', target_id: 'security-review', fields: { risk: 'high', due: '2026-11-27' } });
+    expect(c).toEqual([{ path: '/lore/tag/apply', body: { type: 'adr', id: 'ADR-LORE-050', tag_id: 'security-review', fields: { risk: 'high', due: '2026-11-27' }, action: 'add' }, headers: undefined }]);
+  });
+  it('adr без fields — прежний путь /lore/adr/tag', async () => {
+    const c = await run('entity_link', { type: 'adr', id: 'A', rel: 'tag', target_id: 't' });
+    expect(c.map(x => x.path)).toEqual(['/lore/adr/tag']);
+  });
+  it('decision + tag → /lore/tag/apply (голый тег тоже)', async () => {
+    const c = await run('entity_link', { type: 'decision', id: 'D-1', rel: 'tag', target_id: 'breaking-change' });
+    expect(c[0]).toMatchObject({ path: '/lore/tag/apply', body: { type: 'decision', id: 'D-1', tag_id: 'breaking-change', action: 'add' } });
+  });
+  it('снять тег с полями — action remove тем же путём', async () => {
+    const c = await run('entity_link', { type: 'decision', id: 'D-1', rel: 'tag', target_id: 'x', action: 'remove' });
+    expect(c[0].body).toMatchObject({ action: 'remove', tag_id: 'x' });
+  });
+  it('значение null в fields снимает поле — уходит как есть', async () => {
+    const c = await run('entity_link', { type: 'adr', id: 'A', rel: 'tag', target_id: 't', fields: { verdict: null } });
+    expect(c[0].body.fields).toEqual({ verdict: null });
+  });
+});

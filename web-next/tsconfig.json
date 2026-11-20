@@ -6,6 +6,8 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    // K5-PACKAGE-DELIVERY: kit из этого же репозитория — исходниками (условие exports «seidr-source»).
+    "customConditions": ["seidr-source"],
     "types": ["vite/client", "node"],
     "allowImportingTsExtensions": true,
     "isolatedModules": true,

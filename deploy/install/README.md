@@ -86,7 +86,15 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 - **own** — Forgejo не ставится. Адрес вашего Forgejo уходит в forgejo-mcp (`FORGEJO_URL`), профиль compose — только `forgejo-mcp`.
 - **none** — профили Forgejo снимаются, мост LORE отвечает 503, как без Forgejo.
 
-В вариантах install и own в пакет входит **forgejo-mcp**: репозиторий `AIDA/forgejo-mcp`, версия 0.1.7 (форк `@ric_/forgejo-mcp` с инструментами Actions/CI). Исходники прибиты к коммиту `bbe9f59c`, образ собирается на месте. Готовый образ из своего реестра задаётся переменной `FORGEJO_MCP_IMAGE`. Агенты подключаются по HTTP: `http://127.0.0.1:4430/mcp` с заголовком `Authorization: Bearer ${FORGEJO_MCP_API_KEY}`.
+В вариантах install и own в пакет входит **forgejo-mcp**: репозиторий `AIDA/forgejo-mcp`, версия 0.1.7 (форк `@ric_/forgejo-mcp` с инструментами Actions/CI). Исходники прибиты к коммиту `bbe9f59c`.
+
+Образ forgejo-mcp ни в какой реестр не публикуется. Он едет в пакете установщика архивом `images/forgejo-mcp-bbe9f59c.tar` с файлом `.tar.sha256`, в том же каталоге версии, что и установщик. Положите каталог `images/` рядом с `install.sh`. Порядок выбора образа:
+
+1. `FORGEJO_MCP_IMAGE` — ваш готовый образ, перекрывает всё остальное.
+2. Архив из `images/` — `docker load`, только если sha256 сходится. При несовпадении установка останавливается.
+3. `--forgejo-mcp-build` — сборка из git на том же коммите. Это запасной путь, нужен доступ к репозиторию.
+
+Если нет ни одного из трёх, инсталлятор отказывается и называет причину. Агенты подключаются по HTTP: `http://127.0.0.1:4430/mcp` с заголовком `Authorization: Bearer ${FORGEJO_MCP_API_KEY}`.
 
 После установки:
 

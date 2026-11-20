@@ -297,6 +297,13 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowDecision.component_id    IF NOT EXISTS STRING",  // ADR-019: child-of-ADR filter axis (vertex field, no Hist)
         "CREATE PROPERTY KnowADR.adr_id               IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTag.tag_id               IF NOT EXISTS STRING",
+        // SUPERTAGS-SPIKE: свободные поля тега на ребре (раздел edge_free_fields модели) — словарь значений
+        // без истории и отметки «кто/когда поставил», «кто/когда правил поля». Голое ребро их не несёт.
+        "CREATE PROPERTY TAGGED_WITH.fields           IF NOT EXISTS MAP",
+        "CREATE PROPERTY TAGGED_WITH.tagged_at        IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY TAGGED_WITH.tagged_by        IF NOT EXISTS STRING",
+        "CREATE PROPERTY TAGGED_WITH.changed_at       IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY TAGGED_WITH.changed_by       IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprint.sprint_id         IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSpec.spec_id             IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowFinding.finding_id       IF NOT EXISTS STRING",

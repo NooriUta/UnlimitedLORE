@@ -25,6 +25,9 @@ export function markedWiki(): MarkedExtension {
       },
       renderer(token) {
         const t = token as WikiToken;
+        // SUPERTAGS: [[ЗАПИСЬ#тег]] — чип тега (значения полей — на ребре, в тексте только токен)
+        const tg = /^(.+?)#([\p{L}\p{N}][\p{L}\p{N}_.-]*)$/u.exec(t.ref);
+        if (tg) return `<span class="sk-wref sk-wref--tag" data-ref="${esc(tg[1])}" data-tag="${esc(tg[2])}" title="${esc(`${tg[1]} · #${tg[2]}`)}">#${esc(tg[2])}</span>`;
         const type = t.refType ? ` data-ref-type="${esc(t.refType)}" title="${esc(`${t.refType}: ${t.ref}`)}"` : ` title="${esc(t.ref)}"`;
         return `<span class="sk-wref" data-ref="${esc(t.ref)}"${type}>${esc(t.ref)}</span>`;
       },
