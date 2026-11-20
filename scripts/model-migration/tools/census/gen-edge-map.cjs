@@ -3,6 +3,7 @@
 // (wait при полном переносе = keep); остальные виды — keep по поручению владелицы 17.11.2026 («перенеси по собственным
 // рекомендациям и нашим правилам все объекты»), кроме перечисленных ниже. Запуск: node gen-edge-map.cjs
 const fs = require('fs'), path = require('path');
+const { pathToFileURL, fileURLToPath } = require('url');
 const MAP = path.join(__dirname, '..', '..', 'map');
 const first = JSON.parse(fs.readFileSync(path.join(MAP, 'sprint-phase-task.edges.json'), 'utf8'));
 const triples = fs.readFileSync(path.join(__dirname, 'edge-triples.tsv'), 'utf8').trim().split(/\r?\n/).map(l => l.split('\t'));
@@ -18,6 +19,16 @@ const special = {
   OF_TYPE: { rule: 'drop', basis: 'owner', note: 'снята V89 (#1401): вид трека — поле PlanTrack.area, словарь TrackType снят; MD-02' },
 };
 const ALWAYS = ['HAS_STATUS', 'OF_TYPE'];
+/**
+ * MD-02 8а (владелица 19.11.2026: «по коду восстанови и по данным что выбрать», «функции оставить»): связь, которую
+ * пишет или читает код сервера, а в переписи прода её нет (пустая), — «только схема»: вид связи заводится без данных,
+ * со свойствами старой схемы (DDL шагов V в коде). Пустая и не используемая кодом связь в карту не попадает.
+ */
+const SCHEMA_ONLY_EDGE_NOTE = 'пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)';
+async function main() {
+const ct = await import(pathToFileURL(path.join(__dirname, '..', '..', 'code-types.mjs')).href);
+const JAVA = fileURLToPath(ct.LORE_JAVA);
+const used = ct.codeTypes(JAVA), ddl = ct.declaredDdl(JAVA);
 const edges = {};
 for (const e of ALWAYS) edges[e] = special[e];
 for (const [e] of triples) {
@@ -26,6 +37,10 @@ for (const [e] of triples) {
   else if (first.edges[e]) edges[e] = { ...first.edges[e], rule: first.edges[e].rule === 'wait' ? 'keep' : first.edges[e].rule };
   else edges[e] = { rule: 'keep', basis: 'delegated', note: DELEGATED };
 }
+for (const [e, files] of [...used].sort(([a], [b]) => a.localeCompare(b))) {
+  if (edges[e] || !ddl[e] || ddl[e].kind !== 'EDGE') continue;
+  edges[e] = { rule: 'keep', basis: 'owner', schema_only: true, props: ddl[e].props, note: SCHEMA_ONLY_EDGE_NOTE + '; код: ' + [...files].sort().join(', ') + '; свойства — старая схема (DDL в коде)' };
+}
 const out = {
   _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. Общая карта переноса СВЯЗЕЙ всех объектов. Источник перечня — перепись прода (tools/census/edge-triples.tsv). Сгенерирована tools/census/gen-edge-map.cjs; правки — в генераторе. Правила: keep, drop, convert (to, reverse). basis: owner / delegated / proposal.',
   _vocab: first._vocab,
@@ -33,4 +48,6 @@ const out = {
 };
 fs.writeFileSync(path.join(MAP, 'all.edges.json'), JSON.stringify(out, null, 1) + '\n');
 console.log('видов связей:', Object.keys(edges).length, '· convert:', Object.keys(edges).filter(e => edges[e].rule === 'convert').join(', '),
-  '· drop:', Object.keys(edges).filter(e => edges[e].rule === 'drop').join(', '));
+  '· drop:', Object.keys(edges).filter(e => edges[e].rule === 'drop').join(', '), '· только схема:', Object.keys(edges).filter(e => edges[e].schema_only).join(', '));
+}
+main().catch(e => { console.error(e); process.exit(1); });

@@ -85,6 +85,20 @@ export function fieldDiff(got, want) {
     .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
     .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
 }
+/**
+ * Остаток по несоответствию, которое не закрыто решением человека. MD-02 7а (владелица 19.11.2026): перенос честно
+ * пишет «ждёт решения» (или «отложено человеком», если человек выбрал «решу позже»), а не подставляет значение молча.
+ */
+/** DDL индексов, объявленных схемой 1.18 у типа (indexes: [{fields, kind}]); IF NOT EXISTS — индекс источника не дублируется. */
+export function schemaIndexDdl(schema) {
+  const out = [];
+  for (const [T, t] of Object.entries(schema)) for (const ix of t.indexes || [])
+    out.push(`CREATE INDEX IF NOT EXISTS ON ${T} (${ix.fields.map(f => '`' + f + '`').join(', ')}) ${ix.kind}`);
+  return out;
+}
+export function rejectLeftover(T, rid, x) {
+  return { src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why, state: x.deferred ? 'отложено человеком' : 'ждёт решения' };
+}
 export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
@@ -224,7 +238,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
-    for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
+    for (const x of res.rejects) leftovers.push(rejectLeftover(T, rid, x));
   }
   report.stages.merge = merge;
   report.stages.scd2_repair = scd2Fixes;
@@ -313,6 +327,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // индексы источника — после записи: индекс, которому мешают данные (дубль под уникальным), не роняет перенос,
   // а называется в отчёте с причиной базы
   const indexFailed = [];
+  // MD-02 8а: у типа «только схема» (пустой, но его трогает код) индексы старой схемы объявлены в схеме 1.18 —
+  // UPSERT кода требует уникального индекса, и он не должен зависеть от того, есть ли индекс в источнике
+  for (const s of schemaIndexDdl(SCHEMA)) structure.indexDdl.push(s);
   for (const s of structure.indexDdl) {
     try { await db.dstCommand(s); } catch (e) { indexFailed.push({ ddl: s, why: String(e.message || e).slice(0, 300) }); }
   }
