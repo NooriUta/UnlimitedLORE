@@ -70,7 +70,10 @@ export function registerForgejo(server: McpServer, env: NodeJS.ProcessEnv = proc
       'On success auto-links the graph (FJ-05): KnowPR + SHIPPED_IN to the release ' +
       '(release_id or the project\'s is_current), and sprint→release when sprint_id is given. ' +
       'linked:false in the answer means the release vertex was missing — run release_new + ' +
-      'release_link yourself, the merge itself has already happened.',
+      'release_link yourself, the merge itself has already happened. ' +
+      'MD-05: the merge also records the PR (title, url, merged_at, state → pr_recorded/pr_fields) and links ' +
+      'CLOSED_BY task→PR for every SPRINT/CODE in the PR title (tasks_linked); codes with no such task come ' +
+      'back in unmatched. Promotion PRs (base preprod/main) are not linked to tasks.',
     {
       git_project: z.string().describe('KnowGitProject slug'),
       number: z.number().int().describe('PR number'),
