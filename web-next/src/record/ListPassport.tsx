@@ -203,7 +203,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
   const parentsKey = JSON.stringify(parentsOf(view?.record));
   // S6-04: живые блоки исполняются и в правимом поле (раньше там оставались кодом).
-  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>, l => blocksFor(type, id, l)), [parentsKey, type, id]);
+  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>, l => blocksFor(type, id, l), { type, id }), [parentsKey, type, id]);
   // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
   // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
   // Глубина 1–4 и снятые типы связей (goff) — из адреса. Владелица 11.11: «показать связи

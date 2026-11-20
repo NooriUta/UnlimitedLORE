@@ -3205,6 +3205,12 @@ public final class LoreSlices {
         slice("tags_usage",
             "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
             List.of(), Map.of(), " ORDER BY uses DESC, tag_id");
+        // SUPERTAGS-SPIKE: сущности по тегу с полями — рёбра TAGGED_WITH тега, словарь полей на ребре
+        // (fields) и отметки. Колонки и фасеты считает GET /lore/tag/entities (LoreEdgeFreeFields.table);
+        // здесь — строки для MCP query_slice. vertex — класс записи (KnowADR, KnowDecision).
+        slice("tag_entities",
+            LoreEdgeFreeFields.entitiesSql("TAGGED_WITH"),
+            List.of("tag"), Map.of(), " ORDER BY tagged_at DESC");
         // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
         // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 
@@ -3635,6 +3641,7 @@ public final class LoreSlices {
         Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
         Map.entry("files_of_task", "KnowFile — путь через задачу"),
         Map.entry("task_roles", "ребро ROLE_HELD_BY — путь через задачу"),
+        Map.entry("tag_entities", "ребро TAGGED_WITH — путь через запись (ADR, решение); скоуп по проекту записи — SUPERTAGS шаг 3"),
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),

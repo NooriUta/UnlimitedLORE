@@ -12,7 +12,7 @@ import {
   DENSITIES, FieldEditor, ObjectMention, useKitLang, type ControlState, type Density, type FieldEditorDef, type KitCtx, type Mode,
 } from '@seidr/kit';
 import { PALETTE_DEMO_DATA, PALETTE_DEMO_KINDS } from './kitPaletteDemo';
-import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, resolveMerge } from '@seidr/kit/content';
+import { MartProse, MdMergePanel, SandboxedHtmlFrame, TipTapField, mergeBlocks, resolveMerge, type TipTapRefSource } from '@seidr/kit/content';
 import { ValueChips } from '@seidr/kit/record';
 import { useAppT, type AppKey } from '../i18n';
 import './KitPage.css';
@@ -25,6 +25,22 @@ import { loreRefLook } from '../record/loreMdRefs';
 
 const SECTIONS = ['tokens', 'elements', 'badges', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
+
+// SUPERTAGS-SPIKE: витрина потока «#тег» — источник тегов на демо-данных (как у прочих демо витрины), без сервера.
+const TAG_DEMO: TipTapRefSource = {
+  types: { adr: 'adr' },
+  typeLabels: { adr: 'ADR' },
+  search: async () => [],
+  tags: {
+    host: 'ADR-LORE-050',
+    search: async q => [
+      { tag: 'security-review', uses: 7, keys: ['reviewer', 'risk', 'due', 'verdict'] },
+      { tag: 'secrets-touch', uses: 2, keys: ['vault_path'] },
+      { tag: 'customer-visible', uses: 12, keys: ['customer'] },
+    ].filter(x => x.tag.includes(q.toLowerCase())),
+    apply: async () => ({ ok: true }),
+  },
+};
 const SECTION_KEY: Record<SectionId, AppKey> = {
   tokens: 'kitPage.sec.tokens',
   elements: 'kitPage.sec.elements',
@@ -94,6 +110,7 @@ export default function KitPage() {
   const [earOpen, setEarOpen] = useState(false);
   const [freshNow] = useState(() => Date.now());
   const [md, setMd] = useState(() => t('kitPage.md.sample'));
+  const [tagMd, setTagMd] = useState(() => t('kitPage.tags.sample'));
   // S5-08: спор при сохранении — живой пример панели «Спорные блоки».
   const merge = useMemo(() => mergeBlocks(t('kitPage.merge.base'), t('kitPage.merge.mine'), t('kitPage.merge.theirs')), [t]);
   const [mergePicks, setMergePicks] = useState<Record<number, 'mine' | 'theirs'>>({});
@@ -548,6 +565,16 @@ export default function KitPage() {
             подписи — он показывает КОД, а не пустоту. И седьмой чип за «ещё N»,
             чтобы свёртку было видно живой.
           */}
+          <h3 className="kitp__h3">{t('kitPage.tags.title')}</h3>
+          <p>{t('kitPage.tags.lead')}</p>
+          <div className="kitp__split" data-testid="kit-tags">
+            <div>
+              <TipTapField value={tagMd} onChange={setTagMd} ariaLabel={t('kitPage.tags.label')} minHeight={140} refs={TAG_DEMO} />
+            </div>
+            <div>
+              <MartProse text={tagMd} />
+            </div>
+          </div>
           <h3 className="kitp__h3">{t('kitPage.chips.title')}</h3>
           <p>{t('kitPage.chips.lead')}</p>
           <dl className="kitp__chips">

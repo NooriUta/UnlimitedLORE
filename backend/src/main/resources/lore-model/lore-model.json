@@ -6395,6 +6395,16 @@
       "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
     }
   },
+  "edge_free_fields" : {
+    "TAGGED_WITH" : {
+      "target_type" : "tag",
+      "vertex" : "KnowTag",
+      "key" : "tag_id",
+      "property" : "fields",
+      "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
+      "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег."
+    }
+  },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
   "passport" : {
     "actor" : [ {

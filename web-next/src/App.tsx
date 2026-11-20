@@ -44,6 +44,8 @@ const KitPage = lazyChunk(() => import('./pages/KitPage'));
 const PassportDemo = lazyChunk(() => import('./pages/PassportDemo'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazyChunk(() => import('./news/NewsPage'));
+// SUPERTAGS-SPIKE: сущности по тегу с полями (/tags?tag=…).
+const TagEntitiesPage = lazyChunk(() => import('./tags/TagEntitiesPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 // Админка v2 (SPRINT_UXR_S7B_ADMIN/S7B-01) — модуль оболочки ?mod=admin
 // (V2Shell, admin/adminModule.ts). Прежняя страница /admin?adm=… переписывается
@@ -61,7 +63,7 @@ const NewsPage = lazyChunk(() => import('./news/NewsPage'));
 // seer-prefs ещё до запроса, а ответ сервера её потом уточняет.
 const meClient = createLiveS2Client();
 
-export type Route = 'kit' | 'passport' | 'news' | 'admin' | 'home' | ListScreenId;
+export type Route = 'kit' | 'passport' | 'news' | 'tags' | 'admin' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /**
@@ -89,6 +91,7 @@ export function routeOf(path: string, search = ''): Route {
   if (p === '/kit') return 'kit';
   if (p === '/kit/passport') return 'passport';
   if (p === '/news') return 'news';
+  if (p === '/tags') return 'tags';
   if (p === '/admin') return 'admin';
   // Приёмка 14.11.2026 (PU-29): старая админка v1 жила на /lore?section=admin&tab=… —
   // на любом пути это админка (дальше legacyAdminHref разводит вкладки), а не «Новости».
@@ -159,6 +162,14 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
       <ErrorBoundary lang="ru">
         <StaleChunkBanner />
         <Suspense fallback={<Skeleton lines={8} />}><NewsPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
+  if (route === 'tags') {
+    return (
+      <ErrorBoundary lang={lang}>
+        <StaleChunkBanner />
+        <Suspense fallback={<Skeleton lines={8} />}><TagEntitiesPage /></Suspense>
       </ErrorBoundary>
     );
   }

@@ -28,7 +28,13 @@ export interface RefTriggerOptions {
   types: Record<string, string>;
 }
 
-export interface MdRef { id: string; type: string | null }
+/** Ссылка в теле. tag — токен тега [[ЗАПИСЬ#тег]] (SUPERTAGS): запись — id, тег — tag; значения полей тега живут на ребре. */
+export interface MdRef { id: string; type: string | null; tag?: string }
+
+/** Токен тега в тексте: один на запись и тег, значения полей в текст не попадают (SUPERTAGS-SPIKE). */
+export function tagToken(host: string, tag: string): string {
+  return `[[${host}#${tag}]]`;
+}
 
 export interface BareRefForm { type: string; re: RegExp }
 
@@ -96,10 +102,13 @@ export function refsInMd(md: string): MdRef[] {
     for (const m of seg.text.matchAll(REF)) {
       const inner = m[1].trim();
       const typed = /^([a-z]+):(.+)$/i.exec(inner);
-      const id = typed ? typed[2].trim() : inner;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      out.push({ id, type: typed ? typed[1].toLowerCase() : null });
+      const full = typed ? typed[2].trim() : inner;
+      if (seen.has(full)) continue;
+      seen.add(full);
+      // [[ЗАПИСЬ#тег]] — ссылка на запись с тегом: проверяется запись, тег — отдельно
+      const hash = /^(.+?)#([\p{L}\p{N}][\p{L}\p{N}_.-]*)$/u.exec(full);
+      const type = typed ? typed[1].toLowerCase() : null;
+      out.push(hash ? { id: hash[1], type, tag: hash[2] } : { id: full, type });
     }
   }
   return out;
