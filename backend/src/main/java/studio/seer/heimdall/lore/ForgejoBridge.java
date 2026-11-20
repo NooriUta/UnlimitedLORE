@@ -307,7 +307,7 @@ public class ForgejoBridge {
 
     /**
      * S2-14: поля KnowPR из ответа Forgejo {@code GET /repos/{o}/{r}/pulls/{n}} —
-     * title, url (html_url), merged_at, head_ref, base_ref. Отсутствующее или пустое
+     * title, url (html_url), merged_at, head_ref, base_ref, state (MD-05: open | closed | merged). Отсутствующее или пустое
      * поле в карту НЕ попадает: «не влит» (merged_at = null) не должно выглядеть как
      * пустая дата, а UPDATE по карте не затирает уже записанное пустотой.
      */
@@ -321,7 +321,38 @@ public class ForgejoBridge {
         if (head instanceof JsonObject h) putText(f, "head_ref", h.getValue("ref"));
         Object base = pr.getValue("base");
         if (base instanceof JsonObject b) putText(f, "base_ref", b.getValue("ref"));
+        // MD-05: состояние. «closed» у Forgejo — и влитый, и отклонённый PR; влитый пишем как merged.
+        if (Boolean.TRUE.equals(pr.getValue("merged"))) f.put("state", "merged");
+        else putText(f, "state", pr.getValue("state"));
         return f;
+    }
+
+    /** MD-05: коды задач из заголовка PR, разложенные на найденные в LORE и нет. */
+    record TaskMatch(List<String> matched, List<String> unmatched) {}
+
+    /**
+     * Код задачи — только пара «СПРИНТ/КОД»: одинокий код (CO-11) принадлежит многим спринтам, и
+     * связь по нему была бы догадкой. id спринта — с заглавной и хотя бы одним «_» (так устроены все
+     * 458 спринтов на 20.11.2026); это же отсекает ветки (feat/x) и дроби вроде CI/CD.
+     */
+    private static final java.util.regex.Pattern TASK_UID = java.util.regex.Pattern.compile(
+        "(?<![\\w/])([A-Z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+)/([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)(?![\\w/])");
+
+    /** MD-05: коды СПРИНТ/КОД из заголовка PR — по разу, в порядке появления. */
+    static List<String> taskUidsInTitle(String title) {
+        if (title == null || title.isBlank()) return List.of();
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        java.util.regex.Matcher m = TASK_UID.matcher(title);
+        while (m.find()) out.add(m.group(1) + "/" + m.group(2));
+        return List.copyOf(out);
+    }
+
+    /** MD-05: неизвестный код не роняет мерж — уходит в ответ как unmatched. */
+    static TaskMatch matchTasks(List<String> uids, java.util.function.Predicate<String> exists) {
+        List<String> matched = new java.util.ArrayList<>();
+        List<String> unmatched = new java.util.ArrayList<>();
+        for (String u : uids) (exists.test(u) ? matched : unmatched).add(u);
+        return new TaskMatch(List.copyOf(matched), List.copyOf(unmatched));
     }
 
     private static void putText(Map<String, Object> f, String key, Object v) {
