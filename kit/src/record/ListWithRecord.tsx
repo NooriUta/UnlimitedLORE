@@ -18,7 +18,7 @@
 //   • выход из «во весь экран» — в то место, откуда вошли (MP2-11);
 //   • меню оболочки убирается на время чтения, если человек так выбрал, и возвращается при закрытии
 //     (D-2026-UXR-READ-COLLAPSE): выбор человека kit не затирает.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { onUrlStateWrite, pushUrlState, readUrlState, urlStateHref, type UrlWindow } from '../resilience/urlState';
 import { useOptionalKitShell } from '../shell/KitShell';
 import { RecordDock, isRecordPlacement, type RecordPlacement } from './RecordDock';
@@ -125,7 +125,24 @@ export function ListWithRecord({ list, open, onOpen, record, ready = true, modal
     setCollapsed(!!open.id);
     return () => setCollapsed(false);
   }, [collapseNavOnRead, setCollapsed, open.id]);
-  if (!open.id || !ready) return <>{list}</>;
+  // K4-PASSPORT-NO-LIST-RESET: ссылка на запись ЭТОГО же раздела (связь в паспорте, упоминание,
+  // чип, ссылка-поле в списке) — не загрузка страницы, а смена записи в доке, как щелчок по строке.
+  const onLinkClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const next = sameScreenRecordLink(e);
+    if (!next) return;
+    e.preventDefault();
+    onOpen({ id: next.id, place: next.place ?? open.place, kind: next.kind });
+  };
+  // Список стоит в ОДНОМ месте дерева при любом состоянии записи (K4-PASSPORT-NO-LIST-RESET):
+  // прежде без записи он рисовался сам по себе, а с записью — внутри дока, и React пересоздавал
+  // его при каждом открытии и закрытии — сбрасывались выделение, раскрытия и прокрутка.
+  if (!open.id || !ready) {
+    return (
+      <RecordDock open={false} placement={open.place} backdrop={list} onClick={onLinkClick}>
+        {null}
+      </RecordDock>
+    );
+  }
   const id = open.id;
   const backPlace = lastDock.current;
   const slot: RecordSlot = {
@@ -137,8 +154,37 @@ export function ListWithRecord({ list, open, onOpen, record, ready = true, modal
   };
   return (
     <RecordDock placement={open.place} modal={modal ?? shell == null} controls={controls} backdrop={list}
-      onExitFull={() => onOpen({ ...open, place: backPlace })} onClose={slot.close}>
+      onExitFull={() => onOpen({ ...open, place: backPlace })} onClose={slot.close} onClick={onLinkClick}>
       {record(slot)}
     </RecordDock>
   );
+}
+
+/**
+ * Клик по ссылке на запись этого же экрана — какую запись открыть; null — пусть решает браузер.
+ *
+ * «Этот же экран» — тот же адрес страницы и тот же раздел оболочки (`sec`, `mod`), в ссылке есть
+ * `open`. Прочие параметры ссылки (фильтры, с которыми её собрали) не берём: фильтры списка — те,
+ * что стоят сейчас, их и сохраняем. Чужое окно, Ctrl/Cmd/Shift/Alt, средняя кнопка, `target`,
+ * `download`, другой раздел, внешний адрес — не трогаем.
+ */
+export function sameScreenRecordLink(e: Pick<ReactMouseEvent, 'defaultPrevented' | 'button' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'target'>): { id: string; place: RecordPlacement | null; kind: string | null } | null {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return null;
+  if (typeof window === 'undefined') return null;
+  const t = e.target as Element | null;
+  const a = t && typeof t.closest === 'function' ? t.closest('a[href]') as HTMLAnchorElement | null : null;
+  if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return null;
+  let url: URL;
+  try { url = new URL(a.getAttribute('href') ?? '', window.location.href); } catch { return null; }
+  if (url.origin !== window.location.origin || url.pathname !== window.location.pathname) return null;
+  const p = url.searchParams;
+  const id = p.get('open');
+  if (!id) return null;
+  const cur = new URLSearchParams(window.location.search);
+  for (const k of ['sec', 'mod']) {
+    const want = p.get(k);
+    if (want !== null && want !== (cur.get(k) ?? null)) return null;
+  }
+  const raw = p.get('place') ?? '';
+  return { id, place: isRecordPlacement(raw) ? raw : null, kind: p.get('okind') || null };
 }

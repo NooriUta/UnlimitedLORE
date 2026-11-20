@@ -28,7 +28,8 @@ test('правило поля: остальное — как есть, осно�
   assert.deepEqual([e.rule, e.basis], ['keep', 'delegated']);
 });
 
-test('типы: план-доска и журнал шагов не переносятся; первый объект — своей картой; пустые типы переносятся схемой', () => {
+// Пустой тип решает перепись, а не имя: typePlan судит только по имени, пустоту — proposeMap (MD-02 8а, 19.11.2026).
+test('типы: план-доска и журнал шагов не переносятся; первый объект — своей картой; по имени тип переносится', () => {
   assert.equal(typePlan('PlanTrack').move, false);
   assert.match(typePlan('PlanTrack').why, /план-доск/);
   assert.equal(typePlan('LoreSchemaVersion').move, false);

@@ -3,6 +3,7 @@
 #
 #   install.sh [--dir DIR] --version vX.Y.0 [--build] [--port N] [--bind ADDR] [--dry-run]
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
+#     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -47,11 +48,20 @@ PURGE=0
 DRY=0
 WAIT_SECS="${WAIT_SECS:-900}"
 CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
+# Forgejo (MIG-04, владелица 20.11.2026). Пусто — выбор в .env не трогается (по умолчанию без Forgejo, как раньше).
+FORGEJO=""
+FORGEJO_URL_ARG=""
+FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
+# forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
+# scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
+FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
+FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
+FORGEJO_MCP_BUILD=0
 
 say()  { printf '── %s\n' "$*"; }
 warn() { printf 'ВНИМАНИЕ: %s\n' "$*" >&2; }
 die()  { printf 'ОШИБКА: %s\n' "$1" >&2; exit "${2:-1}"; }
-usage() { sed -n '3,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '3,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # Мажорная версия: vX.Y.0 — то же правило, что у публикации образов и зеркала GitHub.
 is_major() { [[ "$1" =~ ^v[0-9]+\.[0-9]+\.0$ ]]; }
@@ -72,11 +82,12 @@ run() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir|--version|--src|--port|--bind)
+      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url)
         [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "у $1 нет значения" 2
         case "$1" in
           --dir) DIR="$2" ;; --version) VERSION="$2" ;; --src) SRC="$2" ;;
           --port) PORT="$2" ;; --bind) BIND="$2" ;;
+          --forgejo) FORGEJO="$2" ;; --forgejo-url) FORGEJO_URL_ARG="$2" ;;
         esac
         shift 2 ;;
       --uninstall) MODE="uninstall"; shift ;;
@@ -84,6 +95,7 @@ parse_args() {
       --purge)     PURGE=1; shift ;;
       --dry-run)   DRY=1; shift ;;
       --build)     BUILD=1; shift ;;
+      --forgejo-mcp-build) FORGEJO_MCP_BUILD=1; shift ;;
       --selftest)  MODE="selftest"; shift ;;
       -h|--help)   usage; exit 0 ;;
       *) die "неизвестный аргумент: $1 (см. --help)" 2 ;;
@@ -97,9 +109,41 @@ parse_args() {
   if [ -n "$VERSION" ]; then
     is_major "$VERSION" || die "--version $VERSION: инсталлятор — только для мажорных версий vX.Y.0 (например v1.18.0); патчи vX.Y.Z (Z>0) и rc — нет" 2
   fi
+  case "$FORGEJO" in
+    ""|install|none) [ -z "$FORGEJO_URL_ARG" ] || die "--forgejo-url — только вместе с --forgejo own" 2 ;;
+    own)
+      [ -n "$FORGEJO_URL_ARG" ] || die "--forgejo own: нужен адрес своего Forgejo — --forgejo-url https://git.example.org" 2
+      [[ "$FORGEJO_URL_ARG" =~ ^https?://[^[:space:]]+$ ]] || die "--forgejo-url: нужен адрес http(s)://…, а не «$FORGEJO_URL_ARG»" 2
+      FORGEJO_URL_ARG="${FORGEJO_URL_ARG%/}" ;;
+    *) die "--forgejo: install (поставить Forgejo $FORGEJO_VERSION_DEFAULT), own (свой Forgejo) или none" 2 ;;
+  esac
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
   return 0
 }
+
+# Профили compose после выбора Forgejo: чужие профили (guard) сохраняются, forgejo/forgejo-mcp ставятся по варианту.
+merge_profiles() { # текущие-профили режим
+  local out="" p
+  for p in $(printf '%s' "$1" | tr ',' ' '); do
+    case "$p" in forgejo|forgejo-mcp) ;; *) out="${out:+$out,}$p" ;; esac
+  done
+  case "$2" in
+    install) out="${out:+$out,}forgejo,forgejo-mcp" ;;
+    own)     out="${out:+$out,}forgejo-mcp" ;;
+  esac
+  printf '%s' "$out"
+}
+
+# Что выбор Forgejo пишет в .env — строки KEY=VALUE без секретов: токены вписывает владелец, ключ forgejo-mcp — генератор.
+forgejo_env() { # текущие-профили
+  printf 'COMPOSE_PROFILES=%s\n' "$(merge_profiles "$1" "$FORGEJO")"
+  case "$FORGEJO" in
+    install) printf 'FORGEJO_VERSION=%s\nFORGEJO_URL=http://forgejo:3000\nFORGEJO_BASE_OVERRIDE=http://forgejo:3000\n' "$FORGEJO_VERSION_DEFAULT" ;;
+    own)     printf 'FORGEJO_URL=%s\nFORGEJO_BASE_OVERRIDE=\n' "$FORGEJO_URL_ARG" ;;
+    none)    printf 'FORGEJO_URL=\nFORGEJO_BASE_OVERRIDE=\n' ;;
+  esac
+}
+has_profile() { case ",$(env_get COMPOSE_PROFILES "$DIR/.env")," in *",$1,"*) return 0 ;; esac; return 1; }
 
 gen_secret() { head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 
@@ -185,6 +229,17 @@ write_env() {
     if [ -f "$env" ]; then say "[dry-run] .env есть — пароли сохраняются, обновятся версия/исходники"
     else say "[dry-run] .env из .env.example; пароли ARCADEDB_ROOT_PASSWORD, MINIO_PASSWORD — сгенерировать"; fi
     printf '[dry-run] cp %s %s\n' "$SCRIPT_DIR/docker-compose.install.yml" "$DIR/docker-compose.yml"
+    if [ -n "$FORGEJO" ]; then
+      say "[dry-run] Forgejo: $FORGEJO — в .env:"
+      forgejo_env "$(env_get COMPOSE_PROFILES "$env")" | sed 's/^/[dry-run]   /'
+      case "$FORGEJO" in
+        install) say "[dry-run] поднять forgejo $FORGEJO_VERSION_DEFAULT (codeberg.org/forgejo/forgejo), администратора заводите в его первом окне" ;;
+        own)     say "[dry-run] свой Forgejo $FORGEJO_URL_ARG — ставить его не нужно" ;;
+      esac
+      if [ "$FORGEJO" != none ]; then
+        say "[dry-run] FORGEJO_MCP_API_KEY — сгенерировать; forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN (токен вписывает владелец)"
+      fi
+    fi
     return 0
   fi
   mkdir -p "$DIR"; chmod 700 "$DIR"
@@ -207,17 +262,68 @@ write_env() {
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
   [ -z "$PORT" ] || env_set LORE_HTTP_PORT "$PORT" "$env"
   [ -z "$BIND" ] || env_set LORE_BIND "$BIND" "$env"
+  [ -z "${FORGEJO_MCP_IMAGE:-}" ] || env_set FORGEJO_MCP_IMAGE "$FORGEJO_MCP_IMAGE" "$env"
+  if [ -n "$FORGEJO" ]; then
+    local line
+    while IFS= read -r line; do env_set "${line%%=*}" "${line#*=}" "$env"; done < <(forgejo_env "$(env_get COMPOSE_PROFILES "$env")")
+    say "Forgejo: $FORGEJO (профили compose: $(env_get COMPOSE_PROFILES "$env"))"
+  fi
+  # Ключ входа агентов в forgejo-mcp — только когда он включён; как пароли: своё значение из окружения или генератор.
+  if has_profile forgejo-mcp; then
+    cur="$(env_get FORGEJO_MCP_API_KEY "$env")"
+    if [ -z "$cur" ] || [ "$cur" = "CHANGE_ME" ]; then
+      env_set FORGEJO_MCP_API_KEY "${FORGEJO_MCP_API_KEY:-$(gen_secret)}" "$env"
+      say "FORGEJO_MCP_API_KEY: задан (значение в $env, на экран не выводится)"
+    fi
+  fi
   chmod 600 "$env"
+}
+
+# Сервисы для `compose up`: forgejo-mcp без своего токена падает на старте (FORGEJO_TOKEN обязателен), поэтому
+# без FORGEJO_MCP_TOKEN он не поднимается, а установщик громко говорит, что сделать.
+start_stack() {
+  if has_profile forgejo-mcp && [ -z "$(env_get FORGEJO_MCP_TOKEN "$DIR/.env")" ]; then
+    warn "forgejo-mcp не запущен: нет FORGEJO_MCP_TOKEN. Создайте токен в Forgejo (Настройки → Приложения), впишите в $DIR/.env и повторите install.sh — это обновление"
+    # shellcheck disable=SC2046
+    compose up -d $(compose config --services | grep -vx forgejo-mcp)
+  else
+    compose up -d
+  fi
 }
 
 images() {
   if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "загрузка образов"
-    run compose pull
+    run compose pull arcadedb minio lore-backend lore-app-next
   else
     say "сборка образов из $LORE_SRC_RESOLVED (первый раз — 10–20 минут)"
     run compose build lore-backend lore-app-next
     run compose pull arcadedb minio
+  fi
+  if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
+  if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
+}
+
+# Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»). Порядок:
+#   1) FORGEJO_MCP_IMAGE — свой готовый образ, перекрывает всё;
+#   2) архив пакета images/forgejo-mcp-<коммит>.tar — docker load, только если sha256 сходится;
+#   3) --forgejo-mcp-build — сборка из git на том же коммите (запасной путь, только по явному флагу).
+# Нет ни одного — отказ с причиной, а не тихая сборка.
+forgejo_mcp_image() {
+  local img a want got
+  img="${FORGEJO_MCP_IMAGE:-$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")}"
+  if [ -n "$img" ]; then say "forgejo-mcp: готовый образ $img"; run compose pull forgejo-mcp; return 0; fi
+  if [ "$FORGEJO_MCP_BUILD" = 1 ]; then say "forgejo-mcp: сборка из git (--forgejo-mcp-build)"; run compose build forgejo-mcp; return 0; fi
+  a="${FORGEJO_MCP_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_ARCHIVE_REL}"
+  [ -f "$a" ] || die "нет архива образа forgejo-mcp: $a. Положите каталог images/ из пакета установщика рядом с install.sh; либо --forgejo-mcp-build (сборка из git), либо FORGEJO_MCP_IMAGE (свой образ)"
+  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенный образ не гружу"
+  want="$(awk '{print $1; exit}' "$a.sha256")"
+  got="$(sha256sum "$a" | awk '{print $1}')"
+  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не гружу"
+  say "sha256 архива forgejo-mcp сходится"
+  run docker load -i "$a"
+  if [ "$DRY" != 1 ]; then
+    docker image inspect "$FORGEJO_MCP_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $FORGEJO_MCP_IMAGE_DEFAULT"
   fi
 }
 
@@ -282,6 +388,10 @@ verify() {
   else
     printf '  OK    %-24s\n' "backend /q/health/ready"
   fi
+  if has_profile forgejo; then base="http://forgejo:3000"; probe "forgejo /api/v1/version" "/api/v1/version" '"version"'; fi
+  if has_profile forgejo-mcp && [ -n "$(env_get FORGEJO_MCP_TOKEN "$DIR/.env")" ]; then
+    base="http://forgejo-mcp:3000"; probe "forgejo-mcp /health" "/health"
+  fi
   [ "$fails" = 0 ] || die "проверок не прошло: $fails"
   say "установка проверена"
 }
@@ -302,7 +412,7 @@ do_install() {
   fi
   wait_db
   say "запуск бэкенда и фронта"
-  compose up -d
+  start_stack
   wait_backend
   verify
   local bind port
@@ -392,6 +502,52 @@ selftest() {
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
     grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
   done
+  # 8. Forgejo — по выбору (MIG-04, владелица 20.11.2026): install — поставить Forgejo нашей версии, own — свой Forgejo
+  #    владельца, none — без Forgejo (по умолчанию, как раньше). В install и own едет forgejo-mcp.
+  expect_rc 2 --dry-run --dir "$t/inst" --forgejo maybe
+  expect_rc 2 --dry-run --dir "$t/inst" --forgejo own
+  printf '%s' "$out" | grep -q 'forgejo-url' || fail "own без адреса: причина не названа: $out"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --forgejo own --forgejo-url 'ftp://x'
+  expect_rc 2 --dry-run --dir "$t/inst" --forgejo-url https://git.example.org
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
+  printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo,forgejo-mcp' || fail "install: нет профилей forgejo и forgejo-mcp: $out"; ok
+  printf '%s' "$out" | grep -q 'FORGEJO_BASE_OVERRIDE=http://forgejo:3000' || fail "install: мост LORE не направлен на forgejo:3000"; ok
+  printf '%s' "$out" | grep -q 'forgejo 15.0.5' || fail "install: версия Forgejo не названа"; ok
+  printf '%s' "$out" | grep -q 'forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN' || fail "install: нет предупреждения про токен forgejo-mcp"; ok
+  FORGEJO_API_TOKEN=tok-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org/ --forgejo-mcp-build
+  printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo-mcp$' || fail "own: профиль только forgejo-mcp: $out"; ok
+  printf '%s' "$out" | grep -q 'FORGEJO_URL=https://git.example.org$' || fail "own: адрес своего Forgejo не дошёл"; ok
+  printf '%s' "$out" | grep -q 'tok-' && fail "dry-run напечатал токен"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo none
+  printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=$' || fail "none: профили Forgejo не сняты: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -qi 'forgejo' && fail "без --forgejo план не должен трогать Forgejo: $out"; ok
+  [ "$(merge_profiles 'guard,forgejo' install)" = 'guard,forgejo,forgejo-mcp' ] || fail "профили: guard теряется"; ok
+  [ "$(merge_profiles 'forgejo,forgejo-mcp,guard' none)" = 'guard' ] || fail "профили: none не снимает forgejo"; ok
+  [ "$(merge_profiles '' own)" = 'forgejo-mcp' ] || fail "профили: own"; ok
+  grep -q '^FORGEJO_MCP_API_KEY=CHANGE_ME$' "$SCRIPT_DIR/.env.example" || fail ".env.example: ключ forgejo-mcp — заглушка CHANGE_ME"; ok
+  grep -qE '^FORGEJO_(API|MCP)_TOKEN=$' "$SCRIPT_DIR/.env.example" || fail ".env.example: токены Forgejo — пустые"; ok
+  # 9. образ forgejo-mcp — из архива пакета (владелица 20.11.2026: «не публиковать, включить в инсталятор»):
+  #    есть архив — docker load со сверкой sha256; нет — отказ; сборка из git — только --forgejo-mcp-build.
+  mkdir -p "$t/pkg/images"; printf 'образ' > "$t/pkg/images/a.tar"
+  ( cd "$t/pkg/images" && sha256sum a.tar > a.tar.sha256 )
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q "docker load -i $t/pkg/images/a.tar" || fail "архив есть — в плане нет docker load: $out"; ok
+  printf '%s' "$out" | grep -q 'sha256 архива forgejo-mcp сходится' || fail "архив: нет сверки sha256: $out"; ok
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' && fail "архив есть, а план собирает forgejo-mcp из git"; ok
+  printf 'подмена' > "$t/pkg/images/a.tar"
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый архив: отказ без причины: $out"; ok
+  rm -f "$t/pkg/images/a.tar.sha256"; printf 'образ' > "$t/pkg/images/a.tar"
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'нет файла sha256' || fail "архив без sha256: принят молча: $out"; ok
+  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org
+  printf '%s' "$out" | grep -q 'forgejo-mcp-build' || fail "нет архива: отказ не называет запасной путь: $out"; ok
+  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "--forgejo-mcp-build: нет сборки из git: $out"; ok
+  FORGEJO_MCP_IMAGE=reg.example/fmcp:1 FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'compose pull forgejo-mcp' || fail "FORGEJO_MCP_IMAGE не перекрыл архив: $out"; ok
+  printf '%s' "$out" | grep -q 'docker load' && fail "FORGEJO_MCP_IMAGE задан, а план грузит архив"; ok
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }

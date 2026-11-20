@@ -72,6 +72,30 @@ describe('bar: ось Y от нуля', () => {
     expect(labels[0]).toBe('01.11');
     expect(container.querySelectorAll('[data-bar]')).toHaveLength(30);
   });
+
+  // Графики 19.11.2026 (№3 WIP по исполнителям на 390): «Claude Code (full)» налезало на соседнюю
+  // подпись. Подпись длиннее полосы — обрезается многоточием, полное имя — в подсказке и в «Таблицей».
+  it('длинная подпись категории не шире своей полосы — многоточие и полное имя в <title>', () => {
+    const data = ['Claude Code (full)', 'Claude Code (pm)', '(без исполнителя)', 'Ирина', 'a', 'b', 'c', 'd', 'e', 'f']
+      .map(category => ({ category, values: { a: 1 } }));
+    const { container } = wrap(<BarChart title="WIP" groups={[{ key: 'a', label: 'n' }]} data={data} />);
+    const first = container.querySelector('[data-cat]')!;
+    expect(first.textContent!.endsWith('…')).toBe(true);
+    expect(first.querySelector('title')?.textContent).toBe('Claude Code (full)');
+    expect([...container.querySelectorAll('[data-cat]')].find(e => e.textContent === 'Ирина')).toBeTruthy();
+  });
+});
+
+describe('scatter: ось времени', () => {
+  // Графики 19.11.2026 (время цикла, ритм релизов): x — момент, а «Таблицей» печатала epoch-мс числом.
+  it('xLabel — подпись x в таблице и три деления под рисунком', () => {
+    const pts = [0, 10, 20].map(d => ({ x: T0 + d * DAY, y: d + 1, label: `p${d}` }));
+    const fmt = (x: number) => new Date(x).toISOString().slice(5, 10);
+    const { container } = wrap(<ScatterChart title="Цикл" points={pts} xLabel={fmt} />);
+    expect([...container.querySelectorAll('[data-xtick]')].map(e => e.textContent)).toEqual(['10-03', '10-13', '10-23']);
+    fireEvent.click(screen.getByRole('button', { name: 'Таблицей' }));
+    expect(within(container.querySelector('table')!).getByText('10-13')).toBeTruthy();
+  });
 });
 
 describe('scatter и heat', () => {

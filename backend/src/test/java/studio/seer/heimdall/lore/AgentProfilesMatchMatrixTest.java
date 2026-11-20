@@ -48,7 +48,10 @@ class AgentProfilesMatchMatrixTest {
         // машин, вердикт полноты, версия сборки. Все GET, агентный фильтр записи их не скоупит.
         "task_shape", "machine_acl", "harness_list", "quality_check", "lore_version",
         // AO-WHOAMI (13.11): «кто ты» — GET /lore/whoami, читающий, во всех профилях.
-        "whoami");
+        "whoami",
+        // GC-05 (20.11): путь между записями (GET /lore/graph/path) и find (POST /lore/find — ЧТЕНИЕ, семейство
+        // find открыто всем профилям в AgentScopeFilter; это проверяет findIsOpenToEveryProfile).
+        "graph_path", "find");
 
     /**
      * Чтение графа — у КАЖДОГО профиля (README профилей: «reading the graph never needs
@@ -57,7 +60,7 @@ class AgentProfilesMatchMatrixTest {
      * Все — GET (/lore/slice, /lore/search, /lore/graph — GC-04), агентный фильтр их не скоупит.
      */
     static final List<String> GRAPH_READ_TOOLS = List.of(
-        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph");
+        "list_slices", "query_slice", "changed", "run_block", "search", "search_similar", "graph", "graph_path", "find");
 
     @Test
     void everyProfileReadsTheGraph() throws IOException {
@@ -161,6 +164,20 @@ class AgentProfilesMatchMatrixTest {
         List<String> v = violations(p, registry);
         assertEquals(1, v.size(), String.valueOf(v));
         assertTrue(v.get(0).startsWith("tester: decision_new → /lore/decision"), v.get(0));
+    }
+
+    /**
+     * GC-05: find — POST, и агентный фильтр его проверяет. Он в {@link #READ_TOOLS} (ничего не пишет), поэтому
+     * общий обход профилей его пропускает — здесь отдельно: каждый профиль, которому обещан find, бэкендом пропущен.
+     */
+    @Test
+    void findIsOpenToEveryProfile() throws IOException {
+        List<String> v = new ArrayList<>();
+        for (String profile : profiles().keySet()) {
+            AgentScopeFilter.Denial d = AgentScopeFilter.decide(profile, "/lore/find");
+            if (d != null) v.add(profile + ": /lore/find — " + d.what() + ": " + d.why());
+        }
+        assertEquals(List.of(), v, "find обещан всем профилям — бэкенд не должен отказывать");
     }
 
     @Test

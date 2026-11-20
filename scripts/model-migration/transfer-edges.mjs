@@ -8,13 +8,14 @@
 import fs from 'node:fs';
 import { connect } from './db.mjs';
 import { EDGES, SCHEMA, DECISION_MILESTONES } from './resources.mjs';
-import { edgePlan, edgeWrites } from './edge-plan.mjs';
+import { edgePlan, edgeWrites, schemaOnlyEdgeDdl } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
 import { applyOrphanSprints } from './orphan-sprints.mjs';
+import { carriesFreeFields, edgeFreeFieldsDdl, stampFreeFields, freeFieldsLoss } from './edge-free-fields.mjs';
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
@@ -84,6 +85,9 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
     for (const ddl of edgeHistoryDdl(T)) await db.dstCommand(ddl);
     const sources = stampEdgeHistory(T, list, outMoments, at);
+    // SUPERTAGS-SPIKE: свободные поля на ребре (edge_free_fields модели) — словарь и отметки в схеме приёмника
+    for (const ddl of edgeFreeFieldsDdl(T)) await db.dstCommand(ddl);
+    const free = stampFreeFields(T, list);
     await pool(list, 8, w => db.dstCommand(`CREATE EDGE ${T} FROM ${w.from} TO ${w.to} CONTENT :c`, { c: w.content }));
     // сверка: каждая связь приёмника соединяет те записи, что дал расчёт
     const want = new Map(list.map(w => [w.content.mig_src_rid, `${w.from}>${w.to}`]));
@@ -91,6 +95,20 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s, @out AS o, @in AS i FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => { got++; if (want.get(x.s) !== `${x.o}>${x.i}`) bad++; });
     report.moved[T] = { expected: list.length, target: got, wrong_ends: bad, ...(sources ? { valid_from_source: sources } : {}) };
     if (got !== list.length || bad) ok = false;
+    // сверка свободных полей: словарь каждого ребра приёмника совпадает с источником
+    if (carriesFreeFields(T)) {
+      const rows = [];
+      await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s, fields FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => rows.push(x));
+      const loss = freeFieldsLoss(list, rows);
+      report.moved[T].free_fields = { ...free, checked: loss.checked, lost: loss.lost.length, lost_sample: loss.lost.slice(0, 20) };
+      if (loss.lost.length) ok = false;
+    }
+  }
+  // MD-02 8а: пустые связи, которые пишет или читает код сервера, — вид связи без данных, свойства старой схемы
+  report.schema_only_edges = [];
+  for (const ddl of schemaOnlyEdgeDdl(EDGES, new Set(Object.keys(writes)))) {
+    await db.dstCommand(ddl);
+    const m = /^CREATE EDGE TYPE (\w+)/.exec(ddl); if (m) report.schema_only_edges.push(m[1]);
   }
   // версии: пишет этап записи; здесь — что число связей версий в приёмнике не меньше расчётного по своим типам
   const hs = triples.filter(t => t.edge === VERSION_EDGE && OWN.includes(t.from) && t.to === t.from + 'Hist').reduce((a, t) => a + t.n, 0);

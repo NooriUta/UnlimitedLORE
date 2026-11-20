@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "2cbc271726173d05",
+  "version" : "0c2b5efb237bfd54",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -4051,14 +4051,14 @@
         "editable" : false,
         "label_en" : "External dependencies",
         "short_label_en" : null,
-        "definition_en" : null,
+        "definition_en" : "The document references external resources (CDN): without internet access it may not render fully.",
         "description_en" : null,
         "label_pl" : "Zależności zewnętrzne",
         "short_label_pl" : null,
-        "definition_pl" : null,
+        "definition_pl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości.",
         "description_pl" : null,
         "short_label" : null,
-        "definition" : null,
+        "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
         "description" : null,
         "layer" : "optional",
         "historic" : false,
@@ -10908,6 +10908,15 @@
         "place" : "prop",
         "manageable" : false
       }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
+        "manageable" : false
+      }, {
         "key" : "refsOut",
         "label" : "Ссылается",
         "relation" : "association",
@@ -13084,6 +13093,13 @@
             "key" : "refs",
             "label" : "Ссылки"
           }
+        }, {
+          "key" : "metrics",
+          "source" : "part",
+          "ref" : "metrics",
+          "order" : 4,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "repository" : {
@@ -14149,10 +14165,10 @@
   },
   "field_texts" : {
     "fields" : 208,
-    "without_definition" : 11,
+    "without_definition" : 10,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 208
+    "without_definition_en" : 207
   },
   "edge_history" : {
     "fields" : [ "valid_from", "valid_to" ],
@@ -14163,6 +14179,17 @@
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
       "ROLE_HELD_BY" : "Роль на задаче (автор, исполнитель, ревьюер): сколько раз роль передавали и кто вёл задачу раньше (ADR-LORE-042 §4); ведёт историю с TR-05.",
       "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
+    }
+  },
+  "edge_free_fields" : {
+    "TAGGED_WITH" : {
+      "target_type" : "tag",
+      "vertex" : "KnowTag",
+      "key" : "tag_id",
+      "property" : "fields",
+      "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
+      "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег.",
+      "owners" : [ "adr", "decision" ]
     }
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]

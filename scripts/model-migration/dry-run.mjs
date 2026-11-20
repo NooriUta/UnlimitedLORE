@@ -59,6 +59,9 @@ export async function dryRun(db, DECISIONS) {
       for (const f of Object.keys(r.toVersion)) bump(t.toVersion, f);
       for (const f of r.dropped) bump(t.dropped, f);
       for (const f of Object.keys(r.held)) bump(t.held, f);
+      // пустой статус (правило владелицы 19.11): сухой прогон считает запись отдельно, без версий, — «вычислено»
+      // даёт только перенос (computeEmptyStatuses); здесь — «выбор владелицы» и «по умолчанию»
+      for (const f of r.filled || []) bump(t.filled ||= {}, `${f.field} · ${f.how}${f.how === 'выбор владелицы' ? ' ' + f.from : ''}`);
       if (r.titleFallback) t.titleFallback++;
       if ('status' in r.out) bump(t.statusCodes, r.out.status === null ? '(без кода)' : r.out.status);
       for (const x of r.rejects) {
@@ -89,6 +92,7 @@ for (const [T, t] of Object.entries(report.types)) {
   console.log(`${T}: записей ${t.records} · полей в новой записи ${Object.keys(t.outFields).length} · отказов ${rej} · удержано ${held} · снято ${Object.values(t.dropped).reduce((a, n) => a + n, 0)} · полей вне карты ${Object.keys(t.unknown).length}`);
   if (Object.keys(t.unknown).length) console.log('   ВНЕ КАРТЫ:', JSON.stringify(t.unknown));
   if (Object.keys(t.held).length) console.log('   удержано:', JSON.stringify(t.held));
+  if (t.filled) console.log('   пустой статус (правило владелицы 19.11):', JSON.stringify(t.filled));
   if (Object.keys(t.statusCodes).length) console.log('   статусы:', JSON.stringify(t.statusCodes), t.titleFallback ? `· не-статус → название: ${t.titleFallback}` : '');
   for (const [k, e] of Object.entries(t.rejects)) console.log(`   ОТКАЗ ${k}: ${e.n} — ` + Object.entries(e.samples).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([s, n]) => `«${s}»×${n}`).join(', '));
 }

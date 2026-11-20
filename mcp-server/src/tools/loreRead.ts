@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ACTIVE_PROJECT, loreGet, loreSliceWithMeta, loreSlices } from '../backend.js';
+import { ACTIVE_PROJECT, loreGet, lorePost, loreSliceWithMeta, loreSlices } from '../backend.js';
 import { completeness, parseLoreQueryBlock } from './runBlock.js';
 import { registerProjectExport } from './projectExport.js';
 
@@ -301,9 +301,9 @@ export function registerLoreRead(server: McpServer): void {
     'Find records textually similar to a given one (SEARCH_INDEX_MORE). Input is an ID, not a query string. ' +
       'TWO MEASURED ENGINE LIMITS, both reported in the response rather than hidden: (1) same_type_only — ' +
       'similarity never crosses types, a rid of one type against another type index returns nothing; ' +
-      '(2) ranked:false — the engine returns $similarity = 1.0 for every row, so the order is NOT a relevance ' +
-      'ranking and must not be presented as one. An EMPTY result is valid, not an error: Lucene MoreLikeThis ' +
-      'has term/document frequency thresholds and filters everything out on small corpora.',
+      '(2) ranked:true — hits are ordered by $similarity DESC and each carries `similarity` ' +
+      '(MoreLikeThis with minTermFreq:1, minDocFreq:1, so short titles work). An EMPTY result is valid, ' +
+      'not an error: nothing shares enough terms with the source record.',
     {
       ref: z.string().describe('entity id, e.g. "ADR-LORE-022" or "UC-GIT-MERGE"'),
       limit: z.number().int().min(1).max(50).optional().describe('upper bound, not a promise (default 10)'),
@@ -440,7 +440,13 @@ export function registerLoreRead(server: McpServer): void {
       'dangling[{id,rel,dir,reason: missing|hidden_by_scope,count}] names cut ends; hidden_by_scope counts nodes outside the caller\'s ' +
       'projects; frontier_edges:"not_read" — edges between two last-level nodes are not read. meta.rels_available[{rel,count}] lists ' +
       'edge types of the neighborhood at the requested depth WITHOUT the rels filter (count desc, then rel) — use it to pick rels; ' +
-      'meta.by_depth {"1":n,"2":n,…} counts nodes per level (root excluded, an empty level is 0).',
+      'meta.by_depth {"1":n,"2":n,…} counts nodes per level (root excluded, an empty level is 0). ' +
+      'GC-05 (SPEC-LORE-GRAPH-SEARCH §4): walk_types = types the walk may pass THROUGH, return_types = types that land in ' +
+      'nodes (a walked-but-not-returned chain collapses into an edge {from, rel:"via", to, via:[{rel,type,count}]}; ' +
+      'meta.walked_not_returned counts them); do not combine with types. dir=in|out|both (default both): impact/blast radius ' +
+      'is dir=in (who depends on X), downstream is dir=out — plus depth. A structural edge NAMED in rels (e.g. ' +
+      'rels="PART_OF" from a sprint to get its tasks) is walked even without structural=true. For a path between two records ' +
+      'use graph_path; for "type + fields + link" lists use find.',
     {
       type: z.string().optional().describe('neighborhood: record type, e.g. "adr", "task", "sprint", "spec", "decision"'),
       id: z.string().optional().describe('neighborhood: business key, e.g. "ADR-LORE-038" or "SPRINT_X/CO-11" for a task'),
@@ -450,8 +456,11 @@ export function registerLoreRead(server: McpServer): void {
       types: z.string().optional().describe('CSV of node types to keep, e.g. "adr,decision"'),
       structural: z.boolean().optional().describe('include structural edges (PART_OF, BELONGS_TO_PROJECT, …); default false'),
       limit: z.number().int().min(1).max(20000).optional().describe('node cap; neighborhood default 500, slice 10000'),
+      walk_types: z.string().optional().describe('CSV of node types the walk passes THROUGH, e.g. "task"; not with types'),
+      return_types: z.string().optional().describe('CSV of node types to return, e.g. "adr"; not with types'),
+      dir: z.enum(['in', 'out', 'both']).optional().describe('walk direction: in = who points at it (impact), out = what it points at; default both'),
     },
-    async ({ type, id, depth, scope, rels, types, structural, limit }) => {
+    async ({ type, id, depth, scope, rels, types, structural, limit, walk_types, return_types, dir }) => {
       try {
         const params: Record<string, string> = {};
         if (type !== undefined) params.type = type;
@@ -462,7 +471,109 @@ export function registerLoreRead(server: McpServer): void {
         if (types !== undefined) params.types = types;
         if (structural !== undefined) params.structural = String(structural);
         if (limit !== undefined) params.limit = String(limit);
+        if (walk_types !== undefined) params.walk_types = walk_types;
+        if (return_types !== undefined) params.return_types = return_types;
+        if (dir !== undefined) params.dir = dir;
         return json(await loreGet('/lore/graph', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05 (SPEC-LORE-GRAPH-SEARCH §7): путь между двумя записями.
+  // «Пути нет» — не пустой ответ, а meta.found:false с причиной словами.
+  server.tool(
+    'graph_path',
+    'Path between TWO LORE records in one call (GET /lore/graph/path, SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05): ' +
+      'from/to = "<type>:<key>" (e.g. "adr:ADR-LORE-038", "task:SPRINT_X/CO-11", "project:NooriUta/UnlimitedLORE"). ' +
+      'Shortest path(s) up to max_depth (1..6, default 4), k = up to 3 distinct shortest paths. rels / walk_types / dir filter ' +
+      'the walk exactly as in graph (a structural edge named in rels is walked). Returns paths[{length, nodes[{id,type,title,' +
+      'status,status_category}], edges[{from,rel,to}]}] — edges keep their real direction. READ meta FIRST: found:false comes ' +
+      'with reason: too_deep (a path exists deeper than max_depth — raise it), through_hidden (only through records outside ' +
+      'your projects — not shown), no_path (none up to depth N), budget (walk hit the node cap — absence NOT proven, ' +
+      'complete:false). meta.more_paths_possible:true — there are more than k shortest paths.',
+    {
+      from: z.string().describe('start record "<type>:<key>", e.g. "adr:ADR-LORE-057"'),
+      to: z.string().describe('end record "<type>:<key>", e.g. "task:SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05"'),
+      rels: z.string().optional().describe('CSV of edge types to walk ONLY'),
+      walk_types: z.string().optional().describe('CSV of node types the path may pass through (ends are always allowed)'),
+      dir: z.enum(['in', 'out', 'both']).optional().describe('edge direction along the path; default both'),
+      max_depth: z.number().int().min(1).max(6).optional().describe('max path length, 1..6 (default 4)'),
+      k: z.number().int().min(1).max(3).optional().describe('number of shortest paths, 1..3 (default 1)'),
+      structural: z.boolean().optional().describe('walk all structural edges (PART_OF, BELONGS_TO_PROJECT, …); default false'),
+    },
+    async ({ from, to, rels, walk_types, dir, max_depth, k, structural }) => {
+      try {
+        const params: Record<string, string> = { from, to };
+        if (rels !== undefined) params.rels = rels;
+        if (walk_types !== undefined) params.walk_types = walk_types;
+        if (dir !== undefined) params.dir = dir;
+        if (max_depth !== undefined) params.max_depth = String(max_depth);
+        if (k !== undefined) params.k = String(k);
+        if (structural !== undefined) params.structural = String(structural);
+        return json(await loreGet('/lore/graph/path', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05 (SPEC-LORE-GRAPH-SEARCH §6): find «тип + поля + связь».
+  // POST — только потому, что дерево условий не влезает в строку запроса; ничего не пишет.
+  // Тело уходит как есть: проект из LORE_ACTIVE_PROJECT не подставляется (скоуп режет сервер).
+  const findCond: z.ZodType<unknown> = z.lazy(() => z.union([
+    z.object({
+      field: z.string(),
+      op: z.enum(['=', '!=', 'set', '<', '>', '<=', '>=', 'contains']),
+      value: z.unknown().optional(),
+    }),
+    z.object({ or: z.array(findCond) }),
+    z.object({ and: z.array(findCond) }),
+    z.object({ not: findCond }),
+  ]));
+  const findLink = z.object({
+    id: z.string().describe('"<type>:<key>" — project:<slug>, component:<id>, repository:<url>, sprint:<id>, adr:<id>, task:<uid>, …'),
+    rels: z.array(z.string()).optional().describe('edge types; omitted = the model path (project/component/repository only)'),
+    depth: z.number().int().min(1).max(3).optional().describe('1..3 hops, default 1'),
+    dir: z.enum(['in', 'out', 'both']).optional().describe('direction FROM the found record; default both'),
+  });
+  server.tool(
+    'find',
+    'Structured query "type + fields + link" in ONE call (POST /lore/find, SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05) — instead of ' +
+      'chains of slices. type = task | sprint | adr | decision | spec. where = list of conditions (AND); a condition is ' +
+      '{field, op, value} with op = | != (value may be a list = IN / NOT IN) | set (value false = not set) | < > <= >= | contains ' +
+      '(case-insensitive substring), or {or:[…]}, {and:[…]}, {not:{…}}. Fields come from the type (a wrong one answers 400 with ' +
+      'the allowed list); status_category (not_started|in_progress|in_force|finished|withdrawn|unknown) works for every type; ' +
+      'SCD2 fields (status_raw, effort_days, …) are read from the CURRENT version. links_to {id:"project:<slug>"|' +
+      '"component:<id>"|"repository:<url>"|"<type>:<key>", rels?, depth?, dir?} (or a list = AND); not_linked {rels, dir?}; ' +
+      'id_in [keys]; changed_within_days N; fields [names] to return (id, type, title always); sort [{field, dir}]; limit ' +
+      '(default 500, max 2000). Examples: open tasks of a project = {type:"task", where:[{field:"status_category", op:"!=", ' +
+      'value:["finished","withdrawn"]}], links_to:{id:"project:NooriUta/UnlimitedLORE"}}; open sprints = {type:"sprint", ' +
+      'where:[{field:"status_category", op:"!=", value:["finished","withdrawn"]}]}; tasks of a component = {type:"task", ' +
+      'links_to:{id:"component:FORSETI", rels:["TAGGED_WITH"]}}; tasks of a repository = {type:"task", links_to:{id:' +
+      '"repository:https://…"}}. READ meta FIRST: complete:false / truncated:true + capped_at:N + total — not the whole ' +
+      'answer; hidden_by_scope = matching rows outside your projects; an EMPTY answer carries empty_reason: hidden_by_scope ' +
+      '(found, but not yours) or no_match. neighbors / edge_fields / neighbor / view are not executed yet (400 NOT_IMPLEMENTED).',
+    {
+      type: z.enum(['task', 'sprint', 'adr', 'decision', 'spec']).describe('record type to find'),
+      where: z.array(findCond).optional().describe('conditions, AND at top level'),
+      links_to: z.union([findLink, z.array(findLink)]).optional().describe('linked to a record (list = all of them)'),
+      not_linked: z.object({
+        rels: z.array(z.string()).min(1),
+        dir: z.enum(['in', 'out', 'both']).optional(),
+      }).optional().describe('has NO edge of these types, e.g. {rels:["PART_OF"]} = task without a sprint'),
+      id_in: z.array(z.string()).optional().describe('only these keys'),
+      changed_within_days: z.number().int().min(1).max(3650).optional().describe('current version started within N days'),
+      fields: z.array(z.string()).optional().describe('fields to return besides id/type/title'),
+      sort: z.array(z.object({ field: z.string(), dir: z.enum(['asc', 'desc']).optional() })).optional(),
+      limit: z.number().int().min(1).max(2000).optional().describe('row cap, default 500'),
+    },
+    async (args) => {
+      try {
+        const body: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(args)) if (v !== undefined) body[k] = v;
+        return json(await lorePost('/lore/find', body));
       } catch (e) {
         return err(e);
       }

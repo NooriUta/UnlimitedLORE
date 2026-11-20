@@ -179,6 +179,9 @@ public class LoreForgejoResource extends LoreResourceBase {
             out.put("number", number);
             out.put("gate", gate.status());
 
+            boolean promotion = "preprod".equals(gate.baseRef()) || "main".equals(gate.baseRef());
+            out.putAll(recordMergedPr(repo.get(), req.git_project(), number, gate, !promotion));
+
             // CIM-03: промоушн-PR (develop→preprod, preprod→main) и релизные PR не
             // содержат сами по себе релизную работу — привязывать их к KnowRelease
             // значило бы приписать релиз промежуточному мержу веток. #321 (v1.1.1)
@@ -368,6 +371,96 @@ public class LoreForgejoResource extends LoreResourceBase {
             LOG.warnf("[FORGEJO CI] %s@%s: %s", repo.path(), ref, e.getMessage());
             return new CiProbe(Map.of(), ageSeconds, true, "сбой обращения к Forgejo: " + e.getMessage());
         }
+    }
+
+    /**
+     * SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: после успешного мержа — данные PR в KnowPR и связь задача → PR.
+     *
+     * <p>Корень пустых заголовков (разбор моста 15.11): мерж держал в руках заголовок и состояние и
+     * отбрасывал их — KnowPR получал только ключ. Теперь PR перечитывается у Forgejo после мержа
+     * (там уже merged_at) и записывается полями {@link ForgejoBridge#prFields}: title, url, merged_at,
+     * state, head_ref, base_ref. Не прочитался — пишем то, что знает гейт (заголовок, state=merged).
+     *
+     * <p>Связь: для каждого кода СПРИНТ/КОД из заголовка — CLOSED_BY задача → PR, как {@code /lore/task/pr}
+     * (MCP {@code task_link rel=pr}). Неизвестный код мерж не роняет — он в ответе как {@code unmatched}.
+     * Промоушн-PR (base preprod/main) с задачами не связываются: их заголовок перечисляет чужую работу.
+     */
+    private Map<String, Object> recordMergedPr(ForgejoBridge.Repo repo, String gitProject, long number,
+                                               PrGate gate, boolean linkTasks) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        String prUid = gitProject + "#" + number;
+        Map<String, Object> f = new LinkedHashMap<>();
+        try {
+            HttpResponse<String> r = bridge.api(repo, "GET", "/repos/" + repo.path() + "/pulls/" + number, null);
+            if (r.statusCode() < 300) f.putAll(ForgejoBridge.prFields(new JsonObject(r.body())));
+            else out.put("pr_fields_hint", "Forgejo ответил " + r.statusCode()
+                + " на чтение PR после мержа — записаны поля гейта");
+        } catch (Exception e) {
+            out.put("pr_fields_hint", "чтение PR после мержа не удалось (" + e.getMessage() + ") — записаны поля гейта");
+        }
+        if (!f.containsKey("title") && gate.title() != null && !gate.title().isBlank()) f.put("title", gate.title());
+        f.putIfAbsent("state", "merged"); // мерж только что прошёл
+        try {
+            StringBuilder set = new StringBuilder("pr_uid=:uid, pr_number=:n, git_project=:gp");
+            for (String k : f.keySet()) set.append(", ").append(k).append("=:").append(k);
+            Map<String, Object> p = new LinkedHashMap<>(f);
+            p.put("uid", prUid);
+            p.put("n", number);
+            p.put("gp", gitProject);
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowPR SET " + set + " UPSERT WHERE pr_uid=:uid", p)).await().indefinitely();
+            out.put("pr_recorded", true);
+            out.put("pr_fields", List.copyOf(f.keySet()));
+        } catch (Exception e) {
+            LOG.warnf("[FORGEJO MERGE] запись KnowPR %s: %s", prUid, e.getMessage());
+            out.put("pr_recorded", false);
+            out.put("pr_record_hint", "KnowPR не записан (" + e.getMessage() + ") — связи с задачами не ставились");
+            return out;
+        }
+
+        List<String> uids = ForgejoBridge.taskUidsInTitle(String.valueOf(f.getOrDefault("title", "")));
+        List<Map<String, Object>> linked = new java.util.ArrayList<>();
+        out.put("tasks_linked", linked);
+        if (!linkTasks) {
+            out.put("unmatched", List.of());
+            if (!uids.isEmpty()) out.put("tasks_hint", "промоушн-PR (base=" + gate.baseRef()
+                + ") с задачами не связывается — связи ставит содержательный PR");
+            return out;
+        }
+        ForgejoBridge.TaskMatch m;
+        try {
+            m = ForgejoBridge.matchTasks(uids, uid -> !ingestService.queryPublic(
+                "SELECT task_uid FROM KnowTask WHERE task_uid=:t LIMIT 1", Map.of("t", uid)).isEmpty());
+        } catch (Exception e) {
+            // «не смогли проверить» ≠ «таких задач нет»: в unmatched не кладём.
+            LOG.warnf("[FORGEJO MERGE] сверка задач %s: %s", uids, e.getMessage());
+            out.put("unmatched", List.of());
+            out.put("tasks_hint", "сверка задач не удалась (" + e.getMessage() + ") — коды " + uids
+                + " не проверены; task_link rel=pr руками");
+            return out;
+        }
+        out.put("unmatched", m.unmatched());
+        for (String uid : m.matched()) {
+            Map<String, Object> one = new LinkedHashMap<>();
+            one.put("task_uid", uid);
+            try {
+                boolean had = edgeExists("CLOSED_BY", "task_uid", uid, "pr_uid", prUid);
+                if (!had)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE CLOSED_BY FROM (SELECT FROM KnowTask WHERE task_uid=:t) "
+                        + "TO (SELECT FROM KnowPR WHERE pr_uid=:p) IF NOT EXISTS",
+                        Map.of("t", uid, "p", prUid))).await().indefinitely();
+                // Исход — по ребру в графе, а не по факту выполнения команды (DBR-17).
+                boolean made = had || edgeExists("CLOSED_BY", "task_uid", uid, "pr_uid", prUid);
+                one.put("outcome", had ? LoreOutcome.UNCHANGED : made ? LoreOutcome.CREATED : LoreOutcome.NOOP);
+            } catch (Exception e) {
+                LOG.warnf("[FORGEJO MERGE] CLOSED_BY %s → %s: %s", uid, prUid, e.getMessage());
+                one.put("outcome", LoreOutcome.NOOP);
+                one.put("reason", e.getMessage());
+            }
+            linked.add(one);
+        }
+        return out;
     }
 
     /**

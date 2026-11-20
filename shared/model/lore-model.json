@@ -40,7 +40,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "backlog"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -520,7 +521,8 @@
       "historic" : true,
       "labelEn" : "Status",
       "labelPl" : "Status",
-      "notnull" : true
+      "notnull" : true,
+      "initial" : "backlog"
     }, {
       "key" : "waiting_for",
       "label" : "Ждём",
@@ -1067,7 +1069,8 @@
       },
       "definition" : "Состояние решения: предложено, принято, отложено или заменено другим.",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "DRAFT"
     }, {
       "key" : "date",
       "label" : "Дата",
@@ -1472,7 +1475,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "version",
       "label" : "Версия",
@@ -1778,9 +1782,12 @@
       "labelKey" : "pp.field.hasExtDeps",
       "kind" : "bool",
       "group" : "props",
+      "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
       "layer" : "optional",
       "labelEn" : "External dependencies",
-      "labelPl" : "Zależności zewnętrzne"
+      "definitionEn" : "The document references external resources (CDN): without internet access it may not render fully.",
+      "labelPl" : "Zależności zewnętrzne",
+      "definitionPl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości."
     } ],
     "body" : [ {
       "key" : "content_md_ru",
@@ -1932,7 +1939,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -2165,7 +2173,8 @@
       "definition" : "Статус вопроса: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "open"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -3164,7 +3173,8 @@
       "definition" : "Статус фичи: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -4874,7 +4884,8 @@
       "dict" : "qg_status",
       "definition" : "Статус гейта качества: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "labelEn" : "State",
-      "labelPl" : "Stan"
+      "labelPl" : "Stan",
+      "initial" : "draft"
     }, {
       "key" : "qg_type",
       "label" : "Тип",
@@ -4997,6 +5008,18 @@
     }, {
       "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
     } ],
+    "parts" : [ {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "type" : "qg_metric",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+      "orderBy" : "metric_id",
+      "slice" : "qg_metrics"
+    } ],
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
@@ -5028,6 +5051,14 @@
       "targetType" : "component",
       "relation" : "attribute",
       "place" : "prop"
+    }, {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "targetType" : "qg_metric",
+      "relation" : "composition",
+      "place" : "part"
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -5495,7 +5526,8 @@
       "group" : "head",
       "dict" : "task_status",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "backlog"
     }, {
       "key" : "title",
       "label" : "Название",
@@ -5536,7 +5568,8 @@
       "kind" : "enum",
       "group" : "head",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "open"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -5585,7 +5618,8 @@
       "group" : "head",
       "dict" : "decision_status",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -5614,6 +5648,76 @@
     } ],
     "labelEn" : "Decision",
     "labelPl" : "Decyzja"
+  }, {
+    "type" : "qg_metric",
+    "label" : "Метрика гейта",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Итог",
+      "labelKey" : "pp.field.qgMetricStatus",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Итог метрики по порогу и направлению на последнем прогоне гейта: pass — порог выполнен, fail — нет, unknown — измерения нет или порог не числовой.",
+      "labelEn" : "Result",
+      "labelPl" : "Wynik"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код строки таблицы метрик гейта (P-1, INV-03).",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Что измеряет метрика — текст строки таблицы гейта.",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "threshold",
+      "label" : "Порог",
+      "labelKey" : "pp.field.threshold",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Пороговое значение так, как оно записано в гейте (≥ 98%, ≤ 200 ms).",
+      "labelEn" : "Threshold",
+      "labelPl" : "Próg"
+    }, {
+      "key" : "unit",
+      "label" : "Единица",
+      "labelKey" : "pp.field.unit",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Единица измерения: % · s · MB/s · count; из порога, иначе из прогона.",
+      "labelEn" : "Unit",
+      "labelPl" : "Jednostka"
+    }, {
+      "key" : "direction",
+      "label" : "Направление",
+      "labelKey" : "pp.field.direction",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Как сравнивать с порогом: gte — не меньше, lte — не больше, eq — равно.",
+      "labelEn" : "Direction",
+      "labelPl" : "Kierunek"
+    }, {
+      "key" : "current_value",
+      "label" : "Последнее измерение",
+      "labelKey" : "pp.field.currentValue",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Значение метрики на последнем прогоне гейта; пусто — измерения нет.",
+      "labelEn" : "Last measurement",
+      "labelPl" : "Ostatni pomiar"
+    } ],
+    "labelEn" : "Gate metric",
+    "labelPl" : "Metryka bramki"
   } ],
   "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "user" ],
   "graph" : {
@@ -6289,6 +6393,16 @@
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
       "ROLE_HELD_BY" : "Роль на задаче (автор, исполнитель, ревьюер): сколько раз роль передавали и кто вёл задачу раньше (ADR-LORE-042 §4); ведёт историю с TR-05.",
       "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
+    }
+  },
+  "edge_free_fields" : {
+    "TAGGED_WITH" : {
+      "target_type" : "tag",
+      "vertex" : "KnowTag",
+      "key" : "tag_id",
+      "property" : "fields",
+      "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
+      "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег."
     }
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],

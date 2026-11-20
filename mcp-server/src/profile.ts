@@ -22,7 +22,7 @@ export type Permission = Record<string, Verdict>;
 /** Read-only профиль: срезы, поиск, граф, качество, версия. Ничего не пишет. */
 const CORE_TOOLS = [
   'list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar',
-  'task_shape', 'machine_acl', 'harness_list', 'graph', 'quality_check', 'lore_version', 'whoami',
+  'task_shape', 'machine_acl', 'harness_list', 'graph', 'graph_path', 'find', 'quality_check', 'lore_version', 'whoami',
 ] as const;
 
 export function corePermission(): Permission {

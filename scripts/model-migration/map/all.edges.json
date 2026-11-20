@@ -39,6 +39,13 @@
    "basis": "delegated",
    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
   },
+  "ANSWERABLE_BY": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {},
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: QuestionOwner.java; свойства — старая схема (DDL в коде)"
+  },
   "ANSWERS": {
    "rule": "keep",
    "basis": "delegated",
@@ -413,6 +420,26 @@
    "basis": "delegated",
    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
   },
+  "MACHINE_ACCESS": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {
+    "role": "STRING",
+    "projects": "LIST",
+    "harnesses": "LIST",
+    "granted_by": "STRING",
+    "granted_at": "STRING"
+   },
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: LoreUserResource.java; свойства — старая схема (DDL в коде)"
+  },
+  "MEASURED_BY": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {},
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: LoreIngestService.java; свойства — старая схема (DDL в коде)"
+  },
   "OF_TYPE": {
    "rule": "drop",
    "basis": "owner",
@@ -592,6 +619,16 @@
    "rule": "keep",
    "basis": "delegated",
    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "SOURCED_FROM": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {
+    "at": "STRING",
+    "via": "STRING"
+   },
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: AgentSourceTrail.java; свойства — старая схема (DDL в коде)"
   },
   "SUCCESS_OF": {
    "rule": "keep",

@@ -68,12 +68,22 @@ public class LoreIngestService {
      * Idempotent — if the sprint already exists its fields are updated but no
      * duplicate HAS_STATE row is created.
      */
+    /**
+     * Строка хранения статуса спринта. Не назван — начальный статус по модели (sprint.status.initial,
+     * правило владелицы 19.11.2026); раньше — «todo» → «📋 PLANNED» своей строкой. Названный — как было.
+     */
+    static String sprintStatusRaw(String status) {
+        if (status == null || status.isBlank())
+            return LoreResourceBase.SCD2_STATUS_RAW.get(CreateDefaultStatus.forNew("sprint", null));
+        return SPRINT_STATUS_RAW.getOrDefault(status, LoreResourceBase.SCD2_STATUS_RAW.getOrDefault(status, "📋 PLANNED"));
+    }
+
     public CreateSprintResult createSprint(String sprintId, String name, String status,
                                            String planId,
                                            String priority, String outcomeMd, String contextMd,
                                            ChangeAuthor author) {
         final ChangeAuthor by = author == null ? ChangeAuthor.UNKNOWN : author; // S2-12
-        String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "todo" : status, "📋 PLANNED");
+        String statusRaw = sprintStatusRaw(status);
         String nm = (name != null && !name.isBlank()) ? name : sprintId;
 
         // 1. Upsert KnowSprint
@@ -461,8 +471,10 @@ public class LoreIngestService {
                 try {
                     QualityGateParser.ParsedQualityGate qg = QualityGateParser.parse(file);
                     upsertQualityGate(qg);
+                    // current_value и status — из последнего прогона гейта (спека LORE_SCHEMA_V12_NEW_TYPES)
+                    List<Map<String, Object>> lastRun = latestRunOf(qg.qgId(), qg.contentMd(), errors);
                     for (QualityGateParser.ParsedMetric metric : qg.metrics()) {
-                        upsertQGMetric(qg.qgId(), metric);
+                        upsertQGMetric(qg.qgId(), metric, lastRun);
                     }
                     count++;
                 } catch (Exception e) {
@@ -494,14 +506,25 @@ public class LoreIngestService {
                 "UPSERT WHERE qg_id=:qg_id", params);
     }
 
-    private void upsertQGMetric(String qgId, QualityGateParser.ParsedMetric metric) {
-        Map<String, Object> params = new HashMap<>();
-        params.put("metric_id",  metric.metricId());
-        params.put("name",       LoreMarkdownParser.truncate(metric.name(), 500));
-        params.put("threshold",  LoreMarkdownParser.truncate(metric.threshold(), 200));
+    /**
+     * Строки последнего прогона гейта. Сбой чтения — не «прогонов нет»: причина уходит в отчёт инжеста,
+     * а метрики пишутся с current_value = NULL и status = unknown (честно «не знаем»).
+     */
+    private List<Map<String, Object>> latestRunOf(String qgId, String contentMd, List<String> errors) {
+        String rn = QgMetricState.routineOf(qgId, contentMd);
+        try {
+            return QgMetricState.latestRun(rn, this::queryRows);
+        } catch (RuntimeException e) {
+            errors.add("QG " + qgId + ": последний прогон " + rn + " не прочитан: " + e.getMessage());
+            return List.of();
+        }
+    }
 
-        exec("UPDATE QGMetric SET metric_id=:metric_id, name=:name, threshold=:threshold " +
-                "UPSERT WHERE metric_id=:metric_id", params);
+    private void upsertQGMetric(String qgId, QualityGateParser.ParsedMetric metric, List<Map<String, Object>> lastRun) {
+        String name = LoreMarkdownParser.truncate(metric.name(), 500);
+        String threshold = LoreMarkdownParser.truncate(metric.threshold(), 200);
+        QgMetricState.Fields f = QgMetricState.fields(metric.metricId(), name, threshold, lastRun);
+        exec(QgMetricState.UPSERT_SQL, QgMetricState.params(metric.metricId(), name, threshold, f));
 
         // MEASURED_BY edge QualityGate → QGMetric
         createEdgeIfVerticesExist("MEASURED_BY",

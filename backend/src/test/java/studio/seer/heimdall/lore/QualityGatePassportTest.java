@@ -54,6 +54,43 @@ class QualityGatePassportTest {
             "компонент — связью, списком: " + sql);
     }
 
+    /**
+     * 20.11.2026 («доделать функции, чтобы все поля работали»): метрики гейта — частью паспорта со всеми
+     * полями спеки LORE_SCHEMA_V12_NEW_TYPES. Раньше паспорт v2 метрик не показывал вовсе, а срез qg_metrics
+     * отдавал три поля из пяти.
+     */
+    @Test
+    void metricsArePartWithAllSpecFields() {
+        LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(T);
+        LoreRecordRegistry.Part p = d.parts().stream().filter(x -> x.key().equals("metrics")).findFirst().orElse(null);
+        assertNotNull(p, "у паспорта гейта нет части «Метрики»");
+        assertEquals("qg_metrics", p.slice());
+        assertEquals("qg_metric", p.type());
+        assertEquals("qg_id", LoreRecordResource.paramOf(p.slice()));
+        assertEquals(List.of("status", "code", "title", "threshold", "unit", "direction", "current_value"), p.columns());
+        LoreRecordRegistry.TypeDef child = LoreRecordRegistry.childDef("qg_metric");
+        assertNotNull(child, "колонки части описаны типом ребёнка");
+        for (String c : p.columns()) assertNotNull(child.field(c), "колонка " + c + " описана в модели");
+        assertTrue(d.relations().stream().anyMatch(r -> r.key().equals("metrics") && "part".equals(r.place())));
+
+        Map<String, Object> row = new java.util.HashMap<>(Map.of("metric_id", "QG-1:P-1:0", "name", "Доля", "threshold", "≥ 98%",
+            "unit", "%", "direction", "gte", "current_value", 97.5, "status", "fail"));
+        Map<String, Object> item = LoreRecordValues.partItem("qg_metric", row);
+        assertEquals("QG-1:P-1:0", item.get("id"));
+        assertEquals("Доля", item.get("title"));
+        assertEquals("fail", item.get("status"));
+        @SuppressWarnings("unchecked") Map<String, Object> v = (Map<String, Object>) item.get("values");
+        assertEquals(Map.of("status", "fail", "code", "P-1", "title", "Доля", "threshold", "≥ 98%", "unit", "%",
+            "direction", "gte", "current_value", 97.5), v);
+
+        // нет измерения — значение null (ключ есть), итог unknown; не ноль
+        row.put("current_value", null);
+        row.put("status", "unknown");
+        @SuppressWarnings("unchecked") Map<String, Object> v2 = (Map<String, Object>) LoreRecordValues.partItem("qg_metric", row).get("values");
+        assertTrue(v2.containsKey("current_value"));
+        assertNull(v2.get("current_value"));
+    }
+
     @Test
     void graphKnowsTheVertexAndKey() {
         LoreModelTypes.Graph g = LoreModelTypes.GRAPH.get(T);

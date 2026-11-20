@@ -100,6 +100,9 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // разделимы, и они у developer'а изъяты — см. SUBPATH_AGENTS ниже.
         Map.entry("adr",       Set.of("full", "architect", "developer")),
         Map.entry("decision",  Set.of("full", "architect")),
+        // SUPERTAGS-SPIKE (20.11.2026): тег с полями на ребре ADR/решения — POST /lore/tag/apply; те же,
+        // кто ставит тег ADR (/lore/adr/tag): full, architect, developer.
+        Map.entry("tag",       Set.of("full", "architect", "developer")),
         Map.entry("spec",      Set.of("full", "architect", "developer", "marketer")),
         Map.entry("runbook",   Set.of("full", "architect", "developer", "marketer")),
         Map.entry("doc",       Set.of("full", "architect", "developer", "marketer")),
@@ -200,6 +203,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // мочь любой, кто эту запись заводит, — иначе линтер учит дисциплине
         // только полный профиль, а остальные о своих пробелах не знают.
         Map.entry("quality",   Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
+        // find (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05) — POST по форме, но НИЧЕГО не пишет:
+        // структурный запрос «тип + поля + связь» (дерево И/ИЛИ/НЕ не влезает в строку).
+        // Чтение графа открыто всем профилям, как срезы и /lore/graph.
+        Map.entry("find",      Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
         // me (SPRINT_UXR_S2_GRAPH_MEMORY/S2-04, D-2026-UXR-VIEWS-SERVER) — личный слой:
         // виды, избранное, недавние, настройки. «Видимость — сам пользователь и его
