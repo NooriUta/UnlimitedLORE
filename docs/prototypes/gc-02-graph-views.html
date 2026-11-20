@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Графовые виды GC-02</title>
+<!--
+  Прототип SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-02: три отрисовщика договора kit на пяти живых графах LORE.
+  Данные — выгрузки MCP `graph` от 20.11.2026, лежат рядом: gc-02-graphs/*.json (в каждом — какой вызов дал граф).
+  Правило выбора отрисовщика — копия chooseGraphRenderer из kit/src/graph/graphContract.ts (v1.17.20, #1336).
+  Режим правки доски НЕ сделан: это решение владелицы (заметка задачи). Доска здесь только смотрится.
+  Открывать через http (python -m http.server / npx serve в docs/prototypes): с file:// браузер не даст прочитать JSON —
+  страница скажет это словами, а не покажет пустой холст.
+-->
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xyflow/react@12.12.1/dist/style.css">
+<style>
+:root{
+  color-scheme:dark;
+  --bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--bdh:#584c38;
+  --t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#d4a830;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--disp:'Unbounded',system-ui,sans-serif;--body:'Manrope',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--body);font-size:var(--fs-sm)}
+header{padding:12px 16px 8px;border-bottom:1px solid var(--bd)}
+h1{font-family:var(--disp);font-weight:800;font-size:var(--fs-lg);margin:0 0 4px;letter-spacing:.02em}
+.sub{color:var(--t2);font-size:var(--fs-xs);max-width:110ch;line-height:1.5}
+.sub code,.mono{font-family:var(--mono);font-size:var(--fs-2xs)}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg1)}
+.pill{border:1px solid var(--bd);background:var(--bg2);color:var(--t2);border-radius:999px;padding:4px 10px;font:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap}
+.pill[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:var(--bg3)}
+.pill:disabled{opacity:.45;cursor:not-allowed}
+.views{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;align-items:center}
+.lbl{color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;margin-right:4px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;min-height:72vh}
+@media (max-width:820px){main{grid-template-columns:minmax(0,1fr)}}
+#stage{position:relative;min-height:72vh;border-right:1px solid var(--bd);background:var(--bg0)}
+#canvas{position:absolute;inset:0}
+.state{position:absolute;left:16px;right:16px;top:16px;z-index:5;padding:10px 12px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);font-size:var(--fs-xs);line-height:1.5}
+.state.err{border-color:var(--dng);color:var(--dng)}
+.state.wrn{border-color:var(--wrn);color:var(--wrn)}
+.state.inf{border-color:var(--inf);color:var(--inf)}
+aside{padding:12px 16px;font-size:var(--fs-xs);overflow:auto}
+aside h2{font-family:var(--disp);font-weight:800;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:12px 0 6px}
+aside h2:first-child{margin-top:0}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;color:var(--t3);font-weight:600;text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.06em;padding:3px 4px 3px 0}
+td{padding:3px 4px 3px 0;border-top:1px solid var(--bd);vertical-align:top}
+td.n{text-align:right;font-family:var(--mono);font-size:var(--fs-2xs)}
+.chip{display:inline-block;border-radius:999px;padding:1px 7px;border:1px solid var(--bd);font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2)}
+.chip.ok{border-color:var(--suc);color:var(--suc)}.chip.wr{border-color:var(--wrn);color:var(--wrn)}.chip.er{border-color:var(--dng);color:var(--dng)}
+.legend span{display:inline-flex;align-items:center;gap:4px;margin:0 8px 4px 0}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block}
+.card{background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--c,var(--t3));border-radius:4px;padding:4px 7px;width:220px;color:var(--t1);font-size:var(--fs-2xs);line-height:1.35}
+.card .id{font-family:var(--mono);color:var(--c,var(--t2));display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--t1)}
+.card.root{box-shadow:0 0 0 1px var(--acc)}
+.react-flow{--xy-background-color:var(--bg0);--xy-edge-stroke:var(--bdh);--xy-controls-button-background-color:var(--bg2);--xy-controls-button-color:var(--t1);--xy-controls-button-border-color:var(--bd)}
+.react-flow__node{padding:0;border:0;background:transparent;width:auto}
+.react-flow__attribution{display:none}
+button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:4px;padding:4px 8px;font:inherit;font-size:var(--fs-xs);cursor:pointer}
+</style>
+<script type="importmap">
+{"imports":{
+  "react":"https://esm.sh/react@19.2.7",
+  "react/jsx-runtime":"https://esm.sh/react@19.2.7/jsx-runtime",
+  "react-dom":"https://esm.sh/react-dom@19.2.7?external=react",
+  "react-dom/client":"https://esm.sh/react-dom@19.2.7/client?external=react",
+  "@xyflow/react":"https://esm.sh/@xyflow/react@12.12.1?external=react,react-dom",
+  "graphology":"https://esm.sh/graphology@0.26.0",
+  "sigma":"https://esm.sh/sigma@3.0.3?external=graphology",
+  "fa2":"https://esm.sh/graphology-layout-forceatlas2@0.10.1/worker?external=graphology"
+}}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/elkjs@0.12.1/lib/elk-api.js"></script>
+</head>
+<body>
+<header>
+  <h1>Графовые виды · GC-02</h1>
+  <div class="sub">Прототип договора kit <code>kit/src/graph/graphContract.ts</code>: один вход (узлы <code>{id,type,title}</code> и рёбра <code>(from, rel, to, kind?)</code>), три отрисовщика.
+  <b>React Flow</b> — доска, mind map, структура (раскладка ELK в воркере); <b>sigma</b> — граф знаний; <b>d3-force в воркере</b> — «живая» физика поверх sigma.
+  Пять графов — живые выгрузки MCP <code>graph</code> от 20.11.2026, файлы <code>gc-02-graphs/*.json</code>. Режим правки доски не сделан: это решение владелицы.</div>
+</header>
+<nav id="graphs" aria-label="Граф"></nav>
+<div class="views"><span class="lbl">Вид</span><span id="views"></span><span class="lbl" style="margin-left:12px">Отрисовщик</span><span id="renderer" class="chip">—</span></div>
+<main>
+  <section id="stage"><div id="canvas"></div><div id="state" class="state inf" role="status">Загрузка…</div></section>
+  <aside>
+    <h2>Граф</h2><div id="ginfo"></div>
+    <h2>Замер</h2>
+    <table><tbody id="measure"></tbody></table>
+    <h2>Типы рёбер</h2>
+    <table><thead><tr><th>rel</th><th style="text-align:right">шт</th></tr></thead><tbody id="rels"></tbody></table>
+    <h2>Типы узлов</h2><div id="legend" class="legend"></div>
+  </aside>
+</main>
+<script type="module">
+import React, { useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import { ReactFlow, Background, Controls, MiniMap, MarkerType } from '@xyflow/react';
+import Graph from 'graphology';
+import Sigma from 'sigma';
+
+const h = React.createElement;
+
+// ── Договор kit: копия kit/src/graph/graphContract.ts (v1.17.20) ─────────────────────────
+const REACTFLOW_MAX = 300, FORCE_MAX = 300, LAYOUT_TIMEOUT_MS = 8000;
+function chooseGraphRenderer({ view, nodes, editing }) {
+  if (editing) return nodes <= REACTFLOW_MAX ? { renderer: 'reactflow', reason: 'fits' } : { renderer: null, reason: 'edit-too-large' };
+  if (view === 'live') return { renderer: 'obsidian', reason: 'live-physics' };
+  if (view === 'knowledge') return nodes <= FORCE_MAX ? { renderer: 'force', reason: 'fits' } : { renderer: 'obsidian', reason: 'large-graph' };
+  return nodes <= REACTFLOW_MAX ? { renderer: 'reactflow', reason: 'fits' } : { renderer: 'obsidian', reason: 'too-many-for-reactflow' };
+}
+const REASON = {
+  'fits': 'укладывается в потолок вида',
+  'too-many-for-reactflow': `больше ${REACTFLOW_MAX} узлов — React Flow не тянет, по договору sigma`,
+  'edit-too-large': 'правка такого объёма невозможна',
+  'large-graph': `больше ${FORCE_MAX} узлов — sigma (WebGL)`,
+  'live-physics': 'живая физика — d3-force в воркере поверх sigma',
+};
+
+const GRAPHS = [
+  { key: 'g1', file: 'gc-02-graphs/g1-mindmap-adr-lore-050.json', name: 'Mind map · ADR-LORE-050', view: 'mindmap', root: 'ADR-LORE-050' },
+  { key: 'g2', file: 'gc-02-graphs/g2-board-sprint-graph-canvas.json', name: 'Доска · спринт GRAPH_CANVAS', view: 'board', root: 'SPRINT_SEIDRKIT_GRAPH_CANVAS' },
+  { key: 'g3', file: 'gc-02-graphs/g3-structure-sprint-qg-rebuild.json', name: 'Структура · спринт QG_REBUILD', view: 'structure', root: 'SPRINT_QG_REBUILD' },
+  { key: 'g4', file: 'gc-02-graphs/g4-knowledge-adr-decision-spec.json', name: 'Граф знаний · ADR + решения + спеки', view: 'knowledge' },
+  { key: 'g5', file: 'gc-02-graphs/g5-live-sprint-graph-canvas.json', name: 'Живая физика · 3 кольца спринта', view: 'live', root: 'SPRINT_SEIDRKIT_GRAPH_CANVAS' },
+];
+const VIEWS = [['board', 'доска'], ['mindmap', 'mind map'], ['structure', 'структура'], ['knowledge', 'граф знаний'], ['live', 'живая физика']];
+const RENDERER_NAME = { reactflow: 'React Flow + ELK (воркер)', force: 'force-graph (в прототипе — sigma)', obsidian: 'sigma (WebGL)' };
+
+// Цвета типов — только токены; sigma нужен цвет строкой, поэтому читаем вычисленные значения переменных.
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const TYPE_TOKEN = { adr: '--acc', decision: '--inf', spec: '--suc', task: '--t2', sprint: '--wrn', release: '--dng', milestone: '--wrn', component: '--inf', project: '--acc', question: '--dng', doc: '--suc', uc: '--suc', tech: '--t3' };
+const tokenOf = t => TYPE_TOKEN[t] || '--t3';
+
+// ── Состояние в адресе ────────────────────────────────────────────────────────────────────
+const url = new URL(location.href);
+let gKey = GRAPHS.some(g => g.key === url.searchParams.get('g')) ? url.searchParams.get('g') : 'g1';
+let view = url.searchParams.get('v');
+const cache = new Map();
+let teardown = () => {};
+let longest = 0;
+try { new PerformanceObserver(l => l.getEntries().forEach(e => { longest = Math.max(longest, e.duration); })).observe({ type: 'longtask', buffered: false }); } catch { /* браузер без longtask */ }
+
+const $ = id => document.getElementById(id);
+function setState(kind, text) { const s = $('state'); if (!text) { s.hidden = true; return; } s.hidden = false; s.className = 'state ' + kind; s.textContent = text; }
+function measure(rows) { $('measure').innerHTML = rows.map(([k, v, cls]) => `<tr><td>${k}</td><td class="n">${cls ? `<span class="chip ${cls}">${v}</span>` : v}</td></tr>`).join(''); }
+
+function renderNav() {
+  $('graphs').innerHTML = '';
+  for (const g of GRAPHS) {
+    const b = document.createElement('button'); b.className = 'pill'; b.textContent = g.name;
+    b.setAttribute('aria-pressed', String(g.key === gKey));
+    b.onclick = () => { gKey = g.key; view = null; go(); };
+    $('graphs').append(b);
+  }
+}
+function renderViews(n) {
+  $('views').innerHTML = '';
+  for (const [v, label] of VIEWS) {
+    const b = document.createElement('button'); b.className = 'pill'; b.textContent = label;
+    b.setAttribute('aria-pressed', String(v === view));
+    b.onclick = () => { view = v; go(); };
+    $('views').append(b);
+  }
+}
+
+async function loadGraph(g) {
+  if (cache.has(g.key)) return cache.get(g.key);
+  const r = await fetch(g.file);
+  if (!r.ok) throw new Error(`HTTP ${r.status} на ${g.file}`);
+  const j = await r.json();
+  cache.set(g.key, j);
+  return j;
+}
+
+async function go() {
+  teardown(); teardown = () => {};
+  $('canvas').innerHTML = '';
+  const g = GRAPHS.find(x => x.key === gKey);
+  view = view || g.view;
+  url.searchParams.set('g', gKey); url.searchParams.set('v', view); history.replaceState(null, '', url);
+  renderNav(); renderViews();
+  setState('inf', 'Загрузка ' + g.file + '…');
+  let data;
+  try { data = await loadGraph(g); }
+  catch (e) {
+    const fileHint = location.protocol === 'file:' ? ' Страница открыта как file:// — браузер не даёт читать JSON рядом. Запустите http-сервер в docs/prototypes.' : '';
+    setState('err', 'Граф не загрузился: ' + e.message + '.' + fileHint);
+    $('renderer').textContent = '—';
+    return;
+  }
+  const m = data.meta;
+  $('ginfo').innerHTML = `<div class="mono" style="color:var(--t2);margin-bottom:6px;word-break:break-all">${JSON.stringify(data.source.call)}</div>
+    <div style="color:var(--t3)">${data.source.note}</div>
+    <div style="margin-top:6px">${m.complete ? '<span class="chip ok">complete</span>' : '<span class="chip wr">не полный</span>'}
+    ${m.truncated ? `<span class="chip wr">обрезан на ${m.capped_at}</span>` : ''} <span class="chip">hidden_by_scope ${m.hidden_by_scope}</span></div>`;
+  $('rels').innerHTML = Object.entries(m.rels).sort((a, b) => b[1] - a[1]).map(([r, c]) => `<tr><td class="mono">${r}</td><td class="n">${c}</td></tr>`).join('');
+  const types = {}; data.nodes.forEach(n => types[n.type] = (types[n.type] || 0) + 1);
+  $('legend').innerHTML = Object.entries(types).sort((a, b) => b[1] - a[1]).map(([t, c]) => `<span><i class="dot" style="background:var(${tokenOf(t)})"></i>${t} <span class="mono">${c}</span></span>`).join('');
+
+  const choice = chooseGraphRenderer({ view, nodes: data.nodes.length });
+  $('renderer').textContent = choice.renderer ? RENDERER_NAME[choice.renderer] : 'нельзя';
+  $('renderer').title = REASON[choice.reason];
+  const base = [['узлов', data.nodes.length], ['рёбер', data.edges.length], ['правило', REASON[choice.reason]]];
+  longest = 0;
+  if (choice.renderer === 'reactflow') return reactFlowView(g, data, base);
+  if (view === 'live') return liveView(g, data, base);
+  return sigmaView(g, data, base, choice);
+}
+
+// ── React Flow: доска (колонки по типам), mind map (ELK mrtree), структура (ELK layered) ───────
+const NODE_W = 220, NODE_H = 58;
+function Card({ data }) {
+  return h('div', { className: 'card' + (data.root ? ' root' : ''), style: { '--c': `var(${tokenOf(data.type)})` }, title: data.title || '' },
+    h('span', { className: 'id' }, `${data.type} · ${data.id}`), h('span', { className: 'tt' }, data.title || '(без названия)'));
+}
+const nodeTypes = { card: Card };
+
+const ELK_WORKER = URL.createObjectURL(new Blob(
+  ["importScripts('https://cdn.jsdelivr.net/npm/elkjs@0.12.1/lib/elk-worker.min.js');"], { type: 'text/javascript' }));
+
+/** ELK в воркере (elk-api + workerFactory), срок и настоящая отмена через terminateWorker. */
+async function elkLayout(data, algorithm) {
+  const elk = new ELK({ workerFactory: () => new Worker(ELK_WORKER) });
+  const opts = algorithm === 'mrtree'
+    ? { 'elk.algorithm': 'mrtree', 'elk.direction': 'RIGHT', 'elk.spacing.nodeNode': '18', 'elk.mrtree.spacing.nodeNode': '18' }
+    : { 'elk.algorithm': 'layered', 'elk.direction': 'DOWN', 'elk.layered.spacing.nodeNodeBetweenLayers': '60', 'elk.spacing.nodeNode': '24' };
+  const ids = new Set(data.nodes.map(n => n.id));
+  // Рёбра LORE в основном «дочь → родитель» (DECIDED_IN, PART_OF, JUSTIFIED_BY): для раскладки разворачиваем,
+  // чтобы родитель стоял в корне дерева / на верхнем слое. На отрисовку стрелок это не влияет.
+  const seen = new Set(); const edges = [];
+  data.edges.forEach((e, i) => { if (!ids.has(e.f) || !ids.has(e.t) || e.f === e.t) return; const k = e.t + '>' + e.f; if (seen.has(k)) return; seen.add(k); edges.push({ id: 'e' + i, sources: [e.t], targets: [e.f] }); });
+  const g = { id: 'root', layoutOptions: opts, children: data.nodes.map(n => ({ id: n.id, width: NODE_W, height: NODE_H })), edges };
+  let timer;
+  const timeout = new Promise(res => { timer = setTimeout(() => res({ state: 'timeout' }), LAYOUT_TIMEOUT_MS); });
+  try {
+    const r = await Promise.race([elk.layout(g).then(out => ({ state: 'ok', out })), timeout]);
+    return r;
+  } catch (e) { return { state: 'error', error: String(e && e.message || e) }; }
+  finally { clearTimeout(timer); elk.terminateWorker(); }
+}
+
+function gridPositions(nodes) { const cols = Math.ceil(Math.sqrt(nodes.length)); const p = {}; nodes.forEach((n, i) => p[n.id] = { x: (i % cols) * (NODE_W + 24), y: Math.floor(i / cols) * (NODE_H + 24) }); return p; }
+function boardPositions(nodes) {
+  const lanes = [...new Set(nodes.map(n => n.type))]; const count = {}; const p = {};
+  nodes.forEach(n => { const c = lanes.indexOf(n.type); count[c] = (count[c] || 0); p[n.id] = { x: c * (NODE_W + 40), y: 40 + count[c]++ * (NODE_H + 14) }; });
+  return { p, lanes };
+}
+
+async function reactFlowView(g, data, base) {
+  const t0 = performance.now();
+  let pos, note = null, layoutMs = null, lanes = null;
+  if (view === 'board') {
+    ({ p: pos, lanes } = boardPositions(data.nodes));
+    layoutMs = performance.now() - t0;
+  } else {
+    setState('inf', 'Раскладка ELK в воркере…');
+    const r = await elkLayout(data, view === 'mindmap' ? 'mrtree' : 'layered');
+    layoutMs = performance.now() - t0;
+    if (r.state === 'ok') { pos = {}; r.out.children.forEach(c => pos[c.id] = { x: c.x, y: c.y }); }
+    else if (r.state === 'timeout') { pos = gridPositions(data.nodes); note = ['wrn', `Раскладка не уложилась в ${LAYOUT_TIMEOUT_MS / 1000} с — граф показан как есть (сеткой), воркер ELK остановлен.`]; }
+    else { pos = gridPositions(data.nodes); note = ['err', 'Раскладка ELK упала: ' + r.error + '. Граф показан сеткой.']; }
+  }
+  const nodes = data.nodes.map(n => ({ id: n.id, type: 'card', position: pos[n.id] || { x: 0, y: 0 }, data: { ...n, root: n.id === g.root },
+    draggable: false, connectable: false, selectable: true }));
+  if (lanes) lanes.forEach((t, i) => nodes.push({ id: '__lane_' + t, position: { x: i * (NODE_W + 40), y: 0 }, draggable: false, selectable: false,
+    data: { label: t }, style: { width: NODE_W, background: 'transparent', border: 0, color: css('--t3'), fontFamily: css('--mono'), fontSize: css('--fs-2xs'), textTransform: 'uppercase' } }));
+  const edges = data.edges.map((e, i) => ({ id: 'e' + i, source: e.f, target: e.t, label: e.r,
+    labelStyle: { fill: css('--t3'), fontSize: css('--fs-2xs'), fontFamily: css('--mono') }, labelBgStyle: { fill: css('--bg1') },
+    style: { stroke: e.k === 'structural' ? css('--bd') : css('--bdh') }, markerEnd: { type: MarkerType.ArrowClosed, color: css('--bdh') } }));
+  const root = createRoot($('canvas'));
+  const t1 = performance.now();
+  await new Promise(res => {
+    function App() { useEffect(() => { requestAnimationFrame(() => res()); }, []);
+      return h(ReactFlow, { nodes, edges, nodeTypes, fitView: true, minZoom: 0.05, nodesDraggable: false, nodesConnectable: false, elementsSelectable: true, colorMode: 'dark' },
+        h(Background, { color: css('--bd'), gap: 24 }), h(Controls, { showInteractive: false }),
+        h(MiniMap, { pannable: true, zoomable: true, nodeColor: n => css(tokenOf(n.data && n.data.type)), maskColor: 'rgba(0,0,0,.55)', style: { background: css('--bg1') } }));
+    }
+    root.render(h(App));
+  });
+  const paintMs = performance.now() - t1;
+  teardown = () => root.unmount();
+  setState(note ? note[0] : null, note ? note[1] : null);
+  measure([...base,
+    ['раскладка', view === 'board' ? `колонки по типам · ${layoutMs.toFixed(0)} мс` : `ELK ${view === 'mindmap' ? 'mrtree' : 'layered'} в воркере · ${layoutMs.toFixed(0)} мс`, note ? 'wr' : 'ok'],
+    ['отрисовка', paintMs.toFixed(0) + ' мс'], ['самая длинная задача гл. потока', longest ? longest.toFixed(0) + ' мс' : 'нет >50 мс'],
+    ['правка', 'выключена — решение владелицы', 'wr']]);
+}
+
+// ── sigma: граф знаний (ForceAtlas2 в воркере graphology) ─────────────────────────────────
+function seeded(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function buildGraphology(data, rootId) {
+  const G = new Graph({ multi: true, type: 'directed', allowSelfLoops: false });
+  const rnd = seeded(42); // детерминированная начальная раскладка
+  data.nodes.forEach(n => G.addNode(n.id, { label: n.title ? `${n.id} · ${n.title}`.slice(0, 80) : n.id, x: rnd() * 100, y: rnd() * 100,
+    color: css(tokenOf(n.type)), size: 2, nodeType: n.type, forceLabel: n.id === rootId }));
+  data.edges.forEach(e => { if (G.hasNode(e.f) && G.hasNode(e.t) && e.f !== e.t) G.addDirectedEdge(e.f, e.t, { color: e.k === 'structural' ? css('--bg3') : css('--bd'), size: 0.5, rel: e.r }); });
+  G.forEachNode(n => G.setNodeAttribute(n, 'size', 2 + Math.min(10, Math.sqrt(G.degree(n)))));
+  return G;
+}
+function sigmaInstance(G) {
+  return new Sigma(G, $('canvas'), { labelColor: { color: css('--t1') }, labelFont: css('--body'), labelSize: 11, labelRenderedSizeThreshold: 9,
+    defaultEdgeType: 'line', renderEdgeLabels: false, zIndex: true });
+}
+
+async function sigmaView(g, data, base, choice) {
+  setState('inf', 'Граф знаний: ForceAtlas2 в воркере…');
+  const G = buildGraphology(data, g.root);
+  const t0 = performance.now();
+  const s = sigmaInstance(G);
+  const firstPaint = performance.now() - t0;
+  let layout = null, stopTimer = null, note = null;
+  try {
+    const { default: FA2Layout } = await import('fa2');
+    layout = new FA2Layout(G, { settings: { gravity: 1, scalingRatio: 8, barnesHutOptimize: G.order > 400, slowDown: 2 } });
+    layout.start();
+    stopTimer = setTimeout(() => { layout.stop(); finish(); }, 4000);
+  } catch (e) { note = ['err', 'Раскладка ForceAtlas2 не запустилась в воркере: ' + (e.message || e) + '. Граф показан с начальными координатами.']; }
+  function finish() {
+    setState(note ? note[0] : null, note ? note[1] : null);
+    measure([...base, ['раскладка', note ? 'не запустилась' : 'ForceAtlas2 в воркере · 4 с, затем стоп', note ? 'er' : 'ok'],
+      ['первая отрисовка sigma', firstPaint.toFixed(0) + ' мс'], ['самая длинная задача гл. потока', longest ? longest.toFixed(0) + ' мс' : 'нет >50 мс'],
+      ...(choice.renderer === 'force' ? [['оговорка', 'по договору ≤300 узлов — force-graph; прототип рисует sigma', 'wr']] : [])]);
+  }
+  if (note) finish(); else measure([...base, ['раскладка', 'ForceAtlas2 идёт…']]);
+  teardown = () => { clearTimeout(stopTimer); if (layout) layout.kill(); s.kill(); };
+}
+
+// ── d3-force в воркере поверх sigma: «как Обсидиан» ──────────────────────────────────────
+const D3_WORKER = URL.createObjectURL(new Blob([`
+importScripts('https://cdn.jsdelivr.net/npm/d3-dispatch@3.0.1/dist/d3-dispatch.min.js',
+  'https://cdn.jsdelivr.net/npm/d3-quadtree@3.0.1/dist/d3-quadtree.min.js',
+  'https://cdn.jsdelivr.net/npm/d3-timer@3.0.1/dist/d3-timer.min.js',
+  'https://cdn.jsdelivr.net/npm/d3-force@3.0.0/dist/d3-force.min.js');
+let sim, nodes;
+onmessage = ev => {
+  const m = ev.data;
+  if (m.cmd === 'init') {
+    nodes = m.xy.map((v, i) => ({ index: i, x: m.xy[i][0], y: m.xy[i][1] }));
+    const links = m.links.map(([s, t]) => ({ source: s, target: t }));
+    let seed = 42; // детерминированный источник случайности: два прогона дают одну картину
+    const lcg = () => (seed = (1664525 * seed + 1013904223) % 4294967296) / 4294967296;
+    sim = d3.forceSimulation(nodes).randomSource(lcg)
+      .force('link', d3.forceLink(links).distance(30).strength(0.4))
+      .force('charge', d3.forceManyBody().strength(-30).distanceMax(400).theta(0.9))
+      .force('center', d3.forceCenter(0, 0))
+      .force('x', d3.forceX(0).strength(0.02)).force('y', d3.forceY(0).strength(0.02))
+      .alphaDecay(0.02);
+    let tick = 0;
+    sim.on('tick', () => { if (++tick % 2) return; const buf = new Float32Array(nodes.length * 2);
+      for (let i = 0; i < nodes.length; i++) { buf[2*i] = nodes[i].x; buf[2*i+1] = nodes[i].y; }
+      postMessage({ type: 'xy', buf, alpha: sim.alpha() }, [buf.buffer]); });
+    sim.on('end', () => postMessage({ type: 'end' }));
+  } else if (m.cmd === 'reheat' && sim) { sim.alpha(0.8).restart(); }
+  else if (m.cmd === 'stop' && sim) { sim.stop(); }
+};`], { type: 'text/javascript' }));
+
+function liveView(g, data, base) {
+  const G = buildGraphology(data, g.root);
+  const ids = G.nodes(); const idx = new Map(ids.map((id, i) => [id, i]));
+  const xy = ids.map(id => [G.getNodeAttribute(id, 'x') * 20 - 1000, G.getNodeAttribute(id, 'y') * 20 - 1000]);
+  const links = []; G.forEachEdge((e, a, src, tgt) => links.push([idx.get(src), idx.get(tgt)]));
+  const t0 = performance.now();
+  const s = sigmaInstance(G);
+  const firstPaint = performance.now() - t0;
+  const w = new Worker(D3_WORKER);
+  let frames = 0, ended = false, firstFrameMs = null;
+  const tStart = performance.now();
+  w.onmessage = ev => {
+    const m = ev.data;
+    if (m.type === 'xy') {
+      if (firstFrameMs == null) firstFrameMs = performance.now() - tStart;
+      frames++;
+      const b = m.buf;
+      G.updateEachNodeAttributes((id, attr) => { const i = idx.get(id); attr.x = b[2*i]; attr.y = b[2*i+1]; return attr; }, { attributes: ['x', 'y'] });
+      if (frames % 15 === 1) report(`идёт · alpha ${m.alpha.toFixed(3)}`);
+    } else if (m.type === 'end') { ended = true; report('остыла (alpha < alphaMin)'); }
+  };
+  w.onerror = e => { setState('err', 'Воркер d3-force упал: ' + (e.message || 'нет сообщения') + '. Граф показан с начальными координатами.'); };
+  w.postMessage({ cmd: 'init', xy, links });
+  const btn = document.createElement('button'); btn.className = 'act'; btn.textContent = 'Встряхнуть';
+  btn.style.cssText = 'position:absolute;right:12px;bottom:12px;z-index:6';
+  btn.onclick = () => { ended = false; w.postMessage({ cmd: 'reheat' }); };
+  $('stage').append(btn);
+  function report(phys) {
+    measure([...base, ['физика', phys, ended ? 'ok' : null], ['кадров из воркера', frames], ['первый кадр', firstFrameMs != null ? firstFrameMs.toFixed(0) + ' мс' : '—'],
+      ['первая отрисовка sigma', firstPaint.toFixed(0) + ' мс'], ['самая длинная задача гл. потока', longest ? longest.toFixed(0) + ' мс' : 'нет >50 мс']]);
+  }
+  setState(null); report('запуск');
+  teardown = () => { w.postMessage({ cmd: 'stop' }); w.terminate(); s.kill(); btn.remove(); };
+}
+
+go();
+</script>
+</body>
+</html>
