@@ -22,5 +22,17 @@
     "KnowSprint.branch_ref": "никуда: ветка спринта у ранних спринтов, код не пишет и не читает",
     "KnowSprint.version": "никуда: версия спринта у двух записей, код не пишет и не читает",
     "KnowUseCase.actor": "актор сценария — ребро HAS_ACTOR с ролью"
-  }
+  },
+  "more": [
+    {
+      "task": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 (часть 2)",
+      "basis": "owner",
+      "approved": "2026-11-20",
+      "words": "«тоже с релизами»; «HTML выведи отдельной вкладкой в паспорт и посмотри рендеринг»",
+      "fields": {
+        "KnowDoc.content_md": "тело дока — content_md_ru / content_md_en (HTML — content_html); писателя нет, в проде 0 из 460; запасное чтение снято (LoreDocResource, поиск, ftKnowDoc)",
+        "KnowRelease.version": "дубль git_tag и release_id: на снимке 18.11 совпали 92 из 92; срезы релизов отдают version = git_tag"
+      }
+    }
+  ]
 }

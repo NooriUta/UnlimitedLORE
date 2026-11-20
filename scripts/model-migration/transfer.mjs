@@ -24,6 +24,8 @@ import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SE
 import { seriesPlan, copySeries, seriesIo } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
+import { OWNER_EDGE } from './question-owner.mjs';
+import { REFS_EDGE } from './decision-refs.mjs';
 import { REPO_TYPES } from './repos.mjs';
 import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
@@ -86,7 +88,8 @@ export function fieldDiff(got, want) {
     .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
     .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
+// связи, которые заводят шаги после переноса связей (ответственный вопроса, ссылки решения), — тоже свои: повтор с --reset их снимает
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, OWNER_EDGE, REFS_EDGE, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 

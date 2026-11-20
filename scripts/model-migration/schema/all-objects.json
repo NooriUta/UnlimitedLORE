@@ -1622,10 +1622,6 @@
         }
       },
       "held": {
-        "adr_refs": 103,
-        "sprint_refs": 103,
-        "pr_refs": 103,
-        "release_refs": 103,
         "component_id": 475
       },
       "rejects": {}
@@ -3471,16 +3467,6 @@
             "released_at"
           ],
           "filled": 94,
-          "of": 619
-        },
-        "version": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "version"
-          ],
-          "filled": 92,
           "of": 619
         },
         "release_name": {

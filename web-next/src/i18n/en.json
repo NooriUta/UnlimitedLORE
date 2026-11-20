@@ -260,6 +260,7 @@
   "record.status.missed": "Missed",
   "record.status.superseded": "Superseded",
   "record.status.cancelled": "Cancelled",
+  "docHtml.tab": "HTML",
   "sprintTasks.title": "Tasks",
   "sprintTasks.caption": "Sprint {id} tasks",
   "sprintTasks.bulkPartial": "changed {ok} of {total}; not changed: {failed}",
