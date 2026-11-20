@@ -21,7 +21,7 @@ test('список легаси: 17 полей, основание — слов�
   assert.equal(keys.length, 17);
   assert.deepEqual(keys, [...keys].sort(), 'по имени — детерминированный порядок');
   for (const k of keys) { assert.match(k, /^[A-Za-z]+\.[a-z_]+$/, k); assert.ok(LIST.fields[k].trim(), k + ': куда ушло значение'); }
-  assert.deepEqual([...LEGACY.keys()].sort(), keys);
+  assert.deepEqual([...LEGACY.keys()].filter(k => LIST.fields[k]).sort(), keys);
 });
 
 test('правило: не переносится, причина «легаси, MDL-08, утверждено владелицей 20.11.2026»', () => {
@@ -109,4 +109,25 @@ test('конвейер переноса считает убыль, кладёт 
   assert.match(src, /report\.legacy_drop = legacyDrop\(/);
   assert.match(src, /assertLegacyDrop\(report\.legacy_drop\)/);
   assert.match(src, /verify\.legacy_drop/);
+});
+
+test('MDL-08 ч.2: вторая пачка — KnowRelease.version (дубль git_tag) и KnowDoc.content_md (0 значений), своё слово владелицы', () => {
+  assert.equal(LIST.more.length, 1);
+  const b = LIST.more[0];
+  assert.equal(b.basis, 'owner');
+  assert.match(b.words, /тоже с релизами/);
+  assert.deepEqual(Object.keys(b.fields), ['KnowDoc.content_md', 'KnowRelease.version']);
+  assert.ok(LEGACY.has('KnowRelease.version') && LEGACY.has('KnowDoc.content_md'));
+  assert.equal(LEGACY.size, 19);
+  const r = legacyRule('KnowRelease', 'version');
+  assert.equal(r.rule, 'drop');
+  assert.equal(r.legacy, true);
+  assert.match(r.why, /тоже с релизами/);
+  assert.match(r.why, /git_tag/);
+  assert.doesNotMatch(r.why, /мы же утвердили уже/, 'причина — слово своей пачки');
+  assert.deepEqual(MAPS.KnowRelease.version, r);
+  assert.deepEqual(MAPS.KnowDoc.content_md, legacyRule('KnowDoc', 'content_md'));
+  assert.equal(SCHEMA.KnowRelease.fields.version, undefined);
+  assert.equal(SCHEMA.KnowDoc.fields.content_md, undefined);
+  assert.equal(MAPS.KnowRelease.title.rule, 'keep', 'title не дубль release_name — не снимается');
 });

@@ -11,6 +11,7 @@
 // Запуск: node propose-map-all.mjs <перепись.json> → map/all-objects.json
 import fs from 'node:fs';
 import { legacyRule } from './legacy.mjs';
+import { refsRule } from './decision-refs.mjs';
 import { fileURLToPath } from 'node:url';
 import { codeTypes, LORE_JAVA } from './code-types.mjs';
 
@@ -61,6 +62,9 @@ export function ruleFor(T, f) {
   // ключ своего типа — не ссылка: component_id у LoreComponent — его код (18.11.2026: в новой базе он пропадал)
   if (OWN_KEY[T] === f) return { rule: 'keep', basis: 'owner', note: 'ключ записи своего типа' };
   if (EDGE_FIELDS[f]) return { rule: 'open', question: EDGE_FIELDS[f] + ' — строится на шаге связей; до него значение удерживается' };
+  // MDL-08 часть 2 (владелица 20.11.2026): ссылки решения строкой пересаживаются на связи REFERENCES (decision-refs.mjs)
+  const refs = refsRule(T, f);
+  if (refs) return refs;
   if (/_refs$/.test(f)) return { rule: 'open', question: 'ссылки строкой становятся связями на шаге связей; ненайденное — текстом в заметке версии' };
   // date_display — подпись срока для людей («18 апр», «прогноз Q4 2026»), не дата (пробный расчёт 17.11).
   if (f === 'date_display') return { rule: 'keep', basis: 'delegated', note: 'подпись срока, не дата; ' + W };

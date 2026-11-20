@@ -14,8 +14,9 @@ test('правило поля: служебные — как есть; стат�
 });
 
 test('правило поля: компонент, проект и ссылки строкой — ждут шага связей; hist_for и status_category не переносятся', () => {
-  for (const f of ['component_id', 'project', 'git_project', 'adr_refs', 'sprint_refs', 'pr_refs']) {
-    const e = ruleFor('KnowDecision', f);
+  // MDL-08 ч.2: ссылки решения (adr/sprint/pr/release_refs) — не «удержать», а пересадка на связи (decision-refs.test.mjs)
+  for (const [T, f] of [['KnowDecision', 'component_id'], ['KnowDecision', 'project'], ['KnowDecision', 'git_project'], ['KnowSprint', 'pr_refs'], ['KnowSpec', 'adr_refs']]) {
+    const e = ruleFor(T, f);
     assert.equal(e.rule, 'open', f + ': удерживается, пока связь не построена');
     assert.match(e.question, /связ/);
   }
