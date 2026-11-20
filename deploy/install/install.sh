@@ -3,7 +3,7 @@
 #
 #   install.sh [--dir DIR] --version vX.Y.0 [--build] [--port N] [--bind ADDR] [--dry-run]
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
-#     … [--forgejo install|own|none] [--forgejo-url URL] — Forgejo: поставить нашей версии / свой (адрес) / без Forgejo
+#     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -52,6 +52,11 @@ CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
 FORGEJO=""
 FORGEJO_URL_ARG=""
 FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
+# forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
+# scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
+FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
+FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
+FORGEJO_MCP_BUILD=0
 
 say()  { printf '── %s\n' "$*"; }
 warn() { printf 'ВНИМАНИЕ: %s\n' "$*" >&2; }
@@ -90,6 +95,7 @@ parse_args() {
       --purge)     PURGE=1; shift ;;
       --dry-run)   DRY=1; shift ;;
       --build)     BUILD=1; shift ;;
+      --forgejo-mcp-build) FORGEJO_MCP_BUILD=1; shift ;;
       --selftest)  MODE="selftest"; shift ;;
       -h|--help)   usage; exit 0 ;;
       *) die "неизвестный аргумент: $1 (см. --help)" 2 ;;
@@ -256,6 +262,7 @@ write_env() {
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
   [ -z "$PORT" ] || env_set LORE_HTTP_PORT "$PORT" "$env"
   [ -z "$BIND" ] || env_set LORE_BIND "$BIND" "$env"
+  [ -z "${FORGEJO_MCP_IMAGE:-}" ] || env_set FORGEJO_MCP_IMAGE "$FORGEJO_MCP_IMAGE" "$env"
   if [ -n "$FORGEJO" ]; then
     local line
     while IFS= read -r line; do env_set "${line%%=*}" "${line#*=}" "$env"; done < <(forgejo_env "$(env_get COMPOSE_PROFILES "$env")")
@@ -294,9 +301,29 @@ images() {
     run compose pull arcadedb minio
   fi
   if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
-  # forgejo-mcp: готовый образ (FORGEJO_MCP_IMAGE) или сборка из его исходников, прибитых к коммиту (FORGEJO_MCP_SRC).
-  if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then
-    if [ -n "$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")" ]; then run compose pull forgejo-mcp; else run compose build forgejo-mcp; fi
+  if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
+}
+
+# Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»). Порядок:
+#   1) FORGEJO_MCP_IMAGE — свой готовый образ, перекрывает всё;
+#   2) архив пакета images/forgejo-mcp-<коммит>.tar — docker load, только если sha256 сходится;
+#   3) --forgejo-mcp-build — сборка из git на том же коммите (запасной путь, только по явному флагу).
+# Нет ни одного — отказ с причиной, а не тихая сборка.
+forgejo_mcp_image() {
+  local img a want got
+  img="${FORGEJO_MCP_IMAGE:-$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")}"
+  if [ -n "$img" ]; then say "forgejo-mcp: готовый образ $img"; run compose pull forgejo-mcp; return 0; fi
+  if [ "$FORGEJO_MCP_BUILD" = 1 ]; then say "forgejo-mcp: сборка из git (--forgejo-mcp-build)"; run compose build forgejo-mcp; return 0; fi
+  a="${FORGEJO_MCP_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_ARCHIVE_REL}"
+  [ -f "$a" ] || die "нет архива образа forgejo-mcp: $a. Положите каталог images/ из пакета установщика рядом с install.sh; либо --forgejo-mcp-build (сборка из git), либо FORGEJO_MCP_IMAGE (свой образ)"
+  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенный образ не гружу"
+  want="$(awk '{print $1; exit}' "$a.sha256")"
+  got="$(sha256sum "$a" | awk '{print $1}')"
+  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не гружу"
+  say "sha256 архива forgejo-mcp сходится"
+  run docker load -i "$a"
+  if [ "$DRY" != 1 ]; then
+    docker image inspect "$FORGEJO_MCP_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $FORGEJO_MCP_IMAGE_DEFAULT"
   fi
 }
 
@@ -482,12 +509,12 @@ selftest() {
   printf '%s' "$out" | grep -q 'forgejo-url' || fail "own без адреса: причина не названа: $out"; ok
   expect_rc 2 --dry-run --dir "$t/inst" --forgejo own --forgejo-url 'ftp://x'
   expect_rc 2 --dry-run --dir "$t/inst" --forgejo-url https://git.example.org
-  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo,forgejo-mcp' || fail "install: нет профилей forgejo и forgejo-mcp: $out"; ok
   printf '%s' "$out" | grep -q 'FORGEJO_BASE_OVERRIDE=http://forgejo:3000' || fail "install: мост LORE не направлен на forgejo:3000"; ok
   printf '%s' "$out" | grep -q 'forgejo 15.0.5' || fail "install: версия Forgejo не названа"; ok
   printf '%s' "$out" | grep -q 'forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN' || fail "install: нет предупреждения про токен forgejo-mcp"; ok
-  FORGEJO_API_TOKEN=tok-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org/
+  FORGEJO_API_TOKEN=tok-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org/ --forgejo-mcp-build
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo-mcp$' || fail "own: профиль только forgejo-mcp: $out"; ok
   printf '%s' "$out" | grep -q 'FORGEJO_URL=https://git.example.org$' || fail "own: адрес своего Forgejo не дошёл"; ok
   printf '%s' "$out" | grep -q 'tok-' && fail "dry-run напечатал токен"; ok
@@ -500,6 +527,27 @@ selftest() {
   [ "$(merge_profiles '' own)" = 'forgejo-mcp' ] || fail "профили: own"; ok
   grep -q '^FORGEJO_MCP_API_KEY=CHANGE_ME$' "$SCRIPT_DIR/.env.example" || fail ".env.example: ключ forgejo-mcp — заглушка CHANGE_ME"; ok
   grep -qE '^FORGEJO_(API|MCP)_TOKEN=$' "$SCRIPT_DIR/.env.example" || fail ".env.example: токены Forgejo — пустые"; ok
+  # 9. образ forgejo-mcp — из архива пакета (владелица 20.11.2026: «не публиковать, включить в инсталятор»):
+  #    есть архив — docker load со сверкой sha256; нет — отказ; сборка из git — только --forgejo-mcp-build.
+  mkdir -p "$t/pkg/images"; printf 'образ' > "$t/pkg/images/a.tar"
+  ( cd "$t/pkg/images" && sha256sum a.tar > a.tar.sha256 )
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q "docker load -i $t/pkg/images/a.tar" || fail "архив есть — в плане нет docker load: $out"; ok
+  printf '%s' "$out" | grep -q 'sha256 архива forgejo-mcp сходится' || fail "архив: нет сверки sha256: $out"; ok
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' && fail "архив есть, а план собирает forgejo-mcp из git"; ok
+  printf 'подмена' > "$t/pkg/images/a.tar"
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый архив: отказ без причины: $out"; ok
+  rm -f "$t/pkg/images/a.tar.sha256"; printf 'образ' > "$t/pkg/images/a.tar"
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'нет файла sha256' || fail "архив без sha256: принят молча: $out"; ok
+  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org
+  printf '%s' "$out" | grep -q 'forgejo-mcp-build' || fail "нет архива: отказ не называет запасной путь: $out"; ok
+  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "--forgejo-mcp-build: нет сборки из git: $out"; ok
+  FORGEJO_MCP_IMAGE=reg.example/fmcp:1 FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'compose pull forgejo-mcp' || fail "FORGEJO_MCP_IMAGE не перекрыл архив: $out"; ok
+  printf '%s' "$out" | grep -q 'docker load' && fail "FORGEJO_MCP_IMAGE задан, а план грузит архив"; ok
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }
