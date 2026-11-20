@@ -8,6 +8,6 @@ for S in A B; do
   ./lore-migrate.exe connect --env ../win-ab.env --create-dst > /dev/null 2>&1
   ./lore-migrate.exe statuses --env ../win-ab.env --decisions ../decisions-$S.json 2>&1 | grep -E "отпечаток|ГОТОВО|СТОП" | sed "s/^/windows $S statuses: /"
   ./lore-migrate.exe transfer --env ../win-ab.env --decisions ../decisions-$S.json --reset > w-tr-$S.txt 2>&1; echo "windows $S transfer exit=$?"
-  ./lore-migrate.exe edges --env ../win-ab.env > w-ed-$S.txt 2>&1; echo "windows $S edges exit=$? $(tail -1 w-ed-$S.txt)"
+  ./lore-migrate.exe edges --env ../win-ab.env --decisions ../decisions-$S.json > w-ed-$S.txt 2>&1; echo "windows $S edges exit=$? $(tail -1 w-ed-$S.txt)"
   ./lore-migrate.exe dst-fingerprint --env ../win-ab.env --out w-fp-$S.json 2>&1 | tail -1 | sed "s/^/windows $S /"
 done

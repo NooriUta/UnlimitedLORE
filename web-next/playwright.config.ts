@@ -36,7 +36,8 @@ export default defineConfig({
     { name: 'admin-390', testMatch: /admin-phone\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Экран «Модель» админки (SPRINT_LORE_MODEL_AS_CONFIG/MC-06): владелица работает с телефона 19.11 —
     // «HTML админки не адаптирован под телефон». 390×844; сценарий сам проверяет и 360.
-    { name: 'phone-390', testMatch: /model-admin\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    // 20.11.2026: и расхождения спек и кода (метрики гейта, сохранённые виды) — те же 390.
+    { name: 'phone-390', testMatch: /(model-admin|spec-fields)\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE): поток «#тег» и сущности по тегу на телефоне 390×844.
     { name: 'phone-390-tags', testMatch: /supertags\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Паспорт не сбрасывает список (SPRINT_UXR_S13_KIT4/K4-PASSPORT-NO-LIST-RESET): телефон 390×844.

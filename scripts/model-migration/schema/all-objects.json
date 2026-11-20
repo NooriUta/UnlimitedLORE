@@ -779,26 +779,6 @@
           ],
           "filled": 65,
           "of": 1722
-        },
-        "skip_reason": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "skip_reason"
-          ],
-          "filled": 15,
-          "of": 1722
-        },
-        "note": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "note"
-          ],
-          "filled": 6,
-          "of": 1722
         }
       },
       "held": {},
@@ -994,16 +974,6 @@
             "model"
           ],
           "filled": 15,
-          "of": 905
-        },
-        "source": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "source"
-          ],
-          "filled": 1,
           "of": 905
         }
       },
@@ -1273,16 +1243,6 @@
           "filled": 112,
           "of": 443
         },
-        "sprint_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "sprint_id"
-          ],
-          "filled": 94,
-          "of": 443
-        },
         "changed_by": {
           "kind": "text",
           "db_type": "STRING",
@@ -1299,26 +1259,6 @@
             "changed_by_kind"
           ],
           "filled": 46,
-          "of": 443
-        },
-        "adr_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "adr_id"
-          ],
-          "filled": 1,
-          "of": 443
-        },
-        "file_path": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "file_path"
-          ],
-          "filled": 1,
           "of": 443
         },
         "changed_by_session": {
@@ -2973,26 +2913,6 @@
           ],
           "filled": 5,
           "of": 28
-        },
-        "full_name": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "full_name"
-          ],
-          "filled": 2,
-          "of": 28
-        },
-        "repo_url": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "repo_url"
-          ],
-          "filled": 2,
-          "of": 28
         }
       },
       "held": {},
@@ -3493,55 +3413,6 @@
             "head_ref"
           ],
           "filled": 573,
-          "of": 2115
-        },
-        "pr_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "pr_id"
-          ],
-          "filled": 320,
-          "of": 2115
-        },
-        "release_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "release_id"
-          ],
-          "filled": 319,
-          "of": 2115
-        },
-        "repo": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "repo"
-          ],
-          "filled": 32,
-          "of": 2115
-        },
-        "body_md": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "body_md"
-          ],
-          "filled": 4,
-          "of": 2115
-        },
-        "pr_state": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "pr_state"
-          ],
-          "filled": 4,
           "of": 2115
         }
       },
@@ -5620,6 +5491,26 @@
       "schema_only": true,
       "version_of": null,
       "fields": {
+        "current_value": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "current_value"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: current_value — «последнее измерение (NULL если нет)», число; пишет QgMetricState (значение метрики последнего прогона гейта, ClRoutineMetric.value — DOUBLE)"
+        },
+        "direction": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "direction"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: direction — «gte · lte · eq», код-строка; пишет QgMetricState (из текста порога)"
+        },
         "metric_id": {
           "kind": "text",
           "db_type": "STRING",
@@ -5640,6 +5531,16 @@
           "of": 0,
           "source": "выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка"
         },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: status — «pass · fail · unknown», код-строка; пишет QgMetricState (по порогу и направлению)"
+        },
         "threshold": {
           "kind": "text",
           "db_type": "STRING",
@@ -5649,6 +5550,16 @@
           "filled": 0,
           "of": 0,
           "source": "спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка"
+        },
+        "unit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "unit"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: unit — «% · s · MB/s · count», строка; пишет QgMetricState (из порога, иначе из прогона)"
         }
       },
       "indexes": [

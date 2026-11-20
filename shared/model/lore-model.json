@@ -5008,6 +5008,18 @@
     }, {
       "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
     } ],
+    "parts" : [ {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "type" : "qg_metric",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+      "orderBy" : "metric_id",
+      "slice" : "qg_metrics"
+    } ],
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
@@ -5039,6 +5051,14 @@
       "targetType" : "component",
       "relation" : "attribute",
       "place" : "prop"
+    }, {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "targetType" : "qg_metric",
+      "relation" : "composition",
+      "place" : "part"
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -5628,6 +5648,76 @@
     } ],
     "labelEn" : "Decision",
     "labelPl" : "Decyzja"
+  }, {
+    "type" : "qg_metric",
+    "label" : "Метрика гейта",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Итог",
+      "labelKey" : "pp.field.qgMetricStatus",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Итог метрики по порогу и направлению на последнем прогоне гейта: pass — порог выполнен, fail — нет, unknown — измерения нет или порог не числовой.",
+      "labelEn" : "Result",
+      "labelPl" : "Wynik"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код строки таблицы метрик гейта (P-1, INV-03).",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Что измеряет метрика — текст строки таблицы гейта.",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "threshold",
+      "label" : "Порог",
+      "labelKey" : "pp.field.threshold",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Пороговое значение так, как оно записано в гейте (≥ 98%, ≤ 200 ms).",
+      "labelEn" : "Threshold",
+      "labelPl" : "Próg"
+    }, {
+      "key" : "unit",
+      "label" : "Единица",
+      "labelKey" : "pp.field.unit",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Единица измерения: % · s · MB/s · count; из порога, иначе из прогона.",
+      "labelEn" : "Unit",
+      "labelPl" : "Jednostka"
+    }, {
+      "key" : "direction",
+      "label" : "Направление",
+      "labelKey" : "pp.field.direction",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Как сравнивать с порогом: gte — не меньше, lte — не больше, eq — равно.",
+      "labelEn" : "Direction",
+      "labelPl" : "Kierunek"
+    }, {
+      "key" : "current_value",
+      "label" : "Последнее измерение",
+      "labelKey" : "pp.field.currentValue",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Значение метрики на последнем прогоне гейта; пусто — измерения нет.",
+      "labelEn" : "Last measurement",
+      "labelPl" : "Ostatni pomiar"
+    } ],
+    "labelEn" : "Gate metric",
+    "labelPl" : "Metryka bramki"
   } ],
   "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "user" ],
   "graph" : {

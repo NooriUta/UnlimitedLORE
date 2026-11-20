@@ -136,7 +136,7 @@ export interface PassportFromDocOptions {
    * принадлежат связи. Без них одна запись на двух отрезках выглядела двумя одинаковыми строками
    * (пилот 16.11). Нет — общие колонки списка.
    */
-  partColumns?: (part: KitDocPart) => (string | { key: string; label?: string })[] | undefined;
+  partColumns?: (part: KitDocPart) => KitPartColumns | undefined;
 }
 
 export interface PassportFromDoc {
@@ -150,6 +150,12 @@ export interface PassportFromDoc {
 
 /** Общие колонки таблицы связей (как у NestedList): Статус · Вид · Код · Запись. */
 export const DOC_NESTED_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
+type KitPartColumn = string | { key: string; label?: string };
+/**
+ * Колонки таблицы части: список — сверх общих ({@link DOC_NESTED_COLUMNS}); {@code {columns, base: false}} —
+ * свой набор целиком (часть без статуса и с одним видом детей: общие колонки — шум; метрики гейта LORE, 20.11.2026).
+ */
+export type KitPartColumns = KitPartColumn[] | { columns: KitPartColumn[]; base: false };
 /** Ключ блока «не описано в модели» в полях записи. */
 export const UNMODELED_KEY = '_unmodeled';
 
@@ -249,11 +255,14 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const partBody = (p: KitDocPart, ctx: KitCtx): ReactNode => {
     if (p.items.length === 0) return noLinks;
     // Колонки по связи: ключ и подпись приложения (подписи — list.fieldLabels, K4-FACET-LABELS: поля вне вида).
-    const extra = opts.partColumns?.(p)?.map(c => (typeof c === 'string' ? { key: c } : c));
+    const spec = opts.partColumns?.(p);
+    const own = spec && !Array.isArray(spec) ? spec : null;
+    const list: KitPartColumn[] | undefined = spec === undefined ? undefined : Array.isArray(spec) ? spec : spec.columns;
+    const extra = list?.map(c => (typeof c === 'string' ? { key: c } : c));
     const labels = Object.fromEntries((extra ?? []).filter(c => c.label).map(c => [c.key, c.label!]));
     return createElement(NestedList, {
       ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p),
-      ...(extra ? { columns: [...DOC_NESTED_COLUMNS, ...extra.map(c => c.key)] } : {}),
+      ...(extra ? { columns: [...(own ? [] : DOC_NESTED_COLUMNS), ...extra.map(c => c.key)] } : {}),
       ...(Object.keys(labels).length ? { fieldLabels: labels } : {}),
     });
   };

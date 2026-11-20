@@ -212,6 +212,21 @@ describe('passportFromDoc · колонки части — значения и �
     expect(document.querySelector('.sk-list__na')).toBeNull();
     expect(document.body.textContent).toContain('0.15');
   });
+
+  // 20.11.2026, метрики гейта LORE: у части без статуса и с одним видом детей общие колонки (статус, вид,
+  // код записи) — шум; часть может задать свой набор колонок целиком.
+  it('{columns, base: false} — свой набор колонок вместо общих', () => {
+    const p = passportFromDoc(doc({ parts: [{ key: 'm', label: 'Метрики', type: 'metric', rel: 'MEASURED_BY', dir: 'out', state: 'ok', count: 1,
+      items: [{ id: 'G:P-1:0', title: 'Доля', status: '', values: { value: 97.5 } }] }] }),
+    { lang: 'ru', partColumns: () => ({ base: false, columns: ['title', { key: 'fields.value', label: 'Значение' }] }) });
+    const ctx = { config: { modules: [], menu: { groups: [] }, kinds: p.kinds, statuses: { items: [] } }, data: p.data, href: (id: string) => '#' + id, esc: (s: string) => s, md: (s: string) => s } as unknown as KitCtx;
+    render(<KitLangProvider lang="ru">{p.kinds.trail.tabs!.find(t => t.key === 'm')!.render(p.record, ctx)}</KitLangProvider>);
+    const heads = [...document.querySelectorAll('th')].map(th => (th.textContent ?? '').toLowerCase());
+    expect(heads.some(h => h.includes('значение'))).toBe(true);
+    expect(heads.some(h => h.includes('вид')), 'общей колонки «Вид» нет').toBe(false);
+    expect(heads.some(h => h.includes('статус')), 'общей колонки «Статус» нет').toBe(false);
+    expect(document.body.textContent).toContain('97.5');
+  });
 });
 
 // Методика §7.8, шаг 1 (слово сессии модели 16.11): явное место стороны побеждает OWN_TAB — ТОЛЬКО

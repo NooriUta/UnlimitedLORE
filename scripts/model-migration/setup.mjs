@@ -19,6 +19,9 @@ const KC_LINKS = [
   { title: 'Keycloak — загрузка', url: 'https://www.keycloak.org/downloads' },
   { title: 'Keycloak — запуск в контейнере', url: 'https://www.keycloak.org/getting-started/getting-started-docker' },
 ];
+const FORGEJO_LINKS = [
+  { title: 'Forgejo — установка в контейнере', url: 'https://forgejo.org/docs/latest/admin/installation/docker/' },
+];
 const SECRET_LINKS = [
   { title: 'Infisical — своя установка', url: 'https://infisical.com/docs/self-hosting/overview' },
 ];
@@ -32,7 +35,33 @@ export function checkChoice(c) {
   if (!['own', 'none'].includes(c.kc)) bad.push('Keycloak: own или none');
   if (!['own', 'none'].includes(c.secrets)) bad.push('хранилище секретов: own или none');
   if (!['new', 'migrate'].includes(c.mode)) bad.push('режим: new (новая установка) или migrate (перенос)');
+  if (!FORGEJO_MODES.includes(c.forgejo ?? 'none')) bad.push('Forgejo: install, own или none');
   return bad;
+}
+
+// Forgejo — по выбору (владелица 20.11.2026: «установка Forgejo если нет нашей версии и дистрибутив MCP forgejo или
+// указаны настройки если у владельца есть»). install — поставить Forgejo нашей версии; own — свой Forgejo владельца;
+// none — без Forgejo (по умолчанию, как было). В install и own в пакет входит forgejo-mcp.
+export const FORGEJO_VERSION = '15.0.5'; // та же версия, что на нашем стенде (get_server_version, 20.11.2026)
+const FORGEJO_MODES = ['install', 'own', 'none'];
+
+/** Что выбор Forgejo кладёт в .env пакета установки. Без секретов: токены вписывает владелец, ключ forgejo-mcp — install.sh. */
+export function forgejoEnv({ forgejo = 'none', url = '' } = {}) {
+  if (forgejo === 'install') return { COMPOSE_PROFILES: 'forgejo,forgejo-mcp', FORGEJO_URL: 'http://forgejo:3000', FORGEJO_BASE_OVERRIDE: 'http://forgejo:3000', FORGEJO_VERSION };
+  if (forgejo === 'own') {
+    let u;
+    try { u = new URL(String(url).trim()); } catch { u = null; }
+    if (!u || !/^https?:$/.test(u.protocol)) throw new Error('нужен адрес своего Forgejo — http(s)://хост[:порт]');
+    return { COMPOSE_PROFILES: 'forgejo-mcp', FORGEJO_URL: (u.origin + u.pathname).replace(/\/+$/, ''), FORGEJO_BASE_OVERRIDE: '' };
+  }
+  if (forgejo === 'none') return { COMPOSE_PROFILES: '', FORGEJO_URL: '', FORGEJO_BASE_OVERRIDE: '' };
+  throw new Error('Forgejo: install, own или none');
+}
+
+/** Строка MCP forgejo-mcp для агента (HTTP). Ключ — ссылкой на переменную окружения, значение в настройки не пишется. */
+export function forgejoMcpEntry({ url }) {
+  if (!url) throw new Error('не задан адрес forgejo-mcp');
+  return { type: 'http', url: String(url).replace(/\/+$/, '') + '/mcp', headers: { Authorization: 'Bearer ${FORGEJO_MCP_API_KEY}' } };
 }
 
 /** План шагов по выбору первого экрана. Шаг: { id, title, howto[], links[], env[] }. */
@@ -90,6 +119,24 @@ export function planSetup(c) {
       'Völva ставится своей поставкой; её адрес впишите сюда (LORE_VOLVA_EMBED_SITE_URL).',
       'Установщик создаёт пару ключей ES256 и кладёт её в хранилище; издатель — адрес бэкенда LORE (LORE_VOLVA_EMBED_ISSUER), тот же, что в MB_EMBEDDING_JWT_ISSUERS у Völva.',
       'Völva проверяет подпись открытым ключом с /lore/embed/jwks; установщик проверяет, что встройка отвечает.',
+    ] });
+  if (c.forgejo === 'install') p.push({ id: 'forgejo-install', title: `Forgejo ${FORGEJO_VERSION} — своя установка`, links: FORGEJO_LINKS,
+    env: ['FORGEJO_VERSION', 'FORGEJO_ROOT_URL', 'FORGEJO_HTTP_PORT'], howto: [
+      `Пакет поднимает Forgejo ${FORGEJO_VERSION} (образ codeberg.org/forgejo/forgejo, та же версия, что на нашем стенде) в профиле compose forgejo; данные — том forgejo-data.`,
+      'Первое окно Forgejo (FORGEJO_ROOT_URL, по умолчанию http://127.0.0.1:3000/) — заведите администратора; пароль знаете только вы, установщик его не видит.',
+      'Создайте организацию и репозитории; проект в LORE зарегистрируйте с адресом http://localhost:<порт>/<организация>/<репозиторий> — мост LORE ходит на него через forgejo:3000.',
+      'Создайте два токена (Настройки → Приложения): для моста LORE (FORGEJO_API_TOKEN) и для forgejo-mcp (FORGEJO_MCP_TOKEN); впишите их в .env сами и повторите install.sh — это обновление.',
+    ] });
+  if (c.forgejo === 'own') p.push({ id: 'forgejo-own', title: 'Свой Forgejo', links: [], env: ['FORGEJO_URL', 'FORGEJO_API_TOKEN', 'FORGEJO_BASE_OVERRIDE'], howto: [
+    'Адрес своего Forgejo впишите в установщик (FORGEJO_URL) — Forgejo не ставится.',
+    'Проект в LORE зарегистрируйте с адресом репозитория в своём Forgejo (<адрес>/<организация>/<репозиторий>): по нему мост LORE находит организацию и репозиторий.',
+    'Токен моста LORE (FORGEJO_API_TOKEN) вписывает владелец в .env сам: Forgejo → Настройки → Приложения, права на репозитории.',
+  ] });
+  if (c.forgejo === 'install' || c.forgejo === 'own') p.push({ id: 'forgejo-mcp', title: 'forgejo-mcp для агентов', links: [],
+    env: ['FORGEJO_MCP_TOKEN', 'FORGEJO_MCP_API_KEY', 'FORGEJO_MCP_PORT'], howto: [
+      'forgejo-mcp (AIDA/forgejo-mcp, 0.1.7, с инструментами Actions/CI) едет в пакете — профиль compose forgejo-mcp, порт FORGEJO_MCP_PORT (по умолчанию 4430).',
+      'Свой токен в Forgejo (FORGEJO_MCP_TOKEN, отдельный от моста) вписывает владелец; без него forgejo-mcp не запускается, install.sh говорит об этом громко.',
+      'Ключ входа агентов FORGEJO_MCP_API_KEY install.sh генерирует сам; в строку MCP агента он идёт ссылкой ${FORGEJO_MCP_API_KEY}, значение — в окружении машины.',
     ] });
   p.push({ id: 'agent', title: 'Подключение агентов', links: [], env: ['LORE_HARNESS', 'LORE_MACHINE_ID'], howto: [
     'На каждой машине: harness из справочника и код машины.',
@@ -166,7 +213,7 @@ export function installEnvText(example, values) {
   let t = example.replace(/\n*$/, '\n');
   for (const [k, v] of Object.entries(values)) {
     if (!/^[A-Z][A-Z0-9_]*$/.test(k)) throw new Error(`имя переменной «${k}» не годится`);
-    if (/PASSWORD|SECRET|PRIVATE_KEY/.test(k)) throw new Error(`${k}: пароль и секрет в .env через установщик не передаются — их генерирует install.sh или кладёт хранилище`);
+    if (/PASSWORD|SECRET|PRIVATE_KEY|TOKEN|API_KEY/.test(k)) throw new Error(`${k}: пароль, токен и секрет в .env через установщик не передаются — их генерирует install.sh или вписывает владелец`);
     const s = String(v);
     if (/[\r\n]/.test(s)) throw new Error(`${k}: перевод строки в значении`);
     const re = new RegExp('^' + k + '=.*$', 'm');

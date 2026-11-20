@@ -113,7 +113,7 @@ public class LoreTagResource extends LoreResourceBase {
                 String edgeRid = rid(have.get(0).get("r"));
                 if (merged.isEmpty()) sql("UPDATE " + edgeRid + " REMOVE " + spec.property(), null);
                 else sql("UPDATE " + edgeRid + " SET " + spec.property() + " = :f", Map.of("f", merged));
-                sql("UPDATE " + edgeRid + " SET changed_at = :at, changed_by = :by", mapOfNullable("at", now, "by", author.by()));
+                sql("UPDATE " + edgeRid + " SET changed_at = :at, changed_by = :who", mapOfNullable("at", now, "who", author.by()));
                 out.put("action", "updated");
             } else {
                 out.put("action", "unchanged");
