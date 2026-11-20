@@ -93,6 +93,29 @@ td.n{text-align:right;font-family:var(--mono);font-size:var(--fs-2xs)}
 .tb:disabled{opacity:.45;cursor:not-allowed}
 .proto{color:var(--wrn);border-color:var(--wrn)}
 .draw{position:absolute;inset:0;z-index:5;touch-action:none;cursor:crosshair}
+.gbody{position:relative;flex:1;min-height:0;display:flex}
+.pal{flex:none;width:44px;display:flex;flex-direction:column;gap:2px;padding:4px;background:var(--bg1);border-right:1px solid var(--bd);z-index:7;overflow:visible}
+.pal hr{border:0;border-top:1px solid var(--bd);margin:3px 2px;width:auto}
+.pb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-height:34px;padding:4px 0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--t2);font:inherit;cursor:pointer}
+.pb:hover{background:var(--bg2);color:var(--t1)}
+.pb[aria-pressed="true"]{background:var(--bg3);border-color:var(--acc);color:var(--acc)}
+.pb.dng{color:var(--dng)}
+.pb:disabled{opacity:.4;cursor:not-allowed}
+.pb .pl{display:none;font-size:var(--fs-2xs);line-height:1.1;text-align:center}
+.pb .cnt{position:absolute;top:1px;right:1px;min-width:14px;padding:0 3px;border-radius:999px;background:var(--dng);color:var(--bg0);font-family:var(--mono);font-size:var(--fs-2xs);line-height:14px}
+@media (hover:hover) and (min-width:821px){
+  .pb[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);white-space:nowrap;background:var(--bg3);color:var(--t1);border:1px solid var(--bdh);border-radius:4px;padding:3px 7px;font-size:var(--fs-xs);pointer-events:none;z-index:20}
+}
+@media (max-width:820px){
+  .gbody{--palw:58px}
+  .pal{width:58px;overflow-y:auto;overscroll-behavior:contain;padding:3px}
+  .pb{min-height:46px}
+  .pb .pl{display:block}
+}
+.pmenu{position:absolute;z-index:30;min-width:170px;background:var(--bg1);border:1px solid var(--bdh);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.5);padding:4px;display:flex;flex-direction:column;gap:1px}
+.pmenu .ph{color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;padding:4px 6px}
+.pmenu button{display:flex;align-items:center;gap:7px;text-align:left;border:0;background:transparent;color:var(--t1);font:inherit;font-size:var(--fs-xs);padding:6px 8px;border-radius:4px;cursor:pointer;min-height:30px}
+.pmenu button:hover,.pmenu button:focus{background:var(--bg2)}
 .draw.eraser{cursor:cell}
 .dlg-back{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px 16px}
 .dlg{width:min(460px,100%);max-height:calc(100vh - 80px);display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--bdh);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
@@ -364,11 +387,11 @@ function ResItem({ n, onBoard, onPick, extra }) {
   return h('li', null, h('button', { type: 'button', disabled: onBoard, onClick: () => onPick(n), style: { '--c': `var(${tokenOf(n.type)})` } },
     h('span', { className: 'rid' }, `${n.type} · ${n.id}${onBoard ? ' · уже на доске' : ''}${extra ? ' · ' + extra : ''}`), h('span', { className: 'rt' }, n.title || '(без названия)')));
 }
-function AddDialog({ onClose, onCreate, onPick, onBoard }) {
-  const [tab, setTab] = useState('find');
-  const [q, setQ] = useState('');
+function AddDialog({ onClose, onCreate, onPick, onBoard, init = {} }) {
+  const [tab, setTab] = useState(init.tab || 'find');
+  const [q, setQ] = useState(init.q || '');
   const [tag, setTag] = useState(null);
-  const [type, setType] = useState('task');
+  const [type, setType] = useState(init.type || 'task');
   const [title, setTitle] = useState('');
   const [corpus, setCorpus] = useState(null);
   const [err, setErr] = useState(null);
@@ -452,8 +475,26 @@ function RelDialog({ s, t, options, err, onPick, onClose }) {
 
 // ── Рисование: штрихи в координатах холста, живут вместе с доской ────────────────────────────
 // «Связать» — касание карточки, затем второй: на телефоне хэндл при обзорном масштабе в несколько пикселей, пальцем не попасть.
-const TOOL_LABEL = { select: 'Курсор', link: 'Связать', pen: 'Перо', marker: 'Маркер', eraser: 'Ластик' };
+const TOOL_LABEL = { select: 'Выбрать', link: 'Связать', pen: 'Перо', marker: 'Маркер', eraser: 'Ластик' };
 const DRAW_TOOLS = ['pen', 'marker', 'eraser'];
+// Иконки game-icons.net (CC BY 3.0, авторы Lorc, Delapouite и др.) — пути вписаны из Iconify (game-icons), чтобы standalone работал без сети к Iconify.
+const GI = {"arrow-cursor":"M123.193 29.635L121 406.18l84.31-82.836l65.87 159.02l67.5-27.96l-65.87-159.02L391 294.342z","magnifying-glass":"M333.78 20.188c-39.97 0-79.96 15.212-110.405 45.656c-58.667 58.667-60.796 152.72-6.406 213.97l-15.782 15.748l13.25 13.25l15.75-15.78c61.248 54.39 155.3 52.26 213.968-6.407c60.887-60.886 60.888-159.894 0-220.78C413.713 35.4 373.753 20.187 333.78 20.187zm0 18.562c35.15 0 70.285 13.44 97.158 40.313c53.745 53.745 53.744 140.6 0 194.343c-51.526 51.526-133.46 53.643-187.5 6.375l.218-.217c-2.35-2.05-4.668-4.17-6.906-6.407c-2.207-2.206-4.288-4.496-6.313-6.812l-.218.22c-47.27-54.04-45.152-135.976 6.374-187.502C263.467 52.19 298.63 38.75 333.78 38.75m0 18.813c-30.31 0-60.63 11.6-83.81 34.78c-46.362 46.362-46.362 121.234 0 167.594c10.14 10.142 21.632 18.077 33.905 23.782c-24.91-19.087-40.97-49.133-40.97-82.94c0-15.323 3.292-29.888 9.22-43c-4.165 20.485.44 40.88 14.47 54.907c24.583 24.585 68.744 20.318 98.624-9.562s34.146-74.04 9.56-98.625a52.4 52.4 0 0 0-7.655-6.313c45.13 8.648 79.954 46.345 84.25 92.876c4.44-35.07-6.82-71.726-33.813-98.72c-23.18-23.18-53.47-34.78-83.78-34.78zM176.907 297.688L42.094 432.5l34.562 34.563L211.47 332.25zM40 456.813L24 472.78L37.22 486l15.968-16z","price-tag":"M303.297 42.269q-2.31.037-4.476.158c-11.55.649-19.422 3.475-22.47 6.438L18.923 299.087L184.807 469.75l257.43-250.222c3.047-2.963 6.096-10.75 7.072-22.278s.207-26.288-1.645-42.248c-1.605-13.84-3.991-28.476-6.597-42.96c-12.99 9.51-28.1 16.583-48.25 20.222a40 40 0 0 1-11.38 36.191a40 40 0 0 1-56.562-.802a40 40 0 0 1 .803-56.563a40 40 0 0 1 29.031-11.3a40 40 0 0 1 27.532 12.103a40 40 0 0 1 2.998 3.5c24.115-3.229 38.245-11.132 52.109-23.326c-1.891-9.87-3.776-19.475-5.47-28.424c-27.556-6.032-61.042-14.049-90.872-18.371c-11.925-1.728-23.195-2.83-32.957-2.998q-2.441-.042-4.752-.004zm159.469 34.836c-3.39.175-6.773 1.444-9.342 3.283a2734 2734 0 0 1 3.7 19.365l5.326-3.707c.268.372.45.517.765 1.106c2.648 4.937 5.797 16.02 7.912 30.437c4.231 28.833 5.344 71.6 1.848 116.16s-11.623 91.069-25.262 127.625c-13.639 36.557-32.614 61.986-55.453 68.49c-8.264 2.354-12.21.983-16.803-3.57c-4.593-4.552-9.035-13.679-12.054-26.199c-5.115-21.207-6.457-51.417-5.526-83.469l-18.336 17.824c-.067 25.974 1.633 50.248 6.364 69.864c3.443 14.277 8.383 26.341 16.882 34.765s21.359 11.814 34.405 8.098c31.734-9.038 52.827-40.494 67.384-79.512s22.756-86.771 26.344-132.508c3.589-45.736 2.547-89.302-1.984-120.181c-2.266-15.44-5.15-27.556-9.858-36.332c-2.353-4.388-5.217-8.459-10.513-10.627c-1.324-.542-2.736-.832-4.174-.91q-.81-.044-1.625-.002M293.1 187.796l12.549 12.906l-29.38 28.563c6.195 6.952 11.437 14.253 15.71 21.908c5.1 9.1 8.755 18.47 10.96 28.12l-16.91 16.212q-1.421-16.44-7.652-30.496t-17.27-25.57q-21.758-22.696-44.751-22.59q-22.914.189-46.744 23.035q-23.752 22.772-24.907 45.656q-1.074 22.969 20.684 45.664q8.498 8.864 16.584 14.463q8.164 5.526 16.553 8.135l31.539-30.236l-26.205-27.336l13.054-12.516l42.09 43.9l-50.416 48.335q-15.82-3.435-30.398-11.872c-8.672-5.09-16.86-11.463-24.569-19.097l-25.826 24.635l-12.424-13.026l26.303-25.088c-12.28-16.036-18.338-32.69-18.164-49.963q.48-31.775 29.188-59.298q27.885-26.735 58.498-26.692q.987.002 1.976.031c17.69.524 34.44 7.564 50.254 21.069z","health-normal":"M196 16a30 30 0 0 0-30 30v120H46a30 30 0 0 0-30 30v120a30 30 0 0 0 30 30h120v120a30 30 0 0 0 30 30h120a30 30 0 0 0 30-30V346h120a30 30 0 0 0 30-30V196a30 30 0 0 0-30-30H346V46a30 30 0 0 0-30-30z","linked-rings":"M321.7 21.36c-43.2 0-86.4 16.5-119.4 49.5c-19.1 19.08-32.6 41.54-40.7 65.44c16.9-2.4 32.9-2.7 48.7-1.1q5.85-8.25 13.2-15.6c23.3-23.26 53.8-34.9 84.4-34.9s61.2 11.64 84.5 34.9c46.6 46.6 46.6 122.4 0 168.9c-46.5 46.6-122.4 46.6-168.9 0c-22.2-22.2-33.9-51.1-34.9-80.2c-11.5 1.8-22.8 5.6-33.2 11.4c5.8 33 21.4 64.5 46.9 90c66 66 172.9 66.1 238.9 0c66-66 66-172.8 0-238.84c-33-33-76.3-49.5-119.5-49.5M147.6 158.2c-27.9 7.7-58.94 25.4-76.75 44c-47.5 47.4-60.8 116-40.1 175.3c8.91 24.1 23.56 47.1 40.1 63.6c66.05 66 172.95 66 238.95 0c19.1-19.1 32.6-41.6 40.7-65.5c-16.2 2.5-32.6 2.9-48.8 1.2c-3.8 5.4-8.2 10.6-13.1 15.5c-62.7 39.7-137.8 40.6-173.3-4.4c-20.57-26-32.05-58.8-30.55-85.8c2.58-41.6 26.85-79.9 57.75-98.5c10.2-5.9 37.6-15.1 61.6-15.1c33.7 1.5 60.6 11.1 84.5 34.9c22.3 22.1 33.8 51.1 34.8 80.3c11.6-1.8 22.9-5.6 33.3-11.4c-9.4-41.6-26.9-73.2-53.9-96.7c-21.4-18.7-44.1-31.4-70.6-37.6c-28.4-7-58.6-6.5-84.6.2","quill":"M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093c5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594c25.193 7.756 51.57 22.81 72.845 43.844c-31.87-7.045-68.907-5.895-99.188 3c-13.743 28.688-25.008 60.48-33.343 95.687c128.71-30.668 130.522 3.514 50.75 140.438c16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468c-17.29-14.667-39.21-24.838-63.813-32.375c25.364-5.256 50.91-10.928 74.126-11.22c6.482-.082 12.78.272 18.844 1.156c17.57-24.007 37.408-48.612 59.75-73.97c-12.538-6.31-25.476-11.454-38.125-14.967c17.132-5.76 35.274-8.34 52.844-8.157c2.01.02 4.004.095 6 .187c20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28","paint-brush":"M54.438 29.794a24 24 0 0 0-1.204.01c-4.688.157-7.914 1.736-10.113 3.935c-2.932 2.932-4.761 7.689-3.588 15.305s5.683 17.754 15.272 28.941c67.894 79.21 132.935 155.56 183.703 211.969c12.273 13.637 23.693 26.08 34.125 37.135c12.095-31.902 34.57-54.144 62.902-64.715c-10.825-10.199-22.936-21.313-36.197-33.248C242.93 178.358 166.578 113.314 87.369 45.42c-11.186-9.589-21.325-14.098-28.941-15.272a30 30 0 0 0-3.99-.355zm295.783 246.64c-30.461 7.627-53.241 29.185-63.608 65.219c5.652 5.785 10.956 11.085 15.78 15.707c7.58 7.264 14.095 13.007 19.21 16.957c1.776-17.225 10.045-33.062 21.645-44.691c10.601-10.628 24.496-18.006 39.125-19.092c-3.871-4.836-9.14-10.751-15.63-17.524c-4.838-5.047-10.415-10.623-16.522-16.576m35.351 51.95c-10.397.137-20.929 5.28-29.582 13.955c-11.537 11.565-18.674 28.85-16.267 45.7c5.334 37.342 23.749 65.81 49.46 81.237c22.727 13.636 51.452 17.35 83.643 6.983c-24.222-4.01-46.475-30.706-48.197-50.65c10.63 12.814 23.94 24.547 38.426 31.75c-9.881-22.578-9.201-45.452-11.088-64.321c-1.352-13.522-3.891-24.982-11.377-35.162s-20.423-19.8-44.74-27.907a31 31 0 0 0-10.278-1.585","broom":"m153.654 18l52.57 134.734c1.698 3.994 4.05 5.83 7.243 6.977c3.2 1.15 7.36 1.2 11.058.17s6.71-3.146 7.996-4.915c1.288-1.77 1.634-2.564.505-5.24l-.046-.112L181.57 18zm94.168 120.143l1.88 4.81l-.09-.223c3.346 7.937 1.828 16.822-2.532 22.82c-4.36 5.996-10.773 9.734-17.723 11.67c-6.95 1.937-14.653 2.065-21.98-.57s-14.155-8.447-17.742-16.923l-.05-.118l-1.757-4.5c-31.31 19.804-42.47 42.026-35.367 68.89c1.24 4.681 3.422 12.364 5.964 22.13c74.37-5.274 139.945-23.872 199.808-51.6c-10.297-13.867-22.5-25.83-38.232-34.53c-20.505-11.34-47.652-20.157-72.178-21.857zm120.557 71.52c-61.497 28.81-129.173 48.378-205.575 54.196c2.03 8.683 4.08 18.28 5.95 28.495c89.592-10.084 163.043-26.22 217.755-48.767c-5.743-11.72-11.593-23.19-18.13-33.924m26.04 50.16c-57.093 23.772-131.99 40.087-222.73 50.322C180.697 371.423 179.614 446.752 128 480c16.27 0 31.892-.152 46.926-.45c17.84-25.554 31.27-66.222 32.08-86.146c8.27 16.793 3.297 59.32-5.36 85.434c2.735-.093 5.435-.193 8.127-.297c11.824-12.397 11.724-28.632 14.72-47.284c3.324 14.92 7 32.967 9.505 46.156c11.273-.616 22.152-1.34 32.606-2.183c16.38-20.358 21.65-49.604 18.63-85.48c4.226 29.1 9.116 62.138 11.873 82.55a772 772 0 0 0 27.807-3.614c5.04-18.787-4.1-48.444-2.072-69.54c11.123 43.113 22.247 55.45 33.37 64.043a456 456 0 0 0 15.733-3.526c-4.7-13.95 1.573-22.497 1.18-39.986c5.647 18.99 14.625 26.958 24.428 32.816c6.506-2.1 12.66-4.336 18.492-6.697c-10.538-6.57-10.113-26.374-12.38-42.926c5.954 21.703 14.413 32.418 24.083 37.816c29.124-13.8 48.69-31.534 60.398-53.657c-9.078-3.82-18.674-13.002-28.068-20.092c13.214 7.477 23.684 10.614 32.37 10.93a112 112 0 0 0 3.552-9.868c-56.326-19.528-80.07-64.018-101.58-108.178z","trash-can":"M199 103v50h-78v30h270v-30h-78v-50zm18 18h78v32h-78zm-79.002 80l30.106 286h175.794l30.104-286zm62.338 13.38l.64 8.98l16 224l.643 8.976l-17.956 1.283l-.64-8.98l-16-224l-.643-8.976zm111.328 0l17.955 1.284l-.643 8.977l-16 224l-.64 8.98l-17.956-1.284l.643-8.977l16-224l.64-8.98zM247 215h18v242h-18z","anticlockwise-rotation":"M248.91 50a206 206 0 0 1 35.857 3.13c85.207 15.025 152.077 81.895 167.102 167.102c15.023 85.208-24.944 170.917-99.874 214.178c-32.782 18.927-69.254 27.996-105.463 27.553c-46.555-.57-92.675-16.865-129.957-48.15l30.855-36.768a157.85 157.85 0 0 0 180.566 15.797a157.85 157.85 0 0 0 76.603-164.274A157.85 157.85 0 0 0 276.429 100.4a157.84 157.84 0 0 0-139.17 43.862L185 192H57V64l46.34 46.342C141.758 71.962 194.17 50.03 248.91 50"};
+const Ico = ({ n }) => h('svg', { viewBox: '0 0 512 512', width: 20, height: 20, 'aria-hidden': 'true', focusable: 'false' }, h('path', { d: GI[n], fill: 'currentColor' }));
+// Палитра слева (просьба владелицы 20.11: «слева сделать палитру возможностей»). label — имя кнопки и подпись на телефоне,
+// tip — подсказка при наведении на компьютере. tool — режим холста (подсвечивается), остальное — действие.
+const PALETTE = [
+  { k: 'select', icon: 'arrow-cursor', label: 'Выбрать', tip: 'Выбрать и двигать карточки', tool: true },
+  { k: 'find', icon: 'magnifying-glass', label: 'Найти запись', short: 'Найти [[', tip: 'Найти запись LORE — «[[» (peek)' },
+  { k: 'tag', icon: 'price-tag', label: 'По тегу', short: 'Тег #', tip: 'Найти по тегу — «#» (supertag)' },
+  { k: 'create', icon: 'health-normal', label: 'Создать', tip: 'Создать карточку: выбрать тип' },
+  { k: 'link', icon: 'linked-rings', label: 'Связать', tip: 'Связать: коснитесь двух карточек или тяните от точки карточки', tool: true },
+  { k: 'pen', icon: 'quill', label: 'Перо', tip: 'Перо — тонкая линия', tool: true },
+  { k: 'marker', icon: 'paint-brush', label: 'Маркер', tip: 'Маркер — широкая полупрозрачная линия', tool: true },
+  { k: 'eraser', icon: 'broom', label: 'Ластик', tip: 'Ластик — стирает штрихи', tool: true },
+  '-',
+  { k: 'delete', icon: 'trash-can', label: 'Удалить', tip: 'Удалить выделенные карточки и связи', danger: true },
+  { k: 'reset', icon: 'anticlockwise-rotation', label: 'Сбросить', tip: 'Сбросить правки доски в этом браузере' },
+];
 function segDist(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); }
 function strokeHit(s, p, r) { for (let i = 0; i < s.pts.length; i++) if (segDist(p, s.pts[i], s.pts[i + 1] || s.pts[i]) <= r) return true; return false; }
 const pathOf = pts => pts.length === 1 ? `M${pts[0][0]} ${pts[0][1]}l0.01 0` : 'M' + pts.map(p => p[0] + ' ' + p[1]).join('L');
@@ -469,12 +510,13 @@ function GraphApp({ gkey, layout, board, init, onReady }) {
   const [saveState, setSaveState] = useState(init.restored ? 'restored' : 'clean');
   const [msg, setMsg] = useState(null);
   const [linkFrom, setLinkFrom] = useState(null);
+  const [menu, setMenu] = useState(null); // подменю «Создать»: { top }
   const rf = useReactFlow();
   const flowRef = useRef(null), drawRef = useRef(null), addSeq = useRef(0);
   useEffect(() => { requestAnimationFrame(() => onReady()); }, []);
   useEffect(() => { if (!dirty) return; setSaveState(lsSet(gkey, serialize(nodes, edges, strokes)) ? 'saved' : 'nostore'); }, [dirty]);
   const touch = () => setDirty(d => d + 1);
-  const setEditing = v => { setEditingRaw(v); setTool('select'); setMsg(null); setLinkFrom(null);
+  const setEditing = v => { setEditingRaw(v); setTool('select'); setMsg(null); setLinkFrom(null); setMenu(null);
     // на телефоне доска ниже шапки: при входе в правку подводим её под палец целиком
     if (v && window.innerWidth <= 820) $('stage').scrollIntoView({ block: 'start' });
     const u = new URL(location.href); if (v) u.searchParams.set('mode', 'edit'); else u.searchParams.delete('mode'); history.replaceState(null, '', u); };
@@ -489,6 +531,7 @@ function GraphApp({ gkey, layout, board, init, onReady }) {
     const k = (addSeq.current++ % 6) * 18;
     return { x: p.x - NODE_W / 2 + k, y: p.y - NODE_H / 2 + k };
   }
+  useEffect(() => { if (editing && window.innerWidth <= 820) requestAnimationFrame(() => rf.fitView()); }, [editing]);
   const onBoard = new Set(nodes.map(n => n.id));
   function addCard(n, at, extra) { setNodes(ns => ns.map(x => x.selected ? { ...x, selected: false } : x).concat({ id: n.id, type: 'card', position: at, selected: true, data: { ...n, layout, ...extra } })); touch(); }
   async function pickExisting(rec, at) {
@@ -560,20 +603,38 @@ function GraphApp({ gkey, layout, board, init, onReady }) {
     h('span', { className: 'seg', role: 'group', 'aria-label': 'Режим доски' },
       h('button', { type: 'button', 'aria-pressed': String(!editing), onClick: () => setEditing(false) }, 'Просмотр'),
       h('button', { type: 'button', 'aria-pressed': String(editing), onClick: () => setEditing(true) }, 'Правка')),
-    editing && h('button', { type: 'button', className: 'tb', onClick: () => setDlg({ kind: 'add', at: centerPos() }) }, '+ Добавить'),
-    // Инструмент переключается и по pointerup касания: в эмуляции касаний Chrome первый tap сразу после штриха
-    // пришёл без click. Выбор инструмента идемпотентен — двойное срабатывание безвредно.
-    editing && Object.keys(TOOL_LABEL).map(tl => h('button', { key: tl, type: 'button', className: 'tb', 'aria-pressed': String(tool === tl),
-      onClick: () => pickTool(tl), onPointerUp: e => { if (e.pointerType === 'touch') pickTool(tl); } }, TOOL_LABEL[tl])),
-    editing && h('button', { type: 'button', className: 'tb dng', disabled: !selCount, onClick: delSel }, 'Удалить' + (selCount ? ' · ' + selCount : '')),
-    editing && h('button', { type: 'button', className: 'tb', onClick: reset }, 'Сбросить'),
     h('span', { className: 'chip proto' }, 'прототип: в LORE не пишется'),
     SAVE_CHIP[saveState] && h('span', { className: 'chip ' + SAVE_CHIP[saveState][0] }, SAVE_CHIP[saveState][1]),
     editing && msg && h('span', { className: 'chip', role: 'status' }, msg),
-    editing && !msg && h('span', { className: 'hint', style: { color: 'var(--t3)', fontSize: 'var(--fs-2xs)' } }, 'двойной клик по полю — новая карточка · связь: тяни от точки карточки к другой или «Связать»'));
+    editing && !msg && h('span', { className: 'hint', style: { color: 'var(--t3)', fontSize: 'var(--fs-2xs)' } }, 'палитра слева · двойной клик по полю — новая карточка'));
+
+  const openAdd = init => { setMenu(null); setDlg({ kind: 'add', at: centerPos(), init }); };
+  const act = (it, e) => {
+    if (it.tool) { setMenu(null); return pickTool(it.k); }
+    if (it.k === 'find') return openAdd({ tab: 'find', q: '[[' });
+    if (it.k === 'tag') return openAdd({ tab: 'find', q: '#' });
+    if (it.k === 'create') { const b = e.currentTarget; return setMenu(m => m ? null : { top: Math.max(0, b.offsetTop - b.parentElement.scrollTop) }); }
+    setMenu(null);
+    if (it.k === 'delete') return delSel();
+    if (it.k === 'reset') return reset();
+  };
+  // Инструмент переключается и по pointerup касания: в эмуляции касаний Chrome первый tap сразу после штриха
+  // пришёл без click. Выбор инструмента идемпотентен — двойное срабатывание безвредно.
+  const palette = editing && h('nav', { className: 'pal', 'aria-label': 'Палитра доски' }, PALETTE.map((it, i) => it === '-' ? h('hr', { key: 'sep' + i }) :
+    h('button', { key: it.k, type: 'button', className: 'pb' + (it.danger ? ' dng' : ''), 'aria-label': it.label, 'data-tip': it.tip,
+      'aria-pressed': it.tool ? String(tool === it.k) : it.k === 'create' ? String(!!menu) : undefined,
+      'aria-haspopup': it.k === 'create' ? 'menu' : undefined, disabled: it.k === 'delete' && !selCount,
+      onClick: e => act(it, e), onPointerUp: it.tool ? e => { if (e.pointerType === 'touch') pickTool(it.k); } : undefined },
+      h(Ico, { n: it.icon }), h('span', { className: 'pl' }, it.short || it.label),
+      it.k === 'delete' && selCount ? h('span', { className: 'cnt' }, selCount) : null)));
+  const createMenu = editing && menu && h('div', { className: 'pmenu', role: 'menu', style: { left: 'calc(var(--palw, 44px) + 6px)', top: menu.top } },
+    h('div', { className: 'ph' }, 'Создать'),
+    CREATE_TYPES.map(t => h('button', { key: t, type: 'button', role: 'menuitem', onClick: () => openAdd({ tab: 'create', type: t }) },
+      h('i', { className: 'dot', style: { background: `var(${tokenOf(t)})` } }), t === 'note' ? 'Стикер' : (MODEL_TYPES[t] || t))));
 
   return h('div', { className: 'gwrap' + (editing ? ' editing' : '') }, toolbar,
-    h('div', { className: 'gflow', ref: flowRef, onDoubleClick: onDbl },
+    h('div', { className: 'gbody' }, palette, createMenu,
+    h('div', { className: 'gflow', ref: flowRef, onDoubleClick: onDbl, onPointerDown: () => menu && setMenu(null) },
       h(ReactFlow, { nodes: shown, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, onNodeClick, isValidConnection: c => c.source !== c.target,
         connectionMode: ConnectionMode.Loose, connectionRadius: 28, fitView: true, minZoom: 0.05, colorMode: 'dark',
         nodesDraggable: editing && tool === 'select', nodesConnectable: editing, elementsSelectable: true, deleteKeyCode: editing ? ['Delete', 'Backspace'] : null,
@@ -584,8 +645,8 @@ function GraphApp({ gkey, layout, board, init, onReady }) {
           strokes.map(s => h('path', { key: s.id, d: pathOf(s.pts), fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round',
             style: s.tool === 'marker' ? { stroke: 'var(--acc)', strokeWidth: 14, opacity: 0.35 } : { stroke: 'var(--t1)', strokeWidth: 2 } }))))),
       editing && DRAW_TOOLS.includes(tool) && h('div', { className: 'draw' + (tool === 'eraser' ? ' eraser' : ''), onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp,
-        'aria-label': TOOL_LABEL[tool] + ': рисуйте по доске' })),
-    dlg && dlg.kind === 'add' && h(AddDialog, { onClose: () => setDlg(null), onBoard, onPick: rec => pickExisting(rec, dlg.at), onCreate: (type, title) => createNew(type, title, dlg.at) }),
+        'aria-label': TOOL_LABEL[tool] + ': рисуйте по доске' }))),
+    dlg && dlg.kind === 'add' && h(AddDialog, { init: dlg.init, onClose: () => setDlg(null), onBoard, onPick: rec => pickExisting(rec, dlg.at), onCreate: (type, title) => createNew(type, title, dlg.at) }),
     dlg && dlg.kind === 'rel' && h(RelDialog, { ...dlg, onPick: pickRel, onClose: () => setDlg(null) }));
 }
 
