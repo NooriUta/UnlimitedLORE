@@ -23,8 +23,7 @@ import { applyMap } from './apply-map.mjs';
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
 import { seriesPlan, copySeries, seriesIo } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
-import { SESSION_EDGES } from './session-model.mjs';
-import { REPO_TYPES } from './repos.mjs';
+import { EDGE_STEP_TYPES } from './step-types.mjs';
 import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
@@ -85,7 +84,7 @@ export function fieldDiff(got, want) {
     .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
     .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...EDGE_STEP_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
