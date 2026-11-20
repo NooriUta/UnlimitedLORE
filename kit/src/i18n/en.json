@@ -829,6 +829,8 @@
   "kit.record.rel.unlink": "Unlink: {title}",
   "kit.record.rel.link": "Link: {label}",
   "kit.record.rel.linkBtn": "Link",
+  "kit.record.rel.reasonTitle": "Link {id}: {label}",
+  "kit.record.rel.reasonLead": "The “{label}” link to {id} is saved with a reason: why one record depends on the other.",
   "kit.record.rel.idPlaceholder": "Record ID",
   "kit.record.rel.search": "Find a record",
   "kit.record.rel.searching": "Searching…",

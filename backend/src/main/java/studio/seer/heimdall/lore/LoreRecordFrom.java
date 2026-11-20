@@ -548,8 +548,8 @@ final class LoreRecordFrom {
     /** Связи из строки главного среза (S4-29 v3); пустой список — «проверено, связей нет». */
     static final Map<String, List<LinkFrom>> ROW_LINKS = Map.ofEntries(
         Map.entry("sprint", List.of(
-            lf("DEPENDS_ON", "out", "sprint", "depends_on"),
-            lf("DEPENDS_ON", "in", "sprint", "blocks"),
+            // MDL-13: «зависит от» / «от него зависят» — по ребру (LoreRecordEdgeLinks) с видом и причиной,
+            // а не строкой sprint_tree: другой конец теперь любой из четырёх типов планирования.
             lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"),
             // 11.11 (полнота модели рёбер): документы, реализованные в спринте.
             lf("IMPLEMENTED_IN", "in", "doc", "doc_ids"))),

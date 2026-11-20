@@ -109,6 +109,8 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("sprint",    Set.of("full", "pm")),
         Map.entry("milestone", Set.of("full", "pm")),
         Map.entry("phase",     Set.of("full", "pm")),
+        // MDL-13: зависимость задачи, фазы, спринта и вехи (POST /lore/dep) — те же профили, что у прежнего sprint/dep.
+        Map.entry("dep",       Set.of("full", "pm")),
         // architect добавлен по решению владельца 2026-07-20. Причина не в
         // удобстве: по ADR-LORE-014 §4 архитектор фигурирует АВТОРОМ и
         // РЕВЬЮЕРОМ задач — а завести задачу или перевести её в done не мог.

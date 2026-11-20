@@ -601,8 +601,8 @@ class LoreRecordSnapshotTest {
             List<Map<String, Object>> l = new ArrayList<>();
             switch (type) {
                 case "sprint" -> {
-                    l.addAll(links("DEPENDS_ON", "out", "sprint", arr(row.get("depends_on"))));
-                    l.addAll(links("DEPENDS_ON", "in", "sprint", arr(row.get("blocks"))));
+                    // MDL-13: «зависит от» / «блокирует» ушли из строки sprint_tree — читаются по ребру
+                    // (LoreRecordEdgeLinks) с видом и причиной; другой конец — любой из четырёх типов.
                     l.addAll(links("IMPLEMENTED_IN", "in", "adr", arr(row.get("adr_ids"))));
                 }
                 case "task" -> {

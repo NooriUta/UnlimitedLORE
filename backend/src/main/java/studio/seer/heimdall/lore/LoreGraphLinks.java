@@ -34,7 +34,9 @@ final class LoreGraphLinks {
     /** Есть ли ребро {@code edge} ровно {@code fromRid → toRid}. Имя ребра — только из каталога. */
     static boolean edgeBetween(LoreIngestService ingest, String edge, String fromRid, String toRid) {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT count(*) AS n FROM " + edge + " WHERE @out = " + fromRid + " AND @in = " + toRid, Map.of());
+            "SELECT count(*) AS n FROM " + edge + " WHERE @out = " + fromRid + " AND @in = " + toRid
+            // MDL-13: у историчной связи (DEPENDS_ON ADR → ADR) закрытое ребро — история, а не «уже связано».
+            + LoreEdgeHistory.andCurrent(edge), Map.of());
         return !rows.isEmpty() && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
     }
 

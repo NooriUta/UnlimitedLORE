@@ -55,7 +55,9 @@ class LoreRecordRegistryTest {
             "REALIZES:out=realization", "JUSTIFIED_BY:out=realization", "PROMOTED_TO:in=realization",
             "LED_TO:in=realization", "GATES:in=association", "REFERENCES:out=association",
             "REFERENCES:in=association", "PRODUCED_BY:in=association", "RAISED_IN:in=aggregation",
-            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition");
+            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition",
+            // MDL-13: одна связь «зависит от» — задача участвует в обе стороны.
+            "DEPENDS_ON:out=association", "DEPENDS_ON:in=association");
         assertEquals(new java.util.TreeSet<>(want), relations("task"));
     }
 
@@ -111,7 +113,7 @@ class LoreRecordRegistryTest {
         Map<String, LoreRecordRegistry.TabRel> byDir = deps.rels().stream()
             .collect(Collectors.toMap(LoreRecordRegistry.TabRel::dir, r -> r));
         assertEquals("зависит от", byDir.get("out").label());
-        assertEquals("блокирует", byDir.get("in").label());
+        assertEquals("от неё зависят", byDir.get("in").label(), "MDL-13: владелица 20.11 — «выровнять» подписи у всех типов");
         for (LoreRecordRegistry.TabRel r : deps.rels()) {
             assertEquals("DEPENDS_ON", r.rel());
             assertEquals("association", r.relation());

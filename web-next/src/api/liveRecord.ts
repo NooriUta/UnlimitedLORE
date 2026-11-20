@@ -240,6 +240,12 @@ function tabsOf(relations: Json[]): LoreTab[] {
     }));
 }
 
+/** Свойства ребра связи: [{key, label}] с непустыми строками; нет или пусто — undefined (ключа не будет). */
+function propsOf(v: unknown): { key: string; label: string }[] | undefined {
+  const out = arr(v).map(p => ({ key: str(p.key), label: str(p.label) || str(p.key) })).filter(p => p.key);
+  return out.length ? out : undefined;
+}
+
 /** Разбор ответа фасада. `loadedAt` — время КЛИЕНТА: сервер о нём не говорит. */
 export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
   const b = obj(body);
@@ -318,6 +324,13 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // Потеря этого слова и давала «Проекты 0» рядом с живым значением.
       ...(placeOf(r.place) ? { place: placeOf(r.place)! } : {}),
       ...(str(r.target_type) ? { target_type: str(r.target_type) } : {}),
+      // MDL-13: свойства ребра (у «зависит от» — вид и причина) — подписи из модели; kit покажет их
+      // колонками вкладки связей, значения — из values каждой связи.
+      ...(propsOf(r.props) ? { props: propsOf(r.props)! } : {}),
+      // MDL-13: привязка требует причины — признак модели; kit по нему открывает ReasonDialog.
+      ...(r.reason_required === true ? { reasonRequired: true } : {}),
+      // MDL-13: типы другого конца связи к нескольким типам — для выбора с поиском.
+      ...(Array.isArray(r.target_types) && r.target_types.length ? { target_types: r.target_types.map(String) } : {}),
     };
   });
 
