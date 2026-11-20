@@ -184,16 +184,6 @@
           "of": 2157,
           "name": "Конец по плану"
         },
-        "track_id": {
-          "kind": "enum",
-          "db_type": "STRING",
-          "from": [
-            "track_id"
-          ],
-          "filled": 527,
-          "of": 2157,
-          "name": "Трек"
-        },
         "priority": {
           "kind": "enum",
           "db_type": "STRING",

@@ -3249,7 +3249,7 @@
   "PlanCheckpoint": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
   "PlanConfig": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
   "PlanSection": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
-  "PlanTrack": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
+  "PlanTrack": "как тип доски не переносится (D-2026-LORE-PLAN-BOARD-REMOVED); треки переносит шаг связей вершинами KnowTrack — MDL-13 «треки б» (tracks.mjs)",
   "PlanVersion": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
   "StatusAdr": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
   "StatusDecision": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",

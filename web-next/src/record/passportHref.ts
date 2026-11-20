@@ -14,6 +14,8 @@ const CHIP_FIELDS: Readonly<Record<string, string>> = {
   components: 'component',
   // S4-PRODUCTS-NODE: чип продукта (у компонента — IN_PRODUCT) открывает паспорт продукта.
   products: 'product',
+  // MDL-13: чип трека спринта (ребро ON_TRACK) открывает паспорт трека.
+  track: 'track',
 };
 
 /** Код чипа: объект `{id}` (форма S4-29) или строка (прежняя форма). */

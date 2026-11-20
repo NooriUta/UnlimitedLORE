@@ -25,7 +25,8 @@ class EdgeHistoryModelTest {
         LoreModelFile.Content c = LoreModelFile.content();
         assertEquals(List.of("valid_from", "valid_to"), c.edgeHistory().fields(),
             "поля версии у историчного ребра — «действует с» и «действует по», одни на все связи");
-        assertEquals(Set.of("ROLE_HELD_BY", "IN_PHASE", "TARGETS_MILESTONE", "HAS_PROJECT_ROLE", "FILLS_ROLE", "ANSWERABLE_BY", "DEPENDS_ON"),
+        assertEquals(Set.of("ROLE_HELD_BY", "IN_PHASE", "TARGETS_MILESTONE", "HAS_PROJECT_ROLE", "FILLS_ROLE", "ANSWERABLE_BY", "DEPENDS_ON",
+                "ON_TRACK"),
             c.edgeHistory().edges().keySet());
         for (var e : c.edgeHistory().edges().entrySet())
             assertFalse(e.getValue() == null || e.getValue().isBlank(), e.getKey() + ": не сказано, почему связь историчная");

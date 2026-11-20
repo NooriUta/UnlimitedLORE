@@ -996,7 +996,8 @@ public final class LoreSlices {
             // TARGETS_MILESTONE edge is the sole source of truth now.
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_start_date[0], out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0])     AS planned_start_date, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_end_date[0], out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0])         AS planned_end_date, " +
-            "COALESCE(out('HAS_STATE')[valid_to IS NULL].track_id[0], out('HAS_STATE')[track_id IS NOT NULL].track_id[0])                         AS track_id, " +
+            // MDL-13 «треки б»: трек — ребро ON_TRACK (KnowTrack), без ребра — прежняя строка версии (старая схема).
+            SprintTrack.COLUMNS + ", " +
             // MIG-03: в новой схеме тексты спринта живут в версии; открытая версия, иначе запись (старая схема)
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md " +
             "FROM KnowSprint",
@@ -1033,7 +1034,8 @@ public final class LoreSlices {
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
             // 11.11 (полнота модели рёбер): документы, реализованные в спринте (doc_link rel:sprint).
             "in('IMPLEMENTED_IN').doc_id   AS doc_ids, " +
-            "COALESCE(out('HAS_STATE')[valid_to IS NULL].track_id[0], out('HAS_STATE')[track_id IS NOT NULL].track_id[0]) AS track_id " +
+            // MDL-13: трек — по ребру ON_TRACK, без ребра — прежняя строка версии.
+            SprintTrack.COLUMNS + " " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -2093,9 +2095,29 @@ public final class LoreSlices {
             "FROM PlanTrack ORDER BY track_id",
             List.of(), Map.of(), "");
 
-        // S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): выпадающий список «Трек» паспорта спринта —
-        // те же вершины PlanTrack в форме {code, title}, как у прочих полей с выбором.
+        // S4-24 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24): выпадающий список «Трек» паспорта спринта в форме {code, title},
+        // как у прочих полей с выбором. MDL-13: вершины KnowTrack модели 1.18; на старой схеме — PlanTrack
+        // (ModelSchemaAdapter.legacyTypes, те же поля track_id, label, area).
         slice(LoreSprintTracks.SLICE, LoreSprintTracks.SLICE_SQL, List.of(), Map.of(), "");
+
+        // MDL-13 (владелица 20.11.2026: «трек как веха но меньше паспорт ему тоже сделай»): паспорт трека — запись и
+        // спринты на треке С ИСТОРИЕЙ: спринт, который сейчас на треке (ребро ON_TRACK, без ребра — прежняя строка
+        // версии), и спринт, который ушёл (закрытое ребро). period — «название · пришёл — ушёл | сейчас» по рёбрам
+        // к ЭТОМУ треку (первое ребро — приход, последнее — уход); на старой схеме рёбер нет — period пуст.
+        slice("track_by_id",
+            "SELECT track_id, label, area FROM KnowTrack WHERE track_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+        // edge-history: спринты на треке — и закрытые рёбра (valid_to), это история трека.
+        slice("track_sprints",
+            "SELECT sprint_id, coalesce(title, name) AS name, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+            CHILD_SPRINT_COLS + ", " +
+            "CASE WHEN outE('ON_TRACK')[@in.track_id = :id].size() > 0 THEN format('%s · %s — %s', coalesce(title, name, sprint_id), " +
+            "first(outE('ON_TRACK')[@in.track_id = :id].valid_from).asString().left(10), " +
+            "ifnull(last(outE('ON_TRACK')[@in.track_id = :id].valid_to).asString().left(10), 'сейчас')) ELSE null END AS period " +
+            "FROM KnowSprint WHERE (outE('ON_TRACK')[valid_to IS NULL OR valid_to IS NOT NULL].@in.track_id CONTAINS :id OR " +
+            SprintTrack.TRACK_ID + " = :id)",
+            List.of("id"), Map.of(), " ORDER BY sprint_id");
 
         slice("plan_sections",
             "SELECT section_id, label, start_week, end_week, color FROM PlanSection ORDER BY start_week");
@@ -3536,6 +3558,8 @@ public final class LoreSlices {
         Map.entry("component_sprints", "out('BELONGS_TO_PROJECT').slug"),
         // S9-05 B: спринты вехи — строки-спринты, скоуп по проекту спринта, как у компонента.
         Map.entry("milestone_sprints", "out('BELONGS_TO_PROJECT').slug"),
+        // MDL-13: спринты на треке (с историей) — спринты своих проектов.
+        Map.entry("track_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("product_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_sprints", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_sprints_by_tag", "out('BELONGS_TO_PROJECT').slug"),
@@ -3667,6 +3691,8 @@ public final class LoreSlices {
         Map.entry("strategic_coverage", "агрегат по подзапросу — скоуп внутрь подзапроса"),
         Map.entry("milestones", "вехи M0…M7 не связаны с проектами (MT-GOALS) — решение о модели вех"),
         Map.entry("milestone_by_id", "то же: паспорт вехи, веха без проекта"),
+        // MDL-13: трек — справочник студии без проекта, как веха; спринты на нём режутся скоупом (PROJECT_SCOPED).
+        Map.entry("track_by_id", "паспорт трека: трек — справочник студии без проекта, как веха"),
         Map.entry("roadmap", "то же: веха без проекта"),
         Map.entry("uc_actors", "ребро HAS_ACTOR — путь через сценарий"),
         Map.entry("actor_pairs", "ребро FILLS_ROLE — служебное, решение"),
@@ -3889,7 +3915,8 @@ public final class LoreSlices {
             params.put(e.getKey(), kind == null ? value : typedValue(e.getKey(), kind, value));
         }
 
-        StringBuilder sql = new StringBuilder(def.baseSql());
+        // MDL-13: тип 1.18, у которого на старой схеме другое имя (KnowTrack ← PlanTrack), — по схеме базы.
+        StringBuilder sql = new StringBuilder(ModelSchemaAdapter.legacyTypes(def.baseSql()));
         // Склейка нескольких одновременных фильтров.
         //
         // Раньше фрагменты просто дописывались подряд, а каждый нёс СВОЁ

@@ -22,6 +22,7 @@ import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from 
 import { applyDependsOn } from './depends-on.mjs';
 import { applyWaitingLinks } from './waiting-links.mjs';
 import { readDecisionRefsInput, planDecisionRefs, applyDecisionRefs } from './decision-refs.mjs';
+import { readTrackInput, planTracks, applyTracks } from './tracks.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -177,6 +178,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   // неоднозначные и ненайденные — по ответам шага мастера «Ссылки решений» из файла решений (MDL-08 ч.3)
   report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid, doc: decisions }), { log });
   if (!report.decision_refs.ok) ok = false;
+  // трек спринта (MDL-13, владелица 20.11.2026 «треки б»): треки доски → вершины KnowTrack, track_id открытой версии →
+  // ребро ON_TRACK, каждое значение track_id — в остаток с причиной; сверка «спринтов с треком = рёбер»
+  report.tracks = await applyTracks(db, planTracks({ ...(await readTrackInput(db)), at }), { log });
+  if (!report.tracks.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));

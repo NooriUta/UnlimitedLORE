@@ -179,22 +179,20 @@
       "key" : "track",
       "label" : "Трек",
       "labelKey" : "pp.field.track",
-      "kind" : "enum",
+      "kind" : "ref",
       "group" : "props",
       "editable" : true,
       "write" : {
-        "endpoint" : "/lore/sprint/plan",
-        "field" : "track_id"
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "ON_TRACK"
       },
-      "options" : {
-        "slice" : "track_options",
-        "value" : "code",
-        "label" : "title"
-      },
-      "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-      "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+      "refType" : "track",
+      "rel" : "ON_TRACK",
+      "dir" : "out",
+      "relation" : "attribute",
+      "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+      "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
       "layer" : "stable",
-      "historic" : true,
       "labelEn" : "Track",
       "labelPl" : "Ścieżka"
     }, {
@@ -433,6 +431,15 @@
       "rel" : "TARGETS_MILESTONE",
       "dir" : "out",
       "targetType" : "milestone",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
+      "key" : "track",
+      "label" : "Трек",
+      "rel" : "ON_TRACK",
+      "dir" : "out",
+      "targetType" : "track",
       "relation" : "attribute",
       "place" : "prop",
       "manageable" : true
@@ -2660,6 +2667,57 @@
     } ],
     "labelEn" : "Milestone",
     "labelPl" : "Kamień milowy"
+  }, {
+    "type" : "track",
+    "label" : "Трек",
+    "labelKey" : "pp.kind.track",
+    "icon" : "path-distance",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "area",
+      "label" : "Вид",
+      "labelKey" : "pp.field.trackArea",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+      "layer" : "stable",
+      "labelEn" : "Kind",
+      "labelPl" : "Rodzaj"
+    } ],
+    "props" : [ {
+      "fields" : [ "area" ]
+    } ],
+    "relations" : [ {
+      "key" : "sprints",
+      "label" : "Спринты на треке",
+      "rel" : "ON_TRACK",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "aggregation",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "Track",
+    "labelPl" : "Ścieżka"
   }, {
     "type" : "release",
     "label" : "Релиз",
@@ -5864,7 +5922,7 @@
     "labelEn" : "Gate metric",
     "labelPl" : "Metryka bramki"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -5967,6 +6025,10 @@
       "vertex" : "KnowSpec",
       "hist" : "KnowSpecHist",
       "key" : "spec_id"
+    },
+    "track" : {
+      "vertex" : "KnowTrack",
+      "key" : "track_id"
     },
     "user" : {
       "vertex" : "KnowUser",
@@ -6071,6 +6133,10 @@
     "tech" : {
       "code" : "spec_id"
     },
+    "track" : {
+      "code" : "track_id",
+      "title" : "label"
+    },
     "user" : {
       "avatar" : "avatar_ref",
       "title" : "display_name"
@@ -6090,7 +6156,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "organization", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "user" ],
+  "no_type_color" : [ "agent", "doc", "organization", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
   "precision" : {
     "adr.date" : "datetime",
     "decision.date" : "datetime",
@@ -6408,6 +6474,11 @@
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       } ]
     },
+    "track" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
     "user" : {
       "history" : "none",
       "created" : [ ],
@@ -6537,6 +6608,7 @@
       "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
       "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
+      "ON_TRACK" : "Трек спринта (MDL-13, владелица 20.11.2026 «треки б»): спринт переводят с трека на трек; по связи видно, когда спринт пришёл на трек и когда ушёл — история в самой связи, как у вехи.",
       "ROLE_HELD_BY" : "Роль на задаче (автор, исполнитель, ревьюер): сколько раз роль передавали и кто вёл задачу раньше (ADR-LORE-042 §4); ведёт историю с TR-05.",
       "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
     }
@@ -7120,6 +7192,10 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "track" : [ {
+      "key" : "sprints",
       "slot" : "own"
     } ],
     "user" : [ {

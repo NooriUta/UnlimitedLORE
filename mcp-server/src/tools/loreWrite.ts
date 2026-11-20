@@ -1003,15 +1003,19 @@ export function registerLoreWrite(rawServer: McpServer): void {
   // метаданных значило бы прятать это различие.
   server.tool(
     'sprint_plan_set',
-    'Set SCD2 plan fields of a KnowSprint: priority, planned_start_date/planned_end_date (YYYY-MM-DD), ' +
-      'track_id. Opens a NEW hist revision (close-open), carrying everything else forward. ' +
-      'At least one field required. Does NOT change status — use status_set. Mutates system_aida_lore.',
+    'Set plan fields of a KnowSprint: priority, planned_start_date/planned_end_date (YYYY-MM-DD) open a NEW hist ' +
+      'revision (SCD2 close-open), carrying everything else forward. track_id sets the sprint\'s track: on a model-1.18 ' +
+      'base the track is the historic edge ON_TRACK sprint → track (KnowTrack, MDL-13) — setting another track closes the ' +
+      'previous edge (valid_to) instead of erasing it, and a track-only call opens no plan revision; track_id "" removes the ' +
+      'track (closes the edge). Codes come from slice track_options; an unknown code is refused (422 TRACK_NOT_FOUND). On a ' +
+      'pre-1.18 base the track is still the version field track_id. At least one field required. Does NOT change status — ' +
+      'use status_set. Mutates system_aida_lore.',
     {
       sprint_id:          z.string().describe('e.g. "SPRINT_LORE_ADMIN_PANEL"'),
       priority:           z.string().optional().describe('e.g. "high" | "normal" | "low" (dict priority)'),
       planned_start_date: z.string().optional().describe('YYYY-MM-DD'),
       planned_end_date:   z.string().optional().describe('YYYY-MM-DD'),
-      track_id:           z.string().optional(),
+      track_id:           z.string().optional().describe('track code from slice track_options (e.g. "2" = Hound / Parser); "" removes the track'),
       expected: z.object({
         priority:           z.string().nullable().optional(),
         planned_start_date: z.string().nullable().optional(),

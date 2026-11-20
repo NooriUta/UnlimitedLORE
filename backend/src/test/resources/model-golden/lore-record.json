@@ -327,16 +327,17 @@
         "key" : "track",
         "label" : "Трек",
         "label_key" : "pp.field.track",
-        "kind" : "enum",
+        "kind" : "ref",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
-        "options" : {
-          "slice" : "track_options",
-          "value" : "code",
-          "label" : "title"
+        "ref" : {
+          "type" : "track",
+          "rel" : "ON_TRACK",
+          "dir" : "out"
         },
+        "relation" : "attribute",
         "label_en" : "Track",
         "short_label_en" : null,
         "definition_en" : null,
@@ -346,13 +347,13 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-        "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+        "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+        "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
         "layer" : "stable",
-        "historic" : true,
+        "historic" : false,
         "write" : {
-          "endpoint" : "/lore/sprint/plan",
-          "field" : "track_id"
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "ON_TRACK"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -672,6 +673,15 @@
         "place" : "prop",
         "manageable" : true,
         "inverse_label" : null
+      }, {
+        "key" : "track",
+        "label" : "Трек",
+        "relation" : "attribute",
+        "rel" : "ON_TRACK",
+        "dir" : "out",
+        "target_type" : "track",
+        "place" : "prop",
+        "manageable" : true
       }, {
         "key" : "adrs",
         "label" : "Реализует ADR",
@@ -1126,16 +1136,17 @@
         "key" : "track",
         "label" : "Трек",
         "label_key" : "pp.field.track",
-        "kind" : "enum",
+        "kind" : "ref",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
-        "options" : {
-          "slice" : "track_options",
-          "value" : "code",
-          "label" : "title"
+        "ref" : {
+          "type" : "track",
+          "rel" : "ON_TRACK",
+          "dir" : "out"
         },
+        "relation" : "attribute",
         "label_en" : "Track",
         "short_label_en" : null,
         "definition_en" : null,
@@ -1145,13 +1156,13 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-        "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+        "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+        "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
         "layer" : "stable",
-        "historic" : true,
+        "historic" : false,
         "write" : {
-          "endpoint" : "/lore/sprint/plan",
-          "field" : "track_id"
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "ON_TRACK"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -1472,6 +1483,15 @@
         "manageable" : true,
         "inverse_label" : null
       }, {
+        "key" : "track",
+        "label" : "Трек",
+        "relation" : "attribute",
+        "rel" : "ON_TRACK",
+        "dir" : "out",
+        "target_type" : "track",
+        "place" : "prop",
+        "manageable" : true
+      }, {
         "key" : "adrs",
         "label" : "Реализует ADR",
         "relation" : "realization",
@@ -1612,7 +1632,11 @@
       "planned_end_date" : "2026-11-20",
       "created" : "2026-10-30",
       "no_release" : true,
-      "track" : "TRK",
+      "track" : [ {
+        "id" : "TRK",
+        "label" : "TRK",
+        "inherited_from" : null
+      } ],
       "status" : "done"
     },
     "computed" : { },
@@ -10377,6 +10401,226 @@
       "dependsOn" : "SELECT @in.@type AS end_vertex, coalesce(@in.qg_id, @in.task_uid, @in.phase_uid, @in.adr_id, @in.spec_id, @in.sprint_id, @in.decision_id, @in.question_id, @in.milestone_id, @in.release_uid, @in.component_id, @in.uc_id, @in.runbook_id, @in.doc_id, @in.publication_id, @in.insight_id, @in.rec_id, @in.pain_id, @in.gain_id, @in.job_id, @in.actor_id, @in.machine_id, @in.kc_sub, @in.org_id, @in.slug) AS end_id, coalesce(@in.title, @in.name, @in.label, @in.full_name, @in.display_name, @in.statement_md) AS end_title, coalesce(@in.status, @in.status_raw, @in.status_general) AS end_status, unionall(@in.out('BELONGS_TO_PROJECT').slug, @in.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(outE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowMilestone WHERE milestone_id = :id) LIMIT 201",
       "blocks" : "SELECT @out.@type AS end_vertex, coalesce(@out.qg_id, @out.task_uid, @out.phase_uid, @out.adr_id, @out.spec_id, @out.sprint_id, @out.decision_id, @out.question_id, @out.milestone_id, @out.release_uid, @out.component_id, @out.uc_id, @out.runbook_id, @out.doc_id, @out.publication_id, @out.insight_id, @out.rec_id, @out.pain_id, @out.gain_id, @out.job_id, @out.actor_id, @out.machine_id, @out.kc_sub, @out.org_id, @out.slug) AS end_id, coalesce(@out.title, @out.name, @out.label, @out.full_name, @out.display_name, @out.statement_md) AS end_title, coalesce(@out.status, @out.status_raw, @out.status_general) AS end_status, unionall(@out.out('BELONGS_TO_PROJECT').slug, @out.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(inE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowMilestone WHERE milestone_id = :id) LIMIT 201"
     },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
+  "track" : {
+    "schema_unread" : {
+      "type" : "track",
+      "label" : "Трек",
+      "label_key" : "pp.kind.track",
+      "label_en" : "Track",
+      "label_pl" : "Ścieżka",
+      "icon" : "path-distance",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "area",
+        "label" : "Вид",
+        "label_key" : "pp.field.trackArea",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Kind",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Rodzaj",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "area" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "sprints",
+        "label" : "Спринты на треке",
+        "relation" : "aggregation",
+        "rel" : "ON_TRACK",
+        "dir" : "in",
+        "target_type" : "sprint",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "track",
+      "label" : "Трек",
+      "label_key" : "pp.kind.track",
+      "label_en" : "Track",
+      "label_pl" : "Ścieżka",
+      "icon" : "path-distance",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "area",
+        "label" : "Вид",
+        "label_key" : "pp.field.trackArea",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Kind",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Rodzaj",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "area" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "sprints",
+        "label" : "Спринты на треке",
+        "relation" : "aggregation",
+        "rel" : "ON_TRACK",
+        "dir" : "in",
+        "target_type" : "sprint",
+        "place" : "link_tab",
+        "manageable" : false
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ "SliceLink[key=sprints, slice=track_sprints, param=id, rel=ON_TRACK, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[period, name, sprint_id], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
+    "unread" : [ ],
+    "edge_links" : { },
     "defaults" : {
       "title" : ""
     },

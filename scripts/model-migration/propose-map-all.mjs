@@ -36,6 +36,8 @@ const W = 'владелица 17.11.2026: «перенеси по собстве
 /** Судьба типа целиком. */
 export function typePlan(T) {
   if (FIRST.has(T)) return { move: false, why: 'первый объект — своей картой (sprint-phase-task.json)' };
+  // MDL-13 «треки б»: треки переносит шаг связей вершинами KnowTrack (tracks.mjs), а не перенос записей как PlanTrack
+  if (T === 'PlanTrack') return { move: false, why: 'как тип доски не переносится (D-2026-LORE-PLAN-BOARD-REMOVED); треки переносит шаг связей вершинами KnowTrack — MDL-13 «треки б» (tracks.mjs)' };
   if (/^Plan/.test(T)) return { move: false, why: 'план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)' };
   if (RETIRED_V89.includes(T)) return { move: false, why: RETIRED_WHY };
   if (T === 'LoreSchemaVersion') return { move: false, why: 'журнал шагов V заменён отметкой LoreModelSchema (MIG-03)' };

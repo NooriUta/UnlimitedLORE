@@ -2402,5 +2402,9 @@
   "kitPage.tags.lead": "Type «#sec» in the text: the tag window shows how many records carry the tag and which fields it has. Pick a tag — its fields to fill (optional); «Set tag» writes the fields to the edge, and a single token [[RECORD#tag]] goes into the text. On the right — how the token reads.",
   "kitPage.tags.label": "Record body with tags",
   "kitPage.tags.sample": "Links in MD are inserted by the mini window. Before rollout a review is needed: [[ADR-LORE-050#security-review]] ",
-  "lists.field.product_kind": "Product kind"
+  "lists.field.product_kind": "Product kind",
+  "lists.field.track": "Track",
+  "shell.sec.track": "Tracks",
+  "pp.kind.track": "Track",
+  "pp.field.trackArea": "Kind"
 }

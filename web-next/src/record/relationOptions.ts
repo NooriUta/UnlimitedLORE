@@ -24,6 +24,8 @@ const SOURCES: Record<string, Source> = {
   // MDL-13: концы «зависит от» — открытые задачи и вехи (спринты — выше).
   task: { slice: 'open_tasks', id: 'task_uid', title: 'title' },
   milestone: { slice: 'milestones', id: 'milestone_id', title: 'label' },
+  // MDL-13 «треки б»: трек спринта — ребро ON_TRACK к записи трека; варианты — срез треков {code, title}.
+  track: { slice: 'track_options', id: 'code', title: 'title' },
 };
 
 type SliceFn = (name: string, params?: Record<string, string>) => Promise<{ rows?: Record<string, unknown>[] } | null | undefined>;

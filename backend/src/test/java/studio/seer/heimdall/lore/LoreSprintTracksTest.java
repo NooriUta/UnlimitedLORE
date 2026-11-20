@@ -22,7 +22,8 @@ class LoreSprintTracksTest {
         assertNotNull(def, "срез треков для выпадающего списка зарегистрирован");
         assertTrue(def.required().isEmpty(), "общий список — без обязательных параметров");
         String sql = def.baseSql();
-        assertTrue(sql.contains("FROM PlanTrack"), "строки — вершины PlanTrack: " + sql);
+        assertTrue(sql.contains("FROM KnowTrack"), "MDL-13: строки — вершины KnowTrack модели 1.18: " + sql);
+        assertTrue(ModelSchemaAdapter.legacyTypes(sql).contains("FROM PlanTrack"), "на старой схеме — прежние вершины PlanTrack");
         assertTrue(sql.contains("track_id AS code"), "value = track_id (то, что пишется в спринт): " + sql);
         assertTrue(sql.contains("AS title"), "label = подпись трека: " + sql);
         assertTrue(LoreSlices.SCOPE_PENDING.containsKey(LoreSprintTracks.SLICE),
@@ -54,7 +55,8 @@ class LoreSprintTracksTest {
 
     @Test
     void existsQueryIsByExactTrackId() {
-        assertTrue(LoreSprintTracks.EXISTS_SQL.contains("FROM PlanTrack"));
+        assertTrue(LoreSprintTracks.EXISTS_SQL.contains("FROM KnowTrack"));
+        assertTrue(ModelSchemaAdapter.legacyTypes(LoreSprintTracks.EXISTS_SQL).contains("FROM PlanTrack"), "старая схема");
         assertTrue(LoreSprintTracks.EXISTS_SQL.contains("track_id = :track_id"), LoreSprintTracks.EXISTS_SQL);
     }
 

@@ -53,6 +53,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
     @Inject LoreOrganizationResource organizationResource;
+    @Inject LoreStatusResource statusResource;   // MDL-13: трек спринта — тот же путь, что sprint/plan
 
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
@@ -86,6 +87,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "decision" -> new Source("decision", "id", false);
             case "question" -> new Source("question_by_id", "id", false);
             case "milestone" -> new Source("milestone_by_id", "id", false);
+            // MDL-13: паспорт трека — справочник KnowTrack (на старой схеме PlanTrack), ключ track_id.
+            case "track" -> new Source("track_by_id", "id", false);
             case "release" -> new Source("release_by_id", "id", false);
             // S4-V2-SECTIONS: компонент, технология (спека SPEC-TECH-…), фича — сценарий любого уровня.
             case "component" -> new Source("component", "id", false);
@@ -651,6 +654,9 @@ public class LoreRecordResource extends LoreResourceBase {
             case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
             case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
                 new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
+            // MDL-13: трек спринта — путь sprint/plan (на базе 1.18 — ребро ON_TRACK, прежнее закрывается); снять — пустой трек.
+            case SPRINT_TRACK -> statusResource.updateSprintPlan(new LoreStatusResource.SprintPlanRequest(
+                a, null, null, null, "remove".equals(action) ? "" : b), role).await().indefinitely();
             case ORG_LINK -> organizationResource.linkOrganization(
                 new LoreOrganizationResource.OrgLinkRequest(a, r.rel(), b, action), role);
         };

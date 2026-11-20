@@ -76,6 +76,8 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   TARGETS_MILESTONE: { ru: 'к вехе', en: 'targets milestone', color: '--acc' },
   TARGETS_PRODUCT: { ru: 'для продукта', en: 'targets product', color: '--acc' },
   ON_MILESTONE: { ru: 'на вехе', en: 'on milestone', color: '--acc' },
+  // MDL-13 «треки б»: трек спринта — историчное ребро спринт → трек.
+  ON_TRACK: { ru: 'на треке', en: 'on track', color: '--acc' },
   SHIPPED_IN: { ru: 'вошло в релиз', en: 'shipped in', color: '--suc' },
   RELEASED_IN: { ru: 'выпущено в', en: 'released in', color: '--suc' },
   CLOSED_BY: { ru: 'закрыто PR', en: 'closed by', color: '--suc' },

@@ -88,6 +88,9 @@ export function sprintRecord(row: Row): KitRecord {
       planned_start: str(row.planned_start_date),
       planned_end: str(row.planned_end_date),
       done_date: str(row.done_date),
+      // MDL-13 «треки б»: трек — ребро ON_TRACK (срез sprints: track_id и подпись track_label); чип открывает паспорт трека,
+      // по нему же — дорожки списка (группировка «Трек»).
+      track: row.track_id ? [{ id: str(row.track_id), label: str(row.track_label) || str(row.track_id) }] : [],
     },
     ...freshness(row, str(row.valid_from) || str(row.created_date)),
   };

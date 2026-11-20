@@ -28,7 +28,11 @@ import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type Sp
 export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   // S5-DOC-PASSPORT: документ; поля и пути записи присылает фасад (тип doc в модели).
   'doc',
-  'decision', 'question', 'milestone', 'release',
+  'decision', 'question', 'milestone',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 (владелица 20.11.2026: «трек как веха но меньше паспорт ему тоже сделай»):
+  // трек — только чтение, раздела-списка нет: паспорт открывается из паспорта спринта (раздел «Спринты», ?okind=track).
+  'track',
+  'release',
   // Появились 10.11 вместе с серверным PR #1090, все три — только на чтение
   // (perms.can_edit=false, status_next=[], version=null приходят с фасада).
   'component', 'tech', 'feature',
@@ -111,6 +115,8 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   if (type === 'quality_gate') return (await slice<Row>('quality_gates', { fields: 'qg_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.qg_id), title: str(r.name) || str(r.qg_id) }));
   if (type === 'repository') return (await slice<Row>('repositories', { fields: 'url,full_path', limit: '1000' })).rows.map(r => ({ id: str(r.url), title: str(r.full_path) || str(r.url) }));
   if (type === 'organization') return (await slice<Row>('organizations', { fields: 'org_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.org_id), title: str(r.name) || str(r.org_id) }));
+  // MDL-13: перечень треков — срез выбора трека {code, title} (вершины KnowTrack; на старой схеме PlanTrack).
+  if (type === 'track') return (await slice<Row>('track_options')).rows.map(r => ({ id: str(r.code), title: str(r.title) || str(r.code) }));
   if (type === 'runbook') return (await slice<Row>('runbooks', { fields: 'runbook_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.runbook_id), title: str(r.name) || str(r.runbook_id) }));
   if (type === 'product') return (await slice<Row>('products', { fields: 'code,label_ru', limit: '1000' })).rows.map(r => ({ id: str(r.code), title: str(r.label_ru) || str(r.code) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));

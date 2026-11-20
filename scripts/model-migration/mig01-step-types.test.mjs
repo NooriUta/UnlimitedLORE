@@ -18,6 +18,7 @@ import { MILESTONE_EDGE } from './decision-milestones.mjs';
 import { REFS_EDGE } from './decision-refs.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
+import { TRACK_VERTEX, TRACK_EDGE } from './tracks.mjs';
 import { parseArgs, checkDecisionsFile } from './cli.mjs';
 
 test('ANSWERABLE_BY — свой тип переноса: повторный перенос с --reset его пересоздаёт, а не отказывает', () => {
@@ -33,7 +34,7 @@ test('свои типы шага связей — один список; ownType
 
 // Сторож: каждая команда CREATE … TYPE в коде установщика заводит тип, известный ownTypes. Имя литералом — сверяется
 // прямо; имя константой — по её значению; имя переменной цикла — только в местах, где цикл идёт по своему списку.
-const CONST = { OWNER_EDGE, MILESTONE_EDGE, REFS_EDGE, EDGE: 'HAS_STATE', ENTRY: 'MigDictEntry', LABEL: 'MigDictLabel' };
+const CONST = { OWNER_EDGE, MILESTONE_EDGE, REFS_EDGE, TRACK_VERTEX, TRACK_EDGE, EDGE: 'HAS_STATE', ENTRY: 'MigDictEntry', LABEL: 'MigDictLabel' };
 const LOOP_SITES = {
   'transfer.mjs': 'T — типы схемы переноса (SCHEMA)',
   'transfer-edges.mjs': 'T — связи карты (keptEdges), E — связи модели сессий (SESSION_EDGES)',
