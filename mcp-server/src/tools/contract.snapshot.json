@@ -993,6 +993,31 @@
       ]
     }
   },
+  "find": {
+    "input": {
+      "changed_within_days": "number?",
+      "fields": "string[]?",
+      "id_in": "string[]?",
+      "limit": "number?",
+      "links_to": "{depth:number?,dir:enum(both|in|out)?,id:string,rels:string[]?} | {depth:number?,dir:enum(both|in|out)?,id:string,rels:string[]?}[]?",
+      "not_linked": "{dir:enum(both|in|out)?,rels:string[]}?",
+      "sort": "{dir:enum(asc|desc)?,field:string}[]?",
+      "type": "enum(adr|decision|spec|sprint|task)",
+      "where": "lazy[]?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
   "forgejo_branch_protection": {
     "input": {
       "branch": "string?",
@@ -1113,13 +1138,40 @@
   "graph": {
     "input": {
       "depth": "number?",
+      "dir": "enum(both|in|out)?",
       "id": "string?",
       "limit": "number?",
       "rels": "string?",
+      "return_types": "string?",
       "scope": "string?",
       "structural": "boolean?",
       "type": "string?",
-      "types": "string?"
+      "types": "string?",
+      "walk_types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "graph_path": {
+    "input": {
+      "dir": "enum(both|in|out)?",
+      "from": "string",
+      "k": "number?",
+      "max_depth": "number?",
+      "rels": "string?",
+      "structural": "boolean?",
+      "to": "string",
+      "walk_types": "string?"
     },
     "output": {
       "content": [

@@ -75,16 +75,6 @@
           "of": 543,
           "name": "Не требует релиза"
         },
-        "version": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "version"
-          ],
-          "filled": 2,
-          "of": 543,
-          "name": "Версия"
-        },
         "goal": {
           "kind": "text",
           "db_type": "STRING",

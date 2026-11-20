@@ -6,7 +6,7 @@
     "Версия — отдельный тип с окончанием Hist и связью HAS_STATE, как у первого объекта.",
     "Тип поля «как есть» — объявленный в схеме прода; не объявленное там поле — строкой (пометка у поля).",
     "Удержанные значения (component_id, project и *_refs до шага связей) в схему не входят — они становятся связями.",
-    "Типы без записей в снимке (KnowCanvas, KnowSavedView, QGMetric и др.) получают пустой перечень полей — схема заводится, поля появятся с данными."
+    "Пустые типы, которые трогает код (KnowCanvas, KnowSavedView, QGMetric и др.), — «только схема»: свойства и индексы старой схемы, у каждого свойства назван источник (MD-02 8а, 19.11.2026)."
   ],
   "types": {
     "BragiAsset": {
@@ -779,26 +779,6 @@
           ],
           "filled": 65,
           "of": 1722
-        },
-        "skip_reason": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "skip_reason"
-          ],
-          "filled": 15,
-          "of": 1722
-        },
-        "note": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "note"
-          ],
-          "filled": 6,
-          "of": 1722
         }
       },
       "held": {},
@@ -994,16 +974,6 @@
             "model"
           ],
           "filled": 15,
-          "of": 905
-        },
-        "source": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "source"
-          ],
-          "filled": 1,
           "of": 905
         }
       },
@@ -1273,16 +1243,6 @@
           "filled": 112,
           "of": 443
         },
-        "sprint_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "sprint_id"
-          ],
-          "filled": 94,
-          "of": 443
-        },
         "changed_by": {
           "kind": "text",
           "db_type": "STRING",
@@ -1299,26 +1259,6 @@
             "changed_by_kind"
           ],
           "filled": 46,
-          "of": 443
-        },
-        "adr_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "adr_id"
-          ],
-          "filled": 1,
-          "of": 443
-        },
-        "file_path": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "file_path"
-          ],
-          "filled": 1,
           "of": 443
         },
         "changed_by_session": {
@@ -1603,22 +1543,317 @@
     },
     "KnowCanvas": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "canvas_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "canvas_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "created_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "created_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "project": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "project"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "row_version": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "row_version"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "template": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "template"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "updated_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "canvas_uid"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
     "KnowCanvasItem": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "canvas_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "canvas_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "color": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "color"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "h": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "h"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "item_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "item_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "ref_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_id"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "ref_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_type"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "slot": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "slot"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "text": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "text"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "updated_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "w": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "w"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "x": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "x"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "y": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "y"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "canvas_uid",
+            "item_uid"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
     "KnowCanvasLink": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "canvas_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "canvas_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "edge": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "edge"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "from_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "from_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "graph_state": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "graph_state"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "выведено из кода: LoreCanvasResource.java — UPSERT graph_state = :g, значения «drawing» | «created», чтение ifnull(graph_state, 'drawing')"
+        },
+        "link_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "link_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "to_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "to_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "canvas_uid",
+            "link_uid"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
@@ -2521,17 +2756,18 @@
     },
     "KnowFindingHist": {
       "records": 0,
+      "schema_only": true,
       "version_of": "KnowFinding",
       "fields": {
-        "changed_by_session": {
+        "changed_by": {
           "kind": "text",
           "db_type": "STRING",
-          "name": "Сессия правки",
-          "from": [],
+          "from": [
+            "changed_by"
+          ],
           "filled": 0,
           "of": 0,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "source": "старая схема"
         },
         "changed_by_harness": {
           "kind": "text",
@@ -2541,7 +2777,7 @@
           "filled": 0,
           "of": 0,
           "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "source": "общий перечень служебных полей версии"
         },
         "changed_by_harness_note": {
           "kind": "text",
@@ -2551,7 +2787,17 @@
           "filled": 0,
           "of": 0,
           "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "source": "общий перечень служебных полей версии"
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
         },
         "changed_by_machine": {
           "kind": "text",
@@ -2561,7 +2807,37 @@
           "filled": 0,
           "of": 0,
           "service": true,
-          "note": "объявлено общим перечнем служебных полей"
+          "source": "общий перечень служебных полей версии"
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "source": "общий перечень служебных полей версии"
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
         },
         "change_reason": {
           "kind": "text",
@@ -2574,6 +2850,15 @@
           "note": "объявлено общим перечнем служебных полей"
         }
       },
+      "indexes": [
+        {
+          "fields": [
+            "valid_to"
+          ],
+          "kind": "NOTUNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
@@ -2695,26 +2980,6 @@
             "is_private"
           ],
           "filled": 5,
-          "of": 28
-        },
-        "full_name": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "full_name"
-          ],
-          "filled": 2,
-          "of": 28
-        },
-        "repo_url": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "repo_url"
-          ],
-          "filled": 2,
           "of": 28
         }
       },
@@ -3236,55 +3501,6 @@
             "head_ref"
           ],
           "filled": 573,
-          "of": 2115
-        },
-        "pr_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "from": [
-            "pr_id"
-          ],
-          "filled": 320,
-          "of": 2115
-        },
-        "release_id": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "release_id"
-          ],
-          "filled": 319,
-          "of": 2115
-        },
-        "repo": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "repo"
-          ],
-          "filled": 32,
-          "of": 2115
-        },
-        "body_md": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "body_md"
-          ],
-          "filled": 4,
-          "of": 2115
-        },
-        "pr_state": {
-          "kind": "text",
-          "db_type": "STRING",
-          "note": "в схеме прода не объявлено — строкой",
-          "from": [
-            "pr_state"
-          ],
-          "filled": 4,
           "of": 2115
         }
       },
@@ -4034,8 +4250,153 @@
     },
     "KnowSavedView": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "created_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "created_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "is_personal_default": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_personal_default"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "is_team_default": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "is_team_default"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "query": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "query"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "roles": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "roles"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "row_version": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "row_version"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "section": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "section"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "updated_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "view_uid": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "view_uid"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "visibility": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "visibility"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "view_uid"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        },
+        {
+          "fields": [
+            "owner_sub"
+          ],
+          "kind": "NOTUNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        },
+        {
+          "fields": [
+            "section"
+          ],
+          "kind": "NOTUNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
@@ -4564,29 +4925,303 @@
     },
     "KnowUserFavorite": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "added_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "added_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "ref_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_id"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "ref_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_type"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "owner_sub",
+            "ref_type",
+            "ref_id"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
     "KnowUserHabit": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "first_seen": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "first_seen"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "habit_key": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "habit_key"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "hits": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "hits"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "label": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "label"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "last_seen": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "last_seen"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "memory_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "memory_id"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "memory_id"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        },
+        {
+          "fields": [
+            "owner_sub",
+            "kind",
+            "habit_key"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        },
+        {
+          "fields": [
+            "owner_sub"
+          ],
+          "kind": "NOTUNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
     "KnowUserMemoryPref": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "remembering": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "remembering"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "updated_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "owner_sub"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
     "KnowUserRecent": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "first_seen": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "first_seen"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "owner_sub": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "owner_sub"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "ref_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_id"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "ref_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "ref_type"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "visited_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "visited_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "visits": {
+          "kind": "number",
+          "db_type": "INTEGER",
+          "from": [
+            "visits"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "owner_sub",
+            "ref_type",
+            "ref_id"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
@@ -4785,8 +5420,79 @@
     },
     "LoreRefDismissal": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "created_at": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "created_at"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "created_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "created_by"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "dismissal_key": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "dismissal_key"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "kind"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "record_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "record_id"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "record_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "record_type"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "dismissal_key"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },
@@ -4900,8 +5606,49 @@
     },
     "QGMetric": {
       "records": 0,
+      "schema_only": true,
       "version_of": null,
-      "fields": {},
+      "fields": {
+        "metric_id": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "metric_id"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "старая схема"
+        },
+        "name": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка"
+        },
+        "threshold": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "threshold"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка"
+        }
+      },
+      "indexes": [
+        {
+          "fields": [
+            "metric_id"
+          ],
+          "kind": "UNIQUE",
+          "source": "старая схема (DDL шагов V в коде сервера)"
+        }
+      ],
       "held": {},
       "rejects": {}
     },

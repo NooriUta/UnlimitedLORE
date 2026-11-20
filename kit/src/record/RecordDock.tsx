@@ -3,7 +3,7 @@
 // меняется только раскладка зон внутри него. Под панелью — то, поверх чего она открыта (список).
 // «На весь экран» (владелица 08.11: «на весь экран не на весь экран») — слой поверх всей
 // страницы (position: fixed), модальный диалог; выход — кнопкой и Esc (onExitFull).
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEventHandler, type ReactNode, type RefObject } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import { ResizeBorder, zoneSaved } from '../shell/ResizeBorder';
 import { createSafeStorage } from '../resilience/safeStorage';
@@ -100,9 +100,17 @@ export interface RecordDockProps {
    * кто границу тянул, получает свой; пределы (240 px … 2/3 окна) — те же.
    */
   bottomHeight?: number;
+  /**
+   * Открыта ли запись (K4-PASSPORT-NO-LIST-RESET). false — дока нет, список стоит в потоке страницы
+   * как обычно, но В ТОМ ЖЕ узле дерева, что и под открытой записью: открытие и закрытие паспорта
+   * не пересоздают список (выделение, раскрытия, прокрутка на месте). По умолчанию — открыта.
+   */
+  open?: boolean;
+  /** Клик внутри дока и списка (ListWithRecord ловит им ссылки на записи своего раздела). */
+  onClick?: MouseEventHandler<HTMLDivElement>;
 }
 
-export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true, widthStore, bottomHeight, controls = 'dock' }: RecordDockProps) {
+export function RecordDock({ placement, backdrop, children, className, onExitFull, onClose, modal = true, widthStore, bottomHeight, controls = 'dock', open = true, onClick }: RecordDockProps) {
   const own = controls === 'dock';
   const lang = useKitLang();
   const full = placement === 'full';
@@ -148,6 +156,7 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
   // редакторе отменяет правку, и закрывать паспорт вместе с несохранённым
   // текстом нельзя.
   useEffect(() => {
+    if (!open) return;
     const exit = full && onExitFull ? onExitFull : onClose;
     if (!exit) return;
     const onKey = (e: KeyboardEvent) => {
@@ -158,14 +167,28 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [full, onExitFull, onClose]);
+  }, [full, onExitFull, onClose, open]);
+  const backRef = useRef<HTMLDivElement>(null);
+  useListScrollKeep(backRef, open, full, placement);
+  // Закрыта запись — обёртка и место списка не рисуются (display: contents, seidr.css), список
+  // стоит в потоке страницы как прежде. Узлы те же — React список не пересоздаёт.
+  if (!open) {
+    return (
+      <div className={['sk-dock-off', className].filter(Boolean).join(' ')} data-testid="kit-rec-list" onClick={onClick}>
+        {backdrop && <div ref={backRef} className="sk-dock__list">{backdrop}</div>}
+      </div>
+    );
+  }
   return (
     <div className={['sk-dock', className].filter(Boolean).join(' ')} data-placement={placement} data-testid="kit-rec-dock"
       data-sized={sized && !full ? (vertical ? 'h' : 'w') : undefined}
       style={sizeVar ? ({ [vertical ? '--dock-panel-h' : '--dock-panel-w']: `${shown}px` } as CSSProperties) : undefined}
-      {...(full && modal ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}>
-      {/* Список под паспортом живой: своя прокрутка, щелчок по другой записи (08.11). */}
-      {!full && backdrop && <div className="sk-dock__backdrop">{backdrop}</div>}
+      {...(full && modal ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': kitT(lang, 'kit.record.dock.full') } : {})}
+      onClick={onClick}>
+      {/* Список под паспортом живой: своя прокрутка, щелчок по другой записи (08.11).
+          Во весь экран он скрыт, но остаётся в дереве: выход из полного экрана возвращает тот же
+          список, а не новый (K4-PASSPORT-NO-LIST-RESET). */}
+      {backdrop && <div ref={backRef} className="sk-dock__backdrop" hidden={full || undefined}>{backdrop}</div>}
       {/* Граница списка и паспорта (S4-30). Только когда делить есть с кем: во
           весь экран списка нет, и ручка там обещала бы управление, которого
           нет. Панель лежит ПОСЛЕ границы в обоих местах — справа и снизу. */}
@@ -200,4 +223,62 @@ export function RecordDock({ placement, backdrop, children, className, onExitFul
       </section>
     </div>
   );
+}
+
+/**
+ * Прокрутка списка переживает открытие и закрытие паспорта (K4-PASSPORT-NO-LIST-RESET).
+ *
+ * Список один и тот же узел, но крутит его то страница (записи нет), то место списка в доке
+ * (`.sk-dock__backdrop`, своя прокрутка), а во весь экран и на телефоне он скрыт вовсе. Смена
+ * контейнера сама по себе сбросила бы позицию: документ укорачивается до высоты дока, у скрытого
+ * элемента браузер прокрутку забывает. Поэтому позицию списка держим сами — сколько списка уехало
+ * вверх — и при смене контейнера ставим её новому. Телефон: паспорт закрыли — страница
+ * возвращается туда, где был список.
+ */
+type ScrollMode = 'page' | 'box' | 'hidden';
+
+function useListScrollKeep(ref: RefObject<HTMLDivElement | null>, open: boolean, full: boolean, placement: RecordPlacement) {
+  const pos = useRef({ offset: 0, pageY: 0 });
+  const mode = useRef<ScrollMode>('page');
+  const modeOf = (el: HTMLElement): ScrollMode => {
+    if (!open) return 'page';
+    if (full || el.hidden) return 'hidden';
+    return typeof getComputedStyle === 'function' && getComputedStyle(el).display === 'none' ? 'hidden' : 'box';
+  };
+  // Верх списка в документе: у обёртки без записи своей рамки нет (display: contents) — берём список.
+  const topOf = (el: HTMLElement) => {
+    const box = (el.firstElementChild as HTMLElement | null) ?? el;
+    return box.getBoundingClientRect().top + window.scrollY;
+  };
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof window === 'undefined') return;
+    const onPage = () => {
+      if (mode.current !== 'page') return;
+      pos.current.pageY = window.scrollY;
+      pos.current.offset = Math.max(0, window.scrollY - topOf(el));
+    };
+    const onBox = () => { if (mode.current === 'box') pos.current.offset = el.scrollTop; };
+    window.addEventListener('scroll', onPage, { passive: true });
+    el.addEventListener('scroll', onBox, { passive: true });
+    return () => { window.removeEventListener('scroll', onPage); el.removeEventListener('scroll', onBox); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof window === 'undefined') return;
+    const prev = mode.current;
+    const next = modeOf(el);
+    mode.current = next;
+    if (prev === next) return;
+    if (next === 'box') {
+      el.scrollTop = pos.current.offset;
+    } else if (next === 'page') {
+      const y = pos.current.offset > 0 ? topOf(el) + pos.current.offset : pos.current.pageY;
+      if (Math.round(y) !== Math.round(window.scrollY)) {
+        try { window.scrollTo(0, y); } catch { /* окно без прокрутки (тестовое) — позиции нет */ }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, full, placement]);
 }

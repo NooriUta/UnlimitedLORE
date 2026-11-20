@@ -19,6 +19,8 @@ const DROPPED_EDGES = ['HAS_PR', 'ON_MILESTONE'];
 // Мёртвые связи — переводятся в живую IMPLEMENTED_IN_RELEASE, под своим именем не переносятся.
 const CONVERTED_EDGES = ['INCLUDES', 'RELEASED_IN'];
 // «что нужно в QG то и оставляй» (18.11) и «матрица технологий переносится» (18.11) — переносятся.
+// KnowFindingHist в источнике пуст (0 записей), но его читает код (HistAuthorIndex через LoreSlices.HIST_PARENT) —
+// по 8а (19.11.2026, «функции оставить») он в карте «только схемой» (md02-empty-types.test.mjs).
 const KEPT_TYPES = ['ClRoutineRun', 'ClRoutineMetric', 'ClRoutineOutput', 'ClRoutineSprintFlag', 'KnowFindingHist', 'LoreTechnology'];
 const KEPT_EDGES = ['ClRoutineHasOutput'];
 

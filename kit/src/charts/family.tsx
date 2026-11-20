@@ -238,7 +238,13 @@ export interface ScatterPoint { x: number; y: number; label?: string; group?: st
 /** Больше точек — подписи у точек не рисуются (имена — в таблице). */
 export const SCATTER_LABELS_MAX = 20;
 
-export interface ScatterChartProps extends ChartCommon { points: ScatterPoint[]; xTitle?: string; groups?: { key: string; label: string }[] }
+export interface ScatterChartProps extends ChartCommon {
+  points: ScatterPoint[];
+  xTitle?: string;
+  groups?: { key: string; label: string }[];
+  /** Подпись x (ось времени): в таблице и тремя делениями под рисунком — вместо сырого числа. */
+  xLabel?: (x: number) => string;
+}
 
 export function ScatterChart(p: ScatterChartProps) {
   const [plot, W] = useChartWidth();
@@ -258,7 +264,7 @@ export function ScatterChart(p: ScatterChartProps) {
       table={() => (
         <table className="sk-chart__table">
           <thead><tr><th>{kitT(lang, 'kit.chart.point')}</th><th>{p.xTitle ?? 'x'}</th><th>y</th></tr></thead>
-          <tbody>{p.points.map((q, i) => <tr key={i}><td>{q.label ?? i + 1}</td><td>{num(q.x)}</td><td>{num(q.y)}</td></tr>)}</tbody>
+          <tbody>{p.points.map((q, i) => <tr key={i}><td>{q.label ?? i + 1}</td><td>{p.xLabel ? p.xLabel(q.x) : num(q.x)}</td><td>{num(q.y)}</td></tr>)}</tbody>
         </table>
       )}>
       <Svg label={p.title} plot={plot} w={W}>
@@ -271,7 +277,10 @@ export function ScatterChart(p: ScatterChartProps) {
               : <text x={x(q.x) + 6} y={y(q.y) - 6} textAnchor="start" className="sk-chart__lbl">{q.label}</text>)}
           </g>
         ))}
-        {p.xTitle && <text x={W - PAD.r} y={H - 6} textAnchor="end" className="sk-chart__tick">{p.xTitle} →</text>}
+        {p.xLabel && xs.length > 0 && [...new Set([Math.min(...xs), (Math.min(...xs) + Math.max(...xs)) / 2, Math.max(...xs)])].map((xv, i, all) => (
+          <text key={xv} data-xtick="" x={x(xv)} y={H - 6} textAnchor={all.length === 1 ? 'middle' : i === 0 ? 'start' : i === all.length - 1 ? 'end' : 'middle'} className="sk-chart__tick">{p.xLabel!(xv)}</text>
+        ))}
+        {p.xTitle && !p.xLabel && <text x={W - PAD.r} y={H - 6} textAnchor="end" className="sk-chart__tick">{p.xTitle} →</text>}
       </Svg>
     </ChartFrame>
   );
@@ -297,6 +306,8 @@ export function BarChart(p: BarChartProps) {
   // Подписи категорий не теснее ~40 px (графики 19.11.2026: 30 дней на телефоне слипались в кашу) —
   // через одну-две, как у линии; все категории — в «Таблицей».
   const every = Math.max(1, Math.ceil(p.data.length / Math.max(1, Math.floor((W - PAD.l - PAD.r) / 40))));
+  // Подпись не шире своей полосы (≈7 px на знак): длиннее — многоточие, полное имя — в <title> и «Таблицей».
+  const fit = Math.max(3, Math.floor((band * every) / 7));
   return (
     <ChartFrame {...p} kind="bar" empty={p.data.length === 0 || vals.length === 0}
       summary={summaryText(lang, vals, undefined, p.unit)}
@@ -324,7 +335,11 @@ export function BarChart(p: BarChartProps) {
                 if (typeof v !== 'number') return null;
                 return <rect key={g.key} data-bar="" x={x0 + gi * bw} width={bw - 2} y={y(v)} height={Math.max(0, y(0) - y(v))} fill={tone(gi)} />;
               })}
-              {ci % every === 0 && <text data-cat="" x={PAD.l + ci * band + band / 2} y={H - 6} textAnchor="middle" className="sk-chart__tick">{d.category}</text>}
+              {ci % every === 0 && (
+                <text data-cat="" x={PAD.l + ci * band + band / 2} y={H - 6} textAnchor="middle" className="sk-chart__tick">
+                  {d.category.length > fit ? <><title>{d.category}</title>{d.category.slice(0, fit - 1).trimEnd()}…</> : d.category}
+                </text>
+              )}
             </g>
           );
         })}
