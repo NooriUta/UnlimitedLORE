@@ -139,6 +139,9 @@ public class LoreGraphResource extends LoreResourceBase {
                           @QueryParam("types") String typesParam,
                           @QueryParam("structural") String structuralParam,
                           @QueryParam("limit") String limitParam,
+                          @QueryParam("walk_types") String walkTypesParam,
+                          @QueryParam("return_types") String returnTypesParam,
+                          @QueryParam("dir") String dirParam,
                           @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         long t0 = System.nanoTime();
@@ -156,11 +159,14 @@ public class LoreGraphResource extends LoreResourceBase {
             if (!REL.matcher(u).matches()) return badParams("rels: «" + r + "» — не имя типа ребра");
             rels.add(u);
         }
-        Set<String> types = new LinkedHashSet<>();
-        for (String t : csv(typesParam)) {
-            if (!LoreRecordRegistry.TYPES.contains(t))
-                return badParams("types: «" + t + "» — неизвестный тип; допустимы " + LoreRecordRegistry.TYPES);
-            types.add(t);
+        LoreGraphBuilder.Filters filters;
+        String dir;
+        try {
+            filters = LoreGraphBuilder.Filters.of(typeSet("types", typesParam), typeSet("walk_types", walkTypesParam),
+                typeSet("return_types", returnTypesParam));
+            dir = LoreGraphBuilder.checkDir(dirParam);
+        } catch (LoreGraphBuilder.GraphException e) {
+            return refusal(e);
         }
         Boolean structural = parseBool(structuralParam);
         if (structural == null) return badParams("structural — true или false");
@@ -205,11 +211,13 @@ public class LoreGraphResource extends LoreResourceBase {
             LoreGraphBuilder.Query q;
             if (scope != null) {
                 LoreGraphBuilder.checkSliceScope(scope, allowed);
-                q = LoreGraphBuilder.Query.slice(src.seeds(scope), rels, types, structural, limit, allowed);
+                q = LoreGraphBuilder.Query.slice(src.seeds(scope), rels, filters.walk(), filters.ret(), dir, structural,
+                    limit, allowed);
             } else {
                 LoreGraphBuilder.requireNonEmpty(allowed); // 403 SCOPE_EMPTY раньше 404: пустой скоуп не узнаёт, есть ли запись
                 String rid = src.resolve(rootDef, id.strip());
-                q = LoreGraphBuilder.Query.neighborhood(rid, depth, rels, types, structural, limit, allowed);
+                q = LoreGraphBuilder.Query.neighborhood(rid, depth, rels, filters.walk(), filters.ret(), dir, structural,
+                    limit, allowed);
             }
             result = LoreGraphBuilder.build(q, src);
         } catch (LoreGraphBuilder.GraphException e) {
@@ -233,6 +241,141 @@ public class LoreGraphResource extends LoreResourceBase {
         }
         meta.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * GC-05 (SPEC-LORE-GRAPH-SEARCH §7) — путь между двумя записями:
+     * {@code ?from=<тип:ключ>&to=<тип:ключ>[&rels][&walk_types][&dir=both][&max_depth=4][&k=1][&structural]}.
+     * Логика — {@link LoreGraphPath}; «пути нет» отвечается 200 с {@code meta.found:false} и причиной.
+     */
+    @GET
+    @Path("path")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response path(@QueryParam("from") String fromParam,
+                         @QueryParam("to") String toParam,
+                         @QueryParam("rels") String relsParam,
+                         @QueryParam("walk_types") String walkTypesParam,
+                         @QueryParam("dir") String dirParam,
+                         @QueryParam("max_depth") String maxDepthParam,
+                         @QueryParam("k") String kParam,
+                         @QueryParam("structural") String structuralParam,
+                         @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        long t0 = System.nanoTime();
+        RecordRef from;
+        RecordRef to;
+        Set<String> rels;
+        Set<String> walk;
+        String dir;
+        try {
+            from = RecordRef.parse("from", fromParam);
+            to = RecordRef.parse("to", toParam);
+            rels = relSet(relsParam);
+            walk = typeSet("walk_types", walkTypesParam);
+            dir = LoreGraphBuilder.checkDir(dirParam);
+        } catch (LoreGraphBuilder.GraphException e) {
+            return refusal(e);
+        }
+        Boolean structural = parseBool(structuralParam);
+        if (structural == null) return badParams("structural — true или false");
+        Integer maxDepth = parseInt(maxDepthParam, 4);
+        if (maxDepth == null || maxDepth < 1 || maxDepth > LoreGraphPath.MAX_DEPTH)
+            return badParams("max_depth — от 1 до " + LoreGraphPath.MAX_DEPTH);
+        Integer k = parseInt(kParam, 1);
+        if (k == null || k < 1 || k > LoreGraphPath.MAX_K) return badParams("k — от 1 до " + LoreGraphPath.MAX_K);
+
+        Set<String> allowed;
+        try {
+            allowed = sliceScope.allowedProjectsOrNull(role);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE GRAPH PATH] скоуп не посчитан: %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, "проектный скоуп не посчитан: " + LoreUpstream.detail(e))));
+        }
+        LoreGraphPath.Result result;
+        try {
+            result = runPath(new DbSource(ingestService), from, to, rels, walk, dir, structural, maxDepth, k, allowed);
+        } catch (LoreGraphBuilder.GraphException e) {
+            return refusal(e);
+        } catch (Exception e) {
+            LOG.warnf("[LORE GRAPH PATH] %s → %s: %s", fromParam, toParam, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
+        }
+        Map<String, Object> out = result.toJson();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> meta = (Map<String, Object>) out.get("meta");
+        if (allowed != null) meta.put("caller_scope", Map.of("applied", true, "projects", allowed.size()));
+        meta.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
+        return noStore(Response.ok(out));
+    }
+
+    /** Путь над источником БД: концы по бизнес-ключам → rid → {@link LoreGraphPath}. Без Quarkus — для тестов. */
+    static LoreGraphPath.Result runPath(DbSource src, RecordRef from, RecordRef to, Set<String> rels, Set<String> walk,
+                                        String dir, boolean structural, int maxDepth, int k, Set<String> allowed) {
+        LoreGraphBuilder.requireNonEmpty(allowed);
+        String fromRid;
+        String toRid;
+        try {
+            fromRid = src.resolve(from.def(), from.id());
+        } catch (LoreGraphBuilder.GraphException e) {
+            throw new LoreGraphBuilder.GraphException(e.status(), e.code(), "from: " + e.getMessage());
+        }
+        try {
+            toRid = src.resolve(to.def(), to.id());
+        } catch (LoreGraphBuilder.GraphException e) {
+            throw new LoreGraphBuilder.GraphException(e.status(), e.code(), "to: " + e.getMessage());
+        }
+        return LoreGraphPath.find(new LoreGraphPath.Query(fromRid, toRid, rels, walk, dir, structural, maxDepth, k, allowed), src);
+    }
+
+    /** Конец пути {@code <тип>:<ключ>}: тип — из графа ({@link #VERTICES}), ключ — бизнес-ключ записи. */
+    record RecordRef(VDef def, String id) {
+        static RecordRef parse(String name, String raw) {
+            String s = raw == null ? "" : raw.strip();
+            int colon = s.indexOf(':');
+            if (colon <= 0 || colon == s.length() - 1)
+                throw new LoreGraphBuilder.GraphException(400, "BAD_PARAMS",
+                    name + " — в форме <тип>:<ключ>, например adr:ADR-LORE-038 или task:SPRINT_X/CO-11");
+            String type = s.substring(0, colon).strip();
+            String id = s.substring(colon + 1).strip();
+            VDef def = byType(type);
+            if (def == null)
+                throw new LoreGraphBuilder.GraphException(400, "BAD_PARAMS",
+                    name + ": тип «" + type + "» в граф не входит; допустимы " + graphTypes());
+            if (id.length() > 200) throw new LoreGraphBuilder.GraphException(400, "BAD_PARAMS", name + ": ключ длиннее 200 символов");
+            return new RecordRef(def, id);
+        }
+    }
+
+    static List<String> graphTypes() {
+        List<String> out = new ArrayList<>();
+        for (VDef v : VERTICES) out.add(v.type());
+        out.add("tech");
+        return out;
+    }
+
+    static Set<String> relSet(String raw) {
+        Set<String> rels = new LinkedHashSet<>();
+        for (String r : csv(raw)) {
+            String u = r.toUpperCase(Locale.ROOT);
+            if (!REL.matcher(u).matches())
+                throw new LoreGraphBuilder.GraphException(400, "BAD_PARAMS", "rels: «" + r + "» — не имя типа ребра");
+            rels.add(u);
+        }
+        return rels;
+    }
+
+    static Set<String> typeSet(String name, String raw) {
+        Set<String> out = new LinkedHashSet<>();
+        for (String t : csv(raw)) {
+            if (!LoreRecordRegistry.TYPES.contains(t))
+                throw new LoreGraphBuilder.GraphException(400, "BAD_PARAMS",
+                    name + ": «" + t + "» — неизвестный тип; допустимы " + LoreRecordRegistry.TYPES);
+            out.add(t);
+        }
+        return out;
     }
 
     private Response refusal(LoreGraphBuilder.GraphException e) {
@@ -276,10 +419,17 @@ public class LoreGraphResource extends LoreResourceBase {
      */
     static final class DbSource implements LoreGraphBuilder.Source {
 
-        private final LoreIngestService ingest;
+        /** Чтение SQL: у сервера — LoreIngestService.queryPublic, в тестах — встроенная ArcadeDB. */
+        interface Sql { List<Map<String, Object>> queryPublic(String sql, Map<String, Object> params); }
+
+        private final Sql ingest;
         private final Map<String, String> classOf = new HashMap<>();
 
         DbSource(LoreIngestService ingest) {
+            this((Sql) ingest::queryPublic);
+        }
+
+        DbSource(Sql ingest) {
             this.ingest = ingest;
         }
 
