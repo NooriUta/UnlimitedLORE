@@ -243,13 +243,26 @@
 .an-partial { margin: 0; color: var(--wrn); font-size: var(--fs-xs); }
 .an-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, max(420px, calc(50% - 6px))), 1fr)); gap: 12px; }
 .an-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+<<<<<<< HEAD
 /* Графики 19.11.2026 («добавляй графики», пачка 1): подписи под графиком; свёрнутый блок «Графики ▸»
    в паспорте спринта и вехи (?pch=1); полоса переключателей периода и разреза в админке. */
 .an-note { margin: 0; color: var(--t3); font-size: var(--fs-2xs); }
 .pch { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; min-width: 0; }
-.pch__toggle { align-self: flex-start; }
+.pch__toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
 .pch__hint { color: var(--t3); }
 .pch__verdict { color: var(--t2); font-size: var(--fs-xs); }
 .adm-chart { margin: 8px 0 12px; }
 .adm-chart__bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+=======
+/* «Динамика» (решение 19.11 «10 → а3»): подводка и переключатель периода в одну строку, перенос на телефоне. */
+.an-dynbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
+.an-dynbar .an-lead { flex: 1 1 240px; }
+.an-note { margin: 0; color: var(--t3); font-size: var(--fs-2xs); }
+/* Графики спринтов вехи в паспорте (вопрос 11, 19.11): та же сетка блоков, отступ от строки сгорания. */
+.ms-charts { margin: 8px 0 12px; }
+/* «можно и на дорожную карту» (19.11): на телефоне — кнопка «Графики вехи» под вехой; в раскрытии строки — под сгоранием. */
+.ms-fold { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+.ms-fold__btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
+.ms-row { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+>>>>>>> origin/develop
 .an-block__src { align-self: flex-start; font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--t3); border: 1px solid var(--bd); border-radius: 999px; padding: 1px 8px; }

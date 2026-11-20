@@ -1,18 +1,21 @@
 // Графики паспорта спринта и вехи (предложение 19.11.2026, «добавляй графики», первая пачка):
 //   спринт — №2 накопительный поток (CFD) и №1 время цикла;
 //   веха   — №7 прогноз (burnup + тренд до срока) и №2 CFD по задачам её спринтов.
-// Блок свёрнут строкой «Графики ▸» — паспорт не уезжает вниз на телефоне; раскрытие — в адресе (?pch=1).
+// Одно правило свёрнутости для всех графиков паспорта (после #1632): на компьютере открыто сразу; на телефоне
+// свёрнуто кнопкой «Графики ▸» — паспорт не начинается с графиков; раскрытие — в адресе (?pch=1).
+// У вехи в том же блоке — Velocity и Burnup по спринтам вехи из #1632 (MilestoneSprintCharts), не дубль.
 // Честно: сбой — причина и «Повторить»; данных мало — словами; срез неполный — «показана часть».
 // Данные — срез task_status_versions (версии статуса SCD2), у вехи — по каждому её спринту отдельным
 // запросом (фильтр sprint), а не вся история задач; прогноз — task_created_dates и task_done_dates.
 import { useMemo, type ReactNode } from 'react';
-import { BarChart, LineChart, ScatterChart, rowsOf, useLoadState, useUrlParam } from '@seidr/kit';
+import { BarChart, GameIcon, ICON_CANON, LineChart, ScatterChart, rowsOf, useLoadState, useNarrow, useUrlParam } from '@seidr/kit';
 import { useAppT, type AppKey } from '../i18n';
 import { chartLoader, chartState, ddmm, isPartial, rowsOfBody, type ChartLoader } from './chartCommon';
 import { cfdSeries, cycleTimes, FLOW_STACK, taskTimelines, type StatusVersionRow, type Timelines } from './flowModel';
 import { milestoneForecast, TREND_WEEKS } from './forecastModel';
 import { milestoneDue } from '../milestone/milestoneDue';
 import { tasksClosedWeekly } from './batch2Model';
+import { MilestoneSprintCharts } from '../milestone/MilestoneSprintCharts';
 import type { TaskRow } from '../analytics/analyticsModel';
 
 export const PCH_PARAM = 'pch';
@@ -21,15 +24,19 @@ export const CYCLE_FEW = 5;
 
 type T = ReturnType<typeof useAppT>;
 
-/** Строка «Графики ▸» и раскрытие по адресу. */
-export function Fold({ hint, children }: { hint: string; children: () => ReactNode }) {
+/** Компьютер — графики сразу; телефон — кнопка «Графики ▸», раскрытие по адресу (?pch=1). narrow — тестам. */
+export function Fold({ hint, narrow, children }: { hint: string; narrow?: boolean; children: () => ReactNode }) {
   const t = useAppT();
+  const isNarrow = useNarrow(narrow);
   const [v, set] = useUrlParam(PCH_PARAM);
+  if (!isNarrow) return <div className="pch" data-testid="pch">{children()}</div>;
   const open = v === '1';
   return (
     <div className="pch" data-testid="pch">
-      <button type="button" className="sprint-burn__toggle pch__toggle" aria-expanded={open} onClick={() => set(open ? null : '1', { replace: true })}>
-        <span aria-hidden="true">{open ? '▾' : '▸'}</span> {t('charts.toggle')} <span className="pch__hint">· {hint}</span>
+      <button type="button" className="sk-btn pch__toggle" aria-expanded={open} onClick={() => set(open ? null : '1', { replace: true })}>
+        <GameIcon slug={ICON_CANON.recAnalytics} size={14} />
+        <span>{t('charts.toggle')}</span> <span className="pch__hint">· {hint}</span>
+        <span aria-hidden="true">{open ? '▾' : '▸'}</span>
       </button>
       {open && children()}
     </div>
@@ -62,11 +69,11 @@ function CycleChart({ t, tl, common }: { t: T; tl: Timelines | null; common: obj
   );
 }
 
-export interface SprintChartsProps { sprintId: string; load?: ChartLoader; fetchImpl?: typeof fetch; now?: number }
+export interface SprintChartsProps { sprintId: string; load?: ChartLoader; fetchImpl?: typeof fetch; now?: number; narrow?: boolean }
 
 export function SprintCharts(p: SprintChartsProps) {
   const t = useAppT();
-  return <Fold hint={t('charts.hint.sprint')}>{() => <SprintChartsBody {...p} />}</Fold>;
+  return <Fold hint={t('charts.hint.sprint')} {...(p.narrow !== undefined ? { narrow: p.narrow } : {})}>{() => <SprintChartsBody {...p} />}</Fold>;
 }
 
 function SprintChartsBody({ sprintId, load, fetchImpl, now }: SprintChartsProps) {
@@ -85,11 +92,19 @@ function SprintChartsBody({ sprintId, load, fetchImpl, now }: SprintChartsProps)
   );
 }
 
-export interface MilestoneChartsProps { milestoneId: string; load?: ChartLoader; fetchImpl?: typeof fetch; now?: number }
+export interface MilestoneChartsProps { milestoneId: string; load?: ChartLoader; fetchImpl?: typeof fetch; now?: number; narrow?: boolean }
 
 export function MilestoneCharts(p: MilestoneChartsProps) {
   const t = useAppT();
-  return <Fold hint={t('charts.hint.milestone')}>{() => <MilestoneChartsBody {...p} />}</Fold>;
+  return (
+    <Fold hint={t('charts.hint.milestone')} {...(p.narrow !== undefined ? { narrow: p.narrow } : {})}>{() => (
+      <>
+        {/* #1632: Velocity и Burnup по спринтам вехи — первыми; ниже — прогноз и поток по задачам. */}
+        <MilestoneSprintCharts milestoneId={p.milestoneId} {...(p.load ? { load: p.load } : {})} {...(p.fetchImpl ? { fetchImpl: p.fetchImpl } : {})} {...(p.now !== undefined ? { now: p.now } : {})} />
+        <MilestoneChartsBody {...p} />
+      </>
+    )}</Fold>
+  );
 }
 
 const sprintIds = (row: { direct_sprint_ids?: unknown } | undefined) => {
@@ -146,6 +161,10 @@ function MilestoneChartsBody({ milestoneId, load, fetchImpl, now }: MilestoneCha
   })();
   return (
     <section className="an-grid pch__grid" data-testid="milestone-flow-charts" aria-label={t('charts.toggle')}>
+      {/* №6 — первым, рядом с Velocity по спринтам вехи (#1632) над ним: ритм по задачам и по спринтам вместе. */}
+      <div className="an-block" data-block="task-velocity">
+        <BarChart {...common} title={t('charts.taskVelocity.title')} source="task_done_dates" groups={[{ key: 't', label: t('analytics.tasks') }]} data={calc?.velocity ?? []} />
+      </div>
       <div className="an-block" data-block="forecast">
         <LineChart {...common} title={t('charts.forecast.title')} source="task_created_dates · task_done_dates" unit={t('analytics.tasksUnit')}
           series={fc ? [
@@ -157,9 +176,6 @@ function MilestoneChartsBody({ milestoneId, load, fetchImpl, now }: MilestoneCha
         {verdict && <p className="an-note pch__verdict" data-testid="forecast-verdict" data-kind={fc!.verdict.kind}>{verdict}</p>}
       </div>
       <CfdChart t={t} tl={calc?.tl ?? null} today={today} common={common} partial={calc?.partial ?? false} />
-      <div className="an-block" data-block="task-velocity">
-        <BarChart {...common} title={t('charts.taskVelocity.title')} source="task_done_dates" groups={[{ key: 't', label: t('analytics.tasks') }]} data={calc?.velocity ?? []} />
-      </div>
     </section>
   );
 }

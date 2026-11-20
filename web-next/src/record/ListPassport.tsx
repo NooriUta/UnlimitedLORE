@@ -467,7 +467,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
         />
       )}
-      {/* Графики 19.11.2026 (пачка 1): веха — прогноз (№7) и поток (№2); спринт — поток (№2) и время цикла (№1). Свёрнуты строкой. */}
+      {/* Графики 19.11.2026 (пачка 1): веха — прогноз (№7) и поток (№2); спринт — поток (№2) и время цикла (№1). Вместе с Velocity и Burnup по спринтам вехи (#1632): на телефоне свёрнуты кнопкой, на компьютере открыты. */}
       {type === 'milestone' && <MilestoneCharts milestoneId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'sprint' && <SprintCharts sprintId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {/* Пачка 2: проект — возраст открытых задач (№4) и ритм релизов (№8); гейт — доля пройденных (№16). */}

@@ -20,8 +20,14 @@ const open = () => fireEvent.click(screen.getByRole('button', { name: /Граф�
 beforeEach(() => { window.history.replaceState(null, '', '/'); });
 
 describe('паспорт спринта: графики потока', () => {
-  it('свёрнуты по умолчанию; раскрытие — в адресе (pch=1)', async () => {
-    render(<KitLangProvider lang="ru"><SprintCharts sprintId="S1" now={NOW} load={async () => V} /></KitLangProvider>);
+  it('компьютер — графики сразу, без кнопки (одно правило с графиками вехи #1632)', async () => {
+    render(<KitLangProvider lang="ru"><SprintCharts sprintId="S1" now={NOW} narrow={false} load={async () => V} /></KitLangProvider>);
+    expect(screen.queryByRole('button', { name: /Графики/ })).toBeNull();
+    await waitFor(() => expect(kinds()).toEqual(['line', 'scatter']));
+  });
+
+  it('телефон — свёрнуты кнопкой; раскрытие — в адресе (pch=1)', async () => {
+    render(<KitLangProvider lang="ru"><SprintCharts sprintId="S1" now={NOW} narrow load={async () => V} /></KitLangProvider>);
     expect(kinds()).toEqual([]);
     open();
     expect(new URL(window.location.href).searchParams.get('pch')).toBe('1');
@@ -58,7 +64,7 @@ describe('паспорт вехи: прогноз и поток', () => {
   it('прогноз (линии с трендом) и CFD; закрытий одна неделя — «мало данных для тренда»', async () => {
     window.history.replaceState(null, '', '/?pch=1');
     render(<KitLangProvider lang="ru"><MilestoneCharts milestoneId="M" now={NOW} load={load} /></KitLangProvider>);
-    await waitFor(() => expect(kinds()).toEqual(['line', 'line', 'bar'])); // №6 (пачка 2): velocity по задачам
+    await waitFor(() => expect(kinds()).toEqual(['bar', 'line', 'bar', 'line', 'line'])); // Velocity и Burnup спринтов (#1632), №6 velocity по задачам, прогноз, CFD
     expect(screen.getByTestId('forecast-verdict').textContent).toMatch(/мало/i);
   });
 

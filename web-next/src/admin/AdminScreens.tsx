@@ -2,7 +2,7 @@
 // Свой чанк (V2Shell грузит его лениво): админка нужна немногим, и оболочка
 // за неё не платит. Экраны те же, что были на странице /admin, — здесь только
 // выбор экрана по разделу и переход между разделами навигацией оболочки.
-import { useMemo, type ComponentType } from 'react';
+import { useMemo, useRef, type ComponentType } from 'react';
 import { setUrlParams, useKitShell } from '@seidr/kit';
 import { v2Auth } from '../auth/session';
 import { ActionsScreen } from './ActionsScreen';
@@ -22,6 +22,7 @@ import { WizardsScreen } from './WizardsScreen';
 import { ListScreen } from '../pages/ListScreen';
 import { AdminForbidden, WhoamiBarView, adminDenied, useWhoami } from './WhoamiBar';
 import { AdminNavProvider, type AdminNav } from './adminNav';
+import { useTableCardLabels } from './tableCards';
 import type { AdminSection } from './adminModule';
 
 const SCREENS: Record<AdminSection, ComponentType> = {
@@ -65,10 +66,15 @@ export default function AdminSectionView({ id }: { id: AdminSection }) {
   // AP-08: тот же ответ решает, пускать ли: не admin/superadmin — честное «нет прав», а не карточки с нулями.
   const who = useWhoami();
   const denied = adminDenied(who.data ?? null);
+  // Телефон: таблицы разделов — карточками (Admin.css); клеткам — подписи колонок (tableCards.ts).
+  const box = useRef<HTMLDivElement>(null);
+  useTableCardLabels(box);
   return (
     <AdminNavProvider value={nav}>
-      <WhoamiBarView res={who} />
-      {denied ? <AdminForbidden role={who.data?.seer_role} /> : <Screen />}
+      <div ref={box} className="adm-root">
+        <WhoamiBarView res={who} />
+        {denied ? <AdminForbidden role={who.data?.seer_role} /> : <Screen />}
+      </div>
     </AdminNavProvider>
   );
 }

@@ -5,6 +5,7 @@
 // запись в приёмник по нему начинается только после слова владелицы.
 // Запуск: node scripts/model-migration/propose-schema.mjs <отчёт сухого прогона.json>
 import fs from 'node:fs';
+import { markNotNull } from './notnull.mjs';
 
 const here = p => new URL(p, import.meta.url);
 const J = p => JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -61,6 +62,8 @@ for (const [T, t] of Object.entries(types)) {
   // Служебное поле служебное и с данными (снимок 18.11: changed_by_session заполнен у 52 версий задач).
   for (const [f, d] of Object.entries(DECLARED_SERVICE)) t.fields[f] = t.fields[f] ? { ...t.fields[f], ...d, service: true } : { ...d, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
 }
+// MDL-11 (ответ владелицы 19.11.2026 «5а»): обязательные поля (MANDATORY + NOTNULL) — из модели (notnull.mjs)
+markNotNull(types, J(here('../../shared/model/lore-model.json')));
 const out = {
   _about: 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы первого объекта (спринт, фаза, задача) — владелицей не утверждено. Выведено из карты переноса и сухого прогона по снимку прода: в схему попали только поля, которые перенос реально дал. Запись в базу-приёмник по этой схеме начинается после её слова.',
   _source: report.source,

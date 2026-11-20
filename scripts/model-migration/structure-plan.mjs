@@ -22,11 +22,12 @@ export function renamesOf(type) {
 }
 
 /** План: типы без карты (структура источника) и индексы источника на новых именах. srcTypes — строки schema:types. */
-export function structurePlan(srcTypes, schema, notMoved = {}) {
+export function structurePlan(srcTypes, schema, notMoved = {}, series = {}) {
   const types = [], indexes = [], skipped = [], typeDdl = [], indexDdl = [], notCarried = [];
   const sorted = [...srcTypes].sort((a, b) => a.name.localeCompare(b.name));
   for (const t of sorted) {
-    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || schema[t.name]) continue;
+    // ряд, объявленный в модели (series), заводится DDL модели и переносится своим шагом (seriesPlan/copySeries)
+    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || schema[t.name] || series[t.name]) continue;
     // карта решила «не переносить» (план-доска снята и т.п.) — тип не воссоздаётся, причина — в отчёт
     if (notMoved[t.name]) { notCarried.push({ type: t.name, why: notMoved[t.name] }); continue; }
     if (t.type === 't') { // временной ряд ArcadeDB: колонки — момент, теги, поля; строки без @rid
@@ -49,7 +50,7 @@ export function structurePlan(srcTypes, schema, notMoved = {}) {
     indexDdl.push(`CREATE INDEX IF NOT EXISTS ON ${t.name} (mig_src_rid) UNIQUE`);
   }
   for (const t of sorted) {
-    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || notMoved[t.name]) continue;
+    if (t.type === 'edge' || NOT_CARRIED.has(t.name) || notMoved[t.name] || series[t.name]) continue;
     const mapped = schema[t.name];
     const ren = mapped ? renamesOf(mapped) : null;
     for (const ix of [...(t.indexes || [])].sort((a, b) => a.name.localeCompare(b.name))) {
