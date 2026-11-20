@@ -18,7 +18,9 @@ export const KIND_WORDS = [
 export const TEXT_FIELDS = ['name', 'title', 'context_md', 'outcome_md', 'block_reason', 'note_md', 'notes_md'];
 
 const short = id => String(id).replace(/^SPRINT_/, '');
-const sentences = t => String(t || '').split(/(?<=[.!?;\n])\s+/).map(s => s.trim()).filter(Boolean);
+// фраза — строка или ячейка таблицы, внутри — предложение: markdown-таблица не склеивается в одну «фразу»
+const sentences = t => String(t || '').split(/\n|\|/).flatMap(l => l.split(/(?<=[.!?;])\s+/)).map(s => s.trim()).filter(Boolean);
+const clip = s => (s.length > 240 ? s.slice(0, 239) + '…' : s);
 const mentions = (s, id) => {
   const re = new RegExp(`(^|[^A-Z0-9_])(SPRINT_)?${short(id).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Z0-9_])`);
   return re.test(s);
@@ -48,12 +50,12 @@ export function proposeDepKinds(edges, rules) {
     if (own) {
       const k = classify(own.text);
       return { ...base, suggest: codes.includes(k) ? k : null, hint: own.text,
-        why: `в тексте ${e.from.id} (${own.field}): «${own.text}»` + (k === 'relates' ? ' — назван без слова о характере связи' : '') };
+        why: `в тексте ${e.from.id} (${own.field}): «${clip(own.text)}»` + (k === 'relates' ? ' — назван без слова о характере связи' : '') };
     }
     const back = phrase(e.to, e.from.id);
     if (back) {
       const k = classify(back.text);
-      return { ...base, suggest: codes.includes(k) ? k : null, hint: back.text, why: `в тексте ${e.to.id} (${back.field}): «${back.text}»` };
+      return { ...base, suggest: codes.includes(k) ? k : null, hint: back.text, why: `в тексте ${e.to.id} (${back.field}): «${clip(back.text)}»` };
     }
     return { ...base, suggest: null, hint: null, why: 'связь в текстах обоих спринтов не объяснена — «какой?»: выберите вид или оставьте без вида' };
   }).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
