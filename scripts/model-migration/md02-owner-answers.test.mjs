@@ -1,18 +1,20 @@
 // SPRINT_LORE_MODEL_DOCS_TIDY/MD-02 · ответы владелицы 19.11.2026 «7-9а» по таблице вопросов 1.18.
 //  7а — статусы вне словаря (419 спек, 50 решений) сводятся диалогом унификации в мастере «Перенос»: установщик
 //       подсказывает код, человек подтверждает группами; без ответа перенос пишет «ждёт решения», а не подставляет молча.
+//       Пустой статус сюда не относится: его закрывает общее правило #1634 (вычислить → решение из файла → начальный
+//       статус типа, состояние defaulted, перенос не блокирует).
 //  8а — пустые типы: md02-empty-types.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildDialog, groupBySuggestion } from './status-unify.mjs';
-import { applyMap, requiredStatusField } from './apply-map.mjs';
+import { applyMap } from './apply-map.mjs';
 import { rejectLeftover } from './transfer.mjs';
 import { MAP, RULES, VOCAB, CODE_CASE } from './resources.mjs';
 
 const NONE = { format: 'mig-decisions/1', decisions: [] };
 const dictOf = T => (RULES.sources.find(s => s.type === T && (s.field === 'status' || s.field === 'status_raw')) || {}).dict;
 const ctxOf = (T, decisions = null) => ({ statusDict: dictOf(T), statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions,
-  codeCase: CODE_CASE, statusRules: RULES.dictionaries[dictOf(T)], requiredStatus: requiredStatusField(RULES, T) });
+  codeCase: CODE_CASE, statusRules: RULES.dictionaries[dictOf(T)] });
 
 // Значения прода (перепись 15.11, пробный расчёт): у 607 версий спек статуса нет; у решений — легаси fixed/done/rejected/CANCELLED.
 const COUNTS = [
@@ -29,7 +31,9 @@ test('7а: статус спеки и решения вне словаря по�
   const d = buildDialog(COUNTS, RULES, NONE);
   const row = (T, v) => d.rows.find(r => r.type === T && r.value === v);
   assert.equal(row('KnowSpecHist', 'Accepted').state, 'unified', 'знакомое сводится само');
-  const want = { 'KnowSpecHist|null': 'PROPOSED', 'KnowDecisionHist|fixed': 'ACCEPTED', 'KnowDecisionHist|done': 'ACCEPTED',
+  // пустой статус спеки — не вопрос человеку: правило #1634 даёт начальный статус типа (defaulted), перенос не блокирует
+  assert.equal(row('KnowSpecHist', null).state, 'defaulted');
+  const want = { 'KnowDecisionHist|fixed': 'ACCEPTED', 'KnowDecisionHist|done': 'ACCEPTED',
     'KnowDecisionHist|rejected': 'SUPERSEDED', 'KnowDecisionHist|🚫 CANCELLED': 'SUPERSEDED', 'KnowDecision|fixed': 'ACCEPTED' };
   for (const [k, code] of Object.entries(want)) {
     const [T, v] = k.split('|');
@@ -45,34 +49,22 @@ test('7а: статус спеки и решения вне словаря по�
   assert.deepEqual(groups.map(g => [g.code, g.rows.length]), [['ACCEPTED', 2], ['SUPERSEDED', 2]]);
 });
 
-test('7а: без ответа человека перенос не подставляет статус молча — пустой обязательный статус уходит в остаток «ждёт решения»', () => {
-  assert.equal(requiredStatusField(RULES, 'KnowSpecHist'), 'status');
-  assert.equal(requiredStatusField(RULES, 'KnowDecisionHist'), 'status_raw');
-  assert.equal(requiredStatusField(RULES, 'KnowSpec'), null, 'копия статуса на записи не обязательна');
-  assert.equal(requiredStatusField(RULES, 'KnowPhaseHist'), null, 'статус фазы выводится по задачам — не ждёт человека');
-  const r = applyMap('KnowSpecHist', MAP.KnowSpecHist, { valid_from: '2026-01-01T00:00:00Z' }, ctxOf('KnowSpecHist'));
-  assert.equal(r.out.status, undefined, 'код не подставлен');
-  assert.deepEqual(r.rejects.map(x => [x.field, x.why]), [['status', 'пусто']]);
-  const left = rejectLeftover('KnowSpecHist', '#1:1', r.rejects[0]);
+test('7а: без ответа человека статус вне словаря не подставляется молча — остаток «ждёт решения»', () => {
+  const dr = applyMap('KnowDecisionHist', MAP.KnowDecisionHist, { status_raw: 'fixed' }, ctxOf('KnowDecisionHist'));
+  assert.equal(dr.out.status, null, 'код не подставлен');
+  assert.deepEqual(dr.rejects.map(x => [x.field, x.why]), [['status_raw', 'статус вне справочника']]);
+  const left = rejectLeftover('KnowDecisionHist', '#2:1', dr.rejects[0]);
   assert.equal(left.state, 'ждёт решения');
   assert.equal(left.kind, 'reject');
-  // незнакомое значение решения — тоже остаток «ждёт решения», не код
-  const dr = applyMap('KnowDecisionHist', MAP.KnowDecisionHist, { status_raw: 'fixed' }, ctxOf('KnowDecisionHist'));
-  assert.equal(dr.out.status, null);
-  assert.equal(rejectLeftover('KnowDecisionHist', '#2:1', dr.rejects[0]).state, 'ждёт решения');
 });
 
-test('7а: ответ человека из диалога применяется переносом (группа «пусто» → PROPOSED, fixed → ACCEPTED)', () => {
+test('7а: ответ человека из диалога применяется переносом (fixed → ACCEPTED); «решу позже» — остаток «отложено человеком»', () => {
   const dec = { format: 'mig-decisions/1', decisions: [
-    { id: 'ST-07', scope: { type: 'KnowSpecHist', field: 'status', why: 'пусто' }, action: 'map_to', to: 'PROPOSED', by: 'владелица', at: '2026-11-16T16:40:00Z' },
     { id: 'ST-02', scope: { type: 'KnowDecisionHist', field: 'status_raw', value: 'fixed' }, action: 'map_to', to: 'ACCEPTED', by: 'владелица', at: '2026-11-16T16:40:00Z' },
   ] };
-  const r = applyMap('KnowSpecHist', MAP.KnowSpecHist, { valid_from: '2026-01-01T00:00:00Z' }, ctxOf('KnowSpecHist', dec));
-  assert.equal(r.out.status, 'PROPOSED');
-  assert.deepEqual(r.rejects, []);
   const dr = applyMap('KnowDecisionHist', MAP.KnowDecisionHist, { status_raw: 'fixed' }, ctxOf('KnowDecisionHist', dec));
   assert.equal(dr.out.status, 'ACCEPTED');
-  // отложенное человеком — остаток с пометкой «отложено», не «ждёт решения»
+  assert.deepEqual(dr.rejects, []);
   const defer = { format: 'mig-decisions/1', decisions: [{ id: 'ST-99', scope: { type: 'KnowDecisionHist', field: 'status_raw', value: 'fixed' }, action: 'defer', by: 'владелица', at: '2026-11-19T10:00:00Z' }] };
   const df = applyMap('KnowDecisionHist', MAP.KnowDecisionHist, { status_raw: 'fixed' }, ctxOf('KnowDecisionHist', defer));
   assert.equal(rejectLeftover('KnowDecisionHist', '#2:1', df.rejects[0]).state, 'отложено человеком');

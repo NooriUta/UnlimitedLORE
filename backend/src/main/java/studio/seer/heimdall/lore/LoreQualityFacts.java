@@ -146,7 +146,8 @@ public class LoreQualityFacts {
             // версии и вердикт отчитывался по чужому релизу).
             + "out('TARGETS_PRODUCT').code AS products"),
         QUESTION("question", "KnowQuestion", "question_id",
-            "title, status, owner, due_date, out('RAISED_IN').adr_id AS links");
+            // MT-MCP-TRUTH A6: владелец — по ребру ANSWERABLE_BY, без ребра — прежний текст (как у срезов).
+            "title, status, " + QuestionOwner.OWNER_COLUMNS + ", due_date, out('RAISED_IN').adr_id AS links");
 
         public final String name;
         private final String vertex;

@@ -22,8 +22,8 @@ final class TaskCreateStatus {
 
     static final List<String> ALLOWED = List.of("planned", "todo", "backlog", "design", "active");
 
-    /** Первый статус: с него задача начинается, когда создающий статуса не назвал. */
-    static final String DEFAULT = "backlog";
+    /** Первый статус: с него задача начинается, когда создающий статуса не назвал. Из модели (task.status.initial). */
+    static final String DEFAULT = CreateDefaultStatus.FIRST.get("task");
 
     /** Статус не назван — будет поставлен {@link #DEFAULT}. */
     static boolean defaulted(String status) {

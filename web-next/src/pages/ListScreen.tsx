@@ -47,6 +47,7 @@ import { loreListPeek } from '../record/lorePeek';
 import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
 import { browserZone } from '../time/browserZone';
 import { newsRefHrefV2 } from '../news/newsLinks';
+import { ReleasesCharts } from '../charts/Batch2Charts';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -791,6 +792,8 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         <ViewsBar store={viewStore} section={viewSection} user="me" state={listState} onApply={applyView}
           win={urlWin} applyStartView={!urlHasList} canTeamDefault={canTeamDefault} />
       )}
+      {/* №8 (графики 19.11.2026, пачка 2): ритм релизов над лентой релизов, свёрнуто строкой. */}
+      {screen === 'releases' && !open.id && <ReleasesCharts {...(fetchImpl ? { fetchImpl } : {})} />}
       {content}
     </section>
   );

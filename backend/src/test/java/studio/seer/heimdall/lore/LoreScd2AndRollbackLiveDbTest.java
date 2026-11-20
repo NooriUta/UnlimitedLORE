@@ -92,7 +92,9 @@ class LoreScd2AndRollbackLiveDbTest {
             Map.of("sid", sprintId));
         assertEquals(1, afterCreate.size(), "sprint creation should seed exactly one hist row");
         assertNull(afterCreate.get(0).get("valid_to"), "freshly seeded hist row must be open");
-        assertEquals("📋 PLANNED", afterCreate.get(0).get("status_raw"));
+        // Спринт без статуса рождается в начальном статусе модели (sprint.status.initial = backlog; 16.11.2026
+        // «в беклог», правило владелицы 19.11.2026). Прежнее «📋 PLANNED» было своей строкой todo → PLANNED.
+        assertEquals("🟣 BACKLOG", afterCreate.get(0).get("status_raw"));
 
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"entity_type\":\"sprint\",\"id\":\"" + sprintId + "\",\"status\":\"active\"}")

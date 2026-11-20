@@ -156,6 +156,10 @@ public class LoreRequestStats {
     static final String ACTION_INSERT_SQL = "INSERT INTO AgentActionLog SET ts=:ts, object_type=:fam, object_id=:oid, "
         + "source=:src, segment=:seg, client=:client, machine=:machine, value=:v";
 
+    /** Точка окна счётчиков (запросы, сессии) в ряд метрик ARC-02. */
+    static final String METRIC_INSERT_SQL = "INSERT INTO MetricSnapshot SET ts=:ts, object_type='caller', object_id=:caller, "
+        + "metric=:metric, source=:src, segment=:seg, value=:v";
+
     void journalAction(String caller, String axis, String family, String entityOrPath, int status,
                        String client, String machine) {
         if (!statsEnabled || !loreEnabled) return;
@@ -215,8 +219,7 @@ public class LoreRequestStats {
             boolean isSession = M_SESSION.equals(k.what());
             try {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "INSERT INTO MetricSnapshot SET ts=:ts, object_type='caller', object_id=:caller, "
-                    + "metric=:metric, source=:src, segment=:seg, value=:v",
+                    METRIC_INSERT_SQL,
                     Map.of("ts", ts,
                         "caller", k.caller(),
                         "metric", isSession ? M_SESSION : M_REQUESTS,

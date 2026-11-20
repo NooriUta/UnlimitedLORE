@@ -79,6 +79,15 @@ export function TidyScreen({ fetchImpl }: TidyScreenProps) {
           {t('admin.tidy.recheckFailed', { reason: recheckError })}
         </p>
       )}
+      {data && data.notMigrated.length > 0 && (
+        // База из модели 1.18: тип вне модели не читали — «нет данных», а не «чисто» (дефект 502 PlanVersion).
+        <div className="adm-note" data-tone="inf" role="status" data-testid="adm-tidy-not-migrated">
+          <p className="adm-note__line">{t('admin.tidy.notMigrated')}</p>
+          <ul className="adm-plist">
+            {data.notMigrated.map(n => <li key={n.type}><span className="adm-mono">{n.type}</span> — {n.reason}</li>)}
+          </ul>
+        </div>
+      )}
       {body}
     </section>
   );

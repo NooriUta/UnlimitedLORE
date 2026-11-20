@@ -78,8 +78,21 @@ export function isRecord(t: z.ZodTypeAny): boolean {
  * режимы (task_set: пакет tasks[] ИЛИ одиночные поля), где массив вытесняет
  * остальное.
  */
+/**
+ * Файловый двойник поля: `content_md_ru_file` при наличии `content_md_ru` (doc_new). Пара
+ * взаимоисключающая — в базовый вариант двойник не входит, для него свой вариант, где он
+ * стоит вместо поля (значение — метка-путь; реальный файл подставляет сам тест).
+ */
+export function fileTwinOf(key: string, schema: Record<string, z.ZodTypeAny>): string | undefined {
+  if (!key.endsWith('_file')) return undefined;
+  const field = key.slice(0, -'_file'.length);
+  return field in schema ? field : undefined;
+}
+
 export function variantsOf(tool: Tool): Record<string, unknown>[] {
-  const keys = Object.keys(tool.schema);
+  const all = Object.keys(tool.schema);
+  const twins = all.filter(k => fileTwinOf(k, tool.schema));
+  const keys = all.filter(k => !twins.includes(k));
   const base = Object.fromEntries(keys.map(k => [k, values(k, tool.schema[k])[0]]));
   let out: Record<string, unknown>[] = [base];
   for (const k of keys.filter(k => isEnum(tool.schema[k]))) {
@@ -91,6 +104,14 @@ export function variantsOf(tool: Tool): Record<string, unknown>[] {
     const rest = { ...base };
     delete rest[k];
     out.push(rest);
+  }
+  if (twins.length) {
+    const viaFiles: Record<string, unknown> = { ...base };
+    for (const k of twins) {
+      delete viaFiles[fileTwinOf(k, tool.schema)!];
+      viaFiles[k] = MARK(k);
+    }
+    out.push(viaFiles);
   }
   return out;
 }

@@ -1,0 +1,25 @@
+{"source":{"tool":"mcp aida-lore graph","call":{"type":"adr","id":"ADR-LORE-050","depth":3,"limit":400},"taken_at":"2026-11-20","note":"выгрузка целиком; by_depth 1:9, 2:0, 3:0 — у решений и задач соседей дальше нет"},
+"meta":{"complete":true,"truncated":false,"capped_at":null,"hidden_by_scope":0,"by_depth":{"1":9,"2":0,"3":0},"nodes":10,"edges":9,"rels":{"DECIDED_IN":7,"JUSTIFIED_BY":2}},
+"nodes":[
+{"id":"ADR-LORE-050","type":"adr","title":"Ссылка на объект LORE прямо в MD: «[[», «@» и «#тип» открывают одно мини-окно «выбрать существующий или завести новый», правка полей — в паспорте","sc":"in_force","d":0},
+{"id":"D-2026-LORE-FREE-FIELDS-SHOWN","type":"decision","title":"Значение записи вне модели не теряется и не прячется: паспорт показывает его блоком «ключ → значение» только для чтения; сознательный набор ключей описывается в модели полем вида «ключ → значение»","sc":"in_force","d":1},
+{"id":"D-2026-LORE-MD-REF-EDIT-IN-PASSPORT","type":"decision","title":"Поля объекта по ссылке из MD правятся только в паспорте (попап RecordPeek или переход); в чтении MartProse окно лишь показывает карточку","sc":"in_force","d":1},
+{"id":"D-2026-LORE-MD-REF-PASTE-CHECK","type":"decision","title":"Ссылки при вставке копипастом проверяются сразу: найденная зелёная, ненайденная красная с «Завести»; отказ оставляет красной, сохранение предупреждает, меню «Дозавести»","sc":"in_force","d":1},
+{"id":"D-2026-LORE-MD-REF-THREE-TRIGGERS","type":"decision","title":"Ссылку на объект LORE в MD вызывают «[[», «@» и «#тип»: одно окно, один токен [[тип:ID]], ложные срабатывания отсекаются правилами","sc":"in_force","d":1},
+{"id":"D-2026-LORE-MD-REF-TWO-CARDS","type":"decision","title":"Мини-окно ссылки — две карточки на общем Popover: «существующий» (поиск и вставка) и «новый» (форма из раскладки типа, сначала обязательные поля)","sc":"in_force","d":1},
+{"id":"D-2026-LORE-PEEK-ONE-CARD","type":"decision","title":"Peek — одна карточка записи только для чтения, три входа: ссылка в тексте/ленте (наведение с задержкой; на телефоне нижний лист), строка списка (панель справа, пробел и J/K), адрес ?peek=","sc":"in_force","d":1},
+{"id":"D-2026-LORE-RECORD-FIELD-REQUIRED","type":"decision","title":"Поле в модели записи: обязательное (block) — из схемы БД, рекомендуемое (warn) — из проверок качества MCP; описание модели расширяется и передаётся приложением","sc":"in_force","d":1},
+{"id":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-MOCKUP","type":"task","title":"Мокап мини-окна ссылки в MD — одобрение владелицы до кода","sc":"finished","d":1},
+{"id":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-REQUIRED","type":"task","title":"Модель записи: поле получает required 'block' | 'warn' — block из схемы БД, warn из проверок качества MCP (с условиями); приложение передаёт в kit","sc":"finished","d":1}
+],
+"edges":[
+{"f":"D-2026-LORE-FREE-FIELDS-SHOWN","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"D-2026-LORE-MD-REF-EDIT-IN-PASSPORT","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"D-2026-LORE-MD-REF-PASTE-CHECK","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"D-2026-LORE-MD-REF-THREE-TRIGGERS","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"D-2026-LORE-MD-REF-TWO-CARDS","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"D-2026-LORE-PEEK-ONE-CARD","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"D-2026-LORE-RECORD-FIELD-REQUIRED","r":"DECIDED_IN","t":"ADR-LORE-050"},
+{"f":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-MOCKUP","r":"JUSTIFIED_BY","t":"ADR-LORE-050"},
+{"f":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-REQUIRED","r":"JUSTIFIED_BY","t":"ADR-LORE-050"}
+]}

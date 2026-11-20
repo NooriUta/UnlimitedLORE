@@ -18,16 +18,17 @@ import { loadDecisions } from './decisions.mjs';
 const DECISIONS = loadDecisions(); // решения человека из раздела «Перенос»; файла нет — решений нет
 import crypto from 'node:crypto';
 import { connect } from './db.mjs';
-import { applyMap, requiredStatusField } from './apply-map.mjs';
+import { applyMap } from './apply-map.mjs';
 
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
-import { seriesDdl } from './series.mjs';
+import { seriesPlan, copySeries, seriesIo } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
 import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
-import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
+import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
+import { structurePlan, asIsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
 import { repairVersions, addFixes } from './scd2-repair.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
@@ -46,9 +47,27 @@ export function modelMarker(schema, at = new Date().toISOString()) {
   return { model_hash, source: 'installer', built_at: at };
 }
 /** DDL поля: имя в обратных кавычках — поле с именем-ключевым словом SQL (KnowQuestion.trigger, 18.11.2026) иначе роняет перенос. */
-export function ddlProperty(T, f, dbType) {
+// MDL-11 (ответ владелицы 19.11.2026 «5а»): поле схемы с notnull — MANDATORY + NOTNULL, пустое значение база не примет.
+export function ddlProperty(T, f, dbType, { notnull = false } = {}) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(f)) throw new Error('имя поля для схемы недопустимо: ' + f);
-  return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType;
+  return 'CREATE PROPERTY ' + T + '.`' + f + '` ' + dbType + (notnull ? ' (MANDATORY true, NOTNULL true)' : '');
+}
+/** DDL полей типа по схеме переноса (без CREATE VERTEX TYPE и служебного mig_src_rid). */
+export function schemaDdl(T, t) {
+  return Object.entries(t.fields).map(([f, e]) => ddlProperty(T, f, e.db_type, { notnull: e.notnull === true }));
+}
+/**
+ * MDL-11 · сторож перед записью: записи, у которых пусто обязательное (notnull) поле схемы. База такую запись
+ * не примет, и перенос оборвался бы посреди записи; поэтому — поимённо и до первой команды в приёмник.
+ */
+export function notNullMissing(calc, schema) {
+  const out = [];
+  for (const [T, t] of Object.entries(schema)) for (const [f, e] of Object.entries(t.fields)) {
+    if (e.notnull !== true) continue;
+    const rids = (calc[T] || []).filter(x => { const v = x.res.out[f]; return v === undefined || v === null || v === ''; }).map(x => x.rid);
+    if (rids.length) out.push({ type: T, field: f, rids });
+  }
+  return out;
 }
 /**
  * Ожидаемое значение в том виде, в каком его отдаёт база. Момент — «ГГГГ-ММ-ДД ЧЧ:ММ:СС.ммм» (UTC). Дата без времени
@@ -98,7 +117,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const calc = {}; // T → [{ rid, res }]
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
-    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], requiredStatus: requiredStatusField(RULES, T) }) });
+    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], deferEmpty: true }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};
@@ -146,6 +165,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
       }
     }
   }
+  // Пустой статус — правило владелицы 19.11.2026 (empty-fill.mjs): вычислить из данных (предыдущая версия, открытая
+  // версия записи) → решение из файла решений установки → начальный статус справочника. Каждая подстановка — в отчёте.
+  computeEmptyStatuses(calc, parentOf, T => ({ statusCodes, statusDict: DICT_OF[T], codeCase: CODE_CASE, decisions: DECISIONS, statusRules: RULES.dictionaries[RULES_DICT_OF[T]] }));
+  report.stages.empty_fill = { basis: 'правило владелицы 19.11', by_type: filledSummary(calc) };
+  log('2 пустой статус:', JSON.stringify(report.stages.empty_fill.by_type));
   // Статус фазы без кода — минимальный по задачам фазы (слово владелицы 16.11.2026). Задача → фаза по связи
   // IN_PHASE источника, статус задачи — её текущей версии после решений. Несведённое значение статуса фазы
   // уходит из остатка: оно решено правилом, исходный текст остаётся в status_note.
@@ -222,9 +246,16 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
+  // MDL-11: обязательное поле пусто — запись не начинается (пустой статус закрыт правилом выше; сторож — на прочие обязательные поля)
+  const missing = notNullMissing(calc, SCHEMA);
+  if (missing.length) throw new Error('обязательное поле пусто — нужно решение в разделе «Перенос» (несоответствие «пусто» или «вне справочника»): ' + missing.map(m => `${m.type}.${m.field} — ${m.rids.length} (${m.rids.slice(0, 5).join(', ')}${m.rids.length > 5 ? ', …' : ''})`).join('; '));
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
   // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
-  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA, notMovedFor(db.env));
+  const srcTypes = await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types');
+  // ряды модели (series): DDL — из модели, точки источника — своим шагом; «как есть» их не заводит (дефект 1.18,
+  // 19.11.2026: AgentActionLog и MetricSnapshot заводились только шагами V, которых у базы из модели нет)
+  const seriesSteps = seriesPlan(srcTypes, SERIES);
+  const structure = structurePlan(srcTypes, SCHEMA, notMovedFor(db.env), SERIES);
   // свои: типы карты и структуры; плюс типы «не переносить», оставленные прежней версией переноса, — их --reset удаляет
   const mine = [...ownTypes(), ...structure.types.map(t => t.name), ...Object.keys(NOT_MOVED)];
   const clash = existing.filter(n => mine.includes(n));
@@ -235,7 +266,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   for (const n of [...edgesFirst, ...clash.filter(n => !edgesFirst.includes(n))]) if (existing.includes(n)) await db.dstCommand(`DROP TYPE ${n} UNSAFE`);
   for (const [T, t] of Object.entries(SCHEMA)) {
     await db.dstCommand(`CREATE VERTEX TYPE ${T}`);
-    for (const [f, e] of Object.entries(t.fields)) await db.dstCommand(ddlProperty(T, f, e.db_type));
+    for (const s of schemaDdl(T, t)) await db.dstCommand(s);
     await db.dstCommand(`CREATE PROPERTY ${T}.mig_src_rid STRING`);
     await db.dstCommand(`CREATE INDEX ON ${T} (mig_src_rid) UNIQUE`);
   }
@@ -244,8 +275,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
   await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
   await db.dstCommand(`CREATE EDGE TYPE ${EDGE}`);
-  // DBR-07: временные ряды модели (AuditDbLogin — ряд сторожа входов); записей переноса в них нет.
-  for (const [T, s] of Object.entries(SERIES)) await db.dstCommand(seriesDdl(T, s));
+  // DBR-07: временные ряды модели (AuditDbLogin — сторож входов, AgentActionLog — журнал действий, MetricSnapshot —
+  // метрики) — DDL модели; точки источника переносятся ниже, после записей.
+  for (const s of seriesSteps) await db.dstCommand(s.ddl);
 
   const dstRid = {}; // rid источника → rid приёмника
   const undeclared = {};
@@ -265,29 +297,18 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await pool(leftovers, 8, x => db.dstCommand('INSERT INTO MigLeftover CONTENT :c', { c: { ...x, value: typeof x.value === 'string' ? x.value : JSON.stringify(x.value) } }));
   report.stages.write = { records: written, links: links.length, leftovers: leftovers.length, fields_not_in_schema: undeclared };
   // типы без карты — как есть (журналы, снимки метрик, планы): строка источника без @-полей + mig_src_rid; сверка счётом
+  // ряды модели: точки источника — по страницам (окна времени), детерминированно, со сверкой счёта (copySeries)
+  const seriesCopied = {};
+  for (const s of seriesSteps) {
+    seriesCopied[s.name] = s.copy ? await copySeries(seriesIo(db, s.name, s.ts)) : { source: 0, target: 0, absent_in_source: true };
+    log('3 ряд модели:', s.name, JSON.stringify(seriesCopied[s.name]));
+  }
+  report.stages.series = seriesCopied;
   const asIs = {};
-  const fmt = ms => new Date(ms).toISOString().replace('T', ' ').replace('Z', '');
-  // временной ряд: строк без @rid, поэтому окнами по времени; окно, упёршееся в потолок ответа базы, делится пополам
-  const tsCopy = async t => {
-    const [m] = await db.src(`SELECT min(${t.ts}) AS a, max(${t.ts}) AS b FROM ${t.name}`);
-    if (!m || m.a == null) return 0;
-    let n = 0;
-    const win = async (a, b) => {
-      const rows = await db.src(`SELECT FROM ${t.name} WHERE ${t.ts} >= '${fmt(a)}' AND ${t.ts} < '${fmt(b)}'`);
-      if (rows.length >= 20000 && b - a > 1) { const mid = Math.floor((a + b) / 2); await win(a, mid); await win(mid, b); return; }
-      await pool(rows, 8, r => db.dstCommand(`INSERT INTO ${t.name} CONTENT :c`, { c: tsContent(r, t.ts) }));
-      n += rows.length;
-    };
-    const lo = tsContent({ x: m.a }, 'x').x, hi = tsContent({ x: m.b }, 'x').x + 1, DAY = 86400000;
-    for (let a = lo; a < hi; a += DAY) await win(a, Math.min(a + DAY, hi));
-    return n;
-  };
   for (const t of structure.types) {
     if (t.kind === 'TIMESERIES') {
-      const n = await tsCopy(t);
-      const src = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
-      asIs[t.name] = { source: src, target: n };
-      if (src !== n) throw new Error(`перенос как есть: ${t.name} — в источнике ${src}, перенесено ${n}`);
+      // ряд источника вне модели — тем же переносом по страницам, структура — источника
+      asIs[t.name] = await copySeries(seriesIo(db, t.name, t.ts));
       continue;
     }
     let last = '#-1:-1', n = 0;

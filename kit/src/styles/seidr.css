@@ -1599,6 +1599,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-weight: 600;
   cursor: pointer;
 }
+/* Полоса не помещается (KitShell ставит data-compact; админка 1.18, ноутбук 1280: «Админка» обрезалась и уходила
+   под выбор проекта) — прочие модули иконкой (подпись — в aria-label и подсказке), текущий — со словом. */
+.sk-shell__mods[data-compact='true'] .sk-shell__mod:not([aria-current='page']) { padding: 0 8px; }
+.sk-shell__mods[data-compact='true'] .sk-shell__mod:not([aria-current='page']) .sk-shell__label,
+.sk-shell__mods[data-compact='true'] .sk-shell__mod:not([aria-current='page']) .sk-shell__tag { display: none; }
 .sk-shell__mod:hover { color: var(--t1); }
 .sk-shell__mod[aria-current="page"] { color: var(--t1); border-bottom-color: var(--acc); }
 .sk-shell__mod[aria-current="page"] .sk-icon { color: var(--acc); }
@@ -3526,6 +3531,12 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 /* PU-07: свёрнутая многозначная ячейка — одна строка: значение сжимается, «+N» на виду. */
 .sk-list__vals.is-folded { flex-wrap: nowrap; }
+/* Карточка — не строка таблицы: высоту строки беречь незачем, а колонка карточки на телефоне узкая (~170 px).
+   Значение переносится целиком, а не режется многоточием (админка 1.18, «Доступ к машинам» на 390: проект и
+   harness в карточке обрезались). «+N» остаётся рядом. */
+.sk-cards__fields .sk-list__vals.is-folded { flex-wrap: wrap; }
+.sk-cards__fields .sk-list__val { overflow: visible; }
+.sk-cards__fields .sk-list__val-t { white-space: normal; overflow-wrap: anywhere; }
 .sk-list__valmore {
   flex: 0 0 auto;
   padding: 0 6px;
@@ -6801,6 +6812,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   min-height: 0;
   overflow: auto;
 }
+/* K4-PASSPORT-NO-LIST-RESET: список стоит в ОДНОМ узле дерева и без записи, и под ней. Без записи
+   обёртки дока в раскладке нет (display: contents) — список в потоке страницы, крутится страницей,
+   как прежде. Во весь экран место списка скрыто, но список не выброшен из дерева. */
+.sk-dock-off,
+.sk-dock-off > .sk-dock__list { display: contents; }
+.sk-dock__backdrop[hidden] { display: none; }
 .sk-dock__panel {
   position: relative;
   min-height: 0;
