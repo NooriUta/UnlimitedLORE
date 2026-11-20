@@ -34,6 +34,10 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { pasteRefNodes, refCheckStates, refIdOfRaw, type RefCheckState } from './refPasteCheck';
 import { RefCreateCard, RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
+import { TagPicker, type TipTapTagSource } from './TagPicker';
+import { tagToken } from './refTrigger';
+
+export type { TipTapTagSource } from './TagPicker';
 import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
@@ -214,6 +218,11 @@ export interface TipTapRefSource {
    * проверить» (не красим). Отказ (throw) — тоже «не смогли».
    */
   exists?: (refs: MdRef[]) => Promise<Record<string, boolean | null>>;
+  /**
+   * SUPERTAGS-SPIKE: теги со свободными полями. Есть — «#слово», которое не тип записи, открывает окно тегов
+   * (TagPicker): поля пишет приложение на ребро, в текст ложится токен [[ЗАПИСЬ#тег]]. Нет — «тип не знаем».
+   */
+  tags?: TipTapTagSource;
 }
 
 /** Отметки ссылок «есть / нет / не проверено» — декорацией (DOM редактора перерисовывается). */
@@ -343,6 +352,7 @@ export function TipTapField({
   const refOpenRef = useRef<RefOpen | null>(null);
   refOpenRef.current = refOpen;
   const pickerRef = useRef<RefPickerHandle>(null);
+  const tagPickerRef = useRef<RefPickerHandle>(null);
   // Закрытое Esc/щелчком вне не открывается снова, пока вызов на том же месте.
   const refDismissed = useRef<number | null>(null);
   const [refSearch, setRefSearch] = useState<RefSearch>({ state: 'loading' });
@@ -424,8 +434,9 @@ export function TipTapField({
       },
       // Окно ссылки открыто — стрелки, Enter, Tab и Esc идут ему (фокус остаётся в тексте).
       handleKeyDown: (_view, event) => {
-        if (!refOpenRef.current || !pickerRef.current) return false;
-        if (!pickerRef.current.handleKey(event.key)) return false;
+        const picker = tagPickerRef.current ?? pickerRef.current;
+        if (!refOpenRef.current || !picker) return false;
+        if (!picker.handleKey(event.key)) return false;
         event.preventDefault();
         return true;
       },
@@ -508,6 +519,18 @@ export function TipTapField({
     // Атомом mdRaw/wikilink — как круг «MD → TipTap → MD»: текстом сериализатор экранировал бы «[[».
     editor.chain().focus().deleteRange({ from: open.from, to: open.to }).insertContent([
       { type: 'mdRaw', attrs: { raw: `[[${item.type}:${item.id}]]`, kind: 'wikilink' } },
+      { type: 'text', text: ' ' },
+    ]).run();
+    refDismissed.current = null;
+    setRefOpen(null);
+  };
+  // SUPERTAGS: тег поставлен (поля уже на ребре) — набранное «#слово» заменяется токеном [[ЗАПИСЬ#тег]].
+  const pickTag = (tag: string) => {
+    const open = refOpenRef.current;
+    const host = refsRef.current?.tags?.host;
+    if (!editor || editor.isDestroyed || !open || !host) return;
+    editor.chain().focus().deleteRange({ from: open.from, to: open.to }).insertContent([
+      { type: 'mdRaw', attrs: { raw: tagToken(host, tag), kind: 'wikilink' } },
       { type: 'text', text: ' ' },
     ]).run();
     refDismissed.current = null;
@@ -842,6 +865,9 @@ export function TipTapField({
           {refOpen && refs && (
             // Якорь у каретки (координаты окна); поповер встаёт под ним и прижимается к краю экрана.
             <div className="sk-md__refanchor" style={{ left: refOpen.rect.left, top: refOpen.rect.top }}>
+              {refOpen.trigger.trigger === 'hash' && refOpen.trigger.unknownType && refs.tags ? (
+                <TagPicker ref={tagPickerRef} word={refOpen.trigger.unknownType} source={refs.tags} onDone={pickTag} onClose={closeRefPicker} />
+              ) : (
               <RefPicker
                 ref={pickerRef}
                 trigger={refOpen.trigger}
@@ -853,6 +879,7 @@ export function TipTapField({
                 createSpec={refs.createSpec}
                 onCreate={refs.onCreate}
               />
+              )}
             </div>
           )}
           {/* position: fixed — координаты каретки приходят в координатах окна. */}
