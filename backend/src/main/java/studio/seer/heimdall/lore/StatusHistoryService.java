@@ -85,7 +85,9 @@ final class StatusHistoryService {
         "changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine", "status_known_from", "status_backfilled", "rid",
         // MT-NOTE-APPEND п.3: пометка «версия — правка текста» принадлежит своей версии;
         // смена статуса после правки — уже не правка текста.
-        "version_kind");
+        "version_kind",
+        // WK-01: причина правки — у каждой версии своя; из прежней строки не переносится.
+        "change_reason");
 
     /**
      * MIG-03: поле происхождения строки из переноса (mig_src_rid …) принадлежит только своей строке — его индекс

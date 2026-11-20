@@ -41,7 +41,8 @@ test('карта по переписи: каждое поле каждого п�
   const m = proposeMap(census);
   assert.deepEqual(Object.keys(m.types), ['KnowADRHist']);
   // + служебные поля правки у каждого типа версий (снимок 18.11.2026: без правила перенос терял их как «вне карты»)
-  assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'changed_by_session', 'hist_for', 'status_raw', 'valid_from']);
+  // + причина правки (WK-01, 20.11.2026) — тоже служебное поле версии
+  assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['change_reason', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'changed_by_session', 'hist_for', 'status_raw', 'valid_from']);
   // + снятые V89 легаси-словари — всегда, даже если перепись их не видела (MD-02)
   assert.deepEqual(Object.keys(m.skipped), ['PlanTrack', ...RETIRED_V89].sort());
   assert.equal(JSON.stringify(proposeMap(census)), JSON.stringify(m));

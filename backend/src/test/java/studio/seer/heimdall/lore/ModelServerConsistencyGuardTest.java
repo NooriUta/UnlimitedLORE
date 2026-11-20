@@ -73,7 +73,7 @@ class ModelServerConsistencyGuardTest {
                 String pt = (String) f.get("property_type");
                 if (pt == null) continue;
                 String id = t.getKey() + "." + f.get("key");
-                if (!compatible(String.valueOf(f.get("kind")), pt) && !KIND_EXEMPT.containsKey(id))
+                if (!LoreModelConsistency.compatible(String.valueOf(f.get("kind")), Boolean.TRUE.equals(f.get("multi")), pt) && !KIND_EXEMPT.containsKey(id))
                     drift.add(id + " (" + f.get("kind") + " ← " + pt + ")");
             }
         assertEquals(List.of(), drift, "вид поля модели противоречит типу свойства схемы");
