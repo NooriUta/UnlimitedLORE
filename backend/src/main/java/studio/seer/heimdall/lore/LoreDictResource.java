@@ -35,24 +35,90 @@ public class LoreDictResource extends LoreResourceBase {
     public record DictEntryRequest(String dict_type, String code, String label_ru,
                                    String label_en, String color, String icon,
                                    Integer sort_order, Boolean is_active, Boolean is_extensible,
-                                   String kind) {}
+                                   Object kind, String reason) {}
 
     /**
      * SPRINT_LORE_WORK_ANY_KIND/WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид статьи — набор
-     * допустимых значений на словарь. Сейчас вид есть только у product: tech — технологический,
-     * service — сервисно-организационный (от него git не требуется).
+     * допустимых значений на словарь. У product: tech — технологический, service — сервисно-организационный
+     * (от него git не требуется). Порядок списка — канонический порядок набора в записи.
      */
     // qg_type — слой гейта (SPRINT_QG_REBUILD/QG-04, ADR-LORE-053-D3): универсальный или проектный.
-    static final Map<String, java.util.Set<String>> KINDS = Map.of(
-        "product", java.util.Set.of("tech", "service"),
-        "qg_type", java.util.Set.of("universal", "project"));
+    static final Map<String, List<String>> KINDS = Map.of(
+        "product", List.of("tech", "service"),
+        "qg_type", List.of("universal", "project"));
+
+    /**
+     * Словари, у которых вид — НАБОР (enum multi), а не одно значение. product — решение владелицы
+     * 19.11.2026 (ADR-LORE-044): tech, service или оба; пустой набор нельзя. В базе — список
+     * (перенос 1.18 объявляет KnowDictEntry.kind как LIST).
+     */
+    static final java.util.Set<String> MULTI_KINDS = java.util.Set.of("product");
+
+    /** Предел причины правки — как у остальных коротких причин (одна фраза, не текст). */
+    static final int REASON_MAX = 500;
 
     /** Отказ словами, если вид не подходит словарю; null — вид не прислан или допустим. */
-    static String kindRefusal(String dictType, String kind) {
+    static String kindRefusal(String dictType, Object kind) {
+        try {
+            normalizeKind(dictType, kind);
+            return null;
+        } catch (IllegalArgumentException e) {
+            return e.getMessage();
+        }
+    }
+
+    /**
+     * Вид в той форме, в какой он хранится: у словаря-набора — список без повторов в каноническом
+     * порядке (строка прежнего клиента — набор из одного); у словаря с одним видом — строка.
+     * null — вид не прислан. Неподходящий вид — {@link IllegalArgumentException} с текстом отказа.
+     */
+    static Object normalizeKind(String dictType, Object kind) {
         if (kind == null) return null;
-        java.util.Set<String> allowed = KINDS.get(dictType);
-        if (allowed == null) return "у словаря " + dictType + " вида нет — kind не принимается";
-        if (!allowed.contains(kind)) return "вид «" + kind + "» у словаря " + dictType + " недопустим, есть: " + new java.util.TreeSet<>(allowed);
+        List<String> allowed = KINDS.get(dictType);
+        if (allowed == null) throw new IllegalArgumentException("у словаря " + dictType + " вида нет — kind не принимается");
+        boolean multi = MULTI_KINDS.contains(dictType);
+        if (!multi) {
+            if (!(kind instanceof String s)) throw new IllegalArgumentException(
+                "у словаря " + dictType + " вид один — пришлите строку, есть: " + allowed);
+            if (!allowed.contains(s)) throw new IllegalArgumentException(
+                "вид «" + s + "» у словаря " + dictType + " недопустим, есть: " + allowed);
+            return s;
+        }
+        List<?> sent = kind instanceof List<?> l ? l : List.of(kind);
+        if (sent.isEmpty()) throw new IllegalArgumentException(
+            "вид у словаря " + dictType + " — набор, и пустым он быть не может: выберите из " + allowed);
+        java.util.Set<String> got = new java.util.HashSet<>();
+        for (Object o : sent) {
+            if (!(o instanceof String s) || !allowed.contains(s)) throw new IllegalArgumentException(
+                "вид «" + o + "» у словаря " + dictType + " недопустим, есть: " + allowed);
+            got.add(s);
+        }
+        return allowed.stream().filter(got::contains).toList();
+    }
+
+    /** Хранимый вид в форме сравнения: у словаря-набора прежняя строка — список из одного. */
+    private static Object storedKind(String dictType, Object stored) {
+        if (stored == null || !MULTI_KINDS.contains(dictType)) return stored;
+        try {
+            return normalizeKind(dictType, stored);
+        } catch (IllegalArgumentException e) {
+            return stored; // в базе мусор — не равен ничему присланному, правка пройдёт и его заменит
+        }
+    }
+
+    /**
+     * WK-01 (слово владелицы 20.11.2026: «с подтверждением»): смена вида у существующей статьи — правка
+     * с причиной. Причина уходит в версию истории ({@code change_reason}). Вид впервые (у статьи его не
+     * было) — разметка, а не смена: причина не требуется, как и у новой статьи.
+     */
+    static String reasonRefusal(DictEntryRequest req, Map<String, Object> stored) {
+        if (req.reason() != null && req.reason().length() > REASON_MAX)
+            return "reason длиннее " + REASON_MAX + " символов — нужна одна фраза";
+        if (req.kind() == null || stored == null || stored.get("kind") == null) return null;
+        Object want = normalizeKind(req.dict_type(), req.kind());
+        if (java.util.Objects.equals(want, storedKind(req.dict_type(), stored.get("kind")))) return null;
+        if (req.reason() == null || req.reason().isBlank())
+            return "смена вида статьи " + req.dict_type() + "/" + req.code() + " — правка с причиной: пришлите reason (зачем меняется вид)";
         return null;
     }
 
@@ -78,6 +144,8 @@ public class LoreDictResource extends LoreResourceBase {
                 "SELECT label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind " +
                 "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code", key0);
             boolean existed = !prev.isEmpty();
+            String reasonBad = reasonRefusal(req, existed ? prev.get(0) : null);
+            if (reasonBad != null) return badParams(reasonBad);
             Map<String, Object> base = Map.of("ok", true, "dict_type", req.dict_type(), "code", req.code());
             if (existed && sameAsStored(req, prev.get(0))) {
                 Map<String, Object> out = new java.util.LinkedHashMap<>(base);
@@ -100,7 +168,7 @@ public class LoreDictResource extends LoreResourceBase {
             if (req.color()      != null) { sql.append(", color=:col");     p.put("col", req.color()); }
             if (req.icon()       != null) { sql.append(", icon=:icon");     p.put("icon", req.icon()); }
             if (req.sort_order() != null) { sql.append(", sort_order=:so"); p.put("so", req.sort_order()); }
-            if (req.kind()       != null) { sql.append(", kind=:kind");     p.put("kind", req.kind()); }
+            if (req.kind()       != null) { sql.append(", kind=:kind");     p.put("kind", normalizeKind(req.dict_type(), req.kind())); }
             sql.append(" UPSERT WHERE dict_type=:dt AND code=:code");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
@@ -114,7 +182,7 @@ public class LoreDictResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowDictEntry SET is_extensible=false WHERE dict_type=:dt AND code=:code AND is_extensible IS NULL",
                 key)).await().indefinitely();
-            writeDictHist(req.dict_type(), req.code());
+            writeDictHist(req.dict_type(), req.code(), req.reason() == null || req.reason().isBlank() ? null : req.reason().trim());
             Map<String, Object> out = new java.util.LinkedHashMap<>(base);
             out.put("outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED);
             return noStore(Response.ok(out));
@@ -143,7 +211,8 @@ public class LoreDictResource extends LoreResourceBase {
             && same(req.sort_order(), stored.get("sort_order"))
             && same(req.is_active(), stored.get("is_active"))
             && same(req.is_extensible(), stored.get("is_extensible"))
-            && same(req.kind(), stored.get("kind"));
+            && (req.kind() == null || java.util.Objects.equals(
+                    normalizeKind(req.dict_type(), req.kind()), storedKind(req.dict_type(), stored.get("kind"))));
     }
 
     private static boolean same(Object sent, Object stored) {
@@ -164,7 +233,19 @@ public class LoreDictResource extends LoreResourceBase {
      * log; dict is a HUMAN_ONLY family, so the axis is always "human"). This
      * method only answers "when" and "what changed".
      */
-    private void writeDictHist(String dictType, String code) {
+    /**
+     * Вставка версии истории статьи. WK-01: {@code change_reason} — причина правки (обязательна при смене
+     * вида, {@link #reasonRefusal}); правка без причины пишет null — «причину не назвали», а не пустую строку.
+     */
+    static final String HIST_INSERT =
+        "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
+        "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
+        "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
+        "is_active=:is_active, is_extensible=:is_extensible, kind=:kind, change_reason=:reason" + ChangeAuthor.SET_SQL + ";" +
+        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
+        "TO (SELECT FROM KnowDictEntryHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";
+
+    private void writeDictHist(String dictType, String code, String reason) {
         List<Map<String, Object>> rows = ingestService.queryPublic(
             "SELECT label_ru, label_en, color, icon, sort_order, kind, " +
             "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible " +
@@ -176,15 +257,10 @@ public class LoreDictResource extends LoreResourceBase {
         hp.put("code", code);
         hp.put("nsid", UUID.randomUUID().toString());
         hp.put("now", Instant.now().toString());
+        hp.put("reason", reason);
         changeAuthor().bind(hp); // S2-12: автор версии — из токена (справочник правит человек)
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
-            "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
-            "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
-            "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
-            "is_active=:is_active, is_extensible=:is_extensible, kind=:kind" + ChangeAuthor.SET_SQL + ";" +
-            "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
-            "TO (SELECT FROM KnowDictEntryHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);",
-            hp)).await().indefinitely();
+            HIST_INSERT, hp)).await().indefinitely();
     }
 
     // One-time (idempotent) backfill of IN_AREA edges from existing area strings —

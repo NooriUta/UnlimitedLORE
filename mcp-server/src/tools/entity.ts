@@ -560,7 +560,9 @@ export function registerEntity(server: McpServer): void {
       'set (project arrives via the parent ADR). sprint maps fields.project/git_project → git_project with the ' +
       'session fallback; actor/project_actor carry project/projects as body fields.\n\n' +
       'dict: fields.human_approval ("who approved, where") travels as the X-Lore-Human-Approval header ' +
-      '(human-only family), not the body. question: fields.status="closed" is refused with guidance — close via ' +
+      '(human-only family), not the body; dict product kind is a set — fields.kind ["tech"], ["service"] or ' +
+      '["tech","service"] (empty refused), and changing the kind of an existing entry requires fields.reason ' +
+      '(stored on the history version). question: fields.status="closed" is refused with guidance — close via ' +
       'entity_link type=question rel=answers. Mutates the shared system_aida_lore.',
     {
       type: z.enum(UPSERT_TYPES).describe('entity family — the consolidated per-entity tool group to write through'),

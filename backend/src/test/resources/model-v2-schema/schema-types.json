@@ -1,5 +1,5 @@
 {
-  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-06 · снимок схемы базы, собранной переносом из модели (только имена свойств и их типы, без данных). Источник: копия ryzenai, база migration_dst_rehearsal, отметка LoreModelSchema model_hash b93dbe66805f2a4d, built_at 2026-11-19T13:23:28.795Z; запрос SELECT name, properties FROM schema:types. Взяты типы из раздела graph модели; null — типа в схеме нет. Обновлять тем же запросом после пересборки схемы переноса. Поправлено 19.11.2026 по правилам установщика MDL-06 («даты переводи»): status_known_from у версий — DATETIME, KnowUseCase.shipped_at — DATE; копия с этими правилами ещё не пересобрана — после пересборки переснять с базы. Совпадение с scripts/model-migration/schema/*.json сверяет LoreModelDateKindsMatchSchemaTest.snapshotAgreesWithInstallerSchema.",
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-06 · снимок схемы базы, собранной переносом из модели (только имена свойств и их типы, без данных). Источник: копия ryzenai, база migration_dst_rehearsal, отметка LoreModelSchema model_hash b93dbe66805f2a4d, built_at 2026-11-19T13:23:28.795Z; запрос SELECT name, properties FROM schema:types. Взяты типы из раздела graph модели; null — типа в схеме нет. Обновлять тем же запросом после пересборки схемы переноса. Поправлено 19.11.2026 по правилам установщика MDL-06 («даты переводи»): status_known_from у версий — DATETIME, KnowUseCase.shipped_at — DATE; копия с этими правилами ещё не пересобрана — после пересборки переснять с базы. Совпадение с scripts/model-migration/schema/*.json сверяет LoreModelDateKindsMatchSchemaTest.snapshotAgreesWithInstallerSchema. Поправлено 20.11.2026 по правилам установщика WK-01: KnowDictEntry.kind и KnowDictEntryHist.kind — LIST (вид продукта — набор, шаг product-kind.mjs), change_reason у версий — STRING (служебное поле правки); копия с этими правилами ещё не пересобрана — после пересборки переснять с базы.",
   "model_hash": "b93dbe66805f2a4d",
   "built_at": "2026-11-19T13:23:28.795Z",
   "types": {
@@ -17,6 +17,7 @@
     },
     "KnowADRHist": {
       "adr_id": "STRING",
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -61,6 +62,7 @@
       "updated_at": "DATETIME"
     },
     "KnowDecisionHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -84,12 +86,14 @@
       "icon": "STRING",
       "is_active": "BOOLEAN",
       "is_extensible": "BOOLEAN",
+      "kind": "LIST",
       "label_en": "STRING",
       "label_ru": "STRING",
       "mig_src_rid": "STRING",
       "sort_order": "INTEGER"
     },
     "KnowDictEntryHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -102,6 +106,7 @@
       "icon": "STRING",
       "is_active": "BOOLEAN",
       "is_extensible": "BOOLEAN",
+      "kind": "LIST",
       "label_en": "STRING",
       "label_ru": "STRING",
       "mig_src_rid": "STRING",
@@ -168,6 +173,7 @@
       "week": "LONG"
     },
     "KnowMilestoneHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -233,6 +239,7 @@
       "week": "LONG"
     },
     "KnowReleaseHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -264,6 +271,7 @@
       "runbook_id": "STRING"
     },
     "KnowRunbookHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -287,6 +295,7 @@
       "version": "STRING"
     },
     "KnowSpecHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -321,6 +330,7 @@
     },
     "KnowSprintHist": {
       "block_reason": "STRING",
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
@@ -364,6 +374,7 @@
       "work_class": "STRING"
     },
     "KnowTaskHist": {
+      "change_reason": "STRING",
       "changed_by": "STRING",
       "changed_by_harness": "STRING",
       "changed_by_harness_note": "STRING",
