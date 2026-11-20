@@ -102,6 +102,11 @@ export const CODE_FIELDS = {
   QGMetric: {
     name: { db_type: 'STRING', source: 'выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка' },
     threshold: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка' },
+    // 20.11.2026, «доделать функции, чтобы все поля работали»: остальные поля спеки пишет QgMetricState.UPSERT_SQL.
+    unit: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: unit — «% · s · MB/s · count», строка; пишет QgMetricState (из порога, иначе из прогона)' },
+    direction: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: direction — «gte · lte · eq», код-строка; пишет QgMetricState (из текста порога)' },
+    current_value: { db_type: 'DOUBLE', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: current_value — «последнее измерение (NULL если нет)», число; пишет QgMetricState (значение метрики последнего прогона гейта, ClRoutineMetric.value — DOUBLE)' },
+    status: { db_type: 'STRING', source: 'спека LORE_SCHEMA_V12_NEW_TYPES: status — «pass · fail · unknown», код-строка; пишет QgMetricState (по порогу и направлению)' },
   },
 };
 
