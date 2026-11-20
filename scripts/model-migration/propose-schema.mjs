@@ -56,7 +56,7 @@ for (const [T, t] of Object.entries(types)) {
 // Служебные поля, которые новая схема объявляет сама, даже если в данных источника их ещё нет (общий перечень
 // служебных полей; сессия, harness и машина, записавшие версию: слова владелицы 16.11.2026 «в истории … пишет идентификатор
 // сессии», «просить каждый mcp писать harness … константой», «и машину что уж то же», «при настройках MCP ещё две константы»).
-const DECLARED_SERVICE = { changed_by_session: { kind: 'text', db_type: 'STRING', name: 'Сессия правки' }, changed_by_harness: { kind: 'text', db_type: 'STRING', name: 'Harness правки' }, changed_by_harness_note: { kind: 'text', db_type: 'STRING', name: 'Сверка harness' }, changed_by_machine: { kind: 'text', db_type: 'STRING', name: 'Машина правки' } };
+const DECLARED_SERVICE = { changed_by_session: { kind: 'text', db_type: 'STRING', name: 'Сессия правки' }, changed_by_harness: { kind: 'text', db_type: 'STRING', name: 'Harness правки' }, changed_by_harness_note: { kind: 'text', db_type: 'STRING', name: 'Сверка harness' }, changed_by_machine: { kind: 'text', db_type: 'STRING', name: 'Машина правки' }, change_reason: { kind: 'text', db_type: 'STRING', name: 'Причина правки' } };
 for (const [T, t] of Object.entries(types)) {
   if (!T.endsWith('Hist')) continue;
   // Служебное поле служебное и с данными (снимок 18.11: changed_by_session заполнен у 52 версий задач).

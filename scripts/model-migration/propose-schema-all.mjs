@@ -40,7 +40,8 @@ export function sourcesOf(map, f) {
   return Object.entries(map).filter(([k, e]) => (e.rule === 'keep' && k === f) || ((e.rule === 'transform' || e.rule === 'rename') && e.to === f)).map(([k]) => k);
 }
 
-const SERVICE_NAMES = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки' };
+// WK-01 (20.11.2026): + причина правки — служебное поле версии рядом с changed_by_*.
+const SERVICE_NAMES = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки', change_reason: 'Причина правки' };
 
 /**
  * MD-02 8а · схема пустого типа «только схема» (тип нужен живому коду, данных нет). Источники свойства по порядку
@@ -69,7 +70,10 @@ function main() {
   const MAP = J(here('./map/all-objects.json')).types;
   const CENSUS = J(here('./tools/census/fields-all.json'));
   const FIRST = new Set(Object.keys(J(here('./schema/sprint-phase-task.json')).types));
-  const SERVICE = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки' };
+  const SERVICE = SERVICE_NAMES;
+  // WK-01: вид статьи словаря — набор (product: tech | service, ADR-LORE-044); шаг вида продукта (product-kind.mjs) пишет его
+  // списком, поэтому схема объявляет поле сама, даже если в снимке источника значений ещё нет.
+  const DECLARED = { KnowDictEntry: { kind: 'Вид' }, KnowDictEntryHist: { kind: 'Вид' } };
   const types = {};
   const MAPDOC = J(here('./map/all-objects.json'));
   const DDL = declaredDdl(fileURLToPath(LORE_JAVA));
@@ -86,6 +90,7 @@ function main() {
     }
     // Служебное поле служебное и с данными (снимок 18.11: у версий релизов и решений поля правки заполнены).
     if (T.endsWith('Hist')) for (const [f, name] of Object.entries(SERVICE)) fields[f] = fields[f] ? { ...fields[f], kind: 'text', db_type: 'STRING', name, service: true } : { kind: 'text', db_type: 'STRING', name, from: [], filled: 0, of: t.records, service: true, note: 'объявлено общим перечнем служебных полей' };
+    for (const [f, name] of Object.entries(DECLARED[T] || {})) fields[f] = { kind: 'list', db_type: 'LIST', name, from: fields[f] ? fields[f].from : [], filled: fields[f] ? fields[f].filled : 0, of: t.records, note: 'вид статьи — набор (product: tech | service, ADR-LORE-044); объявляет шаг вида продукта (product-kind.mjs)' };
     types[T] = { records: t.records, version_of: T.endsWith('Hist') ? T.slice(0, -4) : null, fields, held: t.held, rejects: Object.fromEntries(Object.entries(t.rejects).map(([k, e]) => [k, e.n ?? e])) };
   }
   // MDL-11: обязательные поля (MANDATORY + NOTNULL) — из модели

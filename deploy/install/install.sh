@@ -548,6 +548,12 @@ selftest() {
   FORGEJO_MCP_IMAGE=reg.example/fmcp:1 FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
   printf '%s' "$out" | grep -q 'compose pull forgejo-mcp' || fail "FORGEJO_MCP_IMAGE не перекрыл архив: $out"; ok
   printf '%s' "$out" | grep -q 'docker load' && fail "FORGEJO_MCP_IMAGE задан, а план грузит архив"; ok
+  # 10. локальная LLM — по выбору (MIG-04, владелица 20.11.2026): бэкенд получает адрес, модель и ключ; по умолчанию пусто
+  for k in LORE_LLM_LOCAL_URL LORE_LLM_LOCAL_MODEL LORE_LLM_LOCAL_API_KEY; do
+    grep -qE "^$k=$" "$SCRIPT_DIR/.env.example" || fail ".env.example: $k — пустая строка"; ok
+    grep -q -- "- $k=\${$k:-" "$c" || fail "бэкенд: $k не передаётся"; ok
+  done
+  grep -q 'host.docker.internal:host-gateway' "$c" || fail "бэкенд: модель на этой машине не видна из контейнера"; ok
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }

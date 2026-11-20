@@ -8,6 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { applyMap, toPrRefs } from './apply-map.mjs';
+import { fieldValues } from './decision-refs.mjs';
 
 const MAP = JSON.parse(fs.readFileSync(new URL('./map/sprint-phase-task.json', import.meta.url), 'utf8')).types;
 const ALL = JSON.parse(fs.readFileSync(new URL('./map/all-objects.json', import.meta.url), 'utf8')).types;
@@ -40,12 +41,13 @@ test('pr_refs: релиз и приписки не теряются — уход
   assert.deepEqual(toPrRefs('см. обсуждение'), { prs: [], note: 'см. обсуждение' });
 });
 
-test('перенос: удержанный pr_refs спринта, версии и решения — одного вида', () => {
+test('перенос: удержанный pr_refs спринта и версии — одного вида; у решения — пересадка на связи (MDL-08 ч.2)', () => {
   const rec = applyMap('KnowSprint', MAP.KnowSprint, { sprint_id: 'S', pr_refs: '#101, #102' }, ctx);
   assert.deepEqual(rec.held.pr_refs, { prs: ['#101', '#102'] });
   const ver = applyMap('KnowSprintHist', MAP.KnowSprintHist, { pr_refs: [420] }, ctx);
   assert.deepEqual(ver.held.pr_refs, { prs: ['#420'] });
   const dec = applyMap('KnowDecision', ALL.KnowDecision, { pr_refs: '[#5](https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/5)' }, ctx);
-  assert.deepEqual(dec.held.pr_refs, { prs: ['git.seidrstudio.pro/AIDA/UnlimitedLORE#5'] });
+  assert.equal(dec.held.pr_refs, undefined, 'решение: не удерживается — шаг связей decision-refs.mjs');
+  assert.deepEqual(fieldValues('pr_refs', '[#5](https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/5)'), ['git.seidrstudio.pro/AIDA/UnlimitedLORE#5'], 'тот же вид MDL-06 у значения пересадки');
   for (const r of [rec, ver, dec]) assert.ok(!('pr_refs' in r.out), 'в запись новой базы поле не идёт — до шага связей');
 });

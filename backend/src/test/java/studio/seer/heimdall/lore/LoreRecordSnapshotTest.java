@@ -112,7 +112,7 @@ class LoreRecordSnapshotTest {
         ROWS.put("milestone", m("milestone_id", "M-SNAP", "label", "Веха", "status", "planned", "week", "W45",
             "date_display", "10.11", "priority", "P0", "products", List.of("LORE"), "goal_md", "цель", "decisions_md", "реш",
             "direct_sprint_ids", List.of("SPRINT_SNAP", "SPRINT_A")));
-        ROWS.put("release", m("release_id", "v1.17.4", "git_tag", "v1.17.4-tag", "version", "1.17.4", "status", "released",
+        ROWS.put("release", m("release_id", "v1.17.4", "git_tag", "v1.17.4-tag", "status", "released",
             "type", "patch", "release_date", "2026-11-05", "is_current", true, "week", "W45", "projects", List.of("AIDA/UnlimitedLORE"),
             "description_md", "описание", "sprint_count", 2, "pr_count", 3));
         ROWS.put("component", m("component_id", "CMP-SNAP", "full_name", "Компонент", "status", "active", "area", "backend",
@@ -270,7 +270,8 @@ class LoreRecordSnapshotTest {
         Map<String, Object> sp = Legacy.values("spec", ROWS.get("spec"));
         assertEquals(true, sp.get("body_redacted"));
         Map<String, Object> r = Legacy.values("release", ROWS.get("release"));
-        assertEquals("1.17.4", r.get("title"));
+        // MDL-08 ч.2: подпись релиза — тег (version снят как дубль release_id/git_tag)
+        assertEquals("v1.17.4", r.get("title"));
         assertEquals("v1.17.4", r.get("code"));
         assertEquals("true", r.get("is_current"));
         Map<String, Object> f = Legacy.values("feature", ROWS.get("feature"));
@@ -479,7 +480,9 @@ class LoreRecordSnapshotTest {
         static Map<String, Object> release(Map<String, Object> r) {
             Map<String, Object> v = new LinkedHashMap<>();
             String tag = str(r.get("release_id")) != null ? str(r.get("release_id")) : str(r.get("git_tag"));
-            v.put("title", str(r.get("version")) != null ? str(r.get("version")) : tag);
+            // MDL-08 ч.2 (20.11.2026): KnowRelease.version снят — дубль release_id/git_tag (снимок 18.11: 92 из 92);
+            // подпись — тег, как и было у всех релизов прода (version там всегда равнялся release_id).
+            v.put("title", tag);
             v.put("code", tag);
             v.put("type", str(r.get("type")));
             v.put("date", str(r.get("release_date")));

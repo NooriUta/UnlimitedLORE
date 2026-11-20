@@ -48,8 +48,7 @@ class FieldDeclaredGuardTest {
 
     private static final String PLAN_BOARD = "старая доска плана: писателя в коде нет, перенос 1.18 её по умолчанию не берёт "
         + "(D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION, срез отвечает 410), читает только экран плана v1";
-    private static final String HELD_REFS = "удержанное значение: в схеме переноса 1.18 не объявлено, становится связью (MIG-01); "
-        + "на старой схеме лежит строкой, читают экран решений v1 и MCP";
+    // MDL-08 ч.2: ссылки решения (adr/sprint/pr/release_refs) читаются по связям REFERENCES — исключения сняты.
 
     /** «срез.поле» → причина, по которой чтение принято без объявления (легаси до решения владелицы). */
     static final Map<String, String> LEGACY = Map.ofEntries(
@@ -60,11 +59,6 @@ class FieldDeclaredGuardTest {
         Map.entry("plan_checkpoints.desc_md", PLAN_BOARD),
         Map.entry("plan_versions.changelog_md", PLAN_BOARD),
         Map.entry("plan_versions.version_date", PLAN_BOARD),
-        Map.entry("decision.adr_refs", HELD_REFS),
-        Map.entry("decision.sprint_refs", HELD_REFS),
-        Map.entry("decision.pr_refs", HELD_REFS),
-        Map.entry("decision.release_refs", HELD_REFS),
-        Map.entry("release_decisions.release_refs", HELD_REFS + "; фильтр решений релиза до перевода на ребро"),
         // qg_metrics.threshold снято: QGMetric в 1.18 — тип «только схема» со свойством threshold (MD-02 8а, 19.11.2026)
         Map.entry("history_sprint.pr_refs", "KnowSprintHist.pr_refs — смешанные типы значений, канон не выбран (MDL-03 придержал); "
             + "в переносе 1.18 — связи с PR (MIG-01)"));

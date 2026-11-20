@@ -127,6 +127,16 @@ describe('SandboxedHtmlFrame — HTML только в песочнице', () =>
     expect(wrapSandboxHtml('<p>x</p>', 't', dark)).toContain('color-scheme:dark');
   });
 
+  // MDL-08 ч.2 (20.11.2026, проверка рендера вкладки «HTML» паспорта документа): рамка, загруженная во вкладке,
+  // которую показали позже (скрытой её высота = своей), сообщала высоту 240 и больше не обновляла — тело
+  // документа обрезалось. Сигнал _skResize обязан следовать за раскладкой (ResizeObserver), а не только за
+  // загрузкой и правкой DOM.
+  it('высота рамки следует за раскладкой тела: ResizeObserver в обвязке песочницы', () => {
+    const html = wrapSandboxHtml('<p>x</p>', 't', readFrameTheme(() => ''));
+    expect(html).toMatch(/new ResizeObserver\(post\)\.observe\(document\.body\)/);
+    expect(html).toContain('_skResize');
+  });
+
   // Витрина /kit переключает тему на обёртке ([data-mode] поддерева), а не на <html>:
   // песочница читала корень и в «Светлой» получала светлый текст тёмной темы.
   // jsdom наследование CSS-переменных не считает, поэтому проверяются две части:

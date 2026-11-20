@@ -293,6 +293,9 @@ final class LoreRecordFrom {
             v("body_md", Transform.FIRST_OF, "content_md_ru", "content_md_en"),
             s("content_md_ru", "content_md_ru"),
             s("content_md_en", "content_md_en"),
+            // MDL-08 ч.2 (владелица 20.11.2026: «HTML выведи отдельной вкладкой в паспорт»): HTML-тело дока — вкладкой
+            // «HTML» паспорта, рендер только в песочнице (SandboxedHtmlFrame); скрытие тела (body_redacted) его обнуляет.
+            s("content_html", "content_html"),
             s("kind", "kind"),
             s("component", "component_id"),
             list("projects", "projects"),
@@ -399,8 +402,8 @@ final class LoreRecordFrom {
             s("decisions_md", "decisions_md"),
             v("status", Transform.DOC_TOKEN, "status"))),
         Map.entry("release", List.of(
-            // У релиза подпись — версия, иначе тег (release_id, иначе git_tag).
-            v("title", Transform.FIRST_OF, "version", "release_id", "git_tag"),
+            // У релиза подпись — тег (release_id, иначе git_tag). MDL-08 ч.2: version снят — дубль git_tag/release_id.
+            v("title", Transform.FIRST_OF, "release_id", "git_tag"),
             v("code", Transform.FIRST_OF, "release_id", "git_tag"),
             s("type", "type"),
             s("date", "release_date"),
@@ -481,6 +484,8 @@ final class LoreRecordFrom {
             s("icon", "icon"),
             v("sort_order", Transform.RAW, "sort_order"),
             v("is_active", Transform.BOOL, "is_active"),
+            // WK-01: вид продукта — набор tech | service (ADR-LORE-044); прежняя строка — список из одного.
+            list("kind", "kind"),
             v("parent", Transform.HEAD_OR, "parent_code"),
             list("projects", "git_projects"),
             list("components", "components"))));
@@ -665,7 +670,7 @@ final class LoreRecordFrom {
             new SliceLink("adrs", "project_adrs", "project", "BELONGS_TO_PROJECT", "in", "adr",
                 from(Transform.STR, "adr_id"), from(Transform.FIRST_OF, "name", "adr_id"), from(Transform.DOC_TOKEN, "status"), true),
             new SliceLink("releases", "project_releases", "project", "BELONGS_TO_PROJECT", "in", "release",
-                from(Transform.STR, "release_uid"), from(Transform.FIRST_OF, "version", "release_id", "git_tag", "release_uid"), null, true),
+                from(Transform.STR, "release_uid"), from(Transform.FIRST_OF, "release_id", "git_tag", "release_uid"), null, true),
             new SliceLink("people", "project_people", "project", "HAS_PROJECT_ROLE", "in", "user",
                 from(Transform.STR, "kc_sub"), from(Transform.FIRST_OF, "display_name", "kc_sub"), null, true),
             new SliceLink("agents", "project_agents", "project", "HAS_PROJECT_ROLE", "in", "agent",
