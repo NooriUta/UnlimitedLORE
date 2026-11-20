@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "c64499e411ca982b",
+  "version" : "598933a31cae81a3",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -5851,7 +5851,7 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true,
+        "manageable" : false,
         "props" : [ {
           "key" : "kind",
           "label" : "Вид",
@@ -5868,7 +5868,7 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true,
+        "manageable" : false,
         "props" : [ {
           "key" : "kind",
           "label" : "Вид",

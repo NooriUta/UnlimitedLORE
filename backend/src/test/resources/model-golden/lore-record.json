@@ -9631,7 +9631,7 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true,
+        "manageable" : false,
         "props" : [ {
           "key" : "kind",
           "label" : "Вид",
@@ -9648,7 +9648,7 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true,
+        "manageable" : false,
         "props" : [ {
           "key" : "kind",
           "label" : "Вид",
@@ -10054,7 +10054,7 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true,
+        "manageable" : false,
         "props" : [ {
           "key" : "kind",
           "label" : "Вид",
@@ -10071,7 +10071,7 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true,
+        "manageable" : false,
         "props" : [ {
           "key" : "kind",
           "label" : "Вид",

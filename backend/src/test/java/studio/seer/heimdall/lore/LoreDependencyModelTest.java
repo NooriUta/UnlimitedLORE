@@ -41,13 +41,20 @@ class LoreDependencyModelTest {
                 assertEquals("any", r.targetType(), type + "." + r.key() + ": другой конец — любой из четырёх типов");
                 assertEquals("link_tab", r.place());
                 assertEquals("association", r.relation());
-                assertTrue(r.manageable(), type + "." + r.key() + ": путь привязки есть");
+                // веха — тип только для чтения (паспорт правку не обещает, LoreRecordFacadeLiveDbTest): её зависимости
+                // ставятся через MCP и путь /relation, но форма в паспорте вехи не рисуется
+                assertEquals(!"milestone".equals(type), r.manageable(), type + "." + r.key() + ": управление из паспорта");
                 assertEquals(List.of("kind", "reason"), r.props().stream().map(LoreRecordRegistry.EdgeProp::key).toList());
                 assertEquals(LoreDependency.DICT, r.props().get(0).dict());
+                if ("milestone".equals(type)) {
+                    assertNull(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", r.dir()), "у вехи пути из паспорта нет — правку паспорт не обещает");
+                    continue;
+                }
                 assertNotNull(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", r.dir()), type + ": маршрут " + r.dir());
                 assertEquals(LoreRecordRelationRoutes.Handler.DEPENDS_ON, LoreRecordRelationRoutes.find(type, "DEPENDS_ON", r.dir()).handler());
             }
-            assertTrue(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", "in").reversed(), "«от неё зависят» — запись на другом конце");
+            if (!"milestone".equals(type))
+                assertTrue(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", "in").reversed(), "«от неё зависят» — запись на другом конце");
         }
         assertEquals(LoreRecordRelationRoutes.Handler.ADR_DEPENDS_ON, LoreRecordRelationRoutes.find("adr", "DEPENDS_ON", "out").handler(),
             "ADR → ADR — свой путь, не зависимость планирования");

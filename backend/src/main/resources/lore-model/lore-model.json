@@ -2589,7 +2589,6 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true,
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
@@ -2606,7 +2605,6 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true,
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
