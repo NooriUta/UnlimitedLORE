@@ -388,6 +388,15 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
 
 if (process.argv[1] === 'transfer') {
 const db = connect();
+// Те же ворота, что у мастера (шаг 4): без решений по статусам и вида продукта перенос не начинается.
+const { collectStatusDialog } = await import('./status-run.mjs');
+const { readProductKindInput, productKindState } = await import('./product-kind.mjs');
+const { transferGate } = await import('./transfer-gate.mjs');
+const dlg = await collectStatusDialog(db, RULES, DECISIONS);
+const pks = productKindState((await readProductKindInput(db)).products, DECISIONS || { decisions: [] });
+const gate = transferGate({ needsDecision: dlg.summary.needs_decision || 0, missingKinds: pks.missing, unread: dlg.unread.length, allowPending: arg('--allow-pending') });
+if (gate.reasons.length) console.log((gate.ok ? 'внимание (--allow-pending): ' : 'СТОП: перенос не начинается — ') + gate.reasons.join('; '));
+if (!gate.ok) process.exit(3);
 const report = await transfer(db, DECISIONS, { reset: arg('--reset') });
 const verify = report.stages.verify;
 if (outFile) fs.writeFileSync(outFile, JSON.stringify(report, null, 1));
