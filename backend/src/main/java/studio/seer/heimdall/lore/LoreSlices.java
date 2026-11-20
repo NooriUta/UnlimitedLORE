@@ -642,6 +642,14 @@ public final class LoreSlices {
             "FROM KnowDecisionHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
+        // Графики 19.11.2026 (№11 «поток решений»): версии решений СО СТАТУСОМ и пометкой бэкфилла
+        // (S2-13: статус в истории решений положен бэкфиллом — это не переход, его считают отдельно).
+        // decision_history_all статуса не несёт и обрезан 300 строками. Без потолка: поток за квартал.
+        slice("decision_status_versions",
+            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, status_raw, valid_from, valid_to, status_backfilled " +
+            "FROM KnowDecisionHist WHERE valid_from IS NOT NULL",
+            List.of(), Map.of(), "");
+
         // ── §2 Decisions ─────────────────────────────────────────────────────
         // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
         // parent_adr (out DECIDED_IN) is the "rule → why" link. ORDER BY/LIMIT live
@@ -2904,6 +2912,16 @@ public final class LoreSlices {
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag",
             List.of("tag"), Map.of("project", " WHERE out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), " ORDER BY pr_number");
 
+        // Графики 19.11.2026 (№9 «от мержа до прода»): выпущенный PR — момент мержа и дата его релиза.
+        // project_prs не несёт релиза, release_prs_by_tag требует тег. Релиз — первый по ребру SHIPPED_IN.
+        slice("pr_ship_lag",
+            "SELECT pr_uid, pr_number, git_project, merged_at, " +
+            "out('SHIPPED_IN').release_id[0] AS release_id, " +
+            "out('SHIPPED_IN').release_date[0] AS release_date, " +
+            "out('SHIPPED_IN').released_at[0] AS released_at " +
+            "FROM KnowPR WHERE out('SHIPPED_IN').size() > 0",
+            List.of(), Map.of("project", " WHERE out('SHIPPED_IN').out('BELONGS_TO_PROJECT').slug CONTAINS :project"), "");
+
         // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
         slice("routine_latest",
             "SELECT metric_key, value, unit, status, run_date " +
@@ -2935,6 +2953,14 @@ public final class LoreSlices {
             "FROM ClRoutineRun WHERE routine_name = :routine_name " +
             "ORDER BY started_at DESC, run_date DESC",
             List.of("routine_name"), Map.of(), " LIMIT 20");
+
+        // Графики 19.11.2026 (№16 «гейты: доля пройденных по неделям»): прогоны гейтов с даты since без
+        // потолка — qg_routine_runs отдаёт 200 последних, а супервизор пишет прогон раз в час (неделя, не квартал).
+        // run_date — строка ГГГГ-ММ-ДД: сравнение со строкой since верное.
+        slice("qg_run_outcomes",
+            "SELECT routine_name, run_date, started_at, status " +
+            "FROM ClRoutineRun WHERE routine_name LIKE 'qg-%'",
+            List.of(), Map.of("since", " WHERE run_date >= :since"), "");
 
         // ── MCP-05: BRAGI content archive read slices (SPEC-BRAGI-ARCHIVE-001) ──
         slice("bragi_overview",
@@ -3484,6 +3510,7 @@ public final class LoreSlices {
         Map.entry("decision", "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("timeline_decisions", "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_decisions", "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("decision_status_versions", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug|in('HAS_STATE').out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("decision_history_all", "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug|in('HAS_STATE').out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
         // Вопросы — своё ребро или место, где подняты.
         Map.entry("question_by_id", "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug"),
@@ -3602,6 +3629,7 @@ public final class LoreSlices {
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
+        Map.entry("pr_ship_lag", "KnowPR — путь через релиз (графики 19.11, №9)"),
         Map.entry("findings", "находки — решение владелицы"),
         Map.entry("finding_by_id", "находки — решение владелицы"),
         // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий связан с проектом, но путь двойной (свой основной и через компонент).
@@ -3618,6 +3646,7 @@ public final class LoreSlices {
         Map.entry("qg_metrics_latest", "QG — QG-04"),
         Map.entry("qg_run_metrics", "QG — QG-04"),
         Map.entry("qg_run_history", "QG — QG-04"),
+        Map.entry("qg_run_outcomes", "QG — QG-04 (графики 19.11, №16)"),
         Map.entry("routine_latest", "рутины QG — QG-04"),
         Map.entry("routine_last_run", "рутины QG — QG-04"),
         Map.entry("routine_outputs", "рутины QG — QG-04"),
