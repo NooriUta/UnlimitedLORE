@@ -1205,11 +1205,18 @@
   "admin.dicts.col.label": "подпись",
   "admin.dicts.col.look": "вид",
   "admin.dicts.col.uses": "использований",
-  "admin.dicts.col.kind": "Вид",
+  "admin.dicts.col.kind": "Вид продукта",
   "admin.dicts.f.kind": "Вид продукта",
   "admin.dicts.kind.tech": "ИТ (tech)",
   "admin.dicts.kind.service": "не ИТ (service)",
   "admin.dicts.kind.none": "не задан",
+  "admin.dicts.kind.hint": "Можно оба: продукт бывает и ИТ, и не ИТ",
+  "admin.dicts.kind.empty": "Выберите хотя бы один вид — пустым вид продукта быть не может",
+  "admin.dicts.kind.reasonTitle": "Смена вида продукта {code}",
+  "admin.dicts.kind.reasonOk": "Сохранить вид",
+  "admin.dicts.kind.reasonLabel": "Зачем меняется вид",
+  "admin.dicts.kind.reasonPh": "например: HARPA продаёт и услуги",
+  "admin.dicts.kind.reasonLead": "Вид: {from} → {to}. Причина уйдёт в историю статьи.",
   "admin.dicts.col.order": "поряд.",
   "admin.dicts.col.active": "акт.",
   "admin.dicts.col.act": "действия",
@@ -2392,5 +2399,6 @@
   "kitPage.tags.title": "Теги с полями · «#тег»",
   "kitPage.tags.lead": "Наберите «#sec» в тексте: окно тегов покажет, сколько записей несут тег и какие у него поля. Выбрали тег — поля к заполнению (необязательны); «Поставить тег» пишет поля на ребро, а в текст ложится один токен [[ЗАПИСЬ#тег]]. Справа — как токен читается.",
   "kitPage.tags.label": "Тело записи с тегами",
-  "kitPage.tags.sample": "Ссылки в MD вставляются мини-окном. Перед выкатом нужен разбор: [[ADR-LORE-050#security-review]] "
+  "kitPage.tags.sample": "Ссылки в MD вставляются мини-окном. Перед выкатом нужен разбор: [[ADR-LORE-050#security-review]] ",
+  "lists.field.product_kind": "Вид продукта"
 }

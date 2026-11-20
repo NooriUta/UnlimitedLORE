@@ -1300,6 +1300,16 @@
           "of": 443,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 443,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
@@ -2061,6 +2071,16 @@
           "of": 1147,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 1147,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
@@ -2150,6 +2170,15 @@
           ],
           "filled": 105,
           "of": 180
+        },
+        "kind": {
+          "kind": "list",
+          "db_type": "LIST",
+          "name": "Вид",
+          "from": [],
+          "filled": 0,
+          "of": 180,
+          "note": "вид статьи — набор (product: tech | service, ADR-LORE-044); объявляет шаг вида продукта (product-kind.mjs)"
         }
       },
       "held": {},
@@ -2324,6 +2353,25 @@
           "of": 55,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 55,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "kind": {
+          "kind": "list",
+          "db_type": "LIST",
+          "name": "Вид",
+          "from": [],
+          "filled": 0,
+          "of": 55,
+          "note": "вид статьи — набор (product: tech | service, ADR-LORE-044); объявляет шаг вида продукта (product-kind.mjs)"
         }
       },
       "held": {},
@@ -2587,6 +2635,16 @@
           "of": 362,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 362,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
@@ -2701,6 +2759,16 @@
       "schema_only": true,
       "version_of": "KnowFinding",
       "fields": {
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "source": "общий перечень служебных полей версии"
+        },
         "changed_by": {
           "kind": "text",
           "db_type": "STRING",
@@ -3194,6 +3262,16 @@
           "of": 46,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 46,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
@@ -3335,6 +3413,16 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 5,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
           "from": [],
           "filled": 0,
           "of": 5,
@@ -3989,6 +4077,16 @@
           "of": 1040,
           "name": "Harness правки",
           "service": true
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 1040,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "held": {},
@@ -4130,6 +4228,16 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 57,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
           "from": [],
           "filled": 0,
           "of": 57,
@@ -4536,6 +4644,16 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 740,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
           "from": [],
           "filled": 0,
           "of": 740,

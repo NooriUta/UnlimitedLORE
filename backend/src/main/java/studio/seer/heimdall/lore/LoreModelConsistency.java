@@ -103,10 +103,21 @@ final class LoreModelConsistency {
                 String prop = aliases.getOrDefault(f.key(), f.write() != null && f.write().field() != null ? f.write().field() : f.key());
                 String pt = types.get(prop);
                 if (pt == null) pt = types.get(f.key());
-                if (pt != null && !compatible(f.kind(), pt)) out.add(id + ": вид «" + f.kind() + "» против типа схемы " + pt);
+                if (pt != null && !compatible(f.kind(), f.multi(), pt)) out.add(id + ": вид «" + f.kind() + "» против типа схемы " + pt);
             }
         }
         return out;
+    }
+
+    /**
+     * SPRINT_LORE_WORK_ANY_KIND/WK-01: поле-список ({@code multi}, не связь) хранится свойством LIST — вид продукта
+     * tech | service, технологии компонента. Одиночное поле против LIST и список против строки — расхождение.
+     */
+    static boolean compatible(String kind, boolean multi, String schemaType) {
+        if ("ref".equals(kind)) return compatible(kind, schemaType);
+        boolean list = Set.of("LIST", "EMBEDDEDLIST").contains(schemaType);
+        if (multi) return list;
+        return !list && compatible(kind, schemaType);
     }
 
     static boolean compatible(String kind, String schemaType) {

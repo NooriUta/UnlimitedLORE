@@ -749,6 +749,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowActor": {
@@ -1173,6 +1178,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowDictEntry": {
@@ -1317,6 +1327,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowDoc": {
@@ -1465,6 +1480,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowFile": {
@@ -1560,6 +1580,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowGain": {
@@ -1799,6 +1824,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowModelConfig": {
@@ -1873,6 +1903,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowPR": {
@@ -2257,6 +2292,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowRunbook": {
@@ -2342,6 +2382,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowSavedView": {
@@ -2555,6 +2600,11 @@
     "rule": "keep",
     "basis": "owner",
     "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
    }
   },
   "KnowTag": {

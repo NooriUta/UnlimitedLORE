@@ -250,6 +250,11 @@
         "rule": "keep",
         "basis": "owner",
         "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "change_reason": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
       }
     },
     "KnowPhase": {
@@ -383,6 +388,11 @@
         "rule": "keep",
         "basis": "owner",
         "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "change_reason": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
       }
     },
     "KnowTask": {
@@ -627,6 +637,11 @@
         "rule": "keep",
         "basis": "owner",
         "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+      },
+      "change_reason": {
+        "rule": "keep",
+        "basis": "owner",
+        "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
       }
     }
   }

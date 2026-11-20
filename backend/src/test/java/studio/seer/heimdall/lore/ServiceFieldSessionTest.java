@@ -42,6 +42,17 @@ class ServiceFieldSessionTest {
         }
     }
 
+    /**
+     * SPRINT_LORE_WORK_ANY_KIND/WK-01 (20.11.2026): причина правки {@code change_reason} — служебное поле версии рядом
+     * с changed_by_*: не «не описано в модели», внутреннее, и из прежней версии не переносится (у каждой правки своя).
+     */
+    @Test
+    void changeReasonIsServiceVersionField() {
+        assertTrue(LoreRecordUnmodeled.SERVICE.contains("change_reason"), "SERVICE");
+        assertTrue(LoreModelTypes.isInternal("change_reason", "code"), "isInternal");
+        assertTrue(StatusHistoryService.VERSION_FIELDS.contains("change_reason"), "VERSION_FIELDS");
+    }
+
     /** Общее правило: служебные поля автора правки ходят вместе — где есть changed_by, там и сессия. */
     @Test
     void authorFieldsTravelTogether() {
