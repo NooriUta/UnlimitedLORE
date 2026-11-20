@@ -6467,14 +6467,14 @@
         "editable" : false,
         "label_en" : "External dependencies",
         "short_label_en" : null,
-        "definition_en" : null,
+        "definition_en" : "The document references external resources (CDN): without internet access it may not render fully.",
         "description_en" : null,
         "label_pl" : "Zależności zewnętrzne",
         "short_label_pl" : null,
-        "definition_pl" : null,
+        "definition_pl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości.",
         "description_pl" : null,
         "short_label" : null,
-        "definition" : null,
+        "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
         "description" : null,
         "layer" : "optional",
         "historic" : false,
@@ -6895,14 +6895,14 @@
         "editable" : false,
         "label_en" : "External dependencies",
         "short_label_en" : null,
-        "definition_en" : null,
+        "definition_en" : "The document references external resources (CDN): without internet access it may not render fully.",
         "description_en" : null,
         "label_pl" : "Zależności zewnętrzne",
         "short_label_pl" : null,
-        "definition_pl" : null,
+        "definition_pl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości.",
         "description_pl" : null,
         "short_label" : null,
-        "definition" : null,
+        "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
         "description" : null,
         "layer" : "optional",
         "historic" : false,
@@ -18966,7 +18966,19 @@
           "section" : null,
           "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
         } ],
-        "parts" : [ ],
+        "parts" : [ {
+          "key" : "metrics",
+          "label" : "Метрики",
+          "type" : "qg_metric",
+          "rel" : "MEASURED_BY",
+          "dir" : "out",
+          "owned" : "strict",
+          "relation" : "composition",
+          "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+          "optional_columns" : [ ],
+          "order_by" : "metric_id",
+          "create" : null
+        } ],
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
@@ -19005,6 +19017,15 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
         "manageable" : false
       }, {
         "key" : "refsOut",
@@ -19383,7 +19404,19 @@
           "section" : null,
           "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
         } ],
-        "parts" : [ ],
+        "parts" : [ {
+          "key" : "metrics",
+          "label" : "Метрики",
+          "type" : "qg_metric",
+          "rel" : "MEASURED_BY",
+          "dir" : "out",
+          "owned" : "strict",
+          "relation" : "composition",
+          "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+          "optional_columns" : [ ],
+          "order_by" : "metric_id",
+          "create" : null
+        } ],
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
@@ -19424,6 +19457,15 @@
         "place" : "prop",
         "manageable" : false
       }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
+        "manageable" : false
+      }, {
         "key" : "refsOut",
         "label" : "Ссылается",
         "relation" : "association",
@@ -19445,7 +19487,19 @@
       "requirements" : [ ],
       "requirements_block" : "schema"
     },
-    "parts" : [ ],
+    "parts" : [ {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "type" : "qg_metric",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+      "optional_columns" : [ ],
+      "order_by" : "metric_id",
+      "create" : null
+    } ],
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {

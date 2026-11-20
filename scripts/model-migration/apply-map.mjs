@@ -2,9 +2,9 @@ import { classify as classifyRules, EMPTY } from './status-unify.mjs';
 import HARNESS_RULES_FILE from './rules/status-unification.json' with { type: 'json' };
 import LORE_MODEL from '../../shared/model/lore-model.json' with { type: 'json' };
 import { notNullOfModel } from './notnull.mjs';
+import { legacyGiven } from './legacy.mjs';
 import { statusSourceOf, fillEmptyStatus } from './empty-fill.mjs';
 import { RULES as STATUS_RULES } from './resources.mjs';
-import { legacyGiven } from './legacy.mjs';
 const HARNESS_RULES = HARNESS_RULES_FILE.dictionaries.harness;
 // MDL-11 (ответ владелицы 19.11.2026 «5а»): обязательное по модели поле (notnull — в базе MANDATORY + NOTNULL) пустым
 // не пропускается молча. Пустой статус закрывает общее правило (empty-fill.mjs, правило владелицы 19.11): вычислить →

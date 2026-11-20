@@ -101,6 +101,9 @@ public class LoreCanvasResource extends LoreResourceBase {
             List<Map<String, Object>> items = ingestService.queryPublic(
                 "SELECT item_uid, kind, text, x, y, w, h, color, slot, ref_type, ref_id, updated_at FROM KnowCanvasItem "
                 + "WHERE canvas_uid = :u ORDER BY item_uid", Map.of("u", uid));
+            // Стикер со ссылкой показывает название записи и открывает её паспорт; битая — «запись не найдена».
+            items = new ArrayList<>(items.stream().map(it -> (Map<String, Object>) new LinkedHashMap<>(it)).toList());
+            LoreCanvas.annotateRefs(items, ingestService::queryPublic);
             List<Map<String, Object>> links = ingestService.queryPublic(
                 "SELECT link_uid, from_uid, to_uid, edge, ifnull(graph_state, 'drawing') AS graph FROM KnowCanvasLink "
                 + "WHERE canvas_uid = :u ORDER BY link_uid",

@@ -59,15 +59,17 @@ class FieldDeclaredGuardTest {
         Map.entry("plan_checkpoints.desc_md", PLAN_BOARD),
         Map.entry("plan_versions.changelog_md", PLAN_BOARD),
         Map.entry("plan_versions.version_date", PLAN_BOARD),
+        // qg_metrics.threshold снято: QGMetric в 1.18 — тип «только схема» со свойством threshold (MD-02 8а, 19.11.2026)
         Map.entry("history_sprint.pr_refs", "KnowSprintHist.pr_refs — смешанные типы значений, канон не выбран (MDL-03 придержал); "
-            + "в переносе 1.18 — связи с PR (MIG-01)"),
-        Map.entry("qg_metrics.threshold", "QGMetric — тип вне модели, записей в проде 0; пишет только разбор md гейтов (LAL-28), "
-            + "читает таблица метрик v1"));
+            + "в переносе 1.18 — связи с PR (MIG-01)"));
 
     /** Колонки частей паспорта, которые считает сервер, а не читает из базы: «тип.колонка» → кто считает. */
     static final Map<String, String> COMPUTED_PART_COLUMNS = Map.of(
         "phase.status", "LoreRecordValues.phaseItem — по статусам задач фазы (done / partial)",
-        "phase.progress", "LoreRecordValues.phaseItem — «x/y» по задачам фазы");
+        "phase.progress", "LoreRecordValues.phaseItem — «x/y» по задачам фазы",
+        // метрика гейта — тип только-ребёнок (child_only), вершина QGMetric; ключи значений — LoreRecordFrom.ITEMS
+        "qg_metric.code", "LoreRecordFrom.Transform.ROW_CODE — код строки таблицы гейта из QGMetric.metric_id",
+        "qg_metric.title", "LoreRecordFrom.ITEMS qg_metric — подпись из QGMetric.name");
 
     // ── Сторожа ───────────────────────────────────────────────────────────
 

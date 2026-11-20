@@ -192,3 +192,87 @@ describe('доступность', () => {
     expect(await axeViolations(container)).toEqual([]);
   });
 });
+
+// Владелица 19–20.11.2026: «доделать функции, чтобы все поля работали». Вид хранится на сервере (KnowSavedView);
+// ссылка ведёт на сохранённый вид и открывает его у другого человека с учётом видимости (visibility / roles).
+describe('поделиться видом, личный и командный по умолчанию', () => {
+  const q = listStateToQuery({ ...DEFAULT_LIST_STATE, filters: { status: ['todo'] } });
+
+  function urlWin(search: string): Window {
+    const loc = new URL(`https://lore.test/?mod=forseti&sec=tasks${search}`);
+    const set = (_: unknown, __: string, u: string) => {
+      const n = new URL(u, loc.href);
+      loc.href = n.href;
+    };
+    return {
+      get location() { return { href: loc.href, pathname: loc.pathname, search: loc.search, hash: loc.hash, origin: loc.origin }; },
+      history: { replaceState: set, pushState: set },
+    } as unknown as Window;
+  }
+
+  it('ссылка на вид: адрес раздела + vw, без своих правок списка; у другого — открывает этот вид', async () => {
+    const store = createMemoryViewStore({ user: 'u-1', teamViews: [team] });
+    const mine = await store.create({ name: 'Мой общий', section: 'tasks', query: q, visibility: 'all' });
+    const first = render(<SavedListView config={cfg} data={data} store={store} section="tasks" user="u-1" urlState={urlWin('&lq=x')} />);
+    const sel = () => within(first.container).getByLabelText('Вид') as HTMLSelectElement;
+    await waitFor(() => expect(sel().disabled).toBe(false));
+    fireEvent.change(sel(), { target: { value: mine.id } });
+    fireEvent.click(within(first.container).getByRole('button', { name: 'Поделиться' }));
+    const link = within(first.container).getByLabelText('Ссылка на вид') as HTMLInputElement;
+    const u = new URL(link.value);
+    expect(u.searchParams.get('vw')).toBe(mine.id);
+    expect(u.searchParams.get('sec')).toBe('tasks');
+    expect(u.searchParams.has('lq'), 'состояние списка — из вида, а не из адреса того, кто делится').toBe(false);
+    first.unmount();
+
+    // другой человек (u-2) видит вид «всем» и открывает его по ссылке
+    const other: KitViewStore = { ...store, list: async s => (await store.list(s)).map(v => (v.owner === 'u-1' ? { ...v, owner: 'other' } : v)) };
+    const { container } = render(<SavedListView config={cfg} data={data} store={other} section="tasks" user="u-2" urlState={urlWin(`&vw=${mine.id}`)} />);
+    await waitFor(() => expect((within(container).getByLabelText('Вид') as HTMLSelectElement).value).toBe(mine.id));
+    expect(rows(container)).toHaveLength(1);
+  });
+
+  it('личный вид «только мне» — поделиться нельзя, сказано почему', async () => {
+    const store = createMemoryViewStore({ user: 'u-1', teamViews: [team] });
+    const mine = await store.create({ name: 'Тайный', section: 'tasks', query: '', visibility: 'me' });
+    setup(store);
+    await waitFor(() => expect(viewSelect().value).toBe('team-done'));
+    fireEvent.change(viewSelect(), { target: { value: mine.id } });
+    const btn = screen.getByRole('button', { name: 'Поделиться' }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.title).toContain('только вам');
+  });
+
+  it('ссылка на вид, которого нет или который не виден, — «вид недоступен», а не молча другой вид', async () => {
+    render(<SavedListView config={cfg} data={data} store={createMemoryViewStore({ user: 'u-1', teamViews: [team] })}
+      section="tasks" user="u-1" urlState={urlWin('&vw=v-hidden')} />);
+    await waitFor(() => expect(screen.getByTestId('kit-views-link-missing').textContent).toContain('недоступен'));
+  });
+
+  it('свой вид — «мой по умолчанию»: флажок пишет personal_default; у командного флажка нет', async () => {
+    const store = createMemoryViewStore({ user: 'u-1', teamViews: [team] });
+    const mine = await store.create({ name: 'Мой', section: 'tasks', query: '', visibility: 'me' });
+    setup(store);
+    await waitFor(() => expect(viewSelect().value).toBe('team-done'));
+    expect(screen.queryByRole('checkbox', { name: 'Мой по умолчанию' })).toBeNull();
+    fireEvent.change(viewSelect(), { target: { value: mine.id } });
+    await act(async () => { fireEvent.click(screen.getByRole('checkbox', { name: 'Мой по умолчанию' })); });
+    expect((await store.list('tasks')).find(v => v.id === mine.id)?.personal_default).toBe(true);
+  });
+
+  it('«Командный по умолчанию» — только при праве; уходит в черновик вида', async () => {
+    const seen: unknown[] = [];
+    const base = createMemoryViewStore({ user: 'u-1', teamViews: [team] });
+    const store: KitViewStore = { ...base, create: d => { seen.push(d); return base.create(d); } };
+    const { rerender } = render(<SavedListView config={cfg} data={data} store={store} section="tasks" user="u-1" urlState={false} />);
+    await waitFor(() => expect(viewSelect().value).toBe('team-done'));
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить как…' }));
+    expect(screen.queryByRole('checkbox', { name: 'Командный по умолчанию' })).toBeNull();
+    rerender(<SavedListView config={cfg} data={data} store={store} section="tasks" user="u-1" urlState={false} canTeamDefault />);
+    fireEvent.change(screen.getByLabelText('Кому виден'), { target: { value: 'all' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Командный по умолчанию' }));
+    fireEvent.change(screen.getByLabelText('Имя вида'), { target: { value: 'Команде' } });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Создать вид' })); });
+    expect(seen[0]).toMatchObject({ name: 'Команде', visibility: 'all', team_default: true });
+  });
+});

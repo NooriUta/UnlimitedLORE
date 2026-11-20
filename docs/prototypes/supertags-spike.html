@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supertags · прототип</title>
+<!--
+  SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, шаг 1: прототип на «да» владелицы. ТОЛЬКО раскладка, бэкенда нет.
+  Основа: док report_supertags_tana_for_lore_2026_11 (ред. 2.0) и ADR-LORE-050 (триггеры «[[», «@», «#тип»).
+  Модель из решения: костяк полей — у типа (SCD2); тег несёт свободные поля как атрибуты ребра TAGGED_WITH, без истории;
+  язык привязки один — токен [[GEOID#тег]] в тексте; сторож битых ссылок на рекей геоида и переименование тега.
+  Все записи и значения ниже — заглушки для раскладки (идентификаторы похожи на настоящие, значения выдуманы).
+-->
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--bdh:#584c38;
+  --t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#d4a830;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--disp:'Unbounded',system-ui,sans-serif;--body:'Manrope',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--body);font-size:var(--fs-sm)}
+header{padding:12px 16px 8px;border-bottom:1px solid var(--bd)}
+h1{font-family:var(--disp);font-weight:800;font-size:var(--fs-lg);margin:0 0 4px}
+h2{font-family:var(--disp);font-weight:800;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0 0 8px}
+.sub{color:var(--t2);font-size:var(--fs-xs);max-width:110ch;line-height:1.5}
+code,.mono{font-family:var(--mono);font-size:var(--fs-2xs)}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg1)}
+.pill{border:1px solid var(--bd);background:var(--bg2);color:var(--t2);border-radius:999px;padding:4px 10px;font:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap}
+.pill[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:var(--bg3)}
+.wrap{padding:12px 16px;display:grid;gap:12px}
+.cols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}
+@media (max-width:820px){.cols{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--bg1);border:1px solid var(--bd);border-radius:6px;padding:10px 12px;min-width:0}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.editor{position:relative;background:var(--bg0);border:1px solid var(--bd);border-radius:4px;padding:10px 12px;line-height:1.7;font-size:var(--fs-md);min-height:340px}
+.editor .caret{display:inline-block;width:1px;height:1.1em;background:var(--acc);vertical-align:text-bottom;animation:b 1s steps(2) infinite}
+@keyframes b{50%{opacity:0}}
+.typed{color:var(--acc);font-family:var(--mono);font-size:var(--fs-sm)}
+.wref{color:var(--inf);border-bottom:1px dotted var(--inf)}
+.tagchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--acc);color:var(--acc);border-radius:999px;padding:0 7px;font-size:var(--fs-xs);cursor:pointer;background:var(--bg2);white-space:nowrap}
+.tagchip .f{color:var(--t2);font-family:var(--mono);font-size:var(--fs-2xs)}
+.tagchip.broken{border-color:var(--dng);color:var(--dng)}
+.pop{position:absolute;z-index:3;left:12px;right:12px;max-width:380px;background:var(--bg2);border:1px solid var(--bdh);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.5);padding:8px;font-size:var(--fs-xs)}
+.pop .hd{display:flex;justify-content:space-between;color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.opt{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:6px;border-radius:4px;cursor:pointer}
+.opt.on{background:var(--bg3);outline:1px solid var(--acc)}
+.opt .n{color:var(--acc);font-weight:700}
+.opt .d{grid-column:2;color:var(--t2)}
+.opt .fs{grid-column:2;display:flex;flex-wrap:wrap;gap:4px}
+.fchip{border:1px solid var(--bd);border-radius:999px;padding:0 6px;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2)}
+.form{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 8px;align-items:center}
+.form label{color:var(--t2)}
+.form input,.form select{width:100%;background:var(--bg0);border:1px solid var(--bd);color:var(--t1);border-radius:4px;padding:4px 6px;font:inherit;font-size:var(--fs-xs)}
+.note{color:var(--t3);font-size:var(--fs-2xs);line-height:1.5;margin-top:6px}
+.btns{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+.btn{border:1px solid var(--bd);background:var(--bg3);color:var(--t1);border-radius:4px;padding:4px 10px;font:inherit;font-size:var(--fs-xs);cursor:pointer}
+.btn.pri{border-color:var(--acc);color:var(--acc)}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2);background:var(--bg0);border:1px solid var(--bd);border-radius:4px;padding:8px}
+pre b{color:var(--acc);font-weight:600}
+.edge{display:grid;grid-template-columns:auto auto auto;gap:6px;align-items:center;justify-content:start;font-family:var(--mono);font-size:var(--fs-2xs)}
+.node{border:1px solid var(--bd);border-radius:4px;padding:4px 6px;background:var(--bg2)}
+.arrow{color:var(--acc)}
+.attrs{margin-top:6px;border-left:2px solid var(--acc);padding-left:8px;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2)}
+.state{border:1px solid var(--bd);border-radius:4px;padding:6px 8px;font-size:var(--fs-xs);line-height:1.5}
+.state.err{border-color:var(--dng);color:var(--dng)}.state.wrn{border-color:var(--wrn);color:var(--wrn)}.state.inf{border-color:var(--inf);color:var(--inf)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th{text-align:left;color:var(--t3);font-weight:600;text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.06em;padding:5px 8px 5px 0;border-bottom:1px solid var(--bd);white-space:nowrap}
+th.tf{color:var(--acc)}
+td{padding:5px 8px 5px 0;border-bottom:1px solid var(--bd);vertical-align:top}
+td .tt{color:var(--t2);font-size:var(--fs-2xs);display:block}
+.tp{display:inline-block;border-radius:999px;border:1px solid var(--bd);padding:0 6px;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2)}
+.empty{color:var(--t3)}
+.lvl-high{color:var(--dng)}.lvl-med{color:var(--wrn)}.lvl-low{color:var(--suc)}
+.facets{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar select,.toolbar input{background:var(--bg0);border:1px solid var(--bd);color:var(--t1);border-radius:4px;padding:4px 6px;font:inherit;font-size:var(--fs-xs)}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+<header>
+  <h1>Supertags · прототип раскладки</h1>
+  <div class="sub">Шаг 1 SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE: поток «#тег» в редакторе и экран «сущности по тегу с полями». Модель — по решению ред. 2.0:
+  костяк полей у типа, а свободные поля тега — атрибуты ребра <code>TAGGED_WITH</code> без истории; в тексте один токен <code>[[GEOID#тег]]</code>.
+  Только раскладка: бэкенда нет, записи и значения — заглушки. Ценность (слово владелицы): «метапроектирование без релизов».</div>
+</header>
+<nav id="screens">
+  <button class="pill" data-s="flow" aria-pressed="true">1 · Поток «#тег» в редакторе</button>
+  <button class="pill" data-s="list" aria-pressed="false">2 · Сущности по тегу с полями</button>
+  <button class="pill" data-s="states" aria-pressed="false">3 · Честные состояния</button>
+</nav>
+
+<!-- ═══ Экран 1: поток «#тег» ═══ -->
+<section class="wrap" id="s-flow">
+  <div class="steps" id="steps">
+    <button class="pill" data-k="1" aria-pressed="true">а · набрали «#sec»</button>
+    <button class="pill" data-k="2">б · тег выбран — поля</button>
+    <button class="pill" data-k="3">в · чип в тексте</button>
+    <button class="pill" data-k="4">г · правка полей чипа</button>
+  </div>
+  <div class="cols">
+    <div class="panel">
+      <h2>Тело ADR-LORE-050 · TipTap</h2>
+      <div class="editor" id="ed">
+        <p style="margin:0 0 8px">Ссылки в MD вставляются мини-окном (<span class="wref">[[spec:SPEC-LORE-MD-INLINE-REF]]</span>). Перед выкатом нужен разбор безопасности вставки HTML из буфера.</p>
+        <p style="margin:0" id="line">Разбор: <span id="slot"></span></p>
+
+        <!-- а: список тегов -->
+        <div class="pop" id="p1" style="top:96px">
+          <div class="hd"><span>Тег · «#sec»</span><span>↑↓ · Enter · Esc</span></div>
+          <div class="opt on"><span class="n">#security-review</span><span class="mono">7 записей</span>
+            <span class="d">Разбор безопасности до выката</span>
+            <span class="fs"><span class="fchip">reviewer</span><span class="fchip">risk</span><span class="fchip">due</span><span class="fchip">verdict</span></span></div>
+          <div class="opt"><span class="n">#secrets-touch</span><span class="mono">2 записи</span>
+            <span class="d">Изменение трогает секреты</span>
+            <span class="fs"><span class="fchip">vault_path</span></span></div>
+          <div class="opt" style="color:var(--t2)"><span class="n" style="color:var(--t2)">+ завести тег «sec…»</span><span></span>
+            <span class="d">Тег заводит владелец тега (открытый вопрос решения, шаг 2)</span></div>
+          <div class="note">«#» перед буквой открывает окно тегов; «# » в начале строки — заголовок, окна нет (правила ADR-LORE-050). «#тип» (adr, task…) по-прежнему сужает поиск объектов — теги идут отдельной группой ниже типов.</div>
+        </div>
+
+        <!-- б: поля выбранного тега -->
+        <div class="pop hidden" id="p2" style="top:96px">
+          <div class="hd"><span>#security-review → ADR-LORE-050</span><span>поля тега</span></div>
+          <div class="form">
+            <label>reviewer</label><input value="arharaga">
+            <label>risk</label><select><option>high</option><option selected>medium</option><option>low</option></select>
+            <label>due</label><input value="2026-11-27">
+            <label>verdict</label><input placeholder="пусто — заполнят после разбора">
+          </div>
+          <div class="note">Поля тега необязательны и без истории: правка перезаписывает значение на ребре. Поле, которое нужно всем записям типа и с историей, — это костяк типа (MD-04), а не тег.</div>
+          <div class="btns"><button class="btn">Без полей</button><button class="btn pri">Поставить тег</button></div>
+        </div>
+
+        <!-- г: правка полей чипа -->
+        <div class="pop hidden" id="p4" style="top:96px">
+          <div class="hd"><span>#security-review · ADR-LORE-050</span><span>изменено 20.11 · arharaga</span></div>
+          <div class="form">
+            <label>reviewer</label><input value="arharaga">
+            <label>risk</label><select><option selected>high</option><option>medium</option><option>low</option></select>
+            <label>due</label><input value="2026-11-27">
+            <label>verdict</label><input value="нужна санитизация">
+          </div>
+          <div class="note">Правка поля тега — прямо в чипе (в отличие от полей объекта, которые правятся в паспорте по ADR-LORE-050 §5): поле принадлежит ребру, а не объекту. Предыдущее значение не хранится.</div>
+          <div class="btns"><button class="btn">Снять тег</button><button class="btn">Все записи с тегом →</button><button class="btn pri">Сохранить</button></div>
+        </div>
+      </div>
+      <div class="note" id="caption"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Что ляжет в текст и в граф</h2>
+      <pre id="src"></pre>
+      <div style="height:10px"></div>
+      <div class="edge"><span class="node">KnowAdr<br>ADR-LORE-050</span><span class="arrow">─ TAGGED_WITH →</span><span class="node">KnowTag<br>security-review</span></div>
+      <div class="attrs" id="attrs"></div>
+      <div class="note">Значения живут на ребре, в тексте — только токен. Срез «сущности по тегу с полями» читает рёбра; ответ MCP при записи тела отдаёт <code>referenced</code> — какие токены нашлись (шаг 3 спайка).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Экран 2: сущности по тегу с полями ═══ -->
+<section class="wrap hidden" id="s-list">
+  <div class="panel">
+    <div class="toolbar">
+      <span class="mono" style="color:var(--t3)">ТЕГ</span>
+      <select id="tagSel"><option>#security-review · 7</option><option>#customer-visible · 12</option><option>#breaking-change · 3</option></select>
+      <span class="mono" style="color:var(--t3)">ТИП</span>
+      <select><option>все типы</option><option>adr</option><option>task</option><option>spec</option></select>
+      <input placeholder="поиск по названию" style="flex:1;min-width:140px">
+    </div>
+    <div class="facets">
+      <span class="pill" aria-pressed="true">все 7</span><span class="pill">risk: high 2</span><span class="pill">risk: medium 3</span><span class="pill">risk: low 1</span><span class="pill">risk: не задано 1</span><span class="pill">verdict: пусто 4</span>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Запись</th><th>Тип</th><th class="tf">reviewer</th><th class="tf">risk</th><th class="tf">due</th><th class="tf">verdict</th><th>поставлен</th></tr></thead>
+        <tbody>
+          <tr><td>ADR-LORE-050<span class="tt">Ссылка на объект LORE прямо в MD…</span></td><td><span class="tp">adr</span></td><td>arharaga</td><td class="lvl-high">high</td><td class="mono">2026-11-27</td><td>нужна санитизация</td><td class="mono">20.11</td></tr>
+          <tr><td>SPRINT_QG_REBUILD/QG-15<span class="tt">Модуль вызова LLM для LORE…</span></td><td><span class="tp">task</span></td><td>arharaga</td><td class="lvl-med">medium</td><td class="mono">2026-11-25</td><td class="empty">—</td><td class="mono">19.11</td></tr>
+          <tr><td>SPEC-QG-JOB-CONTRACT<span class="tt">Контракт джоба рутины QG…</span></td><td><span class="tp">spec</span></td><td>CICDGitHub</td><td class="lvl-med">medium</td><td class="empty">—</td><td>ок, секреты через Infisical</td><td class="mono">18.11</td></tr>
+          <tr><td>SPRINT_LORE_OWN_HOST/OH-17<span class="tt">Собственный хост LORE…</span></td><td><span class="tp">task</span></td><td class="empty">—</td><td class="lvl-high">high</td><td class="mono">2026-11-22</td><td class="empty">—</td><td class="mono">15.11</td></tr>
+          <tr><td>ADR-LORE-053<span class="tt">Архитектура гейтов качества…</span></td><td><span class="tp">adr</span></td><td>arharaga</td><td class="lvl-low">low</td><td class="empty">—</td><td>замечаний нет</td><td class="mono">12.11</td></tr>
+          <tr><td>SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW<span class="tt">Мини-окно ссылок…</span></td><td><span class="tp">task</span></td><td>arharaga</td><td class="lvl-med">medium</td><td class="empty">—</td><td class="empty">—</td><td class="mono">11.11</td></tr>
+          <tr><td>SPEC-LORE-MD-INLINE-REF<span class="tt">Договор мини-окна ссылки…</span></td><td><span class="tp">spec</span></td><td class="empty">—</td><td class="empty" title="поле на ребре не задано">не задано</td><td class="empty">—</td><td class="empty">—</td><td class="mono">10.11</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">Колонки-поля (жёлтые) — объединение ключей с рёбер TAGGED_WITH этого тега: схемы у тега нет, набор полей собирается из данных. «—» — ключа на ребре нет; «не задано» у фасета — то же самое, посчитанное явно. Сортировка по полю тега — по строковому значению (типов у schemaless-полей нет; дата — гипотеза: распознавать ISO-строку).</div>
+  </div>
+  <div class="cols">
+    <div class="panel">
+      <h2>Карточка тега</h2>
+      <div class="form">
+        <label>Тег</label><span class="mono" style="color:var(--acc)">#security-review</span>
+        <label>Описание</label><span>Разбор безопасности до выката</span>
+        <label>Поля в данных</label><span><span class="fchip">reviewer 5/7</span> <span class="fchip">risk 6/7</span> <span class="fchip">due 3/7</span> <span class="fchip">verdict 3/7</span></span>
+        <label>Владелец тега</label><span class="empty">открытый вопрос (шаг 2): кто заводит и переименовывает</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Свободное поле → тег или костяк</h2>
+      <div class="note" style="margin-top:0">Входные данные спайка: 204 свободных поля из брифа lore-field-definitions-2026-11-14. Для каждого: нужно всем записям типа и с историей — <b>костяк</b> (MD-04); нужно не всем и без истории — <b>поле тега</b>.</div>
+      <div class="tbl"><table style="min-width:0">
+        <thead><tr><th>поле</th><th>тип</th><th>заполнено</th><th>куда</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">review_by</td><td><span class="tp">adr</span></td><td class="mono">9%</td><td style="color:var(--acc)">тег #security-review</td></tr>
+          <tr><td class="mono">priority</td><td><span class="tp">task</span></td><td class="mono">71%</td><td style="color:var(--inf)">костяк типа</td></tr>
+          <tr><td class="mono">customer</td><td><span class="tp">task</span></td><td class="mono">4%</td><td style="color:var(--acc)">тег #customer-visible</td></tr>
+        </tbody></table></div>
+      <div class="note">Строки — пример формы разметки, проценты выдуманы.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Экран 3: честные состояния ═══ -->
+<section class="wrap hidden" id="s-states">
+  <div class="cols">
+    <div class="panel">
+      <h2>В тексте</h2>
+      <p>Найден: <span class="tagchip">#security-review <span class="f">risk high</span></span></p>
+      <p>Геоид перевыдан (рекей), ребра нет: <span class="tagchip broken" title="[[ADR-LORE-50#security-review]] — записи ADR-LORE-50 нет">#security-review · битая ссылка</span></p>
+      <p>Тег переименован в #sec-review: <span class="tagchip broken">#security-review → #sec-review?</span></p>
+      <div class="note">Сторож битых ссылок (QG-инвариант спайка) ловит оба случая: токен без ребра и ребро без токена. Исправление — предложение «заменить на #sec-review», а не тихая правка текста.</div>
+    </div>
+    <div class="panel">
+      <h2>В окне и в списке</h2>
+      <div class="state inf">Тегов по «#xyz» не нашлось. <u>Завести тег «xyz»</u> · <u>Повторить</u></div>
+      <div style="height:6px"></div>
+      <div class="state err">Не смогли загрузить теги: 503 от /lore/slice/tags. Это не «тегов нет» — <u>повторить</u>.</div>
+      <div style="height:6px"></div>
+      <div class="state wrn">Заводить теги может только их владелец — у вашей роли права нет. Тег можно поставить из существующих.</div>
+      <div style="height:6px"></div>
+      <div class="state">Записей с тегом #breaking-change нет (0 рёбер TAGGED_WITH). Список пуст по факту, а не из-за ошибки.</div>
+    </div>
+  </div>
+</section>
+
+<script>
+// Только переключение экранов и шагов раскладки — данных и бэкенда нет.
+const $ = s => document.querySelector(s);
+const url = new URL(location.href);
+function show(s) {
+  document.querySelectorAll('#screens .pill').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === s)));
+  ['flow', 'list', 'states'].forEach(k => $('#s-' + k).classList.toggle('hidden', k !== s));
+  url.searchParams.set('s', s); history.replaceState(null, '', url);
+}
+document.querySelectorAll('#screens .pill').forEach(b => b.onclick = () => show(b.dataset.s));
+const SRC = {
+  1: 'Разбор: <b>#sec</b>▏',
+  2: 'Разбор: <b>#security-review</b>▏   ← поля ещё не записаны',
+  3: 'Разбор: <b>[[ADR-LORE-050#security-review]]</b>',
+  4: 'Разбор: <b>[[ADR-LORE-050#security-review]]</b>   ← текст не меняется, меняется ребро',
+};
+const ATTRS = {
+  1: '(ребра ещё нет)',
+  2: '(ребра ещё нет — появится по «Поставить тег»)',
+  3: 'reviewer: "arharaga"<br>risk: "medium"<br>due: "2026-11-27"<br>tagged_at: 2026-11-20 · tagged_by: arharaga',
+  4: 'reviewer: "arharaga"<br>risk: <span style="color:var(--acc)">"high"</span>  ← было "medium", не хранится<br>due: "2026-11-27"<br>verdict: <span style="color:var(--acc)">"нужна санитизация"</span>',
+};
+const CAP = {
+  1: 'а · «#» перед буквой открывает окно тегов. В списке — сколько записей уже несут тег и какие поля у него встречаются.',
+  2: 'б · Выбрали тег — те же поля сразу предлагаются к заполнению. Все необязательны: «Без полей» ставит голый тег.',
+  3: 'в · В тексте — чип с первым непустым полем; в исходнике MD — один токен [[GEOID#тег]].',
+  4: 'г · Нажали на чип — правка полей ребра на месте; «Все записи с тегом» ведёт на экран 2.',
+};
+function step(k) {
+  document.querySelectorAll('#steps .pill').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === String(k))));
+  $('#p1').classList.toggle('hidden', k !== 1); $('#p2').classList.toggle('hidden', k !== 2); $('#p4').classList.toggle('hidden', k !== 4);
+  $('#slot').innerHTML = k === 1 ? '<span class="typed">#sec</span><span class="caret"></span>'
+    : k === 2 ? '<span class="typed">#security-review</span><span class="caret"></span>'
+    : '<span class="tagchip">#security-review <span class="f">risk ' + (k === 4 ? 'high' : 'medium') + '</span></span> — до выката.';
+  $('#src').innerHTML = SRC[k]; $('#attrs').innerHTML = ATTRS[k]; $('#caption').textContent = CAP[k];
+  url.searchParams.set('k', k); history.replaceState(null, '', url);
+}
+document.querySelectorAll('#steps .pill').forEach(b => b.onclick = () => step(Number(b.dataset.k)));
+step(Number(url.searchParams.get('k')) || 1);
+show(['flow', 'list', 'states'].includes(url.searchParams.get('s')) ? url.searchParams.get('s') : 'flow');
+</script>
+</body>
+</html>

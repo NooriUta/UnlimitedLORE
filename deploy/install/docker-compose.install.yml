@@ -114,6 +114,11 @@ services:
       - S3_ACCESS_KEY=${MINIO_USER:-lore}
       - S3_SECRET_KEY=${MINIO_PASSWORD}
       - S3_REGION=us-east-1
+      # Мост Forgejo (ADR-LORE-024) — по выбору (MIG-04): токен вписывает владелец в .env, пусто — /lore/forgejo/*
+      # отвечает 503, как без Forgejo. Адрес репозитория — из регистрации проекта (KnowGitProject.hosts[]); для
+      # localhost-адреса бэкенд ходит на base-override (своя установка — http://forgejo:3000).
+      - FORGEJO_API_TOKEN=${FORGEJO_API_TOKEN:-}
+      - lore.forgejo.base-override=${FORGEJO_BASE_OVERRIDE:-}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9100/q/health/live"]
       interval: 15s
@@ -147,7 +152,55 @@ services:
       lore-backend:
         condition: service_healthy
 
+  # Forgejo — по выбору (MIG-04, владелица 20.11.2026: «установка Forgejo если нет нашей версии»). Профиль forgejo:
+  # без него сервис не стартует. Версия — та же, что на нашем стенде. База — sqlite в томе forgejo-data; SSH выключен
+  # (клон по http). Администратора владелец заводит в первом окне Forgejo — установщик паролей Forgejo не знает.
+  forgejo:
+    profiles: ["forgejo"]
+    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-15.0.5}
+    restart: unless-stopped
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__database__DB_TYPE=sqlite3
+      - FORGEJO__server__HTTP_PORT=3000
+      - FORGEJO__server__ROOT_URL=${FORGEJO_ROOT_URL:-http://127.0.0.1:3000/}
+      - FORGEJO__server__DISABLE_SSH=true
+    volumes:
+      - forgejo-data:/data
+    ports:
+      - "${LORE_BIND:-127.0.0.1}:${FORGEJO_HTTP_PORT:-3000}:3000"
+
+  # forgejo-mcp — MCP-сервер Forgejo для агентов (репозиторий AIDA/forgejo-mcp, форк @ric_/forgejo-mcp 0.1.7 с
+  # инструментами Actions/CI). Профиль forgejo-mcp: и при своей установке Forgejo, и при своём Forgejo владельца.
+  # Образ: свой реестр (FORGEJO_MCP_IMAGE) или сборка из исходников, прибитых к коммиту (FORGEJO_MCP_SRC).
+  # FORGEJO_TOKEN обязателен — без него сервер не стартует; install.sh тогда его не поднимает и говорит, что вписать.
+  forgejo-mcp:
+    profiles: ["forgejo-mcp"]
+    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:bbe9f59c}
+    build:
+      context: ${FORGEJO_MCP_SRC:-https://git.seidrstudio.pro/AIDA/forgejo-mcp.git#bbe9f59c2167655c3c87fb51b102db29a275d13a}
+    restart: unless-stopped
+    environment:
+      - FORGEJO_URL=${FORGEJO_URL:-http://forgejo:3000}
+      - FORGEJO_TOKEN=${FORGEJO_MCP_TOKEN:-}
+      # Ключ входа агентов (Authorization: Bearer); install.sh генерирует его при включённом профиле.
+      - FORGEJO_MCP_API_KEY=${FORGEJO_MCP_API_KEY:-}
+      - PORT=3000
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # get_job_log читает логи Actions прямо с тома Forgejo (REST для них нет). При своём Forgejo владельца том пуст —
+      # инструмент отвечает «лог не найден», остальные работают.
+      - forgejo-data:/forgejo-data:ro
+    ports:
+      - "${LORE_BIND:-127.0.0.1}:${FORGEJO_MCP_PORT:-4430}:3000"
+
 volumes:
   lore-db:
   lore-db-backups:
   lore-minio-data:
+  forgejo-data:

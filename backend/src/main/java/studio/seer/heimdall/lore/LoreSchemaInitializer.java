@@ -195,7 +195,7 @@ public class LoreSchemaInitializer {
         // схемо-гибкий и создаёт тип на первой записи. На чистой БД его нет, и
         // это вскрылось лишь когда V12 попытался объявить KnowPR.title —
         // «Type with name 'KnowPR' was not found» на lore_ci_test.
-        // Свойства — по факту прода: pr_number/title/git_project/pr_uid (pr_id снят, MDL-08).
+        // Свойства — по факту прода: pr_id/pr_number/title/git_project/pr_uid.
         "CREATE VERTEX TYPE KnowPR           IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowMilestone    IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowPhase        IF NOT EXISTS EXTENDS V",
@@ -302,7 +302,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowFinding.finding_id       IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRelease.release_id       IF NOT EXISTS STRING",
         // KnowPR: состав по факту прода (см. комментарий у CREATE VERTEX TYPE).
-        // pr_id (ранний ключ до pr_uid) снят как легаси — MDL-08, владелица 20.11.2026; перенос 1.18 его не несёт.
+        "CREATE PROPERTY KnowPR.pr_id                 IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowPR.pr_uid                IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowPR.pr_number             IF NOT EXISTS INTEGER",
         "CREATE PROPERTY KnowPR.title                 IF NOT EXISTS STRING",
