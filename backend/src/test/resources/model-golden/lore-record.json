@@ -681,7 +681,8 @@
         "dir" : "out",
         "target_type" : "track",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "Реализует ADR",
@@ -1490,7 +1491,8 @@
         "dir" : "out",
         "target_type" : "track",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "Реализует ADR",
@@ -10507,7 +10509,8 @@
         "dir" : "in",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "unknown"
@@ -10612,7 +10615,8 @@
         "dir" : "in",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema"
