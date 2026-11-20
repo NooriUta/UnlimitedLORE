@@ -75,7 +75,9 @@ class BlockedSprintsReasonTest {
         assertTrue(s.contains("out('GATES')[out('HAS_STATE')[valid_to IS NULL AND ("), "закрытость — по ТЕКУЩЕМУ состоянию задачи: " + s);
         assertTrue(s.contains(LoreStatusVocabulary.anySql("status_raw", "done", "cancelled")), s);
         assertTrue(s.contains(" AS closed_tasks"), s);
-        assertTrue(s.contains("SELECT question_id, title, status, priority, owner, "), "owner — без псевдонима: " + s);
+        // MT-MCP-TRUTH A6: колонка по-прежнему зовётся owner, но берётся с ребра ANSWERABLE_BY, без ребра — текст.
+        assertTrue(s.contains("SELECT question_id, title, status, priority, " + QuestionOwner.OWNER_COLUMNS + ", "), "owner: " + s);
+        assertTrue(QuestionOwner.OWNER_COLUMNS.contains(" AS owner,"), "имя колонки owner сохранено для потребителей");
     }
 
     @Test

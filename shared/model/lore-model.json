@@ -2209,7 +2209,8 @@
       "labelKey" : "pp.field.responsible",
       "kind" : "text",
       "group" : "props",
-      "definition" : "Владелец записи: кто за неё отвечает.",
+      "definition" : "Кто отвечает за то, чтобы вопрос получил ответ: человек или агент реестра LORE (связь ANSWERABLE_BY).",
+      "description" : "Ответственный — связь с записью реестра людей или агентов, не свободный текст. Когда вопрос закрывают решением (связь «отвечает»), ответственным становится автор решения. У вопросов, где связи нет, показывается прежний текст поля — только для чтения.",
       "labelEn" : "Responsible",
       "labelPl" : "Odpowiedzialny"
     }, {
@@ -2326,6 +2327,14 @@
       "targetType" : "decision",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "responsible",
+      "label" : "Ответственный",
+      "rel" : "ANSWERABLE_BY",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "attribute",
+      "place" : "prop"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -4884,6 +4893,15 @@
       "labelEn" : "Type",
       "labelPl" : "Typ"
     }, {
+      "key" : "scope",
+      "label" : "Охват",
+      "labelKey" : "pp.field.qgScope",
+      "kind" : "enum",
+      "group" : "props",
+      "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
+      "labelEn" : "Scope",
+      "labelPl" : "Zakres"
+    }, {
       "key" : "title",
       "label" : "Название",
       "labelKey" : "pp.field.title",
@@ -4983,7 +5001,7 @@
       "labelPl" : "Tekst"
     } ],
     "props" : [ {
-      "fields" : [ "projects", "components", "sprint", "date" ]
+      "fields" : [ "scope", "projects", "components", "sprint", "date" ]
     }, {
       "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
     } ],
@@ -6268,6 +6286,7 @@
     } ]
   },
   "edge_fields" : {
+    "question.owner" : "ANSWERABLE_BY",
     "task.author" : "ROLE_HELD_BY",
     "task.executor" : "ROLE_HELD_BY",
     "task.reviewer" : "ROLE_HELD_BY"
@@ -6275,6 +6294,7 @@
   "edge_history" : {
     "fields" : [ "valid_from", "valid_to" ],
     "edges" : {
+      "ANSWERABLE_BY" : "Ответственный за вопрос (человек или агент реестра): при закрытии вопроса решением ответственным становится автор решения; по связи видно, кто отвечал раньше и с какого времени (MT-MCP-TRUTH A6, владелица 19.11.2026).",
       "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
       "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
@@ -7156,6 +7176,22 @@
     }
   },
   "series" : {
+    "AgentActionLog" : {
+      "about" : "AO-01, D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4: журнал действий — точка на каждый мутирующий вызов LORE с исходом (value — HTTP-статус). Теги: семейство (object_type), сущность или путь (object_id), вызывающий (source), ось agent/human/unauth (segment), client_id токена агента (client) и машина X-Lore-Machine (machine); «(unknown)» — агент без значения, «(n/a)» — не агент. Читают срезы agent_actions, admin_actions, mcp_failures, раздел админки «Журнал действий», история сущности и квоты агентов. До 1.18 заводился шагом V86.",
+      "timestamp" : "ts",
+      "tags" : {
+        "object_type" : "STRING",
+        "object_id" : "STRING",
+        "source" : "STRING",
+        "segment" : "STRING",
+        "client" : "STRING",
+        "machine" : "STRING"
+      },
+      "fields" : {
+        "value" : "DOUBLE"
+      },
+      "writer" : "server: LoreRequestStatsFilter → LoreRequestStats.journalAction"
+    },
     "AuditDbLogin" : {
       "about" : "DBR-07: входы в ArcadeDB через сторожа (deploy/db-guard) — первый вход пары «пользователь × источник» за минуту. Секрета нет: из Authorization берётся только имя (Basic → пользователь, Bearer → apitoken:<имя>). Пишет сторож своим токеном с правом только на этот ряд, не root. Ряд полон, только когда прямой :2480 закрыт (Этап 6, D-2026-SETUP-BEFORE-ENFORCE).",
       "timestamp" : "ts",
@@ -7171,6 +7207,21 @@
         "status" : "INTEGER"
       },
       "writer" : "db-guard"
+    },
+    "MetricSnapshot" : {
+      "about" : "ARC-02: метрики — счётчики запросов и сессий по вызывающим (metric lore.requests/lore.session, окно LoreRequestStats), входы через Keycloak (LoreKcLoginPoller), метрики и архив публикаций BRAGI (MCP-03), прежние точки журнала lore.action (до V86, только чтение). Читают срезы метрик и аналитика BRAGI. До 1.18 заводился схемой старой базы (LoreSchemaInitializer).",
+      "timestamp" : "ts",
+      "tags" : {
+        "object_type" : "STRING",
+        "object_id" : "STRING",
+        "metric" : "STRING",
+        "source" : "STRING",
+        "segment" : "STRING"
+      },
+      "fields" : {
+        "value" : "DOUBLE"
+      },
+      "writer" : "server: LoreRequestStats.flush, LoreKcLoginPoller, LoreBragiResource"
     }
   }
 }

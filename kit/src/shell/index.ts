@@ -8,3 +8,4 @@ export { PersonFace, type PersonFaceProps } from './PersonFace';
 export * from './ResizeBorder';
 export * from './TextScaleSlider';
 export * from './Popover';
+export * from './Dialog';

@@ -2,6 +2,7 @@ package studio.seer.heimdall.lore;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,7 +56,50 @@ final class ModelSchemaAdapter {
 
     /** Срез доски на базе из модели, куда доску не перенесли: отвечать «раздел снят», а не 502. */
     static boolean planSectionRemoved(String sliceId) {
-        return enabled && !planBoard && LoreSlices.usesPlanBoard(sliceId);
+        return enabled && (!planBoard || sliceUnavailable(sliceId) != null) && LoreSlices.usesPlanBoard(sliceId);
+    }
+
+    private static final String PLAN_BOARD = "старая доска плана снята (D-2026-LORE-PLAN-BOARD-REMOVED), установщик её не "
+        + "переносит (MIG_PLAN_BOARD=drop); легаси — читается только на старой схеме или при MIG_PLAN_BOARD=keep";
+
+    /**
+     * Типы вне модели 1.18 — тип → почему его может не быть в базе из модели. Каждый тип, который читает срез или
+     * раздел гигиены, либо входит в модель (схема установщика, карта связей, ряды раздела series модели), либо записан здесь — сторож
+     * {@code OutsideModelTypesGuardTest}. На базе из модели, где типа нет, чтение отвечает этой причиной, а не 502.
+     */
+    static final Map<String, String> OUTSIDE_MODEL = Map.of(
+        "PlanConfig", PLAN_BOARD,
+        "PlanTrack", PLAN_BOARD,
+        "PlanSection", PLAN_BOARD,
+        "PlanCheckpoint", PLAN_BOARD,
+        "PlanVersion", PLAN_BOARD);
+
+    /** Типы схемы базы (schema:types) на базе из модели; null — не прочитали, и тогда «типа нет» не утверждаем. */
+    private static volatile Set<String> schemaTypes;
+
+    static void schemaTypes(Set<String> types) { schemaTypes = types == null ? null : Set.copyOf(types); }
+
+    /** Типа точно нет в базе из модели (схему прочитали, его там нет). Старая схема и «не знаем» — false. */
+    static boolean typeMissing(String type) {
+        Set<String> s = schemaTypes;
+        return enabled && s != null && type != null && !s.contains(type);
+    }
+
+    /** Причина словами: «нет данных: тип X не перенесён в 1.18 — почему». */
+    static String missingReason(String type) {
+        String why = OUTSIDE_MODEL.getOrDefault(type, "типа нет в схеме базы, собранной из модели");
+        return "нет данных: тип " + type + " не перенесён в 1.18 — " + why;
+    }
+
+    /**
+     * Срез на базе из модели читает тип, которого в схеме нет: причина словами (ответ 410), иначе null.
+     * Общий механизм для любого среза — не только доски плана.
+     */
+    static String sliceUnavailable(String sliceId) {
+        if (!enabled || schemaTypes == null) return null;
+        for (String t : LoreSlices.typesOf(sliceId))
+            if (typeMissing(t)) return "срез " + sliceId + ": " + missingReason(t);
+        return null;
     }
 
     /** Коды справочников плана и фаз → строка старого вида; остальные коды не трогаются. */
@@ -94,12 +138,104 @@ final class ModelSchemaAdapter {
     /** SQL под новую схему; текст внутри кавычек остаётся как есть. */
     static String rewriteSql(String sql) {
         if (sql == null) return null;
-        return upperStatusLiterals(renameFields(sql));
+        return upperStatusLiterals(renameFields(withStatusNote(sql)));
+    }
+
+    // ── MT-MCP-TRUTH Б7: приписка статуса — в status_note ────────────────────────────────────────────
+
+    /** Суффикс параметра приписки: {@code :ns} → {@code :ns__note}. */
+    static final String NOTE_SUFFIX = "__note";
+
+    private static final Pattern STATUS_SET = Pattern.compile("(?<![\\w])status_raw\\s*=\\s*:(\\w+)");
+    private static final Pattern HIST_WRITE_HEAD = Pattern.compile("(?is)^\\s*(?:UPDATE|INSERT\\s+INTO)\\s+\\w+Hist\\b(.*)$");
+
+    /**
+     * Параметры, которые присваиваются полю статуса ВЕРСИИ (UPDATE/INSERT INTO *Hist … SET status_raw = :p, до WHERE).
+     * Сравнение в условии ({@code WHERE … status_raw = :expected}) — не присваивание; у вершины status_note нет.
+     */
+    static java.util.Set<String> statusNoteParams(String sql) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        if (sql == null || !sql.contains("status_raw")) return out;
+        Matcher m = STATUS_SET.matcher(sql);
+        while (m.find()) {
+            int stmt = sql.lastIndexOf(';', m.start()) + 1;
+            Matcher head = HIST_WRITE_HEAD.matcher(sql.substring(stmt, m.start()));
+            if (!head.matches()) continue;
+            String before = head.group(1);
+            if (!Pattern.compile("(?i)\\bSET\\b").matcher(before).find()) continue;
+            if (Pattern.compile("(?i)\\bWHERE\\b").matcher(before).find()) continue;
+            out.add(m.group(1));
+        }
+        return out;
+    }
+
+    /** SQL: рядом с присваиванием статуса версии — присваивание приписки {@code status_note = :p__note}. */
+    private static String withStatusNote(String sql) {
+        java.util.Set<String> names = statusNoteParams(sql);
+        if (names.isEmpty()) return sql;
+        Matcher m = STATUS_SET.matcher(sql);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String rep = m.group();
+            if (names.contains(m.group(1))) {
+                int stmt = sql.lastIndexOf(';', m.start()) + 1;
+                Matcher head = HIST_WRITE_HEAD.matcher(sql.substring(stmt, m.start()));
+                if (head.matches() && Pattern.compile("(?i)\\bSET\\b").matcher(head.group(1)).find()
+                        && !Pattern.compile("(?i)\\bWHERE\\b").matcher(head.group(1)).find())
+                    rep = m.group() + ", status_note = :" + m.group(1) + NOTE_SUFFIX;
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(rep));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    /** Головы статуса плана: слова строк старого вида и словаря, длинные первыми (READY FOR DEPLOY раньше READY). */
+    private static final List<String> HEAD_WORDS;
+    static {
+        java.util.Set<String> w = new java.util.LinkedHashSet<>();
+        for (String d : DISPLAY.values()) { int sp = d.indexOf(' '); if (sp > 0) w.add(d.substring(sp + 1).toUpperCase(java.util.Locale.ROOT)); }
+        for (LoreStatusVocabulary.Entry e : LoreStatusVocabulary.ENTRIES) w.addAll(e.words());
+        w.addAll(DISPLAY.keySet());
+        List<String> l = new java.util.ArrayList<>(w);
+        l.sort((a, b) -> b.length() - a.length());
+        HEAD_WORDS = List.copyOf(l);
+    }
+
+    /**
+     * Приписка строки статуса плана — то, что после значка и слова статуса («🟡 PARTIAL — ждём CI» → «ждём CI»).
+     * Нет приписки, не статус плана — {@code null}. Слово считается головой только целиком: «✅ Закрыто вручную» —
+     * приписка «Закрыто вручную» (ЗАКРЫТ — начало другого слова). Тот же разбор, что у установщика (apply-map.mjs).
+     */
+    static String noteOf(String raw) {
+        if (raw == null) return null;
+        String t = raw.strip();
+        if (t.isEmpty() || DISPLAY.containsKey(t) || DISPLAY.containsValue(t) || !looksLikePlan(t)) return null;
+        String rest = t;
+        for (LoreStatusVocabulary.Entry e : LoreStatusVocabulary.ENTRIES) {
+            if (rest.startsWith(e.marker())) {
+                rest = rest.substring(e.marker().length());
+                if (rest.startsWith("️")) rest = rest.substring(1);
+                rest = rest.stripLeading();
+                break;
+            }
+        }
+        String up = rest.toUpperCase(java.util.Locale.ROOT);
+        for (String w : HEAD_WORDS) {
+            if (up.startsWith(w) && (up.length() == w.length() || !Character.isLetterOrDigit(up.charAt(w.length())))) {
+                rest = rest.substring(w.length());
+                break;
+            }
+        }
+        rest = rest.replaceFirst("^[\\s—–\\-:·,]+", "").strip();
+        return rest.isEmpty() ? null : rest;
     }
 
     private static final Pattern STATUS_CMP = Pattern.compile("(?<![\\w])(status\\s*(?:=|<>|!=)\\s*)'([a-z][a-z_]*)'");
     private static final Pattern STATUS_IN = Pattern.compile("(?i)(?<![\\w])(status\\s+(?:NOT\\s+)?IN\\s*\\[)([^\\]]*)(\\])");
-    private static final Pattern LOWER_LIT = Pattern.compile("'([a-z][a-z_]*)'");
+    private static final Pattern STATUS_CASE = Pattern.compile("(?is)(?<![\\w.])CASE\\s+status\\s+WHEN\\b.*?\\bEND\\b");
+    private static final Pattern WHEN_LIT = Pattern.compile("(?i)(\\bWHEN\\s+)'([a-z][a-z_]*)'");
+    private static final Pattern LOWER_LIT =Pattern.compile("'([a-z][a-z_]*)'");
 
     /**
      * Коды статусов в новой схеме — заглавными (слово владелицы 16.11.2026: «статусная модель uppercase остальные в
@@ -119,6 +255,9 @@ final class ModelSchemaAdapter {
     static String upperStatusLiterals(String sql) {
         if (!sql.contains("status") || touchesTextStatus(sql)) return sql;
         String s = STATUS_CMP.matcher(sql).replaceAll(m -> Matcher.quoteReplacement(m.group(1) + "'" + m.group(2).toUpperCase(java.util.Locale.ROOT) + "'"));
+        // MT-MCP-TRUTH A3: CASE status WHEN 'open' … END — то же сравнение с кодом (ранг среза questions)
+        s = STATUS_CASE.matcher(s).replaceAll(m -> Matcher.quoteReplacement(
+            WHEN_LIT.matcher(m.group()).replaceAll(x -> Matcher.quoteReplacement(x.group(1) + "'" + x.group(2).toUpperCase(java.util.Locale.ROOT) + "'"))));
         return STATUS_IN.matcher(s).replaceAll(m -> Matcher.quoteReplacement(m.group(1)
             + LOWER_LIT.matcher(m.group(2)).replaceAll(x -> Matcher.quoteReplacement("'" + x.group(1).toUpperCase(java.util.Locale.ROOT) + "'"))
             + m.group(3)));
@@ -246,6 +385,12 @@ final class ModelSchemaAdapter {
     static Map<String, Object> rewriteParams(String sql, Map<String, Object> params) {
         if (sql == null || params == null || params.isEmpty() || !sql.contains("status")) return params;
         Map<String, Object> out = null;
+        // MT-MCP-TRUTH Б7: приписка статуса версии — в status_note (rewriteSql добавил присваивание :p__note)
+        for (String name : statusNoteParams(sql)) {
+            // параметр есть всегда: SQL уже ссылается на :p__note, а пропущенный параметр — ошибка движка
+            if (out == null) out = new java.util.HashMap<>(params);
+            out.put(name + NOTE_SUFFIX, params.get(name) instanceof String s ? noteOf(s) : null);
+        }
         Matcher m = STATUS_ASSIGN.matcher(sql);
         while (m.find()) {
             String name = m.group(1);

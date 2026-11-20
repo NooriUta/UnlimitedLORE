@@ -83,6 +83,31 @@ public class LoreTidyResource extends LoreResourceBase {
         new String[]{"KnowFinding", "finding_id"}, new String[]{"KnowMilestone", "milestone_id"}, new String[]{"KnowPhase", "phase_uid"},
         new String[]{"KnowGitProject", "slug"});
 
+    /** Все типы, которые читает раздел: вершины полей, ID ссылок, прочие ID — для сторожа «тип вне модели». */
+    static Set<String> readTypes() {
+        Set<String> out = new java.util.LinkedHashSet<>();
+        for (Target t : TARGETS) out.add(t.type());
+        for (List<String> v : REF_IDS.values()) out.add(v.get(0));
+        for (String[] o : OTHER_IDS) out.add(o[0]);
+        return out;
+    }
+
+    /**
+     * Цели, чей тип есть в базе. На базе из модели 1.18 тип вне модели (PlanVersion — доска плана, MD-02) не читается:
+     * иначе один отсутствующий тип валил весь раздел 502 «Type with name 'PlanVersion' was not found».
+     */
+    static List<Target> presentTargets() {
+        return TARGETS.stream().filter(t -> !ModelSchemaAdapter.typeMissing(t.type())).toList();
+    }
+
+    /** Пропущенные типы с причиной — экран показывает их «нет данных: тип не перенесён в 1.18», а не молчит. */
+    static List<Map<String, String>> notMigrated() {
+        List<Map<String, String>> out = new ArrayList<>();
+        for (String t : readTypes())
+            if (ModelSchemaAdapter.typeMissing(t)) out.add(Map.of("type", t, "reason", ModelSchemaAdapter.missingReason(t)));
+        return out;
+    }
+
     /** Последний результат: поля, контекст и ответ. Один на процесс — проверку запускает админ. */
     record Snapshot(List<MdRefCheck.Field> fields, MdRefRules.Ctx ctx, Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes,
                     Map<String, Object> answer) {}
@@ -110,7 +135,7 @@ public class LoreTidyResource extends LoreResourceBase {
             MdRefRules.Ctx ctx = loadCtx();
             Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes = loadScopes();
             List<MdRefCheck.Field> fields = new ArrayList<>();
-            for (Target t : TARGETS) fields.addAll(loadFields(t, null));
+            for (Target t : presentTargets()) fields.addAll(loadFields(t, null));
             Snapshot s = build(fields, ctx, scopes, t0, loadDismissed());
             last = s;
             return noStore(Response.ok(s.answer()));
@@ -130,6 +155,8 @@ public class LoreTidyResource extends LoreResourceBase {
         Target t = TARGETS.stream().filter(x -> x.type().equals(type)).findFirst().orElse(null);
         if (t == null) return badParams("type: one of " + TARGETS.stream().map(Target::type).toList());
         if (id == null || id.isBlank()) return badParams("id required");
+        if (ModelSchemaAdapter.typeMissing(type))
+            return noStore(Response.status(Response.Status.GONE).entity(new LoreError("TYPE_NOT_MIGRATED", ModelSchemaAdapter.missingReason(type))));
         long t0 = System.currentTimeMillis();
         try {
             Snapshot s = last;
@@ -162,7 +189,7 @@ public class LoreTidyResource extends LoreResourceBase {
         MdRefRules.Ctx ctx = loadCtx();
         Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes = loadScopes();
         List<MdRefCheck.Field> fields = new ArrayList<>();
-        for (Target t : TARGETS) if (types.contains(t.type())) fields.addAll(loadFields(t, null));
+        for (Target t : presentTargets()) if (types.contains(t.type())) fields.addAll(loadFields(t, null));
         return MdRefCheck.compute(fields, ctx, scopes, MdRefRules.defaults(), loadDismissed());
     }
 
@@ -180,6 +207,8 @@ public class LoreTidyResource extends LoreResourceBase {
         answer.put("checked_at", Instant.now().toString());
         answer.put("took_ms", System.currentTimeMillis() - t0);
         answer.putAll(body);
+        // Тип вне модели 1.18, которого в базе нет, не читали — и говорим об этом, а не молчим («нет данных» ≠ «чисто»).
+        answer.put("not_migrated", notMigrated());
         return new Snapshot(List.copyOf(fields), ctx, scopes, answer);
     }
 
@@ -229,7 +258,7 @@ public class LoreTidyResource extends LoreResourceBase {
             MdRefRules.Ctx ctx = loadCtx();
             Map<MdRefCheck.RecordKey, MdRefRules.Scope> scopes = loadScopes();
             List<MdRefCheck.Field> fields = new ArrayList<>();
-            for (Target t : TARGETS) if (t.writable()) fields.addAll(loadFields(t, null));
+            for (Target t : presentTargets()) if (t.writable()) fields.addAll(loadFields(t, null));
             Set<String> rules = MdRefApply.rulesOf(req.rules());
             List<MdRefApply.Edit> plan = MdRefApply.plan(fields, ctx, scopes, rules);
             Map<String, Object> out = new LinkedHashMap<>();
@@ -521,13 +550,14 @@ public class LoreTidyResource extends LoreResourceBase {
         for (Map.Entry<String, List<String>> e : REF_IDS.entrySet()) {
             Set<String> s = new HashSet<>();
             String vt = e.getValue().get(0);
+            if (ModelSchemaAdapter.typeMissing(vt)) { ids.put(e.getKey(), s); continue; }
             for (String f : e.getValue().subList(1, e.getValue().size()))
                 for (Map<String, Object> r : ingestService.queryPublic("SELECT " + f + " AS v FROM " + vt + " WHERE " + f + " IS NOT NULL", Map.of()))
                     s.add(String.valueOf(r.get("v")));
             ids.put(e.getKey(), s);
         }
         Set<String> other = new HashSet<>();
-        for (String[] o : OTHER_IDS)
+        for (String[] o : OTHER_IDS) if (!ModelSchemaAdapter.typeMissing(o[0]))
             for (Map<String, Object> r : ingestService.queryPublic("SELECT " + o[1] + " AS v FROM " + o[0] + " WHERE " + o[1] + " IS NOT NULL", Map.of()))
                 other.add(String.valueOf(r.get("v")));
         Map<String, MdRefRules.Scope> sprints = new HashMap<>();
@@ -543,7 +573,7 @@ public class LoreTidyResource extends LoreResourceBase {
     /** Привязки записей: проект (BELONGS_TO_PROJECT) и компоненты (BELONGS_TO, TAGGED_WITH, DOCUMENTED_IN). */
     private Map<MdRefCheck.RecordKey, MdRefRules.Scope> loadScopes() {
         Map<MdRefCheck.RecordKey, MdRefRules.Scope> out = new HashMap<>();
-        for (Target t : TARGETS) out.putAll(scopesOf(t.type(), t.idField()));
+        for (Target t : presentTargets()) out.putAll(scopesOf(t.type(), t.idField()));
         // задача наследует привязки своего спринта
         Map<MdRefCheck.RecordKey, MdRefRules.Scope> sprints = scopesOf("KnowSprint", "sprint_id");
         for (Map<String, Object> r : ingestService.queryPublic("SELECT task_uid AS id FROM KnowTask WHERE task_uid IS NOT NULL", Map.of())) {

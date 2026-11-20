@@ -208,8 +208,11 @@ public class LoreAdrResource extends LoreResourceBase {
                 if (req.consequences_md() != null) { histSql.append(first ? "" : ", ").append("consequences_md=:con");  histUpdP.put("con", req.consequences_md()); first = false; }
                 if (!first) {
                     histSql.append(" WHERE @rid=:rid");
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        histSql.toString(), histUpdP)).await().indefinitely();
+                    // MT-MCP-TRUTH Б11: открытую версию прочитали, запись её не нашла — тело не легло, 409
+                    if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            histSql.toString(), histUpdP)).await().indefinitely()))
+                        throw new Scd2Guard.ConflictException("adr '" + req.adr_id()
+                            + "': the open body version disappeared between read and write — nothing written, re-read and retry", Map.of());
                 }
                 // else: no body fields provided at all (e.g. a pure status/edges-only call) — leave the hist row untouched.
                 histCreated = false;
@@ -782,6 +785,9 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("nid", req.new_adr_id(), "oid", req.adr_id())))
                 .await().indefinitely().result();
             Object count = (hit != null && !hit.isEmpty()) ? hit.get(0).get("count") : 0;
+            // MT-MCP-TRUTH Б11: переименование несуществующего ADR отвечало ok:true с updated: 0
+            if (WriteCount.missed(hit))
+                return WriteCount.notFound("adr", req.adr_id(), "переименование в " + req.new_adr_id());
             return noStore(Response.ok(Map.of("ok", true,
                 "adr_id", req.new_adr_id(), "renamed_from", req.adr_id(), "updated", count)));
         } catch (Exception e) {

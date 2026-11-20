@@ -30,6 +30,8 @@ export interface TidyCheck {
   scanned: { records: number; fields: number };
   auto: { edits: number; records: number; rules: Record<string, TidyRuleStat>; signatures: Record<string, number> };
   manual: { records: number; places: number; groups: Record<string, { records: number; places: number }>; rows: TidyRow[]; dismissed: TidyDismissed[] };
+  /** Типы вне модели 1.18, которых в базе нет: не проверялись — «нет данных», а не «чисто». */
+  notMigrated: { type: string; reason: string }[];
 }
 
 /** Отметка «не ссылка»: вид мест записи скрыт из счётчика, текст не менялся. */
@@ -79,6 +81,7 @@ export function parseTidy(raw: unknown): TidyCheck {
       records: num(manual.records), places: num(manual.places), groups, rows,
       dismissed: arr(manual.dismissed).map(x => { const o = obj(x); return { type: str(o.type), id: str(o.id), kind: str(o.kind), places: num(o.places) }; }),
     },
+    notMigrated: arr(r.not_migrated).map(x => { const o = obj(x); return { type: str(o.type), reason: str(o.reason) }; }),
   };
 }
 

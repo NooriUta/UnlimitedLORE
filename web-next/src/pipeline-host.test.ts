@@ -627,6 +627,51 @@ describe('PL-04: бэкенд препрода — basic (root), а не ток�
   });
 });
 
+// SPRINT_LORE_PRODUCT_BACKLOG/DBR-01, шаг 4.2 (вариант А владелицы): рантайм прода ходит в ArcadeDB
+// собственным API-токеном без updateSchema, root-пароль остаётся только у накатки схемы и бэкапа.
+// Раньше compose отдавал ARCADEDB_ROOT_PASSWORD рантайму, и бэкап/снимок прода брали его через
+// `docker exec` в работающий бэкенд — убрать пароль из рантайма, не переведя их, значило сломать
+// бэкап перед накаткой. Поэтому root живёт в отдельном сервисе lore-migrate (профиль migrate).
+describe('DBR-01: root-пароль прода — только у накатки и бэкапа (lore-migrate), рантайм на токене', () => {
+  const HOST = 'docker/lore-host/docker-compose.yml';
+  /** Блок сервиса `name:` (отступ 2) до следующего сервиса. */
+  const svc = (name: string) => job(HOST, name);
+  const env = (block: string) => code(block).split('\n').filter((l) => /^ {6}- /.test(l)).join('\n');
+
+  it('рантайм lore-backend: без ARCADEDB_ROOT_PASSWORD, способ входа жёстко token', () => {
+    const be = env(svc('lore-backend'));
+    expect(be).not.toMatch(/ARCADEDB_ROOT_PASSWORD/);
+    expect(be).toMatch(/^ {6}- lore\.mart\.auth=token$/m);
+    expect(be).not.toMatch(/LORE_MART_AUTH/);
+  });
+
+  it('lore-migrate: наследует lore-backend, профиль migrate, root и basic, накатка-и-выход', () => {
+    const m = code(svc('lore-migrate'));
+    expect(m, 'сервиса lore-migrate нет').not.toBe('');
+    expect(m).toMatch(/^ {4}extends:\n {6}service: lore-backend$/m);
+    expect(m).toMatch(/^ {4}profiles: \[migrate\]$/m);
+    expect(m).toMatch(/^ {6}- ARCADEDB_ROOT_PASSWORD=\$\{ARCADEDB_ROOT_PASSWORD:-unset\}$/m);
+    expect(m).toMatch(/^ {6}- lore\.mart\.auth=basic$/m);
+    expect(m).toMatch(/^ {6}- lore\.migrate=true$/m);
+    expect(m).toMatch(/^ {6}- lore\.migrate\.only=true$/m);
+  });
+
+  it('накатка и бэкап прода в lore-host-deploy.sh идут через lore-migrate, не через рантайм', () => {
+    const s = code(read('.github/scripts/lore-host-deploy.sh'));
+    expect(s).toMatch(/docker compose run --rm --no-deps -T lore-migrate/);
+    expect(s).toMatch(/docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c/);
+    expect(s).not.toMatch(/docker compose run --rm --no-deps -T lore-backend/);
+    expect(s).not.toMatch(/docker exec "\$cid"/);
+  });
+
+  it.each(['scripts/migrate-live-check.sh', 'scripts/migration-snapshot.sh', 'scripts/preprod-db-refresh.sh'])(
+    '%s: снимок прода — кредом lore-migrate, а не docker exec в рантайм', (f) => {
+      const s = code(read(f));
+      expect(s).not.toMatch(/docker exec \$bcid/);
+      expect(s).toMatch(/docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c/);
+    });
+});
+
 // Метка версии в углу (владелица 09.11): тег релиза доезжает до /lore/version только
 // если выкатка прода передаёт его в контейнер, а compose принимает. Снять любую из
 // двух строк — release молча станет null, и метка покажет коммит вместо версии.

@@ -826,8 +826,11 @@
     "input": {
       "component_id": "string?",
       "content_html": "string?",
+      "content_html_file": "string?",
       "content_md_en": "string?",
+      "content_md_en_file": "string?",
       "content_md_ru": "string?",
+      "content_md_ru_file": "string?",
       "doc_id": "string",
       "file_path": "string?",
       "has_ext_deps": "boolean?",
@@ -1612,6 +1615,7 @@
       "qg_id": "string",
       "qg_type": "string?",
       "retired_reason": "string?",
+      "scope": "enum(global|project)?",
       "sprint_id": "string?",
       "status": "string?"
     },

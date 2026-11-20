@@ -22,7 +22,7 @@ services:
     environment:
       - MART_ARCADE_URL=http://LORE-ygg:2480
       - ARCADEDB_USER=${ARCADEDB_USER:-root}
-      - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      # DBR-01 шаг 4.2: root-пароля у рантайма нет — он только у сервиса lore-migrate ниже.
       - LORE_AUTH_ENABLED
       - LORE_OIDC_ISSUER
       - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
@@ -44,7 +44,10 @@ services:
       - lore.forgejo.base-override=https://git.seidrstudio.pro
       - lore.migrate=${LORE_MIGRATE:-false}
       - lore.migrate.only=${LORE_MIGRATE_ONLY:-false}
-      - lore.mart.auth=${LORE_MART_AUTH:-basic}
+      # DBR-01 (вариант А владелицы): рантайм прода — только собственный API-токен без updateSchema
+      # (ARCADEDB_API_TOKEN / ARCADEDB_API_TOKEN_BENCH из секрет-сервиса). Жёстко, без переменной:
+      # отката token→basic нет намеренно; нет токена — бэкенд не выходит в ready.
+      - lore.mart.auth=token
       - lore.scope.enforce=${LORE_SCOPE_ENFORCE:-false}
       - lore.bootstrap=${LORE_BOOTSTRAP:-false}
       - BENCH_ROOT=/bench-data
@@ -63,6 +66,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+
+  # DBR-01 шаг 4.2: единственный носитель root-пароля ArcadeDB на проде. Тот же образ и окружение,
+  # что у lore-backend (extends), но вход под root (basic) — накатка схемы требует updateSchema,
+  # которого у токена рантайма нет по построению. Профиль migrate: `compose up` его не поднимает,
+  # он запускается только явно и разово:
+  #   накатка — docker compose run --rm --no-deps -T lore-migrate  (накатывает и выходит);
+  #   бэкап   — docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c '<curl BACKUP DATABASE>'.
+  # Тег образа берётся у lore-backend через extends — замена тегов при релизе его не пропускает.
+  lore-migrate:
+    extends:
+      service: lore-backend
+    profiles: [migrate]
+    restart: "no"
+    environment:
+      - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      - lore.mart.auth=basic
+      - lore.migrate=true
+      - lore.migrate.only=true
 
   lore-app:
     image: unlimitedlore-lore-app:a2dc70bc

@@ -59,7 +59,7 @@ public class LoreDocResource extends LoreResourceBase {
             return badParams("doc_id contains illegal characters");
         try {
             // LH-44: only SET provided fields — a metadata-only re-call must not wipe
-            // content_html (up to 100 KB of page content) or the other attributes.
+            // content_html (page content, no size limit enforced here) or the other attributes.
             StringBuilder dcsql = new StringBuilder("UPDATE KnowDoc SET doc_id=:id");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("id", req.doc_id());

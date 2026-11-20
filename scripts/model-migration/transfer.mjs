@@ -21,15 +21,16 @@ import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
-import { seriesDdl } from './series.mjs';
+import { seriesPlan, copySeries, seriesIo } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
 import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
-import { structurePlan, asIsContent, tsContent } from './structure-plan.mjs';
+import { structurePlan, asIsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
+import { repairVersions, addFixes } from './scd2-repair.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
@@ -122,12 +123,21 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // ── 2. Сведение ───────────────────────────────────────────────────────────────────────────────────
   const merge = { to_version_set: 0, to_version_kept_existing: 0, no_current_version: 0, phase_title_from_status: 0, phase_title_already_set: 0 };
   const leftovers = [];
+  // MT-MCP-TRUTH Б6: битая история лечится ДО сведения — пустой state_uid, лишние открытые версии, запись без
+  // текущей версии. Прежние значения — в остаток (MigLeftover), счёт — в отчёт.
+  const scd2Fixes = { state_uid_filled: 0, extra_open_closed: 0, current_reopened: 0 };
   for (const B of BASES) {
     const H = B + 'Hist';
     const versions = new Map(); // rid записи → версии
     for (const v of calc[H]) { const p = parentOf[v.rid]; if (p) (versions.get(p) || versions.set(p, []).get(p)).push(v); }
     for (const b of calc[B]) {
       const own = versions.get(b.rid) || [];
+      // лечится только то, что тип версий ведёт по схеме: у KnowMilestoneHist/KnowRunbookHist нет valid_to,
+      // у KnowFindingHist нет и state_uid
+      const hf = (SCHEMA[H] && SCHEMA[H].fields) || {};
+      const fixed = repairVersions(own, { parent: b.rid, type: H, intervals: Boolean(hf.valid_to), stateUid: Boolean(hf.state_uid) });
+      addFixes(scd2Fixes, fixed.fixes);
+      leftovers.push(...fixed.leftovers);
       const open = own.filter(v => !given(v.res.out.valid_to)).sort((a, c) => String(c.res.out.valid_from || '').localeCompare(String(a.res.out.valid_from || '')) || a.rid.localeCompare(c.rid));
       const cur = open[0];
       for (const [f, val] of Object.entries(b.res.toVersion)) {
@@ -217,6 +227,8 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
   }
   report.stages.merge = merge;
+  report.stages.scd2_repair = scd2Fixes;
+  log('2 история SCD2:', JSON.stringify(scd2Fixes));
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
@@ -225,7 +237,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   if (missing.length) throw new Error('обязательное поле пусто — нужно решение в разделе «Перенос» (несоответствие «пусто» или «вне справочника»): ' + missing.map(m => `${m.type}.${m.field} — ${m.rids.length} (${m.rids.slice(0, 5).join(', ')}${m.rids.length > 5 ? ', …' : ''})`).join('; '));
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
   // структура вне карты: типы источника без карты (пустыми) и индексы источника на новых именах полей
-  const structure = structurePlan(await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types'), SCHEMA, notMovedFor(db.env));
+  const srcTypes = await db.src('SELECT name, type, properties, indexes, timestampColumn, tsColumns FROM schema:types');
+  // ряды модели (series): DDL — из модели, точки источника — своим шагом; «как есть» их не заводит (дефект 1.18,
+  // 19.11.2026: AgentActionLog и MetricSnapshot заводились только шагами V, которых у базы из модели нет)
+  const seriesSteps = seriesPlan(srcTypes, SERIES);
+  const structure = structurePlan(srcTypes, SCHEMA, notMovedFor(db.env), SERIES);
   // свои: типы карты и структуры; плюс типы «не переносить», оставленные прежней версией переноса, — их --reset удаляет
   const mine = [...ownTypes(), ...structure.types.map(t => t.name), ...Object.keys(NOT_MOVED)];
   const clash = existing.filter(n => mine.includes(n));
@@ -245,8 +261,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await db.dstCommand('CREATE VERTEX TYPE LoreModelSchema');
   await db.dstCommand('INSERT INTO LoreModelSchema CONTENT :c', { c: modelMarker(SCHEMA) });
   await db.dstCommand(`CREATE EDGE TYPE ${EDGE}`);
-  // DBR-07: временные ряды модели (AuditDbLogin — ряд сторожа входов); записей переноса в них нет.
-  for (const [T, s] of Object.entries(SERIES)) await db.dstCommand(seriesDdl(T, s));
+  // DBR-07: временные ряды модели (AuditDbLogin — сторож входов, AgentActionLog — журнал действий, MetricSnapshot —
+  // метрики) — DDL модели; точки источника переносятся ниже, после записей.
+  for (const s of seriesSteps) await db.dstCommand(s.ddl);
 
   const dstRid = {}; // rid источника → rid приёмника
   const undeclared = {};
@@ -266,29 +283,18 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   await pool(leftovers, 8, x => db.dstCommand('INSERT INTO MigLeftover CONTENT :c', { c: { ...x, value: typeof x.value === 'string' ? x.value : JSON.stringify(x.value) } }));
   report.stages.write = { records: written, links: links.length, leftovers: leftovers.length, fields_not_in_schema: undeclared };
   // типы без карты — как есть (журналы, снимки метрик, планы): строка источника без @-полей + mig_src_rid; сверка счётом
+  // ряды модели: точки источника — по страницам (окна времени), детерминированно, со сверкой счёта (copySeries)
+  const seriesCopied = {};
+  for (const s of seriesSteps) {
+    seriesCopied[s.name] = s.copy ? await copySeries(seriesIo(db, s.name, s.ts)) : { source: 0, target: 0, absent_in_source: true };
+    log('3 ряд модели:', s.name, JSON.stringify(seriesCopied[s.name]));
+  }
+  report.stages.series = seriesCopied;
   const asIs = {};
-  const fmt = ms => new Date(ms).toISOString().replace('T', ' ').replace('Z', '');
-  // временной ряд: строк без @rid, поэтому окнами по времени; окно, упёршееся в потолок ответа базы, делится пополам
-  const tsCopy = async t => {
-    const [m] = await db.src(`SELECT min(${t.ts}) AS a, max(${t.ts}) AS b FROM ${t.name}`);
-    if (!m || m.a == null) return 0;
-    let n = 0;
-    const win = async (a, b) => {
-      const rows = await db.src(`SELECT FROM ${t.name} WHERE ${t.ts} >= '${fmt(a)}' AND ${t.ts} < '${fmt(b)}'`);
-      if (rows.length >= 20000 && b - a > 1) { const mid = Math.floor((a + b) / 2); await win(a, mid); await win(mid, b); return; }
-      await pool(rows, 8, r => db.dstCommand(`INSERT INTO ${t.name} CONTENT :c`, { c: tsContent(r, t.ts) }));
-      n += rows.length;
-    };
-    const lo = tsContent({ x: m.a }, 'x').x, hi = tsContent({ x: m.b }, 'x').x + 1, DAY = 86400000;
-    for (let a = lo; a < hi; a += DAY) await win(a, Math.min(a + DAY, hi));
-    return n;
-  };
   for (const t of structure.types) {
     if (t.kind === 'TIMESERIES') {
-      const n = await tsCopy(t);
-      const src = (await db.src(`SELECT count(*) AS n FROM ${t.name}`))[0].n;
-      asIs[t.name] = { source: src, target: n };
-      if (src !== n) throw new Error(`перенос как есть: ${t.name} — в источнике ${src}, перенесено ${n}`);
+      // ряд источника вне модели — тем же переносом по страницам, структура — источника
+      asIs[t.name] = await copySeries(seriesIo(db, t.name, t.ts));
       continue;
     }
     let last = '#-1:-1', n = 0;

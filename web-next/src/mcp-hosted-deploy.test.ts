@@ -40,8 +40,12 @@ describe('compose: сервис lore-mcp', () => {
     expect(s()).not.toMatch(/\bports:/);
     expect(service('docker-compose.preprod.yml', 'lore-mcp')).not.toMatch(/\bports:/);
   });
-  it('секретов OIDC у сервиса нет (токен — от клиента)', () => {
-    expect(s()).not.toMatch(/LORE_MCP_CLIENT_(ID|SECRET)|LORE_OIDC_ISSUER/);
+  it('секретов OIDC у сервиса нет (токен или пара id/секрет — от клиента)', () => {
+    expect(s()).not.toMatch(/LORE_MCP_CLIENT_(ID|SECRET)/);
+  });
+  it('issuer (не секрет) подан — без него вход по X-Lore-Client-Id/Secret отвечает 503', () => {
+    // Вариант «г»: токен по паре клиента сервер берёт у того же token endpoint, что stdio-режим.
+    expect(s()).toMatch(/LORE_OIDC_ISSUER: \$\{LORE_OIDC_ISSUER/);
   });
   it('препрод: образ с тегом выкатки, как у остальных сервисов', () => {
     expect(service('docker-compose.preprod.yml', 'lore-mcp')).toMatch(/image: unlimitedlore-lore-mcp:\$\{LORE_IMAGE_TAG/);

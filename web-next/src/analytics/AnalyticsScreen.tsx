@@ -9,6 +9,9 @@ import {
 } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import { appT, type AppKey } from '../i18n';
+import type { NewsSource } from '../news/feed/source';
+import { newsSource as appNewsSource } from '../news/source';
+import { AnalyticsDynamics } from './AnalyticsDynamics';
 import { burnup, lastWeeks, leadTime, throughput, velocity, type DoneRow, type TaskRow } from './analyticsModel';
 
 /** Срезы v1, из которых считаются блоки первой поставки. */
@@ -16,16 +19,17 @@ export const ANALYTICS_SLICES = ['sprint_done_dates', 'task_created_dates', 'tas
 const WEEKS = 12;
 
 export type BlockId = 'velocity' | 'burnup' | 'throughput' | 'lead';
-type TabId = 'progress' | 'flow' | 'mine';
+type TabId = 'progress' | 'flow' | 'dynamics' | 'mine';
+const TABS: TabId[] = ['progress', 'flow', 'dynamics', 'mine'];
 
 /** Какие блоки во вкладке. «Моя сводка» по умолчанию — блоки обеих вкладок. */
-export const TAB_BLOCKS: Record<TabId, BlockId[]> = {
+export const TAB_BLOCKS: Record<Exclude<TabId, 'dynamics'>, BlockId[]> = {
   progress: ['velocity', 'burnup'],
   flow: ['throughput', 'lead'],
   mine: ['velocity', 'throughput', 'burnup', 'lead'],
 };
-const BLOCK_TAB: Record<BlockId, Exclude<TabId, 'mine'>> = { velocity: 'progress', burnup: 'progress', throughput: 'flow', lead: 'flow' };
-const isTab = (v: string | null): v is TabId => v === 'progress' || v === 'flow' || v === 'mine';
+const BLOCK_TAB: Record<BlockId, 'progress' | 'flow'> = { velocity: 'progress', burnup: 'progress', throughput: 'flow', lead: 'flow' };
+const isTab = (v: string | null): v is TabId => (TABS as (string | null)[]).includes(v);
 
 export type AnalyticsLoader = (slice: string, signal: AbortSignal) => Promise<unknown>;
 
@@ -34,14 +38,17 @@ export interface AnalyticsScreenProps {
   load?: AnalyticsLoader;
   /** «Сегодня» (тесты). */
   now?: number;
+  /** Источник рядов «Новостей» для вкладки «Динамика»; не задан — тот же, что у экрана «Новости». */
+  news?: NewsSource;
 }
 
-export function AnalyticsScreen({ load, now }: AnalyticsScreenProps) {
+export function AnalyticsScreen({ load, now, news }: AnalyticsScreenProps) {
   const lang = useKitLang();
   const t = (k: AppKey, p?: Record<string, string | number>) => appT(lang, k, p);
   const [raw, setTab] = useUrlParam('atab');
   const tab: TabId = isTab(raw) ? raw : 'progress';
   const fetcher = useMemo(() => sliceFetcher(), []);
+  const newsSource = news ?? appNewsSource;
   const loader: AnalyticsLoader = load ?? ((slice, signal) => fetcher(slice, {}, signal));
   const res = useLoadState(signal => Promise.all(ANALYTICS_SLICES.map(s => loader(s, signal))), [load]);
   const today = now ?? Date.now();
@@ -81,10 +88,14 @@ export function AnalyticsScreen({ load, now }: AnalyticsScreenProps) {
   return (
     <section className="an" aria-label={t('analytics.title')}>
       <Tabs variant="underline" label={t('analytics.title')} value={tab} onChange={v => setTab(v === 'progress' ? null : v)}
-        items={(['progress', 'flow', 'mine'] as TabId[]).map(id => ({ id, label: t(`analytics.tab.${id}` as AppKey) }))} />
-      <p className="an-lead">{t(tab === 'mine' ? 'analytics.mineLead' : 'analytics.lead12', { n: WEEKS })}</p>
-      {calc && calc.partial.length > 0 && <p className="an-partial" role="status">{t('analytics.partial', { slices: calc.partial.join(', ') })}</p>}
-      <div className="an-grid">{TAB_BLOCKS[tab].map(id => block(id, tab === 'mine'))}</div>
+        items={TABS.map(id => ({ id, label: t(`analytics.tab.${id}` as AppKey) }))} />
+      {tab === 'dynamics' ? <AnalyticsDynamics source={newsSource} /> : (
+        <>
+          <p className="an-lead">{t(tab === 'mine' ? 'analytics.mineLead' : 'analytics.lead12', { n: WEEKS })}</p>
+          {calc && calc.partial.length > 0 && <p className="an-partial" role="status">{t('analytics.partial', { slices: calc.partial.join(', ') })}</p>}
+          <div className="an-grid">{TAB_BLOCKS[tab].map(id => block(id, tab === 'mine'))}</div>
+        </>
+      )}
     </section>
   );
 }

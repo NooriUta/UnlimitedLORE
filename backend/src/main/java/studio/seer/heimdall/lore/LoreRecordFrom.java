@@ -340,6 +340,7 @@ final class LoreRecordFrom {
         Map.entry("quality_gate", List.of(
             v("title", Transform.FIRST_OF, "name", "qg_id"),
             s("status", "status"),
+            s("scope", "scope"), // QG-01: общий (global) или проектный (project)
             s("last_run_status", "last_run_status"),
             v("date", Transform.DATE10, "date_created"),
             v("retired_at", Transform.DATE10, "retired_at"),
