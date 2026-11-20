@@ -3705,8 +3705,10 @@
       "key" : "kind",
       "label" : "Вид",
       "labelKey" : "pp.field.kind",
-      "kind" : "text",
+      "kind" : "enum",
       "group" : "props",
+      "multi" : true,
+      "definition" : "Вид продукта — набор: tech (ИТ, технологический), service (не ИТ, сервисно-организационный) или оба; пустым не бывает (ADR-LORE-044).",
       "labelEn" : "Kind",
       "labelPl" : "Rodzaj"
     }, {

@@ -94,6 +94,15 @@ describe('мапперы строк продуктового слоя', () => {
     expect(productRecord({ code: 'X' }).title, 'без подписи — код').toBe('X');
   });
 
+  it('WK-01: вид продукта в списке — набор (строка прежней записи — набор из одного), колонка «Вид»', () => {
+    expect(productRecord({ code: 'HARPA', kind: ['tech', 'service'] }).fields.product_kind).toEqual(['tech', 'service']);
+    expect(productRecord({ code: 'FREYJA', kind: 'service' }).fields.product_kind).toEqual(['service']);
+    expect(productRecord({ code: 'X' }).fields.product_kind).toEqual([]);
+    const cfg = LIST_SCREENS.products.config('ru');
+    expect(cfg.list?.columns).toContain('product_kind');
+    expect(cfg.kinds.product.fields?.find(f => f.key === 'product_kind')?.title).toBe('Вид продукта');
+  });
+
   it('боль, выгода, работа: акторы и «заявлено / снимает»', () => {
     expect(painRecord({ pain_id: 'PAIN-1', title: 'Медленно', severity: 'high', actor_ids: ['ACT-1'], addressed_by: 2, relieved_by: 0 }))
       .toMatchObject({ id: 'PAIN-1', kind: 'pain', title: 'Медленно', fields: { severity: 'high', actors: ['ACT-1'], claimed: 2, relieved: 0 } });

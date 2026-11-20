@@ -14,13 +14,13 @@ import gameIconsData from '@iconify-json/game-icons/icons.json';
 // S7B-22: логотипы harness (simple-icons:…) из поля icon справочника — зарегистрировать до показа чипа.
 import './harnessLogos';
 import {
-  DiffPreview, EmptyState, Forbidden, GameIcon, LoadError, Skeleton, hasGameIcon, useKitLang, useLoadState, useUrlParam,
+  DiffPreview, EmptyState, Forbidden, GameIcon, LoadError, Pill, ReasonDialog, Skeleton, hasGameIcon, useKitLang, useLoadState, useUrlParam,
   type DiffRow,
 } from '@seidr/kit';
 import { useAppT, type AppKey } from '../i18n';
 import { LoreHttpError } from '../api/loreSlice';
 import {
-  DICT_COLOR_TOKENS, checkNewDictType, dictKinds, dictEntryBody, dictEntryDiff, dictTypes, fetchDicts, fetchTags, isCanonDict,
+  DICT_COLOR_TOKENS, checkNewDictType, dictKindProblem, dictKinds, dictEntryBody, kindChanged, orderedKinds, dictEntryDiff, dictTypes, fetchDicts, fetchTags, isCanonDict,
   needsDictConfirm, saveDictEntry, usageOf, type AreaUsage, type DictDraft, type DictRow, type DictsData, type TagRow,
   type UsageCell,
 } from './dicts';
@@ -92,7 +92,7 @@ function DictsBody({ data, fetchImpl, reload }: { data: DictsData; fetchImpl?: t
   const pick = (x: string) => { setDt(x, { replace: true }); setEdit(null); };
   const openNew = (count: number) => setEdit({
     before: null,
-    draft: { code: '', label_ru: '', label_en: null, color: null, icon: null, sort_order: (count + 1) * 10, is_active: true },
+    draft: { code: '', label_ru: '', label_en: null, color: null, icon: null, sort_order: (count + 1) * 10, is_active: true, kind: [] },
   });
   const applyNewType = () => {
     if (newCheck.kind === 'exists') { pick(newCheck.code); setNewType(''); return; }
@@ -234,7 +234,7 @@ function DictRowView({ r, usage, open, withKind, onEdit, onReactivate, children 
         </td>
         <td><Chip color={r.color} icon={r.icon} text={r.label_ru ?? r.code} /></td>
         <td><UsageView cell={usageOf(r.dict_type, r.code, usage)} /></td>
-        {withKind && <td><KindMark kind={r.kind} /></td>}
+        {withKind && <td><KindMark dt={r.dict_type} kind={r.kind} /></td>}
         <td><span className="adm-mono">{r.sort_order ?? '—'}</span></td>
         <td>{r.is_active ? <GameIcon slug="tick" size={12} label={t('admin.dicts.on')} /> : <span className="adm-dim">{t('admin.dicts.off')}</span>}</td>
         <td>
@@ -259,10 +259,16 @@ const FIELD_LABEL: Record<string, AppKey> = {
 /** WK-01: подписи видов продукта. Неизвестный сервером вид — показывается кодом, а не прячется. */
 const KIND_LABEL: Record<string, AppKey> = { tech: 'admin.dicts.kind.tech', service: 'admin.dicts.kind.service' };
 
-function KindMark({ kind }: { kind: string | null }) {
+/** WK-01: вид — набор; каждый вид — пилюля значения (kit Pill), пустой набор — «не задан». */
+function KindMark({ dt, kind }: { dt: string; kind: readonly string[] }) {
   const t = useAppT();
-  if (!kind) return <span className="adm-missing" data-testid="adm-dict-kind" data-kind="none">{t('admin.dicts.kind.none')}</span>;
-  return <span data-testid="adm-dict-kind" data-kind={kind}>{KIND_LABEL[kind] ? t(KIND_LABEL[kind]) : kind}</span>;
+  if (!kind.length) return <span className="adm-missing" data-testid="adm-dict-kind" data-kind="none">{t('admin.dicts.kind.none')}</span>;
+  const ks = orderedKinds(dt, kind);
+  return (
+    <span className="adm-kinds" data-testid="adm-dict-kind" data-kind={ks.join(' ')}>
+      {ks.map(k => <Pill key={k} tone={k === 'tech' ? 'inf' : 'acc'}>{KIND_LABEL[k] ? t(KIND_LABEL[k]) : k}</Pill>)}
+    </span>
+  );
 }
 const COLOR_LABEL: Record<(typeof DICT_COLOR_TOKENS)[number], AppKey> = {
   'var(--acc)': 'admin.dicts.color.acc', 'var(--suc)': 'admin.dicts.color.suc', 'var(--inf)': 'admin.dicts.color.inf',
@@ -284,20 +290,35 @@ function DictForm({ dt, before, draft, usage, onDraft, onCancel, onSaved, fetchI
   const listId = `adm-dict-icons-${dt}`;
   const use = isNew ? null : usageOf(dt, draft.code, usage);
   const confirmNeeded = needsDictConfirm(dt, before, draft);
+  const kinds = dictKinds(dt);
+  const kindProblem = dictKindProblem(dt, draft);
+  // WK-01 (слово владелицы 20.11: «с подтверждением»): смена вида — правка с причиной (kit ReasonDialog).
+  const askReason = kinds !== null && kindChanged(before, draft);
+  const [reasonOpen, setReasonOpen] = useState(false);
 
   const all = dictEntryDiff(before, draft, dt).map(r => ({ ...r, text: t(FIELD_LABEL[r.id]) })) as DiffRow[];
   const changed = all.filter(r => r.kind !== 'same');
   const rows = changed.length ? changed : all;
 
+  const save = (reason?: string) => {
+    setBusy(true);
+    setError(null);
+    saveDictEntry(dictEntryBody(dt, draft, reason), fetchImpl).then(
+      () => { setBusy(false); setReasonOpen(false); onSaved(); },
+      (e: unknown) => { setBusy(false); setError(reasonOf(e)); },
+    );
+  };
   const apply = () => {
     if (busy) return;
     if (!draft.code.trim()) { setError(t('admin.dicts.codeRequired')); return; }
-    setBusy(true);
-    setError(null);
-    saveDictEntry(dictEntryBody(dt, draft), fetchImpl).then(
-      () => { setBusy(false); onSaved(); },
-      (e: unknown) => { setBusy(false); setError(reasonOf(e)); },
-    );
+    if (kindProblem) return; // пустой набор видов не записывается — предупреждение уже на экране
+    if (askReason) { setError(null); setReasonOpen(true); return; }
+    save();
+  };
+  const toggleKind = (k: string, on: boolean) => {
+    const cur = new Set(draft.kind ?? []);
+    if (on) cur.add(k); else cur.delete(k);
+    set('kind')(orderedKinds(dt, [...cur]));
   };
 
   return (
@@ -345,16 +366,21 @@ function DictForm({ dt, before, draft, usage, onDraft, onCancel, onSaved, fetchI
           <input className="adm-input adm-mono" type="number" aria-label={t('admin.dicts.f.order')} value={draft.sort_order ?? ''}
             onChange={e => set('sort_order')(e.target.value === '' ? null : Number(e.target.value))} />
         </label>
-        {dictKinds(dt) && (
-          <label className="adm-field">
+        {kinds && (
+          <div className="adm-field" role="group" aria-label={t('admin.dicts.f.kind')} data-testid="adm-dict-kinds">
             <span className="adm-field__l">{t('admin.dicts.f.kind')}</span>
-            <select className="adm-input" aria-label={t('admin.dicts.f.kind')} value={draft.kind ?? ''}
-              onChange={e => set('kind')(e.target.value === '' ? null : e.target.value)}>
-              {/* Снять заданный вид запись не умеет (null = «не трогать») — «не задан» только пока не задан. */}
-              {!before?.kind && <option value="">{t('admin.dicts.kind.none')}</option>}
-              {dictKinds(dt)!.map(k => <option key={k} value={k}>{KIND_LABEL[k] ? t(KIND_LABEL[k]) : k}</option>)}
-            </select>
-          </label>
+            {/* Вид — набор (ADR-LORE-044): два независимых переключателя, можно оба. */}
+            <span className="adm-kinds">
+              {kinds.map(k => (
+                <Pill key={k} variant="filter" tone={k === 'tech' ? 'inf' : 'acc'} pressed={(draft.kind ?? []).includes(k)}
+                  onToggle={on => toggleKind(k, on)}>
+                  {KIND_LABEL[k] ? t(KIND_LABEL[k]) : k}
+                </Pill>
+              ))}
+            </span>
+            <span className="adm-hint">{t('admin.dicts.kind.hint')}</span>
+            {kindProblem && <span className="adm-hint adm-err" role="alert" data-testid="adm-dict-kind-empty">{t('admin.dicts.kind.empty')}</span>}
+          </div>
         )}
         <label className="adm-field adm-field--btns">
           <input type="checkbox" checked={draft.is_active} onChange={e => set('is_active')(e.target.checked)} />
@@ -381,10 +407,27 @@ function DictForm({ dt, before, draft, usage, onDraft, onCancel, onSaved, fetchI
             ? t('admin.dicts.confirmCanon', { code: (before?.code ?? draft.code).trim() })
             : t('admin.dicts.confirmDeact', { code: (before?.code ?? draft.code).trim() }),
         } : undefined} />
-      {error && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-dict-save-error">{t('admin.dicts.saveError', { reason: error })}</p>}
+      {error && !reasonOpen && <p className="adm-note" data-tone="dng" role="alert" data-testid="adm-dict-save-error">{t('admin.dicts.saveError', { reason: error })}</p>}
       <div className="adm-field--btns">
         <button type="button" className="adm-btn" onClick={onCancel}>{t('admin.dicts.cancel')}</button>
       </div>
+      <ReasonDialog
+        open={reasonOpen}
+        onClose={() => { if (!busy) { setReasonOpen(false); setError(null); } }}
+        title={t('admin.dicts.kind.reasonTitle', { code: (before?.code ?? draft.code).trim() })}
+        confirmLabel={t('admin.dicts.kind.reasonOk')}
+        reasonLabel={t('admin.dicts.kind.reasonLabel')}
+        placeholder={t('admin.dicts.kind.reasonPh')}
+        busy={busy}
+        error={error ? t('admin.dicts.saveError', { reason: error }) : undefined}
+        onConfirm={why => save(why)}>
+        <span data-testid="adm-dict-kind-change">
+          {t('admin.dicts.kind.reasonLead', {
+            from: orderedKinds(dt, before?.kind).join(', ') || t('admin.dicts.kind.none'),
+            to: orderedKinds(dt, draft.kind).join(', '),
+          })}
+        </span>
+      </ReasonDialog>
     </div>
   );
 }

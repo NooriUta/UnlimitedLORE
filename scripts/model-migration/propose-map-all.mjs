@@ -11,12 +11,13 @@
 // Запуск: node propose-map-all.mjs <перепись.json> → map/all-objects.json
 import fs from 'node:fs';
 import { legacyRule } from './legacy.mjs';
+import { refsRule } from './decision-refs.mjs';
 import { fileURLToPath } from 'node:url';
 import { codeTypes, LORE_JAVA } from './code-types.mjs';
 
 const FIRST = new Set(['KnowSprint', 'KnowSprintHist', 'KnowPhase', 'KnowPhaseHist', 'KnowTask', 'KnowTaskHist']);
 const SERVICE = new Set(['valid_from', 'valid_to', 'state_uid', 'content_hash', 'changed_by', 'changed_by_kind', 'changed_by_session',
-  'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'status_known_from', 'status_backfilled', 'source_commit', 'origin']);
+  'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'change_reason', 'status_known_from', 'status_backfilled', 'source_commit', 'origin']);
 const STATUS_TYPES = new Set(['KnowADR', 'KnowADRHist', 'KnowDecision', 'KnowDecisionHist', 'KnowSpec', 'KnowSpecHist', 'KnowMilestoneHist', 'KnowQuestion', 'KnowUseCase', 'QualityGate']);
 const OWN_KEY = { LoreComponent: 'component_id' };
 const EDGE_FIELDS = { component_id: 'связь с компонентом (BELONGS_TO)', project: 'связь с проектом (BELONGS_TO_PROJECT)', git_project: 'связь с проектом (BELONGS_TO_PROJECT)' };
@@ -61,6 +62,9 @@ export function ruleFor(T, f) {
   // ключ своего типа — не ссылка: component_id у LoreComponent — его код (18.11.2026: в новой базе он пропадал)
   if (OWN_KEY[T] === f) return { rule: 'keep', basis: 'owner', note: 'ключ записи своего типа' };
   if (EDGE_FIELDS[f]) return { rule: 'open', question: EDGE_FIELDS[f] + ' — строится на шаге связей; до него значение удерживается' };
+  // MDL-08 часть 2 (владелица 20.11.2026): ссылки решения строкой пересаживаются на связи REFERENCES (decision-refs.mjs)
+  const refs = refsRule(T, f);
+  if (refs) return refs;
   if (/_refs$/.test(f)) return { rule: 'open', question: 'ссылки строкой становятся связями на шаге связей; ненайденное — текстом в заметке версии' };
   // date_display — подпись срока для людей («18 апр», «прогноз Q4 2026»), не дата (пробный расчёт 17.11).
   if (f === 'date_display') return { rule: 'keep', basis: 'delegated', note: 'подпись срока, не дата; ' + W };
@@ -78,6 +82,8 @@ export function ruleFor(T, f) {
  */
 export const SERVICE_EDIT = ['changed_by_session', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine'];
 const SERVICE_EDIT_RULE = { rule: 'keep', basis: 'owner', note: 'служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)' };
+/** WK-01 (20.11.2026): причина правки — служебное поле версии рядом с changed_by_* (смена вида продукта с причиной). */
+export const CHANGE_REASON_RULE = { rule: 'keep', basis: 'owner', note: 'служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)' };
 
 /**
  * MD-02 8а — пустой тип (0 записей по переписи). Владелица 19.11.2026: «по коду восстанови и по данным что выбрать»,
@@ -127,6 +133,7 @@ export function proposeMap(census, opts = {}) {
       for (const f of fields) types[T][f] = CODE_FIELDS[T] && CODE_FIELDS[T][f] ? { rule: 'keep', basis: 'owner', note: 'тип «только схема»: ' + CODE_FIELDS[T][f].source } : { ...SCHEMA_ONLY_RULE };
     } else for (const { name } of [...(census[T].fields || [])].sort((a, b) => a.name.localeCompare(b.name))) types[T][name] = ruleFor(T, name);
     if (T.endsWith('Hist')) for (const f of SERVICE_EDIT) if (!types[T][f]) types[T][f] = { ...SERVICE_EDIT_RULE };
+    if (T.endsWith('Hist') && !types[T].change_reason) types[T].change_reason = { ...CHANGE_REASON_RULE };
   }
   for (const T of RETIRED_V89) skipped[T] ||= RETIRED_WHY;
   const sortedSkipped = Object.fromEntries(Object.entries(skipped).sort(([a], [b]) => a.localeCompare(b)));

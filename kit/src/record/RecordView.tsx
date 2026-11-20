@@ -242,7 +242,9 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, k
   if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} labels={keyLabels} />;
   // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
   // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
-  if (type === 'list') {
+  // WK-01: массив в поле text/enum (вид продукта — набор, а в модели text) — тоже пунктами списка,
+  // а не сырым JSON «["tech","service"]».
+  if (type === 'list' || ((type === 'text' || type === 'enum') && Array.isArray(value))) {
     const items = (Array.isArray(value) ? value : [value]).map(listItemText).filter(s => s !== '');
     if (items.length === 0) return <span className="sk-rec-fields__none">—</span>;
     return <MiniList kind="plain" label={title ?? ''} items={items.map((text, i) => ({ id: String(i), text }))} />;
