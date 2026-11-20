@@ -136,9 +136,11 @@ final class LoreRecordRegistry {
      * Ребро типа с видом UML и местом в паспорте. {@code place}: part | link_tab |
      * prop | head | history | body | links. {@code manageable} — у ребра есть путь
      * привязки через {@code POST /lore/record/{type}/{id}/relation}.
+     * {@code inverseLabel} — подпись связи с ДРУГОГО конца («Зависит от» ↔ «Блокирует»), K5-MODEL-NAV-EDGE-LABELS,
+     * решение владелицы 20.11.2026 (вариант «а»); в ответе — {@code inverse_label}, {@code null} — не задана.
      */
     record Relation(String key, String label, String rel, String dir, String targetType,
-                    String relation, String place, boolean manageable) {}
+                    String relation, String place, boolean manageable, String inverseLabel) {}
 
     record TypeDef(String type, String label, String labelKey, String icon,
                    List<Field> fields, List<Body> body, List<PropSection> props,
@@ -222,6 +224,8 @@ final class LoreRecordRegistry {
             m.put("target_type", r.targetType());
             m.put("place", r.place());
             m.put("manageable", r.manageable());
+            // K5-MODEL-NAV-EDGE-LABELS: ключ есть всегда; null — обратной подписи в модели нет.
+            m.put("inverse_label", r.inverseLabel());
             rels.add(m);
         }
         out.put("relations", rels);

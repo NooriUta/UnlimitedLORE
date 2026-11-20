@@ -23,20 +23,42 @@ export function recordLinks(id: string, edges: readonly KitEdge[]): RecordLink[]
     || (a.other < b.other ? -1 : a.other > b.other ? 1 : 0));
 }
 
+/** Подпись группы связей: слово и признак «подписи с этой стороны нет — показана другая». */
+export interface LinkLabel { label: string; reverseMissing: boolean }
+
 /**
- * Подпись ребра словами (K5-MODEL-NAV-EDGE-LABELS): `config.edges` — главнее (у LORE подписи там
- * выверены); нет — подпись связи вида записи, затем любого вида с этим ребром; нет нигде — код.
+ * Подпись ребра словами ПО СТОРОНЕ (K5-MODEL-NAV-EDGE-LABELS).
+ *
+ * Исходящие: `config.edges.label` (у LORE подписи там выверены) → `config.edgeLabels.out` (из
+ * документа модели) → связь вида записи с той же стороной → связь любого вида с той же стороной.
+ * Входящие: `config.edges.labelIn` → `config.edgeLabels.in` (из `inverse_label` модели) → связь вида
+ * записи со стороной in → любого вида со стороной in. Подписи с этой стороны нет нигде — подпись другой
+ * стороны (в т. ч. `config.edges.label` у входящих) с признаком `reverseMissing`: вкладка пишет её
+ * словами «входящая: …» — «требует» и «нужна для» разные слова (методика §7.3.2). Нет ничего — код.
  */
-export function linkGroupLabel(ctx: KitCtx, recordKind: string, type: string): string {
-  const own = ctx.config.edges?.[type]?.label;
-  if (own) return own;
-  const byKind = ctx.config.kinds[recordKind]?.relations?.find(r => r.rel === type)?.label;
-  if (byKind) return byKind;
-  for (const k of Object.values(ctx.config.kinds)) {
-    const l = k.relations?.find(r => r.rel === type)?.label;
-    if (l) return l;
-  }
-  return type;
+export function linkLabel(ctx: KitCtx, recordKind: string, type: string, dir: 'out' | 'in' = 'out'): LinkLabel {
+  const edge = ctx.config.edges?.[type];
+  const pair = ctx.config.edgeLabels?.[type];
+  const kindSide = (d: 'out' | 'in'): string | undefined => {
+    const own = ctx.config.kinds[recordKind]?.relations?.find(r => r.rel === type && r.dir === d)?.label;
+    if (own) return own;
+    for (const k of Object.values(ctx.config.kinds)) {
+      const l = k.relations?.find(r => r.rel === type && r.dir === d)?.label;
+      if (l) return l;
+    }
+    return undefined;
+  };
+  const other: 'out' | 'in' = dir === 'out' ? 'in' : 'out';
+  const same = (dir === 'out' ? edge?.label : edge?.labelIn) || pair?.[dir] || kindSide(dir);
+  if (same) return { label: same, reverseMissing: false };
+  const opposite = (other === 'out' ? edge?.label : edge?.labelIn) || pair?.[other] || kindSide(other);
+  if (opposite) return { label: opposite, reverseMissing: true };
+  return { label: type, reverseMissing: false };
+}
+
+/** Прежняя подпись без стороны — исходящая (совместимость для внешних вызовов). */
+export function linkGroupLabel(ctx: KitCtx, recordKind: string, type: string, dir: 'out' | 'in' = 'out'): string {
+  return linkLabel(ctx, recordKind, type, dir).label;
 }
 
 /** Ошибка блока данных из meta.errors (block: 'edges' | 'journal' …). */
@@ -51,19 +73,25 @@ export function RecordLinks({ record, ctx, lang }: { record: KitRecord; ctx: Kit
   if (links.length === 0) {
     return <EmptyState compact title={kitT(lang, 'kit.record.links.empty')} hint={kitT(lang, 'kit.record.links.emptyHint')} />;
   }
-  const types = [...new Set(links.map(l => l.type))];
+  // Группа — ребро И сторона (K5-MODEL-NAV-EDGE-LABELS): исходящие и входящие одной связи
+  // подписаны разными словами («требует» / «нужна для»), поэтому в одну группу не сводятся.
+  const groups = [...new Map(links.map(l => [`${l.type}\u0000${l.dir}`, { type: l.type, dir: l.dir }] as const)).values()];
   return (
     <div className="sk-rec-links">
       {ctx.data.meta.truncated && <p className="sk-rec-note" role="note">{kitT(lang, 'kit.record.links.truncated')}</p>}
-      {types.map(type => {
-        const items = links.filter(l => l.type === type);
+      {groups.map(({ type, dir }) => {
+        const items = links.filter(l => l.type === type && l.dir === dir);
         const style = { '--edge-c': edgeColor(ctx.config, type) } as CSSProperties;
+        const found = linkLabel(ctx, record.kind, type, dir);
+        // Подписи с этой стороны нет — сторона названа словами («входящая: Требует»), а не то же слово.
+        const reverseMissing = found.reverseMissing;
+        const label = reverseMissing ? `${kitT(lang, dir === 'out' ? 'kit.record.links.out' : 'kit.record.links.in')}: ${found.label}` : found.label;
         return (
-          <section key={type} className="sk-rec-links__group" data-testid="kit-link-group" data-type={type} style={style}
-            aria-label={linkGroupLabel(ctx, record.kind, type)}>
+          <section key={`${type}:${dir}`} className="sk-rec-links__group" data-testid="kit-link-group" data-type={type} data-dir={dir} style={style}
+            aria-label={label}>
             <h2 className="sk-rec-links__title">
               <span className="sk-rec-dot" aria-hidden="true" />
-              <span>{linkGroupLabel(ctx, record.kind, type)}</span>
+              <span title={reverseMissing ? kitT(lang, 'kit.record.links.reverseMissingHint') : undefined}>{label}</span>
               <code className="sk-rec-links__code">{type}</code>
               <span className="sk-rec-links__count">{items.length}</span>
             </h2>

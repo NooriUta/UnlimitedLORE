@@ -350,7 +350,8 @@
       "dir" : "in",
       "targetType" : "task",
       "relation" : "composition",
-      "place" : "part"
+      "place" : "part",
+      "inverseLabel" : "Спринт"
     }, {
       "key" : "phases",
       "label" : "Фазы",
@@ -358,7 +359,8 @@
       "dir" : "in",
       "targetType" : "phase",
       "relation" : "composition",
-      "place" : "part"
+      "place" : "part",
+      "inverseLabel" : "Спринт"
     }, {
       "key" : "dependsOn",
       "label" : "Зависит от",
@@ -367,7 +369,8 @@
       "targetType" : "sprint",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Блокирует"
     }, {
       "key" : "blocks",
       "label" : "Блокирует",
@@ -376,7 +379,8 @@
       "targetType" : "sprint",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Зависит от"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -420,7 +424,8 @@
       "targetType" : "adr",
       "relation" : "realization",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Спринты"
     }, {
       "key" : "questions",
       "label" : "Вопросы",
@@ -437,7 +442,8 @@
       "dir" : "in",
       "targetType" : "doc",
       "relation" : "realization",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "inverseLabel" : "Спринты"
     }, {
       "key" : "publications",
       "label" : "Публикации",
@@ -896,7 +902,8 @@
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "composition",
-      "place" : "head"
+      "place" : "head",
+      "inverseLabel" : "Задачи"
     }, {
       "key" : "phase",
       "label" : "Фаза",
@@ -939,7 +946,8 @@
       "targetType" : "pr",
       "relation" : "realization",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Закрывает задачи"
     }, {
       "key" : "useCases",
       "label" : "Сценарии",
@@ -981,7 +989,8 @@
       "targetType" : "question",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Блокирует задачи"
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -1298,7 +1307,8 @@
       "targetType" : "adr",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Блокирует"
     }, {
       "key" : "blocks",
       "label" : "Блокирует",
@@ -1307,7 +1317,8 @@
       "targetType" : "adr",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Зависит от"
     }, {
       "key" : "supersedes",
       "label" : "Заменяет",
@@ -1385,7 +1396,8 @@
       "targetType" : "sprint",
       "relation" : "realization",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Реализует ADR"
     }, {
       "key" : "releases",
       "label" : "Релизы",
@@ -1873,7 +1885,8 @@
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "attribute",
-      "place" : "prop"
+      "place" : "prop",
+      "inverseLabel" : "Знания"
     }, {
       "key" : "children",
       "label" : "Вложенные документы",
@@ -2318,7 +2331,8 @@
       "dir" : "out",
       "targetType" : "task",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "inverseLabel" : "Блокирующие вопросы"
     }, {
       "key" : "answeredBy",
       "label" : "Ответ — решения",
