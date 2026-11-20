@@ -26,6 +26,12 @@ on:
         default: 'dry_run'
         type: choice
         options: ['dry_run', 'publish']
+      forgejo_mcp:
+        description: 'include — собрать образ forgejo-mcp и положить архивом в images/ (без реестра); skip — без него'
+        required: true
+        default: 'include'
+        type: choice
+        options: ['include', 'skip']
 
 concurrency:
   group: lore-installer-publish
@@ -66,6 +72,15 @@ jobs:
 
       - name: Исполняемый файл запускается
         run: ./build/lore-migrate --help | head -5
+
+      # Образ forgejo-mcp — архивом docker save в build/images/ (слово владелицы 20.11.2026: «не публиковать, включить
+      # в инсталятор»). Ни push, ни login: образ живёт только в архиве рядом с установщиком. Репозиторий приватный —
+      # токен чтения FORGEJO_MCP_CLONE_TOKEN; его нет — BLOCKED громко (scripts/model-migration/forgejo-mcp-image.mjs).
+      - name: Образ forgejo-mcp → архив images/
+        if: inputs.forgejo_mcp == 'include'
+        env:
+          FORGEJO_MCP_CLONE_TOKEN: ${{ secrets.FORGEJO_MCP_CLONE_TOKEN }}
+        run: node scripts/model-migration/forgejo-mcp-image.mjs --out build
 
       - name: План выкладки
         run: node scripts/model-migration/publish-plan.mjs --dir build --version "${{ inputs.version }}" --dry

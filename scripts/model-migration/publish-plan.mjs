@@ -8,6 +8,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prunePlan, versionsFromAssets } from './prune-plan.mjs';
+import { FORGEJO_MCP_ARCHIVE } from './forgejo-mcp-image.mjs';
+
+const FMCP_TAR = path.basename(FORGEJO_MCP_ARCHIVE);
 
 const VERSION_RE = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 
@@ -29,6 +32,8 @@ function published(name, version) {
     if (msi[1] !== version) throw new Error('версия в имени MSI (' + msi[1] + ') не совпадает с версией каталога ' + version);
     return name;
   }
+  // Образ forgejo-mcp архивом docker save (20.11.2026: «не публиковать, включить в инсталятор») — каталогом images/ версии.
+  if (name === FMCP_TAR || name === FMCP_TAR + '.sha256') return 'images/' + name;
   throw new Error('неизвестный файл установщика: ' + name);
 }
 
@@ -100,6 +105,9 @@ async function main() {
   const msis = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => /^lore-installer-.+-win-x64\.msi$/.test(n)) : [];
   const files = ['lore-migrate.mjs', 'lore-migrate', 'lore-migrate.exe', ...msis].filter(n => fs.existsSync(path.join(dir, n)))
     .map(n => ({ name: n, bytes: fs.readFileSync(path.join(dir, n)) }));
+  for (const n of [FORGEJO_MCP_ARCHIVE, FORGEJO_MCP_ARCHIVE + '.sha256']) {
+    if (fs.existsSync(path.join(dir, n))) files.push({ name: path.basename(n), bytes: fs.readFileSync(path.join(dir, n)) });
+  }
   if (!files.length) throw new Error('в ' + dir + ' нет файлов установщика — сначала build-installer.mjs или готовый MSI');
   const plan = publishPlan({ base: process.env.KKREPO_BASE || 'http://192.168.3.131:8081/repository', repo: process.env.KKREPO_REPO || 'lore-installer', version, files });
   const user = process.env.KKREPO_USER, pass = process.env.KKREPO_PASSWORD;
