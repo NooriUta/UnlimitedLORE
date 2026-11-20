@@ -42,7 +42,9 @@ class LoreRecordSnapshotTest {
         // MD-04, второй заход по QG: гейт качества — тоже после рефакторинга.
         "quality_gate",
         // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий и организация — после рефакторинга.
-        "repository", "organization");
+        "repository", "organization",
+        // MDL-13: паспорт трека — после рефакторинга.
+        "track");
 
     /**
      * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга
@@ -361,7 +363,17 @@ class LoreRecordSnapshotTest {
             // MC-08: сознательная смена контракта — флаг Boolean (null — не задан), было «Да»/null.
             Object nrr = r.get("no_release_required");
             v.put("no_release", nrr instanceof Boolean b ? b : "true".equals(nrr) ? Boolean.TRUE : "false".equals(nrr) ? Boolean.FALSE : null);
-            v.put("track", str(r.get("track_id")));
+            // MDL-13 (владелица 20.11.2026 «треки б»): сознательная смена контракта — трек по ребру ON_TRACK, значение —
+            // чип {id, label} (подпись — label трека, без неё код), kit ведёт ссылкой в паспорт трека; было — строка кода.
+            String track = str(r.get("track_id"));
+            if (track == null) v.put("track", null);
+            else {
+                Map<String, Object> chip = new LinkedHashMap<>();
+                chip.put("id", track);
+                chip.put("label", str(r.get("track_label")) != null ? str(r.get("track_label")) : track);
+                chip.put("inherited_from", null);
+                v.put("track", List.of(chip));
+            }
             return v;
         }
 

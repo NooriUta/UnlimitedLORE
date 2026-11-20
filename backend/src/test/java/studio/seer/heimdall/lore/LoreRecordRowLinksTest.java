@@ -111,6 +111,8 @@ class LoreRecordRowLinksTest {
             // D-2026-MIG-REPOSITORY-ORGANIZATION: связи репозитория — из строки repo_by_id; у организации связей нет.
             Map.entry("repository", Map.of("projects", x, "components", x, "mirrors", x, "mirror_of", x, "uses", x, "used_by", x)),
             Map.entry("organization", Map.of()),
+            // MDL-13: у трека вкладки — срезами (track_sprints, track_history), из строки ничего.
+            Map.entry("track", Map.of()),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.

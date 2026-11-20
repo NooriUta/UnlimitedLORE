@@ -53,6 +53,8 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     project: { title: t('shell.sec.project'), icon: 'open-folder' },
     repository: { title: t('shell.sec.repository'), icon: 'chest' },
     organization: { title: t('shell.sec.organization'), icon: 'castle' },
+    // MDL-13: трек — паспорт без раздела-списка (открывается из спринта).
+    track: { title: t('shell.sec.track'), icon: 'path-distance' },
     user: { title: t('shell.sec.user'), icon: 'person' },
     agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
     product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },

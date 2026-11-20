@@ -2572,14 +2572,6 @@
       "targetType" : "sprint",
       "relation" : "aggregation",
       "place" : "link_tab"
-    }, {
-      "key" : "trackHistory",
-      "label" : "История на треке",
-      "rel" : "ON_TRACK",
-      "dir" : "in",
-      "targetType" : "sprint",
-      "relation" : "aggregation",
-      "place" : "link_tab"
     } ],
     "labelEn" : "Track",
     "labelPl" : "Ścieżka"
@@ -7058,9 +7050,6 @@
     } ],
     "track" : [ {
       "key" : "sprints",
-      "slot" : "own"
-    }, {
-      "key" : "trackHistory",
       "slot" : "own"
     } ],
     "user" : [ {

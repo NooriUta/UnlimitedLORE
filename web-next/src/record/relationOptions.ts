@@ -21,6 +21,8 @@ const SOURCES: Record<string, Source> = {
   // Решение владелицы 19.11.2026: связи организации — продукты и люди (проекты — выше).
   product: { slice: 'products', id: 'code', title: 'label_ru' },
   user: { slice: 'users', id: 'kc_sub', title: 'display_name' },
+  // MDL-13 «треки б»: трек спринта — ребро ON_TRACK к записи трека; варианты — срез треков {code, title}.
+  track: { slice: 'track_options', id: 'code', title: 'title' },
 };
 
 type SliceFn = (name: string, params?: Record<string, string>) => Promise<{ rows?: Record<string, unknown>[] } | null | undefined>;

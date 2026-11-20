@@ -66,6 +66,7 @@ class LorePassportLinksContractTest {
         new Fact("sprint", "IMPLEMENTED_IN_RELEASE", "release", "LoreReleaseResource release_link, LoreForgejoResource"),
         new Fact("pr", "SHIPPED_IN", "release", "LoreReleaseResource release_link, LoreForgejoResource"),
         new Fact("sprint", "TARGETS_MILESTONE", "milestone", "LoreMilestoneResource milestone_link / sprint_link"),
+        new Fact("sprint", "ON_TRACK", "track", "SprintTrack.assign — sprint/plan на базе 1.18 (MDL-13), перенос tracks.mjs"),
         new Fact("use_case", "TARGETS_MILESTONE", "milestone", "LoreProductResource feature_link(rel:milestone)"),
         new Fact("use_case", "DECOMPOSES_INTO", "use_case", "LoreProductResource uc_new (родитель → сценарий)"),
         // ADR ↔ компонент пишет и ingest (LoreIngestService), то же ребро, что adr_new.
@@ -291,7 +292,10 @@ class LorePassportLinksContractTest {
         "ORG_MEMBER", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
         // MT-MCP-TRUTH A6, владелица 19.11.2026 «1а»: ответственный вопроса — ребро; тип заводит перенос 1.18 (question-owner.mjs)
         // и первая запись ответственного (QuestionOwner.ensureType).
-        "ANSWERABLE_BY", "схема из модели (перенос 1.18, MT-MCP-TRUTH A6); в старой схеме шагов V этого ребра нет — тип заводит перенос и первая запись ответственного");
+        "ANSWERABLE_BY", "схема из модели (перенос 1.18, MT-MCP-TRUTH A6); в старой схеме шагов V этого ребра нет — тип заводит перенос и первая запись ответственного",
+        // MDL-13, владелица 20.11.2026 «треки б»: трек спринта — ребро к KnowTrack; тип заводит перенос 1.18 (tracks.mjs)
+        // и первая запись трека на базе 1.18 (SprintTrack.ensureType); на старой схеме трек пишется полем версии.
+        "ON_TRACK", "схема из модели (перенос 1.18, MDL-13); в старой схеме шагов V этого ребра нет — тип заводит перенос треков и первая запись трека");
 
     /**
      * Снятые из схемы рёбра, которые обходят только шаги миграций, убирающие их легаси-экземпляры
@@ -655,7 +659,10 @@ class LorePassportLinksContractTest {
         Map.entry("repository|projects", "проект репозитория — связь «основной у проекта» (HAS_REPOSITORY) во вкладке «Связи»"),
         Map.entry("repository|components", "компонент репозитория — связь COMPONENT_REPOSITORY во вкладке «Связи»"),
         Map.entry("organization|projects", "проекты организации — вкладка «Связи» (ORG_HAS_PROJECT), правится в админке"),
-        Map.entry("organization|components", "у организации компонентов нет: связи — проекты, продукты, люди (решение владелицы 19.11.2026)"));
+        Map.entry("organization|components", "у организации компонентов нет: связи — проекты, продукты, люди (решение владелицы 19.11.2026)"),
+        // MDL-13: трек — справочник студии без проекта и компонента (как веха без проекта); спринты на нём — вкладкой.
+        Map.entry("track|projects", "трек — справочник студии, проекта нет (MDL-13)"),
+        Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"));
 
     @Test
     void chipValuesHaveADeclaredField() {

@@ -25,6 +25,8 @@ final class LoreRecordRelationRoutes {
     /** Существующий обработчик привязки, в который уходит запрос. */
     enum Handler {
         SPRINT_DEP, SPRINT_PROJECT, SPRINT_COMPONENT, SPRINT_MILESTONE, ADR_SPRINT,
+        // MDL-13 «треки б»: трек спринта — ребро ON_TRACK через sprint/plan.
+        SPRINT_TRACK,
         TASK_COMPONENT, TASK_ADR, TASK_PHASE, TASK_PR,
         QUESTION_RAISED_IN, QUESTION_GATES,
         ADR_DEPENDS_ON, ADR_SUPERSEDES, ADR_COMPONENT, ADR_PROJECT, ADR_TAG,
@@ -50,6 +52,7 @@ final class LoreRecordRelationRoutes {
         r("sprint", "BELONGS_TO_PROJECT", "out", Handler.SPRINT_PROJECT, false),
         r("sprint", "BELONGS_TO", "out", Handler.SPRINT_COMPONENT, false),
         r("sprint", "TARGETS_MILESTONE", "out", Handler.SPRINT_MILESTONE, false),
+        r("sprint", "ON_TRACK", "out", Handler.SPRINT_TRACK, false),
         r("sprint", "IMPLEMENTED_IN", "in", Handler.ADR_SPRINT, true),
         r("sprint", "RAISED_IN", "in", Handler.QUESTION_RAISED_IN, true),
         // задача

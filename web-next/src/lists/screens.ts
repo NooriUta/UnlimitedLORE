@@ -247,6 +247,8 @@ function sprintsConfig(lang: KitLang): KitConfig {
           { key: 'components', title: f(lang, 'components'), type: 'ref', refKind: 'component' },
           { key: 'release', title: f(lang, 'release'), type: 'ref', refKind: 'release' },
           { key: 'milestone', title: f(lang, 'milestone'), type: 'ref', refKind: 'milestone' },
+          // MDL-13 «треки б»: трек спринта по ребру ON_TRACK — дорожки списка (группировка «Трек»).
+          { key: 'track', title: f(lang, 'track'), type: 'ref', refKind: 'track' },
           { key: 'priority', title: f(lang, 'priority'), type: 'number' },
           { key: 'tasks', title: f(lang, 'tasks'), type: 'number' },
           // Итоги спринта (S4-09, просьба владелицы 09.11). Единица — в
@@ -283,7 +285,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
       // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
       // строками здесь и ключами там, наборы разошлись молча.
       filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
-      groupings: ['status', 'project', 'priority', 'milestone', 'release'],
+      groupings: ['status', 'project', 'priority', 'milestone', 'track', 'release'],
       // S9-02: релизов у LORE больше сотни — разрез свёрнут при первом показе,
       // иначе раскрытые группы снова дают стену строк, из которой задача и выросла.
       collapsedGroupings: ['release'],

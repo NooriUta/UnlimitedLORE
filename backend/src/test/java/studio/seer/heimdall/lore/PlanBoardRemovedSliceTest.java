@@ -14,9 +14,11 @@ class PlanBoardRemovedSliceTest {
 
     @Test
     void срезы_доски_узнаются_по_типам_plan() {
-        for (String id : new String[]{"plan_config", "plan_tracks", "track_options", "plan_sections", "plan_checkpoints", "plan_versions"})
+        for (String id : new String[]{"plan_config", "plan_tracks", "plan_sections", "plan_checkpoints", "plan_versions"})
             assertTrue(LoreSlices.usesPlanBoard(id), id);
         assertFalse(LoreSlices.usesPlanBoard("sprints"));
+        // MDL-13 «треки б»: выбор трека — вершины KnowTrack модели 1.18, а не доска
+        assertFalse(LoreSlices.usesPlanBoard(LoreSprintTracks.SLICE));
         assertFalse(LoreSlices.usesPlanBoard("нет_такого"));
     }
 
@@ -30,7 +32,8 @@ class PlanBoardRemovedSliceTest {
         ModelSchemaAdapter.enable(true);
         try {
             ModelSchemaAdapter.planBoard(false);
-            assertFalse(keys.get().contains("track"), "доски нет — поля «трек» нет");
+            // MDL-13 «треки б»: трек — ребро ON_TRACK к вершине KnowTrack модели 1.18; доска снята, а поле остаётся
+            assertTrue(keys.get().contains("track"), "доски нет — трек по ребру, поле есть");
             ModelSchemaAdapter.planBoard(true);
             assertTrue(keys.get().contains("track"), "доску оставили — поле есть");
         } finally { ModelSchemaAdapter.enable(false); ModelSchemaAdapter.planBoard(true); }
