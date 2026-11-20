@@ -159,10 +159,13 @@ export async function readDecisionMilestoneInput(db) {
  * Записать рёбра в приёмник. Прежние рёбра этого шага (mig_rule = decision-milestone) снимаются — повтор не плодит дублей.
  * Сверка: рёбер столько же, сколько в плане, концы те, дублей нет; отсутствующее решение или веха — в отчёт.
  */
+/** Связь «решение → веха» — её заводит этот шаг (свой тип переноса, step-types.mjs). */
+export const MILESTONE_EDGE = 'TARGETS_MILESTONE';
+
 export async function applyDecisionMilestones(db, plan, { at = new Date().toISOString(), log = console.log } = {}) {
   const types = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
-  if (!types.has('TARGETS_MILESTONE')) {
-    await db.dstCommand('CREATE EDGE TYPE TARGETS_MILESTONE');
+  if (!types.has(MILESTONE_EDGE)) {
+    await db.dstCommand(`CREATE EDGE TYPE ${MILESTONE_EDGE}`);
     // MDL-02: связь историчная — поля версии объявляются, как у остальных историчных связей шага
     for (const ddl of edgeHistoryDdl('TARGETS_MILESTONE')) await db.dstCommand(ddl);
   }

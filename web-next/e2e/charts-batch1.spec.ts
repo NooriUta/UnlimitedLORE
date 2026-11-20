@@ -51,7 +51,7 @@ async function mock(page: Page) {
 
 const PLACES = [
   { id: 'sprint', url: '/?sec=sprint&open=S1&place=full&pch=1', box: 'sprint-charts', charts: 2 },
-  { id: 'milestone', url: '/?mod=forseti&sec=milestone&open=M7&place=full&pch=1', box: 'milestone-flow-charts', charts: 2 },
+  { id: 'milestone', url: '/?mod=forseti&sec=milestone&open=M7&place=full&pch=1', box: 'milestone-flow-charts', charts: 3 },
   { id: 'analytics-flow', url: '/?sec=analytics&atab=flow', box: null, charts: 3 },
   { id: 'admin-log', url: '/?mod=admin&sec=adm-log', box: 'adm-actions-chart', charts: 1 },
   { id: 'admin-mcp', url: '/?mod=admin&sec=adm-mcp', box: 'adm-mcp-codes-chart', charts: 1 },

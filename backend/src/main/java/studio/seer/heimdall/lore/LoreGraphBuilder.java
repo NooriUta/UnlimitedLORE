@@ -120,18 +120,72 @@ final class LoreGraphBuilder {
      * Запрос. {@code rootKey != null} — окрестность; иначе срез по {@code seeds}.
      * {@code rels}/{@code types} пустые — без фильтра.
      */
-    record Query(String rootKey, List<Node> seeds, int depth, Set<String> rels, Set<String> types,
-                 boolean structural, int limit, Set<String> allowed) {
+    record Query(String rootKey, List<Node> seeds, int depth, Set<String> rels, Set<String> walkTypes,
+                 Set<String> returnTypes, String dir, boolean structural, int limit, Set<String> allowed) {
 
+        /** GC-04: {@code types} — прежний смысл, один фильтр на обход и на выдачу. */
         static Query neighborhood(String rootKey, int depth, Set<String> rels, Set<String> types,
                                   boolean structural, int limit, Set<String> allowed) {
-            return new Query(rootKey, null, depth, rels, types, structural, limit, allowed);
+            return new Query(rootKey, null, depth, rels, types, types, DIR_BOTH, structural, limit, allowed);
+        }
+
+        /** GC-05: раздельные фильтры и направление. */
+        static Query neighborhood(String rootKey, int depth, Set<String> rels, Set<String> walkTypes,
+                                  Set<String> returnTypes, String dir, boolean structural, int limit,
+                                  Set<String> allowed) {
+            return new Query(rootKey, null, depth, rels, walkTypes, returnTypes, dir, structural, limit, allowed);
         }
 
         static Query slice(List<Node> seeds, Set<String> rels, Set<String> types,
                            boolean structural, int limit, Set<String> allowed) {
-            return new Query(null, seeds, 1, rels, types, structural, limit, allowed);
+            return new Query(null, seeds, 1, rels, types, types, DIR_BOTH, structural, limit, allowed);
         }
+
+        static Query slice(List<Node> seeds, Set<String> rels, Set<String> walkTypes, Set<String> returnTypes,
+                           String dir, boolean structural, int limit, Set<String> allowed) {
+            return new Query(null, seeds, 1, rels, walkTypes, returnTypes, dir, structural, limit, allowed);
+        }
+    }
+
+    static final String DIR_BOTH = "both";
+    static final String DIR_IN = "in";
+    static final String DIR_OUT = "out";
+    static final Set<String> DIRS = Set.of(DIR_BOTH, DIR_IN, DIR_OUT);
+
+    /**
+     * GC-05 (SPEC-LORE-GRAPH-SEARCH §4): фильтры типов. {@code types} — прежний смысл (оба фильтра сразу);
+     * вместе с {@code walk_types}/{@code return_types} — 400: два ответа на один вопрос «через что идти».
+     */
+    record Filters(Set<String> walk, Set<String> ret) {
+        static Filters of(Set<String> types, Set<String> walk, Set<String> ret) {
+            boolean legacy = types != null && !types.isEmpty();
+            boolean split = (walk != null && !walk.isEmpty()) || (ret != null && !ret.isEmpty());
+            if (legacy && split) {
+                throw new GraphException(400, "BAD_PARAMS",
+                    "types задаёт оба фильтра сразу — не передавайте его вместе с walk_types/return_types");
+            }
+            if (legacy) return new Filters(Set.copyOf(types), Set.copyOf(types));
+            return new Filters(walk == null ? Set.of() : Set.copyOf(walk), ret == null ? Set.of() : Set.copyOf(ret));
+        }
+    }
+
+    /**
+     * Действующее исключение структурных рёбер: слой выключен — исключены все структурные, КРОМЕ
+     * названных в {@code rels} явно (SPEC §4: проба 19.11.2026 — спринт с types=task дал 1 узел,
+     * задачи висят на PART_OF). Назвать ребро и не получить его — молчаливое противоречие запросу.
+     */
+    static Set<String> excludedRels(boolean structural, Set<String> rels) {
+        if (structural) return Set.of();
+        if (rels == null || rels.isEmpty()) return STRUCTURAL_RELS;
+        Set<String> out = new HashSet<>(STRUCTURAL_RELS);
+        out.removeAll(rels);
+        return Set.copyOf(out);
+    }
+
+    static String checkDir(String dir) {
+        String d = dir == null || dir.isBlank() ? DIR_BOTH : dir.strip();
+        if (!DIRS.contains(d)) throw new GraphException(400, "BAD_PARAMS", "dir — in, out или both; получено «" + dir + "»");
+        return d;
     }
 
     /** Ответ без {@code took_ms} (его ставит ресурс: время — не функция входа). */
@@ -206,8 +260,8 @@ final class LoreGraphBuilder {
         Result r = traverse(q, src);
         boolean filtered = q.rels() != null && !q.rels().isEmpty();
         Result plain = filtered
-            ? traverse(new Query(q.rootKey(), q.seeds(), q.depth(), Set.of(), q.types(), q.structural(), q.limit(),
-                q.allowed()), src)
+            ? traverse(new Query(q.rootKey(), q.seeds(), q.depth(), Set.of(), q.walkTypes(), q.returnTypes(), q.dir(),
+                q.structural(), q.limit(), q.allowed()), src)
             : r;
         Map<String, Integer> counts = new HashMap<>();
         for (Map<String, Object> e : plain.edges()) counts.merge(String.valueOf(e.get("rel")), 1, Integer::sum);
@@ -235,8 +289,16 @@ final class LoreGraphBuilder {
         requireNonEmpty(q.allowed());
 
         Set<String> rels = q.rels() == null ? Set.of() : q.rels();
-        Set<String> types = q.types() == null ? Set.of() : q.types();
-        Set<String> exclude = q.structural() ? Set.of() : STRUCTURAL_RELS;
+        Set<String> walk = q.walkTypes() == null ? Set.of() : q.walkTypes();
+        Set<String> ret = q.returnTypes() == null ? Set.of() : q.returnTypes();
+        String walkDir = checkDir(q.dir());
+        Set<String> exclude = excludedRels(q.structural(), rels);
+        // Узел попадает в обход, если его тип проходим (walk) или возвращаем (ret); раскрывается дальше —
+        // только проходимый. Пустой фильтр — «все типы».
+        java.util.function.Predicate<Node> admitted = n -> walk.isEmpty() || walk.contains(n.type())
+            || ret.isEmpty() || ret.contains(n.type());
+        java.util.function.Predicate<Node> expandable = n -> walk.isEmpty() || walk.contains(n.type());
+        java.util.function.Predicate<Node> returned = n -> ret.isEmpty() || ret.contains(n.type());
 
         Map<String, Node> known = new HashMap<>();      // всё прочитанное из источника
         Map<String, Integer> depthOf = new LinkedHashMap<>(); // ключ → уровень (узлы ответа)
@@ -261,7 +323,7 @@ final class LoreGraphBuilder {
             for (Node n : q.seeds() == null ? List.<Node>of() : q.seeds()) {
                 known.put(n.key(), n);
                 if (!visible(n, q.allowed())) { hidden.add(n.key()); continue; }
-                if (!types.isEmpty() && !types.contains(n.type())) continue;
+                if (!admitted.test(n)) continue;
                 level0.add(n);
             }
         }
@@ -277,8 +339,11 @@ final class LoreGraphBuilder {
         int maxDepth = neighborhood ? q.depth() : 1;
         for (int d = 0; d < maxDepth; d++) {
             final int level = d;
+            // Корень/семена раскрываются всегда; дальше — только узлы проходимого типа (walk_types).
             List<String> frontier = depthOf.entrySet().stream()
-                .filter(e -> e.getValue() == level).map(Map.Entry::getKey).sorted().toList();
+                .filter(e -> e.getValue() == level)
+                .filter(e -> level == 0 || expandable.test(known.get(e.getKey())))
+                .map(Map.Entry::getKey).sorted().toList();
             if (frontier.isEmpty()) break;
             Set<String> frontierSet = new HashSet<>(frontier);
 
@@ -287,6 +352,9 @@ final class LoreGraphBuilder {
                 if (exclude.contains(e.rel())) continue;
                 if (!rels.isEmpty() && !rels.contains(e.rel())) continue;
                 if (!frontierSet.contains(e.from()) && !frontierSet.contains(e.to())) continue;
+                // dir=out — только рёбра ИЗ фронта, dir=in — только В фронт (SPEC §4: влияние вверх/вниз).
+                if (DIR_OUT.equals(walkDir) && !frontierSet.contains(e.from())) continue;
+                if (DIR_IN.equals(walkDir) && !frontierSet.contains(e.to())) continue;
                 edges.add(e);
             }
             edges.sort(EDGE_ORDER);
@@ -306,7 +374,8 @@ final class LoreGraphBuilder {
             List<Edge> pending = new ArrayList<>();
             for (Edge e : edges) {
                 // Обе стороны из фронта — ребро внутри уровня, конец уже есть.
-                String self = frontierSet.contains(e.from()) ? e.from() : e.to();
+                String self = DIR_IN.equals(walkDir) ? e.to()
+                    : frontierSet.contains(e.from()) ? e.from() : e.to();
                 String other = self.equals(e.from()) ? e.to() : e.from();
                 String dir = self.equals(e.from()) ? "out" : "in";
                 if (depthOf.containsKey(other)) { pending.add(e); continue; }
@@ -321,7 +390,7 @@ final class LoreGraphBuilder {
                     dangling.merge(List.of(selfId, e.rel(), dir, HIDDEN), 1, Integer::sum);
                     continue;
                 }
-                if (!types.isEmpty() && !types.contains(o.type())) continue; // отфильтрован types — через него не идём
+                if (!admitted.test(o)) continue; // тип ни проходим, ни возвращаем — через него не идём
                 candidates.put(other, o);
                 pending.add(e);
             }
@@ -337,8 +406,18 @@ final class LoreGraphBuilder {
         }
 
         // ── ответ ──
+        // return_types: пройденный, но не возвращаемый узел в nodes не идёт — он схлопывается в ребро via.
+        Set<String> shown = new HashSet<>();
+        for (Map.Entry<String, Integer> en : depthOf.entrySet()) {
+            Node n = known.get(en.getKey());
+            if ((neighborhood && en.getValue() == 0) || returned.test(n)) shown.add(en.getKey());
+        }
+        List<Map<String, Object>> viaEdges = viaEdges(depthOf, shown, kept, known);
+        kept.removeIf(e -> !shown.contains(e.from()) || !shown.contains(e.to()));
+        int walkedNotReturned = depthOf.size() - shown.size();
+
         List<Node> outNodes = new ArrayList<>();
-        for (String k : depthOf.keySet()) outNodes.add(known.get(k));
+        for (String k : depthOf.keySet()) if (shown.contains(k)) outNodes.add(known.get(k));
         outNodes.sort(Comparator.comparing((Node n) -> depthOf.get(n.key())).thenComparing(BY_TYPE_ID));
         List<Map<String, Object>> nodes = new ArrayList<>();
         for (Node n : outNodes) {
@@ -370,6 +449,7 @@ final class LoreGraphBuilder {
             if (e.kind() != null) m.put("kind", e.kind());
             edgesJson.add(m);
         }
+        edgesJson.addAll(viaEdges);
 
         List<Map<String, Object>> danglingJson = new ArrayList<>();
         boolean anyMissing = false;
@@ -392,7 +472,10 @@ final class LoreGraphBuilder {
         // пустой уровень — 0, а не отсутствие ключа. Ключи — строки (JSON-объект).
         Map<String, Integer> byDepth = new LinkedHashMap<>();
         for (int d = 1; d <= maxDepth; d++) byDepth.put(String.valueOf(d), 0);
-        for (int d : depthOf.values()) if (d >= 1) byDepth.merge(String.valueOf(d), 1, Integer::sum);
+        for (String k : shown) {
+            int d = depthOf.get(k);
+            if (d >= 1) byDepth.merge(String.valueOf(d), 1, Integer::sum);
+        }
         meta.put("complete", !truncated && !anyMissing);
         meta.put("truncated", truncated);
         meta.put("capped_at", truncated ? q.limit() : null);
@@ -411,7 +494,84 @@ final class LoreGraphBuilder {
         meta.put("by_depth", byDepth);
         // rels — эхо фильтра: обход шёл ТОЛЬКО по этим рёбрам на каждом шаге (пусто — по всем).
         meta.put("rels", new TreeSet<>(rels));
+        // GC-05: эхо направления и раздельных фильтров; сколько пройдено без возврата — названо числом.
+        meta.put("dir", walkDir);
+        meta.put("walk_types", new TreeSet<>(walk));
+        meta.put("return_types", new TreeSet<>(ret));
+        meta.put("walked_not_returned", walkedNotReturned);
         return new Result(nodes, edgesJson, meta);
+    }
+
+    /**
+     * Рёбра {@code via}: компоненты связности из пройденных, но не возвращаемых узлов; каждая пара
+     * возвращаемых узлов, касающихся одной компоненты, получает ребро
+     * {@code {from, rel:"via", to, via:[{rel,type,count}]}} — {@code count} = сколько узлов этого типа
+     * компоненты касаются ребра этого типа. {@code from} — узел меньшей глубины (затем меньший id).
+     */
+    private static List<Map<String, Object>> viaEdges(Map<String, Integer> depthOf, Set<String> shown, Set<Edge> kept,
+                                                       Map<String, Node> known) {
+        if (shown.size() == depthOf.size()) return List.of();
+        Map<String, List<Edge>> adj = new HashMap<>();
+        for (Edge e : kept) {
+            adj.computeIfAbsent(e.from(), k -> new ArrayList<>()).add(e);
+            adj.computeIfAbsent(e.to(), k -> new ArrayList<>()).add(e);
+        }
+        Comparator<String> order = Comparator.comparing((String k) -> depthOf.get(k))
+            .thenComparing(k -> known.get(k).id());
+        // (from, to) → (rel, type) → множество via-узлов
+        Map<List<String>, Map<List<String>, Set<String>>> pairs = new TreeMap<>(LoreGraphBuilder::compareLists);
+        Set<String> done = new HashSet<>();
+        List<String> viaNodes = depthOf.keySet().stream().filter(k -> !shown.contains(k)).sorted().toList();
+        for (String start : viaNodes) {
+            if (done.contains(start)) continue;
+            Set<String> comp = new TreeSet<>();
+            Set<String> ends = new TreeSet<>(order);
+            java.util.ArrayDeque<String> queue = new java.util.ArrayDeque<>(List.of(start));
+            comp.add(start);
+            while (!queue.isEmpty()) {
+                String v = queue.poll();
+                for (Edge e : adj.getOrDefault(v, List.of())) {
+                    String o = e.from().equals(v) ? e.to() : e.from();
+                    if (shown.contains(o)) ends.add(o);
+                    else if (comp.add(o)) queue.add(o);
+                }
+            }
+            done.addAll(comp);
+            if (ends.size() < 2) continue;
+            Map<List<String>, Set<String>> parts = new TreeMap<>(LoreGraphBuilder::compareLists);
+            for (String v : comp) {
+                for (Edge e : adj.getOrDefault(v, List.of())) {
+                    parts.computeIfAbsent(List.of(e.rel(), known.get(v).type()), k -> new TreeSet<>()).add(v);
+                }
+            }
+            List<String> endList = new ArrayList<>(ends);
+            for (int i = 0; i < endList.size(); i++) {
+                for (int j = i + 1; j < endList.size(); j++) {
+                    List<String> key = List.of(known.get(endList.get(i)).id(), known.get(endList.get(j)).id());
+                    Map<List<String>, Set<String>> agg = pairs.computeIfAbsent(key, k -> new TreeMap<>(LoreGraphBuilder::compareLists));
+                    for (Map.Entry<List<String>, Set<String>> p : parts.entrySet())
+                        agg.computeIfAbsent(p.getKey(), k -> new TreeSet<>()).addAll(p.getValue());
+                }
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<List<String>, Map<List<String>, Set<String>>> en : pairs.entrySet()) {
+            List<Map<String, Object>> via = new ArrayList<>();
+            for (Map.Entry<List<String>, Set<String>> p : en.getValue().entrySet()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("rel", p.getKey().get(0));
+                m.put("type", p.getKey().get(1));
+                m.put("count", p.getValue().size());
+                via.add(m);
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("from", en.getKey().get(0));
+            m.put("rel", "via");
+            m.put("to", en.getKey().get(1));
+            m.put("via", via);
+            out.add(m);
+        }
+        return out;
     }
 
     private static int compareLists(List<String> a, List<String> b) {

@@ -6806,6 +6806,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   min-height: 0;
   overflow: auto;
 }
+/* K4-PASSPORT-NO-LIST-RESET: список стоит в ОДНОМ узле дерева и без записи, и под ней. Без записи
+   обёртки дока в раскладке нет (display: contents) — список в потоке страницы, крутится страницей,
+   как прежде. Во весь экран место списка скрыто, но список не выброшен из дерева. */
+.sk-dock-off,
+.sk-dock-off > .sk-dock__list { display: contents; }
+.sk-dock__backdrop[hidden] { display: none; }
 .sk-dock__panel {
   position: relative;
   min-height: 0;
