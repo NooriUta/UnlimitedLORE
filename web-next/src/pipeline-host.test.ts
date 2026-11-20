@@ -747,3 +747,58 @@ describe.skipIf(!bashBin)('S8-01: проба прода /lore/version — чер
     expect(probeRun('https://lore.odal.seidrstudio.pro').code).toBe(1);
   });
 });
+
+// 1.18 (20.11.2026): база прода после переноса собрана из модели — бэкенд пишет «схема собрана из модели
+// (LoreModelSchema)», а не «схема сверена: БД vN». Выкатка прода (state/db/probe) ждала только «схема сверена»:
+// state считал схему неизвестной, db делал бэкап и накатку (а та на такой базе честно «шаги V пропущены» →
+// провал), probe краснел. Правило: база из модели — признанное состояние, а не «неизвестно».
+describe.skipIf(!bashBin)('1.18: выкатка прода на базу, собранную из модели', { timeout: SPAWN_TIMEOUT }, () => {
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+  const MODEL_LINE = '[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется';
+
+  function stepRun(step: string, stateLines: string[], logLine: string) {
+    const d = mkdtempSync(join(tmpdir(), 'lore-pl-model-'));
+    writeFileSync(join(d, 'lore-host-deploy.sh'), read('.github/scripts/lore-host-deploy.sh'));
+    writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'r.sh'), [
+      '#!/usr/bin/env bash',
+      'echo "$*" >> "$R_LOG"',
+      'case "$*" in',
+      '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
+      '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
+      '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
+      'esac', '',
+    ].join('\n'));
+    chmodSync(join(d, 'r.sh'), 0o755);
+    const st = join(d, 'state.env');
+    writeFileSync(st, [...stateLines, ''].join('\n'));
+    const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
+    const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
+      DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.0',
+    });
+    const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
+    rmSync(d, { recursive: true, force: true });
+    return { ...r, state, calls };
+  }
+
+  it('db: схема прода «из модели» — ни бэкапа, ни накатки, шаг зелёный', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/собрана из модели/);
+    expect(r.calls).not.toMatch(/remote-backup|lore-migrate/);
+  });
+
+  it('probe: в логе нового бэкенда «схема собрана из модели» — проба зелёная', () => {
+    const r = stepRun('probe', ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+      'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z'], MODEL_LINE);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+  });
+
+  it('probe: ни «схема сверена», ни «из модели» — по-прежнему красная', () => {
+    const r = stepRun('probe', ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+      'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z'], 'что-то другое');
+    expect(r.code).toBe(1);
+  });
+});
