@@ -380,7 +380,7 @@ final class LoreFind {
     /**
      * Один шаг по рёбрам {@code rels} — ТОЛЬКО по текущим (без {@code valid_to}). Историчные связи
      * (edge_history модели: IN_PHASE, TARGETS_MILESTONE, ROLE_HELD_BY, …) хранят закрытые рёбра рядом
-     * с открытым; переход по вершинам ({@code out(РЕБРО)}) взял бы и закрытые — «бывшая фаза» стала бы
+     * с открытым; переход {@code out(<связь>)} по вершинам взял бы и закрытые — «бывшая фаза» стала бы
      * текущей. У неисторичного ребра поля {@code valid_to} нет — фильтр его пропускает.
      */
     private static String hop(String dir, List<String> rels) {
