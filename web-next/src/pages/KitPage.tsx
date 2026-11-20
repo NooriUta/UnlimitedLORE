@@ -27,6 +27,10 @@ const SECTIONS = ['tokens', 'elements', 'badges', 'states', 'charts', 'shell', '
 type SectionId = (typeof SECTIONS)[number];
 
 // SUPERTAGS-SPIKE: витрина потока «#тег» — источник тегов на демо-данных (как у прочих демо витрины), без сервера.
+// Рёбра демо живут в памяти страницы: «Поставить тег» и правка с чипа (шаг «г») пишут сюда, чип читает отсюда.
+const TAG_DEMO_EDGES = new Map<string, Record<string, string>>([
+  ['security-review', { reviewer: 'arharaga', risk: 'medium', due: '2026-11-27' }],
+]);
 const TAG_DEMO: TipTapRefSource = {
   types: { adr: 'adr' },
   typeLabels: { adr: 'ADR' },
@@ -38,7 +42,14 @@ const TAG_DEMO: TipTapRefSource = {
       { tag: 'secrets-touch', uses: 2, keys: ['vault_path'] },
       { tag: 'customer-visible', uses: 12, keys: ['customer'] },
     ].filter(x => x.tag.includes(q.toLowerCase())),
-    apply: async () => ({ ok: true }),
+    apply: async (tag, patch) => {
+      const next = { ...(TAG_DEMO_EDGES.get(tag) ?? {}) };
+      for (const [k, v] of Object.entries(patch)) { if (v == null || v === '') delete next[k]; else next[k] = v; }
+      TAG_DEMO_EDGES.set(tag, next);
+      return { ok: true, fields: next };
+    },
+    fields: async tag => { const f = TAG_DEMO_EDGES.get(tag); return f ? { fields: f } : null; },
+    remove: async tag => { TAG_DEMO_EDGES.delete(tag); return { ok: true }; },
   },
 };
 const SECTION_KEY: Record<SectionId, AppKey> = {

@@ -78,6 +78,25 @@ final class ModelSchemaAdapter {
         "LoreTag", "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)",
         "LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме");
 
+    /**
+     * SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 · типы модели 1.18, у которых на старой схеме (до переноса) другое имя с теми
+     * же полями: трек — {@code KnowTrack} в 1.18 и {@code PlanTrack} старой доски (track_id, label, area). Срез пишется
+     * по модели 1.18; на старой схеме {@link #legacyTypes} подставляет прежнее имя — паспорт трека и выбор трека
+     * работают и до переноса.
+     */
+    static final Map<String, String> LEGACY_TYPE_NAMES = Map.of("KnowTrack", "PlanTrack");
+    private static final Pattern LEGACY_TYPE = Pattern.compile("(?<![\\w])(KnowTrack)(?![\\w])");
+
+    /** SQL среза под старую схему: имя типа 1.18 → прежнее. База из модели — как есть. */
+    static String legacyTypes(String sql) {
+        if (enabled || sql == null || !sql.contains("KnowTrack")) return sql;
+        Matcher m = LEGACY_TYPE.matcher(sql);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) m.appendReplacement(sb, LEGACY_TYPE_NAMES.get(m.group(1)));
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
     /** Типы схемы базы (schema:types) на базе из модели; null — не прочитали, и тогда «типа нет» не утверждаем. */
     private static volatile Set<String> schemaTypes;
 

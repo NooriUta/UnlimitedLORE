@@ -127,9 +127,21 @@ export function recordIdOf(type: string, id: string, project?: string | null): s
 }
 
 /** Ссылка на запись: раздел её типа + ?open=<id>; null — тип в v2 открыть негде. */
+/**
+ * Типы с паспортом, но без своего раздела-списка: паспорт открывается в разделе-хозяине с видом в адресе
+ * (?okind=, PU-29 — так же открывается задача в «Спринтах»). MDL-13: трек — в «Спринтах» (владелица 20.11.2026:
+ * «паспорт ему тоже сделай»; раздела-списка нет, пока нет прототипа).
+ */
+export const PASSPORT_IN_SECTION: Readonly<Record<string, V2Section>> = {
+  track: 'sprint',
+};
+
 export function recordHref(type: string, id: string, from?: URLSearchParams): string | null {
+  if (!id) return null;
+  const host = Object.prototype.hasOwnProperty.call(PASSPORT_IN_SECTION, type) ? PASSPORT_IN_SECTION[type] : null;
+  if (host) return href({ sec: host, open: id, okind: type }, from);
   const sec = sectionOfType(type);
-  if (!sec || !id) return null;
+  if (!sec) return null;
   return href({ sec, open: id }, from);
 }
 

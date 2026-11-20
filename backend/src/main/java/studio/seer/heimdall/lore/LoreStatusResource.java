@@ -686,19 +686,46 @@ public class LoreStatusResource extends LoreResourceBase {
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
-        // S4-24: track_id — ссылка на вершину PlanTrack. Несуществующий трек — отказ с причиной
+        // S4-24: track_id — ссылка на трек. Несуществующий трек — отказ с причиной
         // до чтения и записи версии (раньше опечатка молча уходила в план). Пусто — снятие трека.
+        // MDL-13: трек — вершина KnowTrack (1.18), на старой схеме — PlanTrack (legacyTypes).
         LoreError noBoard = LoreSprintTracks.needsCheck(req.track_id()) ? LoreSprintTracks.unavailable() : null;
         Uni<Response> trackGate = !LoreSprintTracks.needsCheck(req.track_id())
             ? Uni.createFrom().item((Response) null)
             : noBoard != null
             ? Uni.createFrom().item(noStore(Response.status(Response.Status.GONE).entity(noBoard)))
-            : client.query(db, basicAuth(), new MartQuery("sql", LoreSprintTracks.EXISTS_SQL,
+            : client.query(db, basicAuth(), new MartQuery("sql", ModelSchemaAdapter.legacyTypes(LoreSprintTracks.EXISTS_SQL),
                     Map.of("track_id", req.track_id()), -1))
                 .map(t -> {
                     LoreError refused = LoreSprintTracks.refusal(req.track_id(), t.result());
                     return refused == null ? null
                         : noStore(Response.status(422).entity(refused));
+                });
+
+        // MDL-13 (владелица 20.11.2026 «треки б»): на базе 1.18 трек — ребро ON_TRACK, а не поле версии. Правка ТОЛЬКО
+        // трека версию не открывает (план не менялся) — ставит ребро, закрывая прежнее; правка плана с треком — версия
+        // без track_id, затем ребро. На старой схеме — прежний путь: track_id в версии.
+        final boolean trackEdge = SprintTrack.onEdge();
+        if (trackEdge && req.track_id() != null && req.priority() == null && req.planned_start_date() == null
+                && req.planned_end_date() == null)
+            return trackGate.chain(refusedTrack -> refusedTrack != null
+                ? Uni.createFrom().item(refusedTrack)
+                : assignTrack(sid, req.track_id(), now, req.expected()).map(r -> {
+                    if (r.containsKey("conflict")) return Scd2Guard.conflict("sprint '" + sid + "': expected track_id = '"
+                        + req.expected().get("track_id") + "' does not match the current track — re-read and retry",
+                        java.util.Collections.singletonMap("track_id", r.get("conflict")));
+                    Map<String, Object> out = new LinkedHashMap<>();
+                    out.put("ok", true);
+                    out.put("sprint_id", sid);
+                    out.put("track_id", r.get("track_id"));
+                    out.put("track", r);
+                    return noStore(Response.ok(out));
+                }))
+                .onFailure(IllegalArgumentException.class).recoverWithItem(ex ->
+                    noStore(Response.status(422).entity(new LoreError("TRACK_NOT_FOUND", ex.getMessage()))))
+                .onFailure().recoverWithItem(ex -> {
+                    LOG.warnf("[LORE SPRINT TRACK] %s: %s", sid, ex.getMessage());
+                    return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(ex)));
                 });
 
         return trackGate.chain(refusedTrack -> refusedTrack != null
@@ -710,7 +737,13 @@ public class LoreStatusResource extends LoreResourceBase {
             Map<String, Object> cur = rows.get(0);
             String oldRid = String.valueOf(cur.getOrDefault("rid", ""));
             // S2-09: «было» не совпало с открытой версией — отказ до записи.
-            String mismatch = Scd2Guard.firstMismatch(req.expected(), cur);
+            // MDL-13: на базе 1.18 «было» трека сверяется с ребром (assignTrack), а не с версией — в версии его нет.
+            Map<String, Object> expVersion = req.expected();
+            if (trackEdge && expVersion != null && expVersion.containsKey("track_id")) {
+                expVersion = new LinkedHashMap<>(expVersion);
+                expVersion.remove("track_id");
+            }
+            String mismatch = Scd2Guard.firstMismatch(expVersion, cur);
             if (mismatch != null)
                 return Uni.createFrom().item(Scd2Guard.conflict("sprint '" + sid + "': expected "
                     + mismatch + " = '" + req.expected().get(mismatch) + "' does not match the open version — re-read and retry",
@@ -721,7 +754,9 @@ public class LoreStatusResource extends LoreResourceBase {
             next.put("priority",             req.priority()             != null ? req.priority()             : cur.get("priority"));
             next.put("planned_start_date",   req.planned_start_date()   != null ? req.planned_start_date()   : cur.get("planned_start_date"));
             next.put("planned_end_date",     req.planned_end_date()     != null ? req.planned_end_date()     : cur.get("planned_end_date"));
-            next.put("track_id",             req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
+            // MDL-13: на базе 1.18 трек — ребро; в версию поле не пишется (в схеме 1.18 его нет).
+            if (!trackEdge)
+                next.put("track_id",         req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
             next.put("pr_refs",              cur.get("pr_refs"));
             next.put("context_md",           cur.get("context_md"));
             next.put("outcome_md",           cur.get("outcome_md"));
@@ -754,7 +789,7 @@ public class LoreStatusResource extends LoreResourceBase {
             script.append("INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
                     "planned_end_date = :planned_end_date, " +
-                    "track_id = :track_id, pr_refs = :pr_refs, " +
+                    (trackEdge ? "" : "track_id = :track_id, ") + "pr_refs = :pr_refs, " +
                     "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash" +
                     carryStatus + ChangeAuthor.SET_SQL + ";")
                 .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) ")
@@ -767,22 +802,70 @@ public class LoreStatusResource extends LoreResourceBase {
                     : client.query(db, basicAuth(), readQ).map(again -> Scd2Guard.conflict(
                         "sprint '" + sid + "': the plan version read was closed by a concurrent write — re-read and retry",
                         again.result() == null || again.result().isEmpty() ? Map.of() : again.result().get(0))))
-                .map(conflict -> {
-                    if (conflict != null) return conflict;
+                .chain(conflict -> {
+                    if (conflict != null) return Uni.createFrom().item(conflict);
                     Map<String, Object> out = new LinkedHashMap<>(next);
                     out.put("ok", true);
                     out.put("sprint_id", sid);
                     out.remove("status_raw");
-                    return noStore(Response.ok(out));
+                    // MDL-13: на базе 1.18 трек — ребром, после записи версии плана.
+                    if (!trackEdge || req.track_id() == null) return Uni.createFrom().item(noStore(Response.ok(out)));
+                    return assignTrack(sid, req.track_id(), now, req.expected()).map(r -> {
+                        if (r.containsKey("conflict")) return Scd2Guard.conflict("sprint '" + sid + "': plan written, but expected track_id = '"
+                            + req.expected().get("track_id") + "' does not match the current track — track not changed",
+                            java.util.Collections.singletonMap("track_id", r.get("conflict")));
+                        out.put("track_id", r.get("track_id"));
+                        out.put("track", r);
+                        return noStore(Response.ok(out));
+                    });
                 });
         })).onFailure().recoverWithItem(ex -> {
             LOG.warnf("[LORE SPRINT PLAN] %s: %s", sid, ex.getMessage());
+            if (ex instanceof IllegalArgumentException)
+                return noStore(Response.status(422).entity(new LoreError("TRACK_NOT_FOUND", ex.getMessage())));
             if (Scd2Guard.isConcurrentModification(ex))
                 return Scd2Guard.conflict("sprint '" + sid
                     + "': concurrent write to the same plan version — re-read and retry", Map.of());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(ex)));
         });
+    }
+
+    /** MDL-13: база для {@link SprintTrack} — чтение срезным клиентом, запись — командой (блокирующе, на рабочем пуле). */
+    private SprintTrack.Graph trackGraph() {
+        return new SprintTrack.Graph() {
+            @Override
+            public List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                return ingestService.queryPublic(sql, params);
+            }
+            @Override
+            public void exec(String sql, Map<String, Object> params) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
+            }
+        };
+    }
+
+    /**
+     * MDL-13: поставить трек спринта ребром ON_TRACK (прежнее закрывается). «Было» трека ({@code expected.track_id})
+     * сверяется с текущим ребром: расхождение — ответ с ключом {@code conflict} (текущий трек), ничего не пишется.
+     */
+    private Uni<Map<String, Object>> assignTrack(String sid, String trackId, String now, Map<String, Object> expected) {
+        return Uni.createFrom().item(() -> {
+            SprintTrack.Graph g = trackGraph();
+            if (expected != null && expected.containsKey("track_id")) {
+                SprintTrack.ensureType(g);
+                List<String> cur = SprintTrack.current(g, sid);
+                Object want = expected.get("track_id");
+                String was = cur.isEmpty() ? null : cur.get(0);
+                boolean same = want == null || String.valueOf(want).isBlank() ? was == null : String.valueOf(want).equals(was);
+                if (!same) {
+                    Map<String, Object> c = new LinkedHashMap<>();
+                    c.put("conflict", was);
+                    return c;
+                }
+            }
+            return SprintTrack.assign(g, sid, trackId, "sprint/plan", now);
+        }).runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
     }
 
     /**

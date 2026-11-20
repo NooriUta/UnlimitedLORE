@@ -43,6 +43,7 @@ import { useProjectScope } from '../scope/ProjectScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
+import { PASSPORT_IN_SECTION } from '../nav/loreRoutes';
 import { loreListPeek } from '../record/lorePeek';
 import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
 import { browserZone } from '../time/browserZone';
@@ -103,6 +104,8 @@ export function passportTypeFor(screen: ListScreenId, okind: string | null | und
   // Известные виды — те, у которых в приложении есть паспорт (значения PASSPORT_OF):
   // список типов из passportAdapters сюда не тянем — он живёт в ленивом чанке паспорта.
   if (okind && (Object.values(PASSPORT_OF) as string[]).includes(okind)) return okind as PassportType;
+  // MDL-13: паспорт без своего раздела-списка (трек) — в разделе-хозяине по ?okind= (PASSPORT_IN_SECTION).
+  if (okind && PASSPORT_IN_SECTION[okind] && PASSPORT_IN_SECTION[okind] === PASSPORT_OF[screen]) return okind as PassportType;
   return PASSPORT_OF[screen];
 }
 /** Место записи по умолчанию — личная настройка (S4-24, одна с S4-17); не выбирал — справа. */

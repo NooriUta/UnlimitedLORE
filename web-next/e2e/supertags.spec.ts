@@ -71,6 +71,50 @@ test.describe('supertags', () => {
     await shot(page, 'flow-c-token', false);
   });
 
+  test('1г · чип вместо исходника; щелчок по чипу — правка полей; снять тег подтверждением', async ({ page }) => {
+    await page.goto('/kit#kit-content');
+    const box = page.getByTestId('kit-tags');
+    await box.scrollIntoViewIfNeeded();
+    const ed = box.locator('.ProseMirror');
+    // Токен из образца уже чип с полями ребра — исходника [[…#…]] в поле не видно.
+    const seeded = ed.locator('.sk-md__tagchip[data-tag="security-review"]');
+    await expect(seeded).toContainText('arharaga');
+    await expect(ed).not.toContainText('[[ADR-LORE-050#');
+    await ed.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' Секреты: #secr');
+    await page.locator('.sk-tagpick__opt', { hasText: '#secrets-touch' }).click();
+    await page.getByLabel('vault_path').fill('kv/lore/app');
+    await page.getByRole('button', { name: 'Поставить тег' }).click();
+    const chip = ed.locator('.sk-md__tagchip[data-tag="secrets-touch"]');
+    await expect(chip).toContainText('#secrets-touch');
+    await expect(chip).toContainText('kv/lore/app');
+    await noPageOverflow(page);
+    await shot(page, 'chip-d-token', false);
+
+    await chip.click();
+    const pop = page.getByRole('dialog', { name: /Поля тега #secrets-touch/ });
+    await expect(pop).toBeVisible();
+    await noPageOverflow(page);
+    await shot(page, 'chip-d-popover', false);
+    await pop.getByLabel('vault_path', { exact: true }).fill('kv/lore/rotated');
+    await pop.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(pop).toHaveCount(0);
+    await expect(chip).toContainText('kv/lore/rotated');
+    await shot(page, 'chip-d-saved', false);
+
+    await chip.click();
+    await pop.getByRole('button', { name: 'Снять тег' }).click();
+    await expect(pop.getByText(/Снять #secrets-touch с ADR-LORE-050\?/)).toBeVisible();
+    await noPageOverflow(page);
+    await shot(page, 'chip-d-remove-ask', false);
+    await pop.getByRole('button', { name: 'Да, снять' }).click();
+    await expect(chip).toHaveCount(0);
+    await expect(box.locator('.sk-wref--tag[data-tag="secrets-touch"]')).toHaveCount(0);
+    await expect(seeded).toBeVisible();
+    await shot(page, 'chip-d-removed', false);
+  });
+
   test('2 · сущности по тегу с полями: колонки, фасет, правка ребра', async ({ page }) => {
     let applied: unknown = null;
     await page.route('**/lore/tag/suggest**', r => json(r, SUGGEST));
@@ -103,5 +147,28 @@ test.describe('supertags', () => {
     await expect(page.getByText('Записей с тегом «#nothing» нет')).toBeVisible();
     await noPageOverflow(page);
     await shot(page, 'state-empty');
+  });
+
+  // Пункт «Теги» в меню оболочки (после #1661 экран открывался только по адресу): виден в группе «Знание»
+  // на 1280 и в drawer на 390; щелчок открывает «Сущности по тегу» внутри оболочки.
+  test('3 · пункт «Теги» в меню виден, щелчок открывает экран тегов', async ({ page }) => {
+    await page.route('**/lore/tag/suggest**', r => json(r, SUGGEST));
+    await page.route('**/lore/tag/entities**', r => json(r, TABLE));
+    await page.goto('/');
+    const narrow = (page.viewportSize()?.width ?? 0) < 600;
+    if (narrow) await page.getByRole('button', { name: 'Меню', exact: true }).click();
+    const side = page.getByRole('navigation', { name: 'Разделы' });
+    const item = side.getByRole('link', { name: 'Теги', exact: true });
+    if (!(await item.isVisible())) await side.getByRole('button', { name: 'Знание' }).click();
+    await expect(item).toBeVisible();
+    await item.scrollIntoViewIfNeeded();
+    await shot(page, 'nav-item', false);
+    await item.click();
+    await expect(page).toHaveURL(/[?&]sec=tags/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Сущности по тегу' })).toBeVisible();
+    await page.getByRole('button', { name: /#security-review/ }).click();
+    await expect(page.getByRole('link', { name: 'ADR-LORE-050' }).first()).toBeVisible();
+    await noPageOverflow(page);
+    await shot(page, 'nav-opened', false);
   });
 });

@@ -17,10 +17,15 @@
 //   defer   — решу позже: несоответствие остаётся и помечается кодом решения.
 
 export const FORMAT = 'mig-decisions/1';
-export const ACTIONS = ['map_to', 'add_code', 'to_note', 'drop', 'defer'];
+//   link    — только область decision_refs (шаг мастера «Ссылки решений», decision-refs.mjs): ссылка решения
+//              scope.decision со значением scope.value в поле scope.field → связь к цели `to` (однозначный ключ цели);
+//              там же drop — «не ставить связь» (остаток «решено человеком»), defer — «решу позже» (остаток «ждёт решения»).
+export const ACTIONS = ['map_to', 'add_code', 'to_note', 'drop', 'defer', 'link'];
+const REFS_SCOPE = 'decision_refs', REFS_ACTIONS = ['link', 'drop', 'defer'];
 
 const norm = v => String(v).trim();
-const scopeKey = s => `${s.type}.${s.field}|${s.value !== undefined ? 'v:' + norm(s.value) : 'w:' + s.why}`;
+const blankStr = v => v === undefined || v === null || String(v).trim() === '';
+const scopeKey = s => `${s.type}.${s.field}|${s.type === REFS_SCOPE ? 'd:' + s.decision + '|' : ''}${s.value !== undefined ? 'v:' + norm(s.value) : 'w:' + s.why}`;
 
 /** Причины, по которым файл решений не принимается; пусто — файл годен. */
 export function checkDecisions(doc) {
@@ -34,6 +39,12 @@ export function checkDecisions(doc) {
     if (!s.type || !s.field) bad.push(`${at}: не названы тип и поле`);
     if ((s.value === undefined) === (s.why === undefined)) bad.push(`${at}: в области нужно одно из двух — значение или причина`);
     if (!ACTIONS.includes(d.action)) bad.push(`${at}: действие «${d.action}», бывают ${ACTIONS.join(', ')}`);
+    if (s.type === REFS_SCOPE) {
+      if (blankStr(s.decision)) bad.push(`${at}: в области ${REFS_SCOPE} не названо решение`);
+      if (s.value === undefined) bad.push(`${at}: в области ${REFS_SCOPE} нужен исходный текст ссылки`);
+      if (!REFS_ACTIONS.includes(d.action)) bad.push(`${at}: для ссылки решения бывают ${REFS_ACTIONS.join(', ')}, а не «${d.action}»`);
+      if (d.action === 'link' && blankStr(d.to)) bad.push(`${at}: не сказано, какую цель связать`);
+    } else if (d.action === 'link') bad.push(`${at}: действие link — только для области ${REFS_SCOPE}`);
     if ((d.action === 'map_to' || d.action === 'add_code') && (d.to === undefined || d.to === null || d.to === '')) bad.push(`${at}: не сказано, к какому значению свести`);
     if (d.action === 'add_code' && (!d.labels || typeof d.labels !== 'object' || !Object.keys(d.labels).length)) bad.push(`${at}: у добавляемого кода нет подписей`);
     if (!d.by || !String(d.by).trim()) bad.push(`${at}: не сказано, кто принял`);

@@ -327,16 +327,17 @@
         "key" : "track",
         "label" : "Трек",
         "label_key" : "pp.field.track",
-        "kind" : "enum",
+        "kind" : "ref",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
-        "options" : {
-          "slice" : "track_options",
-          "value" : "code",
-          "label" : "title"
+        "ref" : {
+          "type" : "track",
+          "rel" : "ON_TRACK",
+          "dir" : "out"
         },
+        "relation" : "attribute",
         "label_en" : "Track",
         "short_label_en" : null,
         "definition_en" : null,
@@ -346,13 +347,13 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-        "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+        "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+        "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
         "layer" : "stable",
-        "historic" : true,
+        "historic" : false,
         "write" : {
-          "endpoint" : "/lore/sprint/plan",
-          "field" : "track_id"
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "ON_TRACK"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -529,7 +530,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ "kind", "reason" ]
           } ]
@@ -598,20 +599,40 @@
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "out",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
         "manageable" : true,
-        "inverse_label" : "Блокирует"
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
         "manageable" : true,
-        "inverse_label" : "Зависит от"
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -649,6 +670,16 @@
         "rel" : "TARGETS_MILESTONE",
         "dir" : "out",
         "target_type" : "milestone",
+        "place" : "prop",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "track",
+        "label" : "Трек",
+        "relation" : "attribute",
+        "rel" : "ON_TRACK",
+        "dir" : "out",
+        "target_type" : "track",
         "place" : "prop",
         "manageable" : true,
         "inverse_label" : null
@@ -1106,16 +1137,17 @@
         "key" : "track",
         "label" : "Трек",
         "label_key" : "pp.field.track",
-        "kind" : "enum",
+        "kind" : "ref",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
-        "options" : {
-          "slice" : "track_options",
-          "value" : "code",
-          "label" : "title"
+        "ref" : {
+          "type" : "track",
+          "rel" : "ON_TRACK",
+          "dir" : "out"
         },
+        "relation" : "attribute",
         "label_en" : "Track",
         "short_label_en" : null,
         "definition_en" : null,
@@ -1125,13 +1157,13 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-        "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+        "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+        "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
         "layer" : "stable",
-        "historic" : true,
+        "historic" : false,
         "write" : {
-          "endpoint" : "/lore/sprint/plan",
-          "field" : "track_id"
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "ON_TRACK"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -1308,7 +1340,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ "kind", "reason" ]
           } ]
@@ -1377,20 +1409,40 @@
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "out",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
         "manageable" : true,
-        "inverse_label" : "Блокирует"
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
         "manageable" : true,
-        "inverse_label" : "Зависит от"
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -1428,6 +1480,16 @@
         "rel" : "TARGETS_MILESTONE",
         "dir" : "out",
         "target_type" : "milestone",
+        "place" : "prop",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "track",
+        "label" : "Трек",
+        "relation" : "attribute",
+        "rel" : "ON_TRACK",
+        "dir" : "out",
+        "target_type" : "track",
         "place" : "prop",
         "manageable" : true,
         "inverse_label" : null
@@ -1572,29 +1634,15 @@
       "planned_end_date" : "2026-11-20",
       "created" : "2026-10-30",
       "no_release" : true,
-      "track" : "TRK",
+      "track" : [ {
+        "id" : "TRK",
+        "label" : "TRK",
+        "inherited_from" : null
+      } ],
       "status" : "done"
     },
     "computed" : { },
     "row_links" : [ {
-      "rel" : "DEPENDS_ON",
-      "dir" : "out",
-      "id" : "SPRINT_A",
-      "type" : "sprint",
-      "title" : "SPRINT_A",
-      "status" : "",
-      "fromKind" : "sprint",
-      "toKind" : "sprint"
-    }, {
-      "rel" : "DEPENDS_ON",
-      "dir" : "in",
-      "id" : "SPRINT_B",
-      "type" : "sprint",
-      "title" : "SPRINT_B",
-      "status" : "",
-      "fromKind" : "sprint",
-      "toKind" : "sprint"
-    }, {
       "rel" : "IMPLEMENTED_IN",
       "dir" : "in",
       "id" : "ADR-1",
@@ -1661,9 +1709,11 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "publications" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PRODUCED_BY')) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201"
+      "dependsOn" : "SELECT @in.@type AS end_vertex, coalesce(@in.qg_id, @in.task_uid, @in.phase_uid, @in.adr_id, @in.spec_id, @in.sprint_id, @in.decision_id, @in.question_id, @in.milestone_id, @in.release_uid, @in.component_id, @in.uc_id, @in.runbook_id, @in.doc_id, @in.publication_id, @in.insight_id, @in.rec_id, @in.pain_id, @in.gain_id, @in.job_id, @in.actor_id, @in.machine_id, @in.kc_sub, @in.org_id, @in.slug) AS end_id, coalesce(@in.title, @in.name, @in.label, @in.full_name, @in.display_name, @in.statement_md) AS end_title, coalesce(@in.status, @in.status_raw, @in.status_general) AS end_status, unionall(@in.out('BELONGS_TO_PROJECT').slug, @in.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(outE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201",
+      "blocks" : "SELECT @out.@type AS end_vertex, coalesce(@out.qg_id, @out.task_uid, @out.phase_uid, @out.adr_id, @out.spec_id, @out.sprint_id, @out.decision_id, @out.question_id, @out.milestone_id, @out.release_uid, @out.component_id, @out.uc_id, @out.runbook_id, @out.doc_id, @out.publication_id, @out.insight_id, @out.rec_id, @out.pain_id, @out.gain_id, @out.job_id, @out.actor_id, @out.machine_id, @out.kc_sub, @out.org_id, @out.slug) AS end_id, coalesce(@out.title, @out.name, @out.label, @out.full_name, @out.display_name, @out.statement_md) AS end_title, coalesce(@out.status, @out.status_raw, @out.status_general) AS end_status, unionall(@out.out('BELONGS_TO_PROJECT').slug, @out.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(inE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201",
+      "publications" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PRODUCED_BY')) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowSprint WHERE sprint_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : "",
@@ -2352,6 +2402,22 @@
           "create" : null
         } ],
         "link_tabs" : [ {
+          "key" : "deps",
+          "label" : "Зависимости",
+          "rels" : [ {
+            "rel" : "DEPENDS_ON",
+            "dir" : "out",
+            "label" : "зависит от",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          }, {
+            "rel" : "DEPENDS_ON",
+            "dir" : "in",
+            "label" : "от неё зависят",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          } ]
+        }, {
           "key" : "justification",
           "label" : "ADR",
           "rels" : [ {
@@ -2520,6 +2586,46 @@
         "place" : "link_tab",
         "manageable" : true,
         "inverse_label" : "Блокирует задачи"
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -3339,6 +3445,22 @@
           "create" : null
         } ],
         "link_tabs" : [ {
+          "key" : "deps",
+          "label" : "Зависимости",
+          "rels" : [ {
+            "rel" : "DEPENDS_ON",
+            "dir" : "out",
+            "label" : "зависит от",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          }, {
+            "rel" : "DEPENDS_ON",
+            "dir" : "in",
+            "label" : "от неё зависят",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          } ]
+        }, {
           "key" : "justification",
           "label" : "ADR",
           "rels" : [ {
@@ -3507,6 +3629,46 @@
         "place" : "link_tab",
         "manageable" : true,
         "inverse_label" : "Блокирует задачи"
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -3720,11 +3882,13 @@
     "slice_links" : [ "SliceLink[key=adrs, slice=adrs_of_task, param=id, rel=JUSTIFIED_BY, dir=out, type=adr, id=From[columns=[adr_id], transform=STR, when=null], title=From[columns=[name], transform=STR, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=false]", "SliceLink[key=gates, slice=gating_questions_of_task, param=id, rel=GATES, dir=in, type=question, id=From[columns=[question_id], transform=STR, when=null], title=From[columns=[title], transform=STR, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=false]" ],
     "unread" : [ ],
     "edge_links" : {
-      "qgRecs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PROMOTED_TO')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
-      "insights" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('LED_TO')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
-      "publications" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PRODUCED_BY')) FROM KnowTask WHERE task_uid = :id) LIMIT 201"
+      "qgRecs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PROMOTED_TO')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
+      "insights" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('LED_TO')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
+      "dependsOn" : "SELECT @in.@type AS end_vertex, coalesce(@in.qg_id, @in.task_uid, @in.phase_uid, @in.adr_id, @in.spec_id, @in.sprint_id, @in.decision_id, @in.question_id, @in.milestone_id, @in.release_uid, @in.component_id, @in.uc_id, @in.runbook_id, @in.doc_id, @in.publication_id, @in.insight_id, @in.rec_id, @in.pain_id, @in.gain_id, @in.job_id, @in.actor_id, @in.machine_id, @in.kc_sub, @in.org_id, @in.slug) AS end_id, coalesce(@in.title, @in.name, @in.label, @in.full_name, @in.display_name, @in.statement_md) AS end_title, coalesce(@in.status, @in.status_raw, @in.status_general) AS end_status, unionall(@in.out('BELONGS_TO_PROJECT').slug, @in.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(outE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
+      "blocks" : "SELECT @out.@type AS end_vertex, coalesce(@out.qg_id, @out.task_uid, @out.phase_uid, @out.adr_id, @out.spec_id, @out.sprint_id, @out.decision_id, @out.question_id, @out.milestone_id, @out.release_uid, @out.component_id, @out.uc_id, @out.runbook_id, @out.doc_id, @out.publication_id, @out.insight_id, @out.rec_id, @out.pain_id, @out.gain_id, @out.job_id, @out.actor_id, @out.machine_id, @out.kc_sub, @out.org_id, @out.slug) AS end_id, coalesce(@out.title, @out.name, @out.label, @out.full_name, @out.display_name, @out.statement_md) AS end_title, coalesce(@out.status, @out.status_raw, @out.status_general) AS end_status, unionall(@out.out('BELONGS_TO_PROJECT').slug, @out.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(inE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowTask WHERE task_uid = :id) LIMIT 201",
+      "publications" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PRODUCED_BY')) FROM KnowTask WHERE task_uid = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : "",
@@ -4171,7 +4335,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ ]
           }, {
@@ -4246,7 +4410,7 @@
         "inverse_label" : "Блокирует"
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -4979,7 +5143,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ ]
           }, {
@@ -5054,7 +5218,7 @@
         "inverse_label" : "Блокирует"
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -5480,10 +5644,10 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "runbooks" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES_ADR')) FROM KnowADR WHERE adr_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowADR WHERE adr_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowADR WHERE adr_id = :id) LIMIT 201",
-      "insights" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('LED_TO')) FROM KnowADR WHERE adr_id = :id) LIMIT 201"
+      "runbooks" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES_ADR')) FROM KnowADR WHERE adr_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowADR WHERE adr_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowADR WHERE adr_id = :id) LIMIT 201",
+      "insights" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('LED_TO')) FROM KnowADR WHERE adr_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : "",
@@ -6346,8 +6510,8 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : "",
@@ -7232,9 +7396,9 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "children" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowDoc WHERE doc_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowDoc WHERE doc_id = :id) LIMIT 201"
+      "children" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowDoc WHERE doc_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowDoc WHERE doc_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -8312,8 +8476,8 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowDecision WHERE decision_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowDecision WHERE decision_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowDecision WHERE decision_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowDecision WHERE decision_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -9331,8 +9495,8 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowQuestion WHERE question_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowQuestion WHERE question_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowQuestion WHERE question_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowQuestion WHERE question_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -9638,7 +9802,23 @@
           "fields" : [ "week", "date", "priority", "products", "projects", "components" ]
         } ],
         "parts" : [ ],
-        "link_tabs" : [ ],
+        "link_tabs" : [ {
+          "key" : "deps",
+          "label" : "Зависимости",
+          "rels" : [ {
+            "rel" : "DEPENDS_ON",
+            "dir" : "out",
+            "label" : "зависит от",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          }, {
+            "rel" : "DEPENDS_ON",
+            "dir" : "in",
+            "label" : "от неё зависят",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          } ]
+        } ],
         "tree" : {
           "children" : [ ]
         }
@@ -9663,6 +9843,44 @@
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
         "label" : "Продукты",
@@ -10015,7 +10233,23 @@
           "fields" : [ "week", "date", "priority", "products", "projects", "components" ]
         } ],
         "parts" : [ ],
-        "link_tabs" : [ ],
+        "link_tabs" : [ {
+          "key" : "deps",
+          "label" : "Зависимости",
+          "rels" : [ {
+            "rel" : "DEPENDS_ON",
+            "dir" : "out",
+            "label" : "зависит от",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          }, {
+            "rel" : "DEPENDS_ON",
+            "dir" : "in",
+            "label" : "от неё зависят",
+            "relation" : "association",
+            "edge_props" : [ "kind", "reason" ]
+          } ]
+        } ],
         "tree" : {
           "children" : [ ]
         }
@@ -10040,6 +10274,44 @@
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
         "label" : "Продукты",
@@ -10126,6 +10398,231 @@
     },
     "parts" : [ ],
     "slice_links" : [ "SliceLink[key=sprints, slice=milestone_sprints, param=mid, rel=TARGETS_MILESTONE, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[name, sprint_id], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
+    "unread" : [ ],
+    "edge_links" : {
+      "dependsOn" : "SELECT @in.@type AS end_vertex, coalesce(@in.qg_id, @in.task_uid, @in.phase_uid, @in.adr_id, @in.spec_id, @in.sprint_id, @in.decision_id, @in.question_id, @in.milestone_id, @in.release_uid, @in.component_id, @in.uc_id, @in.runbook_id, @in.doc_id, @in.publication_id, @in.insight_id, @in.rec_id, @in.pain_id, @in.gain_id, @in.job_id, @in.actor_id, @in.machine_id, @in.kc_sub, @in.org_id, @in.slug) AS end_id, coalesce(@in.title, @in.name, @in.label, @in.full_name, @in.display_name, @in.statement_md) AS end_title, coalesce(@in.status, @in.status_raw, @in.status_general) AS end_status, unionall(@in.out('BELONGS_TO_PROJECT').slug, @in.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(outE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowMilestone WHERE milestone_id = :id) LIMIT 201",
+      "blocks" : "SELECT @out.@type AS end_vertex, coalesce(@out.qg_id, @out.task_uid, @out.phase_uid, @out.adr_id, @out.spec_id, @out.sprint_id, @out.decision_id, @out.question_id, @out.milestone_id, @out.release_uid, @out.component_id, @out.uc_id, @out.runbook_id, @out.doc_id, @out.publication_id, @out.insight_id, @out.rec_id, @out.pain_id, @out.gain_id, @out.job_id, @out.actor_id, @out.machine_id, @out.kc_sub, @out.org_id, @out.slug) AS end_id, coalesce(@out.title, @out.name, @out.label, @out.full_name, @out.display_name, @out.statement_md) AS end_title, coalesce(@out.status, @out.status_raw, @out.status_general) AS end_status, unionall(@out.out('BELONGS_TO_PROJECT').slug, @out.out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, kind, reason FROM (SELECT expand(inE('DEPENDS_ON')[valid_to IS NULL]) FROM KnowMilestone WHERE milestone_id = :id) LIMIT 201"
+    },
+    "defaults" : {
+      "title" : ""
+    },
+    "read_only" : true
+  },
+  "track" : {
+    "schema_unread" : {
+      "type" : "track",
+      "label" : "Трек",
+      "label_key" : "pp.kind.track",
+      "label_en" : "Track",
+      "label_pl" : "Ścieżka",
+      "icon" : "path-distance",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "area",
+        "label" : "Вид",
+        "label_key" : "pp.field.trackArea",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Kind",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Rodzaj",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "area" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "sprints",
+        "label" : "Спринты на треке",
+        "relation" : "aggregation",
+        "rel" : "ON_TRACK",
+        "dir" : "in",
+        "target_type" : "sprint",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "unknown"
+    },
+    "schema_v1" : {
+      "type" : "track",
+      "label" : "Трек",
+      "label_key" : "pp.kind.track",
+      "label_en" : "Track",
+      "label_pl" : "Ścieżka",
+      "icon" : "path-distance",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      }, {
+        "key" : "area",
+        "label" : "Вид",
+        "label_key" : "pp.field.trackArea",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Kind",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Rodzaj",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
+      } ],
+      "layout" : {
+        "body" : [ ],
+        "props" : [ {
+          "section" : null,
+          "fields" : [ "area" ]
+        } ],
+        "parts" : [ ],
+        "link_tabs" : [ ],
+        "tree" : {
+          "children" : [ ]
+        }
+      },
+      "relations" : [ {
+        "key" : "sprints",
+        "label" : "Спринты на треке",
+        "relation" : "aggregation",
+        "rel" : "ON_TRACK",
+        "dir" : "in",
+        "target_type" : "sprint",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema"
+    },
+    "parts" : [ ],
+    "slice_links" : [ "SliceLink[key=sprints, slice=track_sprints, param=id, rel=ON_TRACK, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[period, name, sprint_id], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
     "unread" : [ ],
     "edge_links" : { },
     "defaults" : {
@@ -11019,9 +11516,9 @@
     "slice_links" : [ "SliceLink[key=sprints, slice=release_sprints, param=ruid, rel=IMPLEMENTED_IN_RELEASE, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[name], transform=STR, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]", "SliceLink[key=prs, slice=release_prs, param=ruid, rel=SHIPPED_IN, dir=in, type=pr, id=From[columns=[pr_uid, pr_number], transform=FIRST_OF, when=null], title=From[columns=[title], transform=STR, when=null], status=null, paged=false]" ],
     "unread" : [ ],
     "edge_links" : {
-      "publications" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('SHIPPED_IN')) FROM KnowRelease WHERE release_uid = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowRelease WHERE release_uid = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowRelease WHERE release_uid = :id) LIMIT 201"
+      "publications" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('SHIPPED_IN')) FROM KnowRelease WHERE release_uid = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowRelease WHERE release_uid = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowRelease WHERE release_uid = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -12336,8 +12833,8 @@
     "slice_links" : [ "SliceLink[key=tasks, slice=component_tasks, param=cid, rel=TAGGED_WITH, dir=in, type=task, id=From[columns=[task_uid], transform=STR, when=null], title=From[columns=[title], transform=STR, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]", "SliceLink[key=sprints, slice=component_sprints, param=cid, rel=BELONGS_TO, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[name], transform=STR, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]", "SliceLink[key=repositories, slice=repos_of_component, param=id, rel=COMPONENT_REPOSITORY, dir=out, type=repository, id=From[columns=[url], transform=STR, when=null], title=From[columns=[full_path, url], transform=FIRST_OF, when=null], status=null, paged=true]" ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM LoreComponent WHERE component_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM LoreComponent WHERE component_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM LoreComponent WHERE component_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM LoreComponent WHERE component_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -12841,8 +13338,8 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowSpec WHERE spec_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -14616,8 +15113,8 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowUseCase WHERE uc_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowUseCase WHERE uc_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowUseCase WHERE uc_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowUseCase WHERE uc_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -15507,7 +16004,7 @@
     "slice_links" : [ "SliceLink[key=features, slice=product_features, param=code, rel=IN_PRODUCT, dir=in, type=feature, id=From[columns=[uc_id], transform=STR, when=null], title=From[columns=[title, uc_id], transform=FIRST_OF, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=true]", "SliceLink[key=pains, slice=product_pains, param=code, rel=ADDRESSES, dir=out, type=pain, id=From[columns=[pain_id], transform=STR, when=null], title=From[columns=[title, pain_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=gains, slice=product_gains, param=code, rel=PROMISES, dir=out, type=gain, id=From[columns=[gain_id], transform=STR, when=null], title=From[columns=[title, gain_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=jobs, slice=product_jobs, param=code, rel=HELPS_WITH, dir=out, type=job, id=From[columns=[job_id], transform=STR, when=null], title=From[columns=[title, job_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=actors, slice=product_actors, param=code, rel=HAS_ACTOR, dir=out, type=actor, id=From[columns=[actor_id], transform=STR, when=null], title=From[columns=[name, actor_id], transform=FIRST_OF, when=null], status=null, paged=true]" ],
     "unread" : [ ],
     "edge_links" : {
-      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_HAS_PRODUCT')) FROM KnowDictEntry WHERE code = :id) LIMIT 201"
+      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_HAS_PRODUCT')) FROM KnowDictEntry WHERE code = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -15893,8 +16390,8 @@
     "slice_links" : [ "SliceLink[key=tasks, slice=user_tasks, param=kc_sub, rel=ROLE_HELD_BY, dir=in, type=task, id=From[columns=[task_uid], transform=STR, when=null], title=From[columns=[title, task_uid], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
     "unread" : [ ],
     "edge_links" : {
-      "agents" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('OWNED_BY')) FROM KnowUser WHERE kc_sub = :id) LIMIT 201",
-      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_MEMBER')) FROM KnowUser WHERE kc_sub = :id) LIMIT 201"
+      "agents" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('OWNED_BY')) FROM KnowUser WHERE kc_sub = :id) LIMIT 201",
+      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_MEMBER')) FROM KnowUser WHERE kc_sub = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -16428,8 +16925,8 @@
     "slice_links" : [ "SliceLink[key=tasks, slice=agent_tasks, param=id, rel=ROLE_HELD_BY, dir=in, type=task, id=From[columns=[task_uid], transform=STR, when=null], title=From[columns=[title, task_uid], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
     "unread" : [ ],
     "edge_links" : {
-      "machines" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('USES_MACHINE')) FROM KnowActor WHERE actor_id = :id) LIMIT 201",
-      "roles" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(outE('FILLS_ROLE')[valid_to IS NULL].inV()) FROM KnowActor WHERE actor_id = :id) LIMIT 201"
+      "machines" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('USES_MACHINE')) FROM KnowActor WHERE actor_id = :id) LIMIT 201",
+      "roles" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(outE('FILLS_ROLE')[valid_to IS NULL].inV()) FROM KnowActor WHERE actor_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -16941,13 +17438,13 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "features" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('HAS_ACTOR')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
-      "pains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('FELT_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
-      "gains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DESIRED_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
-      "jobs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PERFORMED_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
-      "agents" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(inE('FILLS_ROLE')[valid_to IS NULL].outV()) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201"
+      "features" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('HAS_ACTOR')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "pains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('FELT_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "gains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DESIRED_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "jobs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PERFORMED_BY')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "agents" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(inE('FILLS_ROLE')[valid_to IS NULL].outV()) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowProjectActor WHERE actor_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -17425,12 +17922,12 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "claimedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ADDRESSES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
-      "relievedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('RELIEVES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
-      "actors" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('FELT_BY')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
-      "jobs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('BLOCKS')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201"
+      "claimedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ADDRESSES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "relievedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('RELIEVES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "actors" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('FELT_BY')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "jobs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('BLOCKS')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowPain WHERE pain_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -17966,12 +18463,12 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "promisedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PROMISES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
-      "deliveredBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DELIVERS')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
-      "actors" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('DESIRED_BY')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
-      "jobs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('SUCCESS_OF')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201"
+      "promisedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PROMISES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "deliveredBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('DELIVERS')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "actors" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('DESIRED_BY')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "jobs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('SUCCESS_OF')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowGain WHERE gain_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -18529,13 +19026,13 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "helpedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('HELPS_WITH')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
-      "performedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PERFORMS')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
-      "actors" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('PERFORMED_BY')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
-      "pains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('BLOCKS')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
-      "gains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('SUCCESS_OF')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowJob WHERE job_id = :id) LIMIT 201"
+      "helpedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('HELPS_WITH')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "performedBy" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('PERFORMS')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "actors" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('PERFORMED_BY')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "pains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('BLOCKS')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "gains" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('SUCCESS_OF')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowJob WHERE job_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowJob WHERE job_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -18997,9 +19494,9 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "adrs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES_ADR')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201",
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201"
+      "adrs" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES_ADR')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201",
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM KnowRunbook WHERE runbook_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -19909,8 +20406,8 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM QualityGate WHERE qg_id = :id) LIMIT 201",
-      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM QualityGate WHERE qg_id = :id) LIMIT 201"
+      "refsOut" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('REFERENCES')) FROM QualityGate WHERE qg_id = :id) LIMIT 201",
+      "refsIn" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('REFERENCES')) FROM QualityGate WHERE qg_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -20710,9 +21207,9 @@
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
-      "projects" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_PROJECT')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
-      "products" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_PRODUCT')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
-      "members" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_MEMBER')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201"
+      "projects" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_PROJECT')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
+      "products" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_PRODUCT')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
+      "members" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_MEMBER')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""
@@ -21344,7 +21841,7 @@
     "slice_links" : [ "SliceLink[key=sprints, slice=project_sprints, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=sprint, id=From[columns=[sprint_id], transform=STR, when=null], title=From[columns=[name, sprint_id], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]", "SliceLink[key=components, slice=project_components, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=component, id=From[columns=[component_id], transform=STR, when=null], title=From[columns=[full_name, component_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=repositories, slice=repos_of_project, param=project, rel=HAS_REPOSITORY, dir=out, type=repository, id=From[columns=[url], transform=STR, when=null], title=From[columns=[full_path, url], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=adrs, slice=project_adrs, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=adr, id=From[columns=[adr_id], transform=STR, when=null], title=From[columns=[name, adr_id], transform=FIRST_OF, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=true]", "SliceLink[key=releases, slice=project_releases, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=release, id=From[columns=[release_uid], transform=STR, when=null], title=From[columns=[release_id, git_tag, release_uid], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=people, slice=project_people, param=project, rel=HAS_PROJECT_ROLE, dir=in, type=user, id=From[columns=[kc_sub], transform=STR, when=null], title=From[columns=[display_name, kc_sub], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=agents, slice=project_agents, param=project, rel=HAS_PROJECT_ROLE, dir=in, type=agent, id=From[columns=[actor_id], transform=STR, when=null], title=From[columns=[name, actor_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=specs, slice=project_specs, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=spec, id=From[columns=[spec_id], transform=STR, when=null], title=From[columns=[title, spec_id], transform=FIRST_OF, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=true]", "SliceLink[key=decisions, slice=project_decisions, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=decision, id=From[columns=[decision_id], transform=STR, when=null], title=From[columns=[title, decision_id], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=DOC_TOKEN, when=null], paged=true]", "SliceLink[key=questions, slice=project_questions, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=question, id=From[columns=[question_id], transform=STR, when=null], title=From[columns=[title, question_id], transform=FIRST_OF, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=true]", "SliceLink[key=features, slice=project_features, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=feature, id=From[columns=[uc_id], transform=STR, when=null], title=From[columns=[title, uc_id], transform=FIRST_OF, when=null], status=From[columns=[status], transform=DOC_TOKEN, when=null], paged=true]", "SliceLink[key=docs, slice=project_docs, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=doc, id=From[columns=[doc_id], transform=STR, when=null], title=From[columns=[title, doc_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=runbooks, slice=project_runbooks, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=runbook, id=From[columns=[runbook_id], transform=STR, when=null], title=From[columns=[name, runbook_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=actors, slice=project_actors, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=actor, id=From[columns=[actor_id], transform=STR, when=null], title=From[columns=[name, actor_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=boundAgents, slice=project_bound_agents, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=agent, id=From[columns=[actor_id], transform=STR, when=null], title=From[columns=[name, actor_id], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=files, slice=project_files, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=file, id=From[columns=[file_path], transform=STR, when=null], title=From[columns=[file_path], transform=STR, when=null], status=null, paged=true]", "SliceLink[key=prs, slice=project_prs, param=project, rel=BELONGS_TO_PROJECT, dir=in, type=pr, id=From[columns=[pr_uid, pr_number], transform=FIRST_OF, when=null], title=From[columns=[title, pr_uid], transform=FIRST_OF, when=null], status=null, paged=true]" ],
     "unread" : [ ],
     "edge_links" : {
-      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_HAS_PROJECT')) FROM KnowGitProject WHERE slug = :id) LIMIT 201"
+      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_HAS_PROJECT')) FROM KnowGitProject WHERE slug = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""

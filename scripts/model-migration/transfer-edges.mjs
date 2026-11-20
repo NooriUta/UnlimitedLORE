@@ -7,7 +7,7 @@
 // Сверка: число связей каждого вида и концы каждой связи (по адресам приёмника) совпали с расчётом.
 import fs from 'node:fs';
 import { connect } from './db.mjs';
-import { EDGES, SCHEMA, DECISION_MILESTONES } from './resources.mjs';
+import { EDGES, SCHEMA, DECISION_MILESTONES, RULES } from './resources.mjs';
 import { edgePlan, edgeWrites, schemaOnlyEdgeDdl } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
@@ -19,7 +19,10 @@ import { carriesFreeFields, edgeFreeFieldsDdl, stampFreeFields, freeFieldsLoss }
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
+import { applyDependsOn } from './depends-on.mjs';
+import { applyWaitingLinks } from './waiting-links.mjs';
 import { readDecisionRefsInput, planDecisionRefs, applyDecisionRefs } from './decision-refs.mjs';
+import { readTrackInput, planTracks, applyTracks } from './tracks.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -122,6 +125,15 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     x => { if (OWN.includes(x.ot) && x.it === x.ot + 'Hist' && dstRid.has(x.o) && dstRid.has(x.i)) hsKept++; });
   report.moved[VERSION_EDGE] = { source: hs, expected: hsKept, target: hsGot };
   if (hsKept !== hsGot) ok = false;
+  // MDL-13 (владелица 20.11.2026): зависимости DEPENDS_ON — вид кодом объединённого справочника dependency_kind
+  // (hard → blocks), пустой вид — по ответу шага «Вид зависимостей», причина у старых — «перенесено без причины»;
+  // было → стало по паре концов и виду, потерь 0
+  const decisionsDeps = loadDecisions();
+  report.depends_on = await applyDependsOn(db, RULES, decisionsDeps, { log });
+  if (!report.depends_on.ok) ok = false;
+  // шаг «Ожидание → связи»: waiting_for, где назван конец планирования, — связь вида waits по ответу человека
+  report.waiting_links = await applyWaitingLinks(db, decisionsDeps, { log, at });
+  if (!report.waiting_links.ok) ok = false;
   // задачи без спринта (шаг «З» мастера): ребро PART_OF задача → спринт только по ответу человека (orphan_sprints)
   const decisionsOs = loadDecisions();
   report.orphan_sprints = await applyOrphanSprints(db, decisionsOs, { log });
@@ -163,8 +175,13 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   if (!report.question_owner.ok) ok = false;
   // ссылки решения строкой → связи REFERENCES (MDL-08 ч.2, владелица 20.11.2026: «refs … пересадить на связи но с проверкой
   // дублей и с проверкой что оставшийся функционал перешёл на связи»): связь | дубль | остаток; сверка паспорта по связям
-  report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid }), { log });
+  // неоднозначные и ненайденные — по ответам шага мастера «Ссылки решений» из файла решений (MDL-08 ч.3)
+  report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid, doc: decisions }), { log });
   if (!report.decision_refs.ok) ok = false;
+  // трек спринта (MDL-13, владелица 20.11.2026 «треки б»): треки доски → вершины KnowTrack, track_id открытой версии →
+  // ребро ON_TRACK, каждое значение track_id — в остаток с причиной; сверка «спринтов с треком = рёбер»
+  report.tracks = await applyTracks(db, planTracks({ ...(await readTrackInput(db)), at }), { log });
+  if (!report.tracks.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));

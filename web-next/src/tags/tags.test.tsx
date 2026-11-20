@@ -89,6 +89,33 @@ describe('источник тегов для TipTap', () => {
   });
 });
 
+describe('источник тегов — чип и его поповер (шаг «г»)', () => {
+  it('fields — поля ребра СВОЕЙ записи из среза по тегу; нет строки — null (ребра нет); 502 — ошибка', async () => {
+    const f = fakeFetch({ '/lore/tag/entities': () => json(TABLE) });
+    const src = loreTagSource({ type: 'adr', id: 'ADR-LORE-050' }, { fetchImpl: f })!;
+    expect(await src.fields!('security-review')).toMatchObject({ fields: { risk: 'high', due: '2026-11-27' }, tagged_by: 'arharaga' });
+    const url = new URL(String(f.mock.calls[0][0]));
+    expect(url.searchParams.get('tag')).toBe('security-review');
+    expect(url.searchParams.get('type')).toBe('adr');
+    const other = loreTagSource({ type: 'adr', id: 'ADR-NOPE' }, { fetchImpl: f })!;
+    expect(await other.fields!('security-review')).toBeNull();
+    const down = loreTagSource({ type: 'adr', id: 'ADR-LORE-050' }, { fetchImpl: fakeFetch({ '/lore/tag/entities': () => json({ error: 'UPSTREAM' }, 502) }) })!;
+    await expect(down.fields!('security-review')).rejects.toThrow(/502/);
+  });
+
+  it('apply с null снимает поле; ответ сервера с полями отдаётся чипу; remove — action remove; отказ — причиной', async () => {
+    const f = fakeFetch({ '/lore/tag/apply': () => json({ ok: true, action: 'updated', fields: { risk: 'low' } }) });
+    const src = loreTagSource({ type: 'adr', id: 'ADR-LORE-050' }, { fetchImpl: f })!;
+    expect(await src.apply('security-review', { risk: 'low', due: null })).toEqual({ ok: true, fields: { risk: 'low' } });
+    expect(JSON.parse(String(f.mock.calls[0][1]?.body))).toEqual({ type: 'adr', id: 'ADR-LORE-050', tag_id: 'security-review', fields: { risk: 'low', due: null }, action: 'add' });
+    expect(await src.remove!('security-review')).toEqual({ ok: true });
+    expect(JSON.parse(String(f.mock.calls[1][1]?.body))).toEqual({ type: 'adr', id: 'ADR-LORE-050', tag_id: 'security-review', fields: {}, action: 'remove' });
+    const no = loreTagSource({ type: 'adr', id: 'ADR-LORE-050' }, { fetchImpl: fakeFetch({ '/lore/tag/apply': () => json({ error: 'FORBIDDEN', detail: 'нет прав' }, 403) }) })!;
+    const r = await no.remove!('security-review');
+    expect(r.ok ? '' : r.reason).toMatch(/403/);
+  });
+});
+
 describe('экран «сущности по тегу»', () => {
   it('колонки — ключи рёбер; «—» где ключа нет; фасет считает «не задано» явно', async () => {
     const f = fakeFetch({ '/lore/tag/entities': () => json(TABLE), '/lore/tag/suggest': () => json({ state: 'ok', tags: [] }) });

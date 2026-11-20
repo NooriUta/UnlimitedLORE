@@ -19,6 +19,8 @@ beforeAll(() => { registerGameIcons(gameIcons); });
  *  S4-32 (14.11.2026, канал): «3e 9b 10e», «18e», «21c», по №11 «без статуса оставь то что есть». */
 const CHOICE: Record<keyof typeof ICON_CANON, string | null> = {
   sectionTask: 'lucide:list-checks', sectionNews: 'lucide:megaphone', sectionSettings: 'material-symbols:settings-outline',
+  // SUPERTAGS-SPIKE (20.11.2026): раздел «Теги» — price-tag, предложено агентом, ждёт подтверждения владелицы.
+  sectionTags: 'price-tag',
   segFilter: 'lucide:filter', segGroup: 'lucide:group', segSort: 'lucide:list-ordered',
   viewList: 'lucide:list', viewBoard: 'lucide:columns-3',
   statusDraft: 'lucide:file-pen-line', statusDeprecated: 'material-symbols:history-toggle-off', statusUnknown: 'help',

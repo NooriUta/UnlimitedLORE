@@ -69,6 +69,8 @@ export interface KitDocRelation {
    * из `values` каждой ссылки. Нет — общие колонки, как раньше.
    */
   props?: { key: string; label: string }[];
+  /** Привязка требует причины (MDL-13): уходит в KitRelationDef как есть — «Привязать» спросит причину. */
+  reasonRequired?: boolean;
 }
 
 export interface KitDocLink {

@@ -216,8 +216,10 @@ class LorePassportSurfaceTest {
     @Test
     void task() {
         assertEquals(List.of("content", "ADR[adrs+qgRecs+insights]", "Реализация[prs+useCases]", "questions",
-            "Ссылки[refsOut+refsIn]", "publications"), tabs("task"),
-            "задача: Заметка · ADR (с QG и инсайтами) · Реализация (PR + сценарии, 42а) · Вопросы · Ссылки · Публикации");
+            "Ссылки[refsOut+refsIn]", "publications",
+            // MDL-13: одна связь «зависит от» — вкладка «Зависимости» после решённых разделов
+            "Зависимости[dependsOn+blocks]"), tabs("task"),
+            "задача: Заметка · ADR (с QG и инсайтами) · Реализация (PR + сценарии, 42а) · Вопросы · Ссылки · Публикации · Зависимости");
         assertEquals(List.of("gates"), keysIn(sections("task"), "content"),
             "блокирующие вопросы — 42 ребра на 4896 задач — в конце заметки");
     }
@@ -251,7 +253,7 @@ class LorePassportSurfaceTest {
 
     @Test
     void milestone() {
-        assertEquals(List.of("sprints", "features", "content"), tabs("milestone"),
+        assertEquals(List.of("sprints", "features", "content", "Зависимости[dependsOn+blocks]"), tabs("milestone"),
             "веха — контейнер: спринты первыми (45а); решения вехи — поле тела, читаются в конце текста");
     }
 

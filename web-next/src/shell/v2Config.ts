@@ -39,6 +39,8 @@ export const V2_SECTIONS = [
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
   'product', 'actor', 'pain', 'gain', 'job',
   'news', 'analytics', 'settings',
+  // SUPERTAGS-SPIKE: «Теги» — сущности по тегу с полями; раздел «Знание» (экран тот же, что по адресу /tags).
+  'tags',
 ] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
 
@@ -163,7 +165,9 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         {
           id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)',
           // S5-DOC-PASSPORT (владелица 13.11: «подготовить для docs в LORE паспорт — их нет»): документы — рядом со спеками.
-          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('doc', 'bookshelf'), item('runbook', 'spell-book'), item('question', 'help')],
+          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('doc', 'bookshelf'), item('runbook', 'spell-book'), item('question', 'help'),
+            // SUPERTAGS-SPIKE: срез знаний по тегу — рядом с ADR, решениями и спеками, которые теги и метят.
+            item('tags', ICON_CANON.sectionTags)],
         },
         // «Продукт» — зачем всё это (глава «Зачем» v1): продукты, фичи и сценарии,
         // роли, боли, выгоды, работы (S4-PRODUCTS-NODE). «Фичи» переехали сюда из

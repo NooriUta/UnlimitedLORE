@@ -159,7 +159,8 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
   it('dry_run: ввод есть, и ничего меняющего в dry-run не выполняется', () => {
     expect(read(CD)).toMatch(/^ {6}dry_run:$/m);
     const mutating = [
-      /compose-build-retry\.sh/, /docker compose up\b/, /docker compose run\b/,
+      // MIG-01: `docker compose run` накатки схемы живёт в migrate-schema.sh — шаг, который его зовёт, тоже только live
+      /compose-build-retry\.sh/, /docker compose up\b/, /migrate-schema\.sh/,
       /v1-freeze\.sh (pin|repin)\b/, /db-heal\.sh/, /preprod-pin-sha\.sh/, /api\.telegram\.org/,
     ];
     for (const re of mutating) {

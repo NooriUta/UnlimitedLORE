@@ -140,7 +140,18 @@ final class LoreRecordRegistry {
      * решение владелицы 20.11.2026 (вариант «а»); в ответе — {@code inverse_label}, {@code null} — не задана.
      */
     record Relation(String key, String label, String rel, String dir, String targetType,
-                    String relation, String place, boolean manageable, String inverseLabel) {}
+                    String relation, String place, boolean manageable, List<EdgeProp> props,
+                    /* MDL-13: привязка требует причины — kit открывает ReasonDialog, причина уходит в запись связи */
+                    boolean reasonRequired,
+                    /* MDL-13: типы другого конца у связи с targetType any — откуда клиенту брать варианты выбора */
+                    List<String> targetTypes,
+                    String inverseLabel) {}
+
+    /**
+     * MDL-13: свойство самого ребра, которое паспорт показывает колонкой связи (у DEPENDS_ON — вид и причина).
+     * {@code dict} — справочник значений (вид зависимости — {@code dependency_kind}); нет — свободный текст.
+     */
+    record EdgeProp(String key, String label, String dict) {}
 
     record TypeDef(String type, String label, String labelKey, String icon,
                    List<Field> fields, List<Body> body, List<PropSection> props,
@@ -226,6 +237,19 @@ final class LoreRecordRegistry {
             m.put("manageable", r.manageable());
             // K5-MODEL-NAV-EDGE-LABELS: ключ есть всегда; null — обратной подписи в модели нет.
             m.put("inverse_label", r.inverseLabel());
+            if (!r.props().isEmpty()) {
+                List<Map<String, Object>> edgeProps = new ArrayList<>();
+                for (EdgeProp p : r.props()) {
+                    Map<String, Object> pm = new LinkedHashMap<>();
+                    pm.put("key", p.key());
+                    pm.put("label", p.label());
+                    if (p.dict() != null) pm.put("dict", p.dict());
+                    edgeProps.add(pm);
+                }
+                m.put("props", edgeProps);
+            }
+            if (r.reasonRequired()) m.put("reason_required", true);
+            if (!r.targetTypes().isEmpty()) m.put("target_types", r.targetTypes());
             rels.add(m);
         }
         out.put("relations", rels);

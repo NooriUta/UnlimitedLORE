@@ -62,7 +62,13 @@ final class LoreRecordFrom {
          */
         PROGRESS,
         /** Код строки таблицы гейта из metric_id «{qg_id}:{ID}:{номер}» ({@link QgMetricState#rowCode}). */
-        ROW_CODE
+        ROW_CODE,
+        /**
+         * MDL-13: ссылка-чип одной записи — {@code [{id, label, inherited_from: null}]}: код из первой колонки, подпись
+         * из второй (нет — только код); кода нет — null. Форма та же, что у чипов проектов: kit рисует подпись и
+         * ссылку на паспорт (трек спринта по ребру ON_TRACK).
+         */
+        CHIP
     }
 
     /**
@@ -127,6 +133,7 @@ final class LoreRecordFrom {
             case HEAD_OR -> headOr(f.columns(), row);
             case PROGRESS -> progress(f.columns(), row);
             case ROW_CODE -> QgMetricState.rowCode(LoreRecordValues.str(first));
+            case CHIP -> chip(f.columns(), row);
         };
     }
 
@@ -140,6 +147,17 @@ final class LoreRecordFrom {
         m.put("done", done);
         m.put("total", t.intValue());
         return m;
+    }
+
+    private static List<Map<String, Object>> chip(List<String> columns, Map<String, Object> row) {
+        String id = LoreRecordValues.str(row.get(columns.get(0)));
+        if (id == null) return null;
+        String label = columns.size() > 1 ? LoreRecordValues.str(row.get(columns.get(1))) : null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("label", label != null ? label : id);
+        m.put("inherited_from", null);
+        return List.of(m);
     }
 
     private static String trim(String s) { return s == null ? null : s.trim(); }
@@ -239,7 +257,8 @@ final class LoreRecordFrom {
             s("planned_end_date", "planned_end_date"),
             v("created", Transform.DATE10, "created_date"),
             v("no_release", Transform.BOOL, "no_release_required"),
-            s("track", "track_id"),
+            // MDL-13: трек — ребро ON_TRACK; значение — чип {id, label}, kit ведёт ссылкой в паспорт трека.
+            v("track", Transform.CHIP, "track_id", "track_label"),
             v("status", Transform.PLAN_TOKEN, "status_raw"))),
         Map.entry("task", List.of(
             v("title", Transform.FIRST_OF, "title", "task_uid"),
@@ -401,6 +420,11 @@ final class LoreRecordFrom {
             s("goal_md", "goal_md"),
             s("decisions_md", "decisions_md"),
             v("status", Transform.DOC_TOKEN, "status"))),
+        // MDL-13 (владелица 20.11.2026: «трек как веха но меньше паспорт ему тоже сделай»): подпись, код, вид.
+        Map.entry("track", List.of(
+            v("title", Transform.FIRST_OF, "label", "track_id"),
+            s("code", "track_id"),
+            s("area", "area"))),
         Map.entry("release", List.of(
             // У релиза подпись — тег (release_id, иначе git_tag). MDL-08 ч.2: version снят — дубль git_tag/release_id.
             v("title", Transform.FIRST_OF, "release_id", "git_tag"),
@@ -548,8 +572,8 @@ final class LoreRecordFrom {
     /** Связи из строки главного среза (S4-29 v3); пустой список — «проверено, связей нет». */
     static final Map<String, List<LinkFrom>> ROW_LINKS = Map.ofEntries(
         Map.entry("sprint", List.of(
-            lf("DEPENDS_ON", "out", "sprint", "depends_on"),
-            lf("DEPENDS_ON", "in", "sprint", "blocks"),
+            // MDL-13: «зависит от» / «от него зависят» — по ребру (LoreRecordEdgeLinks) с видом и причиной,
+            // а не строкой sprint_tree: другой конец теперь любой из четырёх типов планирования.
             lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"),
             // 11.11 (полнота модели рёбер): документы, реализованные в спринте.
             lf("IMPLEMENTED_IN", "in", "doc", "doc_ids"))),
@@ -701,6 +725,10 @@ final class LoreRecordFrom {
         "milestone", List.of(
             new SliceLink("sprints", "milestone_sprints", "mid", "TARGETS_MILESTONE", "in", "sprint",
                 from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+        // MDL-13: спринты на треке с историей — подпись «название · пришёл — ушёл | сейчас» (рёбра ON_TRACK, и закрытые).
+        "track", List.of(
+            new SliceLink("sprints", "track_sprints", "id", "ON_TRACK", "in", "sprint",
+                from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "period", "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
         // S9-05 A: «таблица детей» человека и агента — задачи, где у него ОТКРЫТАЯ роль.
         "user", List.of(
             new SliceLink("tasks", "user_tasks", "kc_sub", "ROLE_HELD_BY", "in", "task",

@@ -2748,9 +2748,10 @@
     "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
    },
    "base_version": {
-    "rule": "keep",
-    "basis": "delegated",
-    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «а) снять base_version при переносе 1.18»; заменено base_record_version (строка record.version, заполнено у 3 из 3); прежнее целое — 0 из 3 на переписи 18.11; запись null и запасное чтение сняты (LoreMeResource, LoreMeDrafts.out)",
+    "basis": "owner"
    },
    "body_md": {
     "rule": "keep",
@@ -3248,7 +3249,7 @@
   "PlanCheckpoint": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
   "PlanConfig": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
   "PlanSection": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
-  "PlanTrack": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
+  "PlanTrack": "как тип доски не переносится (D-2026-LORE-PLAN-BOARD-REMOVED); треки переносит шаг связей вершинами KnowTrack — MDL-13 «треки б» (tracks.mjs)",
   "PlanVersion": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
   "StatusAdr": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
   "StatusDecision": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",

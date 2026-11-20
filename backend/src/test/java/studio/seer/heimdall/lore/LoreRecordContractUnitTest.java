@@ -198,7 +198,7 @@ class LoreRecordContractUnitTest {
 
     @Test
     void relationRoutesResolveToExistingHandlers() {
-        assertEquals(LoreRecordRelationRoutes.Handler.SPRINT_DEP,
+        assertEquals(LoreRecordRelationRoutes.Handler.DEPENDS_ON,
             LoreRecordRelationRoutes.find("sprint", "DEPENDS_ON", "out").handler());
         LoreRecordRelationRoutes.Route blocks = LoreRecordRelationRoutes.find("sprint", "DEPENDS_ON", "in");
         assertTrue(blocks.reversed(), "«блокирует» — то же ребро, прочитанное входящим");

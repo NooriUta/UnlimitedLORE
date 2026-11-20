@@ -150,7 +150,7 @@ test('сумма сходится: значений = связей + дубле�
 
 test('конвейер связей вызывает шаг пересадки и роняет сверку, если он не сошёлся', () => {
   const src = fs.readFileSync(new URL('./transfer-edges.mjs', import.meta.url), 'utf8');
-  assert.match(src, /report\.decision_refs = await applyDecisionRefs\(db, planDecisionRefs\(\{ \.\.\.\(await readDecisionRefsInput\(db\)\), dstRid \}\)/);
+  assert.match(src, /report\.decision_refs = await applyDecisionRefs\(db, planDecisionRefs\(\{ \.\.\.\(await readDecisionRefsInput\(db\)\), dstRid, doc: decisions \}\)/);
   assert.match(src, /if \(!report\.decision_refs\.ok\) ok = false;/);
 });
 

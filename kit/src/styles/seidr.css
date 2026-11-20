@@ -820,6 +820,26 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-tagpick__btns > button:not(.sk-tagpick__link) { appearance: none; border: 1px solid var(--bd); background: var(--bg3); color: var(--t1); border-radius: var(--r-sm); padding: 4px 10px; font: inherit; font-size: var(--fs-xs); cursor: pointer; }
 .sk-tagpick__btns > button.is-pri { border-color: var(--acc); color: var(--acc); }
 .sk-tagpick__btns > button:disabled { opacity: .5; cursor: default; }
+/* SUPERTAGS шаг «г»: чип тега в TipTap — pill, как .sk-wref--tag в чтении; рядом с «#тег» — до трёх значений полей. */
+.sk-md .ProseMirror .sk-md__tagchip { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; padding: 0 8px; border: 1px solid var(--acc); border-radius: var(--r-pill); background: var(--bg2); font-family: var(--body, inherit); font-size: var(--fs-sm); line-height: 1.5; vertical-align: baseline; cursor: default; }
+.sk-md .ProseMirror .sk-md__tagchip[role='button'] { cursor: pointer; }
+.sk-md .ProseMirror .sk-md__tagchip[role='button']:hover { background: color-mix(in srgb, var(--acc) 14%, var(--bg2)); }
+.sk-md__tagchip-name { color: var(--acc); font-weight: 700; white-space: nowrap; }
+.sk-md__tagchip-vals { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-md__tagchip-vals:empty { display: none; }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='loading'] { opacity: .7; }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='error'] { border-color: var(--wrn); }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='error'] .sk-md__tagchip-vals { color: var(--wrn); }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='noedge'] { border-style: dashed; }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='foreign'] { border-color: var(--bd); }
+.sk-tagchip-pop { min-width: min(320px, calc(100vw - 32px)); }
+.sk-tagchip-pop__stamp { margin-left: auto; color: var(--t3); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-tagchip-pop__row { grid-template-columns: minmax(0, 7em) minmax(0, 1fr) auto; }
+.sk-tagchip-pop__ask { display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--bd); }
+.sk-tagchip-pop [role='dialog'] > .sk-tagpick__btns,
+.sk-tagchip-pop [role='dialog'] > .sk-ref__state { padding: 0 10px 8px; margin: 0; }
+.sk-tagpick__btns > button.is-danger { border-color: var(--dng); color: var(--dng); }
+.sk-tagpick__btns > button.sk-tagchip-pop__remove { margin-right: auto; color: var(--dng); }
 .sk-ref__row { display: flex; gap: 6px; flex-wrap: wrap; }
 .sk-ref__btn { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; border-radius: var(--r-pill); padding: 3px 10px; cursor: pointer; }
 .sk-ref__btn--pri { background: var(--acc); border-color: var(--acc); color: var(--bg0); }

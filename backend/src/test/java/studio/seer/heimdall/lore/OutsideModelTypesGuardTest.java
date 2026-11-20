@@ -78,7 +78,23 @@ class OutsideModelTypesGuardTest {
         Set<String> s = new HashSet<>(modelTypes());
         s.addAll(snapshotTypes());
         s.addAll(seriesTypes());
+        s.addAll(graphAndHistoricEdges());
         return s;
+    }
+
+    /**
+     * MDL-13: вершины раздела graph и историчные связи edge_history модели 1.18 — тоже модель, даже когда их заводит
+     * шаг переноса, а не схема установщика (трек: KnowTrack и ON_TRACK — шаг связей tracks.mjs).
+     */
+    static Set<String> graphAndHistoricEdges() throws Exception {
+        JsonNode m = new ObjectMapper().readTree(java.nio.file.Path.of("..", "shared", "model", "lore-model.json").toFile());
+        Set<String> out = new HashSet<>();
+        m.get("graph").fields().forEachRemaining(e -> {
+            out.add(e.getValue().get("vertex").asText());
+            if (e.getValue().has("hist")) out.add(e.getValue().get("hist").asText());
+        });
+        m.get("edge_history").get("edges").fieldNames().forEachRemaining(out::add);
+        return out;
     }
 
     @Test
@@ -151,7 +167,8 @@ class OutsideModelTypesGuardTest {
                 assertTrue(why.contains("1.18"), id + ": причина говорит про 1.18 — " + why);
             }
         }
-        assertTrue(seen >= 6, "срезы доски плана нашлись: " + seen);
+        // MDL-13: track_options больше не срез доски (вершины KnowTrack модели 1.18) — срезов доски пять
+        assertTrue(seen >= 5, "срезы доски плана нашлись: " + seen);
         assertTrue(ModelSchemaAdapter.sliceUnavailable("plan_versions").contains("PlanVersion"));
     }
 
@@ -264,9 +281,13 @@ class OutsideModelTypesGuardTest {
     @Test
     void трек_спринта_на_базе_без_доски_отказывает_причиной() throws Exception {
         asModelBase();
+        // MDL-13: на базе из модели трек — вершина KnowTrack; её нет (база без шага треков) — отказ с причиной
+        ModelSchemaAdapter.schemaTypes(java.util.Set.of("KnowSprint"));
         LoreResourceBase.LoreError e = LoreSprintTracks.unavailable();
         assertNotNull(e);
-        assertTrue(e.detail().contains("PlanTrack"), e.detail());
+        assertTrue(e.detail().contains("KnowTrack"), e.detail());
+        asModelBase();
+        assertNull(LoreSprintTracks.unavailable(), "треки перенесены — отказа нет");
         ModelSchemaAdapter.enable(false);
         assertNull(LoreSprintTracks.unavailable());
     }

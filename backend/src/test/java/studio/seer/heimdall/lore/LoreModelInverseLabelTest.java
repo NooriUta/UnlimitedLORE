@@ -27,7 +27,10 @@ class LoreModelInverseLabelTest {
 
     @Test
     void inverseLabelOfCoreEdges() {
-        assertEquals("Блокирует", rel("sprint", "dependsOn").get("inverse_label"));
+        // MDL-13 (владелица 20.11.2026: «выровнять»): у всех типов «Зависит от» / «От неё зависят».
+        assertEquals("От неё зависят", rel("sprint", "dependsOn").get("inverse_label"));
+        assertEquals("От неё зависят", rel("task", "dependsOn").get("inverse_label"));
+        assertEquals("Зависит от", rel("milestone", "blocks").get("inverse_label"));
         assertEquals("Зависит от", rel("sprint", "blocks").get("inverse_label"));
         assertEquals("Спринт", rel("sprint", "tasks").get("inverse_label"));
         assertEquals("Задачи", rel("task", "sprint").get("inverse_label"));

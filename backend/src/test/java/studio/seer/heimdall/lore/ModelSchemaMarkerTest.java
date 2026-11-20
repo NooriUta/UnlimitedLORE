@@ -39,4 +39,31 @@ class ModelSchemaMarkerTest {
             LoreSchemaMigrationRunner.schemaSource(0, List.of(Map.of("source", "installer"))),
             "отметка без хэша модели — не отметка: по ней нельзя сказать, из какой модели схема");
     }
+
+    /**
+     * MIG-01 · выкатка 1.18 на препрод. Шаг CD «Migrate schema» идёт с lore.migrate=true + lore.migrate.only=true;
+     * на базе из модели старт отказывал — CD краснел на каждой выкатке. Шаг накатки на такой базе ничего не пишет:
+     * шаги V пропускаются, процесс выходит с 0 и говорит об этом своей строкой. Сервер (migrate без only) — отказ как был.
+     */
+    @Test
+    void cdMigrateOnlyStepOnModelDatabaseSkipsVSteps() {
+        assertEquals(LoreSchemaMigrationRunner.ModelStart.SKIP_V_STEPS, LoreSchemaMigrationRunner.onModelSchema(true, true));
+    }
+
+    @Test
+    void serverWithMigrateOnModelDatabaseIsStillRefused() {
+        assertEquals(LoreSchemaMigrationRunner.ModelStart.REFUSE, LoreSchemaMigrationRunner.onModelSchema(true, false));
+    }
+
+    @Test
+    void runtimeOnModelDatabaseEnablesReadAdapter() {
+        assertEquals(LoreSchemaMigrationRunner.ModelStart.READ_ADAPTER, LoreSchemaMigrationRunner.onModelSchema(false, false));
+    }
+
+    @Test
+    void skipLineIsWhatCdStepGrepsFor() {
+        // .github/scripts/migrate-schema.sh принимает ровно эту строку как «накатка не нужна, база из модели»
+        assertTrue(LoreSchemaMigrationRunner.MODEL_SKIP_LINE.contains("шаги V пропущены"));
+        assertTrue(LoreSchemaMigrationRunner.MODEL_SKIP_LINE.contains("LoreModelSchema"));
+    }
 }
