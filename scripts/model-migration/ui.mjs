@@ -11,6 +11,7 @@ import http from 'node:http';
 import { checkDecisions, FORMAT as DECISIONS_FORMAT } from './decisions.mjs';
 import { EMPTY, groupBySuggestion, statusDictOf, decisionsAgainstRules } from './status-unify.mjs';
 import { fingerprint } from './fingerprint.mjs';
+import { hasCircle, attachProposals } from './status-records.mjs';
 import path from 'node:path';
 import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
@@ -85,6 +86,10 @@ const PAGE = String.raw`<!doctype html><html lang="ru"><head><meta charset="utf-
 .tw{overflow-x:auto;border:1px solid var(--bd);border-radius:6px;margin:6px 0;background:var(--bg1)}table{border-collapse:collapse;width:100%;min-width:720px}th{background:var(--bg2);color:var(--t3);font:700 var(--fs-2xs) Manrope,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:5px 8px}td{border-top:1px solid var(--bd);padding:5px 8px;vertical-align:middle}
 .num{font-family:var(--mono);color:var(--wrn);text-align:right;width:60px}.val{font-family:var(--mono);font-size:var(--fs-xs)}.why{color:var(--t3);font-size:var(--fs-2xs)}
 tr.grp td{background:var(--bg2);font-weight:700}tr.done td{opacity:.6}
+.fhide{display:none}.rec>td{background:var(--bg0);padding:4px 6px}.rw{position:sticky;left:0;max-width:calc(100vw - 46px);overflow-x:auto;border:1px solid var(--bd);border-radius:6px;background:var(--bg1)}
+table.rt{min-width:600px}table.rt td,table.rt th{width:auto;padding:3px 6px;font-size:var(--fs-xs);white-space:nowrap}.rbt{padding:0 8px;margin-left:4px;font-size:var(--fs-2xs)}.rf{padding:3px 6px}.errt{color:var(--dng)}
+.chip.prop{border-style:dashed;border-color:var(--inf);color:var(--inf)}.chip.bad,.btn.bad{border-color:var(--dng);color:var(--dng)}.prop{margin-top:3px;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.filt{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}.filt input{min-width:0;flex:1 1 160px;max-width:280px}.filt select{max-width:100%}
 .dec{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}.dec select{flex:1;min-width:160px}.newf{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.newf[hidden]{display:none}.chip.ok{margin-bottom:4px}td:last-child{width:300px}td:nth-child(3){width:260px}
 .steps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.steps a{text-decoration:none;color:var(--t2);border:1px solid var(--bd);border-radius:999px;padding:4px 12px;font-size:var(--fs-xs);background:var(--bg1)}.steps a b{color:var(--acc);margin-right:4px}.steps a.on{background:var(--acc);border-color:var(--acc);color:var(--bg0)}.steps a.on b{color:var(--bg0)}
 .guide{border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:6px;background:var(--bg1);padding:6px 12px;margin:10px 0}.guide summary{cursor:pointer;padding:4px 0}.guide p,.guide li{color:var(--t1);margin:4px 0}.guide ol,.guide ul{padding-left:20px}
@@ -192,7 +197,9 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <div id="s1">загрузка…</div></section>
 <section data-page="2" hidden><h2>Шаг 2. Унификация статусов</h2>
 <p class="sub">В записи — код справочника (статусы заглавными); подписи на трёх языках — в справочнике. Предложение конвейера принимается кнопкой; группа — кнопкой в её заголовке. Пока есть строка без решения, перенос не начинается.</p>
-<div id="state" class="state">загрузка…</div><div class="kpis" id="kpis"></div><div id="body"></div></section>
+<div id="state" class="state">загрузка…</div><div class="kpis" id="kpis"></div>
+<div class="filt"><select id="fproj" aria-label="фильтр по проекту"><option value="">все проекты</option></select><input id="fq" placeholder="поиск по коду записи" aria-label="поиск по коду записи"><span class="sub" id="fprop"></span></div>
+<p class="sub">У значения — кнопка «▸ N зап.»: записи, в которых оно встречается (тип, код, проект, дата создания, версия с этим статусом). Больше 50 — первые 50 и число остальных. «предложено» — подсказка из файла предложений: в файл решений пишется только кнопкой «принять».</p><div id="body"></div></section>
 <section data-page="p" hidden><h2>Шаг П. Перегруппировка проектов</h2>
 <p class="sub">Предложение из данных этой установки: проект = продукт верхнего уровня (подпродукт — в родителе), дубль того же репозитория — туда же. Строку можно поправить: впишите группу или оставьте пустым — проект останется сам по себе. Старые проекты станут синонимами новой группы: записи и ссылки переезжают, ничего не теряется. Сверка — записей до = записей после по каждой группе.</p>
 <div id="rg" class="state">загрузка…</div></section>
@@ -220,7 +227,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 </div><div id="msg"></div>
 <script>
 (function(){
-var K='lore-migrate-theme',B='lore-migrate-decider',D=null,NAME={KnowSprintHist:'Спринт',KnowTaskHist:'Задача',KnowPhaseHist:'Фаза',KnowADRHist:'ADR',KnowDecisionHist:'Решение',KnowSpecHist:'Спека',KnowMilestoneHist:'Веха',KnowQuestion:'Вопрос',KnowUseCase:'Фича',QualityGate:'Гейт качества'};
+var K='lore-migrate-theme',B='lore-migrate-decider',D=null,NAME={KnowSprintHist:'Спринт',KnowTaskHist:'Задача',KnowPhaseHist:'Фаза',KnowADRHist:'ADR',KnowDecisionHist:'Решение',KnowSpecHist:'Спека',KnowMilestoneHist:'Веха',KnowQuestion:'Вопрос',KnowUseCase:'Фича',QualityGate:'Гейт качества',KnowDecision:'Решение (запись)',KnowADR:'ADR (запись)',KnowSpec:'Спека (запись)',KnowActor:'Агент'};
 function theme(t){document.documentElement.dataset.theme=t;document.querySelectorAll('[data-theme-set]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.themeSet===t))});try{localStorage.setItem(K,t)}catch(e){}}
 try{theme(localStorage.getItem(K)||'light');document.getElementById('by').value=localStorage.getItem(B)||''}catch(e){theme('light')}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -232,9 +239,35 @@ document.getElementById('kpis').innerHTML=[[D.rows.length,'разных знач
 var html='';D.groups.forEach(function(t){html+='<h3>'+esc(NAME[t.type]||t.type)+' <span class="sub">'+esc(t.dict)+' · ждут '+t.waiting+'</span></h3><div class="tw"><table><thead><tr><th>Значение в старой базе</th><th>Записей</th><th>Предложение</th><th>Решение</th></tr></thead><tbody>';
 t.groups.forEach(function(g){var ids=g.rows.filter(function(r){return r.state==='needs_decision'}).map(function(r){return r.i});html+='<tr class="grp"><td colspan="2">'+(g.code?'→ '+esc(g.code):'без предложения')+' · '+g.rows.length+' знач. · '+g.n+' зап.</td><td colspan="2">'+(g.code&&ids.length?'<button class="btn pri" data-group="'+ids.join(',')+'" data-to="'+esc(g.code)+'">Принять группу → '+esc(g.code)+'</button>':'')+'</td></tr>';
 g.rows.forEach(function(r){var done=r.state!=='needs_decision';var opts=r.codes.map(function(c){return '<option'+(c===r.code?' selected':'')+'>'+esc(c)+'</option>'}).join('');
-html+='<tr class="'+(done?'done':'')+'" data-i="'+r.i+'"><td><span class="val">'+(r.value==null?'<i>(пусто)</i>':esc(String(r.value).replace(/\s+/g,' ').slice(0,100)))+'</span></td><td class="num">'+r.n+'</td><td>'+(r.suggest&&!done?'<button class="btn" data-one="'+r.i+'" data-to="'+esc(r.suggest)+'">принять: '+esc(r.suggest)+'</button>':'')+'<div class="why">'+esc(r.suggestWhy||'')+'</div></td><td>'+(done?'<span class="chip ok">'+esc(r.decision?'решение '+r.decision+' → '+(r.code||'—'):'→ '+(r.code||'—'))+'</span> ':'')+'<div class="dec"><select data-sel="'+r.i+'"><option value="">— решение —</option><optgroup label="свести к коду">'+opts+'</optgroup><option value="@new">новый код…</option><option value="@defer">решу позже</option></select><button class="btn" data-apply="'+r.i+'">применить</button></div><div class="newf" data-newform="'+r.i+'" hidden><input class="lbl" placeholder="КОД" data-nc="'+r.i+'"> <input class="lbl" placeholder="подпись ru" data-l="ru'+r.i+'"> <input class="lbl" placeholder="подпись en" data-l="en'+r.i+'"> <input class="lbl" placeholder="подпись pl" data-l="pl'+r.i+'"> <button class="btn pri" data-addcode="'+r.i+'">добавить и свести</button></div></td></tr>'})});html+='</tbody></table></div>'});
-document.getElementById('body').innerHTML=html}
+html+='<tr class="'+(done?'done':'')+(hide(r)?' fhide':'')+'" data-i="'+r.i+'"><td><span class="val">'+(r.value==null?'<i>(пусто)</i>':esc(String(r.value).replace(/\s+/g,' ').slice(0,100)))+'</span>'+recBtn('m',r)+'</td><td class="num">'+r.n+'</td><td>'+(r.suggest&&!done?'<button class="btn" data-one="'+r.i+'" data-to="'+esc(r.suggest)+'">принять: '+esc(r.suggest)+'</button>':'')+'<div class="why">'+esc(r.suggestWhy||'')+'</div>'+propHtml(r,done)+'</td><td>'+(done?'<span class="chip ok">'+esc(r.decision?'решение '+r.decision+' → '+(r.code||'—'):'→ '+(r.code||'—'))+'</span> ':'')+'<div class="dec"><select data-sel="'+r.i+'"><option value="">— решение —</option><optgroup label="свести к коду">'+opts+'</optgroup><option value="@new">новый код…</option><option value="@defer">решу позже</option></select><button class="btn" data-apply="'+r.i+'">применить</button></div><div class="newf" data-newform="'+r.i+'" hidden><input class="lbl" placeholder="КОД" data-nc="'+r.i+'"> <input class="lbl" placeholder="подпись ru" data-l="ru'+r.i+'"> <input class="lbl" placeholder="подпись en" data-l="en'+r.i+'"> <input class="lbl" placeholder="подпись pl" data-l="pl'+r.i+'"> <button class="btn pri" data-addcode="'+r.i+'">добавить и свести</button></div></td></tr>'+recRow('m',r,4)})});html+='</tbody></table></div>'});
+html+=circlesHtml();document.getElementById('body').innerHTML=html;filtBar()}
 function row(i){return D.flat[i]}
+// MIG-01 (20.11.2026): у значения — записи, в которых оно встречается; фильтр по проекту и поиск по коду — в адресе (?proj=&q=)
+var OPEN={},F={proj:'',q:''};
+try{var sp0=new URLSearchParams(location.search);F.proj=sp0.get('proj')||'';F.q=sp0.get('q')||''}catch(e){}
+function fsave(){try{var sp=new URLSearchParams(location.search);['proj','q'].forEach(function(k){if(F[k])sp.set(k,F[k]);else sp.delete(k)});var s=sp.toString();history.replaceState(null,'',location.pathname+(s?'?'+s:'')+location.hash)}catch(e){}}
+function fon(){return !!(F.proj||F.q)}
+function fit(x){return (!F.proj||(x.project||'').split(', ').indexOf(F.proj)>=0)&&(!F.q||String(x.code||'').toLowerCase().indexOf(F.q.toLowerCase())>=0)}
+function hits(r){return r.records&&r.records.items?r.records.items.filter(fit):[]}
+function hide(r){return fon()&&!hits(r).length}
+function isOpen(k,r){return OPEN[k]!==undefined?OPEN[k]:(!!F.q&&hits(r).length>0)}
+function recBtn(w,r){if(!r.records)return '';var k=w+r.i,o=isOpen(k,r),t=r.records.error?'записи: не прочитаны':(fon()?hits(r).length+' из '+r.records.items.length:r.records.total)+' зап.';return ' <button class="btn rbt'+(r.records.error?' bad':'')+'" data-rec="'+k+'" aria-expanded="'+o+'">'+(o?'▾':'▸')+' '+t+'</button>'}
+function recRow(w,r,cols){if(!r.records)return '';var k=w+r.i;return '<tr class="rec'+(hide(r)?' fhide':'')+'" data-recrow="'+k+'"'+(isOpen(k,r)?'':' hidden')+'><td colspan="'+cols+'"><div class="rw">'+recTable(r)+'</div></td></tr>'}
+function d16(v){return v?esc(String(v).slice(0,16).replace('T',' ')):'—'}
+function recTable(r){var R=r.records;if(R.error)return '<div class="state stop">не смогли прочитать записи: '+esc(R.error)+'</div>';
+var it=R.items.filter(fit);var h='<table class="rt"><thead><tr><th>тип</th><th>код</th><th>проект</th><th>создана</th><th>valid_from</th><th>valid_to</th><th>версия</th></tr></thead><tbody>';
+h+=it.map(function(x){return '<tr><td>'+esc(x.kind)+'</td><td class="mono">'+esc(x.code||'—')+'</td><td>'+(x.project?esc(x.project)+(x.projectVia==='спринт'?' <span class="why">через спринт</span>':''):'<span class="why">—</span>')+'</td><td class="mono">'+d16(x.created)+(x.createdVia==='первая версия'?' <span class="why">1-я версия</span>':'')+'</td><td class="mono">'+d16(x.valid_from)+'</td><td class="mono">'+d16(x.valid_to)+'</td><td>'+(x.open===null?'<span class="why">без версий</span>':x.open?'<span class="chip ok">открыта</span>':'<span class="chip">закрыта</span>')+'</td></tr>'}).join('');
+if(!it.length)h+='<tr><td colspan="7" class="why">'+(R.items.length?'по фильтру записей нет':'записей нет')+'</td></tr>';
+var foot=[];if(fon())foot.push('по фильтру '+it.length+' из '+R.items.length+' показанных');if(R.more)foot.push('показаны первые '+R.items.length+' из '+R.total+' · ещё '+R.more);
+return h+'</tbody></table>'+(foot.length?'<div class="why rf">'+foot.join(' · ')+'</div>':'')}
+function propHtml(r,done){if(!r.proposed)return '';var same=done&&r.code===r.proposed.to;return '<div class="prop"><span class="chip prop" title="'+esc(r.proposed.note||'')+'">предложено: '+esc(r.proposed.to)+'</span>'+(same?' <span class="why">совпадает с решением</span>':' <button class="btn" data-one="'+r.i+'" data-to="'+esc(r.proposed.to)+'">принять</button>')+'</div>'}
+function circlesHtml(){var C=D.circles||[];if(!C.length)return '';var h='<h3>Статусы-кружки <span class="sub">значения с эмодзи-кружком, в том числе распознанные словарём · '+C.length+'</span></h3><div class="tw"><table><thead><tr><th>Значение в старой базе</th><th>Тип</th><th>Записей</th><th>Распознано</th></tr></thead><tbody>';
+C.forEach(function(c){var r=row(c.i);var st=c.state==='unified'?'<span class="chip ok">распознано → '+esc(c.recognized||'—')+'</span>':c.state==='decided'?'<span class="chip ok">решение '+esc(c.decision)+' → '+esc(c.recognized||'—')+'</span>':c.state==='defaulted'?'<span class="chip">пусто → начальный</span>':'<span class="chip bad">не распознано — ждёт решения</span>';
+h+='<tr class="'+(hide(r)?'fhide':'')+'"><td><span class="val">'+esc(String(c.value).replace(/\s+/g,' ').slice(0,100))+'</span>'+recBtn('c',r)+'</td><td>'+esc(NAME[c.type]||c.type)+'</td><td class="num">'+c.n+'</td><td>'+st+'</td></tr>'+recRow('c',r,4)});return h+'</tbody></table></div>'}
+function filtBar(){var s=document.getElementById('fproj');s.innerHTML='<option value="">все проекты</option>'+(D.projects||[]).map(function(p){return '<option'+(p===F.proj?' selected':'')+'>'+esc(p)+'</option>'}).join('');document.getElementById('fq').value=F.q;
+var pr=D.proposals||{},fp=document.getElementById('fprop');fp.textContent=pr.error?pr.error:pr.file?'предложенных кодов в файле: '+pr.n+' — подсказка, в решения не пишутся до «принять»':'';fp.className='sub'+(pr.error?' errt':'')}
+document.addEventListener('change',function(e){if(e.target.id==='fproj'){F.proj=e.target.value;OPEN={};fsave();draw()}});
+document.addEventListener('input',function(e){if(e.target.id==='fq'){clearTimeout(F.t);F.t=setTimeout(function(){F.q=e.target.value.trim();OPEN={};fsave();draw()},250)}});
 function by(){var v=document.getElementById('by').value.trim();try{localStorage.setItem(B,v)}catch(e){}return v}
 function send(list){var who=by();if(!who){msg('Заполните «кто принимает решения» вверху страницы',true);document.getElementById('by').focus();return}
 fetch('api/decisions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(list.map(function(f){f.by=who;return f}))}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);D=d;draw();msg('Записано решений: '+list.length)}).catch(function(e){msg(e.message,true)})}
@@ -242,6 +275,7 @@ function form(i,action,to,labels){var r=row(i);return {type:r.type,field:r.field
 document.addEventListener('change',function(e){var s=e.target.closest('select[data-sel]');if(s){var f=document.querySelector('[data-newform="'+s.dataset.sel+'"]');if(f)f.hidden=s.value!=='@new'}});
 document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
 if(b.dataset.themeSet)return theme(b.dataset.themeSet);if(b.id==='reload')return load();
+if(b.dataset.rec){var k=b.dataset.rec,tr=document.querySelector('[data-recrow="'+k+'"]');OPEN[k]=tr.hidden;tr.hidden=!tr.hidden;b.setAttribute('aria-expanded',String(OPEN[k]));b.innerHTML=(OPEN[k]?'▾':'▸')+b.innerHTML.slice(1);return}
 if(b.dataset.one)return send([form(+b.dataset.one,'map_to',b.dataset.to)]);
 if(b.dataset.group)return send(b.dataset.group.split(',').map(function(i){return form(+i,'map_to',b.dataset.to)}));
 if(b.dataset.apply){var i=b.dataset.apply,v=document.querySelector('[data-sel="'+i+'"]').value;if(!v)return msg('Выберите решение в списке',true);
@@ -349,8 +383,8 @@ if(e.target.id==='run5'){fetch('api/run',{method:'POST',headers:{'Content-Type':
 auth();step(stepFromHash());load();job();if(stepFromHash()!=='k')pk();fetch('api/connect').then(function(r){return r.json()}).then(function(c){if(c.dstDb)document.getElementById('dstname').textContent=c.dstDb}).catch(function(){})})();
 </script></body></html>`;
 
-/** Диалог для страницы: строки с номерами, сгруппированные по типу и по предложению. */
-function forPage(dialog, rules) {
+/** Диалог для страницы: строки с номерами, сгруппированные по типу и по предложению; отдельно — «кружки» и проекты записей. */
+export function forPage(dialog, rules) {
   // у закрытых строк список кодов тоже нужен: решение можно переиграть
   const flat = dialog.rows.map((r, i) => ({ ...r, i, codes: r.codes || (r.dict ? rules.dictionaries[r.dict].codes.map(c => c.code) : []) }));
   const byType = new Map();
@@ -360,10 +394,14 @@ function forPage(dialog, rules) {
     type, dict: rows[0].dict, waiting: rows.filter(r => r.state === 'needs_decision').length,
     groups: groupBySuggestion(rows),
   }));
-  return { ...dialog, flat, groups };
+  // «Статусы-кружки» (MIG-01, 20.11.2026): значения с эмодзи-кружком, в том числе распознанные словарём, — отдельной группой
+  const circles = flat.filter(r => r.state !== 'no_rule' && hasCircle(r.value)).map(r => ({ i: r.i, type: r.type, value: r.value, n: r.n, state: r.state,
+    recognized: r.state === 'unified' || r.state === 'decided' ? r.code || null : null, decision: r.decision || null }));
+  const projects = [...new Set(flat.flatMap(r => ((r.records && r.records.items) || []).flatMap(x => (x.project ? x.project.split(', ') : []))))].sort();
+  return { ...dialog, flat, groups, circles, projects };
 }
 
-export async function serve({ port = 2499 } = {}) {
+export async function serve({ port = 2499, db: givenDb = null, decisionsFile = null, proposalsFile = null } = {}) {
   const [{ connect }, { RULES }, { collectStatusDialog }, { dryRun, reportFingerprint }, { dstUrl, updateEnvText, parseEnv, checkEnv, publicView }, { transfer }, { transferEdges }, { dstFingerprint }] = await Promise.all([import('./db.mjs'), import('./resources.mjs'), import('./status-run.mjs'), import('./dry-run.mjs'), import('./env.mjs'), import('./transfer.mjs'), import('./transfer-edges.mjs'), import('./dst-fingerprint.mjs')]);
   const envFile = process.env.MIG_ENV_FILE;
   // Одно задание за раз: перенос (записи → связи → отпечаток) или только отпечаток. Ход — строками, итог — объектом.
@@ -399,11 +437,18 @@ export async function serve({ port = 2499 } = {}) {
     } catch (e) { J.error = e.message; log('ОШИБКА: ' + e.message); }
     J.running = false;
   };
-  const file = process.env.MIG_DECISIONS_FILE;
+  const file = decisionsFile || process.env.MIG_DECISIONS_FILE;
   if (!file) throw new Error('не указан файл решений: --decisions <файл> (создастся, если его нет)');
   const readDoc = () => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { format: DECISIONS_FORMAT, decisions: [] });
-  let db = connect();
+  let db = givenDb || connect();
   let cache = null;
+  const recordsCache = new Map(); // записи за значениями статуса: между решениями не перечитываются (MIG-01)
+  // Предложенные коды (MIG-01, 20.11.2026): файл в формате решений; только подсказка «предложено», в файл решений не пишется.
+  const proposals = proposalsFile || process.env.MIG_PROPOSALS_FILE || null;
+  const readProposals = () => {
+    if (!proposals) return { doc: null, error: null };
+    try { return { doc: JSON.parse(fs.readFileSync(proposals, 'utf8')), error: null }; } catch (e) { return { doc: null, error: 'файл предложений не прочитан: ' + e.message.slice(0, 120) }; }
+  };
   // Форма подключения: значения из формы поверх файла доступа; пустой пароль — прежний.
   const FORM_KEYS = ['MIG_DB_URL', 'MIG_SRC_DB', 'MIG_SRC_USER', 'MIG_SRC_PASSWORD', 'MIG_DST_URL', 'MIG_DST_DB', 'MIG_DST_USER', 'MIG_DST_PASSWORD'];
   const pickForm = b => Object.fromEntries(FORM_KEYS.filter(k => b[k] !== undefined).map(k => [k, String(b[k])]));
@@ -424,7 +469,13 @@ export async function serve({ port = 2499 } = {}) {
   };
   const readBody = async req => { let b = ''; for await (const ch of req) { b += ch; if (b.length > 1e5) throw new Error('слишком большой запрос'); } return JSON.parse(b || '{}'); };
   const dialog = async (fresh) => {
-    if (!cache || fresh) cache = forPage(await collectStatusDialog(db, RULES, readDoc()), RULES);
+    if (!cache || fresh) {
+      const d = await collectStatusDialog(db, RULES, readDoc(), { recordsCache });
+      const p = readProposals();
+      if (p.doc) attachProposals(d.rows, p.doc);
+      d.proposals = { file: proposals, error: p.error, n: p.doc ? (p.doc.decisions || []).length : 0 };
+      cache = forPage(d, RULES);
+    }
     return cache;
   };
   const json = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); };
@@ -473,7 +524,7 @@ export async function serve({ port = 2499 } = {}) {
         return res.end();
       }
       if (kc.configured && req.url.startsWith('/api/') && !me(req)) return json(res, 401, { error: 'нужен вход: шаг 0' });
-      if (req.method === 'GET' && req.url === '/api/dialog') return json(res, 200, await dialog(true));
+      if (req.method === 'GET' && req.url === '/api/dialog') { recordsCache.clear(); return json(res, 200, await dialog(true)); } // «Перепроверить» — записи перечитываются
       if (req.method === 'GET' && req.url === '/api/connect') {
         const src = (await db.src('SELECT name, type, records FROM schema:types')).filter(t => t.type === 'vertex' && t.records > 0).map(t => ({ name: t.name, records: t.records })).sort((a, b) => a.name.localeCompare(b.name));
         let dstTypes = null, dstError = null;
@@ -731,4 +782,5 @@ export async function serve({ port = 2499 } = {}) {
 }
 
 const portArg = process.argv.indexOf('--port');
-if (process.argv[1] === 'ui') serve({ port: portArg > 0 ? +process.argv[portArg + 1] : 2499 }).catch(e => { console.error('ошибка: ' + e.message); process.exitCode = 1; });
+const propArg = process.argv.indexOf('--proposals');
+if (process.argv[1] === 'ui') serve({ port: portArg > 0 ? +process.argv[portArg + 1] : 2499, proposalsFile: propArg > 0 ? path.resolve(process.argv[propArg + 1]) : null }).catch(e => { console.error('ошибка: ' + e.message); process.exitCode = 1; });
