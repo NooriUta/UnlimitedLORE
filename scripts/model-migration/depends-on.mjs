@@ -113,14 +113,15 @@ export function compareDeps(src, dst) {
   return { ok, lost, was: src.total, now: dst.total, unknown: [...src.unknown, ...dst.unknown], rows };
 }
 
-const COLS = '@rid AS r, @out.@type AS o, @in.@type AS i, coalesce(@out.task_uid, @out.phase_uid, @out.sprint_id, @out.milestone_id, @out.adr_id) AS from, coalesce(@in.task_uid, @in.phase_uid, @in.sprint_id, @in.milestone_id, @in.adr_id) AS to, kind, reason';
+const COLS = '@rid AS r, @out.@type AS o, @in.@type AS i, coalesce(@out.task_uid, @out.phase_uid, @out.sprint_id, @out.milestone_id, @out.adr_id) AS fid, coalesce(@in.task_uid, @in.phase_uid, @in.sprint_id, @in.milestone_id, @in.adr_id) AS tid, kind, reason';
 const read = async (q, where) => {
   const out = [];
   let last = '#-1:-1';
   for (;;) {
     const page = await q(`SELECT ${COLS} FROM ${DEP_EDGE} WHERE @rid > ${last}${where} ORDER BY @rid LIMIT 5000`);
     if (!page.length) break;
-    out.push(...page);
+    // from / to — ключевые слова SQL ArcadeDB, поэтому в запросе fid / tid
+    for (const x of page) out.push({ ...x, from: x.fid, to: x.tid });
     last = page[page.length - 1].r;
     if (page.length < 5000) break;
   }
