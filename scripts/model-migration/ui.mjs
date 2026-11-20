@@ -29,6 +29,7 @@ import { proposeOrphanSprints, readOrphanSprintInput, orphanSprintAnswers, orpha
 import { proposeDepKinds, readDepKindInput, depKindAnswers, depKindState, withDepKinds } from './dep-kinds.mjs';
 import { proposeWaitingLinks, readWaitingLinkInput, waitingLinkAnswers, waitingLinkState, withWaitingLinks, WAIT_KIND } from './waiting-links.mjs';
 import { decisionMilestoneRules, decisionMilestoneMap, planDecisionMilestones, readDecisionMilestoneInput, withDecisionMilestones } from './decision-milestones.mjs';
+import { readDecisionRefsInput, planDecisionRefs, withRefAnswer } from './decision-refs.mjs';
 
 const blank = v => v === null || v === undefined || String(v).trim() === '';
 
@@ -107,6 +108,9 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 .help h3{font-size:var(--fs-sm)}.help h4{font-size:var(--fs-xs);margin:8px 0 4px;font-family:Unbounded,Manrope,sans-serif}.help pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg0);border:1px solid var(--bd);border-radius:6px;padding:6px 8px;margin:4px 0}.help code{overflow-wrap:anywhere}.help p,.help li{overflow-wrap:anywhere}
 .htw{border:1px solid var(--bd);border-radius:6px;margin:6px 0;overflow-x:auto}.htab{min-width:0;font-size:var(--fs-xs)}.htab td{vertical-align:top}.hsteps{margin:4px 0 6px}
 @media (max-width:700px){.htab,.htab tbody,.htab tr,.htab td{display:block;width:auto!important}.htab thead{display:none}.htab tr{border-top:1px solid var(--bd);padding:4px 0}.htab td{border:0;padding:2px 8px}.htab td::before{content:attr(data-th);display:block;color:var(--t3);font:700 var(--fs-2xs) Manrope,sans-serif;letter-spacing:.08em;text-transform:uppercase}}
+.drl{display:flex;flex-direction:column;gap:6px;margin:6px 0}.drc{display:grid;grid-template-columns:minmax(0,1fr);gap:4px 12px;border:1px solid var(--bd);border-radius:6px;background:var(--bg1);padding:7px 10px}.drc.dec{border-left:3px solid var(--suc)}.drc.wait{border-left:3px solid var(--wrn)}
+.drc .ch{display:flex;flex-direction:column;gap:3px}.drc .ch label{display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:2px 4px;border-radius:4px}.drc .ch label:hover{background:var(--bg2)}.drc .ch input{margin:0}.drc .cand{font-family:var(--mono);font-size:var(--fs-xs);overflow-wrap:anywhere}
+@media (min-width:900px){.drc{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.3fr)}}
 #msg{position:fixed;left:12px;right:12px;bottom:10px;background:var(--bg1);border:1px solid var(--acc);border-radius:6px;padding:6px 10px;display:none}#msg.err{border-color:var(--dng);color:var(--dng)}
 </style></head><body><div class="wrap">
 <div class="top"><h1>Установщик LORE</h1><span class="themesw"><button data-theme-set="light">Светлая</button><button data-theme-set="dark">Тёмная</button></span></div>
@@ -121,6 +125,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <a href="#step-p" data-step="p"><b>П</b> Проекты</a>
 <a href="#step-k" data-step="k"><b>В</b> Вид продукта</a>
 <a href="#step-m" data-step="m"><b>Р</b> Решения → вехи</a>
+<a href="#step-r" data-step="r"><b>С</b> Ссылки решений</a>
 <a href="#step-o" data-step="o"><b>З</b> Задачи без спринта</a>
 <a href="#step-d" data-step="d"><b>Зв</b> Вид зависимостей</a>
 <a href="#step-w" data-step="w"><b>Ж</b> Ожидание → связи</a>
@@ -222,6 +227,10 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <section data-page="m" hidden><h2>Шаг Р. Решения → вехи</h2>
 <p class="sub">Связь решения с вехой — ребро TARGETS_MILESTONE, как у спринта. Решение с ADR вехой не связывается: оно уже связано через ADR. Решению без ADR веха вычисляется при переносе по данным этой установки, первое сработавшее: спринт решения (код SPRINT_… в тексте или спринт вопроса, на который оно отвечает) → веха спринта; иначе окно по времени — дата решения попала в окно вехи (даты её спринтов и решений, срок вехи); сначала вехи продукта или проекта решения, потом любые; при пересечении окон — ближайший конец после даты. Нет ни спринта, ни окна — строка «куда?»: выберите веху или «без вехи». Выбор пишется в файл решений и сильнее вычисления.</p>
 <div id="dm" class="state">загрузка…</div></section>
+<section data-page="r" hidden><h2>Шаг С. Ссылки решений</h2>
+<p class="sub">Ссылки решения строкой (ADR, спринт, PR, релиз) при переносе становятся связями. Сюда попадает ссылка, которая неоднозначна (тот же код у нескольких целей, и проект решения не выбирает одну — например тег v1.0.0 у трёх проектов) или не нашла цель. По каждой строке выберите: кандидата — ставится связь; «не ставить связь» — значение остаётся в остатке с пометкой «решено человеком»; «решу позже» — остаток «ждёт решения». Ответ пишется в файл решений (код DR-NN) и применяется при каждом переносе.</p>
+<div class="filt"><select id="drproj" aria-label="фильтр по проекту решения"><option value="">все проекты</option></select><span class="sub" id="drn"></span></div>
+<div id="dr" class="state">загрузка…</div></section>
 <section data-page="o" hidden><h2>Шаг З. Задачи без спринта</h2>
 <p class="sub">Задача без связи со спринтом висит в воздухе: в новой модели спринт задачи — ребро «задача → спринт». Установщик предлагает спринт по данным этой установки, первое сработавшее: приставка кода задачи — спринт из реестра (точно); в другом спринте есть задача с тем же кодом (возможен дубль — вторая задача с тем же кодом не заводится, ответ «дубль» уводит задачу в остаток переноса); похожий спринт по словам кода (похоже, подтвердите); иначе «куда?». Решает человек: подтвердите предложение или выберите спринт. Ребро ставится только по ответу; без ответа задача переносится без спринта, в отчёте — «ждёт решения».</p>
 <div id="os" class="state">загрузка…</div></section>
@@ -309,7 +318,7 @@ byl.hidden=true;
 if(d.me){el.innerHTML='<div class="state go">Вы вошли как <b>'+esc(d.me.login)+'</b> через '+esc(d.me.kc)+' · область '+esc(d.me.realm)+'. Владелец проекта '+esc(d.me.project)+' — проверено по Keycloak и по базе.</div>';document.getElementById('who').textContent='вошли: '+d.me.login;return}
 el.innerHTML='<form action="auth/start" method="get" class="tw" style="padding:8px"><label class="sub">сервер Keycloak <input name="url" size="40" value="'+esc(d.kc.url)+'"></label> <label class="sub">область <input name="realm" value="'+esc(d.kc.realm)+'"></label> <button class="btn pri">Войти</button><div class="sub">клиент '+esc(d.kc.client)+' · проект-владелец '+esc(d.kc.project)+' · роль '+esc(d.kc.role)+'</div></form>';
 if(stepFromHash()!=='0'&&stepFromHash()!=='s')location.hash='#step-0'})}
-function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}if(n==='p')rg();if(n==='k')pk();if(n==='m')dm();if(n==='o')osp();if(n==='d')dk();if(n==='w')wl()}
+function step(n){n=String(n||1);document.querySelectorAll('section[data-page]').forEach(function(s){s.hidden=s.dataset.page!==n});document.querySelectorAll('#steps a').forEach(function(a){a.classList.toggle('on',a.dataset.step===n)});if(n==='1'&&!step.c1){step.c1=1;conn()}if(n==='p')rg();if(n==='k')pk();if(n==='m')dm();if(n==='o')osp();if(n==='d')dk();if(n==='w')wl();if(n==='r')dr()}
 function postMap(url,m,done){fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map:m,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error)return msg(x.error,true);msg('записано в файл решений');done()})}
 function dk(){var el=document.getElementById('dk');fetch('api/dep-kinds').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent='не смогли прочитать зависимости без вида: '+d.error;return}
 el.className='';var sug=d.rows.filter(function(r){return r.suggest}).length;
@@ -363,7 +372,28 @@ el.innerHTML=h;
 function save(map){fetch('api/product-kind',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({map:map,by:(document.getElementById('by')||{}).value||''})}).then(function(r){return r.json()}).then(function(x){if(x.error){el.insertAdjacentHTML('afterbegin','<div class="state stop">'+esc(x.error)+'</div>');return}pk()})}
 el.querySelectorAll('input[data-pk]').forEach(function(i){i.onchange=function(){var v=[];el.querySelectorAll('input[data-pk]').forEach(function(x){if(x.dataset.pk===i.dataset.pk&&x.checked)v.push(x.value)});if(!v.length){i.checked=true;return msg('вид продукта '+i.dataset.pk+' не может быть пустым: оставьте tech, service или оба',true)}var m={};m[i.dataset.pk]=v;save(m)}});
 document.getElementById('pkall').onclick=function(){var m={};d.rows.forEach(function(r){if(!r.kind&&Array.isArray(r.suggested))m[r.code]=r.suggested});if(!Object.keys(m).length)return msg('нечего принимать: у всех строк вид уже есть или предложения нет',true);save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать продукты: '+e.message;PKM=null;gate()})}
-function stepFromHash(){var m=/^#step-(\d|s|p|k|m|o)$/.exec(location.hash);return m?m[1]:'s'}
+function stepFromHash(){var m=/^#step-(\d|s|p|k|m|o|r)$/.exec(location.hash);return m?m[1]:'s'}
+function dr(){var el=document.getElementById('dr'),sel=document.getElementById('drproj');fetch('api/decision-refs').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent='не смогли прочитать ссылки решений: '+d.error;return}
+var sp=new URLSearchParams(location.search),P=sp.get('drproj')||'';sel.innerHTML='<option value="">все проекты</option>'+d.projects.map(function(p){return '<option'+(p===P?' selected':'')+'>'+esc(p)+'</option>'}).join('');
+sel.onchange=function(){var q=new URLSearchParams(location.search);if(sel.value)q.set('drproj',sel.value);else q.delete('drproj');var s=q.toString();history.replaceState(null,'',location.pathname+(s?'?'+s:'')+location.hash);dr()};
+var rows=d.rows.filter(function(r){return !P||r.projects.indexOf(P)>=0});var c=d.counts;
+document.getElementById('drn').textContent=P?'показано '+rows.length+' из '+d.rows.length:'';
+var h='<div class="kpis"><div class="kpi"><b>'+d.rows.length+'</b><span>ссылок в шаге</span></div><div class="kpi"><b>'+d.rows.filter(function(r){return r.reason==='ambiguous'}).length+'</b><span>неоднозначно</span></div><div class="kpi"><b>'+d.rows.filter(function(r){return r.reason==='not_found'}).length+'</b><span>нет цели</span></div><div class="kpi"><b>'+c.linked+'</b><span>связь выбрана</span></div><div class="kpi"><b>'+c.decided+'</b><span>не ставить связь</span></div><div class="kpi"><b>'+c.waiting+'</b><span>ждёт решения</span></div></div>';
+h+='<div class="state '+(c.waiting?'stop':'go')+'" data-testid="dr-state">'+(c.waiting?'Ждут решения — '+c.waiting+': без ответа ссылка уходит в остаток со статусом «ждёт решения», перенос при этом не останавливается':'У всех ссылок шага есть ответ')+'</div>';
+var F={adr_refs:'ADR',sprint_refs:'спринт',pr_refs:'PR',release_refs:'релиз'};
+var st=function(a){if(!a||a.action==='defer')return '<span class="chip" style="color:var(--wrn);border-color:var(--wrn)">ждёт решения'+(a?' · '+esc(a.id):'')+'</span>';if(a.action==='drop')return '<span class="chip ok">решено человеком · '+esc(a.id)+'</span>';return '<span class="chip ok">связь → '+esc(a.to)+' · '+esc(a.id)+'</span>'};
+var opt=function(i,r,v,label,on){return '<label><input type="radio" name="dr'+i+'" data-dr="'+i+'" value="'+esc(v)+'"'+(on?' checked':'')+'><span>'+label+'</span></label>'};
+h+='<div class="drl">'+(rows.length?rows.map(function(r){var i=d.rows.indexOf(r),a=r.answer;
+var ch=r.candidates.map(function(x){return opt(i,r,'link:'+x.uid,'<span class="cand">'+esc(x.uid)+'</span> <span class="sub">'+esc(x.project||'проект не указан')+' · '+esc(x.date||'дата не указана')+'</span>',a&&a.action==='link'&&a.to===x.uid)}).join('');
+if(!r.candidates.length)ch='<span class="sub">кандидатов нет: цели с таким кодом в источнике не нашлось</span>';
+ch+=opt(i,r,'drop','не ставить связь <span class="sub">— остаток «решено человеком»</span>',a&&a.action==='drop')+opt(i,r,'defer','решу позже <span class="sub">— остаток «ждёт решения»</span>',a&&a.action==='defer');
+return '<div class="drc'+(a&&a.action!=='defer'?' dec':' wait')+'" data-dr-row="'+esc(r.key)+'"><div><span class="mono">решение '+esc(r.decision)+'</span><div>'+esc(r.title||'без названия')+'</div><div class="sub">'+esc(r.projects.join(', ')||'проект не указан')+'</div></div>'
++'<div><span class="chip">'+esc(F[r.field]||r.field)+'</span> <span class="val">«'+esc(r.value)+'»</span><div style="margin:3px 0"><span class="chip'+(r.reason==='ambiguous'?' sug':' bad')+'">'+(r.reason==='ambiguous'?'неоднозначно · кандидатов '+r.candidates.length:'нет цели')+'</span> '+st(a)+'</div><div class="why">'+esc(r.why)+'</div></div>'
++'<div class="ch" role="radiogroup" aria-label="выбор по ссылке '+esc(r.value)+'">'+ch+'</div></div>'}).join(''):'<div class="state">'+(d.rows.length?'в проекте '+esc(P)+' таких ссылок нет':'Все ссылки решений нашли цель сами — выбирать нечего')+'</div>')+'</div>';
+el.className='';el.innerHTML=h;
+el.querySelectorAll('input[data-dr]').forEach(function(x){x.onchange=function(){var r=d.rows[+x.dataset.dr],v=x.value,b={decision:r.decision,field:r.field,value:r.value,by:(document.getElementById('by')||{}).value||''};
+if(v.indexOf('link:')===0){b.action='link';b.to=v.slice(5)}else b.action=v;
+fetch('api/decision-refs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(q){return q.json()}).then(function(z){if(z.error){msg(z.error,true);return dr()}msg('записано в файл решений: '+z.id);dr()})}})}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать ссылки решений: '+e.message})}
 function rg(){var el=document.getElementById('rg');fetch('api/regroup').then(function(r){return r.json()}).then(function(d){if(d.error){el.className='state stop';el.textContent=d.error;return}
 el.className='';var gs=Object.keys(d.groups).sort();
 var h='<div class="kpis">'+gs.map(function(g){return '<div class="kpi"><b>'+esc(g)+'</b><span class="sub">'+d.groups[g].from.length+' пр. · '+d.groups[g].records+' зап.</span></div>'}).join('')+(d.unassigned.length?'<div class="kpi"><b>куда?</b><span class="sub">'+d.unassigned.length+' пр.</span></div>':'')+'</div>';
@@ -509,6 +539,8 @@ export async function serve({ port = 2499, db: givenDb = null, decisionsFile = n
     } catch (x) { out.dst = { ok: false, why: 'нет ответа: ' + (x.cause && x.cause.code || x.name) }; }
     return out;
   };
+  // план шага «Ссылки решений» до переноса: все записи считаются перенесёнными — в шаг идут только неоднозначные и ненайденные
+  const refsPlan = async doc => planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid: { get: r => r }, doc });
   const readBody = async req => { let b = ''; for await (const ch of req) { b += ch; if (b.length > 1e5) throw new Error('слишком большой запрос'); } return JSON.parse(b || '{}'); };
   const dialog = async (fresh) => {
     if (!cache || fresh) {
@@ -773,6 +805,22 @@ export async function serve({ port = 2499, db: givenDb = null, decisionsFile = n
         if (!by) return json(res, 400, { error: 'не записано: не сказано, кто принял (поле «кто принимает решения»)' });
         fs.writeFileSync(file, JSON.stringify(withDecisionMilestones(readDoc(), b.map, by), null, 2) + '\n');
         return json(res, 200, { ok: true });
+      }
+      // Шаг С: ссылки решений (MDL-08 ч.3; владелица 20.11.2026 про решение 23 → «v1.0.0» у трёх проектов: «визардом
+      // с возможностью выбрать в миграции») — неоднозначные и ненайденные ссылки; ответ — в файл решений, DR-NN
+      if (req.method === 'GET' && req.url === '/api/decision-refs') {
+        const plan = await refsPlan(readDoc());
+        return json(res, 200, { rows: plan.review, counts: plan.review_counts, projects: [...new Set(plan.review.flatMap(r => r.projects))].sort() });
+      }
+      if (req.method === 'POST' && req.url === '/api/decision-refs') {
+        const b = await readBody(req); const who = me(req);
+        const doc = readDoc();
+        const next = withRefAnswer(doc, b, who ? who.login : (b.by || '').trim(), undefined, await refsPlan(doc));
+        const bad = checkDecisions(next);
+        if (bad.length) return json(res, 400, { error: 'не записано: ' + bad.join('; ') });
+        fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
+        const saved = next.decisions.find(d => d.scope.type === 'decision_refs' && d.scope.decision === String(b.decision) && d.scope.field === b.field && d.scope.value === String(b.value).trim());
+        return json(res, 200, { ok: true, id: saved.id });
       }
       // Шаг З: задачи без спринта (владелица 19.11.2026: «без спринта реконструировать ребро в визарде предложить
       // владельцу привязать») — предложение с основанием, ответ человека — в файл решений, раздел orphan_sprints

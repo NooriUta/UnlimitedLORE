@@ -174,7 +174,8 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   if (!report.question_owner.ok) ok = false;
   // ссылки решения строкой → связи REFERENCES (MDL-08 ч.2, владелица 20.11.2026: «refs … пересадить на связи но с проверкой
   // дублей и с проверкой что оставшийся функционал перешёл на связи»): связь | дубль | остаток; сверка паспорта по связям
-  report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid }), { log });
+  // неоднозначные и ненайденные — по ответам шага мастера «Ссылки решений» из файла решений (MDL-08 ч.3)
+  report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid, doc: decisions }), { log });
   if (!report.decision_refs.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
