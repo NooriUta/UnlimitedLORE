@@ -8,12 +8,13 @@
 // Данные — срез task_status_versions (версии статуса SCD2), у вехи — по каждому её спринту отдельным
 // запросом (фильтр sprint), а не вся история задач; прогноз — task_created_dates и task_done_dates.
 import { useMemo, type ReactNode } from 'react';
-import { GameIcon, ICON_CANON, LineChart, ScatterChart, rowsOf, useLoadState, useNarrow, useUrlParam } from '@seidr/kit';
+import { BarChart, GameIcon, ICON_CANON, LineChart, ScatterChart, rowsOf, useLoadState, useNarrow, useUrlParam } from '@seidr/kit';
 import { useAppT, type AppKey } from '../i18n';
 import { chartLoader, chartState, ddmm, isPartial, rowsOfBody, type ChartLoader } from './chartCommon';
 import { cfdSeries, cycleTimes, FLOW_STACK, taskTimelines, type StatusVersionRow, type Timelines } from './flowModel';
 import { milestoneForecast, TREND_WEEKS } from './forecastModel';
 import { milestoneDue } from '../milestone/milestoneDue';
+import { tasksClosedWeekly } from './batch2Model';
 import { MilestoneSprintCharts } from '../milestone/MilestoneSprintCharts';
 import type { TaskRow } from '../analytics/analyticsModel';
 
@@ -59,7 +60,7 @@ function CycleChart({ t, tl, common }: { t: T; tl: Timelines | null; common: obj
   const c = useMemo(() => (tl ? cycleTimes(tl) : null), [tl]);
   return (
     <div className="an-block" data-block="cycle">
-      <ScatterChart {...common} title={t('charts.cycle.title')} source="task_status_versions" unit={t('analytics.days')} xTitle={t('analytics.closed')}
+      <ScatterChart {...common} title={t('charts.cycle.title')} source="task_status_versions" unit={t('analytics.days')} xTitle={t('analytics.closed')} xLabel={ddmm}
         points={(c?.points ?? []).map(p => ({ x: p.x, y: p.y, label: p.id }))} />
       {c && c.points.length > 0 && c.points.length < CYCLE_FEW && <p className="an-note" data-testid="cycle-few">{t('charts.cycle.few', { n: c.points.length })}</p>}
       {c && c.skippedWork > 0 && <p className="an-note">{t('charts.cycle.skipped', { n: c.skippedWork })}</p>}
@@ -137,7 +138,9 @@ function MilestoneChartsBody({ milestoneId, load, fetchImpl, now }: MilestoneCha
     const { due, frozen } = milestoneDue(d.when);
     const fc = milestoneForecast({ created: rowsOfBody<TaskRow>(d.created), done: rowsOfBody<TaskRow>(d.done), inScope, today, due, frozen });
     const partial = [...d.versions, d.created, d.done].some(isPartial);
-    return { tl, fc, due, partial };
+    // №6 (пачка 2): закрыто задач вехи за неделю — ритм по задачам рядом с Velocity по спринтам (#1632).
+    const velocity = tasksClosedWeekly(rowsOfBody<TaskRow>(d.done), inScope, today, 12);
+    return { tl, fc, due, partial, velocity };
   }, [res.data, today]);
 
   if (res.data && res.data.ids.length === 0) {
@@ -158,6 +161,10 @@ function MilestoneChartsBody({ milestoneId, load, fetchImpl, now }: MilestoneCha
   })();
   return (
     <section className="an-grid pch__grid" data-testid="milestone-flow-charts" aria-label={t('charts.toggle')}>
+      {/* №6 — первым, рядом с Velocity по спринтам вехи (#1632) над ним: ритм по задачам и по спринтам вместе. */}
+      <div className="an-block" data-block="task-velocity">
+        <BarChart {...common} title={t('charts.taskVelocity.title')} source="task_done_dates" groups={[{ key: 't', label: t('analytics.tasks') }]} data={calc?.velocity ?? []} />
+      </div>
       <div className="an-block" data-block="forecast">
         <LineChart {...common} title={t('charts.forecast.title')} source="task_created_dates · task_done_dates" unit={t('analytics.tasksUnit')}
           series={fc ? [
