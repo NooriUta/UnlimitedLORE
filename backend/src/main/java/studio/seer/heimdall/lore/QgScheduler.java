@@ -47,6 +47,21 @@ public class QgScheduler {
     @Inject
     LoreQgRunWriter writer;
 
+    @Inject
+    studio.seer.heimdall.lore.llm.ModelRouter router;
+
+    /**
+     * Вызовы модели для одной попытки: модель и потолок — из настройки рутины, которую
+     * правит владелица ({@link QgLlmSettings}), новый счётчик расхода на каждую попытку
+     * (потолок — на попытку, не на жизнь процесса). QG-15.
+     */
+    studio.seer.heimdall.lore.llm.BudgetedModelCall analystFor(String routine) {
+        QgLlmSettings s = QgLlmSettings.of(routine,
+            k -> ConfigProvider.getConfig().getOptionalValue(k, String.class));
+        return new studio.seer.heimdall.lore.llm.BudgetedModelCall(
+            req -> router.ask(s.model(), req), s.budget(), s.price());
+    }
+
     private ScheduledExecutorService pool;
     private final Map<String, AtomicBoolean> busy = new ConcurrentHashMap<>();
 
@@ -97,7 +112,7 @@ public class QgScheduler {
             return;
         }
         try {
-            QgAttemptRunner.run(r, this::safeWrite, now);
+            QgAttemptRunner.run(r, this::safeWrite, now, analystFor(r.name()));
         } catch (Throwable t) {
             LOG.warnf("[LORE QG] рутина %s: попытка не записана: %s", r.name(), t.toString());
         } finally {
