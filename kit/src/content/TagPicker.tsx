@@ -14,13 +14,26 @@ import { useKitLang } from '../i18n/lang';
 /** Тег в подсказке: имя, сколько записей его несут, какие ключи полей встречаются на его рёбрах. */
 export interface TagSuggestion { tag: string; uses: number; keys: string[] }
 
-export type TagApplyResult = { ok: true } | { ok: false; reason: string };
+/** Ответ записи: ok — поля после записи (если сервер их вернул), иначе причина отказа словами. */
+export type TagApplyResult = { ok: true; fields?: Record<string, string> } | { ok: false; reason: string };
+
+/** Ребро TAGGED_WITH своей записи: поля и отметки «кто и когда поставил / правил». */
+export interface TagEdge {
+  fields: Record<string, string>;
+  tagged_at?: string | null; tagged_by?: string | null;
+  changed_at?: string | null; changed_by?: string | null;
+}
 
 /** Источник тегов приложения. host — ID записи, в теле которой пишут (null — запись ещё не сохранена). */
 export interface TipTapTagSource {
   host: string | null;
   search: (query: string) => Promise<TagSuggestion[]>;
-  apply: (tag: string, fields: Record<string, string>) => Promise<TagApplyResult>;
+  /** Поставить тег / patch полей: null снимает поле (истории нет). */
+  apply: (tag: string, fields: Record<string, string | null>) => Promise<TagApplyResult>;
+  /** Поля ребра host→тег для чипа (шаг «г»): null — ребра нет; отказ (throw) — «не смогли загрузить». */
+  fields?: (tag: string) => Promise<TagEdge | null>;
+  /** Снять тег с записи (ребро удаляется). Нет — кнопки «Снять тег» в поповере чипа нет. */
+  remove?: (tag: string) => Promise<TagApplyResult>;
 }
 
 export interface TagPickerHandle { handleKey: (key: string) => boolean }
