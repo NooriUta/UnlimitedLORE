@@ -40,6 +40,8 @@ export default defineConfig({
     { name: 'phone-390', testMatch: /(model-admin|spec-fields)\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Правка вида продукта (SPRINT_LORE_WORK_ANY_KIND/WK-01): владелица правит с телефона — 390×844.
     { name: 'kind-390', testMatch: /product-kind\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    // Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE): поток «#тег» и сущности по тегу на телефоне 390×844.
+    { name: 'phone-390-tags', testMatch: /supertags\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Паспорт не сбрасывает список (SPRINT_UXR_S13_KIT4/K4-PASSPORT-NO-LIST-RESET): телефон 390×844.
     { name: 'list-390', testMatch: /list-no-reset\.spec\.ts/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     // Планшет (жалобы владелицы 08.11 и 10.11 — скрины с планшета): палец, а не

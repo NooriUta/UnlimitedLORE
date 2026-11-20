@@ -1,0 +1,39 @@
+/* SUPERTAGS-SPIKE · экран «сущности по тегу с полями». Только токены цвета и шкалы шрифта (STYLE-01).
+   Телефон 390: карточки вместо таблицы, переносы вместо горизонтальной прокрутки страницы. */
+.tg { box-sizing: border-box; max-width: 100%; min-width: 0; padding: 12px 16px 24px; display: grid; gap: 10px; background: var(--bg0); color: var(--t1); font-family: var(--body, inherit); font-size: var(--fs-sm); }
+.tg *, .tg *::before, .tg *::after { box-sizing: border-box; }
+.tg__head { display: grid; gap: 4px; border-bottom: 1px solid var(--bd); padding-bottom: 8px; min-width: 0; }
+.tg__title { margin: 0; font-family: var(--disp, inherit); font-weight: 800; font-size: var(--fs-lg); }
+.tg__lead { margin: 0; color: var(--t2); font-size: var(--fs-xs); line-height: 1.5; max-width: 110ch; }
+.tg__bar, .tg__facet { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.tg__facets { display: grid; gap: 6px; min-width: 0; }
+.tg__label { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.tg__muted { color: var(--t3); font-size: var(--fs-xs); }
+.tg__err { margin: 0; color: var(--dng); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.tg__note { margin: 0; color: var(--t3); font-size: var(--fs-2xs); line-height: 1.5; }
+.tg__mono { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); white-space: nowrap; }
+.tg__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tg__tbl { overflow-x: auto; min-width: 0; border: 1px solid var(--bd); border-radius: var(--r-sm, 4px); background: var(--bg1); }
+.tg__tbl table { border-collapse: collapse; width: 100%; }
+.tg__tbl th { text-align: left; color: var(--t3); font-weight: 600; text-transform: uppercase; font-size: var(--fs-2xs); letter-spacing: .06em; padding: 5px 8px; border-bottom: 1px solid var(--bd); white-space: nowrap; }
+.tg__tbl th.tg__th-f { color: var(--acc); text-transform: none; font-family: var(--mono); }
+.tg__tbl td { padding: 5px 8px; border-bottom: 1px solid var(--bd); vertical-align: top; }
+.tg__rec { display: grid; gap: 1px; min-width: 0; }
+.tg__id { color: var(--acc); font-family: var(--mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.tg__ttl { color: var(--t2); font-size: var(--fs-2xs); overflow-wrap: anywhere; }
+.tg__btn { appearance: none; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--bd); background: var(--bg3); color: var(--t1); border-radius: var(--r-sm, 4px); padding: 3px 8px; font: inherit; font-size: var(--fs-xs); cursor: pointer; min-height: 28px; }
+.tg__btn--pri { border-color: var(--acc); color: var(--acc); }
+.tg__btn:disabled { opacity: .5; cursor: default; }
+.tg__cards { display: grid; gap: 8px; min-width: 0; }
+.tg-card { display: grid; gap: 6px; min-width: 0; padding: 8px 10px; border: 1px solid var(--bd); border-radius: var(--r-sm, 4px); background: var(--bg1); }
+.tg-card__fields { margin: 0; display: grid; gap: 2px; }
+.tg-card__f { display: grid; grid-template-columns: minmax(0, 8em) minmax(0, 1fr); gap: 6px; }
+.tg-card__f dt { color: var(--acc); font-family: var(--mono); font-size: var(--fs-2xs); overflow-wrap: anywhere; }
+.tg-card__f dd { margin: 0; overflow-wrap: anywhere; }
+.tg-edit { display: grid; gap: 6px; min-width: 0; }
+.tg-edit__form { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--bdh, var(--bd)); border-left: 2px solid var(--acc); border-radius: var(--r-sm, 4px); background: var(--bg2); min-width: 0; max-width: 420px; }
+.tg-edit__row { display: grid; grid-template-columns: minmax(0, 7em) minmax(0, 1fr); gap: 6px; align-items: center; min-width: 0; }
+.tg-edit__row--new { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.tg-edit__k { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.tg-edit__row input { min-width: 0; width: 100%; background: var(--bg0); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-sm, 4px); padding: 4px 6px; font: inherit; font-size: var(--fs-touch-input, var(--fs-md)); }
+.tg-edit__btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
