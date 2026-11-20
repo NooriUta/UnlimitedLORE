@@ -257,7 +257,8 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
     // Колонки по связи: ключ и подпись приложения (подписи — list.fieldLabels, K4-FACET-LABELS: поля вне вида).
     const spec = opts.partColumns?.(p);
     const own = spec && !Array.isArray(spec) ? spec : null;
-    const extra = (own ? own.columns : spec)?.map(c => (typeof c === 'string' ? { key: c } : c));
+    const list: KitPartColumn[] | undefined = spec === undefined ? undefined : Array.isArray(spec) ? spec : spec.columns;
+    const extra = list?.map(c => (typeof c === 'string' ? { key: c } : c));
     const labels = Object.fromEntries((extra ?? []).filter(c => c.label).map(c => [c.key, c.label!]));
     return createElement(NestedList, {
       ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p),

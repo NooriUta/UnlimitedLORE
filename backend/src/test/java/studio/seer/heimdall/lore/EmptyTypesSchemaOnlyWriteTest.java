@@ -216,8 +216,8 @@ class EmptyTypesSchemaOnlyWriteTest {
         write(up, QgMetricState.params("QG-1/branches", "Ветки", ">= 70%", none));
         assertEquals(1, count("SELECT FROM QGMetric WHERE metric_id = 'QG-1/branches' AND current_value IS NULL AND status = 'unknown'"));
         // пересчёт после прогона — тем SQL, что у регистратора
-        write(QgMetricState.REFRESH_SQL, QgMetricState.params("QG-1/branches", null, null,
-            QgMetricState.fields("QG-1:C-2:1", "Ветки", ">= 70%", List.of(Map.of("metric_key", "C-2", "value", 65.0)))));
+        QgMetricState.refresh((sql, q) -> { write(sql, q); return null; }, "QG-1/branches",
+            QgMetricState.fields("QG-1:C-2:1", "Ветки", ">= 70%", List.of(Map.of("metric_key", "C-2", "value", 65.0))));
         assertEquals(1, count("SELECT FROM QGMetric WHERE metric_id = 'QG-1/branches' AND current_value = 65.0 AND status = 'fail' AND threshold = '>= 70%'"));
         // createEdgeIfVerticesExist("MEASURED_BY", "QualityGate", "qg_id", …, "QGMetric", "metric_id", …) — тот же шаблон
         code("LoreIngestService.java", "createEdgeIfVerticesExist(\"MEASURED_BY\",");

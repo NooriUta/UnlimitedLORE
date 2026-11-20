@@ -165,8 +165,9 @@ public class LoreQgRunWriter {
                 for (Map<String, Object> m : rows(auth, QgMetricState.METRICS_OF_GATE_SQL, Map.of("qg", qg))) {
                     String mid = (String) m.get("metric_id");
                     QgMetricState.Fields f = QgMetricState.fields(mid, (String) m.get("name"), (String) m.get("threshold"), last);
-                    writeClient.command(db, auth, new LoreCommandClient.LoreCommand("sql", QgMetricState.REFRESH_SQL,
-                        QgMetricState.params(mid, null, null, f))).await().indefinitely();
+                    long n = QgMetricState.refresh((sql, p) -> writeClient.command(db, auth,
+                        new LoreCommandClient.LoreCommand("sql", sql, p)).await().indefinitely(), mid, f);
+                    if (n == 0) LOG.warnf("[LORE QG RUN] метрика %s не пересчитана: строки нет (удалена между чтением и записью)", mid);
                 }
             }
         } catch (RuntimeException e) {

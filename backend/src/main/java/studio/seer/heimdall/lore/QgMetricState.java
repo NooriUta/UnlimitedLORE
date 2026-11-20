@@ -126,10 +126,16 @@ final class QgMetricState {
         "UPDATE QGMetric SET metric_id=:metric_id, name=:name, threshold=:threshold, unit=:unit, "
         + "direction=:direction, current_value=:current_value, status=:status UPSERT WHERE metric_id=:metric_id";
 
-    /** Пересчёт после нового прогона: только измерение и итог, порог и имя — от инжеста. */
-    static final String REFRESH_SQL =
-        "UPDATE QGMetric SET unit=:unit, direction=:direction, current_value=:current_value, status=:status "
-        + "WHERE metric_id=:metric_id";
+    /**
+     * Пересчёт после нового прогона: только измерение и итог, порог и имя — от инжеста. Возвращает число задетых
+     * строк ({@link WriteCount}): 0 — метрику удалили между чтением и записью, вызывающий пишет промах в журнал,
+     * а не считает пересчёт сделанным.
+     */
+    static long refresh(java.util.function.BiFunction<String, Map<String, Object>, Object> exec, String metricId, Fields f) {
+        Object r = exec.apply("UPDATE QGMetric SET unit=:unit, direction=:direction, current_value=:current_value, status=:status "
+            + "WHERE metric_id=:metric_id", params(metricId, null, null, f));
+        return WriteCount.of(r);
+    }
 
     /**
      * Дата последнего прогона гейта. Отдельным запросом, а не подзапросом в WHERE: в ArcadeDB
