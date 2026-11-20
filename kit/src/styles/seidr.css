@@ -5961,6 +5961,12 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-views .sk-btn:disabled { opacity: .5; cursor: not-allowed; }
 .sk-views__remove { color: var(--dng); }
 .sk-views__hint { color: var(--t3); font-size: var(--fs-sm); }
+/* Поделиться видом и флажки умолчания (20.11.2026): ссылка на вид — поле только для чтения, на узком экране
+   во всю ширину; флажок — с целью касания от --tap. */
+.sk-views__check { min-height: max(var(--tap), 22px); color: var(--t2); font-size: var(--fs-sm); cursor: pointer; }
+.sk-views__check input { accent-color: var(--acc); }
+.sk-views__share { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.sk-views__share .sk-views__input { width: min(360px, 100%); max-width: 100%; }
 /* ═══════════ S4-12: цели касания ≥ 44px у оболочки и списков ═══════════
    SPRINT_UXR_S4_UI_SHELL_LISTS/S4-12. Гейт — web-next/src/a11y/: у каждого
    интерактивного элемента оболочки и списков есть правило с высотой от --tap.

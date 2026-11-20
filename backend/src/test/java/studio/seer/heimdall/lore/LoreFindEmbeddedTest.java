@@ -370,6 +370,49 @@ class LoreFindEmbeddedTest {
         assertFalse(ids(a).isEmpty());
     }
 
+    // ── историчные связи (edge_history): закрытое ребро — не «текущее» ───────
+
+    /** A-1: фаза PH-OLD закрыта (valid_to), PH-NEW открыта; SP_A: веха M-OLD снята, открытой нет. */
+    private void historicEdges() {
+        db.transaction(() -> {
+            cmd("INSERT INTO KnowPhase SET phase_uid = 'PH-OLD'");
+            cmd("INSERT INTO KnowPhase SET phase_uid = 'PH-NEW'");
+            cmd("INSERT INTO KnowMilestone SET milestone_id = 'M-OLD', label = 'старая веха'");
+            db.command("sql", "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = 'SP_A/A-1') TO "
+                + "(SELECT FROM KnowPhase WHERE phase_uid = 'PH-OLD') SET valid_from = '2026-11-01', valid_to = '2026-11-10'");
+            db.command("sql", "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = 'SP_A/A-1') TO "
+                + "(SELECT FROM KnowPhase WHERE phase_uid = 'PH-NEW') SET valid_from = '2026-11-10'");
+            db.command("sql", "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = 'SP_A/A-2') TO "
+                + "(SELECT FROM KnowPhase WHERE phase_uid = 'PH-OLD') SET valid_from = '2026-11-01', valid_to = '2026-11-10'");
+            db.command("sql", "CREATE EDGE TARGETS_MILESTONE FROM (SELECT FROM KnowSprint WHERE sprint_id = 'SP_A') TO "
+                + "(SELECT FROM KnowMilestone WHERE milestone_id = 'M-OLD') SET valid_from = '2026-11-01', valid_to = '2026-11-05'");
+        });
+    }
+
+    @Test
+    void closedHistoricEdgeIsNotCurrentInProjection() {
+        historicEdges();
+        Map<String, Object> res = find(req("type", "task", "id_in", List.of("SP_A/A-1", "SP_A/A-2"),
+            "fields", List.of("phase_uid")));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) res.get("rows");
+        assertEquals("PH-NEW", rows.get(0).get("phase_uid"), "фаза — по открытому ребру IN_PHASE");
+        assertEquals(null, rows.get(1).get("phase_uid"), "закрытое ребро IN_PHASE — фазы сейчас нет");
+    }
+
+    @Test
+    void closedHistoricEdgeDoesNotLink() {
+        historicEdges();
+        Map<String, Object> linked = find(req("type", "task",
+            "links_to", req("id", "milestone:M-OLD", "rels", List.of("PART_OF", "TARGETS_MILESTONE"), "depth", 2, "dir", "out")));
+        assertTrue(ids(linked).isEmpty(), "веха снята со спринта — задачи с ней не связаны: " + ids(linked));
+        Map<String, Object> inOld = find(req("type", "task",
+            "links_to", req("id", "phase:PH-OLD", "rels", List.of("IN_PHASE"), "dir", "out")));
+        assertTrue(ids(inOld).isEmpty(), "из фазы PH-OLD все задачи ушли: " + ids(inOld));
+        Map<String, Object> unlinked = find(req("type", "sprint", "not_linked", req("rels", List.of("TARGETS_MILESTONE"))));
+        assertTrue(ids(unlinked).contains("SP_A"), "закрытое ребро — связи нет: " + ids(unlinked));
+    }
+
     // ── граф и путь на настоящей базе ────────────────────────────────────────
 
     @Test
