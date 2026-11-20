@@ -64,3 +64,18 @@ test('палитра установщика — фирменная Amber Forest 
     assert.equal(tok(uiDark, k), tok(kitDark, k), 'тёмная --' + k);
   }
 });
+
+// 20.11.2026, Playwright-проход мастера на ryzenai: «Зв» и «Ж» есть в меню, но по адресу #step-d / #step-w
+// открывался «Старт» — stepFromHash не знал этих шагов (перезагрузка и прямая ссылка уводили на первый экран).
+// Правило: каждый шаг меню открывается своим адресом.
+test('каждый шаг меню открывается по своему адресу #step-<x>', async () => {
+  const { pageHtml } = await import('./ui.mjs');
+  const html = pageHtml();
+  const steps = [...html.matchAll(/data-step="([a-z0-9]+)"/g)].map(m => m[1]);
+  assert.ok(steps.length >= 14, 'шаги меню найдены: ' + steps.join(','));
+  const src = /function stepFromHash\(\)\{var m=(\/.*?\/)\.exec/.exec(html);
+  assert.ok(src, 'stepFromHash найден в странице');
+  const re = new Function('return ' + src[1])();
+  const lost = steps.filter(s => !re.test('#step-' + s));
+  assert.deepEqual(lost, [], 'шаги, которые по адресу открывают «Старт»');
+});
