@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "cb4b58a87b85557e",
+  "version" : "04dce86a561d1a7a",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -8560,10 +8560,11 @@
         "key" : "kind",
         "label" : "Вид",
         "label_key" : "pp.field.kind",
-        "kind" : "text",
+        "kind" : "enum",
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "multi" : true,
         "label_en" : "Kind",
         "short_label_en" : null,
         "definition_en" : null,
@@ -8573,7 +8574,7 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : null,
+        "definition" : "Вид продукта — набор: tech (ИТ, технологический), service (не ИТ, сервисно-организационный) или оба; пустым не бывает (ADR-LORE-044).",
         "description" : null,
         "layer" : null,
         "historic" : false,
@@ -8582,8 +8583,8 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
+          "priority" : 2,
+          "width" : "s",
           "overflow" : "ellipsis"
         },
         "property" : null,
@@ -14318,7 +14319,7 @@
   },
   "field_texts" : {
     "fields" : 211,
-    "without_definition" : 10,
+    "without_definition" : 9,
     "without_label_en" : 0,
     "without_label_pl" : 0,
     "without_definition_en" : 210

@@ -767,9 +767,10 @@
       "icon": "string?",
       "is_active": "boolean?",
       "is_extensible": "boolean?",
-      "kind": "enum(service|tech)?",
+      "kind": "string | string[]?",
       "label_en": "string?",
       "label_ru": "string?",
+      "reason": "string?",
       "sort_order": "number?"
     },
     "output": {

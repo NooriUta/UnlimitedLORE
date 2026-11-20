@@ -2497,14 +2497,19 @@ export function registerLoreWrite(rawServer: McpServer): void {
       sort_order:    z.number().int().optional().describe('display order within the domain'),
       is_active:     z.boolean().optional().describe('soft-delete flag; default true'),
       is_extensible: z.boolean().optional().describe('true = admins may add values via UI; default false'),
-      kind:          z.enum(['tech', 'service']).optional().describe('only dict_type="product": tech = technology product (has a git repo), service = service/organisational product (no git required). D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE; other dictionaries refuse kind with 400'),
+      kind:          z.union([z.string(), z.array(z.string()).min(1)]).optional().describe('entry kind — only for dictionaries that have kinds; others refuse it with 400. ' +
+        'dict_type="product": a SET (ADR-LORE-044) — ["tech"], ["service"] or ["tech","service"]; tech = technology product (has a git repo), ' +
+        'service = service/organisational product (no git required); an empty set is refused, a plain string is read as a set of one. ' +
+        'dict_type="qg_type": ONE string, "universal" or "project". Changing the kind of an existing entry requires reason'),
+      reason:        z.string().max(500).optional().describe('why this edit is made — one sentence; stored on the new history version (change_reason). ' +
+        'REQUIRED when the kind of an existing entry changes (400 otherwise); optional for other edits'),
       human_approval: z.string().max(300).optional().describe('WHO approved and WHERE, e.g. "omiloreadmin: minilore channel 09.11". Dictionaries are human-only; the full profile may write only with a named human approval (owner decision 09.11.2026). Logged on the server.'),
     },
     headers: ({ human_approval }) =>
       human_approval && human_approval.trim() ? { 'X-Lore-Human-Approval': encodeURIComponent(human_approval.trim()) } : undefined,
     path: '/lore/dict/entry',
-    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind }) =>
-      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind }),
+    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind, reason }) =>
+      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind, reason }),
   });
 
   server.tool(

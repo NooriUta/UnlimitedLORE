@@ -662,9 +662,13 @@ export function productRecord(row: Row): KitRecord {
       children: list(row.sub_products),
       components: list(row.components),
       project: list(row.git_projects),
+      // WK-01: вид продукта — набор tech | service (ADR-LORE-044); прежняя строка — набор из одного.
+      product_kind: kindSet(row.kind),
     },
   };
 }
+
+const kindSet = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).filter(Boolean) : typeof v === 'string' && v ? [v] : []);
 
 /** Строка среза pains → запись kit: чья боль, сколько сценариев её заявляют и сколько снимают. */
 export function painRecord(row: Row): KitRecord {

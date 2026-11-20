@@ -14,8 +14,9 @@ test('правило поля: служебные — как есть; стат�
 });
 
 test('правило поля: компонент, проект и ссылки строкой — ждут шага связей; hist_for и status_category не переносятся', () => {
-  for (const f of ['component_id', 'project', 'git_project', 'adr_refs', 'sprint_refs', 'pr_refs']) {
-    const e = ruleFor('KnowDecision', f);
+  // MDL-08 ч.2: ссылки решения (adr/sprint/pr/release_refs) — не «удержать», а пересадка на связи (decision-refs.test.mjs)
+  for (const [T, f] of [['KnowDecision', 'component_id'], ['KnowDecision', 'project'], ['KnowDecision', 'git_project'], ['KnowSprint', 'pr_refs'], ['KnowSpec', 'adr_refs']]) {
+    const e = ruleFor(T, f);
     assert.equal(e.rule, 'open', f + ': удерживается, пока связь не построена');
     assert.match(e.question, /связ/);
   }
@@ -43,7 +44,8 @@ test('карта по переписи: каждое поле каждого п�
   const m = proposeMap(census);
   assert.deepEqual(Object.keys(m.types), ['KnowADRHist']);
   // + служебные поля правки у каждого типа версий (снимок 18.11.2026: без правила перенос терял их как «вне карты»)
-  assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'changed_by_session', 'hist_for', 'status_raw', 'valid_from']);
+  // + причина правки (WK-01, 20.11.2026) — тоже служебное поле версии
+  assert.deepEqual(Object.keys(m.types.KnowADRHist).sort(), ['change_reason', 'changed_by_harness', 'changed_by_harness_note', 'changed_by_machine', 'changed_by_session', 'hist_for', 'status_raw', 'valid_from']);
   // + снятые V89 легаси-словари — всегда, даже если перепись их не видела (MD-02)
   assert.deepEqual(Object.keys(m.skipped), ['PlanTrack', ...RETIRED_V89].sort());
   assert.equal(JSON.stringify(proposeMap(census)), JSON.stringify(m));

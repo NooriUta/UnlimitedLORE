@@ -19,6 +19,7 @@ import { carriesFreeFields, edgeFreeFieldsDdl, stampFreeFields, freeFieldsLoss }
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
+import { readDecisionRefsInput, planDecisionRefs, applyDecisionRefs } from './decision-refs.mjs';
 import { readTrackInput, planTracks, applyTracks } from './tracks.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
@@ -161,6 +162,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   report.question_owner = await applyQuestionOwners(db, planQuestionOwners(qoIn), { log, at,
     moments: new Map(qoIn.questions.map(x => [x.rid, [x.updated_at, x.opened_date]])) });
   if (!report.question_owner.ok) ok = false;
+  // ссылки решения строкой → связи REFERENCES (MDL-08 ч.2, владелица 20.11.2026: «refs … пересадить на связи но с проверкой
+  // дублей и с проверкой что оставшийся функционал перешёл на связи»): связь | дубль | остаток; сверка паспорта по связям
+  report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid }), { log });
+  if (!report.decision_refs.ok) ok = false;
   // трек спринта (MDL-13, владелица 20.11.2026 «треки б»): треки доски → вершины KnowTrack, track_id открытой версии →
   // ребро ON_TRACK, каждое значение track_id — в остаток с причиной; сверка «спринтов с треком = рёбер»
   report.tracks = await applyTracks(db, planTracks({ ...(await readTrackInput(db)), at }), { log });

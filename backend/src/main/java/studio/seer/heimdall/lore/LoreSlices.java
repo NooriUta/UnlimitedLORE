@@ -703,7 +703,13 @@ public final class LoreSlices {
             // но не в карточке одного решения.
             "SELECT decision_id, title, date_created, status_raw, " +
             "body_md, rationale_md, refs_raw, " +
-            "adr_refs, sprint_refs, pr_refs, release_refs, " +
+            // MDL-08 ч.2 (владелица 20.11.2026: «refs … пересадить на связи»): ссылки — по связям, а не полями-строками.
+            // ADR — родитель (DECIDED_IN) и упомянутые (REFERENCES); спринты, PR, релизы — REFERENCES. Выражения те же,
+            // что исполняет сверка переноса (scripts/model-migration/rules/decision-refs.json; сторож DecisionRefsPassportTest).
+            "unionall(out('DECIDED_IN').adr_id, out('REFERENCES')[@this INSTANCEOF 'KnowADR'].adr_id) AS adr_refs, " +
+            "out('REFERENCES')[@this INSTANCEOF 'KnowSprint'].sprint_id AS sprint_refs, " +
+            "out('REFERENCES')[@this INSTANCEOF 'KnowPR'].pr_uid AS pr_refs, " +
+            "out('REFERENCES')[@this INSTANCEOF 'KnowRelease'].release_id AS release_refs, " +
             // Проект и компоненты в карточке. Их не было ни здесь, ни в
             // списочном срезе после его обрезки — то есть принадлежность
             // решения проекту НЕ ЧИТАЛАСЬ ничем: записать можно, проверить
@@ -1897,7 +1903,7 @@ public final class LoreSlices {
         // Kit 09.11: паспорт релиза (только чтение). Ключ — release_uid («проект#тег»):
         // release_id один и тот же в разных проектах.
         slice("release_by_id",
-            "SELECT release_id, release_uid, git_tag, version, week, type, " +
+            "SELECT release_id, release_uid, git_tag, git_tag AS version, week, type, " +
             "release_date, is_current, description_md, git_project, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
@@ -2022,7 +2028,7 @@ public final class LoreSlices {
             "      AND content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$d = (SELECT 'doc' AS type, doc_id AS ref_id, title FROM KnowDoc " +
             "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
-            "      OR content_md ILIKE ('%' + :pattern + '%') OR content_md_en ILIKE ('%' + :pattern + '%') " +
+            "      OR content_md_en ILIKE ('%' + :pattern + '%') " +
             "      OR content_md_ru ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
             "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
@@ -2226,7 +2232,7 @@ public final class LoreSlices {
             List.of("project"), Map.of(), " ORDER BY adr_id");
         // Ключ паспорта релиза — release_uid «проект#тег»; свежие сверху, как у releases.
         slice("project_releases",
-            "SELECT release_uid, release_id, version, git_tag, release_date " +
+            "SELECT release_uid, release_id, git_tag AS version, git_tag, release_date " +
             "FROM KnowRelease WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project",
             List.of("project"), Map.of(), " ORDER BY release_date DESC, release_uid DESC");
         // Люди — по назначению роли (HAS_PROJECT_ROLE, AL-82: источник истины о правах — граф),
@@ -2849,7 +2855,8 @@ public final class LoreSlices {
 
         // ── Releases ─────────────────────────────────────────────────────────
         slice("releases",
-            "SELECT release_id, release_uid, git_tag, version, week, type, " +
+            // MDL-08 ч.2: KnowRelease.version снят — дубль git_tag (снимок 18.11: 92 из 92 совпали); ключ ответа прежний
+            "SELECT release_id, release_uid, git_tag, git_tag AS version, week, type, " +
             changedAtSql("released_at", "release_date") + ", " +
             "release_date, is_current, description_md, git_project, " +
             // AL-96: плоское git_project и ребро BELONGS_TO_PROJECT — две правды
@@ -2893,7 +2900,8 @@ public final class LoreSlices {
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +
-            "WHERE release_refs CONTAINS :tag ORDER BY decision_id",
+            // MDL-08 ч.2: решения релиза — по связи REFERENCES решение → релиз (тег — release_id релиза)
+            "WHERE out('REFERENCES')[@this INSTANCEOF 'KnowRelease'].release_id CONTAINS :tag ORDER BY decision_id",
             List.of("tag"), Map.of(), "");
 
         // Sprints linked to a given release via IMPLEMENTED_IN_RELEASE edge.

@@ -356,6 +356,16 @@
           "of": 2157,
           "service": true,
           "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 2157,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "from_record_to_current_version": [],
@@ -582,6 +592,16 @@
           "kind": "text",
           "db_type": "STRING",
           "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
           "from": [],
           "filled": 0,
           "of": 356,
@@ -1000,6 +1020,16 @@
           ],
           "filled": 1,
           "of": 17217
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 17217,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "from_record_to_current_version": [],

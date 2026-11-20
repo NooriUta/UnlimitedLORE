@@ -36,6 +36,7 @@ export function checkChoice(c) {
   if (!['own', 'none'].includes(c.secrets)) bad.push('хранилище секретов: own или none');
   if (!['new', 'migrate'].includes(c.mode)) bad.push('режим: new (новая установка) или migrate (перенос)');
   if (!FORGEJO_MODES.includes(c.forgejo ?? 'none')) bad.push('Forgejo: install, own или none');
+  if (!LLM_MODES.includes(c.llm ?? 'none')) bad.push('LLM: none или local');
   return bad;
 }
 
@@ -56,6 +57,25 @@ export function forgejoEnv({ forgejo = 'none', url = '' } = {}) {
   }
   if (forgejo === 'none') return { COMPOSE_PROFILES: '', FORGEJO_URL: '', FORGEJO_BASE_OVERRIDE: '' };
   throw new Error('Forgejo: install, own или none');
+}
+
+// Локальная LLM — по выбору (владелица 20.11.2026: «и в инсталятор добавить описание подключения для векторного индекса
+// локальной llm и для qg»). Рантайм читает три переменные (application.properties, llm/LocalChatProvider.java): адрес машины
+// LORE_LLM_LOCAL_URL, имя модели LORE_LLM_LOCAL_MODEL, необязательный ключ LORE_LLM_LOCAL_API_KEY. Векторного индекса в
+// коде пока нет — его настроек установщик не выдумывает. Платные провайдеры не подключены (владелица, 15.11.2026).
+const LLM_MODES = ['none', 'local'];
+
+/** Что выбор LLM кладёт в .env. Без ключа: если раннер его требует, ключ вписывает владелец (LORE_LLM_LOCAL_API_KEY). */
+export function llmEnv({ llm = 'none', url = '', model = '' } = {}) {
+  if (llm !== 'local') return { LORE_LLM_LOCAL_URL: '', LORE_LLM_LOCAL_MODEL: '' };
+  let u;
+  try { u = new URL(String(url).trim()); } catch { u = null; }
+  if (!u || !/^https?:$/.test(u.protocol)) throw new Error('адрес сервера модели — http(s)://хост:порт (Ollama, llama-server, vLLM, LM Studio)');
+  // клиент LORE сам дописывает /v1/chat/completions — хвост /v1 срезаем, иначе выйдет /v1/v1
+  const clean = (u.origin + u.pathname).replace(/\/+$/, '').replace(/\/v1$/, '');
+  const m = String(model || '').trim();
+  if (!m) throw new Error('имя модели на сервере не задано: без него LORE отвечает «локальная модель не задана»');
+  return { LORE_LLM_LOCAL_URL: clean, LORE_LLM_LOCAL_MODEL: m };
 }
 
 /** Строка MCP forgejo-mcp для агента (HTTP). Ключ — ссылкой на переменную окружения, значение в настройки не пишется. */
@@ -137,6 +157,13 @@ export function planSetup(c) {
       'forgejo-mcp (AIDA/forgejo-mcp, 0.1.7, с инструментами Actions/CI) едет в пакете — профиль compose forgejo-mcp, порт FORGEJO_MCP_PORT (по умолчанию 4430).',
       'Свой токен в Forgejo (FORGEJO_MCP_TOKEN, отдельный от моста) вписывает владелец; без него forgejo-mcp не запускается, install.sh говорит об этом громко.',
       'Ключ входа агентов FORGEJO_MCP_API_KEY install.sh генерирует сам; в строку MCP агента он идёт ссылкой ${FORGEJO_MCP_API_KEY}, значение — в окружении машины.',
+    ] });
+  if (c.llm === 'local') p.push({ id: 'llm-local', title: 'Локальная LLM — гейты качества и (после 1.18) векторный индекс', links: [],
+    env: ['LORE_LLM_LOCAL_URL', 'LORE_LLM_LOCAL_MODEL', 'LORE_LLM_LOCAL_API_KEY'], howto: [
+      'Сервер модели ставится своей поставкой (Ollama, llama-server, vLLM, LM Studio): LORE ходит в него на диалекте OpenAI — POST <адрес>/v1/chat/completions.',
+      'Адрес сервера (LORE_LLM_LOCAL_URL, без хвоста /v1) и имя модели на нём (LORE_LLM_LOCAL_MODEL) впишите сюда; ключ LORE_LLM_LOCAL_API_KEY нужен, только если раннер его требует, — его вписывает владелец в .env сам.',
+      'Гейты качества зовут модель только при потолке рутины (lore.qg.routines.<имя>.max-tokens или max-usd); без потолка суждения нет — флаг budget_unset. Цена локальной модели — 0, уже задана. В этой версии ни одна рутина суждения ещё не просит: подключение готовит место.',
+      'Векторный индекс (поиск по смыслу, Qwen3-Embedding, 1024) — после 1.18: в этой версии его кода нет, настроек тоже; «похожие» ищутся полнотекстом.',
     ] });
   p.push({ id: 'agent', title: 'Подключение агентов', links: [], env: ['LORE_HARNESS', 'LORE_MACHINE_ID'], howto: [
     'На каждой машине: harness из справочника и код машины.',

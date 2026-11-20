@@ -780,12 +780,14 @@ const LIBRARIES = {
 /** Продукты: статья словаря product; родитель и подпродукты — рёбра PARENT_PRODUCT. */
 const productsSpec: SectionSpec = {
   kind: 'product', titleKey: 'lists.products.title', icon: 'bullseye',
-  fields: [['parent', 'ref'], ['children', 'ref'], ['components', 'ref'], ['project', 'ref']],
+  // WK-01: вид продукта (tech | service, набор) — колонка, фильтр и группировка списка. Ключ не «kind»:
+  // kind у записи kit — её тип (product), и колонка «kind» показала бы «Продукты».
+  fields: [['product_kind', 'text'], ['parent', 'ref'], ['children', 'ref'], ['components', 'ref'], ['project', 'ref']],
   views: ['list', 'cards'],
   quick: [['top-level', 'lists.quick.topLevel', { parent: '' }]],
-  filters: [LORE_FILTER_FIELDS.project, 'fields.parent'],
-  groupings: ['fields.parent'],
-  columns: ['id', 'title', 'parent', 'children', 'components', 'project'],
+  filters: [LORE_FILTER_FIELDS.project, 'fields.product_kind', 'fields.parent'],
+  groupings: ['fields.parent', 'fields.product_kind'],
+  columns: ['id', 'title', 'product_kind', 'parent', 'children', 'components', 'project'],
   tree: { parent: 'parent', order: 'title' },
 };
 
