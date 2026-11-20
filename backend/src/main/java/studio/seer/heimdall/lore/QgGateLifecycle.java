@@ -70,8 +70,8 @@ final class QgGateLifecycle {
         return "global".equals(scope) || ownerProjects > 0;
     }
 
-    /** Статус нового гейта: не передан — draft. */
+    /** Статус нового гейта: не передан — начальный по модели (quality_gate.status.initial). */
     static String initialStatus(String status) {
-        return CreateDefaultStatus.forNew("quality_gate", status); // первый статус справочника qg_status (16.11.2026)
+        return CreateDefaultStatus.forNew("quality_gate", status); // начальный статус по модели (16.11.2026, 19.11.2026)
     }
 }

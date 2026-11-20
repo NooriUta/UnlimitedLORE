@@ -17,6 +17,7 @@ import { AGENTS_NO_MACHINE, fetchAgents, type AgentsData } from './agents';
 import { fetchMcp, MCP_ONLY_FAILURES, type McpData } from './mcp';
 import { fetchRoleMatrix, type RolesData } from './roles';
 import { agentsWithoutMachine, mcpFailureTotal, peopleWithoutProjects, ROLES_NO_PROJECTS } from './home';
+import { BlockedBlock } from '../charts/Batch2Charts';
 import './Admin.css';
 
 export interface AdminHomeProps {
@@ -80,6 +81,8 @@ export function AdminHome({ fetchImpl }: AdminHomeProps) {
         <AttnCard id="noprojects" st={noProjects} title={t('admin.home.noProjects')} hint={t('admin.home.noProjectsHint')}
           fix={t('admin.home.noProjectsFix')} onFix={go('roles', { 'adm-roles-f': ROLES_NO_PROJECTS })} onRetry={roles.reload} />
       </div>
+      {/* №5 (графики 19.11.2026, пачка 2): блокировки во времени — растёт ли «ждём». */}
+      <div className="an-block adm-chart" data-testid="adm-home-blocked"><BlockedBlock {...(fetchImpl ? { fetchImpl } : {})} /></div>
       {/* S7B-31 п.4а: чеклист включения auth из старой вкладки «Настройки». */}
       <AuthPreflight fetchImpl={fetchImpl} />
       <h3 className="adm-access__h">{t('admin.home.start')}</h3>

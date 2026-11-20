@@ -13,23 +13,30 @@ import { CycleBlock } from './CycleBlock';
 import type { NewsSource } from '../news/feed/source';
 import { newsSource as appNewsSource } from '../news/source';
 import { AnalyticsDynamics } from './AnalyticsDynamics';
+import { BlockedBlock, DecisionFlowBlock, GatesHeatBlock, MergeToProdBlock, ReleaseRhythmBlock, WipBlock } from '../charts/Batch2Charts';
 import { burnup, lastWeeks, leadTime, throughput, velocity, type DoneRow, type TaskRow } from './analyticsModel';
 
 /** Срезы v1, из которых считаются блоки первой поставки. */
 export const ANALYTICS_SLICES = ['sprint_done_dates', 'task_created_dates', 'task_done_dates'] as const;
 const WEEKS = 12;
 
-export type BlockId = 'velocity' | 'burnup' | 'throughput' | 'lead' | 'cycle';
-type TabId = 'progress' | 'flow' | 'dynamics' | 'mine';
-const TABS: TabId[] = ['progress', 'flow', 'dynamics', 'mine'];
+export type BlockId = 'velocity' | 'burnup' | 'throughput' | 'lead' | 'cycle' | 'blocked' | 'wip' | 'rhythm' | 'ship' | 'decisions' | 'gates';
+// Пачка 2 графиков (19.11.2026): «Люди и агенты» (№3), «Релизы» (№8, №9), «Архитектура» (№11), «Качество» (№16).
+type TabId = 'progress' | 'flow' | 'dynamics' | 'people' | 'releases' | 'arch' | 'quality' | 'mine';
+const TABS: TabId[] = ['progress', 'flow', 'dynamics', 'people', 'releases', 'arch', 'quality', 'mine'];
 
 /** Какие блоки во вкладке. «Моя сводка» по умолчанию — блоки обеих вкладок. */
 export const TAB_BLOCKS: Record<Exclude<TabId, 'dynamics'>, BlockId[]> = {
   progress: ['velocity', 'burnup'],
-  flow: ['throughput', 'lead', 'cycle'],
+  flow: ['throughput', 'lead', 'cycle', 'blocked'],
+  people: ['wip'],
+  releases: ['rhythm', 'ship'],
+  arch: ['decisions'],
+  quality: ['gates'],
   mine: ['velocity', 'throughput', 'burnup', 'lead', 'cycle'],
 };
-const BLOCK_TAB: Record<BlockId, 'progress' | 'flow'> = { velocity: 'progress', burnup: 'progress', throughput: 'flow', lead: 'flow', cycle: 'flow' };
+const BLOCK_TAB: Record<BlockId, Exclude<TabId, 'mine' | 'dynamics'>> = { velocity: 'progress', burnup: 'progress', throughput: 'flow', lead: 'flow', cycle: 'flow',
+  blocked: 'flow', wip: 'people', rhythm: 'releases', ship: 'releases', decisions: 'arch', gates: 'quality' };
 const isTab = (v: string | null): v is TabId => (TABS as (string | null)[]).includes(v);
 
 export type AnalyticsLoader = (slice: string, signal: AbortSignal) => Promise<unknown>;
@@ -71,6 +78,8 @@ export function AnalyticsScreen({ load, now, news }: AnalyticsScreenProps) {
     : undefined;
   const common = { loading, ...(error ? { error, onRetry: res.reload } : {}) };
 
+  // Блоки графиков пачек 19.11 грузят свои срезы сами (с параметрами); в тестах — тот же загрузчик.
+  const b2 = useMemo(() => (load ? { load: (sl: string, _p: Record<string, string>, sg: AbortSignal) => load(sl, sg) } : {}), [load]);
   const block = (id: BlockId, showTab: boolean) => {
     const head = showTab ? <span className="an-block__src">{t(`analytics.tab.${BLOCK_TAB[id]}` as AppKey)}</span> : null;
     const body = (() => {
@@ -82,7 +91,13 @@ export function AnalyticsScreen({ load, now, news }: AnalyticsScreenProps) {
         case 'lead': return <ScatterChart {...common} title={t('analytics.lead')} source="task_created_dates · task_done_dates" unit={t('analytics.days')} xTitle={t('analytics.closed')}
           points={(calc?.lead ?? []).map(p => ({ x: p.x, y: p.y, label: p.id, id: p.id }))} />;
         // №1 (графики 19.11.2026): время цикла по версиям статуса — своя загрузка, только когда блок на экране.
-        case 'cycle': return <CycleBlock {...(load ? { load: (sl: string, _p: Record<string, string>, sg: AbortSignal) => load(sl, sg) } : {})} weeks={WEEKS} now={today} />;
+        case 'cycle': return <CycleBlock {...b2} weeks={WEEKS} now={today} />;
+        case 'blocked': return <BlockedBlock {...b2} now={today} />;
+        case 'wip': return <WipBlock {...b2} />;
+        case 'rhythm': return <ReleaseRhythmBlock {...b2} />;
+        case 'ship': return <MergeToProdBlock {...b2} />;
+        case 'decisions': return <DecisionFlowBlock {...b2} now={today} />;
+        case 'gates': return <GatesHeatBlock {...b2} now={today} />;
       }
     })();
     return <div key={id} className="an-block" data-block={id}>{head}{body}</div>;
@@ -94,7 +109,7 @@ export function AnalyticsScreen({ load, now, news }: AnalyticsScreenProps) {
         items={TABS.map(id => ({ id, label: t(`analytics.tab.${id}` as AppKey) }))} />
       {tab === 'dynamics' ? <AnalyticsDynamics source={newsSource} /> : (
         <>
-          <p className="an-lead">{t(tab === 'mine' ? 'analytics.mineLead' : 'analytics.lead12', { n: WEEKS })}</p>
+          <p className="an-lead">{t(tab === 'mine' ? 'analytics.mineLead' : tab === 'releases' ? 'charts.releasesLead' : 'analytics.lead12', { n: WEEKS })}</p>
           {calc && calc.partial.length > 0 && <p className="an-partial" role="status">{t('analytics.partial', { slices: calc.partial.join(', ') })}</p>}
           <div className="an-grid">{TAB_BLOCKS[tab].map(id => block(id, tab === 'mine'))}</div>
         </>

@@ -2,10 +2,13 @@ import { classify as classifyRules, EMPTY } from './status-unify.mjs';
 import HARNESS_RULES_FILE from './rules/status-unification.json' with { type: 'json' };
 import LORE_MODEL from '../../shared/model/lore-model.json' with { type: 'json' };
 import { notNullOfModel } from './notnull.mjs';
+import { statusSourceOf, fillEmptyStatus } from './empty-fill.mjs';
+import { RULES as STATUS_RULES } from './resources.mjs';
 const HARNESS_RULES = HARNESS_RULES_FILE.dictionaries.harness;
 // MDL-11 (ответ владелицы 19.11.2026 «5а»): обязательное по модели поле (notnull — в базе MANDATORY + NOTNULL) пустым
-// не пропускается молча, а становится несоответствием «пусто»; его закрывает решение человека (у LORE: ST-08 — версия
-// задачи без статуса → BACKLOG). Без решения запись не пишется: сторож notNullMissing в transfer.mjs.
+// не пропускается молча. Пустой статус закрывает общее правило (empty-fill.mjs, правило владелицы 19.11): вычислить →
+// выбор из файла решений → начальный статус справочника. Прочее обязательное поле без значения — несоответствие «пусто»;
+// без решения запись не пишется: сторож notNullMissing в transfer.mjs.
 const NOT_NULL = notNullOfModel(LORE_MODEL);
 // SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01 · Исполнитель карты переноса.
 //
@@ -179,7 +182,7 @@ const RENAMES = {
 };
 
 export function applyMap(T, typeMap, record, ctx = {}) {
-  const r = { out: {}, toVersion: {}, dropped: [], held: {}, rejects: [], titleFallback: null };
+  const r = { out: {}, toVersion: {}, dropped: [], held: {}, rejects: [], titleFallback: null, filled: [] };
   for (const [f, v] of Object.entries(record)) {
     if (ENGINE.test(f)) continue;
     const e = typeMap[f];
@@ -207,8 +210,16 @@ export function applyMap(T, typeMap, record, ctx = {}) {
     }
     throw new Error(`${k}: неизвестное правило «${e.rule}»`);
   }
+  // Правило владелицы 19.11.2026: пустой статус — начальный (empty-fill.mjs). Значение было, но не свелось, —
+  // это не «пусто», а несоответствие «вне справочника», его правило не трогает. deferEmpty — перенос сначала
+  // вычисляет из данных (computeEmptyStatuses после сведения версий), поэтому здесь только помечает.
+  const src = statusSourceOf(T, typeMap, ctx.statusRulesAll || STATUS_RULES);
+  if (src && !given(r.out.status) && !Object.keys(typeMap).some(f => (typeMap[f].to || f) === 'status' && typeMap[f].rule !== 'drop' && given(record[f]))) {
+    if (ctx.deferEmpty) r.emptyStatus = src;
+    else fillEmptyStatus(T, r, { ...ctx, statusRules: ctx.statusRules || (ctx.statusRulesAll || STATUS_RULES).dictionaries[src.dict], source: src });
+  }
   for (const to of NOT_NULL[T] || []) {
-    if (given(r.out[to])) continue;
+    if (given(r.out[to]) || (to === 'status' && r.emptyStatus)) continue;
     const src = Object.keys(typeMap).filter(f => (typeMap[f].to || f) === to && typeMap[f].rule !== 'drop');
     if (src.some(f => given(record[f]))) continue; // значение было, но не привелось — несоответствие уже названо
     reject(r, src[0] || to, '', EMPTY, { bucket: 'out', field: to, ...(to === 'status' ? { note: 'status_note' } : {}) });
