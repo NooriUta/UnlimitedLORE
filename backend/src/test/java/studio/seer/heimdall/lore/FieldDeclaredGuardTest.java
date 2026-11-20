@@ -72,7 +72,10 @@ class FieldDeclaredGuardTest {
     /** Колонки частей паспорта, которые считает сервер, а не читает из базы: «тип.колонка» → кто считает. */
     static final Map<String, String> COMPUTED_PART_COLUMNS = Map.of(
         "phase.status", "LoreRecordValues.phaseItem — по статусам задач фазы (done / partial)",
-        "phase.progress", "LoreRecordValues.phaseItem — «x/y» по задачам фазы");
+        "phase.progress", "LoreRecordValues.phaseItem — «x/y» по задачам фазы",
+        // метрика гейта — тип только-ребёнок (child_only), вершина QGMetric; ключи значений — LoreRecordFrom.ITEMS
+        "qg_metric.code", "LoreRecordFrom.Transform.ROW_CODE — код строки таблицы гейта из QGMetric.metric_id",
+        "qg_metric.title", "LoreRecordFrom.ITEMS qg_metric — подпись из QGMetric.name");
 
     // ── Сторожа ───────────────────────────────────────────────────────────
 

@@ -23,14 +23,14 @@ import { applyMap } from './apply-map.mjs';
 import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
 import { seriesPlan, copySeries, seriesIo } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
-import { SESSION_EDGES } from './session-model.mjs';
-import { REPO_TYPES } from './repos.mjs';
+import { EDGE_STEP_TYPES } from './step-types.mjs';
 import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
 import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
 import { structurePlan, asIsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
 import { repairVersions, addFixes } from './scd2-repair.mjs';
+import { countLegacyBefore, legacyLeftovers, legacyDrop, assertLegacyDrop, LEGACY_KIND } from './legacy.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
 const RULES_DICT_OF = Object.fromEntries(RULES.sources.filter(s => s.field === 'status_raw' || s.field === 'status').map(s => [s.type, s.dict]));
 const DICT_OF = { ...RULES_DICT_OF, KnowSprintHist: 'sprint_status', KnowTaskHist: 'task_status', KnowPhaseHist: 'phase_status' };
@@ -99,7 +99,7 @@ export function schemaIndexDdl(schema) {
 export function rejectLeftover(T, rid, x) {
   return { src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why, state: x.deferred ? 'отложено человеком' : 'ждёт решения' };
 }
-export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
+export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...EDGE_STEP_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
@@ -115,9 +115,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const statusCodes = {};
   for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
   const calc = {}; // T → [{ rid, res }]
+  // MDL-08: «было» по легаси-полям — по исходным записям, независимо от исполнителя карты (сверка с остатком на шаге 2)
+  const legacyBefore = {};
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
-    for await (const rec of db.scan(T)) calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], deferEmpty: true }) });
+    for await (const rec of db.scan(T)) countLegacyBefore(T, rec, legacyBefore), calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], deferEmpty: true }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};
@@ -237,6 +239,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
     log('2 задачи без спринта:', loose.length, '· привяжет шаг связей', st.link.length, '· дубль', st.duplicate.map(d => `${d.task_uid} = ${d.of}`).join(', ') || '—', '· без спринта по ответу', st.keep.length, st.waiting.length ? '· ЖДУТ РЕШЕНИЯ (шаг «З»): ' + st.waiting.join(', ') : '');
   }
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
+    leftovers.push(...legacyLeftovers(T, rid, res));
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
     for (const x of res.rejects) leftovers.push(rejectLeftover(T, rid, x));
   }
@@ -244,6 +247,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   report.stages.scd2_repair = scd2Fixes;
   log('2 история SCD2:', JSON.stringify(scd2Fixes));
   log('2 сведение:', JSON.stringify(merge), '· остаток', leftovers.length);
+  // MDL-08 · объявление убыли: снятое легаси-поле — в остатке столько же раз, сколько записей источника его несли;
+  // расхождение — стоп до первой записи в приёмник (значение потерялось бы молча)
+  report.legacy_drop = legacyDrop(legacyBefore, leftovers);
+  log('2 легаси MDL-08: было', report.legacy_drop.total.before, '· в остаток', report.legacy_drop.total.leftover, '·', Object.entries(report.legacy_drop.fields).filter(([, e]) => e.before).map(([k, e]) => k + ' ' + e.before).join(', '));
+  assertLegacyDrop(report.legacy_drop);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
   // MDL-11: обязательное поле пусто — запись не начинается (пустой статус закрыт правилом выше; сторож — на прочие обязательные поля)
@@ -363,12 +371,17 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   }
   verify.links = { expected: links.length, target: (await db.dstQuery(`SELECT count(*) AS n FROM ${EDGE}`))[0].n };
   verify.leftovers = { expected: leftovers.length, target: (await db.dstQuery('SELECT count(*) AS n FROM MigLeftover'))[0].n };
-  verify.ok = Object.values(verify.counts).every(c => c.source === c.target) && Object.values(verify.mismatched_records).every(b => b === 0) && verify.links.expected === verify.links.target && verify.leftovers.expected === verify.leftovers.target && Object.keys(undeclared).length === 0;
+  // MDL-08: остаток легаси в приёмнике — поле в поле с объявлением убыли
+  const legacyRows = await db.dstQuery(`SELECT src_type, field FROM MigLeftover WHERE kind = '${LEGACY_KIND}'`);
+  const legacyGot = {}; for (const x of legacyRows) legacyGot[x.src_type + '.' + x.field] = (legacyGot[x.src_type + '.' + x.field] || 0) + 1;
+  const legacyBad = Object.entries(report.legacy_drop.fields).filter(([k, e]) => (legacyGot[k] || 0) !== e.leftover).map(([k]) => k);
+  verify.legacy_drop = { expected: report.legacy_drop.total.leftover, target: legacyRows.length, mismatched: legacyBad, ok: legacyBad.length === 0 && legacyRows.length === report.legacy_drop.total.leftover };
+  verify.ok = verify.legacy_drop.ok && Object.values(verify.counts).every(c => c.source === c.target) && Object.values(verify.mismatched_records).every(b => b === 0) && verify.links.expected === verify.links.target && verify.leftovers.expected === verify.leftovers.target && Object.keys(undeclared).length === 0;
   // справочники с подписями на всех языках правил (правило переноса 16.11.2026) — частью сверки
   report.stages.dicts = await writeDictionaries(db, RULES, DECISIONS, { log });
   if (!report.stages.dicts.ok) verify.ok = false;
   report.stages.verify = verify;
-  log('5 сверка:', JSON.stringify({ ok: verify.ok, counts: verify.counts, mismatched: verify.mismatched_records, links: verify.links, leftovers: verify.leftovers }));
+  log('5 сверка:', JSON.stringify({ ok: verify.ok, counts: verify.counts, mismatched: verify.mismatched_records, links: verify.links, leftovers: verify.leftovers, legacy_drop: verify.legacy_drop }));
   if (verify.samples.length) log('  расхождения (образцы):', JSON.stringify(verify.samples, null, 1).slice(0, 1500));
   return report;
 }

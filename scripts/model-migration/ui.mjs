@@ -15,7 +15,7 @@ import path from 'node:path';
 import { buildReport } from './report.mjs';
 import crypto from 'node:crypto';
 import { kcConfig, pkce, authUrl, exchange, tokenClaims, ownerInDb, verdict } from './auth.mjs';
-import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml, volvaEmbedEnv } from './setup.mjs';
+import { COMPONENTS, planSetup, mcpEntry, applyMcpEntry, installEnvText, installArgs, volvaKeys, linkConfigToml, volvaEmbedEnv, forgejoEnv } from './setup.mjs';
 import { INSTALL_BUNDLE, DECISION_MILESTONES } from './resources.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
@@ -118,6 +118,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <div><b>Что ставим</b></div><div id="scomp"></div>
 <div style="margin-top:6px"><b>Keycloak</b> <label><input type="radio" name="kc" value="own" checked> есть свой</label> <label><input type="radio" name="kc" value="none"> нет — скачать и настроить</label></div>
 <div><b>Хранилище секретов</b> <label><input type="radio" name="secrets" value="own" checked> есть своё</label> <label><input type="radio" name="secrets" value="none"> нет — скачать и настроить</label></div>
+<div><b>Forgejo</b> <label><input type="radio" name="forgejo" value="none" checked> без Forgejo</label> <label><input type="radio" name="forgejo" value="install"> поставить Forgejo нашей версии</label> <label><input type="radio" name="forgejo" value="own"> есть свой — указать адрес</label></div>
 <div><b>Режим</b> <label><input type="radio" name="mode" value="new" checked> новая установка</label> <label><input type="radio" name="mode" value="migrate"> перенос на новую модель</label></div>
 </form></div>
 <div id="splan"></div>
@@ -130,6 +131,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Адрес веба LORE</td><td><input name="web" size="40" placeholder="https://lore.example.org"></td></tr>
 <tr><td>Администратор Keycloak (новая установка)</td><td><input name="kcAdmin" size="16" autocomplete="off" placeholder="admin"> <input name="kcPassword" type="password" size="16" autocomplete="new-password" placeholder="пароль — не сохраняется"></td></tr>
 <tr><td>Адрес Völva</td><td><input name="volva" size="40" placeholder="если Völva выбрана"></td></tr>
+<tr><td>Адрес своего Forgejo</td><td><input name="forgejoUrl" size="40" placeholder="если выбран свой Forgejo"></td></tr>
 <tr><td>Адрес сервера miniLORE</td><td><input name="minilore" size="40" placeholder="если miniLORE выбран"></td></tr></table>
 <div class="top"><button type="button" class="btn" id="ienv">Собрать .env</button><button type="button" class="btn" id="iplan">План установки</button><button type="button" class="btn" id="ivolva">Ключи Völva</button><button type="button" class="btn" id="ilink">Файл для link</button><button type="button" class="btn" id="ikcplan">План области Keycloak</button><button type="button" class="btn" id="ikcapply">Завести область</button></div>
 <pre class="mono" id="iout" style="white-space:pre-wrap;max-height:360px;overflow:auto"></pre><div id="ires" class="sub"></div></form></div>
@@ -298,7 +300,7 @@ function save(map){fetch('api/regroup',{method:'POST',headers:{'Content-Type':'a
 el.querySelectorAll('[data-save]').forEach(function(b){b.onclick=function(){var i=el.querySelector('input[data-from="'+b.dataset.save+'"]');var m={};m[b.dataset.save]=i.value;save(m)}});
 document.getElementById('rgall').onclick=function(){var m={};el.querySelectorAll('input[data-from]').forEach(function(i){m[i.dataset.from]=i.value});save(m)}}).catch(function(e){el.className='state stop';el.textContent='не смогли прочитать проекты: '+e.message})}
 window.addEventListener('hashchange',function(){step(stepFromHash())});
-function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
+function sform(){var f=document.getElementById('sf'),o={components:[]};f.querySelectorAll('input[name=comp]:checked').forEach(function(x){o.components.push(x.value)});['kc','secrets','forgejo','mode'].forEach(function(k){var x=f.querySelector('input[name='+k+']:checked');o[k]=x&&x.value});return o}
 function splan(){fetch('api/setup/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sform())}).then(function(r){return r.json()}).then(function(d){var el=document.getElementById('splan');if(d.error){el.innerHTML='<div class="state stop">'+esc(d.error)+'</div>';return}
 el.innerHTML='<h3>План</h3><ol>'+d.plan.map(function(p){return '<li><b>'+esc(p.title)+'</b><ul>'+p.howto.map(function(h){return '<li>'+esc(h)+'</li>'}).join('')+'</ul>'+(p.links.length?'<div class="sub">'+p.links.map(function(l){return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.title)+'</a>'}).join(' · ')+'</div>':'')+(p.env.length?'<div class="sub mono">'+p.env.map(esc).join(' · ')+'</div>':'')+'</li>'}).join('')+'</ol>'})}
 fetch('api/setup/defaults').then(function(r){return r.json()}).then(function(d){document.getElementById('scomp').innerHTML=d.components.map(function(c){return '<label style="display:block"><input type="checkbox" name="comp" value="'+esc(c.id)+'"'+(c.required?' checked disabled':'')+'> <b>'+esc(c.name)+'</b> <span class="sub">'+esc(c.about)+'</span></label>'}).join('');
@@ -489,10 +491,13 @@ export async function serve({ port = 2499 } = {}) {
             LORE_VERSION: b.version || '', LORE_HTTP_PORT: String(b.port || 4400), LORE_AUTH_ENABLED: auth, LORE_OIDC_ISSUER: b.issuer || '',
             LORE_OIDC_ORIGIN: b.issuer ? new URL(b.issuer).origin : '',
             // встройка Völva: издатель — origin веба LORE (EMB-L6); без адреса веба — только адреса Völva, ES256 не включится
+            // Forgejo (20.11.2026): профили compose и адреса; токены сюда не идут — их вписывает владелец
+            ...forgejoEnv({ forgejo: ch.forgejo || 'none', url: b.forgejoUrl || '' }),
             ...((ch.components || []).includes('volva') && b.volva ? (b.web ? volvaEmbedEnv({ web: b.web, volva: b.volva }).lore : { LORE_VOLVA_ORIGIN: new URL(b.volva).origin, LORE_VOLVA_EMBED_SITE_URL: b.volva }) : {}),
           });
           const volvaSide = (ch.components || []).includes('volva') && b.volva && b.web ? volvaEmbedEnv({ web: b.web, volva: b.volva }).volva : null;
           if (req.url === '/api/setup/env') return json(res, 200, { text: env(), note: 'пароли останутся CHANGE_ME — install.sh сгенерирует их сам; вход ' + (auth === 'true' ? 'через Keycloak' : 'выключен')
+            + (ch.forgejo === 'install' || ch.forgejo === 'own' ? '. Forgejo: токены FORGEJO_API_TOKEN (мост LORE) и FORGEJO_MCP_TOKEN (forgejo-mcp) впишите в .env сами; ключ FORGEJO_MCP_API_KEY сгенерирует install.sh' : '')
             + (volvaSide ? '. На стороне Völva: MB_EMBEDDING_JWT_ISSUERS=' + volvaSide.MB_EMBEDDING_JWT_ISSUERS + ', ключи — ' + volvaSide.jwks : (ch.components || []).includes('volva') ? '. Издатель Völva не задан — впишите «Адрес веба LORE», иначе подпись останется временной HS256' : '') });
           if (req.url === '/api/setup/install-plan') {
             const args = installArgs({ dir: b.dir, version: b.version, port: b.port, dry: true });

@@ -9,5 +9,5 @@ umask 077
 R="env -i PATH=/usr/bin:/bin ./lore-migrate"
 $R connect --env access.env --create-dst > connect.txt 2>&1; echo "connect exit=$?"; grep -E '"exists"|"created"|отказ' connect.txt
 $R transfer --env access.env --decisions $B/decisions.lore.json --out transfer.json > transfer.txt 2>&1; echo "transfer exit=$?"; tail -4 transfer.txt | cut -c1-300
-$R edges --env access.env --out edges.json > edges.txt 2>&1; echo "edges exit=$?"; tail -3 edges.txt | cut -c1-300
+$R edges --env access.env --decisions $B/decisions.lore.json --out edges.json > edges.txt 2>&1; echo "edges exit=$?"; tail -3 edges.txt | cut -c1-300
 $R dst-fingerprint --env access.env --out dstfp.json > dstfp.txt 2>&1; echo "dst-fingerprint exit=$?"; cat dstfp.txt

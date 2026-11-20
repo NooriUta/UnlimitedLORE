@@ -11,6 +11,8 @@
     "search": "allow",
     "search_similar": "allow",
     "graph": "allow",
+    "graph_path": "allow",
+    "find": "allow",
     "task_*": "allow",
     "release_*": "allow",
     "tech_*": "allow",
