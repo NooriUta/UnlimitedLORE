@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import { connect } from './db.mjs';
 import { EDGES, SCHEMA, DECISION_MILESTONES, RULES } from './resources.mjs';
-import { edgePlan, edgeWrites } from './edge-plan.mjs';
+import { edgePlan, edgeWrites, schemaOnlyEdgeDdl } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
@@ -92,6 +92,12 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s, @out AS o, @in AS i FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => { got++; if (want.get(x.s) !== `${x.o}>${x.i}`) bad++; });
     report.moved[T] = { expected: list.length, target: got, wrong_ends: bad, ...(sources ? { valid_from_source: sources } : {}) };
     if (got !== list.length || bad) ok = false;
+  }
+  // MD-02 8а: пустые связи, которые пишет или читает код сервера, — вид связи без данных, свойства старой схемы
+  report.schema_only_edges = [];
+  for (const ddl of schemaOnlyEdgeDdl(EDGES, new Set(Object.keys(writes)))) {
+    await db.dstCommand(ddl);
+    const m = /^CREATE EDGE TYPE (\w+)/.exec(ddl); if (m) report.schema_only_edges.push(m[1]);
   }
   // версии: пишет этап записи; здесь — что число связей версий в приёмнике не меньше расчётного по своим типам
   const hs = triples.filter(t => t.edge === VERSION_EDGE && OWN.includes(t.from) && t.to === t.from + 'Hist').reduce((a, t) => a + t.n, 0);

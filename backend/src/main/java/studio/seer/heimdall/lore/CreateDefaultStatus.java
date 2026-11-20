@@ -1,31 +1,61 @@
 package studio.seer.heimdall.lore;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Статус по умолчанию при создании записи — первый статус справочника её типа.
+ * Статус по умолчанию при создании записи — начальный статус её типа по модели.
  *
  * <p>Слова владелицы 16.11.2026: «для спринтов и задач верно, для остальных по аналогии выбирать первый
- * статус и делать статусом по умолчанию». Задача и спринт — {@link TaskCreateStatus} (бэклог). Здесь —
- * остальные типы со статусом. Значения — первые по sort_order в справочниках прода (KnowDictEntry,
- * 16.11.2026): adr_status, decision_status, spec_status, qg_status, phase_status. Веха статуса при создании
- * не принимает (у вехи в модели нет поля статуса; status_raw версии — только из загрузки), поэтому её здесь нет.
- * Справочник поменяется — поменяется и эта таблица (сторож CreateDefaultStatusTest).
+ * статус и делать статусом по умолчанию». Правило владелицы 19.11.2026: «ставить начальный, где без статуса»,
+ * «не только в файл решений, правь бэк».
+ *
+ * <p>Единственная реализация правила в бэкенде. Значение не зашито в код: это поле {@code initial} у статуса
+ * типа в модели ({@code shared/model/lore-model.json}, копия бэкенда — {@code lore-model/lore-model.json}).
+ * Значение записано в форме хранения бэкенда. Справочник поменяется — меняется модель, а не этот класс.
+ * Выборы владелицы при переносе (ST-xx в файле решений установщика) сюда не попадают.
+ *
+ * <p>Подстановка не молчаливая: {@link #report} кладёт в ответ записи {@code defaulted: {status: {value, from}}}.
  */
 final class CreateDefaultStatus {
 
     private CreateDefaultStatus() {}
 
-    static final Map<String, String> FIRST = Map.of(
-        "adr", "DRAFT", "decision", "proposed", "spec", "proposed",
-        "quality_gate", "draft", "phase", "backlog");
+    /** Тип модели → начальный статус ({@code initial} поля {@code status}); типы и дочерние типы модели. */
+    static final Map<String, String> FIRST = fromModel(LoreModelFile.content());
 
-    /** Названный статус — как есть; не назван — первый статус справочника типа. */
-    static String forNew(String type, String given) {
-        if (given != null && !given.isBlank()) return given;
+    static Map<String, String> fromModel(LoreModelFile.Content c) {
+        Map<String, String> m = new LinkedHashMap<>();
+        for (Map<String, LoreRecordRegistry.TypeDef> defs : java.util.List.of(c.typeDefs(), c.childOnly()))
+            for (Map.Entry<String, LoreRecordRegistry.TypeDef> e : defs.entrySet())
+                for (LoreRecordRegistry.Field f : e.getValue().fields())
+                    if ("status".equals(f.key()) && f.initial() != null && !f.initial().isBlank()) m.putIfAbsent(e.getKey(), f.initial());
+        return Collections.unmodifiableMap(m);
+    }
+
+    /** Итог выбора статуса: значение, подставлено ли оно и откуда. */
+    record Pick(String value, boolean defaulted, String from) {}
+
+    /** Названный статус — как есть; не назван — начальный статус типа по модели. */
+    static Pick pick(String type, String given) {
+        if (given != null && !given.isBlank()) return new Pick(given, false, null);
         String first = FIRST.get(type);
-        if (first == null) throw new IllegalArgumentException("у типа «" + type + "» нет статуса по умолчанию");
-        return first;
+        if (first == null) throw new IllegalArgumentException("у типа «" + type + "» в модели нет начального статуса (status.initial)");
+        return new Pick(first, true, "модель: " + type + ".status.initial");
+    }
+
+    /** Названный статус — как есть; не назван — начальный статус типа по модели. */
+    static String forNew(String type, String given) {
+        return pick(type, given).value();
+    }
+
+    /** Подстановка — в ответ записи: {@code defaulted.status = {value, from}}. Названный статус ответ не меняет. */
+    static void report(Map<String, Object> out, Pick p) {
+        if (p == null || !p.defaulted()) return;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> d = (Map<String, Object>) out.computeIfAbsent("defaulted", k -> new LinkedHashMap<String, Object>());
+        d.put("status", Map.of("value", p.value(), "from", p.from()));
     }
 
     /** Строка хранения первого статуса фазы (фаза хранит статус в форме задачи). */

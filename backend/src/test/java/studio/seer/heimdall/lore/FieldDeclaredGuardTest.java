@@ -65,10 +65,9 @@ class FieldDeclaredGuardTest {
         Map.entry("decision.pr_refs", HELD_REFS),
         Map.entry("decision.release_refs", HELD_REFS),
         Map.entry("release_decisions.release_refs", HELD_REFS + "; фильтр решений релиза до перевода на ребро"),
+        // qg_metrics.threshold снято: QGMetric в 1.18 — тип «только схема» со свойством threshold (MD-02 8а, 19.11.2026)
         Map.entry("history_sprint.pr_refs", "KnowSprintHist.pr_refs — смешанные типы значений, канон не выбран (MDL-03 придержал); "
-            + "в переносе 1.18 — связи с PR (MIG-01)"),
-        Map.entry("qg_metrics.threshold", "QGMetric — тип вне модели, записей в проде 0; пишет только разбор md гейтов (LAL-28), "
-            + "читает таблица метрик v1"));
+            + "в переносе 1.18 — связи с PR (MIG-01)"));
 
     /** Колонки частей паспорта, которые считает сервер, а не читает из базы: «тип.колонка» → кто считает. */
     static final Map<String, String> COMPUTED_PART_COLUMNS = Map.of(

@@ -154,10 +154,12 @@ public class LoreProductResource extends LoreResourceBase {
             StringBuilder sql = new StringBuilder("UPDATE KnowUseCase SET uc_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("id", req.feature_id());
+            final CreateDefaultStatus.Pick statusPick = ucStatusPick(req.feature_id(), req.status());
+            final String status = statusPick != null ? statusPick.value() : req.status();
             if (req.title() != null)        { sql.append(", title=:t");        p.put("t", req.title()); }
             if (req.body_md() != null)      { sql.append(", body_md=:b");      p.put("b", req.body_md()); }
             if (req.context_md() != null)   { sql.append(", context_md=:cx");  p.put("cx", req.context_md()); } // D13
-            if (req.status() != null)       { sql.append(", status=:s");       p.put("s", req.status()); }
+            if (status != null)             { sql.append(", status=:s");       p.put("s", status); }
             if (req.component_id() != null) { sql.append(", component_id=:c"); p.put("c", req.component_id()); }
             // Уровень обязателен по существу: слайс «Фичи» отбирает корни именно
             // по goal_level, и корень без него был бы невидим в своём же разделе.
@@ -179,11 +181,25 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("feature_id", req.feature_id());
             linkComponentEdge("KnowUseCase", "uc_id", req.feature_id(), req.component_id(), out);
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /**
+     * Правило владелицы 19.11.2026: фича/сценарий без статуса (новый или со статусом null) получает начальный
+     * статус типа по модели (feature.status.initial). Статус уже есть — null: подстановки нет.
+     */
+    @SuppressWarnings("unchecked")
+    private CreateDefaultStatus.Pick ucStatusPick(String ucId, String given) {
+        List<Map<String, Object>> had = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+            new LoreCommandClient.LoreCommand("sql", "SELECT status FROM KnowUseCase WHERE uc_id=:id", Map.of("id", ucId)))
+            .await().indefinitely().result();
+        boolean noStatusYet = had == null || had.isEmpty() || had.get(0).get("status") == null;
+        return noStatusYet ? CreateDefaultStatus.pick("feature", given) : null;
     }
 
     // ── UseCase ──────────────────────────────────────────────────────────────
@@ -247,7 +263,9 @@ public class LoreProductResource extends LoreResourceBase {
                 sql.append(", scenario_md = ifnull(scenario_md, :sc)"); p.put("sc", scenario);
             }
             if (req.acceptance_md() != null) { sql.append(", acceptance_md=:ac"); p.put("ac", req.acceptance_md()); }
-            if (req.status() != null)        { sql.append(", status=:s");         p.put("s", req.status()); }
+            final CreateDefaultStatus.Pick statusPick = ucStatusPick(req.uc_id(), req.status());
+            final String ucStatus = statusPick != null ? statusPick.value() : req.status();
+            if (ucStatus != null)            { sql.append(", status=:s");         p.put("s", ucStatus); }
             if (req.parent_uc_id() != null)  { sql.append(", parent_uc_id=:f");   p.put("f", req.parent_uc_id()); }
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
@@ -270,6 +288,7 @@ public class LoreProductResource extends LoreResourceBase {
             // чинит оформление в той же сессии, не дожидаясь ревью.
             out.put("quality", qualityOf(req.uc_id()));
             out.put("uc_id", req.uc_id());
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             if (req.parent_uc_id() != null && !req.parent_uc_id().isBlank()) {
                 // Само-иерархия допускает цикл, которого раньше не было по
                 // построению (два разных типа). Проверяем явно: сценарий,

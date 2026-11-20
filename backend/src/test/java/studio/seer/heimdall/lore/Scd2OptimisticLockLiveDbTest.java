@@ -139,13 +139,13 @@ class Scd2OptimisticLockLiveDbTest {
     @Test
     void staleExpectedStatusIs409WithCurrentAndWritesNothing() {
         final String sid = "SPRINT_S209_EXPECTED_PROBE";
-        createSprint(sid); // 📋 PLANNED
+        createSprint(sid); // 🟣 BACKLOG — начальный статус модели (sprint.status.initial, правило владелицы 19.11.2026)
         assertEquals(200, postStatus(
-            "{\"entity_type\":\"sprint\",\"id\":\"" + sid + "\",\"status\":\"active\",\"expected\":\"planned\"}"),
+            "{\"entity_type\":\"sprint\",\"id\":\"" + sid + "\",\"status\":\"active\",\"expected\":\"backlog\"}"),
             "matching expected must pass");
 
         var resp = given().header("X-Seer-Role", "admin").contentType("application/json")
-            .body("{\"entity_type\":\"sprint\",\"id\":\"" + sid + "\",\"status\":\"done\",\"expected\":\"planned\"}")
+            .body("{\"entity_type\":\"sprint\",\"id\":\"" + sid + "\",\"status\":\"done\",\"expected\":\"backlog\"}")
             .when().post("/lore/status").then().extract();
         assertEquals(409, resp.statusCode(), "stale expected must be refused: " + resp.asString());
         assertEquals("CONFLICT", resp.jsonPath().getString("error"));

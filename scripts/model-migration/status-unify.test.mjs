@@ -63,7 +63,7 @@ const counts = [
 ];
 const NONE = { format: 'mig-decisions/1', decisions: [] };
 
-test('диалог: знакомое сведено, незнакомое и пустое обязательного поля ждут решения с вариантами', () => {
+test('диалог: знакомое сведено, незнакомое ждёт решения с вариантами; пустое — начальный статус (правило владелицы 19.11)', () => {
   const d = buildDialog(counts, RULES, NONE);
   assert.equal(d.rows.length, counts.length);
   const by = v => d.rows.find(r => r.value === v);
@@ -75,12 +75,13 @@ test('диалог: знакомое сведено, незнакомое и п�
   assert.deepEqual(hold.options.map(o => o.action), ['map_to', 'add_code', 'defer']);
   assert.ok(hold.options[0].codes.includes('WAITING'), 'привязать можно к любому коду справочника типа');
   const empty = by(null);
-  assert.equal(empty.state, 'needs_decision');
+  assert.equal(empty.state, 'defaulted', 'правило владелицы 19.11.2026: пустой статус решения не ждёт');
   assert.equal(empty.why, 'пусто');
-  assert.equal(empty.suggest, 'PROPOSED', 'предложение — статус по умолчанию справочника (у спеки — первый)');
+  assert.equal(empty.code, 'PROPOSED', 'начальный статус справочника (у спеки — первый)');
   assert.equal(by('REJECTED').state, 'needs_decision');
-  assert.equal(d.summary.needs_decision, 4);
-  assert.equal(d.summary.records_waiting, 4 + 413 + 1 + 114);
+  assert.equal(d.summary.needs_decision, 3);
+  assert.equal(d.summary.defaulted, 1);
+  assert.equal(d.summary.records_waiting, 4 + 1 + 114);
   assert.equal(d.ready, false, 'пока есть строка без решения — перенос не начинается');
 });
 

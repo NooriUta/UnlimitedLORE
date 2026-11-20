@@ -136,7 +136,10 @@ describe('RecordDock — место паспорта', () => {
     expect(container.querySelector('.sk-dock')?.getAttribute('data-placement')).toBe('bottom');
     expect(container.querySelector('.sk-dock__backdrop')?.textContent).toBe('список');
     rerender(<RecordDock placement="full" backdrop={<span>список</span>}><p>паспорт</p></RecordDock>);
-    expect(container.querySelector('.sk-dock__backdrop')).toBeNull();
+    // K4-PASSPORT-NO-LIST-RESET: фона не видно, но список не выброшен из дерева — скрыт (hidden),
+    // чтобы выход из полного экрана вернул тот же список, а не пересозданный.
+    expect(container.querySelector('.sk-dock__backdrop:not([hidden])')).toBeNull();
+    expect(container.querySelector('.sk-dock__backdrop')?.hasAttribute('hidden')).toBe(true);
     expect(screen.getByText('паспорт')).toBeTruthy();
   });
   it('full — настоящий полный экран: слой поверх страницы, выход кнопкой и Esc', async () => {
