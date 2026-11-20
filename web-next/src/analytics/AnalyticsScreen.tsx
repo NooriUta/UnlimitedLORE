@@ -9,6 +9,7 @@ import {
 } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import { appT, type AppKey } from '../i18n';
+import { CycleBlock } from './CycleBlock';
 import type { NewsSource } from '../news/feed/source';
 import { newsSource as appNewsSource } from '../news/source';
 import { AnalyticsDynamics } from './AnalyticsDynamics';
@@ -18,17 +19,17 @@ import { burnup, lastWeeks, leadTime, throughput, velocity, type DoneRow, type T
 export const ANALYTICS_SLICES = ['sprint_done_dates', 'task_created_dates', 'task_done_dates'] as const;
 const WEEKS = 12;
 
-export type BlockId = 'velocity' | 'burnup' | 'throughput' | 'lead';
+export type BlockId = 'velocity' | 'burnup' | 'throughput' | 'lead' | 'cycle';
 type TabId = 'progress' | 'flow' | 'dynamics' | 'mine';
 const TABS: TabId[] = ['progress', 'flow', 'dynamics', 'mine'];
 
 /** Какие блоки во вкладке. «Моя сводка» по умолчанию — блоки обеих вкладок. */
 export const TAB_BLOCKS: Record<Exclude<TabId, 'dynamics'>, BlockId[]> = {
   progress: ['velocity', 'burnup'],
-  flow: ['throughput', 'lead'],
-  mine: ['velocity', 'throughput', 'burnup', 'lead'],
+  flow: ['throughput', 'lead', 'cycle'],
+  mine: ['velocity', 'throughput', 'burnup', 'lead', 'cycle'],
 };
-const BLOCK_TAB: Record<BlockId, 'progress' | 'flow'> = { velocity: 'progress', burnup: 'progress', throughput: 'flow', lead: 'flow' };
+const BLOCK_TAB: Record<BlockId, 'progress' | 'flow'> = { velocity: 'progress', burnup: 'progress', throughput: 'flow', lead: 'flow', cycle: 'flow' };
 const isTab = (v: string | null): v is TabId => (TABS as (string | null)[]).includes(v);
 
 export type AnalyticsLoader = (slice: string, signal: AbortSignal) => Promise<unknown>;
@@ -80,6 +81,8 @@ export function AnalyticsScreen({ load, now, news }: AnalyticsScreenProps) {
           series={calc ? [{ key: 'scope', label: t('analytics.scope'), points: calc.burnup.scope }, { key: 'done', label: t('analytics.done'), points: calc.burnup.done }] : []} />;
         case 'lead': return <ScatterChart {...common} title={t('analytics.lead')} source="task_created_dates · task_done_dates" unit={t('analytics.days')} xTitle={t('analytics.closed')}
           points={(calc?.lead ?? []).map(p => ({ x: p.x, y: p.y, label: p.id, id: p.id }))} />;
+        // №1 (графики 19.11.2026): время цикла по версиям статуса — своя загрузка, только когда блок на экране.
+        case 'cycle': return <CycleBlock {...(load ? { load: (sl: string, _p: Record<string, string>, sg: AbortSignal) => load(sl, sg) } : {})} weeks={WEEKS} now={today} />;
       }
     })();
     return <div key={id} className="an-block" data-block={id}>{head}{body}</div>;

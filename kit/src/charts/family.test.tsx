@@ -61,6 +61,17 @@ describe('bar: ось Y от нуля', () => {
     expect(ticks[0]).toBe('0');
     expect(container.querySelectorAll('[data-bar]')).toHaveLength(2);
   });
+
+  // Графики 19.11.2026 (№14 «отказы по кодам» за 30 дней на телефоне 390): подпись под КАЖДЫМ
+  // столбиком слипалась в кашу «2122232425…». Подписи — через одну-две, как у линии; все — в «Таблицей».
+  it('много категорий — подписи прореживаются (не теснее ~40 px), столбики все', () => {
+    const data = Array.from({ length: 30 }, (_, i) => ({ category: `${String(i + 1).padStart(2, '0')}.11`, values: { a: i } }));
+    const { container } = wrap(<BarChart title="По дням" groups={[{ key: 'a', label: 'n' }]} data={data} />);
+    const labels = [...container.querySelectorAll('[data-cat]')].map(e => e.textContent);
+    expect(labels.length).toBeLessThanOrEqual(15);
+    expect(labels[0]).toBe('01.11');
+    expect(container.querySelectorAll('[data-bar]')).toHaveLength(30);
+  });
 });
 
 describe('scatter и heat', () => {

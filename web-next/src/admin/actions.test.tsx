@@ -383,8 +383,10 @@ describe('экран журнала · честные состояния', () =>
     const detail = "unknown axis 'robot' — expected one of [agent, human, unauth]";
     // 400 — только у журнала: блок отказов KC (S7B-31) читает свой источник и честно
     // показал бы СВОЙ сбой, а проверяем здесь, что 400 журнала — не «ошибка загрузки».
+    // График №13 (19.11.2026) тоже читает свой срез — его сбой был бы своим, не журнала.
     const f = vi.fn(async (url: string) => (url.startsWith('/lore/kc/denials')
       ? json({ denials: [] })
+      : url.startsWith('/lore/slice/agent_action_points') ? json({ rows: [] })
       : json({ error: 'BAD_PARAMS', detail }, 400))) as unknown as typeof fetch;
     mount(f);
     const bad = await screen.findByTestId('adm-log-badparams');

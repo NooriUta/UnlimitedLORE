@@ -17,6 +17,7 @@ import {
 } from './mcp';
 import { mcpFailureTotal } from './home';
 import { MachineCell } from './machineMark';
+import { McpFailureCodesChart } from '../charts/AgentCharts';
 import './Admin.css';
 
 export interface McpScreenProps {
@@ -128,6 +129,8 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       {/* S7B-07: «последний вызов» здесь — счётчик запросов профиля; «Агенты» показывают ещё и отметку сессий. */}
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-source-note">{t('admin.mcp.sourceNote')}</p>
       {body}
+      {/* №14 (графики 19.11.2026): отказы по кодам во времени — над отказами построчно. */}
+      <McpFailureCodesChart {...(fetchImpl ? { fetchImpl } : {})} {...(now !== undefined ? { now } : {})} />
       {data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
       {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}
       <QuickCommands />

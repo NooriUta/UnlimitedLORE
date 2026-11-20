@@ -25,6 +25,7 @@ import { fetchKcUsers } from './wizards';
 import { fetchAgents, type AgentRow } from './agents';
 import { HarnessMark, callerHarness } from './HarnessMark';
 import { MachineCell } from './machineMark';
+import { AgentActionsChart } from '../charts/AgentCharts';
 import './Admin.css';
 
 export interface ActionsScreenProps {
@@ -253,6 +254,8 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
     <section className="adm" aria-labelledby="adm-log-h">
       <h2 id="adm-log-h" className="adm-h">{t('admin.log.title')}</h2>
       <p className="adm-lead">{t('admin.log.lead')}</p>
+      {/* №13 (графики 19.11.2026): действия агентов по дням — над журналом построчно. */}
+      <AgentActionsChart {...(fetchImpl ? { fetchImpl } : {})} />
       <form className="adm-filters" onSubmit={e => { e.preventDefault(); apply(); }}>
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.log.f.caller')}</span>
