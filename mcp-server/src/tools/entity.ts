@@ -243,6 +243,14 @@ const dependsOn = (type: string, id: string, t: unknown, action: LinkAction, f: 
 const asIds = (targetId: unknown): (string | number)[] =>
   Array.isArray(targetId) ? (targetId as (string | number)[]) : targetId !== undefined ? [targetId as string | number] : [];
 
+/**
+ * SUPERTAGS-SPIKE: тег со свободными полями на ребре TAGGED_WITH — /lore/tag/apply. fields — поля тега
+ * (значение перезаписывает, null/"" снимает поле, истории нет).
+ */
+function tagApply(type: string, id: string, t: unknown, action: LinkAction, f: Record<string, unknown>): LinkResult {
+  return { path: '/lore/tag/apply', body: { type, id, tag_id: t, fields: f, action: action ?? 'add' } };
+}
+
 function bragiForsetiLink(entityType: 'publication' | 'variant', id: string, rel: string, t: unknown, action: string, f: Record<string, unknown>): LinkResult {
   const edge_type = rel === 'produced_by' ? 'PRODUCED_BY' : 'SHIPPED_IN';
   const target_type = rel === 'produced_by' ? (f.target_type ?? 'task') : 'release';
@@ -266,7 +274,9 @@ const LINK_DEFS = {
         case 'component': return { path: '/lore/adr/component', body: { adr_id: id, component_id: t, action: action ?? 'add' } };
         case 'depends_on': return { path: '/lore/adr/depends_on', body: { adr_id: id, dep_adr_id: t, action: action ?? 'add' } };
         case 'supersedes': return { path: '/lore/adr/supersedes', body: { adr_id: id, superseded_adr_id: t, action: action ?? 'add' } };
-        case 'tag': return { path: '/lore/adr/tag', body: { adr_id: id, tag_id: t, action: action ?? 'add' } };
+        // голый тег — прежний путь (паритет с adr_link); с полями — общая дверь тегов
+        case 'tag': if (Object.keys(f).length) return tagApply('adr', id, t, action, f);
+          return { path: '/lore/adr/tag', body: { adr_id: id, tag_id: t, action: action ?? 'add' } };
         case 'project': return { path: '/lore/adr/project', body: { adr_id: id, project: t, action: action ?? 'add' } };
       }
       return `unreachable: adr/${rel}`;
@@ -307,10 +317,11 @@ const LINK_DEFS = {
     },
   },
   decision: {
-    rels: ['component', 'project'],
+    rels: ['component', 'project', 'tag'],
     replaces: ['decision_link'],
-    dispatch: (id, rel, t, action): LinkResult | string => {
+    dispatch: (id, rel, t, action, f): LinkResult | string => {
       if (needTarget(t, rel)) return needTarget(t, rel)!;
+      if (rel === 'tag') return tagApply('decision', id, t, action, f);
       if (rel === 'component') return { path: '/lore/decision/component', body: { decision_id: id, component_id: t, action: action ?? 'add' } };
       return { path: '/lore/decision/project', body: { decision_id: id, project: t, action: action ?? 'add' } };
     },
@@ -640,6 +651,9 @@ export function registerEntity(server: McpServer): void {
       'project+summary_md (task file/pr), ' +
       'actor_role (uc actor), target_type (question raised_in, bragi produced_by), role+kind (product), ' +
       'mode (spec — add|remove|replace, default "replace"; action is NOT accepted for spec). ' +
+      'rel="tag" (adr, decision; SUPERTAGS): fields are the tag free fields stored on the TAGGED_WITH edge ' +
+      '(e.g. {risk:"high", due:"2026-11-27"}) — a value overwrites (no history), null or "" removes the field; ' +
+      'read them back with query_slice tag_entities {tag}. ' +
       'target_id is a single id, or an array for type=release (the old release_link/release_unlink were batch). ' +
       'type=insight is add-only (parity with insight_link). Mutates system_aida_lore.',
     {

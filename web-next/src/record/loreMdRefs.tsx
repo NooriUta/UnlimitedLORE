@@ -19,6 +19,7 @@ import { loreKindLook } from '../shell/loreKinds';
 import { LORE_ID_FORMS, loreRefsExist } from './loreRefPaste';
 import { cachedModelType, createLoreRecord, createSpecFor, warmCreateModel } from './loreRefCreate';
 import { v2Auth } from '../auth/session';
+import { loreTagSource } from '../tags/tagSource';
 
 export { typeByForm };
 
@@ -119,11 +120,16 @@ export function loreRefHref(ref: { id: string; type: string | null }): string | 
  * (её родителей): новая задача из текста спринта сразу кладётся в этот спринт.
  * blocks — живые блоки записи (S6-04): lore-query/lore-graph исполняются и в правимом поле.
  */
-export function mdEditorWithRefs(parents: Record<string, string>, blocks?: (lang: KitLang) => LiveBlocks): ComponentType<MdEditorSlotProps> {
+export function mdEditorWithRefs(parents: Record<string, string>, blocks?: (lang: KitLang) => LiveBlocks, host?: { type: string; id: string | null }): ComponentType<MdEditorSlotProps> {
   return function MdInlineEditWithRefsIn(props: MdEditorSlotProps) {
     const lang = useKitLang();
     const key = JSON.stringify(parents);
-    const refs = useMemo(() => loreMdRefs(lang, { create: { parents } }), [lang, key]); // eslint-disable-line react-hooks/exhaustive-deps
+    // SUPERTAGS-SPIKE: «#тег» с полями — запись, в теле которой пишут (ADR, решение), ставит тег себе.
+    const refs = useMemo(() => {
+      const base = loreMdRefs(lang, { create: { parents } });
+      const tags = host ? loreTagSource(host) : undefined;
+      return tags ? { ...base, tags } : base;
+    }, [lang, key, host?.type, host?.id]); // eslint-disable-line react-hooks/exhaustive-deps
     const peek = useMemo(() => loreRefPeek(lang, { enabled: appliedPeekHover() }), [lang]);
     const look = useMemo(() => loreRefLook(lang), [lang]);
     return <MdInlineEdit {...props} refs={refs} refHref={loreRefHref} refLook={look} refPeek={peek} blocks={blocks?.(lang)} />;

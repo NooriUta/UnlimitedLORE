@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "8bdd9e3d91929bce",
+  "version" : "0c2b5efb237bfd54",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -1199,38 +1199,18 @@
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "out",
-        "target_type" : "any",
+        "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : true,
-        "props" : [ {
-          "key" : "kind",
-          "label" : "Вид",
-          "dict" : "dependency_kind"
-        }, {
-          "key" : "reason",
-          "label" : "Причина"
-        } ],
-        "reason_required" : true,
-        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+        "manageable" : true
       }, {
         "key" : "blocks",
-        "label" : "От неё зависят",
+        "label" : "Блокирует",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "target_type" : "any",
+        "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : true,
-        "props" : [ {
-          "key" : "kind",
-          "label" : "Вид",
-          "dict" : "dependency_kind"
-        }, {
-          "key" : "reason",
-          "label" : "Причина"
-        } ],
-        "reason_required" : true,
-        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+        "manageable" : true
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -2370,44 +2350,6 @@
         "place" : "link_tab",
         "manageable" : true
       }, {
-        "key" : "dependsOn",
-        "label" : "Зависит от",
-        "relation" : "association",
-        "rel" : "DEPENDS_ON",
-        "dir" : "out",
-        "target_type" : "any",
-        "place" : "link_tab",
-        "manageable" : true,
-        "props" : [ {
-          "key" : "kind",
-          "label" : "Вид",
-          "dict" : "dependency_kind"
-        }, {
-          "key" : "reason",
-          "label" : "Причина"
-        } ],
-        "reason_required" : true,
-        "target_types" : [ "task", "phase", "sprint", "milestone" ]
-      }, {
-        "key" : "blocks",
-        "label" : "От неё зависят",
-        "relation" : "association",
-        "rel" : "DEPENDS_ON",
-        "dir" : "in",
-        "target_type" : "any",
-        "place" : "link_tab",
-        "manageable" : true,
-        "props" : [ {
-          "key" : "kind",
-          "label" : "Вид",
-          "dict" : "dependency_kind"
-        }, {
-          "key" : "reason",
-          "label" : "Причина"
-        } ],
-        "reason_required" : true,
-        "target_types" : [ "task", "phase", "sprint", "milestone" ]
-      }, {
         "key" : "refsOut",
         "label" : "Ссылается",
         "relation" : "association",
@@ -3062,7 +3004,7 @@
         "manageable" : true
       }, {
         "key" : "blocks",
-        "label" : "От неё зависят",
+        "label" : "Блокирует",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -5851,42 +5793,6 @@
         "target_type" : "feature",
         "place" : "link_tab",
         "manageable" : false
-      }, {
-        "key" : "dependsOn",
-        "label" : "Зависит от",
-        "relation" : "association",
-        "rel" : "DEPENDS_ON",
-        "dir" : "out",
-        "target_type" : "any",
-        "place" : "link_tab",
-        "manageable" : false,
-        "props" : [ {
-          "key" : "kind",
-          "label" : "Вид",
-          "dict" : "dependency_kind"
-        }, {
-          "key" : "reason",
-          "label" : "Причина"
-        } ],
-        "target_types" : [ "task", "phase", "sprint", "milestone" ]
-      }, {
-        "key" : "blocks",
-        "label" : "От неё зависят",
-        "relation" : "association",
-        "rel" : "DEPENDS_ON",
-        "dir" : "in",
-        "target_type" : "any",
-        "place" : "link_tab",
-        "manageable" : false,
-        "props" : [ {
-          "key" : "kind",
-          "label" : "Вид",
-          "dict" : "dependency_kind"
-        }, {
-          "key" : "reason",
-          "label" : "Причина"
-        } ],
-        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
         "label" : "Продукты",
@@ -11943,26 +11849,6 @@
           "order" : 11,
           "slot" : "own",
           "group" : null
-        }, {
-          "key" : "dependsOn",
-          "source" : "relation",
-          "ref" : "dependsOn",
-          "order" : 12,
-          "slot" : "own",
-          "group" : {
-            "key" : "deps",
-            "label" : "Зависимости"
-          }
-        }, {
-          "key" : "blocks",
-          "source" : "relation",
-          "ref" : "blocks",
-          "order" : 13,
-          "slot" : "own",
-          "group" : {
-            "key" : "deps",
-            "label" : "Зависимости"
-          }
         } ]
       },
       "adr" : {
@@ -12294,26 +12180,6 @@
           "order" : 3,
           "slot" : "own",
           "group" : null
-        }, {
-          "key" : "dependsOn",
-          "source" : "relation",
-          "ref" : "dependsOn",
-          "order" : 4,
-          "slot" : "own",
-          "group" : {
-            "key" : "deps",
-            "label" : "Зависимости"
-          }
-        }, {
-          "key" : "blocks",
-          "source" : "relation",
-          "ref" : "blocks",
-          "order" : 5,
-          "slot" : "own",
-          "group" : {
-            "key" : "deps",
-            "label" : "Зависимости"
-          }
         } ]
       },
       "release" : {
@@ -14308,12 +14174,22 @@
     "fields" : [ "valid_from", "valid_to" ],
     "edges" : {
       "ANSWERABLE_BY" : "Ответственный за вопрос (человек или агент реестра): при закрытии вопроса решением ответственным становится автор решения; по связи видно, кто отвечал раньше и с какого времени (MT-MCP-TRUTH A6, владелица 19.11.2026).",
-      "DEPENDS_ON" : "Зависимость задачи, фазы, спринта и вехи (одна связь «зависит от» с видом и причиной, MDL-13; у ADR — та же связь между ADR): снятая зависимость и смена вида закрывают ребро, а не стирают — видно, что от чего зависело и когда.",
       "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
       "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
       "ROLE_HELD_BY" : "Роль на задаче (автор, исполнитель, ревьюер): сколько раз роль передавали и кто вёл задачу раньше (ADR-LORE-042 §4); ведёт историю с TR-05.",
       "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
+    }
+  },
+  "edge_free_fields" : {
+    "TAGGED_WITH" : {
+      "target_type" : "tag",
+      "vertex" : "KnowTag",
+      "key" : "tag_id",
+      "property" : "fields",
+      "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
+      "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег.",
+      "owners" : [ "adr", "decision" ]
     }
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]

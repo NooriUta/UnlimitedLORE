@@ -798,6 +798,28 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-ref__msg { margin: 0; font-size: var(--fs-sm); }
 .sk-ref__msg--block { color: var(--dng); }
 .sk-ref__msg--warn { color: var(--wrn); }
+/* SUPERTAGS-SPIKE: окно тегов «#тег» — список тегов (сколько записей, какие поля) и поля тега к заполнению */
+.sk-tagpick { max-height: min(70vh, 460px); overflow: auto; }
+.sk-tagpick__list { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow: auto; }
+.sk-tagpick__opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 8px; border-bottom: 1px solid var(--bd); cursor: pointer; min-width: 0; }
+.sk-tagpick__opt:hover, .sk-tagpick__opt.is-on { background: var(--bg3); outline: 1px solid var(--acc); outline-offset: -1px; }
+.sk-tagpick__name { color: var(--acc); font-weight: 700; overflow-wrap: anywhere; }
+.sk-tagpick__uses { color: var(--t3); font-size: var(--fs-2xs); justify-self: end; }
+.sk-tagpick__keys { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-tagpick__key { border: 1px solid var(--bd); border-radius: var(--r-pill); padding: 0 6px; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); }
+.sk-tagpick__link { appearance: none; background: none; border: 0; padding: 0; color: var(--acc); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.sk-tagpick__new { display: block; padding: 8px 10px; text-align: left; }
+.sk-tagpick__form { display: grid; gap: 6px; padding: 8px 10px 10px; }
+.sk-tagpick__edge { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); border-left: 2px solid var(--acc); padding-left: 8px; overflow-wrap: anywhere; }
+.sk-tagpick__row { display: grid; grid-template-columns: minmax(0, 7em) minmax(0, 1fr); gap: 6px; align-items: center; min-width: 0; }
+.sk-tagpick__row--new { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.sk-tagpick__lab { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.sk-tagpick__row input { min-width: 0; width: 100%; background: var(--bg1); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-sm); padding: 5px 8px; font-family: inherit; font-size: var(--fs-touch-input); }
+.sk-tagpick__note { margin: 0; color: var(--t3); font-size: var(--fs-2xs); line-height: 1.5; }
+.sk-tagpick__btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
+.sk-tagpick__btns > button:not(.sk-tagpick__link) { appearance: none; border: 1px solid var(--bd); background: var(--bg3); color: var(--t1); border-radius: var(--r-sm); padding: 4px 10px; font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.sk-tagpick__btns > button.is-pri { border-color: var(--acc); color: var(--acc); }
+.sk-tagpick__btns > button:disabled { opacity: .5; cursor: default; }
 .sk-ref__row { display: flex; gap: 6px; flex-wrap: wrap; }
 .sk-ref__btn { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; border-radius: var(--r-pill); padding: 3px 10px; cursor: pointer; }
 .sk-ref__btn--pri { background: var(--acc); border-color: var(--acc); color: var(--bg0); }
@@ -2169,6 +2191,8 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-prose a { color: var(--acc); text-decoration: underline; text-underline-offset: 2px; }
 /* Вики-ссылка [[ID]] — рамкой, без скобок (владелица 08.11). */
 .sk-wref { display: inline-block; padding: 0 5px; border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent); border-radius: var(--r-sm); background: color-mix(in srgb, var(--acc) 8%, transparent); color: var(--acc); font-family: var(--mono); font-size: .9em; line-height: 1.35; white-space: nowrap; }
+/* SUPERTAGS-SPIKE: токен [[ЗАПИСЬ#тег]] — чип тега (pill), значения полей живут на ребре */
+.sk-wref--tag { border-radius: var(--r-pill); border-color: var(--acc); background: var(--bg2); font-family: var(--body, inherit); }
 /* Рамка-ссылка в чтении (MD-READ-PEEK): переход в паспорт записи; вид рамки тот же, без подчёркивания. */
 a.sk-wref { text-decoration: none; cursor: pointer; }
 a.sk-wref:hover { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent); }
