@@ -96,8 +96,11 @@ describe('образ web-next собирает и kit', () => {
     const df = read('Dockerfile');
     const kitPkg = JSON.parse(readFileSync(resolve(webNext, '../kit/package.json'), 'utf8'));
     const dirs = new Set<string>();
-    for (const target of Object.values(kitPkg.exports as Record<string, string>)) {
-      const m = /^\.\/([^/]+)\//.exec(target);
+    // K5-PACKAGE-DELIVERY: вход kit — объект условий; образ web-next собирает kit исходниками,
+    // то есть по условию «seidr-source» (dist — только для пакета наружу).
+    for (const raw of Object.values(kitPkg.exports as Record<string, string | Record<string, string>>)) {
+      const target = typeof raw === 'string' ? raw : raw['seidr-source'];
+      const m = /^\.\/([^/]+)\//.exec(target ?? '');
       if (m && m[1] !== 'dist') dirs.add(m[1]);
     }
     expect(dirs.has('src')).toBe(true); // положительный контроль
