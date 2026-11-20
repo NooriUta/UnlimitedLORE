@@ -104,4 +104,27 @@ test.describe('supertags', () => {
     await noPageOverflow(page);
     await shot(page, 'state-empty');
   });
+
+  // Пункт «Теги» в меню оболочки (после #1661 экран открывался только по адресу): виден в группе «Знание»
+  // на 1280 и в drawer на 390; щелчок открывает «Сущности по тегу» внутри оболочки.
+  test('3 · пункт «Теги» в меню виден, щелчок открывает экран тегов', async ({ page }) => {
+    await page.route('**/lore/tag/suggest**', r => json(r, SUGGEST));
+    await page.route('**/lore/tag/entities**', r => json(r, TABLE));
+    await page.goto('/');
+    const narrow = (page.viewportSize()?.width ?? 0) < 600;
+    if (narrow) await page.getByRole('button', { name: 'Меню', exact: true }).click();
+    const side = page.getByRole('navigation', { name: 'Разделы' });
+    const item = side.getByRole('link', { name: 'Теги', exact: true });
+    if (!(await item.isVisible())) await side.getByRole('button', { name: 'Знание' }).click();
+    await expect(item).toBeVisible();
+    await item.scrollIntoViewIfNeeded();
+    await shot(page, 'nav-item', false);
+    await item.click();
+    await expect(page).toHaveURL(/[?&]sec=tags/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Сущности по тегу' })).toBeVisible();
+    await page.getByRole('button', { name: /#security-review/ }).click();
+    await expect(page.getByRole('link', { name: 'ADR-LORE-050' }).first()).toBeVisible();
+    await noPageOverflow(page);
+    await shot(page, 'nav-opened', false);
+  });
 });
