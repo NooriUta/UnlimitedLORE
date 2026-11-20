@@ -91,7 +91,7 @@ final class LoreFind {
         task.put("effort_days", Field.one(scd2("effort_days")));
         task.put("waiting_for", Field.one(scd2("waiting_for")));
         task.put("sprint_id", Field.one("out('PART_OF').sprint_id[0]"));
-        task.put("phase_uid", Field.one("out('IN_PHASE').phase_uid[0]"));
+        task.put("phase_uid", Field.one("outE('IN_PHASE')[valid_to IS NULL].inV().phase_uid[0]"));
         task.put("component", Field.many("out('TAGGED_WITH').component_id"));
         task.put("project", Field.many(TASK_PROJECT));
         task.put("release_ids", Field.many("out('CLOSED_BY').out('SHIPPED_IN').release_id"));
@@ -157,10 +157,12 @@ final class LoreFind {
         String id = s.substring(colon + 1).strip();
         if (id.length() > 300) throw bad("links_to.id: ключ длиннее 300 символов");
         if ("repository".equals(type)) return new Target(type, "KnowRepository", "url", id);
+        if ("phase".equals(type)) return new Target(type, "KnowPhase", "phase_uid", id);
         LoreGraphResource.VDef v = LoreGraphResource.byType(type);
         if (v == null) {
             List<String> ok = new ArrayList<>(LoreGraphResource.graphTypes());
             ok.add("repository");
+            ok.add("phase");
             throw bad("links_to.id: тип «" + type + "» не поддержан; допустимы " + ok);
         }
         return new Target(type, v.vertexClass(), v.idField(), id);
@@ -250,7 +252,7 @@ final class LoreFind {
             Map<String, Object> m = asMap(notLinked, "not_linked");
             List<String> rels = rels(m.get("rels"), "not_linked.rels");
             if (rels.isEmpty()) throw bad("not_linked.rels — хотя бы одно ребро");
-            sqlWhere.add(dirFn(dir(m.get("dir"), "out"), rels) + ".size() = 0");
+            sqlWhere.add(currentEdges(dir(m.get("dir"), "out"), rels) + ".size() = 0");
         }
 
         StringBuilder sb = new StringBuilder("SELECT ").append(def.idField()).append(" AS __id");
@@ -365,19 +367,48 @@ final class LoreFind {
         StringBuilder chain = new StringBuilder();
         for (int d = 1; d <= depth; d++) {
             if (d > 1) chain.append('.');
-            chain.append(dirFn(dir, rels));
+            chain.append(hop(dir, rels));
             parts.add(chain + "." + t.idField() + " CONTAINS :" + p);
         }
-        return "(" + String.join(" OR ", parts) + ")";
+        String linked = "(" + String.join(" OR ", parts) + ")";
+        // bothV() отдаёт и сам исходный узел: запись «связана сама с собой» — не связь.
+        if ("both".equals(dir) && t.vertexClass().equals(def.vertexClass()))
+            linked = "(" + linked + " AND " + def.idField() + " <> :" + p + ")";
+        return linked;
     }
 
-    private static String dirFn(String dir, List<String> rels) {
-        StringBuilder sb = new StringBuilder(dir).append('(');
+    /**
+     * Один шаг по рёбрам {@code rels} — ТОЛЬКО по текущим (без {@code valid_to}). Историчные связи
+     * (edge_history модели: IN_PHASE, TARGETS_MILESTONE, ROLE_HELD_BY, …) хранят закрытые рёбра рядом
+     * с открытым; переход {@code out('X')} по вершинам взял бы и закрытые — «бывшая фаза» стала бы
+     * текущей. У неисторичного ребра поля {@code valid_to} нет — фильтр его пропускает.
+     */
+    private static String hop(String dir, List<String> rels) {
+        String names = edgeNames(rels);
+        return switch (dir) {
+            case "out" -> "outE(" + names + ")[valid_to IS NULL].inV()";
+            case "in" -> "inE(" + names + ")[valid_to IS NULL].outV()";
+            default -> "bothE(" + names + ")[valid_to IS NULL].bothV()";
+        };
+    }
+
+    /** «Есть текущее ребро» по тем же правилам, что {@link #hop}. */
+    private static String currentEdges(String dir, List<String> rels) {
+        String names = edgeNames(rels);
+        return switch (dir) {
+            case "out" -> "outE(" + names + ")[valid_to IS NULL]";
+            case "in" -> "inE(" + names + ")[valid_to IS NULL]";
+            default -> "bothE(" + names + ")[valid_to IS NULL]";
+        };
+    }
+
+    private static String edgeNames(List<String> rels) {
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < rels.size(); i++) {
             if (i > 0) sb.append(", ");
             sb.append('\'').append(rels.get(i)).append('\'');
         }
-        return sb.append(')').toString();
+        return sb.toString();
     }
 
     private static List<String> rels(Object raw, String name) {
