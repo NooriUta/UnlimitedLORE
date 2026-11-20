@@ -67,6 +67,17 @@ describe('MINI-03 · адреса — серверные, не заглушеч�
   });
 });
 
+describe('20.11.2026 · командный вид по умолчанию уходит на сервер', () => {
+  it('create с team_default → is_team_default: true; без него — поля нет', async () => {
+    const f = fakeFetch(() => ({ body: { ok: true, view: row({ is_team_default: true, visibility: 'all' }) } }));
+    const api = createLoreViewApi({ user: 'kc-1', fetchImpl: f.impl });
+    await api.create({ name: 'Команде', section: 'sprints', query: '', visibility: 'all', team_default: true });
+    expect(JSON.parse(String(f.calls[0].init?.body))).toMatchObject({ visibility: 'all', is_team_default: true });
+    await api.create({ name: 'Мой', section: 'sprints', query: '', visibility: 'me' });
+    expect(JSON.parse(String(f.calls[1].init?.body))).not.toHaveProperty('is_team_default');
+  });
+});
+
 describe('MINI-03 · формы и честные отказы', () => {
   it('командный вид — owner null и team_default; видимость по ролям — {roles}', async () => {
     const f = fakeFetch(() => ({ body: { ok: true, views: [

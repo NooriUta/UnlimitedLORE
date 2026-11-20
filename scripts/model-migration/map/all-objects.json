@@ -3015,6 +3015,16 @@
    }
   },
   "QGMetric": {
+   "current_value": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: current_value — «последнее измерение (NULL если нет)», число; пишет QgMetricState (значение метрики последнего прогона гейта, ClRoutineMetric.value — DOUBLE)"
+   },
+   "direction": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: direction — «gte · lte · eq», код-строка; пишет QgMetricState (из текста порога)"
+   },
    "metric_id": {
     "rule": "keep",
     "basis": "owner",
@@ -3025,10 +3035,20 @@
     "basis": "owner",
     "note": "тип «только схема»: выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка"
    },
+   "status": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: status — «pass · fail · unknown», код-строка; пишет QgMetricState (по порогу и направлению)"
+   },
    "threshold": {
     "rule": "keep",
     "basis": "owner",
     "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка"
+   },
+   "unit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: unit — «% · s · MB/s · count», строка; пишет QgMetricState (из порога, иначе из прогона)"
    }
   },
   "QGRecommendation": {

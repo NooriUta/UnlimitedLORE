@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -198,19 +199,85 @@ class EmptyTypesSchemaOnlyWriteTest {
 
     @Test
     void метрика_гейта_и_связь_measured_by() throws Exception {
-        Map<String, Object> p = Map.of("metric_id", "QG-1/coverage", "name", "Покрытие", "threshold", ">= 80%");
-        String up = code("LoreIngestService.java", "UPDATE QGMetric SET metric_id=:metric_id, name=:name, threshold=:threshold "
-            + "UPSERT WHERE metric_id=:metric_id");
+        // 20.11.2026: все поля спеки LORE_SCHEMA_V12_NEW_TYPES — порог, единица, направление, измерение, итог.
+        String up = code("QgMetricState.java", "UPDATE QGMetric SET metric_id=:metric_id, name=:name, threshold=:threshold, unit=:unit, "
+            + "direction=:direction, current_value=:current_value, status=:status UPSERT WHERE metric_id=:metric_id");
+        assertEquals(up, QgMetricState.UPSERT_SQL);
+        code("LoreIngestService.java", "exec(QgMetricState.UPSERT_SQL, QgMetricState.params(");
+        QgMetricState.Fields f = QgMetricState.fields("QG-1:C-1:0", "Покрытие", ">= 80%",
+            List.of(Map.of("metric_key", "C-1", "value", 91.5, "unit", "%")));
+        Map<String, Object> p = QgMetricState.params("QG-1/coverage", "Покрытие", ">= 80%", f);
         write(up, p);
         write(up, p);
-        assertEquals(1, count("SELECT FROM QGMetric WHERE threshold = '>= 80%'"));
+        assertEquals(1, count("SELECT FROM QGMetric WHERE threshold = '>= 80%' AND unit = '%' AND direction = 'gte' "
+            + "AND current_value = 91.5 AND status = 'pass'"));
+        // нет измерения — current_value NULL, status unknown (запись принимает NULL в числовом поле)
+        QgMetricState.Fields none = QgMetricState.fields("QG-1:C-2:1", "Ветки", ">= 70%", List.of());
+        write(up, QgMetricState.params("QG-1/branches", "Ветки", ">= 70%", none));
+        assertEquals(1, count("SELECT FROM QGMetric WHERE metric_id = 'QG-1/branches' AND current_value IS NULL AND status = 'unknown'"));
+        // пересчёт после прогона — тем SQL, что у регистратора
+        write(QgMetricState.REFRESH_SQL, QgMetricState.params("QG-1/branches", null, null,
+            QgMetricState.fields("QG-1:C-2:1", "Ветки", ">= 70%", List.of(Map.of("metric_key", "C-2", "value", 65.0)))));
+        assertEquals(1, count("SELECT FROM QGMetric WHERE metric_id = 'QG-1/branches' AND current_value = 65.0 AND status = 'fail' AND threshold = '>= 70%'"));
         // createEdgeIfVerticesExist("MEASURED_BY", "QualityGate", "qg_id", …, "QGMetric", "metric_id", …) — тот же шаблон
         code("LoreIngestService.java", "createEdgeIfVerticesExist(\"MEASURED_BY\",");
         code("LoreIngestService.java", "exec(\"CREATE EDGE \" + edgeType +");
         write("INSERT INTO QualityGate SET qg_id = 'QG-1'", Map.of());
         write("CREATE EDGE MEASURED_BY FROM (SELECT FROM QualityGate WHERE qg_id=:from_val) TO   (SELECT FROM QGMetric WHERE metric_id=:to_val) IF NOT EXISTS",
             Map.of("from_val", "QG-1", "to_val", "QG-1/coverage"));
-        assertEquals(1, count("SELECT FROM MEASURED_BY"));
+        assertEquals(1, count("SELECT FROM MEASURED_BY WHERE @in.metric_id = 'QG-1/coverage'"));
+    }
+
+    @Test
+    void срез_qg_metrics_и_последний_прогон_гейта_все_поля_спеки() {
+        // концы — минимально; ClRoutineMetric в 1.18 есть картой (тип с данными)
+        if (!db.getSchema().existsType("ClRoutineMetric")) db.getSchema().createVertexType("ClRoutineMetric");
+        write("INSERT INTO QualityGate SET qg_id = 'QG-S', content_md = :c", Map.of("c", "# S\n**Routine:** `qg-s-run`\n"));
+        write("INSERT INTO ClRoutineMetric SET routine_name = 'qg-s-run', run_date = '2026-11-19', metric_key = 'P-1', value = 90.0", Map.of());
+        write("INSERT INTO ClRoutineMetric SET routine_name = 'qg-s-run', run_date = '2026-11-20', metric_key = 'P-1', value = 99.0, unit = '%'", Map.of());
+        List<Map<String, Object>> last = QgMetricState.latestRun("qg-s-run", EmptyTypesSchemaOnlyWriteTest::rows);
+        assertEquals(1, last.size(), "только последний прогон");
+        assertEquals(99.0, ((Number) last.get(0).get("value")).doubleValue());
+        assertEquals(List.of(), QgMetricState.latestRun("нет-такого", EmptyTypesSchemaOnlyWriteTest::rows), "прогонов нет — пусто");
+        // гейт находится по имени прогона из текста — тем SQL, что у регистратора
+        List<Map<String, Object>> gates = rows(QgMetricState.GATES_OF_ROUTINE_SQL, Map.of("rn", "qg-s-run", "pat", "%`qg-s-run`%"));
+        assertEquals("QG-S", gates.get(0).get("qg_id"));
+        QgMetricState.Fields f = QgMetricState.fields("QG-S:P-1:0", "Доля", "≥ 98%", last);
+        write(QgMetricState.UPSERT_SQL, QgMetricState.params("QG-S:P-1:0", "Доля", "≥ 98%", f));
+        write(QgMetricState.UPSERT_SQL, QgMetricState.params("QG-S:P-2:1", "Время", "≤ 2 s",
+            QgMetricState.fields("QG-S:P-2:1", "Время", "≤ 2 s", last)));
+        write("CREATE EDGE MEASURED_BY FROM (SELECT FROM QualityGate WHERE qg_id='QG-S') TO (SELECT FROM QGMetric WHERE metric_id='QG-S:P-1:0')", Map.of());
+        write("CREATE EDGE MEASURED_BY FROM (SELECT FROM QualityGate WHERE qg_id='QG-S') TO (SELECT FROM QGMetric WHERE metric_id='QG-S:P-2:1')", Map.of());
+        assertEquals(2, rows(QgMetricState.METRICS_OF_GATE_SQL, Map.of("qg", "QG-S")).size());
+
+        LoreSlices.SliceDef s = LoreSlices.get("qg_metrics");
+        List<Map<String, Object>> out = rows(s.baseSql() + " ORDER BY metric_id", Map.of("qg_id", "QG-S"));
+        assertEquals(2, out.size());
+        Map<String, Object> p1 = out.get(0);
+        for (String k : List.of("metric_id", "name", "threshold", "unit", "direction", "current_value", "status"))
+            assertTrue(p1.containsKey(k), "срез отдаёт " + k);
+        assertEquals("%", p1.get("unit"));
+        assertEquals("gte", p1.get("direction"));
+        assertEquals(99.0, ((Number) p1.get("current_value")).doubleValue());
+        assertEquals("pass", p1.get("status"));
+        Map<String, Object> p2 = out.get(1);
+        assertEquals("s", p2.get("unit"));
+        assertEquals("lte", p2.get("direction"));
+        assertNull(p2.get("current_value"), "метрики нет в прогоне — значения нет");
+        assertEquals("unknown", p2.get("status"));
+    }
+
+    private static List<Map<String, Object>> rows(String sql, Map<String, Object> p) {
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        try (ResultSet rs = db.query("sql", sql, p)) {
+            while (rs.hasNext()) {
+                var r = rs.next();
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                for (String n : r.getPropertyNames()) m.put(n, r.getProperty(n));
+                out.add(m);
+            }
+        }
+        return out;
     }
 
     @Test

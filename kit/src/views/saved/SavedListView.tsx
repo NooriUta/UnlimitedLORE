@@ -45,6 +45,8 @@ export interface ViewsBarProps {
   win?: UrlWindow | null;
   /** Стартовать с вида по умолчанию — только если в URL не было своего состояния списка. */
   applyStartView?: boolean;
+  /** Право заводить командный вид по умолчанию (админ). Нет права — флажка нет; сервер всё равно проверит сам. */
+  canTeamDefault?: boolean;
   className?: string;
 }
 
@@ -53,7 +55,21 @@ function urlViewId(win: UrlWindow | null | undefined): string | null {
 }
 
 /** Панель видов. Состояние списка держит родитель — панель только читает и применяет. */
-export function ViewsBar({ store, section, user, state, onApply, win, applyStartView = true, className }: ViewsBarProps) {
+/**
+ * Ссылка на вид: адрес раздела + {@link VIEW_URL_KEY}, без своего состояния списка (lv/lq/…) — у получателя
+ * список открывается сохранённым состоянием вида, а не правками того, кто делится.
+ */
+export function viewShareHref(win: UrlWindow, id: string): string {
+  // У окна адреса kit (UrlWindow) полного href может не быть — собираем из пути и строки запроса.
+  const loc = win.location as UrlWindow['location'] & { href?: string };
+  const origin = typeof window !== 'undefined' && window.location ? window.location.origin : 'http://localhost';
+  const u = new URL(loc.href ?? loc.pathname + loc.search, origin);
+  for (const k of LIST_URL_KEYS) u.searchParams.delete(k);
+  u.searchParams.set(VIEW_URL_KEY, id);
+  return u.href;
+}
+
+export function ViewsBar({ store, section, user, state, onApply, win, applyStartView = true, canTeamDefault = false, className }: ViewsBarProps) {
   const lang = useKitLang();
   const t = (k: KitKey, vars?: Record<string, string | number>) => kitT(lang, k, vars);
   const formId = useId();
@@ -66,6 +82,10 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
   const [asOpen, setAsOpen] = useState(false);
   const [asName, setAsName] = useState('');
   const [asVis, setAsVis] = useState<'me' | 'all'>('me');
+  const [asTeam, setAsTeam] = useState(false);
+  // Ссылка по vw не нашла вида среди видимых — сказать, а не молча открыть другой (видимость решает сервер).
+  const [linkMissing, setLinkMissing] = useState(false);
+  const [share, setShare] = useState<{ href: string; copied: boolean | null } | null>(null);
   const started = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -75,6 +95,7 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
 
   const select = useCallback((v: KitSavedListView | null, apply: boolean) => {
     setActiveId(v?.id ?? null);
+    setShare(null);
     if (win) pushUrlState({ [VIEW_URL_KEY]: v?.id ?? null }, { win, replace: true });
     if (apply) onApplyRef.current(v ? queryToListState(v.query) : DEFAULT_LIST_STATE);
   }, [win]);
@@ -88,7 +109,9 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
       setPhase(list.length ? 'ok' : 'empty');
       if (!started.current) {
         started.current = true;
-        const first = startView(list, section, urlViewId(win));
+        const urlId = urlViewId(win);
+        if (urlId && !list.some(v => v.id === urlId && v.section === section)) setLinkMissing(true);
+        const first = startView(list, section, urlId);
         // Своё состояние списка в URL (ссылка, перезагрузка) важнее вида по умолчанию.
         select(first, applyStartView);
       }
@@ -125,9 +148,34 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
     }
   };
 
+  const doShare = () => {
+    if (!active || !win) return;
+    const href = viewShareHref(win, active.id);
+    setShare({ href, copied: null });
+    const clip = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (clip?.writeText) clip.writeText(href).then(() => setShare({ href, copied: true }), () => setShare({ href, copied: false }));
+    else setShare({ href, copied: false });
+  };
+
+  const doPersonalDefault = async (on: boolean) => {
+    if (!active || !viewCanSave(active, user)) return;
+    setBusy(true);
+    setSaveErr(null);
+    try {
+      const upd = await store.update(active.id, { personal_default: on });
+      // личный по умолчанию в разделе один: сервер снимает флажок с прочих своих — то же и здесь
+      setViews(prev => prev.map(v => (v.id === upd.id ? upd : on && v.section === upd.section && v.owner === user ? { ...v, personal_default: false } : v)));
+    } catch (error) {
+      setSaveErr({ key: 'kit.views.saveError', error });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const openSaveAs = () => {
     setAsName(t('kit.views.nameDefault', { n: mine.length + 1 }));
     setAsVis('me');
+    setAsTeam(false);
     setSaveErr(null);
     setAsOpen(true);
   };
@@ -140,7 +188,8 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
     setSaveErr(null);
     try {
       const visibility: KitViewVisibility = asVis;
-      const created = await store.create({ name, section, query: listStateToQuery(stateRef.current), visibility });
+      const team = canTeamDefault && asTeam && visibility !== 'me';
+      const created = await store.create({ name, section, query: listStateToQuery(stateRef.current), visibility, ...(team ? { team_default: true } : {}) });
       setViews(prev => [...prev, created]);
       setPhase('ok');
       setAsOpen(false);
@@ -185,6 +234,9 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
   const saveTitle = !active
     ? t('kit.views.saveHintNone')
     : !viewCanSave(active, user) ? t('kit.views.saveHintTeam') : undefined;
+  const shareTitle = !active ? t('kit.views.shareHintNone')
+    : active.visibility === 'me' ? t('kit.views.shareHintMe')
+      : !win ? t('kit.views.shareHintNoUrl') : undefined;
   const resetTitle = !reset
     ? t('kit.views.resetNone')
     : reset.id === active?.id ? t('kit.views.resetHintDirty', { name: reset.name }) : t('kit.views.resetHintTeam', { name: reset.name });
@@ -214,12 +266,26 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
         {t('kit.views.saveAs')}
       </button>
       <button type="button" className="sk-btn" disabled={!reset || busy} title={resetTitle} onClick={() => reset && select(reset, true)}>{t('kit.views.reset')}</button>
+      <button type="button" className="sk-btn" disabled={!!shareTitle || busy} title={shareTitle} onClick={doShare}>{t('kit.views.share')}</button>
+      {active && viewCanSave(active, user) && (
+        <label className="sk-views__field sk-views__check">
+          <input type="checkbox" checked={!!active.personal_default} disabled={busy} onChange={e => { void doPersonalDefault(e.target.checked); }} />
+          <span>{t('kit.views.personalDefault')}</span>
+        </label>
+      )}
       {active && viewCanSave(active, user) && (
         <button type="button" className="sk-btn sk-views__remove" disabled={busy} onClick={doRemove}>
           {t('kit.views.remove', { name: active.name })}
         </button>
       )}
       {phase === 'empty' && <span className="sk-views__hint">{t('kit.views.empty')}</span>}
+      {linkMissing && <span className="sk-views__hint" role="status" data-testid="kit-views-link-missing">{t('kit.views.linkMissing')}</span>}
+      {share && (
+        <span className="sk-views__share" data-testid="kit-views-share">
+          <input className="sk-views__input" readOnly aria-label={t('kit.views.shareLink')} value={share.href} onFocus={e => e.currentTarget.select()} />
+          {share.copied !== null && <span className="sk-views__hint" role="status">{t(share.copied ? 'kit.views.shareCopied' : 'kit.views.shareCopyManual')}</span>}
+        </span>
+      )}
       {asOpen && (
         <form id={formId} className="sk-views__form" onSubmit={doSaveAs}>
           <label className="sk-views__field">
@@ -240,6 +306,12 @@ export function ViewsBar({ store, section, user, state, onApply, win, applyStart
               <option value="all">{t('kit.views.visAll')}</option>
             </select>
           </label>
+          {canTeamDefault && asVis === 'all' && (
+            <label className="sk-views__field sk-views__check">
+              <input type="checkbox" checked={asTeam} onChange={e => setAsTeam(e.target.checked)} />
+              <span>{t('kit.views.teamDefault')}</span>
+            </label>
+          )}
           <button type="submit" className="sk-btn" disabled={busy || !asName.trim()}>{t('kit.views.create')}</button>
           <button type="button" className="sk-btn" onClick={() => setAsOpen(false)}>{t('kit.views.cancel')}</button>
         </form>
@@ -253,6 +325,7 @@ export interface SavedListViewProps extends Omit<ListViewProps, 'state' | 'onSta
   store: KitViewStore;
   section: string;
   user?: string | null;
+  canTeamDefault?: boolean;
   onStateChange?: (state: ListState) => void;
 }
 
@@ -263,7 +336,7 @@ function resolveWin(urlState: ListViewProps['urlState']): UrlWindow | null {
 }
 
 /** Список kit с сохранёнными видами: панель видов сверху, ListView в управляемом режиме. */
-export function SavedListView({ store, section, user, onStateChange, initial, ...listProps }: SavedListViewProps) {
+export function SavedListView({ store, section, user, canTeamDefault, onStateChange, initial, ...listProps }: SavedListViewProps) {
   const win = resolveWin(listProps.urlState);
   const [urlHasList] = useState(() => !!win && LIST_URL_KEYS.some(k => readUrlState(win).has(k)));
   const [state, setState] = useState<ListState>(() => {
@@ -277,7 +350,7 @@ export function SavedListView({ store, section, user, onStateChange, initial, ..
   }, [onStateChange]);
   return (
     <div className="sk-saved">
-      <ViewsBar store={store} section={section} user={user} state={state} onApply={apply} win={win} applyStartView={!urlHasList} />
+      <ViewsBar store={store} section={section} user={user} state={state} onApply={apply} win={win} applyStartView={!urlHasList} canTeamDefault={canTeamDefault} />
       <ListView {...listProps} state={state} onStateChange={apply} />
     </div>
   );

@@ -139,7 +139,39 @@ public class LoreQgRunWriter {
             }
         }
         LOG.debugf("[LORE QG RUN] %s: %d метрик", runId, written);
+        refreshGateMetrics(req.routine_name(), auth);
         return Result.written(runId, written);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> rows(String auth, String sql, Map<String, Object> p) {
+        Object r = writeClient.command(db, auth, new LoreCommandClient.LoreCommand("sql", sql, p))
+            .await().indefinitely().result();
+        return r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+    }
+
+    /**
+     * Спека LORE_SCHEMA_V12_NEW_TYPES: current_value — последнее измерение, status — pass/fail по порогу.
+     * Новый прогон гейта пересчитывает его метрики сразу, а не до следующего инжеста md. Прогон уже записан:
+     * сбой пересчёта прогон не отменяет — он в журнале, а метрики остаются с прежним измерением.
+     */
+    void refreshGateMetrics(String routineName, String auth) {
+        try {
+            List<Map<String, Object>> last = QgMetricState.latestRun(routineName, (sql, p) -> rows(auth, sql, p));
+            for (Map<String, Object> g : rows(auth, QgMetricState.GATES_OF_ROUTINE_SQL,
+                    Map.of("rn", routineName.toLowerCase(java.util.Locale.ROOT), "pat", "%`" + routineName + "`%"))) {
+                String qg = (String) g.get("qg_id");
+                if (!routineName.equals(QgMetricState.routineOf(qg, (String) g.get("content_md")))) continue;
+                for (Map<String, Object> m : rows(auth, QgMetricState.METRICS_OF_GATE_SQL, Map.of("qg", qg))) {
+                    String mid = (String) m.get("metric_id");
+                    QgMetricState.Fields f = QgMetricState.fields(mid, (String) m.get("name"), (String) m.get("threshold"), last);
+                    writeClient.command(db, auth, new LoreCommandClient.LoreCommand("sql", QgMetricState.REFRESH_SQL,
+                        QgMetricState.params(mid, null, null, f))).await().indefinitely();
+                }
+            }
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QG RUN] метрики гейта %s не пересчитаны: %s", routineName, e.getMessage());
+        }
     }
 
     /** Удобная форма для канала 1: прогон из Actions без метрик, кроме факта сборки. */

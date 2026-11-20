@@ -5620,6 +5620,26 @@
       "schema_only": true,
       "version_of": null,
       "fields": {
+        "current_value": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "current_value"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: current_value — «последнее измерение (NULL если нет)», число; пишет QgMetricState (значение метрики последнего прогона гейта, ClRoutineMetric.value — DOUBLE)"
+        },
+        "direction": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "direction"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: direction — «gte · lte · eq», код-строка; пишет QgMetricState (из текста порога)"
+        },
         "metric_id": {
           "kind": "text",
           "db_type": "STRING",
@@ -5640,6 +5660,16 @@
           "of": 0,
           "source": "выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка"
         },
+        "status": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: status — «pass · fail · unknown», код-строка; пишет QgMetricState (по порогу и направлению)"
+        },
         "threshold": {
           "kind": "text",
           "db_type": "STRING",
@@ -5649,6 +5679,16 @@
           "filled": 0,
           "of": 0,
           "source": "спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка"
+        },
+        "unit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "unit"
+          ],
+          "filled": 0,
+          "of": 0,
+          "source": "спека LORE_SCHEMA_V12_NEW_TYPES: unit — «% · s · MB/s · count», строка; пишет QgMetricState (из порога, иначе из прогона)"
         }
       },
       "indexes": [

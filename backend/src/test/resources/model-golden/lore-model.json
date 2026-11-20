@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "1b6680dfe922683c",
+  "version" : "9f8ecc23fcdbdd10",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -10898,6 +10898,15 @@
         "place" : "prop",
         "manageable" : false
       }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
+        "manageable" : false
+      }, {
         "key" : "refsOut",
         "label" : "Ссылается",
         "relation" : "association",
@@ -13074,6 +13083,13 @@
             "key" : "refs",
             "label" : "Ссылки"
           }
+        }, {
+          "key" : "metrics",
+          "source" : "part",
+          "ref" : "metrics",
+          "order" : 4,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "repository" : {

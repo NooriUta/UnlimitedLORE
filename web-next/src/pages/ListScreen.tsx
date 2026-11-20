@@ -13,7 +13,13 @@ import {
   isDateRangeActive, isShowClosed, pushUrlState, readDateRangeUrl, readUrlState, showClosedOf, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
+  DEFAULT_LIST_STATE, LIST_URL_KEYS, ViewsBar, queryToListState, writeListState,
 } from '@seidr/kit';
+import type { ListState } from '@seidr/kit';
+import { LORE_VIEW_SECTIONS } from '../views/loreViews';
+import { createLoreViewApi } from '../views/loreViewsApi';
+import { getJson } from '../admin/actions';
+import { adminDenied, type WhoamiBody } from '../admin/WhoamiBar';
 import type { DateFilterScope, DateRangeValue, KitConfig, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { ListWithRecord, useRecordOpen } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
@@ -409,6 +415,35 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Список держит режим сам; снять фильтр снаружи (переход на запись вне его)
   // значит пересобрать список с новым режимом — ключ меняется ровно тогда.
   const [listKey, setListKey] = useState(0);
+  // Сохранённые виды раздела (сервер — KnowSavedView, LoreMeResource; 20.11.2026: «чтобы все поля работали»).
+  // Вид — строка состояния списка; применяется через адрес (lv/lq/lg/ls/lf…) и пересборку списка: список
+  // сам читает адрес при монтировании. Ссылка «Поделиться» ведёт на сохранённый вид (vw), видимость решает
+  // сервер (visibility / roles). Без адреса (встроенный список) панели видов нет — применить вид некуда.
+  const viewSection = (LORE_VIEW_SECTIONS as readonly string[]).includes(screen) && urlWin ? screen : null;
+  const viewStore = useMemo(
+    // «свой» вид сервер помечает own — метка пользователя на клиенте лишь сравнивается, kc_sub не нужен
+    () => (viewSection ? createLoreViewApi({ user: 'me', ...(fetchImpl ? { fetchImpl } : {}) }) : null),
+    [viewSection, fetchImpl],
+  );
+  const [listState, setListState] = useState<ListState>(() => (urlWin ? { ...DEFAULT_LIST_STATE, ...queryToListState(readUrlState(urlWin).toString()) } : DEFAULT_LIST_STATE));
+  const urlHasList = useRef(!!urlWin && LIST_URL_KEYS.some(k => readUrlState(urlWin).has(k))).current;
+  const applyView = (s: ListState) => {
+    if (!urlWin) return;
+    pushUrlState(writeListState(s), { win: urlWin, replace: true });
+    setListState(s);
+    setListKey(k => k + 1);
+  };
+  // «Командный по умолчанию» предлагается только админу (сервер всё равно проверит сам: 403).
+  const [canTeamDefault, setCanTeamDefault] = useState(false);
+  useEffect(() => {
+    if (!viewStore) return;
+    let live = true;
+    (getJson('/lore/whoami', { fetchImpl }) as Promise<WhoamiBody>).then(
+      b => { if (live) setCanTeamDefault(!adminDenied(b)); },
+      () => { if (live) setCanTeamDefault(false); },
+    );
+    return () => { live = false; };
+  }, [viewStore, fetchImpl]);
   const loadClosed = !!def.closedSlice && closedMode !== 'hide';
   const result = useLoadState(
     async signal => {
@@ -669,6 +704,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         key={listKey}
         onStateChange={s => {
           setListView(s.view);
+          setListState(s);
           if (def.closedSlice) setClosedMode(showClosedOf(s, config));
         }}
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
@@ -751,6 +787,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           — техническое сообщение, его место под значком тех. сведений, как в паспорте, а не полосой
           над списком. Полоса выше — про ВЫДАЧУ (обрезано, закрытые скрыты), она остаётся на месте. */}
       <ModelNotes notes={modelStatuses?.notes ?? []} />
+      {viewStore && viewSection && (
+        <ViewsBar store={viewStore} section={viewSection} user="me" state={listState} onApply={applyView}
+          win={urlWin} applyStartView={!urlHasList} canTeamDefault={canTeamDefault} />
+      )}
       {content}
     </section>
   );
