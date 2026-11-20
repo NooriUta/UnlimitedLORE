@@ -112,13 +112,13 @@ test('конвейер переноса считает убыль, кладёт 
 });
 
 test('MDL-08 ч.2: вторая пачка — KnowRelease.version (дубль git_tag) и KnowDoc.content_md (0 значений), своё слово владелицы', () => {
-  assert.equal(LIST.more.length, 1);
+  assert.equal(LIST.more.length, 2);
   const b = LIST.more[0];
   assert.equal(b.basis, 'owner');
   assert.match(b.words, /тоже с релизами/);
   assert.deepEqual(Object.keys(b.fields), ['KnowDoc.content_md', 'KnowRelease.version']);
   assert.ok(LEGACY.has('KnowRelease.version') && LEGACY.has('KnowDoc.content_md'));
-  assert.equal(LEGACY.size, 19);
+  assert.equal(LEGACY.size, 20);
   const r = legacyRule('KnowRelease', 'version');
   assert.equal(r.rule, 'drop');
   assert.equal(r.legacy, true);
@@ -130,4 +130,28 @@ test('MDL-08 ч.2: вторая пачка — KnowRelease.version (дубль g
   assert.equal(SCHEMA.KnowRelease.fields.version, undefined);
   assert.equal(SCHEMA.KnowDoc.fields.content_md, undefined);
   assert.equal(MAPS.KnowRelease.title.rule, 'keep', 'title не дубль release_name — не снимается');
+});
+
+test('MDL-08 ч.3: KnowUserDraft.base_version — слово владелицы «а) снять base_version при переносе 1.18», заменено base_record_version', () => {
+  assert.equal(LIST.more.length, 2);
+  const b = LIST.more[1];
+  assert.equal(b.basis, 'owner');
+  assert.equal(b.approved, '2026-11-20');
+  assert.equal(b.words, '«а) снять base_version при переносе 1.18»');
+  assert.deepEqual(Object.keys(b.fields), ['KnowUserDraft.base_version']);
+  const r = legacyRule('KnowUserDraft', 'base_version');
+  assert.equal(r.rule, 'drop');
+  assert.equal(r.legacy, true);
+  assert.match(r.why, /^легаси, MDL-08, утверждено владелицей 20\.11\.2026: «а\) снять base_version при переносе 1\.18»; заменено base_record_version/);
+  assert.deepEqual(MAPS.KnowUserDraft.base_version, r, 'карта переноса — по правилу легаси');
+  assert.equal(MAPS.KnowUserDraft.base_record_version.rule, 'keep', 'новое поле переносится');
+  assert.equal(SCHEMA.KnowUserDraft.fields.base_version, undefined, 'схема 1.18 поля не несёт');
+  assert.ok(SCHEMA.KnowUserDraft.fields.base_record_version);
+  // Значений 0 из 3 (перепись 18.11) — сверка тривиальна, но поле в отчёте есть: было 0 = остаток 0.
+  const acc = {};
+  for (const rec of [{ base_record_version: 'v1' }, { base_record_version: 'v2', base_version: null }, { base_record_version: 'v3' }])
+    countLegacyBefore('KnowUserDraft', rec, acc);
+  const rep = legacyDrop(acc, []);
+  assert.deepEqual(rep.fields['KnowUserDraft.base_version'], { before: 0, leftover: 0 });
+  assert.equal(rep.ok, true);
 });

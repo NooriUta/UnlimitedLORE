@@ -77,13 +77,44 @@ class LoreMeDraftsTest {
             "шаг V74 зарегистрирован");
     }
 
+    /**
+     * SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 (владелица 20.11.2026: «а) снять base_version при переносе 1.18»):
+     * версия-основа черновика хранится только в base_record_version. Наружу — по-прежнему ключом
+     * base_version, строкой (это имя поля API, не свойства в базе).
+     */
     @Test
-    void legacyIntegerVersionStillComesOutAsString() {
+    void recordVersionDrivesConflictCheck() {
+        Map<String, Object> row = new HashMap<>();
+        row.put("ref_type", "task");
+        row.put("base_record_version", "2026-11-09T02:45:27.453349250Z");
+        assertEquals("2026-11-09T02:45:27.453349250Z", LoreMeDrafts.out(row).get("base_version"),
+            "черновик с base_record_version отдаёт версию — клиент ловит конфликт по равенству, как раньше");
+    }
+
+    @Test
+    void draftWithoutVersionHasNullVersion() {
+        Map<String, Object> row = new HashMap<>();
+        row.put("ref_type", "task");
+        assertTrue(LoreMeDrafts.out(row).containsKey("base_version"), "ключ на месте");
+        assertNull(LoreMeDrafts.out(row).get("base_version"), "версии нет — null, а не придуманная");
+    }
+
+    /** MDL-08: прежнее целое свойство base_version (в проде 0 из 3) больше не читается запасным вариантом. */
+    @Test
+    void legacyIntegerPropertyIsNotRead() {
         Map<String, Object> row = new HashMap<>();
         row.put("ref_type", "task");
         row.put("base_version", 7);
-        assertEquals("7", LoreMeDrafts.out(row).get("base_version"), "один тип наружу — строка, даже у старых черновиков");
-        row.remove("base_version");
-        assertNull(LoreMeDrafts.out(row).get("base_version"), "версии нет — null, а не придуманная");
+        assertNull(LoreMeDrafts.out(row).get("base_version"), "запасного чтения base_version больше нет");
+    }
+
+    /** MDL-08: сервер не пишет (null) и не выбирает KnowUserDraft.base_version. */
+    @Test
+    void resourceNeitherWritesNorSelectsLegacyProperty() throws java.io.IOException {
+        String src = java.nio.file.Files.readString(java.nio.file.Path.of(
+            "src", "main", "java", "studio", "seer", "heimdall", "lore", "LoreMeResource.java"),
+            java.nio.charset.StandardCharsets.UTF_8);
+        assertFalse(src.contains("base_version=null"), "UPDATE KnowUserDraft не пишет base_version");
+        assertFalse(src.contains("body_md, base_version,"), "SELECT черновиков не читает base_version");
     }
 }

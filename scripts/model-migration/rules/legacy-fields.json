@@ -33,6 +33,15 @@
         "KnowDoc.content_md": "тело дока — content_md_ru / content_md_en (HTML — content_html); писателя нет, в проде 0 из 460; запасное чтение снято (LoreDocResource, поиск, ftKnowDoc)",
         "KnowRelease.version": "дубль git_tag и release_id: на снимке 18.11 совпали 92 из 92; срезы релизов отдают version = git_tag"
       }
+    },
+    {
+      "task": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 (часть 3)",
+      "basis": "owner",
+      "approved": "2026-11-20",
+      "words": "«а) снять base_version при переносе 1.18»",
+      "fields": {
+        "KnowUserDraft.base_version": "заменено base_record_version (строка record.version, заполнено у 3 из 3); прежнее целое — 0 из 3 на переписи 18.11; запись null и запасное чтение сняты (LoreMeResource, LoreMeDrafts.out)"
+      }
     }
   ]
 }
