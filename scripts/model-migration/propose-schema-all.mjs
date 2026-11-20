@@ -40,7 +40,8 @@ export function sourcesOf(map, f) {
   return Object.entries(map).filter(([k, e]) => (e.rule === 'keep' && k === f) || ((e.rule === 'transform' || e.rule === 'rename') && e.to === f)).map(([k]) => k);
 }
 
-const SERVICE_NAMES = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки' };
+// WK-01 (20.11.2026): + причина правки — служебное поле версии рядом с changed_by_*.
+const SERVICE_NAMES = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки', change_reason: 'Причина правки' };
 
 /**
  * MD-02 8а · схема пустого типа «только схема» (тип нужен живому коду, данных нет). Источники свойства по порядку
@@ -69,7 +70,7 @@ function main() {
   const MAP = J(here('./map/all-objects.json')).types;
   const CENSUS = J(here('./tools/census/fields-all.json'));
   const FIRST = new Set(Object.keys(J(here('./schema/sprint-phase-task.json')).types));
-  const SERVICE = { changed_by_session: 'Сессия правки', changed_by_harness: 'Harness правки', changed_by_harness_note: 'Сверка harness', changed_by_machine: 'Машина правки', change_reason: 'Причина правки' };
+  const SERVICE = SERVICE_NAMES;
   // WK-01: вид статьи словаря — набор (product: tech | service, ADR-LORE-044); шаг вида продукта (product-kind.mjs) пишет его
   // списком, поэтому схема объявляет поле сама, даже если в снимке источника значений ещё нет.
   const DECLARED = { KnowDictEntry: { kind: 'Вид' }, KnowDictEntryHist: { kind: 'Вид' } };

@@ -2759,6 +2759,16 @@
       "schema_only": true,
       "version_of": "KnowFinding",
       "fields": {
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 0,
+          "service": true,
+          "source": "общий перечень служебных полей версии"
+        },
         "changed_by": {
           "kind": "text",
           "db_type": "STRING",
@@ -2838,16 +2848,6 @@
           "filled": 0,
           "of": 0,
           "source": "старая схема"
-        },
-        "change_reason": {
-          "kind": "text",
-          "db_type": "STRING",
-          "name": "Причина правки",
-          "from": [],
-          "filled": 0,
-          "of": 0,
-          "service": true,
-          "note": "объявлено общим перечнем служебных полей"
         }
       },
       "indexes": [
