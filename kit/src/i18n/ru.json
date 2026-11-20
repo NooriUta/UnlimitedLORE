@@ -274,6 +274,7 @@
   "kit.record.links.out": "исходящая",
   "kit.record.links.in": "входящая",
   "kit.record.links.missing": "вне выборки",
+  "kit.record.links.reverseMissingHint": "В модели связь подписана только с другой стороны — показана её подпись",
   "kit.record.place.enter": "Во весь экран",
   "kit.record.place.exit": "Вернуть на место",
   "kit.record.place.menu": "Где открыт",
