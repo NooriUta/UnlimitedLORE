@@ -2632,7 +2632,8 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         slice("qg_metrics",
-            "SELECT metric_id, name, threshold " +
+            // Все поля спеки LORE_SCHEMA_V12_NEW_TYPES: порог, единица, направление, последнее измерение, итог.
+            "SELECT metric_id, name, threshold, unit, direction, current_value, status " +
             "FROM QGMetric WHERE in('MEASURED_BY').qg_id[0] = :qg_id",
             List.of("qg_id"), Map.of(), " LIMIT 100");
 

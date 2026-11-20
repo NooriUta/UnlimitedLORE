@@ -203,6 +203,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // только полный профиль, а остальные о своих пробелах не знают.
         Map.entry("quality",   Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
+        // find (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05) — POST по форме, но НИЧЕГО не пишет:
+        // структурный запрос «тип + поля + связь» (дерево И/ИЛИ/НЕ не влезает в строку).
+        // Чтение графа открыто всем профилям, как срезы и /lore/graph.
+        Map.entry("find",      Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
         // me (SPRINT_UXR_S2_GRAPH_MEMORY/S2-04, D-2026-UXR-VIEWS-SERVER) — личный слой:
         // виды, избранное, недавние, настройки. «Видимость — сам пользователь и его
         // агенты»: агент пишет ОТ ИМЕНИ своего владельца (LoreMeResource берёт владельца

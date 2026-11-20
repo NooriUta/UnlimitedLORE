@@ -19207,7 +19207,19 @@
           "section" : null,
           "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
         } ],
-        "parts" : [ ],
+        "parts" : [ {
+          "key" : "metrics",
+          "label" : "Метрики",
+          "type" : "qg_metric",
+          "rel" : "MEASURED_BY",
+          "dir" : "out",
+          "owned" : "strict",
+          "relation" : "composition",
+          "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+          "optional_columns" : [ ],
+          "order_by" : "metric_id",
+          "create" : null
+        } ],
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
@@ -19246,6 +19258,15 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
+        "manageable" : false
+      }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
         "manageable" : false
       }, {
         "key" : "refsOut",
@@ -19624,7 +19645,19 @@
           "section" : null,
           "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
         } ],
-        "parts" : [ ],
+        "parts" : [ {
+          "key" : "metrics",
+          "label" : "Метрики",
+          "type" : "qg_metric",
+          "rel" : "MEASURED_BY",
+          "dir" : "out",
+          "owned" : "strict",
+          "relation" : "composition",
+          "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+          "optional_columns" : [ ],
+          "order_by" : "metric_id",
+          "create" : null
+        } ],
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
@@ -19665,6 +19698,15 @@
         "place" : "prop",
         "manageable" : false
       }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
+        "manageable" : false
+      }, {
         "key" : "refsOut",
         "label" : "Ссылается",
         "relation" : "association",
@@ -19686,7 +19728,19 @@
       "requirements" : [ ],
       "requirements_block" : "schema"
     },
-    "parts" : [ ],
+    "parts" : [ {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "type" : "qg_metric",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+      "optional_columns" : [ ],
+      "order_by" : "metric_id",
+      "create" : null
+    } ],
     "slice_links" : [ ],
     "unread" : [ ],
     "edge_links" : {
