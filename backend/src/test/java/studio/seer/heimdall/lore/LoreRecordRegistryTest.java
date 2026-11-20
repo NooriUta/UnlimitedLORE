@@ -113,7 +113,7 @@ class LoreRecordRegistryTest {
         Map<String, LoreRecordRegistry.TabRel> byDir = deps.rels().stream()
             .collect(Collectors.toMap(LoreRecordRegistry.TabRel::dir, r -> r));
         assertEquals("зависит от", byDir.get("out").label());
-        assertEquals("блокирует", byDir.get("in").label());
+        assertEquals("от неё зависят", byDir.get("in").label(), "MDL-13: владелица 20.11 — «выровнять» подписи у всех типов");
         for (LoreRecordRegistry.TabRel r : deps.rels()) {
             assertEquals("DEPENDS_ON", r.rel());
             assertEquals("association", r.relation());

@@ -34,6 +34,9 @@ class LoreDependencyModelTest {
             assertEquals("DEPENDS_ON", out.rel());
             assertEquals("out", out.dir());
             assertEquals("in", in.dir());
+            // владелица 20.11.2026: подписи «выровнять» — одни у всех типов
+            assertEquals("Зависит от", out.label(), type);
+            assertEquals("От неё зависят", in.label(), type);
             for (LoreRecordRegistry.Relation r : List.of(out, in)) {
                 assertEquals("any", r.targetType(), type + "." + r.key() + ": другой конец — любой из четырёх типов");
                 assertEquals("link_tab", r.place());

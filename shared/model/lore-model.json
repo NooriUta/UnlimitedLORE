@@ -306,7 +306,7 @@
       }, {
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "label" : "блокирует",
+        "label" : "от неё зависят",
         "relation" : "association",
         "edgeProps" : [ "kind", "reason" ]
       } ]
@@ -378,7 +378,7 @@
       } ]
     }, {
       "key" : "blocks",
-      "label" : "Блокирует",
+      "label" : "От неё зависят",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "any",
@@ -1306,7 +1306,7 @@
       }, {
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "label" : "блокирует",
+        "label" : "от неё зависят",
         "relation" : "association"
       }, {
         "rel" : "SUPERSEDES",
@@ -1367,7 +1367,7 @@
       "manageable" : true
     }, {
       "key" : "blocks",
-      "label" : "Блокирует",
+      "label" : "От неё зависят",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "adr",

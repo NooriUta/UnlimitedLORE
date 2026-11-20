@@ -634,7 +634,8 @@ export function registerEntity(server: McpServer): void {
       'the rels valid for that type. `fields` carries rel-conditional extras exactly as the old tools did: ' +
       'git_project (adr/release, bragi shipped_in), kind+reason (sprint dep; depends_on), ' +
       'depends_on (MDL-13): ONE DEPENDS_ON edge for task, phase, sprint, milestone in any pair — fields.kind from the ' +
-      'dictionary dependency_kind (unknown → 422), fields.reason, fields.target_type when the target id is ambiguous; ' +
+      'merged dictionary dependency_kind: blocks, waits, soft, gate, informs, relates (hard = blocks; unknown → 422), ' +
+      'fields.reason REQUIRED for a new dependency (422 REASON_REQUIRED), fields.target_type when the target id is ambiguous; ' +
       'a link that closes a cycle → 409 with the cycle path; remove closes the edge (history kept). ' +
       'project+summary_md (task file/pr), ' +
       'actor_role (uc actor), target_type (question raised_in, bragi produced_by), role+kind (product), ' +

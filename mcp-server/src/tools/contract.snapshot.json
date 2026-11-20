@@ -2160,7 +2160,7 @@
   "sprint_link": {
     "input": {
       "action": "enum(add|remove)?",
-      "kind": "enum(gate|hard|informs|soft)?",
+      "kind": "enum(blocks|gate|hard|informs|relates|soft|waits)?",
       "reason": "string?",
       "rel": "enum(component|dep|milestone|project)",
       "sprint_id": "string",

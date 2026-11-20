@@ -529,7 +529,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ "kind", "reason" ]
           } ]
@@ -609,7 +609,7 @@
         } ]
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -1308,7 +1308,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ "kind", "reason" ]
           } ]
@@ -1388,7 +1388,7 @@
         } ]
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -4223,7 +4223,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ ]
           }, {
@@ -4295,7 +4295,7 @@
         "manageable" : true
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -5012,7 +5012,7 @@
           }, {
             "rel" : "DEPENDS_ON",
             "dir" : "in",
-            "label" : "блокирует",
+            "label" : "от неё зависят",
             "relation" : "association",
             "edge_props" : [ ]
           }, {
@@ -5084,7 +5084,7 @@
         "manageable" : true
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",

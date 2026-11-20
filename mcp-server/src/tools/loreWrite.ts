@@ -1050,7 +1050,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       sprint_id: z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       rel:       z.enum(['project', 'dep', 'component', 'milestone']),
       target_id: z.string().describe('git_project slug (rel="project"), depended-on sprint_id (rel="dep"), component_id (rel="component"), or milestone_id (rel="milestone")'),
-      kind:      z.enum(['hard', 'soft', 'gate', 'informs']).optional().default('soft').describe('rel="dep" only'),
+      kind:      z.enum(['blocks', 'waits', 'soft', 'gate', 'informs', 'relates', 'hard']).optional().default('soft').describe('rel="dep" only; hard = old synonym of blocks (MDL-13 merged dictionary)'),
       reason:    z.string().optional().describe('rel="dep" only: brief reason for the dependency'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },

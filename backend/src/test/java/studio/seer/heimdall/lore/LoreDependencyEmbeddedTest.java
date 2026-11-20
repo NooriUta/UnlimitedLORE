@@ -99,12 +99,12 @@ class LoreDependencyEmbeddedTest {
         LoreDependency.Result r = link("task", "SPRINT_A/T1", "phase", "SPRINT_B/PHASE_1", "hard", "ждём схему");
         assertEquals(200, r.status(), r.body().toString());
         assertEquals("created", r.body().get("outcome"));
-        assertEquals(200, link("milestone", "M-1", "sprint", "SPRINT_A", "gate", null).status());
-        assertEquals(200, link("phase", "SPRINT_B/PHASE_1", "milestone", "M-1", null, null).status());
+        assertEquals(200, link("milestone", "M-1", "sprint", "SPRINT_A", "gate", "r").status());
+        assertEquals(200, link("phase", "SPRINT_B/PHASE_1", "milestone", "M-1", null, "r").status());
         List<Map<String, Object>> e = g.query("SELECT kind, reason, valid_from, valid_to FROM DEPENDS_ON "
             + "WHERE @out.task_uid = 'SPRINT_A/T1'", Map.of());
         assertEquals(1, e.size());
-        assertEquals("hard", e.get(0).get("kind"));
+        assertEquals("blocks", e.get(0).get("kind"), "hard — синоним blocks в объединённом справочнике");
         assertEquals("ждём схему", e.get(0).get("reason"));
         assertNotNull(e.get(0).get("valid_from"), "связь историчная — у нового ребра есть «действует с»");
         assertNull(e.get(0).get("valid_to"));
@@ -122,6 +122,30 @@ class LoreDependencyEmbeddedTest {
     }
 
     @Test
+    void newDependencyWithoutReasonIs422() {
+        LoreDependency.Result r = link("task", "SPRINT_A/T1", "task", "SPRINT_A/T2", "blocks", null);
+        assertEquals(422, r.status());
+        assertEquals("REASON_REQUIRED", r.body().get("error"));
+        assertTrue(String.valueOf(r.body().get("detail")).contains("укажите причину"));
+        assertEquals(422, link("task", "SPRINT_A/T1", "task", "SPRINT_A/T2", "blocks", "   ").status(), "пробелы — не причина");
+        assertEquals(0, g.query("SELECT FROM DEPENDS_ON WHERE @out.task_uid = 'SPRINT_A/T1'", Map.of()).size());
+        // старая связь без причины (до 1.18): смена вида без причины открыла бы новое ребро без причины — тоже 422
+        g.exec("CREATE EDGE DEPENDS_ON FROM (SELECT FROM KnowSprint WHERE sprint_id = 'SPRINT_A') TO (SELECT FROM KnowSprint WHERE sprint_id = 'SPRINT_C') SET kind = 'soft'", Map.of());
+        assertEquals(422, link("sprint", "SPRINT_A", "sprint", "SPRINT_C", "gate", null).status());
+        assertEquals("unchanged", link("sprint", "SPRINT_A", "sprint", "SPRINT_C", null, null).body().get("outcome"),
+            "повтор без изменений не пишет и причины не требует");
+    }
+
+    @Test
+    void mergedDictionaryAcceptsSpecKindsAndMapsHardToBlocks() {
+        assertEquals(List.of("blocks", "waits", "soft", "gate", "informs", "relates"), LoreDependency.DEFAULT_KINDS);
+        assertEquals(200, link("task", "SPRINT_A/T1", "task", "SPRINT_A/T2", "waits", "ждём ответ").status());
+        assertEquals(200, link("task", "SPRINT_A/T2", "sprint", "SPRINT_B", "relates", "см.").status());
+        LoreDependency.Result r = link("milestone", "M-1", "sprint", "SPRINT_A", "hard", "старый код");
+        assertEquals("blocks", r.body().get("kind"));
+    }
+
+    @Test
     void selfLoopIs400AndMissingEndIs404() {
         assertEquals(400, link("task", "SPRINT_A/T1", "task", "SPRINT_A/T1", "hard", null).status());
         LoreDependency.Result r = link("task", "SPRINT_A/T1", "sprint", "SPRINT_NOPE", "hard", null);
@@ -132,11 +156,11 @@ class LoreDependencyEmbeddedTest {
 
     @Test
     void cycleThroughDifferentTypesIs409WithThePath() {
-        assertEquals(200, link("task", "SPRINT_A/T1", "phase", "SPRINT_B/PHASE_1", "hard", null).status());
-        assertEquals(200, link("phase", "SPRINT_B/PHASE_1", "milestone", "M-1", "soft", null).status());
-        assertEquals(200, link("milestone", "M-1", "sprint", "SPRINT_C", "informs", null).status());
+        assertEquals(200, link("task", "SPRINT_A/T1", "phase", "SPRINT_B/PHASE_1", "hard", "r").status());
+        assertEquals(200, link("phase", "SPRINT_B/PHASE_1", "milestone", "M-1", "soft", "r").status());
+        assertEquals(200, link("milestone", "M-1", "sprint", "SPRINT_C", "informs", "r").status());
         // SPRINT_C → SPRINT_B (старое ребро без valid_from); SPRINT_B → задача замкнёт цикл? нет: задача → фаза.
-        LoreDependency.Result r = link("sprint", "SPRINT_C", "task", "SPRINT_A/T1", "hard", null);
+        LoreDependency.Result r = link("sprint", "SPRINT_C", "task", "SPRINT_A/T1", "hard", "r");
         assertEquals(409, r.status(), r.body().toString());
         assertEquals("CYCLE", r.body().get("error"));
         @SuppressWarnings("unchecked") List<String> path = (List<String>) r.body().get("cycle");
@@ -146,9 +170,9 @@ class LoreDependencyEmbeddedTest {
 
     @Test
     void closedEdgeDoesNotCloseACycle() {
-        assertEquals(200, link("task", "SPRINT_A/T1", "task", "SPRINT_A/T2", "hard", null).status());
+        assertEquals(200, link("task", "SPRINT_A/T1", "task", "SPRINT_A/T2", "hard", "r").status());
         assertEquals(200, LoreDependency.link(g, ref("task", "SPRINT_A/T1"), ref("task", "SPRINT_A/T2"), null, null, "remove", KINDS, now()).status());
-        assertEquals(200, link("task", "SPRINT_A/T2", "task", "SPRINT_A/T1", "hard", null).status(),
+        assertEquals(200, link("task", "SPRINT_A/T2", "task", "SPRINT_A/T1", "hard", "r").status(),
             "снятая (закрытая) зависимость цикла не образует");
     }
 
@@ -172,7 +196,7 @@ class LoreDependencyEmbeddedTest {
             "без вида и причины — связь та же");
         LoreDependency.Result r = link("task", "SPRINT_A/T1", "sprint", "SPRINT_B", "soft", null);
         assertEquals("updated", r.body().get("outcome"));
-        assertEquals("hard", r.body().get("previous_kind"));
+        assertEquals("blocks", r.body().get("previous_kind"));
         List<Map<String, Object>> all = g.query("SELECT kind, reason, valid_to FROM DEPENDS_ON WHERE @out.task_uid = 'SPRINT_A/T1' ORDER BY valid_from", Map.of());
         assertEquals(2, all.size());
         assertNotNull(all.get(0).get("valid_to"));
@@ -195,8 +219,8 @@ class LoreDependencyEmbeddedTest {
     @Test
     void depsSlicesShowOnlyCurrentPlanningEdges() {
         link("task", "SPRINT_A/T1", "phase", "SPRINT_B/PHASE_1", "hard", "ждём");
-        link("milestone", "M-1", "sprint", "SPRINT_A", "gate", null);
-        link("task", "SPRINT_A/T2", "sprint", "SPRINT_B", "soft", null);
+        link("milestone", "M-1", "sprint", "SPRINT_A", "gate", "r");
+        link("task", "SPRINT_A/T2", "sprint", "SPRINT_B", "soft", "r");
         LoreDependency.link(g, ref("task", "SPRINT_A/T2"), ref("sprint", "SPRINT_B"), null, null, "remove", KINDS, now());
 
         List<Map<String, Object>> all = slice("deps", Map.of());
@@ -205,7 +229,7 @@ class LoreDependencyEmbeddedTest {
         assertEquals("SPRINT_A/T1", t.get("from_id"));
         assertEquals("phase", t.get("to_type"));
         assertEquals("SPRINT_B/PHASE_1", t.get("to_id"));
-        assertEquals("hard", t.get("kind"));
+        assertEquals("blocks", t.get("kind"));
         assertEquals("ждём", t.get("reason"));
         assertEquals(1, slice("deps", Map.of("type", "milestone")).size());
         assertEquals(1, slice("deps", Map.of("kind", "gate")).size());
@@ -226,9 +250,9 @@ class LoreDependencyEmbeddedTest {
     @Test
     void sprintSlicesKeepTheirShapeAndSkipClosedEdges() {
         link("sprint", "SPRINT_A", "sprint", "SPRINT_B", "hard", "x");
-        link("sprint", "SPRINT_B", "sprint", "SPRINT_A", "soft", null); // цикл → 409, не записано
+        link("sprint", "SPRINT_B", "sprint", "SPRINT_A", "soft", "r"); // цикл → 409, не записано
         LoreDependency.link(g, ref("sprint", "SPRINT_A"), ref("sprint", "SPRINT_B"), null, null, "remove", KINDS, now());
-        link("sprint", "SPRINT_A", "sprint", "SPRINT_C", "gate", null);
+        link("sprint", "SPRINT_A", "sprint", "SPRINT_C", "gate", "r");
         List<Map<String, Object>> deps = slice("sprint_deps", Map.of());
         assertEquals(2, deps.size(), deps.toString()); // C → B (старое) и A → C
         assertTrue(deps.stream().allMatch(x -> x.containsKey("from_sprint") && x.containsKey("to_sprint") && x.containsKey("kind")));

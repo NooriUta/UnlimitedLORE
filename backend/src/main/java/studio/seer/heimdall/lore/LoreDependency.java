@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
  * спринтом и вехой в любом сочетании (слова владелицы 16.11.2026: «одно ребро которое универсально может
  * связывать»; спека SPEC-LORE-DEPENDENCY-EDGE).
  * <ul>
- *   <li>у ребра вид {@code kind} из справочника {@link #DICT} (как у спринтов: hard, soft, gate, informs) и
- *       причина {@code reason}; вид не из справочника — 422 со списком допустимых;</li>
+ *   <li>у ребра вид {@code kind} из справочника {@link #DICT} (объединённый: blocks, waits, soft, gate, informs, relates) и
+ *       причина {@code reason} (обязательна у новой связи — иначе 422); вид не из справочника — 422 со списком допустимых;</li>
  *   <li>связь с собой — 400; конец не найден — 404; связь, замыкающая цикл (через любые из четырёх типов), —
  *       409 с путём цикла;</li>
  *   <li>связь историчная (раздел edge_history модели): снятие закрывает ребро {@code valid_to}, смена вида —
@@ -32,8 +32,16 @@ final class LoreDependency {
     static final String EDGE = "DEPENDS_ON";
     /** Справочник видов зависимости (KnowDictEntry.dict_type; в новой базе — справочник переноса). */
     static final String DICT = "dependency_kind";
-    /** Виды, пока справочник в базе не заведён: те, что уже лежат у спринтов (прод 16.11: hard 42, soft 30, gate 9, informs 6). */
-    static final List<String> DEFAULT_KINDS = List.of("hard", "soft", "gate", "informs");
+    /**
+     * Виды, пока справочник в базе не заведён. Объединённый справочник (владелица 20.11.2026: «объединить»): виды
+     * спринтов (soft, gate, informs) и виды спеки SPEC-LORE-DEPENDENCY-EDGE (blocks, waits, relates); hard спринтов
+     * и blocks спеки — одно и то же («не начать без»), код один — blocks, hard принимается синонимом.
+     */
+    static final List<String> DEFAULT_KINDS = List.of("blocks", "waits", "soft", "gate", "informs", "relates");
+    /** Синонимы видов: прежний код → код справочника. */
+    static final Map<String, String> SYNONYMS = Map.of("hard", "blocks");
+    /** Причина, которую получают при переносе старые связи без причины (до 1.18). */
+    static final String MIGRATED_NO_REASON = "перенесено без причины (до 1.18)";
     /** Вид, когда вызывающий его не назвал — как у прежнего sprint/dep. */
     static final String DEFAULT_KIND = "soft";
     /** Предел обхода при поиске цикла: граф планирования — сотни рёбер, предел — от зацикливания самого обхода. */
@@ -146,6 +154,7 @@ final class LoreDependency {
                 + (fe == null ? from.type() : to.type())));
         if (from.equals(to)) return new Result(400, err("BAD_PARAMS", "связь с собой: " + from.label()));
         String k = kind == null || kind.isBlank() ? null : kind.strip();
+        if (k != null) k = SYNONYMS.getOrDefault(k, k);
         if (!remove && k != null && !kinds.contains(k)) {
             Map<String, Object> e = err("UNKNOWN_KIND", "вид зависимости «" + k + "» не из справочника " + DICT);
             e.put("allowed", List.copyOf(kinds));
@@ -175,13 +184,20 @@ final class LoreDependency {
         String prevKind = cur.isEmpty() ? null : s(cur.get(0).get("kind"));
         String prevReason = cur.isEmpty() ? null : s(cur.get(0).get("reason"));
         String newKind = k != null ? k : (cur.isEmpty() ? DEFAULT_KIND : prevKind);
-        String newReason = reason != null ? reason : prevReason;
+        String newReason = reason != null && !reason.isBlank() ? reason.strip() : (prevReason == null || prevReason.isBlank() ? null : prevReason);
         out.put("kind", newKind);
         if (newReason != null) out.put("reason", newReason);
-        if (!cur.isEmpty() && Objects.equals(prevKind, newKind) && Objects.equals(prevReason, newReason)) {
+        if (!cur.isEmpty() && Objects.equals(prevKind, newKind) && (reason == null || reason.isBlank() || Objects.equals(prevReason, newReason))) {
             out.put("outcome", LoreOutcome.UNCHANGED);
             out.put("hint", "связь уже была — повторять вызов не нужно");
             return new Result(200, out);
+        }
+        // Владелица 20.11.2026: «хорошо бы с причиной, мы её теряем» — новая связь (и новое ребро при смене вида)
+        // без причины не пишется.
+        if (newReason == null) {
+            Map<String, Object> e = err("REASON_REQUIRED", "укажите причину зависимости (reason): почему "
+                + from.label() + " зависит от " + to.label());
+            return new Result(422, e);
         }
         if (cur.isEmpty()) {
             List<Ref> cycle = cyclePath(g, from, fr, to, tr);

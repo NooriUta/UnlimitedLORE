@@ -655,11 +655,12 @@
       }
     },
     "dependency_kind": {
-      "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: вид связи «зависит от» (DEPENDS_ON) между задачей, фазой, спринтом и вехой. Набор — как у спринтов на проде (16.11.2026: hard 42, soft 30, gate 9, informs 6, без вида 30); подписи — из заметки задачи. Другой набор (blocks / waits / relates из SPEC-LORE-DEPENDENCY-EDGE) — развилка владелицы, не решена.",
+      "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: вид связи «зависит от» (DEPENDS_ON) между задачей, фазой, спринтом и вехой. Владелица 20.11.2026: «объединить» — виды спринтов (прод 16.11: hard 42, soft 30, gate 9, informs 6) и виды спеки SPEC-LORE-DEPENDENCY-EDGE (blocks, waits, relates). Дубль по смыслу один: hard спринтов = blocks спеки («не начать без») — код blocks, hard — синоним.",
       "kind": "other",
       "codes": [
         {
-          "code": "hard",
+          "code": "blocks",
+          "meaning": "не начать без другой записи (спека: blocks; у спринтов было hard)",
           "labels": {
             "ru": "Блокирует",
             "en": "Blocks",
@@ -667,7 +668,17 @@
           }
         },
         {
+          "code": "waits",
+          "meaning": "ждём ответа или результата другой записи (спека: waits)",
+          "labels": {
+            "ru": "Ждёт ответа",
+            "en": "Waits for",
+            "pl": "Czeka na"
+          }
+        },
+        {
           "code": "soft",
+          "meaning": "ждёт, но начинать можно (спринты: soft)",
           "labels": {
             "ru": "Ждёт, но можно начинать",
             "en": "Waits, can start meanwhile",
@@ -676,6 +687,7 @@
         },
         {
           "code": "gate",
+          "meaning": "проверка: перейти дальше — после решения или приёмки другой записи (спринты: gate)",
           "labels": {
             "ru": "Проверка",
             "en": "Gate",
@@ -684,13 +696,26 @@
         },
         {
           "code": "informs",
+          "meaning": "другая запись даёт входные данные (спринты: informs)",
           "labels": {
             "ru": "Входные данные",
             "en": "Informs",
             "pl": "Dane wejściowe"
           }
+        },
+        {
+          "code": "relates",
+          "meaning": "просто связано, без ожидания (спека: relates)",
+          "labels": {
+            "ru": "Связано",
+            "en": "Relates to",
+            "pl": "Powiązane"
+          }
         }
-      ]
+      ],
+      "synonyms": {
+        "hard": "blocks"
+      }
     }
   },
   "_sources": "Где в источнике лежит статус. required: пустое значение — строка диалога (правило владелицы 16.11.2026: пустого статуса нет, предложение — первый статус справочника).",

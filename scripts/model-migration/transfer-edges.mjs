@@ -18,7 +18,8 @@ import { applyOrphanSprints } from './orphan-sprints.mjs';
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
-import { checkDependsOn } from './depends-on.mjs';
+import { applyDependsOn } from './depends-on.mjs';
+import { applyWaitingLinks } from './waiting-links.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -110,9 +111,15 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     x => { if (OWN.includes(x.ot) && x.it === x.ot + 'Hist' && dstRid.has(x.o) && dstRid.has(x.i)) hsKept++; });
   report.moved[VERSION_EDGE] = { source: hs, expected: hsKept, target: hsGot };
   if (hsKept !== hsGot) ok = false;
-  // MDL-13: зависимости DEPENDS_ON — вид из справочника dependency_kind, было → стало по паре концов и виду, потерь 0
-  report.depends_on = await checkDependsOn(db, RULES, { log });
+  // MDL-13 (владелица 20.11.2026): зависимости DEPENDS_ON — вид кодом объединённого справочника dependency_kind
+  // (hard → blocks), пустой вид — по ответу шага «Вид зависимостей», причина у старых — «перенесено без причины»;
+  // было → стало по паре концов и виду, потерь 0
+  const decisionsDeps = loadDecisions();
+  report.depends_on = await applyDependsOn(db, RULES, decisionsDeps, { log });
   if (!report.depends_on.ok) ok = false;
+  // шаг «Ожидание → связи»: waiting_for, где назван конец планирования, — связь вида waits по ответу человека
+  report.waiting_links = await applyWaitingLinks(db, decisionsDeps, { log, at });
+  if (!report.waiting_links.ok) ok = false;
   // задачи без спринта (шаг «З» мастера): ребро PART_OF задача → спринт только по ответу человека (orphan_sprints)
   const decisionsOs = loadDecisions();
   report.orphan_sprints = await applyOrphanSprints(db, decisionsOs, { log });
