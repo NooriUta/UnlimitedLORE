@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "6d663b9ae97b5611",
+  "version" : "dbeab450fcdfe80f",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -1199,18 +1199,38 @@
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "out",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -2350,6 +2370,44 @@
         "place" : "link_tab",
         "manageable" : true
       }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
         "key" : "refsOut",
         "label" : "Ссылается",
         "relation" : "association",
@@ -3004,7 +3062,7 @@
         "manageable" : true
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
@@ -5793,6 +5851,42 @@
         "target_type" : "feature",
         "place" : "link_tab",
         "manageable" : false
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
         "label" : "Продукты",
@@ -11850,6 +11944,26 @@
           "order" : 11,
           "slot" : "own",
           "group" : null
+        }, {
+          "key" : "dependsOn",
+          "source" : "relation",
+          "ref" : "dependsOn",
+          "order" : 12,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
+        }, {
+          "key" : "blocks",
+          "source" : "relation",
+          "ref" : "blocks",
+          "order" : 13,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
         } ]
       },
       "adr" : {
@@ -12181,6 +12295,26 @@
           "order" : 3,
           "slot" : "own",
           "group" : null
+        }, {
+          "key" : "dependsOn",
+          "source" : "relation",
+          "ref" : "dependsOn",
+          "order" : 4,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
+        }, {
+          "key" : "blocks",
+          "source" : "relation",
+          "ref" : "blocks",
+          "order" : 5,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
         } ]
       },
       "release" : {
@@ -14175,6 +14309,7 @@
     "fields" : [ "valid_from", "valid_to" ],
     "edges" : {
       "ANSWERABLE_BY" : "Ответственный за вопрос (человек или агент реестра): при закрытии вопроса решением ответственным становится автор решения; по связи видно, кто отвечал раньше и с какого времени (MT-MCP-TRUTH A6, владелица 19.11.2026).",
+      "DEPENDS_ON" : "Зависимость задачи, фазы, спринта и вехи (одна связь «зависит от» с видом и причиной, MDL-13; у ADR — та же связь между ADR): снятая зависимость и смена вида закрывают ребро, а не стирают — видно, что от чего зависело и когда.",
       "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
       "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
       "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
