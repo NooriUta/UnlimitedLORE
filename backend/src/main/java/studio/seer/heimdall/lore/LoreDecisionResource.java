@@ -136,7 +136,8 @@ public class LoreDecisionResource extends LoreResourceBase {
             // S2-13: статус — версией KnowDecisionHist (у решений истории не было вовсе).
             // Тот же статус повторно версию не открывает. Новое решение без статуса — первый статус
             // справочника (слово владелицы 16.11.2026: «по аналогии выбирать первый статус»).
-            final String st = knownNew ? CreateDefaultStatus.forNew("decision", req.status()) : req.status();
+            final CreateDefaultStatus.Pick statusPick = knownNew ? CreateDefaultStatus.pick("decision", req.status()) : null;
+            final String st = statusPick != null ? statusPick.value() : req.status();
             if (st != null && !st.isBlank()) {
                 java.util.List<Map<String, Object>> cur = ingestService.queryPublic(
                     "SELECT status_raw, out('HAS_STATE').size() AS versions FROM KnowDecision WHERE decision_id=:d",
@@ -221,6 +222,7 @@ public class LoreDecisionResource extends LoreResourceBase {
             // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
             WorkQuality.Result quality = decisionQuality(req.decision_id());
             if (quality != null) out.put("quality", WorkQuality.compact(quality));
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());

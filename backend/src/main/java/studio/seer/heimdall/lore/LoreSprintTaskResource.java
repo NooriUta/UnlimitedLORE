@@ -109,7 +109,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.sprint_id()).matches()) {
             return badParams("sprint_id contains illegal characters");
         }
-        String status = (req.status() == null || req.status().isBlank()) ? "todo" : req.status();
+        // Спринт без статуса — начальный статус по модели (sprint.status.initial; 16.11.2026 «в беклог»,
+        // правило владелицы 19.11.2026). Раньше — «todo», который писался «📋 PLANNED».
+        final CreateDefaultStatus.Pick statusPick = CreateDefaultStatus.pick("sprint", req.status());
+        String status = statusPick.value();
         if (!PLAN_STATUSES.contains(status)) {
             return badParams("status must be one of: " + PLAN_STATUSES);
         }
@@ -143,6 +146,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (req.context_md() != null || req.outcome_md() != null)
                 out.put("mentions", autoLinkMentions("sprint", req.sprint_id(), false, req.context_md(), req.outcome_md()));
             out.put("quality", WorkQuality.compact(sprintQuality(req.sprint_id())));
+            if (r.created()) CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
@@ -401,6 +405,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             // MDL-11: в каком статусе родилась задача и назвал ли его создающий.
                             body.put("status", createStatusRaw);
                             body.put("status_defaulted", TaskCreateStatus.defaulted(req.status()));
+                            CreateDefaultStatus.report(body, CreateDefaultStatus.pick("task", req.status())); // правило 19.11
                             body.put("task_id", tid);
                             body.put("order_index", order);
                             body.put("quality", WorkQuality.compact(taskQuality(uid)));

@@ -23,9 +23,11 @@ class CreateDefaultStatusTest {
         "adr", "DRAFT", "decision", "proposed", "spec", "proposed",
         "quality_gate", "draft", "phase", "backlog");
 
+    /** 19.11.2026: таблица выводится из модели (status.initial) и шире — спринт, задача, вопрос, фича. */
     @Test
     void defaultIsTheFirstStatusOfTheTypeDictionary() {
-        assertEquals(FIRST_ON_PROD, CreateDefaultStatus.FIRST);
+        for (Map.Entry<String, String> e : FIRST_ON_PROD.entrySet())
+            assertEquals(e.getValue(), CreateDefaultStatus.FIRST.get(e.getKey()), e.getKey());
     }
 
     @Test
