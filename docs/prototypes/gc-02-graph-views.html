@@ -8,9 +8,12 @@
   Прототип SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-02: три отрисовщика договора kit на пяти живых графах LORE.
   Данные — выгрузки MCP `graph` от 20.11.2026, лежат рядом: gc-02-graphs/*.json (в каждом — какой вызов дал граф).
   Правило выбора отрисовщика — копия chooseGraphRenderer из kit/src/graph/graphContract.ts (v1.17.20, #1336).
-  Режим правки доски НЕ сделан: это решение владелицы (заметка задачи). Доска здесь только смотрится.
-  Открывать через http (python -m http.server / npx serve в docs/prototypes): с file:// браузер не даст прочитать JSON —
-  страница скажет это словами, а не покажет пустой холст.
+  v2 (20.11.2026, по отзыву владелицы): у карточек React Flow есть хэндлы — рёбра рисуются во всех трёх видах;
+  у доски режим «Правка»: создать карточку (тип LORE + название), найти существующую запись («[[» — peek, «#» — по тегу),
+  связать (тип связи — из shared/model/lore-model.json через gc-02-graphs/model-relations.json), двигать, удалять, рисовать.
+  Правки — только localStorage этого браузера: прототип, в LORE не пишется.
+  Открывать: двойным щелчком — gc-02-graph-views.standalone.html (данные встроены, собирает gc-02-build-standalone.mjs);
+  этот файл — через http (npx serve в docs/prototypes), с file:// браузер не даст прочитать JSON, и страница скажет это словами.
 -->
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +40,10 @@ nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-bottom:1px solid
 .views{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;align-items:center}
 .lbl{color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;margin-right:4px}
 main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;min-height:72vh}
-@media (max-width:820px){main{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:820px){main{grid-template-columns:minmax(0,1fr)}#stage{min-height:calc(100dvh - 8px)}}
+@media (max-width:820px){.react-flow__minimap{display:none}}
+details.sub>summary{cursor:pointer;color:var(--t2);font-size:var(--fs-xs)}
+details.sub[open]>summary{margin-bottom:4px}
 #stage{position:relative;min-height:72vh;border-right:1px solid var(--bd);background:var(--bg0)}
 #canvas{position:absolute;inset:0}
 .state{position:absolute;left:16px;right:16px;top:16px;z-index:5;padding:10px 12px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);font-size:var(--fs-xs);line-height:1.5}
@@ -62,6 +68,46 @@ td.n{text-align:right;font-family:var(--mono);font-size:var(--fs-2xs)}
 .react-flow{--xy-background-color:var(--bg0);--xy-edge-stroke:var(--bdh);--xy-controls-button-background-color:var(--bg2);--xy-controls-button-color:var(--t1);--xy-controls-button-border-color:var(--bd)}
 .react-flow__node{padding:0;border:0;background:transparent;width:auto}
 .react-flow__attribution{display:none}
+.card.local{border-style:dashed;border-left-style:solid}
+.card.note{background:var(--bg3);border-left-color:var(--acc)}
+.card .badge{float:right;margin-left:4px;color:var(--acc);font-family:var(--mono)}
+.react-flow__handle.hd{width:6px;height:6px;min-width:0;min-height:0;border:0;background:var(--acc);opacity:0;pointer-events:none}
+.gwrap.editing .react-flow__handle.hd{opacity:1;width:12px;height:12px;border:2px solid var(--bg0);pointer-events:all}
+@media (pointer:coarse){.gwrap.editing .react-flow__handle.hd{width:18px;height:18px}}
+.react-flow__node.selected .card{box-shadow:0 0 0 2px var(--acc)}
+.react-flow__node.linkfrom .card{box-shadow:0 0 0 2px var(--inf)}
+.react-flow__edge-text{fill:var(--t2);font-family:var(--mono);font-size:var(--fs-2xs)}
+.react-flow__edge-textbg{fill:var(--bg1)}
+.react-flow__edge-textwrapper{opacity:.8}
+.react-flow__edge:hover .react-flow__edge-textwrapper,.react-flow__edge.selected .react-flow__edge-textwrapper{opacity:1}
+.react-flow__edge.selected .react-flow__edge-path{stroke:var(--acc)!important}
+.gwrap{position:absolute;inset:0;display:flex;flex-direction:column}
+.gflow{position:relative;flex:1;min-height:0}
+.btool{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg1);position:relative;z-index:6}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:var(--bg2);color:var(--t2);font:inherit;font-size:var(--fs-xs);padding:4px 10px;cursor:pointer;min-height:28px}
+.seg button[aria-pressed="true"]{background:var(--bg3);color:var(--acc)}
+.tb{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:999px;padding:4px 10px;font:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;min-height:28px}
+.tb[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:var(--bg3)}
+.tb.dng{color:var(--dng)}
+.tb:disabled{opacity:.45;cursor:not-allowed}
+.proto{color:var(--wrn);border-color:var(--wrn)}
+.draw{position:absolute;inset:0;z-index:5;touch-action:none;cursor:crosshair}
+.draw.eraser{cursor:cell}
+.dlg-back{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px 16px}
+.dlg{width:min(460px,100%);max-height:calc(100vh - 80px);display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--bdh);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.dlg h3{font-family:var(--disp);font-weight:800;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0;padding:10px 12px 6px}
+.dlg .body{padding:6px 12px 12px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.dlg input,.dlg select{width:100%;background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:4px;padding:7px 8px;font:inherit;font-size:var(--fs-md)}
+.dlg input:focus,.dlg select:focus{outline:1px solid var(--acc);border-color:var(--acc)}
+.dlg .hint{color:var(--t3);font-size:var(--fs-2xs);line-height:1.5}
+.dlg .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.res{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.res button{width:100%;text-align:left;border:1px solid transparent;background:var(--bg2);color:var(--t1);border-radius:4px;padding:5px 7px;font:inherit;font-size:var(--fs-xs);cursor:pointer;display:block}
+.res button:hover,.res button:focus{border-color:var(--acc)}
+.res button:disabled{opacity:.5;cursor:default}
+.res .rid{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--c,var(--t2));display:block}
+.res .rt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:4px;padding:4px 8px;font:inherit;font-size:var(--fs-xs);cursor:pointer}
 </style>
 <script type="importmap">
@@ -81,9 +127,10 @@ button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);bord
 <body>
 <header>
   <h1>Графовые виды · GC-02</h1>
-  <div class="sub">Прототип договора kit <code>kit/src/graph/graphContract.ts</code>: один вход (узлы <code>{id,type,title}</code> и рёбра <code>(from, rel, to, kind?)</code>), три отрисовщика.
+  <details class="sub" id="about"><summary>О прототипе</summary>Прототип договора kit <code>kit/src/graph/graphContract.ts</code>: один вход (узлы <code>{id,type,title}</code> и рёбра <code>(from, rel, to, kind?)</code>), три отрисовщика.
   <b>React Flow</b> — доска, mind map, структура (раскладка ELK в воркере); <b>sigma</b> — граф знаний; <b>d3-force в воркере</b> — «живая» физика поверх sigma.
-  Пять графов — живые выгрузки MCP <code>graph</code> от 20.11.2026, файлы <code>gc-02-graphs/*.json</code>. Режим правки доски не сделан: это решение владелицы.</div>
+  Пять графов — живые выгрузки MCP <code>graph</code> от 20.11.2026, файлы <code>gc-02-graphs/*.json</code>.
+  У доски — режим <b>Правка</b>: создать, найти (<code>[[</code> запись, <code>#</code> тег), связать по модели, двигать, удалять, рисовать. <b>Прототип: в LORE не пишется</b>, правки живут в этом браузере.</details>
 </header>
 <nav id="graphs" aria-label="Граф"></nav>
 <div class="views"><span class="lbl">Вид</span><span id="views"></span><span class="lbl" style="margin-left:12px">Отрисовщик</span><span id="renderer" class="chip">—</span></div>
@@ -99,9 +146,10 @@ button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);bord
   </aside>
 </main>
 <script type="module">
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, Background, Controls, MiniMap, MarkerType } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, Background, Controls, MiniMap, MarkerType, Handle, Position, ConnectionMode, ViewportPortal,
+  useNodesState, useEdgesState, useReactFlow } from '@xyflow/react';
 import Graph from 'graphology';
 import Sigma from 'sigma';
 
@@ -135,7 +183,7 @@ const RENDERER_NAME = { reactflow: 'React Flow + ELK (воркер)', force: 'fo
 
 // Цвета типов — только токены; sigma нужен цвет строкой, поэтому читаем вычисленные значения переменных.
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const TYPE_TOKEN = { adr: '--acc', decision: '--inf', spec: '--suc', task: '--t2', sprint: '--wrn', release: '--dng', milestone: '--wrn', component: '--inf', project: '--acc', question: '--dng', doc: '--suc', uc: '--suc', tech: '--t3' };
+const TYPE_TOKEN = { adr: '--acc', decision: '--inf', spec: '--suc', task: '--t2', sprint: '--wrn', release: '--dng', milestone: '--wrn', component: '--inf', project: '--acc', question: '--dng', doc: '--suc', uc: '--suc', tech: '--t3', note: '--acc' };
 const tokenOf = t => TYPE_TOKEN[t] || '--t3';
 
 // ── Состояние в адресе ────────────────────────────────────────────────────────────────────
@@ -170,8 +218,17 @@ function renderViews(n) {
   }
 }
 
+/** Файл из gc-02-graphs: из встроенных данных (standalone, file://), иначе fetch. */
+async function loadFile(file) {
+  const embedded = window.__GC02_DATA && window.__GC02_DATA[file];
+  if (embedded) return embedded;
+  const r = await fetch(file);
+  if (!r.ok) throw new Error(`HTTP ${r.status} на ${file}`);
+  return r.json();
+}
 async function loadGraph(g) {
   if (cache.has(g.key)) return cache.get(g.key);
+  if (window.__GC02_DATA && window.__GC02_DATA[g.file]) { cache.set(g.key, window.__GC02_DATA[g.file]); return window.__GC02_DATA[g.file]; }
   const r = await fetch(g.file);
   if (!r.ok) throw new Error(`HTTP ${r.status} на ${g.file}`);
   const j = await r.json();
@@ -179,7 +236,9 @@ async function loadGraph(g) {
   return j;
 }
 
+let goSeq = 0;
 async function go() {
+  goSeq++;
   teardown(); teardown = () => {};
   $('canvas').innerHTML = '';
   const g = GRAPHS.find(x => x.key === gKey);
@@ -216,11 +275,318 @@ async function go() {
 
 // ── React Flow: доска (колонки по типам), mind map (ELK mrtree), структура (ELK layered) ───────
 const NODE_W = 220, NODE_H = 58;
+// Хэндлы карточки: [вход, выход] под направление раскладки. Рёбра LORE в основном «дочь → родитель», а ELK
+// ставит родителя в корень (mind map — слева, структура — сверху), поэтому выход дочери смотрит на родителя.
+// Без <Handle> React Flow рёбра не рисует вовсе — это и была причина «не вижу связей» в v1.
+const HANDLE_POS = { board: [Position.Left, Position.Right], mindmap: [Position.Right, Position.Left], structure: [Position.Bottom, Position.Top] };
+let MODEL_TYPES = {}; // подписи типов из модели (заполняется при загрузке model-relations.json)
+const typeLabel = t => t === 'note' ? 'заметка' : (MODEL_TYPES[t] || t);
 function Card({ data }) {
-  return h('div', { className: 'card' + (data.root ? ' root' : ''), style: { '--c': `var(${tokenOf(data.type)})` }, title: data.title || '' },
-    h('span', { className: 'id' }, `${data.type} · ${data.id}`), h('span', { className: 'tt' }, data.title || '(без названия)'));
+  const [tp, sp] = HANDLE_POS[data.layout] || HANDLE_POS.board;
+  const cls = 'card' + (data.root ? ' root' : '') + (data.local ? ' local' : '') + (data.type === 'note' ? ' note' : '');
+  return h('div', { className: cls, style: { '--c': `var(${tokenOf(data.type)})` }, title: data.title || '' },
+    h(Handle, { type: 'target', position: tp, className: 'hd' }),
+    h('span', { className: 'id' }, data.local ? h('span', { className: 'badge' }, 'новая') : data.added ? h('span', { className: 'badge' }, '+') : null,
+      data.local ? typeLabel(data.type) : `${data.type} · ${data.id}`),
+    h('span', { className: 'tt' }, data.title || '(без названия)'),
+    h(Handle, { type: 'source', position: sp, className: 'hd' }));
 }
-const nodeTypes = { card: Card };
+function Lane({ data }) {
+  return h('div', { style: { width: NODE_W, color: 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.08em' } }, data.label);
+}
+const nodeTypes = { card: Card, lane: Lane };
+
+/** Ребро для React Flow. Подпись = тип связи; структурные — тусклее, связи «только доски» (стикер) — акцентом. */
+function edgeOf(e) {
+  const col = e.boardOnly ? css('--acc') : e.k === 'structural' ? css('--bdh') : css('--t3');
+  return { id: e.id, source: e.source, target: e.target, label: e.rel, labelBgPadding: [3, 1], labelBgBorderRadius: 3,
+    data: { rel: e.rel, k: e.k || null, local: !!e.local, boardOnly: !!e.boardOnly },
+    style: { stroke: col, strokeWidth: 1.25, strokeDasharray: e.local ? '5 3' : undefined },
+    markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 14, height: 14 } };
+}
+
+// ── Хранилище правок доски: только этот браузер, всё в try/catch ─────────────────────────────
+const LS_KEY = k => 'gc02.board.v1.' + k;
+function lsGet(k) { try { const s = localStorage.getItem(LS_KEY(k)); return s ? JSON.parse(s) : null; } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(LS_KEY(k), JSON.stringify(v)); return true; } catch { return false; } }
+function lsDel(k) { try { localStorage.removeItem(LS_KEY(k)); } catch { /* хранилище недоступно — нечего стирать */ } }
+function serialize(nodes, edges, strokes) {
+  return { v: 1, saved_at: new Date().toISOString(),
+    nodes: nodes.filter(n => n.type === 'card').map(n => ({ id: n.id, position: n.position, data: { id: n.data.id, type: n.data.type, title: n.data.title, sc: n.data.sc, root: !!n.data.root, local: !!n.data.local, added: !!n.data.added } })),
+    edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, rel: e.data && e.data.rel || e.label, k: e.data && e.data.k, local: !!(e.data && e.data.local), boardOnly: !!(e.data && e.data.boardOnly) })),
+    strokes };
+}
+
+// ── Данные для поиска и модель связей (только встроенные выгрузки, бэкенда нет) ───────────────
+let corpusP = null, modelP = null;
+function loadCorpus() {
+  if (!corpusP) corpusP = Promise.all(GRAPHS.map(g => loadGraph(g).catch(() => null))).then(list => {
+    const byId = new Map(), adj = new Map(), tagged = new Map(), keys = new Set();
+    const push = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+    let failed = 0;
+    for (const d of list) {
+      if (!d) { failed++; continue; }
+      d.nodes.forEach(n => { if (!byId.has(n.id)) byId.set(n.id, n); });
+      d.edges.forEach(e => { const k = e.f + '|' + e.r + '|' + e.t; if (keys.has(k)) return; keys.add(k); push(adj, e.f, e); push(adj, e.t, e);
+        if (e.r === 'TAGGED_WITH') { if (!tagged.has(e.t)) tagged.set(e.t, new Set()); tagged.get(e.t).add(e.f); } });
+    }
+    if (failed === list.length) throw new Error('ни одна выгрузка графа не загрузилась');
+    return { byId, adj, tagged, failed, files: list.length };
+  });
+  return corpusP;
+}
+function loadModel() {
+  if (!modelP) modelP = loadFile('gc-02-graphs/model-relations.json').then(m => { MODEL_TYPES = m.types || {}; return m; });
+  return modelP;
+}
+loadModel().catch(() => { modelP = null; });
+/** Допустимые связи для пары типов по модели — в обе стороны (rev: связь идёт от второй карточки к первой). */
+function relOptions(model, a, b) {
+  if (a === 'note' || b === 'note') return [{ rel: 'NOTE_ON', rev: a !== 'note', label: 'заметка к записи — есть только на доске, в модели LORE такой связи нет', boardOnly: true }];
+  const out = [], seen = new Set();
+  for (const r of model.relations) {
+    let o = null;
+    if (r.f === a && r.t === b) o = { rel: r.rel, rev: false, label: r.label };
+    else if (r.f === b && r.t === a) o = { rel: r.rel, rev: true, label: r.label };
+    if (o && !seen.has(o.rel + o.rev)) { seen.add(o.rel + o.rev); out.push(o); }
+  }
+  return out;
+}
+const CREATE_TYPES = ['task', 'sprint', 'adr', 'decision', 'spec', 'question', 'note'];
+
+// ── Окно «+»: «Найти запись» ([[ — peek, # — по тегу) и «Создать новую» ─────────────────────
+function Dlg({ title, onClose, children }) {
+  return h('div', { className: 'dlg-back', onMouseDown: e => { if (e.target === e.currentTarget) onClose(); }, onKeyDown: e => { if (e.key === 'Escape') onClose(); } },
+    h('div', { className: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, h('h3', null, title), h('div', { className: 'body' }, children)));
+}
+function ResItem({ n, onBoard, onPick, extra }) {
+  return h('li', null, h('button', { type: 'button', disabled: onBoard, onClick: () => onPick(n), style: { '--c': `var(${tokenOf(n.type)})` } },
+    h('span', { className: 'rid' }, `${n.type} · ${n.id}${onBoard ? ' · уже на доске' : ''}${extra ? ' · ' + extra : ''}`), h('span', { className: 'rt' }, n.title || '(без названия)')));
+}
+function AddDialog({ onClose, onCreate, onPick, onBoard }) {
+  const [tab, setTab] = useState('find');
+  const [q, setQ] = useState('');
+  const [tag, setTag] = useState(null);
+  const [type, setType] = useState('task');
+  const [title, setTitle] = useState('');
+  const [corpus, setCorpus] = useState(null);
+  const [err, setErr] = useState(null);
+  const inRef = useRef(null);
+  useEffect(() => { loadCorpus().then(setCorpus, e => setErr(String(e && e.message || e))); }, []);
+  useEffect(() => { if (inRef.current) inRef.current.focus(); }, [tab]);
+  const tabs = h('span', { className: 'seg', role: 'tablist' },
+    h('button', { type: 'button', role: 'tab', 'aria-pressed': String(tab === 'find'), onClick: () => setTab('find') }, 'Найти запись'),
+    h('button', { type: 'button', role: 'tab', 'aria-pressed': String(tab === 'create'), onClick: () => setTab('create') }, 'Создать новую'));
+  const foot = h('div', { className: 'hint' }, 'Прототип: в LORE не пишется. Карточка живёт на доске в этом браузере (localStorage).');
+  if (tab === 'create') {
+    const onTitle = v => { if (v.startsWith('[[') || v.startsWith('#')) { setTab('find'); setQ(v); setTag(null); setTitle(''); return; } setTitle(v); };
+    const ok = title.trim().length > 0;
+    return h(Dlg, { title: 'Добавить на доску', onClose }, tabs,
+      h('label', { className: 'hint' }, 'Тип записи LORE'),
+      h('select', { value: type, onChange: e => setType(e.target.value) }, CREATE_TYPES.map(t => h('option', { key: t, value: t }, t === 'note' ? 'Заметка-стикер' : (MODEL_TYPES[t] || t)))),
+      h('label', { className: 'hint' }, 'Название'),
+      h('input', { ref: inRef, value: title, placeholder: type === 'note' ? 'текст стикера' : 'название записи', onChange: e => onTitle(e.target.value),
+        onKeyDown: e => { if (e.key === 'Enter' && ok) onCreate(type, title.trim()); } }),
+      h('div', { className: 'hint' }, 'Начните с «[[» — откроется поиск записи, с «#» — поиск по тегу, как в редакторе.'),
+      h('div', { className: 'row' }, h('button', { type: 'button', className: 'tb', onClick: onClose }, 'Отмена'),
+        h('button', { type: 'button', className: 'tb', 'aria-pressed': 'true', disabled: !ok, onClick: () => onCreate(type, title.trim()) }, 'Создать')), foot);
+  }
+  const raw = q.trim();
+  let body;
+  if (err) body = h('div', { className: 'state err', style: { position: 'static' } }, 'Поиск недоступен: ' + err + '. Выгрузки графов не прочитались — это не «ничего не найдено».');
+  else if (!corpus) body = h('div', { className: 'hint' }, 'Читаю выгрузки графов…');
+  else if (raw.startsWith('#')) {
+    const s = raw.slice(1).toLowerCase();
+    if (tag) {
+      const tn = corpus.byId.get(tag);
+      const recs = [...(corpus.tagged.get(tag) || [])].map(id => corpus.byId.get(id)).filter(Boolean);
+      body = [h('div', { key: 'h', className: 'row', style: { justifyContent: 'space-between', alignItems: 'center' } },
+          h('span', { className: 'hint' }, `#${tag}${tn && tn.title ? ' — ' + tn.title : ''} · записей с тегом: ${recs.length}`),
+          h('button', { type: 'button', className: 'tb', onClick: () => setTag(null) }, '← все теги')),
+        recs.length ? h('ul', { key: 'l', className: 'res' }, recs.map(n => h(ResItem, { key: n.id, n, onBoard: onBoard.has(n.id), onPick })))
+          : h('div', { key: 'e', className: 'hint' }, 'В выгрузках нет записей с этим тегом.')];
+    } else {
+      const tags = [...corpus.tagged.entries()].map(([id, set]) => ({ id, n: corpus.byId.get(id), count: set.size }))
+        .filter(t => !s || t.id.toLowerCase().includes(s) || (t.n && (t.n.title || '').toLowerCase().includes(s)))
+        .sort((a, b) => b.count - a.count).slice(0, 40);
+      body = [h('div', { key: 'h', className: 'hint' }, `Теги (supertag) — цели связей TAGGED_WITH во встроенных выгрузках: ${corpus.tagged.size}. Выберите тег, затем запись.`),
+        tags.length ? h('ul', { key: 'l', className: 'res' }, tags.map(t => h('li', { key: t.id }, h('button', { type: 'button', onClick: () => setTag(t.id) },
+          h('span', { className: 'rid' }, `#${t.id} · записей ${t.count}`), h('span', { className: 'rt' }, t.n && t.n.title || '')))))
+          : h('div', { key: 'e', className: 'hint' }, `Тега «${s}» в выгрузках нет.`)];
+    }
+  } else if (raw) {
+    const s = raw.replace(/^\[\[/, '').replace(/\]\]$/, '').trim().toLowerCase();
+    if (!s) body = h('div', { className: 'hint' }, 'Поиск записи (peek): наберите часть кода или названия.');
+    else {
+      const hits = [];
+      for (const n of corpus.byId.values()) {
+        const id = n.id.toLowerCase(), t = (n.title || '').toLowerCase();
+        const rank = id === s ? 0 : id.startsWith(s) ? 1 : id.includes(s) ? 2 : t.includes(s) ? 3 : -1;
+        if (rank >= 0) hits.push([rank, n]);
+      }
+      hits.sort((a, b) => a[0] - b[0] || a[1].id.localeCompare(b[1].id));
+      body = [h('div', { key: 'h', className: 'hint' }, `Найдено: ${hits.length}${hits.length > 40 ? ', показаны первые 40' : ''} · искали в ${corpus.byId.size} записях выгрузок`),
+        hits.length ? h('ul', { key: 'l', className: 'res' }, hits.slice(0, 40).map(([, n]) => h(ResItem, { key: n.id, n, onBoard: onBoard.has(n.id), onPick })))
+          : h('div', { key: 'e', className: 'hint' }, `Записей с «${s}» в выгрузках нет.`)];
+    }
+  } else body = h('div', { className: 'hint' }, '«[[» — поиск записи по коду или названию (peek), «#» — поиск по тегу (supertag). Текст без префикса ищет запись.');
+  return h(Dlg, { title: 'Добавить на доску', onClose }, tabs,
+    h('input', { ref: inRef, value: q, placeholder: '[[код или название   ·   #тег', onChange: e => { setQ(e.target.value); setTag(null); } }),
+    corpus && corpus.failed ? h('div', { className: 'state wrn', style: { position: 'static' } }, `Не прочитались выгрузки: ${corpus.failed} из ${corpus.files} — поиск идёт по остальным.`) : null,
+    body, foot);
+}
+function RelDialog({ s, t, options, err, onPick, onClose }) {
+  const name = n => `${typeLabel(n.data.type)} ${n.data.local ? '«' + n.data.title + '»' : n.id}`;
+  return h(Dlg, { title: 'Тип связи', onClose },
+    h('div', { className: 'hint' }, `${name(s)} ⇄ ${name(t)}. Типы — из модели LORE (shared/model/lore-model.json), только допустимые для этой пары.`),
+    err ? h('div', { className: 'state err', style: { position: 'static' } }, 'Модель связей не загрузилась: ' + err + '. Связь не создана — выбрать тип не из чего.')
+      : options.length ? h('ul', { className: 'res' }, options.map(o => {
+        const [a, b] = o.rev ? [t, s] : [s, t];
+        return h('li', { key: o.rel + o.rev }, h('button', { type: 'button', onClick: () => onPick(o) },
+          h('span', { className: 'rid' }, `${a.data.type} —${o.rel}→ ${b.data.type}`), h('span', { className: 'rt' }, o.label)));
+      }))
+      : h('div', { className: 'state wrn', style: { position: 'static' } }, `По модели LORE между «${typeLabel(s.data.type)}» и «${typeLabel(t.data.type)}» связей нет — связь не создана.`),
+    h('div', { className: 'row' }, h('button', { type: 'button', className: 'tb', onClick: onClose }, 'Отмена')));
+}
+
+// ── Рисование: штрихи в координатах холста, живут вместе с доской ────────────────────────────
+// «Связать» — касание карточки, затем второй: на телефоне хэндл при обзорном масштабе в несколько пикселей, пальцем не попасть.
+const TOOL_LABEL = { select: 'Курсор', link: 'Связать', pen: 'Перо', marker: 'Маркер', eraser: 'Ластик' };
+const DRAW_TOOLS = ['pen', 'marker', 'eraser'];
+function segDist(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); }
+function strokeHit(s, p, r) { for (let i = 0; i < s.pts.length; i++) if (segDist(p, s.pts[i], s.pts[i + 1] || s.pts[i]) <= r) return true; return false; }
+const pathOf = pts => pts.length === 1 ? `M${pts[0][0]} ${pts[0][1]}l0.01 0` : 'M' + pts.map(p => p[0] + ' ' + p[1]).join('L');
+
+function GraphApp({ gkey, layout, board, init, onReady }) {
+  const [nodes, setNodes, onNodesChangeRaw] = useNodesState(init.nodes);
+  const [edges, setEdges, onEdgesChangeRaw] = useEdgesState(init.edges);
+  const [strokes, setStrokes] = useState(init.strokes);
+  const [editing, setEditingRaw] = useState(board && url.searchParams.get('mode') === 'edit');
+  const [tool, setTool] = useState('select');
+  const [dlg, setDlg] = useState(null);
+  const [dirty, setDirty] = useState(0);
+  const [saveState, setSaveState] = useState(init.restored ? 'restored' : 'clean');
+  const [msg, setMsg] = useState(null);
+  const [linkFrom, setLinkFrom] = useState(null);
+  const rf = useReactFlow();
+  const flowRef = useRef(null), drawRef = useRef(null), addSeq = useRef(0);
+  useEffect(() => { requestAnimationFrame(() => onReady()); }, []);
+  useEffect(() => { if (!dirty) return; setSaveState(lsSet(gkey, serialize(nodes, edges, strokes)) ? 'saved' : 'nostore'); }, [dirty]);
+  const touch = () => setDirty(d => d + 1);
+  const setEditing = v => { setEditingRaw(v); setTool('select'); setMsg(null); setLinkFrom(null);
+    // на телефоне доска ниже шапки: при входе в правку подводим её под палец целиком
+    if (v && window.innerWidth <= 820) $('stage').scrollIntoView({ block: 'start' });
+    const u = new URL(location.href); if (v) u.searchParams.set('mode', 'edit'); else u.searchParams.delete('mode'); history.replaceState(null, '', u); };
+  const onNodesChange = useCallback(ch => { onNodesChangeRaw(ch); if (ch.some(c => (c.type === 'position' && c.dragging === false) || c.type === 'remove')) touch(); }, []);
+  const onEdgesChange = useCallback(ch => { onEdgesChangeRaw(ch); if (ch.some(c => c.type === 'remove')) touch(); }, []);
+  // Сохранение идёт после применения изменений (следующий рендер), поэтому dirty — счётчик, а не флаг.
+  useEffect(() => { if (dirty) setSaveState(lsSet(gkey, serialize(nodes, edges, strokes)) ? 'saved' : 'nostore'); }, [nodes, edges, strokes]);
+
+  function centerPos() {
+    const r = flowRef.current.getBoundingClientRect();
+    const p = rf.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    const k = (addSeq.current++ % 6) * 18;
+    return { x: p.x - NODE_W / 2 + k, y: p.y - NODE_H / 2 + k };
+  }
+  const onBoard = new Set(nodes.map(n => n.id));
+  function addCard(n, at, extra) { setNodes(ns => ns.map(x => x.selected ? { ...x, selected: false } : x).concat({ id: n.id, type: 'card', position: at, selected: true, data: { ...n, layout, ...extra } })); touch(); }
+  async function pickExisting(rec, at) {
+    const c = await loadCorpus();
+    const have = new Set(edges.map(e => e.source + '|' + (e.data && e.data.rel) + '|' + e.target));
+    const add = (c.adj.get(rec.id) || []).filter(e => e.f !== e.t && (e.f === rec.id ? onBoard.has(e.t) : onBoard.has(e.f)) && !have.has(e.f + '|' + e.r + '|' + e.t))
+      .map((e, i) => edgeOf({ id: `c${Date.now()}_${i}`, source: e.f, target: e.t, rel: e.r, k: e.k }));
+    addCard({ id: rec.id, type: rec.type, title: rec.title, sc: rec.sc }, at, { added: true });
+    setEdges(es => es.concat(add));
+    setMsg(`${rec.id} на доске · связей из выгрузок подтянуто: ${add.length}`);
+    setDlg(null);
+  }
+  function createNew(type, title, at) {
+    const id = `NEW-${type.toUpperCase()}-${Date.now().toString(36)}`;
+    addCard({ id, type, title }, at, { local: true });
+    setMsg(`создана «${title}» — только в этом браузере`);
+    setDlg(null);
+  }
+  const onConnect = useCallback(async c => {
+    if (c.source === c.target) return;
+    const s = rf.getNode(c.source), t = rf.getNode(c.target);
+    if (!s || !t || s.type !== 'card' || t.type !== 'card') return;
+    try { const m = await loadModel(); setDlg({ kind: 'rel', s, t, options: relOptions(m, s.data.type, t.data.type) }); }
+    catch (e) { setDlg({ kind: 'rel', s, t, options: [], err: String(e && e.message || e) }); }
+  }, []);
+  function pickRel(o) {
+    const { s, t } = dlg;
+    const [src, tgt] = o.rev ? [t.id, s.id] : [s.id, t.id];
+    setEdges(es => es.concat(edgeOf({ id: 'u' + Date.now().toString(36), source: src, target: tgt, rel: o.rel, local: true, boardOnly: o.boardOnly })));
+    setMsg(`связь ${o.rel} добавлена`); setDlg(null); touch();
+  }
+  const onNodeClick = (e, n) => {
+    if (!editing || tool !== 'link' || n.type !== 'card') return;
+    if (!linkFrom) { setLinkFrom(n.id); setMsg(`связь от ${n.data.local ? '«' + n.data.title + '»' : n.id} — коснитесь второй карточки`); return; }
+    if (linkFrom === n.id) { setLinkFrom(null); setMsg('связь отменена'); return; }
+    const from = linkFrom; setLinkFrom(null); onConnect({ source: from, target: n.id });
+  };
+  const pickTool = tl => { setTool(tl); setLinkFrom(null); setMsg(tl === 'link' ? 'коснитесь первой карточки, затем второй' : null); };
+  const shown = linkFrom ? nodes.map(n => n.id === linkFrom ? { ...n, className: 'linkfrom' } : n) : nodes;
+  const selCount = nodes.filter(n => n.selected && n.type === 'card').length + edges.filter(e => e.selected).length;
+  function delSel() {
+    const gone = new Set(nodes.filter(n => n.selected && n.type === 'card').map(n => n.id));
+    const ne = edges.filter(e => e.selected).length;
+    setNodes(ns => ns.filter(n => !gone.has(n.id)));
+    setEdges(es => es.filter(e => !e.selected && !gone.has(e.source) && !gone.has(e.target)));
+    setMsg(`удалено: карточек ${gone.size}, связей ${ne}${gone.size ? ' (и связи удалённых карточек)' : ''}`); touch();
+  }
+  function reset() { if (!window.confirm('Сбросить правки доски в этом браузере и вернуть выгрузку из LORE?')) return; lsDel(gkey); go(); }
+
+  // Рисование поверх доски: слой ловит указатель только в режимах Перо / Маркер / Ластик.
+  const pt = e => { const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }); return [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; };
+  const eraseAt = p => { const z = rf.getZoom(); setStrokes(ss => { const keep = ss.filter(s => !strokeHit(s, p, (12 + (s.tool === 'marker' ? 7 : 1)) / z)); return keep.length === ss.length ? ss : keep; }); };
+  const onDown = e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId);
+    if (tool === 'eraser') { drawRef.current = { erase: true }; eraseAt(pt(e)); return; }
+    const s = { id: 's' + Date.now().toString(36), tool, pts: [pt(e)] }; drawRef.current = s; setStrokes(ss => ss.concat(s)); };
+  const onMove = e => { const d = drawRef.current; if (!d) return; if (d.erase) { eraseAt(pt(e)); return; }
+    const p = pt(e), last = d.pts[d.pts.length - 1]; if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 2 / rf.getZoom()) return;
+    d.pts = d.pts.concat([p]); const { id, pts } = d; setStrokes(ss => ss.map(x => x.id === id ? { ...x, pts } : x)); };
+  const onUp = () => { if (drawRef.current) { drawRef.current = null; touch(); } };
+  const onDbl = e => {
+    if (!editing || tool !== 'select') return;
+    if (e.target.closest('.react-flow__node, .react-flow__edge, .react-flow__controls, .react-flow__minimap, .react-flow__panel')) return;
+    const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setDlg({ kind: 'add', at: { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 } });
+  };
+
+  const SAVE_CHIP = { restored: ['', 'правки из этого браузера'], saved: ['ok', 'сохранено локально'], nostore: ['er', 'localStorage недоступен — правки живут до перезагрузки'] };
+  const toolbar = board && h('div', { className: 'btool' },
+    h('span', { className: 'seg', role: 'group', 'aria-label': 'Режим доски' },
+      h('button', { type: 'button', 'aria-pressed': String(!editing), onClick: () => setEditing(false) }, 'Просмотр'),
+      h('button', { type: 'button', 'aria-pressed': String(editing), onClick: () => setEditing(true) }, 'Правка')),
+    editing && h('button', { type: 'button', className: 'tb', onClick: () => setDlg({ kind: 'add', at: centerPos() }) }, '+ Добавить'),
+    // Инструмент переключается и по pointerup касания: в эмуляции касаний Chrome первый tap сразу после штриха
+    // пришёл без click. Выбор инструмента идемпотентен — двойное срабатывание безвредно.
+    editing && Object.keys(TOOL_LABEL).map(tl => h('button', { key: tl, type: 'button', className: 'tb', 'aria-pressed': String(tool === tl),
+      onClick: () => pickTool(tl), onPointerUp: e => { if (e.pointerType === 'touch') pickTool(tl); } }, TOOL_LABEL[tl])),
+    editing && h('button', { type: 'button', className: 'tb dng', disabled: !selCount, onClick: delSel }, 'Удалить' + (selCount ? ' · ' + selCount : '')),
+    editing && h('button', { type: 'button', className: 'tb', onClick: reset }, 'Сбросить'),
+    h('span', { className: 'chip proto' }, 'прототип: в LORE не пишется'),
+    SAVE_CHIP[saveState] && h('span', { className: 'chip ' + SAVE_CHIP[saveState][0] }, SAVE_CHIP[saveState][1]),
+    editing && msg && h('span', { className: 'chip', role: 'status' }, msg),
+    editing && !msg && h('span', { className: 'hint', style: { color: 'var(--t3)', fontSize: 'var(--fs-2xs)' } }, 'двойной клик по полю — новая карточка · связь: тяни от точки карточки к другой или «Связать»'));
+
+  return h('div', { className: 'gwrap' + (editing ? ' editing' : '') }, toolbar,
+    h('div', { className: 'gflow', ref: flowRef, onDoubleClick: onDbl },
+      h(ReactFlow, { nodes: shown, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, onNodeClick, isValidConnection: c => c.source !== c.target,
+        connectionMode: ConnectionMode.Loose, connectionRadius: 28, fitView: true, minZoom: 0.05, colorMode: 'dark',
+        nodesDraggable: editing && tool === 'select', nodesConnectable: editing, elementsSelectable: true, deleteKeyCode: editing ? ['Delete', 'Backspace'] : null,
+        zoomOnDoubleClick: !editing, connectionLineStyle: { stroke: css('--acc'), strokeWidth: 2 } },
+        h(Background, { color: css('--bd'), gap: 24 }), h(Controls, { showInteractive: false }),
+        h(MiniMap, { pannable: true, zoomable: true, nodeColor: n => css(tokenOf(n.data && n.data.type)), maskColor: 'rgba(0,0,0,.55)', style: { background: css('--bg1') } }),
+        h(ViewportPortal, null, h('svg', { className: 'strokes', width: 1, height: 1, style: { position: 'absolute', left: 0, top: 0, overflow: 'visible', pointerEvents: 'none' } },
+          strokes.map(s => h('path', { key: s.id, d: pathOf(s.pts), fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round',
+            style: s.tool === 'marker' ? { stroke: 'var(--acc)', strokeWidth: 14, opacity: 0.35 } : { stroke: 'var(--t1)', strokeWidth: 2 } }))))),
+      editing && DRAW_TOOLS.includes(tool) && h('div', { className: 'draw' + (tool === 'eraser' ? ' eraser' : ''), onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp,
+        'aria-label': TOOL_LABEL[tool] + ': рисуйте по доске' })),
+    dlg && dlg.kind === 'add' && h(AddDialog, { onClose: () => setDlg(null), onBoard, onPick: rec => pickExisting(rec, dlg.at), onCreate: (type, title) => createNew(type, title, dlg.at) }),
+    dlg && dlg.kind === 'rel' && h(RelDialog, { ...dlg, onPick: pickRel, onClose: () => setDlg(null) }));
+}
 
 const ELK_WORKER = URL.createObjectURL(new Blob(
   ["importScripts('https://cdn.jsdelivr.net/npm/elkjs@0.12.1/lib/elk-worker.min.js');"], { type: 'text/javascript' }));
@@ -267,30 +633,35 @@ async function reactFlowView(g, data, base) {
     else if (r.state === 'timeout') { pos = gridPositions(data.nodes); note = ['wrn', `Раскладка не уложилась в ${LAYOUT_TIMEOUT_MS / 1000} с — граф показан как есть (сеткой), воркер ELK остановлен.`]; }
     else { pos = gridPositions(data.nodes); note = ['err', 'Раскладка ELK упала: ' + r.error + '. Граф показан сеткой.']; }
   }
-  const nodes = data.nodes.map(n => ({ id: n.id, type: 'card', position: pos[n.id] || { x: 0, y: 0 }, data: { ...n, root: n.id === g.root },
-    draggable: false, connectable: false, selectable: true }));
-  if (lanes) lanes.forEach((t, i) => nodes.push({ id: '__lane_' + t, position: { x: i * (NODE_W + 40), y: 0 }, draggable: false, selectable: false,
-    data: { label: t }, style: { width: NODE_W, background: 'transparent', border: 0, color: css('--t3'), fontFamily: css('--mono'), fontSize: css('--fs-2xs'), textTransform: 'uppercase' } }));
-  const edges = data.edges.map((e, i) => ({ id: 'e' + i, source: e.f, target: e.t, label: e.r,
-    labelStyle: { fill: css('--t3'), fontSize: css('--fs-2xs'), fontFamily: css('--mono') }, labelBgStyle: { fill: css('--bg1') },
-    style: { stroke: e.k === 'structural' ? css('--bd') : css('--bdh') }, markerEnd: { type: MarkerType.ArrowClosed, color: css('--bdh') } }));
+  const layout = view;
+  const saved = view === 'board' ? lsGet(gKey) : null;
+  const restored = !!(saved && saved.v === 1 && Array.isArray(saved.nodes));
+  let cards, edges, strokes = [];
+  if (restored) {
+    cards = saved.nodes.map(n => ({ id: n.id, type: 'card', position: n.position, data: { ...n.data, layout } }));
+    edges = (saved.edges || []).map(edgeOf); strokes = saved.strokes || [];
+  } else {
+    cards = data.nodes.map(n => ({ id: n.id, type: 'card', position: pos[n.id] || { x: 0, y: 0 }, data: { ...n, root: n.id === g.root, layout } }));
+    edges = data.edges.map((e, i) => edgeOf({ id: 'e' + i, source: e.f, target: e.t, rel: e.r, k: e.k }));
+  }
+  const nodes = (lanes || []).map((t, i) => ({ id: '__lane_' + t, type: 'lane', position: { x: i * (NODE_W + 40), y: 0 }, draggable: false, selectable: false, connectable: false, deletable: false, data: { label: t } }))
+    .concat(cards);
   const root = createRoot($('canvas'));
   const t1 = performance.now();
-  await new Promise(res => {
-    function App() { useEffect(() => { requestAnimationFrame(() => res()); }, []);
-      return h(ReactFlow, { nodes, edges, nodeTypes, fitView: true, minZoom: 0.05, nodesDraggable: false, nodesConnectable: false, elementsSelectable: true, colorMode: 'dark' },
-        h(Background, { color: css('--bd'), gap: 24 }), h(Controls, { showInteractive: false }),
-        h(MiniMap, { pannable: true, zoomable: true, nodeColor: n => css(tokenOf(n.data && n.data.type)), maskColor: 'rgba(0,0,0,.55)', style: { background: css('--bg1') } }));
-    }
-    root.render(h(App));
-  });
+  await new Promise(res => root.render(h(ReactFlowProvider, null,
+    h(GraphApp, { gkey: gKey, layout, board: view === 'board', init: { nodes, edges, strokes, restored }, onReady: res }))));
   const paintMs = performance.now() - t1;
   teardown = () => root.unmount();
   setState(note ? note[0] : null, note ? note[1] : null);
-  measure([...base,
+  const rows = drawn => [...base,
     ['раскладка', view === 'board' ? `колонки по типам · ${layoutMs.toFixed(0)} мс` : `ELK ${view === 'mindmap' ? 'mrtree' : 'layered'} в воркере · ${layoutMs.toFixed(0)} мс`, note ? 'wr' : 'ok'],
+    ['рёбер на холсте', drawn == null ? '…' : `${drawn} из ${edges.length}`, drawn == null ? null : drawn === edges.length ? 'ok' : 'er'],
     ['отрисовка', paintMs.toFixed(0) + ' мс'], ['самая длинная задача гл. потока', longest ? longest.toFixed(0) + ' мс' : 'нет >50 мс'],
-    ['правка', 'выключена — решение владелицы', 'wr']]);
+    ['правка', view === 'board' ? (restored ? 'доска из правок этого браузера' : 'Просмотр / Правка — прототип, в LORE не пишется') : 'только у доски', view === 'board' ? 'wr' : null]];
+  measure(rows(null));
+  // Рёбра React Flow рисует после замера размеров узлов — считаем их чуть позже первого кадра.
+  const seq = goSeq;
+  setTimeout(() => { if (seq === goSeq) measure(rows(document.querySelectorAll('#canvas .react-flow__edge').length)); }, 600);
 }
 
 // ── sigma: граф знаний (ForceAtlas2 в воркере graphology) ─────────────────────────────────
@@ -396,6 +767,7 @@ function liveView(g, data, base) {
   teardown = () => { w.postMessage({ cmd: 'stop' }); w.terminate(); s.kill(); btn.remove(); };
 }
 
+try { if (matchMedia('(min-width: 821px)').matches) $('about').open = true; } catch { /* без matchMedia — свёрнуто */ }
 go();
 </script>
 </body>
