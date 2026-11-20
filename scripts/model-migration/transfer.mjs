@@ -27,6 +27,7 @@ import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
 import { orphanSprintAnswers, orphanSprintState } from './orphan-sprints.mjs';
 import { derivePhaseStatus } from './status-unify.mjs';
+import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
 import { structurePlan, asIsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
 import { repairVersions, addFixes } from './scd2-repair.mjs';
@@ -85,6 +86,20 @@ export function fieldDiff(got, want) {
     .filter(f => JSON.stringify(got[f]) !== JSON.stringify(want[f]))
     .map(f => ({ field: f, got: cut(got[f]), want: cut(want[f]) }));
 }
+/**
+ * Остаток по несоответствию, которое не закрыто решением человека. MD-02 7а (владелица 19.11.2026): перенос честно
+ * пишет «ждёт решения» (или «отложено человеком», если человек выбрал «решу позже»), а не подставляет значение молча.
+ */
+/** DDL индексов, объявленных схемой 1.18 у типа (indexes: [{fields, kind}]); IF NOT EXISTS — индекс источника не дублируется. */
+export function schemaIndexDdl(schema) {
+  const out = [];
+  for (const [T, t] of Object.entries(schema)) for (const ix of t.indexes || [])
+    out.push(`CREATE INDEX IF NOT EXISTS ON ${T} (${ix.fields.map(f => '`' + f + '`').join(', ')}) ${ix.kind}`);
+  return out;
+}
+export function rejectLeftover(T, rid, x) {
+  return { src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why, state: x.deferred ? 'отложено человеком' : 'ждёт решения' };
+}
 export const ownTypes = () => [...Object.keys(SCHEMA), ...SERVICE, EDGE, ...keptEdges(), ...SESSION_EDGES, ...REPO_TYPES, DICT_ENTRY, DICT_LABEL, ...Object.keys(SERIES)];
 const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
@@ -105,7 +120,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const legacyBefore = {};
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
-    for await (const rec of db.scan(T)) countLegacyBefore(T, rec, legacyBefore), calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]] }) });
+    for await (const rec of db.scan(T)) countLegacyBefore(T, rec, legacyBefore), calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], deferEmpty: true }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};
@@ -153,6 +168,11 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
       }
     }
   }
+  // Пустой статус — правило владелицы 19.11.2026 (empty-fill.mjs): вычислить из данных (предыдущая версия, открытая
+  // версия записи) → решение из файла решений установки → начальный статус справочника. Каждая подстановка — в отчёте.
+  computeEmptyStatuses(calc, parentOf, T => ({ statusCodes, statusDict: DICT_OF[T], codeCase: CODE_CASE, decisions: DECISIONS, statusRules: RULES.dictionaries[RULES_DICT_OF[T]] }));
+  report.stages.empty_fill = { basis: 'правило владелицы 19.11', by_type: filledSummary(calc) };
+  log('2 пустой статус:', JSON.stringify(report.stages.empty_fill.by_type));
   // Статус фазы без кода — минимальный по задачам фазы (слово владелицы 16.11.2026). Задача → фаза по связи
   // IN_PHASE источника, статус задачи — её текущей версии после решений. Несведённое значение статуса фазы
   // уходит из остатка: оно решено правилом, исходный текст остаётся в status_note.
@@ -222,7 +242,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   for (const [T, list] of Object.entries(calc)) for (const { rid, res } of list) {
     leftovers.push(...legacyLeftovers(T, rid, res));
     for (const [f, v] of Object.entries(res.held)) leftovers.push({ src_type: T, src_rid: rid, field: f, value: v, kind: 'held', why: 'нет решения по полю' });
-    for (const x of res.rejects) leftovers.push({ src_type: T, src_rid: rid, field: x.field, value: x.value, kind: 'reject', why: x.why });
+    for (const x of res.rejects) leftovers.push(rejectLeftover(T, rid, x));
   }
   report.stages.merge = merge;
   report.stages.scd2_repair = scd2Fixes;
@@ -235,7 +255,7 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   assertLegacyDrop(report.legacy_drop);
 
   // ── 3. Схема и запись ─────────────────────────────────────────────────────────────────────────────
-  // MDL-11: обязательное поле пусто — запись не начинается (пустой статус версии задачи решает человек, ST-08)
+  // MDL-11: обязательное поле пусто — запись не начинается (пустой статус закрыт правилом выше; сторож — на прочие обязательные поля)
   const missing = notNullMissing(calc, SCHEMA);
   if (missing.length) throw new Error('обязательное поле пусто — нужно решение в разделе «Перенос» (несоответствие «пусто» или «вне справочника»): ' + missing.map(m => `${m.type}.${m.field} — ${m.rids.length} (${m.rids.slice(0, 5).join(', ')}${m.rids.length > 5 ? ', …' : ''})`).join('; '));
   const existing = (await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name);
@@ -316,6 +336,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   // индексы источника — после записи: индекс, которому мешают данные (дубль под уникальным), не роняет перенос,
   // а называется в отчёте с причиной базы
   const indexFailed = [];
+  // MD-02 8а: у типа «только схема» (пустой, но его трогает код) индексы старой схемы объявлены в схеме 1.18 —
+  // UPSERT кода требует уникального индекса, и он не должен зависеть от того, есть ли индекс в источнике
+  for (const s of schemaIndexDdl(SCHEMA)) structure.indexDdl.push(s);
   for (const s of structure.indexDdl) {
     try { await db.dstCommand(s); } catch (e) { indexFailed.push({ ddl: s, why: String(e.message || e).slice(0, 300) }); }
   }

@@ -187,6 +187,80 @@ class OutsideModelTypesGuardTest {
         assertTrue(LoreTidyResource.notMigrated().isEmpty());
     }
 
+    // ── MD-02 8а: не только срезы — любой тип и связь, которые трогает код сервера ────────────────────────────
+    // Владелица 19.11.2026: «функции оставить». Сторож один: код читает или пишет тип (литеральное имя в SQL:
+    // INSERT INTO / UPDATE / DELETE FROM / CREATE VERTEX / CREATE EDGE / SELECT … FROM; константа-имя «+ X +» и
+    // «+ Класс.X +»; помощник createEdgeIfVerticesExist("X", …)) — тип есть в модели 1.18 или в OUTSIDE_MODEL с причиной.
+    // Тот же разбор у генератора карты (scripts/model-migration/code-types.mjs): по нему пустой тип, который трогает
+    // код, переходит в 1.18 «только схемой».
+
+    private static final java.util.regex.Pattern VERB = java.util.regex.Pattern.compile(
+        "\\b(?:INSERT\\s+INTO|UPDATE|DELETE\\s+FROM|DELETE\\s+VERTEX|CREATE\\s+VERTEX|CREATE\\s+EDGE|FROM)\\s+`?([A-Z][A-Za-z0-9_]*)`?");
+    private static final Set<String> NOT_TYPE = Set.of("TYPE", "SET", "IF", "CONTENT", "MERGE", "SELECT", "WHERE", "FROM");
+    private static final java.util.regex.Pattern CONST = java.util.regex.Pattern.compile(
+        "static\\s+final\\s+String\\s+([A-Z_]+)\\s*=\\s*\"([A-Za-z][A-Za-z0-9_]*)\"\\s*;");
+    // possessive: длинный литерал не уводит разбор в рекурсию (StackOverflowError на чередовании)
+    private static final java.util.regex.Pattern LITERAL = java.util.regex.Pattern.compile("\"((?:[^\"\\\\\\n]++|\\\\.)*+)\"");
+    private static final java.util.regex.Pattern HELPER = java.util.regex.Pattern.compile("createEdgeIfVerticesExist\\(\\s*\"([A-Z][A-Za-z0-9_]*)\"");
+    private static final java.nio.file.Path LORE_SRC = java.nio.file.Path.of("src", "main", "java", "studio", "seer", "heimdall", "lore");
+
+    /** Типы и связи, которые трогает код пакета lore: имя → файлы. */
+    static Map<String, Set<String>> codeTypes() throws Exception {
+        List<java.nio.file.Path> files;
+        try (var s = java.nio.file.Files.list(LORE_SRC)) { files = s.filter(p -> p.toString().endsWith(".java")).sorted().toList(); }
+        Map<String, Map<String, String>> consts = new java.util.HashMap<>();
+        for (var f : files) {
+            var m = CONST.matcher(java.nio.file.Files.readString(f));
+            String cls = f.getFileName().toString().replace(".java", "");
+            while (m.find()) consts.computeIfAbsent(cls, k -> new java.util.HashMap<>()).put(m.group(1), m.group(2));
+        }
+        Map<String, Set<String>> out = new java.util.TreeMap<>();
+        for (var f : files) {
+            String cls = f.getFileName().toString().replace(".java", "");
+            String s = java.nio.file.Files.readString(f).replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("(?m)^\\s*//.*$", "");
+            List<String[]> subs = new ArrayList<>();
+            consts.getOrDefault(cls, Map.of()).forEach((k, v) -> subs.add(new String[]{k, v}));
+            consts.forEach((c, ks) -> ks.forEach((k, v) -> subs.add(new String[]{c + "\\." + k, v})));
+            for (String[] kv : subs)
+                s = s.replaceAll("\"\\s*\\+\\s*" + kv[0] + "\\s*\\+\\s*\"", kv[1]).replaceAll("\"\\s*\\+\\s*" + kv[0] + "\\s*([,)])", kv[1] + "\"$1");
+            s = s.replaceAll("\"\\s*\\+\\s*\"", "");
+            var lit = LITERAL.matcher(s);
+            while (lit.find()) {
+                String l = lit.group(1);
+                if (l.matches("(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\b.*|^\\s*CREATE\\s+(PROPERTY|INDEX)\\b.*|^\\s*DROP\\s.*")) continue;
+                var v = VERB.matcher(l);
+                while (v.find()) if (!NOT_TYPE.contains(v.group(1))) out.computeIfAbsent(v.group(1), k -> new TreeSet<>()).add(f.getFileName().toString());
+            }
+            var h = HELPER.matcher(s);
+            while (h.find()) out.computeIfAbsent(h.group(1), k -> new TreeSet<>()).add(f.getFileName().toString());
+        }
+        return out;
+    }
+
+    /** Служебные типы, которые заводит сам перенос (transfer.mjs ownTypes без типов карты): остаток и отметка схемы. */
+    private static final Set<String> TRANSFER_OWN = Set.of("MigLeftover", "LoreModelSchema", "HAS_STATE");
+
+    @Test
+    void каждый_тип_который_трогает_код_в_модели_или_помечен_вне_модели() throws Exception {
+        Map<String, Set<String>> used = codeTypes();
+        // положительный контроль разбора: пустые типы «только схема» и связи, которые пишет код, узнаются
+        for (String t : List.of("KnowCanvas", "KnowSavedView", "QGMetric", "LoreRefDismissal", "MEASURED_BY", "MACHINE_ACCESS", "SOURCED_FROM"))
+            assertTrue(used.containsKey(t), "разбор узнаёт " + t);
+        assertFalse(used.containsKey("FROM") || used.containsKey("SET"), "служебные слова SQL — не типы");
+        Set<String> model = known();
+        model.addAll(TRANSFER_OWN);
+        List<String> bad = new ArrayList<>();
+        used.forEach((t, fs) -> { if (!model.contains(t) && !ModelSchemaAdapter.OUTSIDE_MODEL.containsKey(t)) bad.add(t + " ← " + fs); });
+        assertTrue(bad.isEmpty(), "код трогает тип вне модели 1.18 без пометки ModelSchemaAdapter.OUTSIDE_MODEL:\n  " + String.join("\n  ", bad));
+    }
+
+    @Test
+    void пометка_вне_модели_нужна_коду() throws Exception {
+        Map<String, Set<String>> used = codeTypes();
+        for (String t : ModelSchemaAdapter.OUTSIDE_MODEL.keySet())
+            assertTrue(used.containsKey(t), t + ": код его не трогает — пометка «вне модели» устарела");
+    }
+
     @Test
     void трек_спринта_на_базе_без_доски_отказывает_причиной() throws Exception {
         asModelBase();

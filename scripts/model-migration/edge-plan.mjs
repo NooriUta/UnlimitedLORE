@@ -50,3 +50,17 @@ export function edgeWrites(src, dstRid, plan) {
   }
   return { writes, missingEnds, duplicates };
 }
+
+/**
+ * MD-02 8а · DDL пустых связей «только схема» (карта: schema_only, props — свойства старой схемы): вид связи нужен
+ * живому коду сервера, данных нет. created — виды, уже заведённые записью данных этого переноса: их не трогаем.
+ */
+export function schemaOnlyEdgeDdl(edges, created = new Set()) {
+  const out = [];
+  for (const [e, r] of Object.entries(edges).sort(([a], [b]) => a.localeCompare(b))) {
+    if (!r.schema_only || created.has(e)) continue;
+    out.push(`CREATE EDGE TYPE ${e} IF NOT EXISTS`);
+    for (const [p, t] of Object.entries(r.props || {})) out.push(`CREATE PROPERTY ${e}.\`${p}\` IF NOT EXISTS ${t}`);
+  }
+  return out;
+}

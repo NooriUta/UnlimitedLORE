@@ -462,9 +462,11 @@ public class LoreTidyResource extends LoreResourceBase {
             if (remove) {
                 command("DELETE FROM " + MdRefDismissals.TYPE + " WHERE dismissal_key = :k", Map.of("k", key));
             } else {
+                // «:by» нельзя: BY — ключевое слово парсера ArcadeDB, запрос падал «mismatched input ','» (найдено 19.11.2026
+                // пробой записи, EmptyTypesSchemaOnlyWriteTest; сторож — md02-empty-types.test.mjs)
                 command("UPDATE " + MdRefDismissals.TYPE + " SET dismissal_key = :k, record_type = :t, record_id = :i, kind = :kind,"
-                    + " created_by = :by, created_at = :at UPSERT WHERE dismissal_key = :k",
-                    Map.of("k", key, "t", req.type(), "i", req.id(), "kind", req.kind(), "by", callerLabel(), "at", Instant.now().toString()));
+                    + " created_by = :who, created_at = :at UPSERT WHERE dismissal_key = :k",
+                    Map.of("k", key, "t", req.type(), "i", req.id(), "kind", req.kind(), "who", callerLabel(), "at", Instant.now().toString()));
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);

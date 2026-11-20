@@ -80,19 +80,16 @@ class LoreSearchSimilarLiveDbTest {
     }
 
     /**
-     * `ranked: false` — не косметика. `$similarity` у движка возвращает 1.0 у
-     * всех строк (та же ловушка, что CLASSIC у обычного поиска), поэтому мы его
-     * не отдаём вовсе: константа, выданная за меру близости, хуже её
-     * отсутствия — по ней начнут сортировать.
+     * GC-05: с {@code minTermFreq:1, minDocFreq:1} и {@code ORDER BY $similarity DESC} выдача
+     * ранжирована — ответ говорит {@code ranked: true}; движок-уровень проверяет SearchSimilarEngineTest.
      */
     @Test
     @Order(4)
-    void declaresThatOrderIsNotRanked() {
+    void declaresThatOrderIsRanked() {
         given().header("X-Seer-Role", "admin").queryParam("ref", "ADR-SIM-1")
         .when().get("/lore/search/similar")
         .then().statusCode(200)
-            .body("ranked", equalTo(false))
-            .body("hits.find { it.ref_id == 'ADR-SIM-2' }.score", equalTo(null));
+            .body("ranked", equalTo(true));
     }
 
     /** Несуществующий идентификатор — 404, а не пустая выдача. */
