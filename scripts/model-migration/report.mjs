@@ -43,7 +43,7 @@ ${tbl(['Тип', 'В источнике', 'В новой базе'], Object.entr
 
 <h2>Связи</h2>
 ${edges ? tbl(['Связь', 'Что с ней', 'Сколько'], [
-  ...Object.entries(edges.moved || {}).map(([k, x]) => [`<span class="m">${esc(k)}</span>`, 'перенесена', num(typeof x === 'object' ? `${x.source} → ${x.target}` : x)]),
+  ...Object.entries(edges.moved || {}).map(([k, x]) => [`<span class="m">${esc(k)}</span>`, 'перенесена', num(typeof x === 'object' ? `${x.source ?? x.expected ?? '?'} → ${x.target ?? '?'}` : x)]),
   ...Object.entries(edges.waiting || {}).map(([k, x]) => [`<span class="m">${esc(k)}</span>`, 'ждёт своего объекта', num(x.links ?? x)]),
   ...Object.entries(edges.dropped || {}).map(([k, x]) => [`<span class="m">${esc(k)}</span>`, 'не переносится по карте', num(x)]),
   ...(edges.anomalies || []).map(a => [`<span class="m">${esc(a.edge)}</span>`, 'аномалия: ' + esc(a.why), num(a.n)]),

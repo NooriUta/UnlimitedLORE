@@ -44,3 +44,13 @@ test('отчёт — светлая тема и без внешних скрип
   assert.ok(!/<script/i.test(h), 'в отчёте нет исполняемого кода');
   assert.ok(h.includes('&lt;script&gt;'));
 });
+
+// Playwright-проход мастера на ryzenai 20.11: таблица связей «перенесена undefined → 36». transfer-edges пишет
+// у обычной связи { expected, target }, поле source есть только у связи «запись → версия» — отчёт брал source.
+test('связи в отчёте: число источника есть и у обычной связи (expected), «undefined» нет', () => {
+  const x = input();
+  x.edges.moved = { ADDRESSES: { expected: 36, target: 36, wrong_ends: 0 }, HAS_STATE: { source: 23607, expected: 23607, target: 23607 } };
+  const h = buildReport(x);
+  assert.ok(!h.includes('undefined'), 'нет «undefined»');
+  assert.ok(h.includes('36 → 36') && h.includes('23607 → 23607'));
+});
