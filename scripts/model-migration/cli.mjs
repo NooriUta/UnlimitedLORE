@@ -18,7 +18,7 @@ export const COMMANDS = [
   { name: 'dry-run', module: () => import('./dry-run.mjs'), write: false, about: 'пробный расчёт без записи: что не привелось, что удержано, поля вне карты (--out отчёт.json)' },
   { name: 'transfer', module: () => import('./transfer.mjs'), write: true, about: 'перенос записей с историей в новую базу и сверка (--out отчёт.json)' },
   { name: 'edges', module: () => import('./transfer-edges.mjs'), write: true, about: 'перенос связей в новую базу и сверка; после transfer (--out отчёт.json)' },
-  { name: 'ui', module: () => import('./ui.mjs'), write: false, about: 'интерфейс переноса в браузере на 127.0.0.1 (--port 2499): диалог по данным этой установки, решения пишутся в файл --decisions' },
+  { name: 'ui', module: () => import('./ui.mjs'), write: false, about: 'интерфейс переноса в браузере на 127.0.0.1 (--port 2499): диалог по данным этой установки, решения пишутся в файл --decisions; --proposals <файл> — предложенные коды подсказкой «предложено» (в решения — только по «принять»)' },
   { name: 'dst-fingerprint', module: () => import('./dst-fingerprint.mjs'), write: false, about: 'отпечаток содержимого новой базы — сверка двух переносов: одинаковые настройки и источник → одинаковый отпечаток (--out файл.json)' },
 ];
 

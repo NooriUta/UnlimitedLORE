@@ -119,6 +119,15 @@ services:
       # localhost-адреса бэкенд ходит на base-override (своя установка — http://forgejo:3000).
       - FORGEJO_API_TOKEN=${FORGEJO_API_TOKEN:-}
       - lore.forgejo.base-override=${FORGEJO_BASE_OVERRIDE:-}
+      # Локальная LLM для гейтов качества (QG-15) — по выбору (MIG-04, README «Локальная LLM»). Пустая модель —
+      # провайдер честно отвечает «не настроен». Адрес без /v1: клиент дописывает /v1/chat/completions сам; умолчание
+      # то же, что в application.properties. Ключ нужен, только если раннер его требует.
+      - LORE_LLM_LOCAL_URL=${LORE_LLM_LOCAL_URL:-http://localhost:11434}
+      - LORE_LLM_LOCAL_MODEL=${LORE_LLM_LOCAL_MODEL:-}
+      - LORE_LLM_LOCAL_API_KEY=${LORE_LLM_LOCAL_API_KEY:-}
+    # Сервер модели на той же машине, что и LORE: из контейнера он виден как host.docker.internal.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9100/q/health/live"]
       interval: 15s

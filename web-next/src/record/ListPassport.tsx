@@ -26,6 +26,7 @@ import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
 import { MilestoneCharts, SprintCharts } from '../charts/TaskFlowCharts';
 import { GateCharts, ProjectCharts } from '../charts/Batch2Charts';
 import { withSprintTasksTab } from './sprintTasksTab';
+import { withDocHtmlTab } from './docHtmlTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
 import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
@@ -419,11 +420,13 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,
   // решение владелицы 10.11) из того же ответа /lore/record, и вторым видом —
   // прежняя таблица задач (группировка, правка, массовый статус) со строкой сгорания.
-  const baseConfig = type === 'sprint' && contract
+  const sprintConfig = type === 'sprint' && contract
     ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), () => (
       <SprintTasksPanel contract={contract} onStatusSaved={pp.reload} fetchImpl={fetchImpl} win={win} />
     ))
     : view.config;
+  // Документ: HTML-тело (content_html) — отдельной вкладкой «HTML», рендер только в песочнице (MDL-08 ч.2).
+  const baseConfig = type === 'doc' ? withDocHtmlTab(sprintConfig, view.record.kind, t('docHtml.tab'), contract?.values.content_html) : sprintConfig;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;

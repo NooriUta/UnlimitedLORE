@@ -1,0 +1,32 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 (часть 2) · ссылки решения строкой (KnowDecision.adr_refs / sprint_refs / pr_refs / release_refs) пересаживаются на связи при переносе 1.18. Каждое значение — связь REFERENCES решение → цель, если такой связи ещё нет; уже существующая связь (DECIDED_IN к тому же ADR, REFERENCES к той же цели, второе написание той же цели) — дубль: второе ребро не заводится, дубль считается в отчёте; значение без цели (не нашлась, неоднозначна, не перенесена) — в остаток MigLeftover (kind decision_ref) с причиной. passport — выражение паспорта решения (срез decision, LoreSlices.java) по связям; сверка переноса исполняет его же на приёмнике, а сторож сервера (DecisionRefsPassportTest) проверяет, что срез читает ровно его.",
+  "task": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08",
+  "basis": "owner",
+  "approved": "2026-11-20",
+  "words": "«refs с релизов разобрать пересадить на связи но с проверкой дублей и с проверкой что оставшийся функционал перешёл на связи»",
+  "edge": "REFERENCES",
+  "fields": {
+    "adr_refs": {
+      "target": "KnowADR",
+      "key": "adr_id",
+      "dup_edges": ["DECIDED_IN"],
+      "passport": "unionall(out('DECIDED_IN').adr_id, out('REFERENCES')[@this INSTANCEOF 'KnowADR'].adr_id)"
+    },
+    "sprint_refs": {
+      "target": "KnowSprint",
+      "key": "sprint_id",
+      "passport": "out('REFERENCES')[@this INSTANCEOF 'KnowSprint'].sprint_id"
+    },
+    "pr_refs": {
+      "target": "KnowPR",
+      "key": "pr_uid",
+      "passport": "out('REFERENCES')[@this INSTANCEOF 'KnowPR'].pr_uid"
+    },
+    "release_refs": {
+      "target": "KnowRelease",
+      "key": "release_id",
+      "passport": "out('REFERENCES')[@this INSTANCEOF 'KnowRelease'].release_id"
+    }
+  },
+  "release_decisions": "out('REFERENCES')[@this INSTANCEOF 'KnowRelease'].release_id CONTAINS :tag"
+}
