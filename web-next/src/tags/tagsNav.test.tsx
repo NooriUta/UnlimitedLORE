@@ -10,7 +10,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { ICON_CANON, createSafeStorage, registerGameIcons, type UrlWindow } from '@seidr/kit';
 import App from '../App';
-import { V2_SECTIONS, menuFromModel, v2Config, type ModelNavGroup } from '../shell/v2Config';
+import { V2_SECTIONS, menuFromModel, v2Config } from '../shell/v2Config';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -64,9 +64,10 @@ describe('SUPERTAGS-SPIKE · пункт «Теги» в меню', () => {
 
   it('меню из модели: пункт не отброшен как незнакомый, подпись из локалей ru/en', () => {
     const m = modelNav();
-    const nav: ModelNavGroup[] = m.nav.map(g => ({ id: g.id, label_key: g.labelKey, tone: g.tone, pin_top: !!g.pinTop, items: g.items }));
+    // K5-MODEL-NAV-EDGE-LABELS (#1654): menuFromModel принимает документ /lore/model (surfaces.nav), разбор — kit navFromModel.
+    const doc = { surfaces: { nav: m.nav.map(g => ({ id: g.id, label_key: g.labelKey, tone: g.tone, pin_top: !!g.pinTop, items: g.items })) } };
     for (const [lang, title] of [['ru', 'Теги'], ['en', 'Tags']] as const) {
-      const knowledge = menuFromModel(lang, nav).find(g => g.id === 'knowledge');
+      const knowledge = menuFromModel(lang, doc).find(g => g.id === 'knowledge');
       expect(knowledge?.items).toContainEqual({ id: 'tags', title, icon: ICON_CANON.sectionTags });
     }
   });
