@@ -402,18 +402,9 @@ jobs:
           LORE_MIGRATE: "true"
           LORE_MIGRATE_ONLY: "true"
           LORE_MART_AUTH: basic
-        run: |
-          rc=0
-          timeout 1800 docker compose run --rm --no-deps -T lore-backend > /tmp/migrate.log 2>&1 || rc=$?
-          grep -E "LORE MIGRATE|LORE MART|ERROR|Exception" /tmp/migrate.log | tail -80 || true
-          if [ "$rc" != "0" ]; then
-            echo "::error::накатка схемы упала (код $rc) — работающий бэкенд НЕ подменён. Хвост лога:"
-            tail -60 /tmp/migrate.log
-            exit 1
-          fi
-          grep -q "lore.migrate.only=true — схема накатана" /tmp/migrate.log \
-            || { echo "::error::процесс вышел с 0, но строки о завершённой накатке нет — накатка не подтверждена"; tail -60 /tmp/migrate.log; exit 1; }
-          echo "накатка подтверждена"
+        # MIG-01: на базе из модели (LoreModelSchema, 1.18) бэкенд пропускает шаги V и выходит с 0 —
+        # скрипт принимает это как законный исход; на старой базе всё как раньше.
+        run: bash .github/scripts/migrate-schema.sh
 
       # PL-04: у препрода свой MinIO (порты 19000/19001, том lore-preprod_*).
       # Бэкенд поднимается с --no-deps, поэтому MinIO сам не стартует — без этого
