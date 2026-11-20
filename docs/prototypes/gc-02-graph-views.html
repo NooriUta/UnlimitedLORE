@@ -8,9 +8,12 @@
   Прототип SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-02: три отрисовщика договора kit на пяти живых графах LORE.
   Данные — выгрузки MCP `graph` от 20.11.2026, лежат рядом: gc-02-graphs/*.json (в каждом — какой вызов дал граф).
   Правило выбора отрисовщика — копия chooseGraphRenderer из kit/src/graph/graphContract.ts (v1.17.20, #1336).
-  Режим правки доски НЕ сделан: это решение владелицы (заметка задачи). Доска здесь только смотрится.
-  Открывать через http (python -m http.server / npx serve в docs/prototypes): с file:// браузер не даст прочитать JSON —
-  страница скажет это словами, а не покажет пустой холст.
+  v2 (20.11.2026, по отзыву владелицы): у карточек React Flow есть хэндлы — рёбра рисуются во всех трёх видах;
+  у доски режим «Правка»: создать карточку (тип LORE + название), найти существующую запись («[[» — peek, «#» — по тегу),
+  связать (тип связи — из shared/model/lore-model.json через gc-02-graphs/model-relations.json), двигать, удалять, рисовать.
+  Правки — только localStorage этого браузера: прототип, в LORE не пишется.
+  Открывать: двойным щелчком — gc-02-graph-views.standalone.html (данные встроены, собирает gc-02-build-standalone.mjs);
+  этот файл — через http (npx serve в docs/prototypes), с file:// браузер не даст прочитать JSON, и страница скажет это словами.
 -->
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +40,10 @@ nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-bottom:1px solid
 .views{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;align-items:center}
 .lbl{color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;margin-right:4px}
 main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;min-height:72vh}
-@media (max-width:820px){main{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:820px){main{grid-template-columns:minmax(0,1fr)}#stage{min-height:calc(100dvh - 8px)}}
+@media (max-width:820px){.react-flow__minimap{display:none}}
+details.sub>summary{cursor:pointer;color:var(--t2);font-size:var(--fs-xs)}
+details.sub[open]>summary{margin-bottom:4px}
 #stage{position:relative;min-height:72vh;border-right:1px solid var(--bd);background:var(--bg0)}
 #canvas{position:absolute;inset:0}
 .state{position:absolute;left:16px;right:16px;top:16px;z-index:5;padding:10px 12px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);font-size:var(--fs-xs);line-height:1.5}
@@ -62,6 +68,69 @@ td.n{text-align:right;font-family:var(--mono);font-size:var(--fs-2xs)}
 .react-flow{--xy-background-color:var(--bg0);--xy-edge-stroke:var(--bdh);--xy-controls-button-background-color:var(--bg2);--xy-controls-button-color:var(--t1);--xy-controls-button-border-color:var(--bd)}
 .react-flow__node{padding:0;border:0;background:transparent;width:auto}
 .react-flow__attribution{display:none}
+.card.local{border-style:dashed;border-left-style:solid}
+.card.note{background:var(--bg3);border-left-color:var(--acc)}
+.card .badge{float:right;margin-left:4px;color:var(--acc);font-family:var(--mono)}
+.react-flow__handle.hd{width:6px;height:6px;min-width:0;min-height:0;border:0;background:var(--acc);opacity:0;pointer-events:none}
+.gwrap.editing .react-flow__handle.hd{opacity:1;width:12px;height:12px;border:2px solid var(--bg0);pointer-events:all}
+@media (pointer:coarse){.gwrap.editing .react-flow__handle.hd{width:18px;height:18px}}
+.react-flow__node.selected .card{box-shadow:0 0 0 2px var(--acc)}
+.react-flow__node.linkfrom .card{box-shadow:0 0 0 2px var(--inf)}
+.react-flow__edge-text{fill:var(--t2);font-family:var(--mono);font-size:var(--fs-2xs)}
+.react-flow__edge-textbg{fill:var(--bg1)}
+.react-flow__edge-textwrapper{opacity:.8}
+.react-flow__edge:hover .react-flow__edge-textwrapper,.react-flow__edge.selected .react-flow__edge-textwrapper{opacity:1}
+.react-flow__edge.selected .react-flow__edge-path{stroke:var(--acc)!important}
+.gwrap{position:absolute;inset:0;display:flex;flex-direction:column}
+.gflow{position:relative;flex:1;min-height:0}
+.btool{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg1);position:relative;z-index:6}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:var(--bg2);color:var(--t2);font:inherit;font-size:var(--fs-xs);padding:4px 10px;cursor:pointer;min-height:28px}
+.seg button[aria-pressed="true"]{background:var(--bg3);color:var(--acc)}
+.tb{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:999px;padding:4px 10px;font:inherit;font-size:var(--fs-xs);cursor:pointer;white-space:nowrap;min-height:28px}
+.tb[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:var(--bg3)}
+.tb.dng{color:var(--dng)}
+.tb:disabled{opacity:.45;cursor:not-allowed}
+.proto{color:var(--wrn);border-color:var(--wrn)}
+.draw{position:absolute;inset:0;z-index:5;touch-action:none;cursor:crosshair}
+.gbody{position:relative;flex:1;min-height:0;display:flex}
+.pal{flex:none;width:44px;display:flex;flex-direction:column;gap:2px;padding:4px;background:var(--bg1);border-right:1px solid var(--bd);z-index:7;overflow:visible}
+.pal hr{border:0;border-top:1px solid var(--bd);margin:3px 2px;width:auto}
+.pb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-height:34px;padding:4px 0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--t2);font:inherit;cursor:pointer}
+.pb:hover{background:var(--bg2);color:var(--t1)}
+.pb[aria-pressed="true"]{background:var(--bg3);border-color:var(--acc);color:var(--acc)}
+.pb.dng{color:var(--dng)}
+.pb:disabled{opacity:.4;cursor:not-allowed}
+.pb .pl{display:none;font-size:var(--fs-2xs);line-height:1.1;text-align:center}
+.pb .cnt{position:absolute;top:1px;right:1px;min-width:14px;padding:0 3px;border-radius:999px;background:var(--dng);color:var(--bg0);font-family:var(--mono);font-size:var(--fs-2xs);line-height:14px}
+@media (hover:hover) and (min-width:821px){
+  .pb[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);white-space:nowrap;background:var(--bg3);color:var(--t1);border:1px solid var(--bdh);border-radius:4px;padding:3px 7px;font-size:var(--fs-xs);pointer-events:none;z-index:20}
+}
+@media (max-width:820px){
+  .gbody{--palw:58px}
+  .pal{width:58px;overflow-y:auto;overscroll-behavior:contain;padding:3px}
+  .pb{min-height:46px}
+  .pb .pl{display:block}
+}
+.pmenu{position:absolute;z-index:30;min-width:170px;background:var(--bg1);border:1px solid var(--bdh);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.5);padding:4px;display:flex;flex-direction:column;gap:1px}
+.pmenu .ph{color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;padding:4px 6px}
+.pmenu button{display:flex;align-items:center;gap:7px;text-align:left;border:0;background:transparent;color:var(--t1);font:inherit;font-size:var(--fs-xs);padding:6px 8px;border-radius:4px;cursor:pointer;min-height:30px}
+.pmenu button:hover,.pmenu button:focus{background:var(--bg2)}
+.draw.eraser{cursor:cell}
+.dlg-back{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px 16px}
+.dlg{width:min(460px,100%);max-height:calc(100vh - 80px);display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--bdh);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.dlg h3{font-family:var(--disp);font-weight:800;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0;padding:10px 12px 6px}
+.dlg .body{padding:6px 12px 12px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.dlg input,.dlg select{width:100%;background:var(--bg0);color:var(--t1);border:1px solid var(--bd);border-radius:4px;padding:7px 8px;font:inherit;font-size:var(--fs-md)}
+.dlg input:focus,.dlg select:focus{outline:1px solid var(--acc);border-color:var(--acc)}
+.dlg .hint{color:var(--t3);font-size:var(--fs-2xs);line-height:1.5}
+.dlg .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.res{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.res button{width:100%;text-align:left;border:1px solid transparent;background:var(--bg2);color:var(--t1);border-radius:4px;padding:5px 7px;font:inherit;font-size:var(--fs-xs);cursor:pointer;display:block}
+.res button:hover,.res button:focus{border-color:var(--acc)}
+.res button:disabled{opacity:.5;cursor:default}
+.res .rid{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--c,var(--t2));display:block}
+.res .rt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:4px;padding:4px 8px;font:inherit;font-size:var(--fs-xs);cursor:pointer}
 </style>
 <script type="importmap">
@@ -81,9 +150,10 @@ button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);bord
 <body>
 <header>
   <h1>Графовые виды · GC-02</h1>
-  <div class="sub">Прототип договора kit <code>kit/src/graph/graphContract.ts</code>: один вход (узлы <code>{id,type,title}</code> и рёбра <code>(from, rel, to, kind?)</code>), три отрисовщика.
+  <details class="sub" id="about"><summary>О прототипе</summary>Прототип договора kit <code>kit/src/graph/graphContract.ts</code>: один вход (узлы <code>{id,type,title}</code> и рёбра <code>(from, rel, to, kind?)</code>), три отрисовщика.
   <b>React Flow</b> — доска, mind map, структура (раскладка ELK в воркере); <b>sigma</b> — граф знаний; <b>d3-force в воркере</b> — «живая» физика поверх sigma.
-  Пять графов — живые выгрузки MCP <code>graph</code> от 20.11.2026, файлы <code>gc-02-graphs/*.json</code>. Режим правки доски не сделан: это решение владелицы.</div>
+  Пять графов — живые выгрузки MCP <code>graph</code> от 20.11.2026, файлы <code>gc-02-graphs/*.json</code>.
+  У доски — режим <b>Правка</b>: создать, найти (<code>[[</code> запись, <code>#</code> тег), связать по модели, двигать, удалять, рисовать. <b>Прототип: в LORE не пишется</b>, правки живут в этом браузере.</details>
 </header>
 <nav id="graphs" aria-label="Граф"></nav>
 <div class="views"><span class="lbl">Вид</span><span id="views"></span><span class="lbl" style="margin-left:12px">Отрисовщик</span><span id="renderer" class="chip">—</span></div>
@@ -99,9 +169,10 @@ button.act{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);bord
   </aside>
 </main>
 <script type="module">
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, Background, Controls, MiniMap, MarkerType } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, Background, Controls, MiniMap, MarkerType, Handle, Position, ConnectionMode, ViewportPortal,
+  useNodesState, useEdgesState, useReactFlow } from '@xyflow/react';
 import Graph from 'graphology';
 import Sigma from 'sigma';
 
@@ -135,7 +206,7 @@ const RENDERER_NAME = { reactflow: 'React Flow + ELK (воркер)', force: 'fo
 
 // Цвета типов — только токены; sigma нужен цвет строкой, поэтому читаем вычисленные значения переменных.
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const TYPE_TOKEN = { adr: '--acc', decision: '--inf', spec: '--suc', task: '--t2', sprint: '--wrn', release: '--dng', milestone: '--wrn', component: '--inf', project: '--acc', question: '--dng', doc: '--suc', uc: '--suc', tech: '--t3' };
+const TYPE_TOKEN = { adr: '--acc', decision: '--inf', spec: '--suc', task: '--t2', sprint: '--wrn', release: '--dng', milestone: '--wrn', component: '--inf', project: '--acc', question: '--dng', doc: '--suc', uc: '--suc', tech: '--t3', note: '--acc' };
 const tokenOf = t => TYPE_TOKEN[t] || '--t3';
 
 // ── Состояние в адресе ────────────────────────────────────────────────────────────────────
@@ -170,8 +241,17 @@ function renderViews(n) {
   }
 }
 
+/** Файл из gc-02-graphs: из встроенных данных (standalone, file://), иначе fetch. */
+async function loadFile(file) {
+  const embedded = window.__GC02_DATA && window.__GC02_DATA[file];
+  if (embedded) return embedded;
+  const r = await fetch(file);
+  if (!r.ok) throw new Error(`HTTP ${r.status} на ${file}`);
+  return r.json();
+}
 async function loadGraph(g) {
   if (cache.has(g.key)) return cache.get(g.key);
+  if (window.__GC02_DATA && window.__GC02_DATA[g.file]) { cache.set(g.key, window.__GC02_DATA[g.file]); return window.__GC02_DATA[g.file]; }
   const r = await fetch(g.file);
   if (!r.ok) throw new Error(`HTTP ${r.status} на ${g.file}`);
   const j = await r.json();
@@ -179,7 +259,9 @@ async function loadGraph(g) {
   return j;
 }
 
+let goSeq = 0;
 async function go() {
+  goSeq++;
   teardown(); teardown = () => {};
   $('canvas').innerHTML = '';
   const g = GRAPHS.find(x => x.key === gKey);
@@ -216,11 +298,356 @@ async function go() {
 
 // ── React Flow: доска (колонки по типам), mind map (ELK mrtree), структура (ELK layered) ───────
 const NODE_W = 220, NODE_H = 58;
+// Хэндлы карточки: [вход, выход] под направление раскладки. Рёбра LORE в основном «дочь → родитель», а ELK
+// ставит родителя в корень (mind map — слева, структура — сверху), поэтому выход дочери смотрит на родителя.
+// Без <Handle> React Flow рёбра не рисует вовсе — это и была причина «не вижу связей» в v1.
+const HANDLE_POS = { board: [Position.Left, Position.Right], mindmap: [Position.Right, Position.Left], structure: [Position.Bottom, Position.Top] };
+let MODEL_TYPES = {}; // подписи типов из модели (заполняется при загрузке model-relations.json)
+const typeLabel = t => t === 'note' ? 'заметка' : (MODEL_TYPES[t] || t);
 function Card({ data }) {
-  return h('div', { className: 'card' + (data.root ? ' root' : ''), style: { '--c': `var(${tokenOf(data.type)})` }, title: data.title || '' },
-    h('span', { className: 'id' }, `${data.type} · ${data.id}`), h('span', { className: 'tt' }, data.title || '(без названия)'));
+  const [tp, sp] = HANDLE_POS[data.layout] || HANDLE_POS.board;
+  const cls = 'card' + (data.root ? ' root' : '') + (data.local ? ' local' : '') + (data.type === 'note' ? ' note' : '');
+  return h('div', { className: cls, style: { '--c': `var(${tokenOf(data.type)})` }, title: data.title || '' },
+    h(Handle, { type: 'target', position: tp, className: 'hd' }),
+    h('span', { className: 'id' }, data.local ? h('span', { className: 'badge' }, 'новая') : data.added ? h('span', { className: 'badge' }, '+') : null,
+      data.local ? typeLabel(data.type) : `${data.type} · ${data.id}`),
+    h('span', { className: 'tt' }, data.title || '(без названия)'),
+    h(Handle, { type: 'source', position: sp, className: 'hd' }));
 }
-const nodeTypes = { card: Card };
+function Lane({ data }) {
+  return h('div', { style: { width: NODE_W, color: 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.08em' } }, data.label);
+}
+const nodeTypes = { card: Card, lane: Lane };
+
+/** Ребро для React Flow. Подпись = тип связи; структурные — тусклее, связи «только доски» (стикер) — акцентом. */
+function edgeOf(e) {
+  const col = e.boardOnly ? css('--acc') : e.k === 'structural' ? css('--bdh') : css('--t3');
+  return { id: e.id, source: e.source, target: e.target, label: e.rel, labelBgPadding: [3, 1], labelBgBorderRadius: 3,
+    data: { rel: e.rel, k: e.k || null, local: !!e.local, boardOnly: !!e.boardOnly },
+    style: { stroke: col, strokeWidth: 1.25, strokeDasharray: e.local ? '5 3' : undefined },
+    markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 14, height: 14 } };
+}
+
+// ── Хранилище правок доски: только этот браузер, всё в try/catch ─────────────────────────────
+const LS_KEY = k => 'gc02.board.v1.' + k;
+function lsGet(k) { try { const s = localStorage.getItem(LS_KEY(k)); return s ? JSON.parse(s) : null; } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(LS_KEY(k), JSON.stringify(v)); return true; } catch { return false; } }
+function lsDel(k) { try { localStorage.removeItem(LS_KEY(k)); } catch { /* хранилище недоступно — нечего стирать */ } }
+function serialize(nodes, edges, strokes) {
+  return { v: 1, saved_at: new Date().toISOString(),
+    nodes: nodes.filter(n => n.type === 'card').map(n => ({ id: n.id, position: n.position, data: { id: n.data.id, type: n.data.type, title: n.data.title, sc: n.data.sc, root: !!n.data.root, local: !!n.data.local, added: !!n.data.added } })),
+    edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, rel: e.data && e.data.rel || e.label, k: e.data && e.data.k, local: !!(e.data && e.data.local), boardOnly: !!(e.data && e.data.boardOnly) })),
+    strokes };
+}
+
+// ── Данные для поиска и модель связей (только встроенные выгрузки, бэкенда нет) ───────────────
+let corpusP = null, modelP = null;
+function loadCorpus() {
+  if (!corpusP) corpusP = Promise.all(GRAPHS.map(g => loadGraph(g).catch(() => null))).then(list => {
+    const byId = new Map(), adj = new Map(), tagged = new Map(), keys = new Set();
+    const push = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+    let failed = 0;
+    for (const d of list) {
+      if (!d) { failed++; continue; }
+      d.nodes.forEach(n => { if (!byId.has(n.id)) byId.set(n.id, n); });
+      d.edges.forEach(e => { const k = e.f + '|' + e.r + '|' + e.t; if (keys.has(k)) return; keys.add(k); push(adj, e.f, e); push(adj, e.t, e);
+        if (e.r === 'TAGGED_WITH') { if (!tagged.has(e.t)) tagged.set(e.t, new Set()); tagged.get(e.t).add(e.f); } });
+    }
+    if (failed === list.length) throw new Error('ни одна выгрузка графа не загрузилась');
+    return { byId, adj, tagged, failed, files: list.length };
+  });
+  return corpusP;
+}
+function loadModel() {
+  if (!modelP) modelP = loadFile('gc-02-graphs/model-relations.json').then(m => { MODEL_TYPES = m.types || {}; return m; });
+  return modelP;
+}
+loadModel().catch(() => { modelP = null; });
+/** Допустимые связи для пары типов по модели — в обе стороны (rev: связь идёт от второй карточки к первой). */
+function relOptions(model, a, b) {
+  if (a === 'note' || b === 'note') return [{ rel: 'NOTE_ON', rev: a !== 'note', label: 'заметка к записи — есть только на доске, в модели LORE такой связи нет', boardOnly: true }];
+  const out = [], seen = new Set();
+  for (const r of model.relations) {
+    let o = null;
+    if (r.f === a && r.t === b) o = { rel: r.rel, rev: false, label: r.label };
+    else if (r.f === b && r.t === a) o = { rel: r.rel, rev: true, label: r.label };
+    if (o && !seen.has(o.rel + o.rev)) { seen.add(o.rel + o.rev); out.push(o); }
+  }
+  return out;
+}
+const CREATE_TYPES = ['task', 'sprint', 'adr', 'decision', 'spec', 'question', 'note'];
+
+// ── Окно «+»: «Найти запись» ([[ — peek, # — по тегу) и «Создать новую» ─────────────────────
+function Dlg({ title, onClose, children }) {
+  return h('div', { className: 'dlg-back', onMouseDown: e => { if (e.target === e.currentTarget) onClose(); }, onKeyDown: e => { if (e.key === 'Escape') onClose(); } },
+    h('div', { className: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, h('h3', null, title), h('div', { className: 'body' }, children)));
+}
+function ResItem({ n, onBoard, onPick, extra }) {
+  return h('li', null, h('button', { type: 'button', disabled: onBoard, onClick: () => onPick(n), style: { '--c': `var(${tokenOf(n.type)})` } },
+    h('span', { className: 'rid' }, `${n.type} · ${n.id}${onBoard ? ' · уже на доске' : ''}${extra ? ' · ' + extra : ''}`), h('span', { className: 'rt' }, n.title || '(без названия)')));
+}
+function AddDialog({ onClose, onCreate, onPick, onBoard, init = {} }) {
+  const [tab, setTab] = useState(init.tab || 'find');
+  const [q, setQ] = useState(init.q || '');
+  const [tag, setTag] = useState(null);
+  const [type, setType] = useState(init.type || 'task');
+  const [title, setTitle] = useState('');
+  const [corpus, setCorpus] = useState(null);
+  const [err, setErr] = useState(null);
+  const inRef = useRef(null);
+  useEffect(() => { loadCorpus().then(setCorpus, e => setErr(String(e && e.message || e))); }, []);
+  useEffect(() => { if (inRef.current) inRef.current.focus(); }, [tab]);
+  const tabs = h('span', { className: 'seg', role: 'tablist' },
+    h('button', { type: 'button', role: 'tab', 'aria-pressed': String(tab === 'find'), onClick: () => setTab('find') }, 'Найти запись'),
+    h('button', { type: 'button', role: 'tab', 'aria-pressed': String(tab === 'create'), onClick: () => setTab('create') }, 'Создать новую'));
+  const foot = h('div', { className: 'hint' }, 'Прототип: в LORE не пишется. Карточка живёт на доске в этом браузере (localStorage).');
+  if (tab === 'create') {
+    const onTitle = v => { if (v.startsWith('[[') || v.startsWith('#')) { setTab('find'); setQ(v); setTag(null); setTitle(''); return; } setTitle(v); };
+    const ok = title.trim().length > 0;
+    return h(Dlg, { title: 'Добавить на доску', onClose }, tabs,
+      h('label', { className: 'hint' }, 'Тип записи LORE'),
+      h('select', { value: type, onChange: e => setType(e.target.value) }, CREATE_TYPES.map(t => h('option', { key: t, value: t }, t === 'note' ? 'Заметка-стикер' : (MODEL_TYPES[t] || t)))),
+      h('label', { className: 'hint' }, 'Название'),
+      h('input', { ref: inRef, value: title, placeholder: type === 'note' ? 'текст стикера' : 'название записи', onChange: e => onTitle(e.target.value),
+        onKeyDown: e => { if (e.key === 'Enter' && ok) onCreate(type, title.trim()); } }),
+      h('div', { className: 'hint' }, 'Начните с «[[» — откроется поиск записи, с «#» — поиск по тегу, как в редакторе.'),
+      h('div', { className: 'row' }, h('button', { type: 'button', className: 'tb', onClick: onClose }, 'Отмена'),
+        h('button', { type: 'button', className: 'tb', 'aria-pressed': 'true', disabled: !ok, onClick: () => onCreate(type, title.trim()) }, 'Создать')), foot);
+  }
+  const raw = q.trim();
+  let body;
+  if (err) body = h('div', { className: 'state err', style: { position: 'static' } }, 'Поиск недоступен: ' + err + '. Выгрузки графов не прочитались — это не «ничего не найдено».');
+  else if (!corpus) body = h('div', { className: 'hint' }, 'Читаю выгрузки графов…');
+  else if (raw.startsWith('#')) {
+    const s = raw.slice(1).toLowerCase();
+    if (tag) {
+      const tn = corpus.byId.get(tag);
+      const recs = [...(corpus.tagged.get(tag) || [])].map(id => corpus.byId.get(id)).filter(Boolean);
+      body = [h('div', { key: 'h', className: 'row', style: { justifyContent: 'space-between', alignItems: 'center' } },
+          h('span', { className: 'hint' }, `#${tag}${tn && tn.title ? ' — ' + tn.title : ''} · записей с тегом: ${recs.length}`),
+          h('button', { type: 'button', className: 'tb', onClick: () => setTag(null) }, '← все теги')),
+        recs.length ? h('ul', { key: 'l', className: 'res' }, recs.map(n => h(ResItem, { key: n.id, n, onBoard: onBoard.has(n.id), onPick })))
+          : h('div', { key: 'e', className: 'hint' }, 'В выгрузках нет записей с этим тегом.')];
+    } else {
+      const tags = [...corpus.tagged.entries()].map(([id, set]) => ({ id, n: corpus.byId.get(id), count: set.size }))
+        .filter(t => !s || t.id.toLowerCase().includes(s) || (t.n && (t.n.title || '').toLowerCase().includes(s)))
+        .sort((a, b) => b.count - a.count).slice(0, 40);
+      body = [h('div', { key: 'h', className: 'hint' }, `Теги (supertag) — цели связей TAGGED_WITH во встроенных выгрузках: ${corpus.tagged.size}. Выберите тег, затем запись.`),
+        tags.length ? h('ul', { key: 'l', className: 'res' }, tags.map(t => h('li', { key: t.id }, h('button', { type: 'button', onClick: () => setTag(t.id) },
+          h('span', { className: 'rid' }, `#${t.id} · записей ${t.count}`), h('span', { className: 'rt' }, t.n && t.n.title || '')))))
+          : h('div', { key: 'e', className: 'hint' }, `Тега «${s}» в выгрузках нет.`)];
+    }
+  } else if (raw) {
+    const s = raw.replace(/^\[\[/, '').replace(/\]\]$/, '').trim().toLowerCase();
+    if (!s) body = h('div', { className: 'hint' }, 'Поиск записи (peek): наберите часть кода или названия.');
+    else {
+      const hits = [];
+      for (const n of corpus.byId.values()) {
+        const id = n.id.toLowerCase(), t = (n.title || '').toLowerCase();
+        const rank = id === s ? 0 : id.startsWith(s) ? 1 : id.includes(s) ? 2 : t.includes(s) ? 3 : -1;
+        if (rank >= 0) hits.push([rank, n]);
+      }
+      hits.sort((a, b) => a[0] - b[0] || a[1].id.localeCompare(b[1].id));
+      body = [h('div', { key: 'h', className: 'hint' }, `Найдено: ${hits.length}${hits.length > 40 ? ', показаны первые 40' : ''} · искали в ${corpus.byId.size} записях выгрузок`),
+        hits.length ? h('ul', { key: 'l', className: 'res' }, hits.slice(0, 40).map(([, n]) => h(ResItem, { key: n.id, n, onBoard: onBoard.has(n.id), onPick })))
+          : h('div', { key: 'e', className: 'hint' }, `Записей с «${s}» в выгрузках нет.`)];
+    }
+  } else body = h('div', { className: 'hint' }, '«[[» — поиск записи по коду или названию (peek), «#» — поиск по тегу (supertag). Текст без префикса ищет запись.');
+  return h(Dlg, { title: 'Добавить на доску', onClose }, tabs,
+    h('input', { ref: inRef, value: q, placeholder: '[[код или название   ·   #тег', onChange: e => { setQ(e.target.value); setTag(null); } }),
+    corpus && corpus.failed ? h('div', { className: 'state wrn', style: { position: 'static' } }, `Не прочитались выгрузки: ${corpus.failed} из ${corpus.files} — поиск идёт по остальным.`) : null,
+    body, foot);
+}
+function RelDialog({ s, t, options, err, onPick, onClose }) {
+  const name = n => `${typeLabel(n.data.type)} ${n.data.local ? '«' + n.data.title + '»' : n.id}`;
+  return h(Dlg, { title: 'Тип связи', onClose },
+    h('div', { className: 'hint' }, `${name(s)} ⇄ ${name(t)}. Типы — из модели LORE (shared/model/lore-model.json), только допустимые для этой пары.`),
+    err ? h('div', { className: 'state err', style: { position: 'static' } }, 'Модель связей не загрузилась: ' + err + '. Связь не создана — выбрать тип не из чего.')
+      : options.length ? h('ul', { className: 'res' }, options.map(o => {
+        const [a, b] = o.rev ? [t, s] : [s, t];
+        return h('li', { key: o.rel + o.rev }, h('button', { type: 'button', onClick: () => onPick(o) },
+          h('span', { className: 'rid' }, `${a.data.type} —${o.rel}→ ${b.data.type}`), h('span', { className: 'rt' }, o.label)));
+      }))
+      : h('div', { className: 'state wrn', style: { position: 'static' } }, `По модели LORE между «${typeLabel(s.data.type)}» и «${typeLabel(t.data.type)}» связей нет — связь не создана.`),
+    h('div', { className: 'row' }, h('button', { type: 'button', className: 'tb', onClick: onClose }, 'Отмена')));
+}
+
+// ── Рисование: штрихи в координатах холста, живут вместе с доской ────────────────────────────
+// «Связать» — касание карточки, затем второй: на телефоне хэндл при обзорном масштабе в несколько пикселей, пальцем не попасть.
+const TOOL_LABEL = { select: 'Выбрать', link: 'Связать', pen: 'Перо', marker: 'Маркер', eraser: 'Ластик' };
+const DRAW_TOOLS = ['pen', 'marker', 'eraser'];
+// Иконки game-icons.net (CC BY 3.0, авторы Lorc, Delapouite и др.) — пути вписаны из Iconify (game-icons), чтобы standalone работал без сети к Iconify.
+const GI = {"arrow-cursor":"M123.193 29.635L121 406.18l84.31-82.836l65.87 159.02l67.5-27.96l-65.87-159.02L391 294.342z","magnifying-glass":"M333.78 20.188c-39.97 0-79.96 15.212-110.405 45.656c-58.667 58.667-60.796 152.72-6.406 213.97l-15.782 15.748l13.25 13.25l15.75-15.78c61.248 54.39 155.3 52.26 213.968-6.407c60.887-60.886 60.888-159.894 0-220.78C413.713 35.4 373.753 20.187 333.78 20.187zm0 18.562c35.15 0 70.285 13.44 97.158 40.313c53.745 53.745 53.744 140.6 0 194.343c-51.526 51.526-133.46 53.643-187.5 6.375l.218-.217c-2.35-2.05-4.668-4.17-6.906-6.407c-2.207-2.206-4.288-4.496-6.313-6.812l-.218.22c-47.27-54.04-45.152-135.976 6.374-187.502C263.467 52.19 298.63 38.75 333.78 38.75m0 18.813c-30.31 0-60.63 11.6-83.81 34.78c-46.362 46.362-46.362 121.234 0 167.594c10.14 10.142 21.632 18.077 33.905 23.782c-24.91-19.087-40.97-49.133-40.97-82.94c0-15.323 3.292-29.888 9.22-43c-4.165 20.485.44 40.88 14.47 54.907c24.583 24.585 68.744 20.318 98.624-9.562s34.146-74.04 9.56-98.625a52.4 52.4 0 0 0-7.655-6.313c45.13 8.648 79.954 46.345 84.25 92.876c4.44-35.07-6.82-71.726-33.813-98.72c-23.18-23.18-53.47-34.78-83.78-34.78zM176.907 297.688L42.094 432.5l34.562 34.563L211.47 332.25zM40 456.813L24 472.78L37.22 486l15.968-16z","price-tag":"M303.297 42.269q-2.31.037-4.476.158c-11.55.649-19.422 3.475-22.47 6.438L18.923 299.087L184.807 469.75l257.43-250.222c3.047-2.963 6.096-10.75 7.072-22.278s.207-26.288-1.645-42.248c-1.605-13.84-3.991-28.476-6.597-42.96c-12.99 9.51-28.1 16.583-48.25 20.222a40 40 0 0 1-11.38 36.191a40 40 0 0 1-56.562-.802a40 40 0 0 1 .803-56.563a40 40 0 0 1 29.031-11.3a40 40 0 0 1 27.532 12.103a40 40 0 0 1 2.998 3.5c24.115-3.229 38.245-11.132 52.109-23.326c-1.891-9.87-3.776-19.475-5.47-28.424c-27.556-6.032-61.042-14.049-90.872-18.371c-11.925-1.728-23.195-2.83-32.957-2.998q-2.441-.042-4.752-.004zm159.469 34.836c-3.39.175-6.773 1.444-9.342 3.283a2734 2734 0 0 1 3.7 19.365l5.326-3.707c.268.372.45.517.765 1.106c2.648 4.937 5.797 16.02 7.912 30.437c4.231 28.833 5.344 71.6 1.848 116.16s-11.623 91.069-25.262 127.625c-13.639 36.557-32.614 61.986-55.453 68.49c-8.264 2.354-12.21.983-16.803-3.57c-4.593-4.552-9.035-13.679-12.054-26.199c-5.115-21.207-6.457-51.417-5.526-83.469l-18.336 17.824c-.067 25.974 1.633 50.248 6.364 69.864c3.443 14.277 8.383 26.341 16.882 34.765s21.359 11.814 34.405 8.098c31.734-9.038 52.827-40.494 67.384-79.512s22.756-86.771 26.344-132.508c3.589-45.736 2.547-89.302-1.984-120.181c-2.266-15.44-5.15-27.556-9.858-36.332c-2.353-4.388-5.217-8.459-10.513-10.627c-1.324-.542-2.736-.832-4.174-.91q-.81-.044-1.625-.002M293.1 187.796l12.549 12.906l-29.38 28.563c6.195 6.952 11.437 14.253 15.71 21.908c5.1 9.1 8.755 18.47 10.96 28.12l-16.91 16.212q-1.421-16.44-7.652-30.496t-17.27-25.57q-21.758-22.696-44.751-22.59q-22.914.189-46.744 23.035q-23.752 22.772-24.907 45.656q-1.074 22.969 20.684 45.664q8.498 8.864 16.584 14.463q8.164 5.526 16.553 8.135l31.539-30.236l-26.205-27.336l13.054-12.516l42.09 43.9l-50.416 48.335q-15.82-3.435-30.398-11.872c-8.672-5.09-16.86-11.463-24.569-19.097l-25.826 24.635l-12.424-13.026l26.303-25.088c-12.28-16.036-18.338-32.69-18.164-49.963q.48-31.775 29.188-59.298q27.885-26.735 58.498-26.692q.987.002 1.976.031c17.69.524 34.44 7.564 50.254 21.069z","health-normal":"M196 16a30 30 0 0 0-30 30v120H46a30 30 0 0 0-30 30v120a30 30 0 0 0 30 30h120v120a30 30 0 0 0 30 30h120a30 30 0 0 0 30-30V346h120a30 30 0 0 0 30-30V196a30 30 0 0 0-30-30H346V46a30 30 0 0 0-30-30z","linked-rings":"M321.7 21.36c-43.2 0-86.4 16.5-119.4 49.5c-19.1 19.08-32.6 41.54-40.7 65.44c16.9-2.4 32.9-2.7 48.7-1.1q5.85-8.25 13.2-15.6c23.3-23.26 53.8-34.9 84.4-34.9s61.2 11.64 84.5 34.9c46.6 46.6 46.6 122.4 0 168.9c-46.5 46.6-122.4 46.6-168.9 0c-22.2-22.2-33.9-51.1-34.9-80.2c-11.5 1.8-22.8 5.6-33.2 11.4c5.8 33 21.4 64.5 46.9 90c66 66 172.9 66.1 238.9 0c66-66 66-172.8 0-238.84c-33-33-76.3-49.5-119.5-49.5M147.6 158.2c-27.9 7.7-58.94 25.4-76.75 44c-47.5 47.4-60.8 116-40.1 175.3c8.91 24.1 23.56 47.1 40.1 63.6c66.05 66 172.95 66 238.95 0c19.1-19.1 32.6-41.6 40.7-65.5c-16.2 2.5-32.6 2.9-48.8 1.2c-3.8 5.4-8.2 10.6-13.1 15.5c-62.7 39.7-137.8 40.6-173.3-4.4c-20.57-26-32.05-58.8-30.55-85.8c2.58-41.6 26.85-79.9 57.75-98.5c10.2-5.9 37.6-15.1 61.6-15.1c33.7 1.5 60.6 11.1 84.5 34.9c22.3 22.1 33.8 51.1 34.8 80.3c11.6-1.8 22.9-5.6 33.3-11.4c-9.4-41.6-26.9-73.2-53.9-96.7c-21.4-18.7-44.1-31.4-70.6-37.6c-28.4-7-58.6-6.5-84.6.2","quill":"M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093c5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594c25.193 7.756 51.57 22.81 72.845 43.844c-31.87-7.045-68.907-5.895-99.188 3c-13.743 28.688-25.008 60.48-33.343 95.687c128.71-30.668 130.522 3.514 50.75 140.438c16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468c-17.29-14.667-39.21-24.838-63.813-32.375c25.364-5.256 50.91-10.928 74.126-11.22c6.482-.082 12.78.272 18.844 1.156c17.57-24.007 37.408-48.612 59.75-73.97c-12.538-6.31-25.476-11.454-38.125-14.967c17.132-5.76 35.274-8.34 52.844-8.157c2.01.02 4.004.095 6 .187c20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28","paint-brush":"M54.438 29.794a24 24 0 0 0-1.204.01c-4.688.157-7.914 1.736-10.113 3.935c-2.932 2.932-4.761 7.689-3.588 15.305s5.683 17.754 15.272 28.941c67.894 79.21 132.935 155.56 183.703 211.969c12.273 13.637 23.693 26.08 34.125 37.135c12.095-31.902 34.57-54.144 62.902-64.715c-10.825-10.199-22.936-21.313-36.197-33.248C242.93 178.358 166.578 113.314 87.369 45.42c-11.186-9.589-21.325-14.098-28.941-15.272a30 30 0 0 0-3.99-.355zm295.783 246.64c-30.461 7.627-53.241 29.185-63.608 65.219c5.652 5.785 10.956 11.085 15.78 15.707c7.58 7.264 14.095 13.007 19.21 16.957c1.776-17.225 10.045-33.062 21.645-44.691c10.601-10.628 24.496-18.006 39.125-19.092c-3.871-4.836-9.14-10.751-15.63-17.524c-4.838-5.047-10.415-10.623-16.522-16.576m35.351 51.95c-10.397.137-20.929 5.28-29.582 13.955c-11.537 11.565-18.674 28.85-16.267 45.7c5.334 37.342 23.749 65.81 49.46 81.237c22.727 13.636 51.452 17.35 83.643 6.983c-24.222-4.01-46.475-30.706-48.197-50.65c10.63 12.814 23.94 24.547 38.426 31.75c-9.881-22.578-9.201-45.452-11.088-64.321c-1.352-13.522-3.891-24.982-11.377-35.162s-20.423-19.8-44.74-27.907a31 31 0 0 0-10.278-1.585","broom":"m153.654 18l52.57 134.734c1.698 3.994 4.05 5.83 7.243 6.977c3.2 1.15 7.36 1.2 11.058.17s6.71-3.146 7.996-4.915c1.288-1.77 1.634-2.564.505-5.24l-.046-.112L181.57 18zm94.168 120.143l1.88 4.81l-.09-.223c3.346 7.937 1.828 16.822-2.532 22.82c-4.36 5.996-10.773 9.734-17.723 11.67c-6.95 1.937-14.653 2.065-21.98-.57s-14.155-8.447-17.742-16.923l-.05-.118l-1.757-4.5c-31.31 19.804-42.47 42.026-35.367 68.89c1.24 4.681 3.422 12.364 5.964 22.13c74.37-5.274 139.945-23.872 199.808-51.6c-10.297-13.867-22.5-25.83-38.232-34.53c-20.505-11.34-47.652-20.157-72.178-21.857zm120.557 71.52c-61.497 28.81-129.173 48.378-205.575 54.196c2.03 8.683 4.08 18.28 5.95 28.495c89.592-10.084 163.043-26.22 217.755-48.767c-5.743-11.72-11.593-23.19-18.13-33.924m26.04 50.16c-57.093 23.772-131.99 40.087-222.73 50.322C180.697 371.423 179.614 446.752 128 480c16.27 0 31.892-.152 46.926-.45c17.84-25.554 31.27-66.222 32.08-86.146c8.27 16.793 3.297 59.32-5.36 85.434c2.735-.093 5.435-.193 8.127-.297c11.824-12.397 11.724-28.632 14.72-47.284c3.324 14.92 7 32.967 9.505 46.156c11.273-.616 22.152-1.34 32.606-2.183c16.38-20.358 21.65-49.604 18.63-85.48c4.226 29.1 9.116 62.138 11.873 82.55a772 772 0 0 0 27.807-3.614c5.04-18.787-4.1-48.444-2.072-69.54c11.123 43.113 22.247 55.45 33.37 64.043a456 456 0 0 0 15.733-3.526c-4.7-13.95 1.573-22.497 1.18-39.986c5.647 18.99 14.625 26.958 24.428 32.816c6.506-2.1 12.66-4.336 18.492-6.697c-10.538-6.57-10.113-26.374-12.38-42.926c5.954 21.703 14.413 32.418 24.083 37.816c29.124-13.8 48.69-31.534 60.398-53.657c-9.078-3.82-18.674-13.002-28.068-20.092c13.214 7.477 23.684 10.614 32.37 10.93a112 112 0 0 0 3.552-9.868c-56.326-19.528-80.07-64.018-101.58-108.178z","trash-can":"M199 103v50h-78v30h270v-30h-78v-50zm18 18h78v32h-78zm-79.002 80l30.106 286h175.794l30.104-286zm62.338 13.38l.64 8.98l16 224l.643 8.976l-17.956 1.283l-.64-8.98l-16-224l-.643-8.976zm111.328 0l17.955 1.284l-.643 8.977l-16 224l-.64 8.98l-17.956-1.284l.643-8.977l16-224l.64-8.98zM247 215h18v242h-18z","anticlockwise-rotation":"M248.91 50a206 206 0 0 1 35.857 3.13c85.207 15.025 152.077 81.895 167.102 167.102c15.023 85.208-24.944 170.917-99.874 214.178c-32.782 18.927-69.254 27.996-105.463 27.553c-46.555-.57-92.675-16.865-129.957-48.15l30.855-36.768a157.85 157.85 0 0 0 180.566 15.797a157.85 157.85 0 0 0 76.603-164.274A157.85 157.85 0 0 0 276.429 100.4a157.84 157.84 0 0 0-139.17 43.862L185 192H57V64l46.34 46.342C141.758 71.962 194.17 50.03 248.91 50"};
+const Ico = ({ n }) => h('svg', { viewBox: '0 0 512 512', width: 20, height: 20, 'aria-hidden': 'true', focusable: 'false' }, h('path', { d: GI[n], fill: 'currentColor' }));
+// Палитра слева (просьба владелицы 20.11: «слева сделать палитру возможностей»). label — имя кнопки и подпись на телефоне,
+// tip — подсказка при наведении на компьютере. tool — режим холста (подсвечивается), остальное — действие.
+const PALETTE = [
+  { k: 'select', icon: 'arrow-cursor', label: 'Выбрать', tip: 'Выбрать и двигать карточки', tool: true },
+  { k: 'find', icon: 'magnifying-glass', label: 'Найти запись', short: 'Найти [[', tip: 'Найти запись LORE — «[[» (peek)' },
+  { k: 'tag', icon: 'price-tag', label: 'По тегу', short: 'Тег #', tip: 'Найти по тегу — «#» (supertag)' },
+  { k: 'create', icon: 'health-normal', label: 'Создать', tip: 'Создать карточку: выбрать тип' },
+  { k: 'link', icon: 'linked-rings', label: 'Связать', tip: 'Связать: коснитесь двух карточек или тяните от точки карточки', tool: true },
+  { k: 'pen', icon: 'quill', label: 'Перо', tip: 'Перо — тонкая линия', tool: true },
+  { k: 'marker', icon: 'paint-brush', label: 'Маркер', tip: 'Маркер — широкая полупрозрачная линия', tool: true },
+  { k: 'eraser', icon: 'broom', label: 'Ластик', tip: 'Ластик — стирает штрихи', tool: true },
+  '-',
+  { k: 'delete', icon: 'trash-can', label: 'Удалить', tip: 'Удалить выделенные карточки и связи', danger: true },
+  { k: 'reset', icon: 'anticlockwise-rotation', label: 'Сбросить', tip: 'Сбросить правки доски в этом браузере' },
+];
+function segDist(p, a, b) { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); }
+function strokeHit(s, p, r) { for (let i = 0; i < s.pts.length; i++) if (segDist(p, s.pts[i], s.pts[i + 1] || s.pts[i]) <= r) return true; return false; }
+const pathOf = pts => pts.length === 1 ? `M${pts[0][0]} ${pts[0][1]}l0.01 0` : 'M' + pts.map(p => p[0] + ' ' + p[1]).join('L');
+
+function GraphApp({ gkey, layout, board, init, onReady }) {
+  const [nodes, setNodes, onNodesChangeRaw] = useNodesState(init.nodes);
+  const [edges, setEdges, onEdgesChangeRaw] = useEdgesState(init.edges);
+  const [strokes, setStrokes] = useState(init.strokes);
+  const [editing, setEditingRaw] = useState(board && url.searchParams.get('mode') === 'edit');
+  const [tool, setTool] = useState('select');
+  const [dlg, setDlg] = useState(null);
+  const [dirty, setDirty] = useState(0);
+  const [saveState, setSaveState] = useState(init.restored ? 'restored' : 'clean');
+  const [msg, setMsg] = useState(null);
+  const [linkFrom, setLinkFrom] = useState(null);
+  const [menu, setMenu] = useState(null); // подменю «Создать»: { top }
+  const rf = useReactFlow();
+  const flowRef = useRef(null), drawRef = useRef(null), addSeq = useRef(0);
+  useEffect(() => { requestAnimationFrame(() => onReady()); }, []);
+  useEffect(() => { if (!dirty) return; setSaveState(lsSet(gkey, serialize(nodes, edges, strokes)) ? 'saved' : 'nostore'); }, [dirty]);
+  const touch = () => setDirty(d => d + 1);
+  const setEditing = v => { setEditingRaw(v); setTool('select'); setMsg(null); setLinkFrom(null); setMenu(null);
+    // на телефоне доска ниже шапки: при входе в правку подводим её под палец целиком
+    if (v && window.innerWidth <= 820) $('stage').scrollIntoView({ block: 'start' });
+    const u = new URL(location.href); if (v) u.searchParams.set('mode', 'edit'); else u.searchParams.delete('mode'); history.replaceState(null, '', u); };
+  const onNodesChange = useCallback(ch => { onNodesChangeRaw(ch); if (ch.some(c => (c.type === 'position' && c.dragging === false) || c.type === 'remove')) touch(); }, []);
+  const onEdgesChange = useCallback(ch => { onEdgesChangeRaw(ch); if (ch.some(c => c.type === 'remove')) touch(); }, []);
+  // Сохранение идёт после применения изменений (следующий рендер), поэтому dirty — счётчик, а не флаг.
+  useEffect(() => { if (dirty) setSaveState(lsSet(gkey, serialize(nodes, edges, strokes)) ? 'saved' : 'nostore'); }, [nodes, edges, strokes]);
+
+  function centerPos() {
+    const r = flowRef.current.getBoundingClientRect();
+    const p = rf.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    const k = (addSeq.current++ % 6) * 18;
+    return { x: p.x - NODE_W / 2 + k, y: p.y - NODE_H / 2 + k };
+  }
+  useEffect(() => { if (editing && window.innerWidth <= 820) requestAnimationFrame(() => rf.fitView()); }, [editing]);
+  const onBoard = new Set(nodes.map(n => n.id));
+  function addCard(n, at, extra) { setNodes(ns => ns.map(x => x.selected ? { ...x, selected: false } : x).concat({ id: n.id, type: 'card', position: at, selected: true, data: { ...n, layout, ...extra } })); touch(); }
+  async function pickExisting(rec, at) {
+    const c = await loadCorpus();
+    const have = new Set(edges.map(e => e.source + '|' + (e.data && e.data.rel) + '|' + e.target));
+    const add = (c.adj.get(rec.id) || []).filter(e => e.f !== e.t && (e.f === rec.id ? onBoard.has(e.t) : onBoard.has(e.f)) && !have.has(e.f + '|' + e.r + '|' + e.t))
+      .map((e, i) => edgeOf({ id: `c${Date.now()}_${i}`, source: e.f, target: e.t, rel: e.r, k: e.k }));
+    addCard({ id: rec.id, type: rec.type, title: rec.title, sc: rec.sc }, at, { added: true });
+    setEdges(es => es.concat(add));
+    setMsg(`${rec.id} на доске · связей из выгрузок подтянуто: ${add.length}`);
+    setDlg(null);
+  }
+  function createNew(type, title, at) {
+    const id = `NEW-${type.toUpperCase()}-${Date.now().toString(36)}`;
+    addCard({ id, type, title }, at, { local: true });
+    setMsg(`создана «${title}» — только в этом браузере`);
+    setDlg(null);
+  }
+  const onConnect = useCallback(async c => {
+    if (c.source === c.target) return;
+    const s = rf.getNode(c.source), t = rf.getNode(c.target);
+    if (!s || !t || s.type !== 'card' || t.type !== 'card') return;
+    try { const m = await loadModel(); setDlg({ kind: 'rel', s, t, options: relOptions(m, s.data.type, t.data.type) }); }
+    catch (e) { setDlg({ kind: 'rel', s, t, options: [], err: String(e && e.message || e) }); }
+  }, []);
+  function pickRel(o) {
+    const { s, t } = dlg;
+    const [src, tgt] = o.rev ? [t.id, s.id] : [s.id, t.id];
+    setEdges(es => es.concat(edgeOf({ id: 'u' + Date.now().toString(36), source: src, target: tgt, rel: o.rel, local: true, boardOnly: o.boardOnly })));
+    setMsg(`связь ${o.rel} добавлена`); setDlg(null); touch();
+  }
+  const onNodeClick = (e, n) => {
+    if (!editing || tool !== 'link' || n.type !== 'card') return;
+    if (!linkFrom) { setLinkFrom(n.id); setMsg(`связь от ${n.data.local ? '«' + n.data.title + '»' : n.id} — коснитесь второй карточки`); return; }
+    if (linkFrom === n.id) { setLinkFrom(null); setMsg('связь отменена'); return; }
+    const from = linkFrom; setLinkFrom(null); onConnect({ source: from, target: n.id });
+  };
+  const pickTool = tl => { setTool(tl); setLinkFrom(null); setMsg(tl === 'link' ? 'коснитесь первой карточки, затем второй' : null); };
+  const shown = linkFrom ? nodes.map(n => n.id === linkFrom ? { ...n, className: 'linkfrom' } : n) : nodes;
+  const selCount = nodes.filter(n => n.selected && n.type === 'card').length + edges.filter(e => e.selected).length;
+  function delSel() {
+    const gone = new Set(nodes.filter(n => n.selected && n.type === 'card').map(n => n.id));
+    const ne = edges.filter(e => e.selected).length;
+    setNodes(ns => ns.filter(n => !gone.has(n.id)));
+    setEdges(es => es.filter(e => !e.selected && !gone.has(e.source) && !gone.has(e.target)));
+    setMsg(`удалено: карточек ${gone.size}, связей ${ne}${gone.size ? ' (и связи удалённых карточек)' : ''}`); touch();
+  }
+  function reset() { if (!window.confirm('Сбросить правки доски в этом браузере и вернуть выгрузку из LORE?')) return; lsDel(gkey); go(); }
+
+  // Рисование поверх доски: слой ловит указатель только в режимах Перо / Маркер / Ластик.
+  const pt = e => { const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }); return [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; };
+  const eraseAt = p => { const z = rf.getZoom(); setStrokes(ss => { const keep = ss.filter(s => !strokeHit(s, p, (12 + (s.tool === 'marker' ? 7 : 1)) / z)); return keep.length === ss.length ? ss : keep; }); };
+  const onDown = e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId);
+    if (tool === 'eraser') { drawRef.current = { erase: true }; eraseAt(pt(e)); return; }
+    const s = { id: 's' + Date.now().toString(36), tool, pts: [pt(e)] }; drawRef.current = s; setStrokes(ss => ss.concat(s)); };
+  const onMove = e => { const d = drawRef.current; if (!d) return; if (d.erase) { eraseAt(pt(e)); return; }
+    const p = pt(e), last = d.pts[d.pts.length - 1]; if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 2 / rf.getZoom()) return;
+    d.pts = d.pts.concat([p]); const { id, pts } = d; setStrokes(ss => ss.map(x => x.id === id ? { ...x, pts } : x)); };
+  const onUp = () => { if (drawRef.current) { drawRef.current = null; touch(); } };
+  const onDbl = e => {
+    if (!editing || tool !== 'select') return;
+    if (e.target.closest('.react-flow__node, .react-flow__edge, .react-flow__controls, .react-flow__minimap, .react-flow__panel')) return;
+    const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setDlg({ kind: 'add', at: { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 } });
+  };
+
+  const SAVE_CHIP = { restored: ['', 'правки из этого браузера'], saved: ['ok', 'сохранено локально'], nostore: ['er', 'localStorage недоступен — правки живут до перезагрузки'] };
+  const toolbar = board && h('div', { className: 'btool' },
+    h('span', { className: 'seg', role: 'group', 'aria-label': 'Режим доски' },
+      h('button', { type: 'button', 'aria-pressed': String(!editing), onClick: () => setEditing(false) }, 'Просмотр'),
+      h('button', { type: 'button', 'aria-pressed': String(editing), onClick: () => setEditing(true) }, 'Правка')),
+    h('span', { className: 'chip proto' }, 'прототип: в LORE не пишется'),
+    SAVE_CHIP[saveState] && h('span', { className: 'chip ' + SAVE_CHIP[saveState][0] }, SAVE_CHIP[saveState][1]),
+    editing && msg && h('span', { className: 'chip', role: 'status' }, msg),
+    editing && !msg && h('span', { className: 'hint', style: { color: 'var(--t3)', fontSize: 'var(--fs-2xs)' } }, 'палитра слева · двойной клик по полю — новая карточка'));
+
+  const openAdd = init => { setMenu(null); setDlg({ kind: 'add', at: centerPos(), init }); };
+  const act = (it, e) => {
+    if (it.tool) { setMenu(null); return pickTool(it.k); }
+    if (it.k === 'find') return openAdd({ tab: 'find', q: '[[' });
+    if (it.k === 'tag') return openAdd({ tab: 'find', q: '#' });
+    if (it.k === 'create') { const b = e.currentTarget; return setMenu(m => m ? null : { top: Math.max(0, b.offsetTop - b.parentElement.scrollTop) }); }
+    setMenu(null);
+    if (it.k === 'delete') return delSel();
+    if (it.k === 'reset') return reset();
+  };
+  // Инструмент переключается и по pointerup касания: в эмуляции касаний Chrome первый tap сразу после штриха
+  // пришёл без click. Выбор инструмента идемпотентен — двойное срабатывание безвредно.
+  const palette = editing && h('nav', { className: 'pal', 'aria-label': 'Палитра доски' }, PALETTE.map((it, i) => it === '-' ? h('hr', { key: 'sep' + i }) :
+    h('button', { key: it.k, type: 'button', className: 'pb' + (it.danger ? ' dng' : ''), 'aria-label': it.label, 'data-tip': it.tip,
+      'aria-pressed': it.tool ? String(tool === it.k) : it.k === 'create' ? String(!!menu) : undefined,
+      'aria-haspopup': it.k === 'create' ? 'menu' : undefined, disabled: it.k === 'delete' && !selCount,
+      onClick: e => act(it, e), onPointerUp: it.tool ? e => { if (e.pointerType === 'touch') pickTool(it.k); } : undefined },
+      h(Ico, { n: it.icon }), h('span', { className: 'pl' }, it.short || it.label),
+      it.k === 'delete' && selCount ? h('span', { className: 'cnt' }, selCount) : null)));
+  const createMenu = editing && menu && h('div', { className: 'pmenu', role: 'menu', style: { left: 'calc(var(--palw, 44px) + 6px)', top: menu.top } },
+    h('div', { className: 'ph' }, 'Создать'),
+    CREATE_TYPES.map(t => h('button', { key: t, type: 'button', role: 'menuitem', onClick: () => openAdd({ tab: 'create', type: t }) },
+      h('i', { className: 'dot', style: { background: `var(${tokenOf(t)})` } }), t === 'note' ? 'Стикер' : (MODEL_TYPES[t] || t))));
+
+  return h('div', { className: 'gwrap' + (editing ? ' editing' : '') }, toolbar,
+    h('div', { className: 'gbody' }, palette, createMenu,
+    h('div', { className: 'gflow', ref: flowRef, onDoubleClick: onDbl, onPointerDown: () => menu && setMenu(null) },
+      h(ReactFlow, { nodes: shown, edges, nodeTypes, onNodesChange, onEdgesChange, onConnect, onNodeClick, isValidConnection: c => c.source !== c.target,
+        connectionMode: ConnectionMode.Loose, connectionRadius: 28, fitView: true, minZoom: 0.05, colorMode: 'dark',
+        nodesDraggable: editing && tool === 'select', nodesConnectable: editing, elementsSelectable: true, deleteKeyCode: editing ? ['Delete', 'Backspace'] : null,
+        zoomOnDoubleClick: !editing, connectionLineStyle: { stroke: css('--acc'), strokeWidth: 2 } },
+        h(Background, { color: css('--bd'), gap: 24 }), h(Controls, { showInteractive: false }),
+        h(MiniMap, { pannable: true, zoomable: true, nodeColor: n => css(tokenOf(n.data && n.data.type)), maskColor: 'rgba(0,0,0,.55)', style: { background: css('--bg1') } }),
+        h(ViewportPortal, null, h('svg', { className: 'strokes', width: 1, height: 1, style: { position: 'absolute', left: 0, top: 0, overflow: 'visible', pointerEvents: 'none' } },
+          strokes.map(s => h('path', { key: s.id, d: pathOf(s.pts), fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round',
+            style: s.tool === 'marker' ? { stroke: 'var(--acc)', strokeWidth: 14, opacity: 0.35 } : { stroke: 'var(--t1)', strokeWidth: 2 } }))))),
+      editing && DRAW_TOOLS.includes(tool) && h('div', { className: 'draw' + (tool === 'eraser' ? ' eraser' : ''), onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp,
+        'aria-label': TOOL_LABEL[tool] + ': рисуйте по доске' }))),
+    dlg && dlg.kind === 'add' && h(AddDialog, { init: dlg.init, onClose: () => setDlg(null), onBoard, onPick: rec => pickExisting(rec, dlg.at), onCreate: (type, title) => createNew(type, title, dlg.at) }),
+    dlg && dlg.kind === 'rel' && h(RelDialog, { ...dlg, onPick: pickRel, onClose: () => setDlg(null) }));
+}
 
 const ELK_WORKER = URL.createObjectURL(new Blob(
   ["importScripts('https://cdn.jsdelivr.net/npm/elkjs@0.12.1/lib/elk-worker.min.js');"], { type: 'text/javascript' }));
@@ -267,30 +694,35 @@ async function reactFlowView(g, data, base) {
     else if (r.state === 'timeout') { pos = gridPositions(data.nodes); note = ['wrn', `Раскладка не уложилась в ${LAYOUT_TIMEOUT_MS / 1000} с — граф показан как есть (сеткой), воркер ELK остановлен.`]; }
     else { pos = gridPositions(data.nodes); note = ['err', 'Раскладка ELK упала: ' + r.error + '. Граф показан сеткой.']; }
   }
-  const nodes = data.nodes.map(n => ({ id: n.id, type: 'card', position: pos[n.id] || { x: 0, y: 0 }, data: { ...n, root: n.id === g.root },
-    draggable: false, connectable: false, selectable: true }));
-  if (lanes) lanes.forEach((t, i) => nodes.push({ id: '__lane_' + t, position: { x: i * (NODE_W + 40), y: 0 }, draggable: false, selectable: false,
-    data: { label: t }, style: { width: NODE_W, background: 'transparent', border: 0, color: css('--t3'), fontFamily: css('--mono'), fontSize: css('--fs-2xs'), textTransform: 'uppercase' } }));
-  const edges = data.edges.map((e, i) => ({ id: 'e' + i, source: e.f, target: e.t, label: e.r,
-    labelStyle: { fill: css('--t3'), fontSize: css('--fs-2xs'), fontFamily: css('--mono') }, labelBgStyle: { fill: css('--bg1') },
-    style: { stroke: e.k === 'structural' ? css('--bd') : css('--bdh') }, markerEnd: { type: MarkerType.ArrowClosed, color: css('--bdh') } }));
+  const layout = view;
+  const saved = view === 'board' ? lsGet(gKey) : null;
+  const restored = !!(saved && saved.v === 1 && Array.isArray(saved.nodes));
+  let cards, edges, strokes = [];
+  if (restored) {
+    cards = saved.nodes.map(n => ({ id: n.id, type: 'card', position: n.position, data: { ...n.data, layout } }));
+    edges = (saved.edges || []).map(edgeOf); strokes = saved.strokes || [];
+  } else {
+    cards = data.nodes.map(n => ({ id: n.id, type: 'card', position: pos[n.id] || { x: 0, y: 0 }, data: { ...n, root: n.id === g.root, layout } }));
+    edges = data.edges.map((e, i) => edgeOf({ id: 'e' + i, source: e.f, target: e.t, rel: e.r, k: e.k }));
+  }
+  const nodes = (lanes || []).map((t, i) => ({ id: '__lane_' + t, type: 'lane', position: { x: i * (NODE_W + 40), y: 0 }, draggable: false, selectable: false, connectable: false, deletable: false, data: { label: t } }))
+    .concat(cards);
   const root = createRoot($('canvas'));
   const t1 = performance.now();
-  await new Promise(res => {
-    function App() { useEffect(() => { requestAnimationFrame(() => res()); }, []);
-      return h(ReactFlow, { nodes, edges, nodeTypes, fitView: true, minZoom: 0.05, nodesDraggable: false, nodesConnectable: false, elementsSelectable: true, colorMode: 'dark' },
-        h(Background, { color: css('--bd'), gap: 24 }), h(Controls, { showInteractive: false }),
-        h(MiniMap, { pannable: true, zoomable: true, nodeColor: n => css(tokenOf(n.data && n.data.type)), maskColor: 'rgba(0,0,0,.55)', style: { background: css('--bg1') } }));
-    }
-    root.render(h(App));
-  });
+  await new Promise(res => root.render(h(ReactFlowProvider, null,
+    h(GraphApp, { gkey: gKey, layout, board: view === 'board', init: { nodes, edges, strokes, restored }, onReady: res }))));
   const paintMs = performance.now() - t1;
   teardown = () => root.unmount();
   setState(note ? note[0] : null, note ? note[1] : null);
-  measure([...base,
+  const rows = drawn => [...base,
     ['раскладка', view === 'board' ? `колонки по типам · ${layoutMs.toFixed(0)} мс` : `ELK ${view === 'mindmap' ? 'mrtree' : 'layered'} в воркере · ${layoutMs.toFixed(0)} мс`, note ? 'wr' : 'ok'],
+    ['рёбер на холсте', drawn == null ? '…' : `${drawn} из ${edges.length}`, drawn == null ? null : drawn === edges.length ? 'ok' : 'er'],
     ['отрисовка', paintMs.toFixed(0) + ' мс'], ['самая длинная задача гл. потока', longest ? longest.toFixed(0) + ' мс' : 'нет >50 мс'],
-    ['правка', 'выключена — решение владелицы', 'wr']]);
+    ['правка', view === 'board' ? (restored ? 'доска из правок этого браузера' : 'Просмотр / Правка — прототип, в LORE не пишется') : 'только у доски', view === 'board' ? 'wr' : null]];
+  measure(rows(null));
+  // Рёбра React Flow рисует после замера размеров узлов — считаем их чуть позже первого кадра.
+  const seq = goSeq;
+  setTimeout(() => { if (seq === goSeq) measure(rows(document.querySelectorAll('#canvas .react-flow__edge').length)); }, 600);
 }
 
 // ── sigma: граф знаний (ForceAtlas2 в воркере graphology) ─────────────────────────────────
@@ -396,6 +828,7 @@ function liveView(g, data, base) {
   teardown = () => { w.postMessage({ cmd: 'stop' }); w.terminate(); s.kill(); btn.remove(); };
 }
 
+try { if (matchMedia('(min-width: 821px)').matches) $('about').open = true; } catch { /* без matchMedia — свёрнуто */ }
 go();
 </script>
 </body>
