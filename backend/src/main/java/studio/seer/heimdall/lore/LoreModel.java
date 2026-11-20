@@ -155,6 +155,8 @@ final class LoreModel {
         content.put("field_texts", LoreModelFile.fieldTextsCount(LoreModelFile.content()));
         // MDL-02: историчные связи — какие связи ведут историю в самом ребре и какими полями.
         content.put("edge_history", LoreEdgeHistory.surface(LoreModelFile.content()));
+        // SUPERTAGS-SPIKE: свободные поля на ребре — какие связи, в каком свойстве и кому положены (owners).
+        content.put("edge_free_fields", LoreEdgeFreeFields.surface(LoreModelFile.content(), true));
         content.put("warnings", warnings);
 
         Map<String, Object> doc = new LinkedHashMap<>();

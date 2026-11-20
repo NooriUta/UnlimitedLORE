@@ -38,6 +38,8 @@ const EXTRA_VARIANTS: Record<string, Record<string, unknown>[]> = {
     { type: 'dict', fields: { dict_type: 'priority', code: 'P0' } },
     { type: 'tech', fields: { component_id: 'YGG', tech_name: 'ArcadeDB', version: '26.6.1', project: 'o/r' } },
   ],
+  // SUPERTAGS-SPIKE: голый тег ADR — прежний /lore/adr/tag, с полями — /lore/tag/apply (генератор всегда шлёт fields)
+  entity_link: [{ type: 'adr', id: 'A', rel: 'tag', target_id: 't' }],
 };
 
 async function snapshot(): Promise<Record<string, string[]>> {

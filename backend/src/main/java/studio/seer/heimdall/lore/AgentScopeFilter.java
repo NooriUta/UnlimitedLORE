@@ -100,6 +100,9 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // разделимы, и они у developer'а изъяты — см. SUBPATH_AGENTS ниже.
         Map.entry("adr",       Set.of("full", "architect", "developer")),
         Map.entry("decision",  Set.of("full", "architect")),
+        // SUPERTAGS-SPIKE (20.11.2026): тег с полями на ребре ADR/решения — POST /lore/tag/apply; те же,
+        // кто ставит тег ADR (/lore/adr/tag): full, architect, developer.
+        Map.entry("tag",       Set.of("full", "architect", "developer")),
         Map.entry("spec",      Set.of("full", "architect", "developer", "marketer")),
         Map.entry("runbook",   Set.of("full", "architect", "developer", "marketer")),
         Map.entry("doc",       Set.of("full", "architect", "developer", "marketer")),
