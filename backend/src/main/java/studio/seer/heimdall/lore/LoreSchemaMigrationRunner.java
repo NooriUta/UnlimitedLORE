@@ -287,6 +287,24 @@ public class LoreSchemaMigrationRunner {
         }
     }
 
+    /**
+     * MIG-01 · что делать на базе, собранной из модели (1.18). Шаг CD «Migrate schema» (lore.migrate=true +
+     * lore.migrate.only=true) на ней ничего не пишет: шаги V пропускаются, процесс выходит с 0 строкой
+     * {@link #MODEL_SKIP_LINE} — иначе CD краснел бы на каждой выкатке на новую базу. Сервер с lore.migrate=true
+     * (без only) по-прежнему отказывает: он остался бы работать на базе, куда хотел накатывать старую схему.
+     */
+    enum ModelStart { REFUSE, SKIP_V_STEPS, READ_ADAPTER }
+
+    static ModelStart onModelSchema(boolean migrate, boolean migrateOnly) {
+        if (migrate && migrateOnly) return ModelStart.SKIP_V_STEPS;
+        if (migrate) return ModelStart.REFUSE;
+        return ModelStart.READ_ADAPTER;
+    }
+
+    /** Строка шага накатки CD на базе из модели; .github/scripts/migrate-schema.sh ищет «шаги V пропущены». */
+    static final String MODEL_SKIP_LINE = "[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), "
+        + "шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)";
+
     /** Отказ старта: lore.migrate=true на базе, собранной из модели. */
     static String modelMigrateRefusal() {
         return "[LORE MIGRATE] Отказ старта: схема базы собрана из модели (LoreModelSchema), а lore.migrate=true — "
@@ -345,6 +363,9 @@ public class LoreSchemaMigrationRunner {
         return null;
     }
 
+    /** База из модели и шаг накатки CD: шаги V пропущены (см. {@link #onModelSchema}). */
+    private boolean modelSkipped;
+
     @PostConstruct
     void run() {
         if (enabled) {
@@ -354,6 +375,11 @@ public class LoreSchemaMigrationRunner {
             if (problem != null) throw new IllegalStateException("[LORE MIGRATE] Отказ старта: " + problem);
         }
         runSchema();
+        if (enabled && migrateOnly && modelSkipped) {
+            LOG.info(MODEL_SKIP_LINE);
+            io.quarkus.runtime.Quarkus.asyncExit(0);
+            return;
+        }
         if (enabled && migrateOnly) {
             LOG.info("[LORE MIGRATE] lore.migrate.only=true — схема накатана, процесс завершается (шаг накатки CD)");
             io.quarkus.runtime.Quarkus.asyncExit(0);
@@ -368,7 +394,11 @@ public class LoreSchemaMigrationRunner {
         // MIG-03: база собрана из модели — переходник чтения включается на ЛЮБОМ пути старта (и при выключенной
         // сверке), а накатка шагов V на неё запрещена: шаги пишут старую схему поверх новой.
         if (builtFromModel()) {
-            if (migrate) throw new IllegalStateException(modelMigrateRefusal());
+            switch (onModelSchema(migrate, migrateOnly)) {
+                case REFUSE -> throw new IllegalStateException(modelMigrateRefusal());
+                case SKIP_V_STEPS -> { modelSkipped = true; return; }
+                case READ_ADAPTER -> { /* ниже */ }
+            }
             ModelSchemaAdapter.enable(true);
             LOG.info("[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)");
             markPlanBoard();
