@@ -12,7 +12,7 @@ import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
 import { loadSprintChildren } from '../sprints/sprintChildren';
 import { MILESTONE_TOTALS_FIELDS, loadMilestoneTotals } from '../milestone/milestoneTotals';
-import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { MilestoneRowDetail } from '../milestone/MilestoneRowDetail';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -920,11 +920,12 @@ export const LIST_SCREENS = {
     defaultSort: FRESH_FIRST,
     map: milestoneRecord, config: lang => withFeed(lang, sectionConfig(lang, milestonesSpec), FEEDS.milestones), feed: FEEDS.milestones, quickIcons: {},
     // PU-27: «задачи x/y» вехи — сумма итогов её спринтов (sprint_totals считает сервер);
-    // в раскрытой строке — сгорание вехи (BURN-DOWN и «Цель к сроку»), тем же кодом, что у спринта.
+    // в раскрытой строке — сгорание вехи (BURN-DOWN и «Цель к сроку»), тем же кодом, что у спринта,
     nested: {
       lateFields: MILESTONE_TOTALS_FIELDS,
       load: loadMilestoneTotals,
-      render: id => createElement(MilestoneBurnLine, { milestoneId: id }),
+      // K4-CHARTS (19.11, «можно и на дорожную карту»): под сгоранием — графики спринтов вехи.
+      render: id => createElement(MilestoneRowDetail, { milestoneId: id }),
     },
   },
   releases: {

@@ -23,6 +23,7 @@ import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { ProjectExportButton } from './ProjectExportButton';
 import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { MilestonePassportCharts } from '../milestone/MilestoneRowDetail';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
@@ -465,6 +466,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
         />
       )}
+      {/* K4-CHARTS (вопрос 11, 19.11.2026): графики спринтов вехи из v1 — Velocity и Burnup — на kit;
+          на телефоне свёрнуты под вехой кнопкой «Графики вехи» (19.11, «можно и на дорожную карту»). */}
+      {type === 'milestone' && <MilestonePassportCharts milestoneId={view.record.id} fetchImpl={fetchImpl} />}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
