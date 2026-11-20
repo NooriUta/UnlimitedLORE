@@ -7,5 +7,7 @@ import { SESSION_EDGES } from './session-model.mjs';
 import { REPO_TYPES } from './repos.mjs';
 import { OWNER_EDGE } from './question-owner.mjs';
 import { MILESTONE_EDGE } from './decision-milestones.mjs';
+import { TRACK_TYPES } from './tracks.mjs';
 
-export const EDGE_STEP_TYPES = [...SESSION_EDGES, ...REPO_TYPES, MILESTONE_EDGE, OWNER_EDGE];
+// MDL-13 «треки б»: трек спринта — вершина KnowTrack и ребро ON_TRACK.
+export const EDGE_STEP_TYPES = [...SESSION_EDGES, ...REPO_TYPES, MILESTONE_EDGE, OWNER_EDGE, ...TRACK_TYPES];

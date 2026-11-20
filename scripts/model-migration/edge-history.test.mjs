@@ -8,7 +8,7 @@ import { HISTORIC_EDGES, EDGE_HISTORY_FIELDS, isHistoric, edgeVersion, edgeHisto
 const AT = '2026-11-19T10:00:00.000Z';
 
 test('историчные связи и поля версии — из модели', () => {
-  assert.deepEqual([...HISTORIC_EDGES].sort(), ['ANSWERABLE_BY', 'FILLS_ROLE', 'HAS_PROJECT_ROLE', 'IN_PHASE', 'ROLE_HELD_BY', 'TARGETS_MILESTONE']);
+  assert.deepEqual([...HISTORIC_EDGES].sort(), ['ANSWERABLE_BY', 'FILLS_ROLE', 'HAS_PROJECT_ROLE', 'IN_PHASE', 'ON_TRACK', 'ROLE_HELD_BY', 'TARGETS_MILESTONE']);
   assert.deepEqual(EDGE_HISTORY_FIELDS, ['valid_from', 'valid_to']);
   assert.ok(!isHistoric('PART_OF'));
 });

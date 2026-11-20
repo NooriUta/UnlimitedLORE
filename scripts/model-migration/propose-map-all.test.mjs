@@ -31,7 +31,8 @@ test('правило поля: остальное — как есть, осно�
 // Пустой тип решает перепись, а не имя: typePlan судит только по имени, пустоту — proposeMap (MD-02 8а, 19.11.2026).
 test('типы: план-доска и журнал шагов не переносятся; первый объект — своей картой; по имени тип переносится', () => {
   assert.equal(typePlan('PlanTrack').move, false);
-  assert.match(typePlan('PlanTrack').why, /план-доск/);
+  assert.match(typePlan('PlanTrack').why, /KnowTrack/, 'MDL-13 «треки б»: треки переносит шаг связей вершинами KnowTrack');
+  assert.match(typePlan('PlanSection').why, /план-доск/);
   assert.equal(typePlan('LoreSchemaVersion').move, false);
   assert.equal(typePlan('KnowTask').move, false, 'первый объект уже в своей карте');
   assert.equal(typePlan('KnowCanvas').move, true);
