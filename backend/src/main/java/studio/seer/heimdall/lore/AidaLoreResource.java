@@ -938,7 +938,7 @@ public class AidaLoreResource extends LoreResourceBase {
      * говорится числом ({@code scope.hidden}). sprint_deps — ребро между двумя
      * спринтами: без числа «зависимостей нет» неотличимо от «они ведут в чужие проекты».
      */
-    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps");
+    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps", "deps", "deps_of");
 
     /** «Скрыто N» в метке скоупа: total — без скоупа, shown — под скоупом. */
     static void putHidden(Map<String, Object> marker, int total, int shown) {

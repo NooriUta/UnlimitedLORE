@@ -54,7 +54,8 @@ class BlockedSprintsReasonTest {
     @Test
     void openDependencyMeansNotDoneAndNotCancelled() {
         String s = sql("blocked_sprints_reason");
-        assertTrue(s.contains("out('DEPENDS_ON')[out('HAS_STATE')[valid_to IS NULL AND ("), s);
+        // MDL-13: DEPENDS_ON историчная — только текущие рёбра зависимости.
+        assertTrue(s.contains("outE('DEPENDS_ON')[valid_to IS NULL].inV()[out('HAS_STATE')[valid_to IS NULL AND ("), s);
         assertTrue(s.contains(LoreStatusVocabulary.anySql("status_raw", "done", "cancelled")), s);
     }
 

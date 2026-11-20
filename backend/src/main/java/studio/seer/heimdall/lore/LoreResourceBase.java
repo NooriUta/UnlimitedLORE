@@ -731,9 +731,11 @@ public abstract class LoreResourceBase {
         if (dryRun) return MentionEdgeOutcome.CREATED;
         // SET — String.format, не именованные параметры: CREATE EDGE их в SET не принимает.
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-            String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS SET origin='%s', created_at='%s', created_by='%s'",
-                edge, fromRid, toRid, LoreGraphLinks.sqlSafe(origin), LoreGraphLinks.sqlSafe(createdAt),
-                LoreGraphLinks.sqlSafe(createdBy)),
+            // MDL-13: у историчной связи IF NOT EXISTS нашёл бы закрытое ребро — новое открывается с valid_from.
+            String.format("CREATE EDGE %s FROM %s TO %s%s SET origin='%s', created_at='%s', created_by='%s'%s",
+                edge, fromRid, toRid, LoreEdgeHistory.historic(edge) ? "" : " IF NOT EXISTS",
+                LoreGraphLinks.sqlSafe(origin), LoreGraphLinks.sqlSafe(createdAt),
+                LoreGraphLinks.sqlSafe(createdBy), LoreEdgeHistory.setValidFrom(edge, createdAt == null ? java.time.Instant.now().toString() : createdAt)),
             Map.of())).await().indefinitely();
         return LoreGraphLinks.edgeBetween(ingestService, edge, fromRid, toRid)
             ? MentionEdgeOutcome.CREATED : MentionEdgeOutcome.NOT_CREATED;

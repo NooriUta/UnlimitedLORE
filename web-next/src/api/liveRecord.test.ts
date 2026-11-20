@@ -160,6 +160,25 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     expect(c.links[0]).toMatchObject({ fromKind: 'decision', toKind: 'component' });
   });
 
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: «зависит от» — одна связь между задачей, фазой, спринтом и вехой; вид и
+  // причина лежат на ребре. Подписи свойств — из модели (schema.relations[].props), значения — в values связи;
+  // kit рисует их колонками вкладки связей (KitDocRelation.props).
+  it('свойства ребра (вид, причина) доходят до kit: подписи из схемы, значения из связи', () => {
+    const b = sprintBody();
+    b.links = [{ rel: 'DEPENDS_ON', dir: 'out', id: 'SPRINT_B/PHASE_1', type: 'phase', title: 'Фаза', status: '',
+      values: { kind: 'hard', reason: 'ждём схему' } } as never];
+    b.schema.relations = [{ key: 'dependsOn', label: 'Зависит от', relation: 'association', rel: 'DEPENDS_ON', dir: 'out',
+      target_type: 'any', place: 'link_tab', manageable: true,
+      props: [{ key: 'kind', label: 'Вид', dict: 'dependency_kind' }, { key: 'reason', label: 'Причина' }] } as never];
+    const c = recordFromServer(b, LOADED);
+    const r = c.schema.relations.find(x => x.key === 'dependsOn');
+    expect(r?.props).toEqual([{ key: 'kind', label: 'Вид' }, { key: 'reason', label: 'Причина' }]);
+    expect(r?.count).toBe(1);
+    expect(c.links[0].values).toEqual({ kind: 'hard', reason: 'ждём схему' });
+    b.schema.relations = [{ key: 'adrs', label: 'ADR', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'adr', place: 'link_tab', manageable: false }];
+    expect(recordFromServer(b, LOADED).schema.relations[0]).not.toHaveProperty('props');
+  });
+
   it('одно ребро в двух связях — счётчик по типу цели', () => {
     const b = sprintBody();
     b.links = [

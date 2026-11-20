@@ -225,6 +225,20 @@ const needTarget = (targetId: unknown, rel: string): string | null =>
     ? `target_id required for rel="${rel}"`
     : null;
 
+/**
+ * SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 — одна связь «зависит от» (DEPENDS_ON) у задачи, фазы, спринта и вехи:
+ * один путь /lore/dep. Запись `id` зависит от `target_id`; тип цели — fields.target_type (не задан — сервер
+ * ищет по ключу среди четырёх типов). Вид (fields.kind) MCP не подменяет и не отсекает: справочник
+ * dependency_kind у сервера, неизвестный вид — его 422; вид не задан — сервер ставит вид по умолчанию.
+ */
+const dependsOn = (type: string, id: string, t: unknown, action: LinkAction, f: Record<string, unknown>): LinkResult | string => {
+  if (needTarget(t, 'depends_on')) return needTarget(t, 'depends_on')!;
+  return { path: '/lore/dep', body: {
+    from_type: type, from_id: id, to_type: str(f.target_type) ?? null, to_id: t,
+    kind: str(f.kind) ?? null, reason: str(f.reason) ?? null, action: action ?? 'add',
+  } };
+};
+
 /** target_id у release — одиночный или массив (старый release_link брал ids[]). */
 const asIds = (targetId: unknown): (string | number)[] =>
   Array.isArray(targetId) ? (targetId as (string | number)[]) : targetId !== undefined ? [targetId as string | number] : [];
@@ -330,9 +344,10 @@ const LINK_DEFS = {
     },
   },
   milestone: {
-    rels: ['product'],
+    rels: ['product', 'depends_on'],
     replaces: ['milestone_link'],
-    dispatch: (id, rel, t, action): LinkResult | string => {
+    dispatch: (id, rel, t, action, f): LinkResult | string => {
+      if (rel === 'depends_on') return dependsOn('milestone', id, t, action, f);
       if (needTarget(t, rel)) return needTarget(t, rel)!;
       return { path: '/lore/milestone/product', body: { milestone_id: id, product_code: t, action: action ?? 'add' } };
     },
@@ -400,13 +415,20 @@ const LINK_DEFS = {
       return { path: '/lore/spec/link', body: { spec_id: id, target_id: t, rel, mode: f.mode ?? 'replace' } };
     },
   },
+  // MDL-13: у фазы через entity_link — только зависимость (фазу задаче ставит task rel=phase).
+  phase: {
+    rels: ['depends_on'],
+    replaces: [],
+    dispatch: (id, _rel, t, action, f): LinkResult | string => dependsOn('phase', id, t, action, f),
+  },
   sprint: {
-    rels: ['project', 'dep', 'component', 'milestone'],
+    rels: ['project', 'dep', 'depends_on', 'component', 'milestone'],
     replaces: ['sprint_link'],
     dispatch: (id, rel, t, action, f): LinkResult | string => {
       if (needTarget(t, rel)) return needTarget(t, rel)!;
       switch (rel) {
         case 'project': return { path: '/lore/sprint/project', body: { sprint_id: id, git_project: t, action: action ?? 'add' } };
+        case 'depends_on': return dependsOn('sprint', id, t, action, f);
         case 'dep': return { path: '/lore/sprint/dep', body: { from_sprint: id, to_sprint: t, kind: f.kind ?? 'soft', reason: f.reason ?? null, action: action ?? 'add' } };
         case 'component': return { path: '/lore/sprint/component', body: { sprint_id: id, component_id: t, action: action ?? 'add' } };
         case 'milestone': return { path: '/lore/milestone/sprint', body: { sprint_id: id, milestone_id: t, action: action ?? 'add' } };
@@ -415,10 +437,11 @@ const LINK_DEFS = {
     },
   },
   task: {
-    rels: ['phase', 'component', 'file', 'adr', 'pr'],
+    rels: ['phase', 'component', 'file', 'adr', 'pr', 'depends_on'],
     replaces: ['task_link'],
     dispatch: (id, rel, t, action, f): LinkResult | string => {
       switch (rel) {
+        case 'depends_on': return dependsOn('task', id, t, action, f);
         case 'phase': return { path: '/lore/task/phase', body: { task_uid: id, phase_uid: t ?? null, action: action ?? 'add' } };
         case 'file': {
           if (needTarget(t, rel)) return 'target_id (file path) required for rel="file"';
@@ -609,7 +632,11 @@ export function registerEntity(server: McpServer): void {
       '*_link collapse tools plus vp/feature/uc/actor/decision/question/product/milestone/spec links and ' +
       'release_unlink). `type` picks the family, `rel` the edge; an unknown rel for the type is a 400 naming ' +
       'the rels valid for that type. `fields` carries rel-conditional extras exactly as the old tools did: ' +
-      'git_project (adr/release, bragi shipped_in), kind+reason (sprint dep), project+summary_md (task file/pr), ' +
+      'git_project (adr/release, bragi shipped_in), kind+reason (sprint dep; depends_on), ' +
+      'depends_on (MDL-13): ONE DEPENDS_ON edge for task, phase, sprint, milestone in any pair — fields.kind from the ' +
+      'dictionary dependency_kind (unknown → 422), fields.reason, fields.target_type when the target id is ambiguous; ' +
+      'a link that closes a cycle → 409 with the cycle path; remove closes the edge (history kept). ' +
+      'project+summary_md (task file/pr), ' +
       'actor_role (uc actor), target_type (question raised_in, bragi produced_by), role+kind (product), ' +
       'mode (spec — add|remove|replace, default "replace"; action is NOT accepted for spec). ' +
       'target_id is a single id, or an array for type=release (the old release_link/release_unlink were batch). ' +

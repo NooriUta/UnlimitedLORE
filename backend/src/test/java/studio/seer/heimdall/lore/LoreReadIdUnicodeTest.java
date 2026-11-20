@@ -88,7 +88,7 @@ class LoreReadIdUnicodeTest {
         assertFalse(LoreResourceBase.SAFE_ID.matcher("задача").matches(), "SAFE_ID записи — ASCII, как было");
         assertTrue(LoreResourceBase.SAFE_READ_ID.matcher("задача-1/Ё_2.x").matches());
         Response r = record(new StubIngest((sql, p) -> List.of())).relation("task", "SPRINT_X/ЗАДАЧА-1",
-            new LoreRecordResource.RelationRequest("adr", null, "ADR-X", null, null, null), "admin");
+            new LoreRecordResource.RelationRequest("adr", null, "ADR-X", null, null, null, null), "admin");
         assertEquals(400, r.getStatus(), "запись (привязка) с кириллическим id — по-прежнему 400");
     }
 }

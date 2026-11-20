@@ -579,7 +579,8 @@ public class LoreRecordResource extends LoreResourceBase {
 
     // ── POST relation ───────────────────────────────────────────────────────
 
-    public record RelationRequest(String rel, String dir, String target, String action, String kind, String reason) {}
+    /** {@code target_type} — тип другого конца, где он неоднозначен (MDL-13: DEPENDS_ON ведёт к задаче, фазе, спринту или вехе; не задан — ищется по ключу). */
+    public record RelationRequest(String rel, String dir, String target, String action, String kind, String reason, String target_type) {}
 
     @POST
     @Path("{type}/{id: .+}/relation")
@@ -615,8 +616,10 @@ public class LoreRecordResource extends LoreResourceBase {
         String a = id, b = target;
         if (r.reversed()) { a = target; b = id; }
         return switch (r.handler()) {
-            case SPRINT_DEP -> sprintTask.linkSprintDep(
-                new LoreSprintTaskResource.SprintDepRequest(a, b, req.kind(), req.reason(), action), role);
+            // MDL-13: «зависит от» — запись from, цель to; у reversed («от неё зависят») запись — to.
+            case DEPENDS_ON -> sprintTask.linkDependency(r.reversed()
+                ? new LoreSprintTaskResource.DepRequest(req.target_type(), target, type, id, req.kind(), req.reason(), action)
+                : new LoreSprintTaskResource.DepRequest(type, id, req.target_type(), target, req.kind(), req.reason(), action), role);
             case SPRINT_PROJECT -> sprintTask.linkSprintProject(
                 new LoreSprintTaskResource.SprintProjectRequest(a, b, action), role);
             case SPRINT_COMPONENT -> sprintTask.linkSprintComponent(

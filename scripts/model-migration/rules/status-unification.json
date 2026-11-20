@@ -653,6 +653,44 @@
         "deepseek harness": "dsh",
         "open code": "opencode"
       }
+    },
+    "dependency_kind": {
+      "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: вид связи «зависит от» (DEPENDS_ON) между задачей, фазой, спринтом и вехой. Набор — как у спринтов на проде (16.11.2026: hard 42, soft 30, gate 9, informs 6, без вида 30); подписи — из заметки задачи. Другой набор (blocks / waits / relates из SPEC-LORE-DEPENDENCY-EDGE) — развилка владелицы, не решена.",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "hard",
+          "labels": {
+            "ru": "Блокирует",
+            "en": "Blocks",
+            "pl": "Blokuje"
+          }
+        },
+        {
+          "code": "soft",
+          "labels": {
+            "ru": "Ждёт, но можно начинать",
+            "en": "Waits, can start meanwhile",
+            "pl": "Czeka, można zaczynać"
+          }
+        },
+        {
+          "code": "gate",
+          "labels": {
+            "ru": "Проверка",
+            "en": "Gate",
+            "pl": "Bramka"
+          }
+        },
+        {
+          "code": "informs",
+          "labels": {
+            "ru": "Входные данные",
+            "en": "Informs",
+            "pl": "Dane wejściowe"
+          }
+        }
+      ]
     }
   },
   "_sources": "Где в источнике лежит статус. required: пустое значение — строка диалога (правило владелицы 16.11.2026: пустого статуса нет, предложение — первый статус справочника).",

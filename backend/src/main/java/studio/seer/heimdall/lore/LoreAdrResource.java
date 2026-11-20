@@ -244,21 +244,32 @@ public class LoreAdrResource extends LoreResourceBase {
             }
 
             // Step 4: replace DEPENDS_ON edges
+            // MDL-13: DEPENDS_ON историчная — набор заменяется закрытием лишних (valid_to) и добавлением
+            // недостающих (valid_from); оставшиеся в наборе связи не трогаются, история не множится.
             if (req.depends_on_ids() != null) {
+                java.util.Set<String> want = new java.util.LinkedHashSet<>();
+                for (String dep : req.depends_on_ids()) if (dep != null && !dep.isBlank()) want.add(dep.trim());
                 try {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM (SELECT expand(outE('DEPENDS_ON')) FROM KnowADR WHERE adr_id = :id)",
-                        Map.of("id", req.adr_id()))).await().indefinitely();
+                    List<Map<String, Object>> cur = ingestService.queryPublic(
+                        "SELECT @rid AS r, @in.adr_id AS dep FROM DEPENDS_ON WHERE @out.adr_id = :id AND valid_to IS NULL",
+                        Map.of("id", req.adr_id()));
+                    java.util.Set<String> have = new java.util.HashSet<>();
+                    for (Map<String, Object> c : cur) {
+                        String dep = c.get("dep") == null ? null : String.valueOf(c.get("dep"));
+                        if (dep != null && want.contains(dep)) { have.add(dep); continue; }
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            closeOrDeleteEdge("DEPENDS_ON", String.valueOf(c.get("r"))))).await().indefinitely();
+                    }
+                    want.removeAll(have);
                 } catch (Exception ex) {
                     LOG.warnf("[LORE ADR DEPENDS_ON DEL] %s: %s", req.adr_id(), ex.getMessage());
                 }
-                for (String dep : req.depends_on_ids()) {
-                    if (dep == null || dep.isBlank()) continue;
+                for (String dep : want) {
                     try {
                         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                             "CREATE EDGE DEPENDS_ON " +
                             "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
-                            "TO   (SELECT FROM KnowADR WHERE adr_id = :dep)",
+                            "TO   (SELECT FROM KnowADR WHERE adr_id = :dep) SET valid_from = '" + java.time.Instant.now() + "'",
                             Map.of("id", req.adr_id(), "dep", dep))).await().indefinitely();
                     } catch (Exception ex) {
                         LOG.warnf("[LORE ADR DEPENDS_ON] %s → %s: %s", req.adr_id(), dep, ex.getMessage());
@@ -622,10 +633,9 @@ public class LoreAdrResource extends LoreResourceBase {
                 // Проба ДО удаления: после него она бессмысленна — ребра нет в обоих
                 // случаях, и «снято» стало бы утверждением без факта.
                 boolean had = edgeExists("DEPENDS_ON", "adr_id", req.adr_id(), "adr_id", req.dep_adr_id());
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('DEPENDS_ON')) FROM KnowADR WHERE adr_id=:id) " +
-                    "WHERE @in.adr_id = :dep",
-                    Map.of("id", req.adr_id(), "dep", req.dep_adr_id()))).await().indefinitely();
+                // MDL-13: связь историчная — снятие закрывает ребро valid_to, а не стирает.
+                deleteEdges("DEPENDS_ON", "@out.adr_id = :id AND @in.adr_id = :dep",
+                    Map.of("id", req.adr_id(), "dep", req.dep_adr_id()));
                 return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                     "dep_adr_id", req.dep_adr_id(), "action", "removed"), had);
             }
@@ -633,15 +643,20 @@ public class LoreAdrResource extends LoreResourceBase {
             // что вернул CREATE EDGE — его результат доказывает отсутствие
             // ошибки, но не факт записи (замерено на CI 30.08.2026).
             boolean hadBefore = edgeExists("DEPENDS_ON", "adr_id", req.adr_id(), "adr_id", req.dep_adr_id());
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> created = (List<Map<String, Object>>)
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE DEPENDS_ON " +
-                    "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
-                    "TO   (SELECT FROM KnowADR WHERE adr_id = :dep) IF NOT EXISTS",
-                    Map.of("id", req.adr_id(), "dep", req.dep_adr_id())))
-                .await().indefinitely().result();
-            boolean linked = created != null && !created.isEmpty();
+            // MDL-13: IF NOT EXISTS у историчной связи не годится — закрытое ребро той же пары помешало бы
+            // открыть новое. Текущая связь есть — не пишем; нет — новое ребро с valid_from.
+            boolean linked = false;
+            if (!hadBefore) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> created = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE DEPENDS_ON " +
+                        "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
+                        "TO   (SELECT FROM KnowADR WHERE adr_id = :dep) SET valid_from = '" + java.time.Instant.now() + "'",
+                        Map.of("id", req.adr_id(), "dep", req.dep_adr_id())))
+                    .await().indefinitely().result();
+                linked = created != null && !created.isEmpty();
+            }
             return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "dep_adr_id", req.dep_adr_id(), "action", "added", "linked", linked),
                 linked, "DEPENDS_ON", "adr_id", req.adr_id(), "adr_id", req.dep_adr_id(),

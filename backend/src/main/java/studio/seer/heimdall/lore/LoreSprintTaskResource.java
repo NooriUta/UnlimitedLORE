@@ -1926,10 +1926,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
     }
 
-    // ── Write-path: link sprint ↔ sprint (DEPENDS_ON) ────────────────────────
+    // ── Write-path: зависимость DEPENDS_ON (MDL-13) ──────────────────────────
 
     public record SprintDepRequest(String from_sprint, String to_sprint, String kind, String reason, String action) {}
 
+    /**
+     * Прежний путь «спринт зависит от спринта» — теперь частный случай одной связи «зависит от»
+     * ({@link #linkDependency}): те же проверки вида, цикла (409 с путём) и история в ребре. Форма ответа
+     * сохраняет from_sprint / to_sprint для прежних вызывающих.
+     */
     @POST
     @Path("sprint/dep")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -1940,61 +1945,65 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.from_sprint() == null || req.to_sprint() == null)
             return badParams("from_sprint and to_sprint required");
-        if (!SAFE_ID.matcher(req.from_sprint()).matches() || !SAFE_ID.matcher(req.to_sprint()).matches())
-            return badParams("sprint ids contain illegal characters");
-        if (req.from_sprint().equals(req.to_sprint()))
-            return badParams("self-loop not allowed");
-        boolean remove = "remove".equalsIgnoreCase(req.action());
-        try {
-            if (remove) {
-                // DELETE EDGE doesn't work in ArcadeDB — use SELECT @rid + DELETE FROM
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM DEPENDS_ON WHERE @out.sprint_id=:f AND @in.sprint_id=:t",
-                    Map.of("f", req.from_sprint(), "t", req.to_sprint()));
-                for (Map<String, Object> e : edges) {
-                    String rid = e.get("@rid").toString();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM DEPENDS_ON WHERE @rid=" + rid, null)).await().indefinitely();
-                }
-            } else {
-                // Cycle guard: if to_sprint can reach from_sprint → adding edge creates a cycle
-                // @depth is not filterable in ArcadeDB TRAVERSE; self-loop guard above
-                // already ensures from != to, so sprint_id=from_sprint at any depth = cycle
-                List<Map<String, Object>> cycleCheck = ingestService.queryPublic(
-                    "SELECT sprint_id FROM (TRAVERSE out('DEPENDS_ON') FROM " +
-                    "(SELECT FROM KnowSprint WHERE sprint_id=:t) MAXDEPTH 50) " +
-                    "WHERE sprint_id=:f",
-                    Map.of("t", req.to_sprint(), "f", req.from_sprint()));
-                if (!cycleCheck.isEmpty())
-                    return badParams("cycle detected: " + req.to_sprint() + " already depends (transitively) on " + req.from_sprint());
-                // Idempotent: skip if already linked
-                List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM DEPENDS_ON WHERE @out.sprint_id=:f AND @in.sprint_id=:t",
-                    Map.of("f", req.from_sprint(), "t", req.to_sprint()));
-                if (existing.isEmpty()) {
-                    // Named params don't work for CREATE EDGE in ArcadeDB — use String.format
-                    String kind   = req.kind() != null && !req.kind().isBlank() ? req.kind() : "soft";
-                    String reason = req.reason() != null ? req.reason().replace("'", "\\'").replace("\n", " ") : "";
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        String.format(
-                            "CREATE EDGE DEPENDS_ON FROM (SELECT FROM KnowSprint WHERE sprint_id='%s') " +
-                            "TO (SELECT FROM KnowSprint WHERE sprint_id='%s') " +
-                            "SET kind='%s', reason='%s'",
-                            req.from_sprint(), req.to_sprint(), kind, reason),
-                        null)).await().indefinitely();
-                }
-            }
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("ok", true);
+        Response r = linkDependency(new DepRequest("sprint", req.from_sprint(), "sprint", req.to_sprint(),
+            req.kind(), req.reason(), req.action()), role);
+        if (r.getStatus() == 200 && r.getEntity() instanceof Map<?, ?> body) {
+            @SuppressWarnings("unchecked") Map<String, Object> out = new LinkedHashMap<>((Map<String, Object>) body);
             out.put("from_sprint", req.from_sprint());
             out.put("to_sprint", req.to_sprint());
-            out.put("action", remove ? "removed" : "added");
             return noStore(Response.ok(out));
+        }
+        return r;
+    }
+
+    /**
+     * Зависимость между задачей, фазой, спринтом и вехой в любом сочетании: {@code from} зависит от
+     * {@code to}. Тип конца не назван — ищется по ключу среди четырёх типов. Вид — из справочника
+     * {@code dependency_kind} (нет справочника в базе — виды спринтов), иначе 422; связь с собой — 400;
+     * нет конца — 404; цикл — 409 с путём цикла. Снятие закрывает ребро (связь историчная).
+     */
+    public record DepRequest(String from_type, String from_id, String to_type, String to_id,
+                             String kind, String reason, String action) {}
+
+    @POST
+    @Path("dep")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkDependency(DepRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.from_id() == null || req.to_id() == null)
+            return badParams("from_id and to_id required");
+        if (!SAFE_ID.matcher(req.from_id()).matches() || !SAFE_ID.matcher(req.to_id()).matches())
+            return badParams("ids contain illegal characters");
+        try {
+            LoreDependency.Graph g = dependencyGraph();
+            LoreDependency.Resolved from = LoreDependency.resolve(g, req.from_type(), req.from_id().trim());
+            if (from.ref() == null) return noStore(Response.status(from.status()).entity(from.error()));
+            LoreDependency.Resolved to = LoreDependency.resolve(g, req.to_type(), req.to_id().trim());
+            if (to.ref() == null) return noStore(Response.status(to.status()).entity(to.error()));
+            LoreDependency.Result r = LoreDependency.link(g, from.ref(), to.ref(), req.kind(), req.reason(), req.action(),
+                activeDictCodes(LoreDependency.DICT, LoreDependency.DEFAULT_KINDS), java.time.Instant.now().toString());
+            return noStore(Response.status(r.status()).entity(r.body()));
         } catch (Exception e) {
-            LOG.warnf("[LORE SPRINT DEP] %s → %s: %s", req.from_sprint(), req.to_sprint(), e.getMessage());
+            LOG.warnf("[LORE DEP] %s → %s: %s", req.from_id(), req.to_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }
+    }
+
+    private LoreDependency.Graph dependencyGraph() {
+        return new LoreDependency.Graph() {
+            @Override
+            public List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                return ingestService.queryPublic(sql, params);
+            }
+            @Override
+            public void exec(String sql, Map<String, Object> params) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql,
+                    params == null || params.isEmpty() ? null : params)).await().indefinitely();
+            }
+        };
     }
 
     /**

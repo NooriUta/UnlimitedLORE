@@ -7,7 +7,7 @@
 // Сверка: число связей каждого вида и концы каждой связи (по адресам приёмника) совпали с расчётом.
 import fs from 'node:fs';
 import { connect } from './db.mjs';
-import { EDGES, SCHEMA, DECISION_MILESTONES } from './resources.mjs';
+import { EDGES, SCHEMA, DECISION_MILESTONES, RULES } from './resources.mjs';
 import { edgePlan, edgeWrites } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
@@ -18,6 +18,7 @@ import { applyOrphanSprints } from './orphan-sprints.mjs';
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
+import { checkDependsOn } from './depends-on.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -103,6 +104,9 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     x => { if (OWN.includes(x.ot) && x.it === x.ot + 'Hist' && dstRid.has(x.o) && dstRid.has(x.i)) hsKept++; });
   report.moved[VERSION_EDGE] = { source: hs, expected: hsKept, target: hsGot };
   if (hsKept !== hsGot) ok = false;
+  // MDL-13: зависимости DEPENDS_ON — вид из справочника dependency_kind, было → стало по паре концов и виду, потерь 0
+  report.depends_on = await checkDependsOn(db, RULES, { log });
+  if (!report.depends_on.ok) ok = false;
   // задачи без спринта (шаг «З» мастера): ребро PART_OF задача → спринт только по ответу человека (orphan_sprints)
   const decisionsOs = loadDecisions();
   report.orphan_sprints = await applyOrphanSprints(db, decisionsOs, { log });

@@ -124,6 +124,7 @@
     "/lore/bragi/rubric/link",
     "/lore/decision/component",
     "/lore/decision/project",
+    "/lore/dep",
     "/lore/doc/component",
     "/lore/doc/parent",
     "/lore/doc/project",

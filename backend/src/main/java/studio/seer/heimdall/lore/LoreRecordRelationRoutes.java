@@ -24,7 +24,8 @@ final class LoreRecordRelationRoutes {
 
     /** Существующий обработчик привязки, в который уходит запрос. */
     enum Handler {
-        SPRINT_DEP, SPRINT_PROJECT, SPRINT_COMPONENT, SPRINT_MILESTONE, ADR_SPRINT,
+        // MDL-13: одна связь «зависит от» задачи, фазы, спринта и вехи — путь dep (LoreDependency).
+        DEPENDS_ON, SPRINT_PROJECT, SPRINT_COMPONENT, SPRINT_MILESTONE, ADR_SPRINT,
         TASK_COMPONENT, TASK_ADR, TASK_PHASE, TASK_PR,
         QUESTION_RAISED_IN, QUESTION_GATES,
         ADR_DEPENDS_ON, ADR_SUPERSEDES, ADR_COMPONENT, ADR_PROJECT, ADR_TAG,
@@ -45,8 +46,8 @@ final class LoreRecordRelationRoutes {
 
     static final List<Route> ROUTES = List.of(
         // спринт
-        r("sprint", "DEPENDS_ON", "out", Handler.SPRINT_DEP, false),
-        r("sprint", "DEPENDS_ON", "in", Handler.SPRINT_DEP, true),
+        r("sprint", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("sprint", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
         r("sprint", "BELONGS_TO_PROJECT", "out", Handler.SPRINT_PROJECT, false),
         r("sprint", "BELONGS_TO", "out", Handler.SPRINT_COMPONENT, false),
         r("sprint", "TARGETS_MILESTONE", "out", Handler.SPRINT_MILESTONE, false),
@@ -59,6 +60,11 @@ final class LoreRecordRelationRoutes {
         r("task", "CLOSED_BY", "out", Handler.TASK_PR, false),
         r("task", "RAISED_IN", "in", Handler.QUESTION_RAISED_IN, true),
         r("task", "GATES", "in", Handler.QUESTION_GATES, true),
+        r("task", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("task", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
+        // веха (MDL-13): зависимость — единственная связь вехи, которой управляют из паспорта
+        r("milestone", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("milestone", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
         // ADR
         r("adr", "DEPENDS_ON", "out", Handler.ADR_DEPENDS_ON, false),
         r("adr", "DEPENDS_ON", "in", Handler.ADR_DEPENDS_ON, true),

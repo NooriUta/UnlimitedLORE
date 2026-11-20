@@ -55,7 +55,9 @@ class LoreRecordRegistryTest {
             "REALIZES:out=realization", "JUSTIFIED_BY:out=realization", "PROMOTED_TO:in=realization",
             "LED_TO:in=realization", "GATES:in=association", "REFERENCES:out=association",
             "REFERENCES:in=association", "PRODUCED_BY:in=association", "RAISED_IN:in=aggregation",
-            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition");
+            "HAS_STATE:out=composition", "ATTACHED_TO:out=composition",
+            // MDL-13: одна связь «зависит от» — задача участвует в обе стороны.
+            "DEPENDS_ON:out=association", "DEPENDS_ON:in=association");
         assertEquals(new java.util.TreeSet<>(want), relations("task"));
     }
 

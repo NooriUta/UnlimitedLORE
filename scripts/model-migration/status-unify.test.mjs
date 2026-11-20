@@ -126,8 +126,8 @@ test('владелица 16.11.2026: «статусная модель uppercase
   const p = RULES.dictionaries.priority;
   assert.equal(p.kind, 'other');
   assert.deepEqual(p.codes.map(c => c.code), ['critical', 'high', 'normal', 'low']);
-  // не статусная модель — приоритет и harness (17.11.2026: harness в правилах, коды miniLORE строчными)
-  for (const [name, d] of Object.entries(RULES.dictionaries)) if (!['priority', 'harness'].includes(name)) assert.equal(d.kind, 'status', name);
+  // не статусная модель — приоритет, harness (17.11.2026: harness в правилах, коды miniLORE строчными) и вид зависимости (MDL-13)
+  for (const [name, d] of Object.entries(RULES.dictionaries)) if (!['priority', 'harness', 'dependency_kind'].includes(name)) assert.equal(d.kind, 'status', name);
   assert.deepEqual(classify('P1', p), { kind: 'known', code: 'high' });
   assert.deepEqual(classify('🔴 HIGH', p), { kind: 'known', code: 'high' });
   assert.deepEqual(classify('blocker', p), { kind: 'known', code: 'critical' });
