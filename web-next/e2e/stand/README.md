@@ -90,3 +90,9 @@ npm run e2e:stand              # RBAC + смоук
 ```
 
 В CI — workflow «LORE stand e2e (preprod, test accounts)», запуск по кнопке; Chromium ставится из Playwright (`LORE_STAND_CHANNEL=''`).
+
+## «+ Новая» по типам (`create.stand.ts`, SPRINT_LORE_ADMIN_POLISH/AP-06)
+
+- **CR-00** — опись под test-sa: типы модели стенда (`/lore/model`) с путём создания (паспорт `_new` разрешает или видна «+ Новая») и без него. Список — `create-coverage.md` / `.json` в папке отчёта и строка `[create] CR-00 БЕЗ пути создания: …` в журнале.
+- **CR-<тип>** — для каждого типа с формой (`STAND_CREATE_TYPES`, копия `CREATE_TYPES`, совпадение сторожит vitest) под каждой TEST-учёткой: право сервера, кнопка видна ⇔ право, форма открывается, пустой черновик не сохраняется и причина названа. Исход ячейки — `src/standSmoke/createCoverage.ts`.
+- **Записи нет**: стенд только для чтения (`writeGuard.ts`), пути удаления записей в UI нет (AP-01). Сохранение, строка в списке и SCD2 — не проверяются этим сценарием.
