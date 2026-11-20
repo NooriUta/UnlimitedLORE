@@ -44,6 +44,7 @@ bash deploy/install/install.sh --dir /opt/lore
 - **Вход** — `LORE_AUTH_ENABLED`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID` (см. «Keycloak»).
 - **Völva** — `LORE_VOLVA_ORIGIN`, `LORE_VOLVA_EMBED_SITE_URL`, `LORE_VOLVA_EMBED_ISSUER` (см. «Völva»).
 - **Forgejo** — `COMPOSE_PROFILES`, `FORGEJO_*` (см. «Forgejo и forgejo-mcp»).
+- **Локальная LLM** — `LORE_LLM_LOCAL_URL`, `LORE_LLM_LOCAL_MODEL`, `LORE_LLM_LOCAL_API_KEY` (см. «Локальная LLM»).
 
 Пароли в образце — заглушки `CHANGE_ME`: оставленная заглушка значит «сгенерировать». Окно установщика пароли, токены и ключи в `.env` не передаёт — их генерирует `install.sh` или вписывает владелец. Какие секреты есть и как их сменить — раздел «Секреты рантайма».
 
@@ -174,6 +175,85 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 
 Проект в LORE регистрируется с адресом репозитория: `<адрес Forgejo>/<организация>/<репозиторий>`. Из этого адреса мост берёт организацию и репозиторий. При своей установке Forgejo используйте `http://localhost:3000/...`: бэкенд из контейнера ходит на этот адрес через `forgejo:3000` (`FORGEJO_BASE_OVERRIDE`).
 
+## Локальная LLM: векторный индекс и гейты качества
+
+По выбору. Без модели LORE работает полностью, как раньше. Платные провайдеры (Anthropic и другие) не подключены — только своя модель на своей машине.
+
+### Что даёт каждая часть
+
+| часть | что даёт | в этой версии |
+|---|---|---|
+| **Гейты качества (QG)** | рутина считает метрики сама, затем модель пишет к ним короткое суждение. На числа модель не влияет: метрики готовы до её вызова | подключение есть. Но ни одна рутина суждения ещё не просит — переменные готовят место |
+| **Векторный индекс** | поиск по смыслу, а не по словам: найти похожие задачи и решения до заведения новых, затем соседей по графу (ADR-LORE-057, D-2026-GRAPH-SEARCH-VECTOR-PROBE) | **будет в версии после 1.18.** Кода индекса, эмбеддингов и их настроек в этой версии нет, вписывать нечего |
+
+### Какие модели проверены
+
+- **Эмбеддинги — Qwen3-Embedding, размерность 1024** (проба 19.11.2026). Сервер — `llama-server`, `/v1/embeddings`, только плотный вектор. Индекс — `LSM_VECTOR` в ArcadeDB 26.11.1, создан и опрошен на копии базы. Сходство пар-дублей 0,55–0,71, несвязанных пар — 0,33–0,44. Это проба, а не настройка: в установку эмбеддинги пока не подключаются.
+- **Чат для суждений QG — любая модель за OpenAI-совместимым API.** Первый живой прогон (27.08.2026) — Qwen3. У рассуждающих моделей потолок токенов может уйти на размышление, и тогда ответ придёт пустым (`finish_reason=length`). LORE пишет это как «не измерено» с причиной, а не как пустой ответ.
+
+### Как поднять сервер модели
+
+LORE ходит в модель на диалекте OpenAI: `POST <адрес>/v1/chat/completions`. Подходит любой раннер с этим API. Пример с Ollama на той же машине, что и LORE:
+
+```bash
+# Ollama: слушать не только localhost, чтобы контейнер бэкенда достучался
+OLLAMA_HOST=0.0.0.0:11434 ollama serve &
+ollama pull qwen3:4b
+curl -s http://127.0.0.1:11434/v1/models     # модель в списке
+```
+
+OpenAI-совместимый `llama-server` из llama.cpp — так стоит модель на нашей машине:
+
+```bash
+llama-server -m <модель>.gguf --host 0.0.0.0 --port 8086 --alias qwen3-4b
+# вектора для будущего индекса — отдельный процесс:
+# llama-server -m <Qwen3-Embedding>.gguf --embedding --host 0.0.0.0 --port 8088
+```
+
+vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `:1234`) подключаются так же: нужен адрес и имя модели.
+
+### Какие переменные вписать
+
+В `.env` установки (образец — `.env.example`, окно установщика заполняет их в шаге «LLM»):
+
+| переменная | что | пример |
+|---|---|---|
+| `LORE_LLM_LOCAL_URL` | адрес сервера модели **без** `/v1`. Модель на той же машине — `host.docker.internal`, пакет пробрасывает это имя в контейнер бэкенда | `http://host.docker.internal:11434`, `http://192.168.3.50:8086` |
+| `LORE_LLM_LOCAL_MODEL` | имя модели, как его отдаёт `/v1/models`. Пусто — провайдер отвечает «локальная модель не задана» | `qwen3:4b`, `qwen3-4b` |
+| `LORE_LLM_LOCAL_API_KEY` | ключ, только если раннер его требует (`--api-key`). Уходит заголовком `Authorization: Bearer` | пусто |
+
+После правки — `docker compose up -d lore-backend` в каталоге установки.
+
+Что ещё нужно гейтам качества. Это настройки рутины, а не переменные пакета (`backend/src/main/resources/application.properties`, `QgLlmSettings`):
+
+- **Цена.** `lore.llm.price.local.*=0` — уже задана, локальная модель бесплатна.
+- **Потолок рутины.** `lore.qg.routines.<имя>.max-tokens` или `max-usd`. Умолчания нет намеренно: без потолка модель не вызывается, флаг прогона `budget: budget_unset`. Когда рутина получит суждение, потолок задаётся переменной окружения бэкенда по правилу MicroProfile Config. Например, `LORE_QG_ROUTINES_QG_SUPERVISOR_MAX_TOKENS=20000`.
+- **Модель рутины.** `lore.qg.routines.<имя>.model`. Пусто — `local`.
+
+### Как проверить, что подключилось
+
+1. Сервер модели виден из контейнера бэкенда:
+   ```bash
+   docker compose exec lore-backend curl -fsS "$LORE_LLM_LOCAL_URL/v1/models"
+   ```
+   Должен прийти JSON со списком моделей, и `LORE_LLM_LOCAL_MODEL` в нём есть. Ошибка соединения — модель слушает только `127.0.0.1` (Ollama: `OLLAMA_HOST=0.0.0.0`) или закрыт порт.
+2. Модель отвечает тем запросом, которым её зовёт LORE:
+   ```bash
+   docker compose exec lore-backend curl -fsS "$LORE_LLM_LOCAL_URL/v1/chat/completions" \
+     -H 'Content-Type: application/json' \
+     -d "{\"model\":\"$LORE_LLM_LOCAL_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok?\"}],\"max_tokens\":64}"
+   ```
+   В ответе `choices[0].message.content` не пустой. Если пустой, а `finish_reason` = `length` — поднимите `max_tokens`.
+3. В самом LORE: в прогоне рутины QG с суждением поле `model` заполнено, а строка суждения — с числом токенов. Отдельной ручки «проверить модель» у бэкенда нет.
+
+### Что будет без модели
+
+- **Поиск «похожих»** (`search_similar`, `/lore/search/similar`) работает на полнотексте ArcadeDB: совпадение слов, а не смысла. Так же работает и с моделью, пока нет векторного индекса.
+- **Рутины QG** считают и пишут метрики как обычно. Суждения нет:
+  - модель не задана или недоступна — строка суждения «не измерено», причина `source_unreachable`;
+  - нет потолка или цены — `budget_exhausted` с флагом `budget_unset` или `price_unknown`;
+  - у рутины без аналитика (в этой версии — у всех) модель не вызывается вовсе.
+
 ## Секреты рантайма
 
 Здесь перечислено всё, что читает работающая установка. Секреты, нужные только для разработки, сюда не входят. Значения нигде не печатаются: инсталлятор пишет их в `.env` (права 600) и на экран не выводит. Колонка «где читается» — файл в этом репозитории, где переменную берёт рантайм. Перечень сверяет тест `scripts/model-migration/installer-forgejo.test.mjs` в обе стороны с compose и `.env.example`.
@@ -190,6 +270,7 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 | `FORGEJO_MCP_API_KEY` | ключ входа агентов в forgejo-mcp (`Authorization: Bearer`); без него HTTP-вход открыт | установщик генерирует при включённом forgejo-mcp | `.env` 600; у агента — в окружении машины, строка MCP ссылается на переменную | Forgejo install или own | новое значение в `.env`, `up -d forgejo-mcp`, обновить окружение агентов | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `LORE_MCP_CLIENT_SECRET` | секрет клиента Keycloak `lore-mcp-full` / `lore-mcp-full_<harness>`: MCP aida-lore получает по нему токен агента. Клиент без настройки окружения шлёт ту же пару в заголовках X-Lore-Client-Id и X-Lore-Client-Secret | окно установщика заводит клиенты в Keycloak и выдаёт секреты | файл `~/kc-clients-<область>.env` 600, затем настройки harness или хранилище | если включён вход через Keycloak | перевыпустить секрет клиента в Keycloak, обновить настройки harness | `mcp-server/src/backend.ts` |
 | `LORE_DB_GUARD_AUTH`, `LORE_DB_GUARD_TOKEN_NAMES`, `GUARD_TOKEN_NAMES` | сторож входов ArcadeDB: токен группы db-guard (секрет) и список имён токенов (не секрет) | владелец заводит токен в ArcadeDB | `.env` 600 | только профиль `guard` | новый токен в ArcadeDB, `.env`, `up -d lore-db-guard` | `deploy/install/docker-compose.install.yml`, `deploy/db-guard/guard.mjs` |
+| `LORE_LLM_LOCAL_API_KEY` | ключ сервера локальной модели (заголовок `Authorization: Bearer`); пусто — без заголовка, обычный случай для Ollama | вписывает владелец, если раннер запущен с `--api-key` | `.env` 600 | только если сервер модели требует ключ | новый ключ на сервере модели и в `.env`, `up -d lore-backend` | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
 | пароль администратора Keycloak | заводить область и клиенты из окна установщика | у владельца Keycloak | нигде: только в запросе к Keycloak, на диск не пишется | новая установка с Keycloak | в Keycloak | — |
 
 Чего в этом профиле нет:

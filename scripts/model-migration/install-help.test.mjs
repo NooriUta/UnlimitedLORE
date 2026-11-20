@@ -32,14 +32,12 @@ test('каждый раздел README виден в окне ровно на о
   for (const sec of readmeSections(README)) assert.ok(where.has(sec.heading), `раздел README «${sec.heading}» не виден ни на одном шаге окна`);
 });
 
-test('у каждого шага, кроме LLM, разделы README есть; LLM — есть или честно названо «раздела нет»', () => {
+test('у каждого шага разделы README есть (LLM — «Локальная LLM…» из #1663); пропажа раздела в окне названа явно', () => {
+  assert.ok(helpFor(README, 'llm').sections.some(s => LLM.test(s.heading)), 'шаг LLM: нет раздела «Локальная LLM»');
+  const gone = helpHtml(README.replace(/^## Völva/m, '## Вёльва'));
+  assert.match(gone, /В README пакета нет раздела «Völva»/, 'пропавший раздел — честное «раздела нет», а не пустой блок');
   for (const st of HELP_STEPS) {
     const h = helpFor(README, st.id);
-    if (st.id === 'llm' && !readmeSections(README).some(s => LLM.test(s.heading))) {
-      assert.equal(h.sections.length, 0);
-      assert.ok(h.missing.length > 0, 'LLM без раздела — пропажа названа');
-      continue;
-    }
     assert.ok(h.sections.length > 0, st.id + ': нет разделов README');
     assert.deepEqual(h.missing, [], st.id + ': не найдены разделы ' + h.missing.join(', '));
   }

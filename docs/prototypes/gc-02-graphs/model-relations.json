@@ -1,0 +1,993 @@
+{
+ "source": "shared/model/lore-model.json — types[].relations (dir in развёрнут в «откуда → куда»)",
+ "built_by": "docs/prototypes/gc-02-build-standalone.mjs",
+ "model_format": "lore-model/1",
+ "types": {
+  "sprint": "Спринт",
+  "task": "Задача",
+  "adr": "ADR",
+  "spec": "Спека",
+  "doc": "Документ",
+  "decision": "Решение",
+  "question": "Вопрос",
+  "milestone": "Веха",
+  "release": "Релиз",
+  "component": "Компонент",
+  "tech": "Технология",
+  "feature": "Фича",
+  "product": "Продукт",
+  "user": "Человек",
+  "agent": "Агент",
+  "actor": "Роль продукта",
+  "pain": "Боль",
+  "gain": "Выгода",
+  "job": "Работа",
+  "runbook": "Ранбук",
+  "quality_gate": "Гейт качества",
+  "repository": "Репозиторий",
+  "organization": "Организация",
+  "project": "Проект"
+ },
+ "relations": [
+  {
+   "f": "actor",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "actor",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "adr",
+   "rel": "ATTACHED_TO",
+   "t": "asset",
+   "label": "Вложения"
+  },
+  {
+   "f": "adr",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "adr",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "adr",
+   "rel": "DEPENDS_ON",
+   "t": "adr",
+   "label": "Зависит от"
+  },
+  {
+   "f": "adr",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "adr",
+   "rel": "IMPLEMENTED_IN_RELEASE",
+   "t": "release",
+   "label": "Релизы"
+  },
+  {
+   "f": "adr",
+   "rel": "IMPLEMENTED_IN",
+   "t": "sprint",
+   "label": "Спринты"
+  },
+  {
+   "f": "adr",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "adr",
+   "rel": "SUPERSEDES",
+   "t": "adr",
+   "label": "Заменяет"
+  },
+  {
+   "f": "adr",
+   "rel": "TAGGED_WITH",
+   "t": "tag",
+   "label": "Теги"
+  },
+  {
+   "f": "agent",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "agent",
+   "rel": "FILLS_ROLE",
+   "t": "actor",
+   "label": "Роли продукта"
+  },
+  {
+   "f": "agent",
+   "rel": "HAS_PROJECT_ROLE",
+   "t": "project",
+   "label": "Агенты"
+  },
+  {
+   "f": "agent",
+   "rel": "OWNED_BY",
+   "t": "user",
+   "label": "Владелец"
+  },
+  {
+   "f": "agent",
+   "rel": "USES_MACHINE",
+   "t": "machine",
+   "label": "Машины"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "actor",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "adr",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "component",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "decision",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "doc",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "feature",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "gain",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "job",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "pain",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "quality_gate",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "question",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "release",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "runbook",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "spec",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "sprint",
+   "label": "На него ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "task",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "any",
+   "rel": "REFERENCES",
+   "t": "tech",
+   "label": "На неё ссылаются"
+  },
+  {
+   "f": "component",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Компоненты"
+  },
+  {
+   "f": "component",
+   "rel": "COMPONENT_REPOSITORY",
+   "t": "repository",
+   "label": "Репозитории"
+  },
+  {
+   "f": "component",
+   "rel": "DOCUMENTED_IN",
+   "t": "spec",
+   "label": "Спеки"
+  },
+  {
+   "f": "component",
+   "rel": "DOCUMENTED_IN",
+   "t": "tech",
+   "label": "Технологии"
+  },
+  {
+   "f": "component",
+   "rel": "IN_AREA",
+   "t": "area",
+   "label": "Область"
+  },
+  {
+   "f": "component",
+   "rel": "IN_PRODUCT",
+   "t": "product",
+   "label": "Продукты"
+  },
+  {
+   "f": "component",
+   "rel": "PARENT_OF",
+   "t": "component",
+   "label": "Родитель"
+  },
+  {
+   "f": "component",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "component",
+   "rel": "USES",
+   "t": "tech_ref",
+   "label": "Стек"
+  },
+  {
+   "f": "decision",
+   "rel": "ANSWERS",
+   "t": "question",
+   "label": "Отвечает на вопросы"
+  },
+  {
+   "f": "decision",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "decision",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "decision",
+   "rel": "DECIDED_IN",
+   "t": "adr",
+   "label": "ADR"
+  },
+  {
+   "f": "decision",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "decision",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "decision",
+   "rel": "SUPERSEDES",
+   "t": "decision",
+   "label": "Заменяет"
+  },
+  {
+   "f": "decision",
+   "rel": "TAGGED_WITH",
+   "t": "tag",
+   "label": "Теги"
+  },
+  {
+   "f": "doc",
+   "rel": "ATTACHED_TO",
+   "t": "asset",
+   "label": "Вложения"
+  },
+  {
+   "f": "doc",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "doc",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компонент"
+  },
+  {
+   "f": "doc",
+   "rel": "DOC_CHILD_OF",
+   "t": "doc",
+   "label": "Родительский документ"
+  },
+  {
+   "f": "doc",
+   "rel": "IMPLEMENTED_IN",
+   "t": "sprint",
+   "label": "Спринты"
+  },
+  {
+   "f": "doc",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "feature",
+   "rel": "ADDRESSES",
+   "t": "pain",
+   "label": "Боли"
+  },
+  {
+   "f": "feature",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "feature",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "feature",
+   "rel": "BUILDS_ON",
+   "t": "feature",
+   "label": "Опирается на"
+  },
+  {
+   "f": "feature",
+   "rel": "DECOMPOSES_INTO",
+   "t": "feature",
+   "label": "Сценарии"
+  },
+  {
+   "f": "feature",
+   "rel": "DELIVERS",
+   "t": "gain",
+   "label": "Создаёт выгоды"
+  },
+  {
+   "f": "feature",
+   "rel": "HAS_ACTOR",
+   "t": "actor",
+   "label": "Акторы"
+  },
+  {
+   "f": "feature",
+   "rel": "HELPS_WITH",
+   "t": "job",
+   "label": "Работы"
+  },
+  {
+   "f": "feature",
+   "rel": "IN_PRODUCT",
+   "t": "product",
+   "label": "Фичи и сценарии"
+  },
+  {
+   "f": "feature",
+   "rel": "PERFORMS",
+   "t": "job",
+   "label": "Выполняет работы"
+  },
+  {
+   "f": "feature",
+   "rel": "PROMISES",
+   "t": "gain",
+   "label": "Выгоды"
+  },
+  {
+   "f": "feature",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "feature",
+   "rel": "RELIEVES",
+   "t": "pain",
+   "label": "Снимает боли"
+  },
+  {
+   "f": "feature",
+   "rel": "TARGETS_MILESTONE",
+   "t": "milestone",
+   "label": "Вехи"
+  },
+  {
+   "f": "feature",
+   "rel": "TRACED_TO",
+   "t": "adr",
+   "label": "ADR"
+  },
+  {
+   "f": "feature",
+   "rel": "TRACED_TO",
+   "t": "decision",
+   "label": "Решения"
+  },
+  {
+   "f": "feature",
+   "rel": "UC_EXTENDS",
+   "t": "feature",
+   "label": "Расширяет"
+  },
+  {
+   "f": "feature",
+   "rel": "UC_INCLUDES",
+   "t": "feature",
+   "label": "Включает"
+  },
+  {
+   "f": "file",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Файлы"
+  },
+  {
+   "f": "file",
+   "rel": "EDITED_IN",
+   "t": "task",
+   "label": "Файлы"
+  },
+  {
+   "f": "gain",
+   "rel": "DESIRED_BY",
+   "t": "actor",
+   "label": "Роли"
+  },
+  {
+   "f": "gain",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "gain",
+   "rel": "SUCCESS_OF",
+   "t": "job",
+   "label": "Успех в работах"
+  },
+  {
+   "f": "insight",
+   "rel": "LED_TO",
+   "t": "adr",
+   "label": "Инсайты BRAGI"
+  },
+  {
+   "f": "insight",
+   "rel": "LED_TO",
+   "t": "task",
+   "label": "Инсайты BRAGI"
+  },
+  {
+   "f": "job",
+   "rel": "PERFORMED_BY",
+   "t": "actor",
+   "label": "Роли"
+  },
+  {
+   "f": "job",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "milestone",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "milestone",
+   "rel": "TARGETS_PRODUCT",
+   "t": "product",
+   "label": "Продукты"
+  },
+  {
+   "f": "organization",
+   "rel": "ORG_HAS_PRODUCT",
+   "t": "product",
+   "label": "Продукты"
+  },
+  {
+   "f": "organization",
+   "rel": "ORG_HAS_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "organization",
+   "rel": "ORG_MEMBER",
+   "t": "user",
+   "label": "Люди"
+  },
+  {
+   "f": "pain",
+   "rel": "BLOCKS",
+   "t": "job",
+   "label": "Мешает работам"
+  },
+  {
+   "f": "pain",
+   "rel": "FELT_BY",
+   "t": "actor",
+   "label": "Роли"
+  },
+  {
+   "f": "pain",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "phase",
+   "rel": "PART_OF",
+   "t": "sprint",
+   "label": "Фазы"
+  },
+  {
+   "f": "pr",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "PR"
+  },
+  {
+   "f": "product",
+   "rel": "ADDRESSES",
+   "t": "pain",
+   "label": "Боли"
+  },
+  {
+   "f": "product",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "product",
+   "rel": "HAS_ACTOR",
+   "t": "actor",
+   "label": "Роли"
+  },
+  {
+   "f": "product",
+   "rel": "HELPS_WITH",
+   "t": "job",
+   "label": "Работы"
+  },
+  {
+   "f": "product",
+   "rel": "PARENT_PRODUCT",
+   "t": "product",
+   "label": "Родитель"
+  },
+  {
+   "f": "product",
+   "rel": "PROMISES",
+   "t": "gain",
+   "label": "Выгоды"
+  },
+  {
+   "f": "product",
+   "rel": "SERVES",
+   "t": "product",
+   "label": "Обслуживает"
+  },
+  {
+   "f": "project",
+   "rel": "HAS_REPOSITORY",
+   "t": "repository",
+   "label": "Репозитории"
+  },
+  {
+   "f": "pr",
+   "rel": "SHIPPED_IN",
+   "t": "release",
+   "label": "PR"
+  },
+  {
+   "f": "publication",
+   "rel": "PRODUCED_BY",
+   "t": "sprint",
+   "label": "Публикации"
+  },
+  {
+   "f": "publication",
+   "rel": "PRODUCED_BY",
+   "t": "task",
+   "label": "Публикации"
+  },
+  {
+   "f": "publication",
+   "rel": "SHIPPED_IN",
+   "t": "release",
+   "label": "Публикации"
+  },
+  {
+   "f": "qg_recommendation",
+   "rel": "PROMOTED_TO",
+   "t": "task",
+   "label": "Рекомендации QG"
+  },
+  {
+   "f": "qg",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Гейты качества"
+  },
+  {
+   "f": "quality_gate",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проект-владелец"
+  },
+  {
+   "f": "quality_gate",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "quality_gate",
+   "rel": "MEASURED_BY",
+   "t": "qg_metric",
+   "label": "Метрики"
+  },
+  {
+   "f": "quality_gate",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "question",
+   "rel": "ANSWERABLE_BY",
+   "t": "any",
+   "label": "Ответственный"
+  },
+  {
+   "f": "question",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "question",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "question",
+   "rel": "GATES",
+   "t": "task",
+   "label": "Блокирует задачи"
+  },
+  {
+   "f": "question",
+   "rel": "RAISED_IN",
+   "t": "adr",
+   "label": "Вопросы"
+  },
+  {
+   "f": "question",
+   "rel": "RAISED_IN",
+   "t": "any",
+   "label": "Поднят в"
+  },
+  {
+   "f": "question",
+   "rel": "RAISED_IN",
+   "t": "sprint",
+   "label": "Вопросы"
+  },
+  {
+   "f": "question",
+   "rel": "RAISED_IN",
+   "t": "task",
+   "label": "Вопросы"
+  },
+  {
+   "f": "question",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "release",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "release",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "release",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "repository",
+   "rel": "MIRRORED_TO",
+   "t": "repository",
+   "label": "Зеркала"
+  },
+  {
+   "f": "repository",
+   "rel": "USES_REPOSITORY",
+   "t": "repository",
+   "label": "Использует"
+  },
+  {
+   "f": "runbook",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "runbook",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "runbook",
+   "rel": "REFERENCES_ADR",
+   "t": "adr",
+   "label": "ADR"
+  },
+  {
+   "f": "runbook",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "spec",
+   "rel": "ATTACHED_TO",
+   "t": "asset",
+   "label": "Вложения"
+  },
+  {
+   "f": "spec",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "spec",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компонент"
+  },
+  {
+   "f": "spec",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "spec",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "sprint",
+   "rel": "ATTACHED_TO",
+   "t": "asset",
+   "label": "Вложения"
+  },
+  {
+   "f": "sprint",
+   "rel": "BELONGS_TO_PROJECT",
+   "t": "project",
+   "label": "Проекты"
+  },
+  {
+   "f": "sprint",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "sprint",
+   "rel": "DEPENDS_ON",
+   "t": "sprint",
+   "label": "Зависит от"
+  },
+  {
+   "f": "sprint",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "sprint",
+   "rel": "IMPLEMENTED_IN_RELEASE",
+   "t": "release",
+   "label": "Релизы"
+  },
+  {
+   "f": "sprint",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "sprint",
+   "rel": "TARGETS_MILESTONE",
+   "t": "milestone",
+   "label": "Вехи"
+  },
+  {
+   "f": "task",
+   "rel": "ATTACHED_TO",
+   "t": "asset",
+   "label": "Вложения"
+  },
+  {
+   "f": "task",
+   "rel": "CLOSED_BY",
+   "t": "pr",
+   "label": "PR"
+  },
+  {
+   "f": "task",
+   "rel": "HAS_STATE",
+   "t": "hist",
+   "label": "История"
+  },
+  {
+   "f": "task",
+   "rel": "IN_PHASE",
+   "t": "phase",
+   "label": "Фаза"
+  },
+  {
+   "f": "task",
+   "rel": "JUSTIFIED_BY",
+   "t": "adr",
+   "label": "Обоснована ADR"
+  },
+  {
+   "f": "task",
+   "rel": "PART_OF",
+   "t": "sprint",
+   "label": "Спринт"
+  },
+  {
+   "f": "task",
+   "rel": "REALIZES",
+   "t": "feature",
+   "label": "Задачи"
+  },
+  {
+   "f": "task",
+   "rel": "REALIZES",
+   "t": "use_case",
+   "label": "Сценарии"
+  },
+  {
+   "f": "task",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "task",
+   "rel": "ROLE_HELD_BY",
+   "t": "actor",
+   "label": "Роли"
+  },
+  {
+   "f": "task",
+   "rel": "ROLE_HELD_BY",
+   "t": "agent",
+   "label": "Задачи"
+  },
+  {
+   "f": "task",
+   "rel": "ROLE_HELD_BY",
+   "t": "user",
+   "label": "Задачи"
+  },
+  {
+   "f": "task",
+   "rel": "TAGGED_WITH",
+   "t": "component",
+   "label": "Компоненты"
+  },
+  {
+   "f": "tech",
+   "rel": "BELONGS_TO",
+   "t": "component",
+   "label": "Компонент"
+  },
+  {
+   "f": "tech",
+   "rel": "REFERENCES",
+   "t": "any",
+   "label": "Ссылается"
+  },
+  {
+   "f": "use_case",
+   "rel": "TRACED_TO",
+   "t": "adr",
+   "label": "Сценарии"
+  },
+  {
+   "f": "user",
+   "rel": "HAS_PROJECT_ROLE",
+   "t": "project",
+   "label": "Проекты"
+  }
+ ]
+}

@@ -10,17 +10,21 @@ import LIST from './rules/legacy-fields.json' with { type: 'json' };
 const DATE_RU = d => d.split('-').reverse().join('.');
 /** Общая часть причины: задача, кто и когда утвердил — её же видно в карте и в строке остатка. */
 export const LEGACY_WHY = `легаси, MDL-08, утверждено владелицей ${DATE_RU(LIST.approved)}: ${LIST.words}`;
-/** «Тип.поле» → куда переехал смысл поля. */
-export const LEGACY = new Map(Object.entries(LIST.fields));
+/** «Тип.поле» → куда переехал смысл поля (первая пачка и дальнейшие — раздел more, у каждой своё слово владелицы). */
+export const LEGACY = new Map([...Object.entries(LIST.fields), ...(LIST.more || []).flatMap(b => Object.entries(b.fields))]);
+const WHY_OF = new Map([...Object.keys(LIST.fields).map(k => [k, { why: LEGACY_WHY, basis: LIST.basis }]),
+  ...(LIST.more || []).flatMap(b => Object.keys(b.fields).map(k => [k, { why: `легаси, MDL-08, утверждено владелицей ${DATE_RU(b.approved)}: ${b.words}`, basis: b.basis }]))]);
 export const LEGACY_KIND = 'legacy_field';
 
 export const legacyGiven = v => !(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0));
 
 /** Правило карты для поля из списка; null — поле не легаси. */
 export function legacyRule(T, f) {
-  const where = LEGACY.get(T + '.' + f);
+  const k = T + '.' + f;
+  const where = LEGACY.get(k);
   if (where === undefined) return null;
-  return { rule: 'drop', legacy: true, why: LEGACY_WHY + '; ' + where, basis: LIST.basis };
+  const b = WHY_OF.get(k);
+  return { rule: 'drop', legacy: true, why: b.why + '; ' + where, basis: b.basis };
 }
 
 /** «Было»: считает по исходной записи (не по результату карты), сколько записей несут непустое значение. */

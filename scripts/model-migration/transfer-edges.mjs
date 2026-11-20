@@ -19,6 +19,7 @@ import { carriesFreeFields, edgeFreeFieldsDdl, stampFreeFields, freeFieldsLoss }
 import { isHistoric, edgeHistoryDdl, outMomentsQuery, stampEdgeHistory, sourceMoment } from './edge-history.mjs';
 import { decisionMilestoneRules, readDecisionMilestoneInput, planDecisionMilestones, applyDecisionMilestones } from './decision-milestones.mjs';
 import { readQuestionOwnerInput, planQuestionOwners, applyQuestionOwners } from './question-owner.mjs';
+import { readDecisionRefsInput, planDecisionRefs, applyDecisionRefs } from './decision-refs.mjs';
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -160,6 +161,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   report.question_owner = await applyQuestionOwners(db, planQuestionOwners(qoIn), { log, at,
     moments: new Map(qoIn.questions.map(x => [x.rid, [x.updated_at, x.opened_date]])) });
   if (!report.question_owner.ok) ok = false;
+  // ссылки решения строкой → связи REFERENCES (MDL-08 ч.2, владелица 20.11.2026: «refs … пересадить на связи но с проверкой
+  // дублей и с проверкой что оставшийся функционал перешёл на связи»): связь | дубль | остаток; сверка паспорта по связям
+  report.decision_refs = await applyDecisionRefs(db, planDecisionRefs({ ...(await readDecisionRefsInput(db)), dstRid }), { log });
+  if (!report.decision_refs.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));

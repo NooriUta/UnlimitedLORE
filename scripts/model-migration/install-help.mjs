@@ -10,7 +10,7 @@ export const HELP_STEPS = [
   { id: 'keycloak', title: 'Keycloak', headings: ['Keycloak', 'Безопасность'] },
   { id: 'volva', title: 'Völva', headings: ['Völva'] },
   { id: 'forgejo', title: 'Forgejo', headings: ['Forgejo'] },
-  // Раздел пишется в ветке docs/installer-local-llm; пока его нет в README — шаг честно говорит «раздела нет».
+  // Раздел «Локальная LLM…» — из #1663 (docs/installer-local-llm).
   { id: 'llm', title: 'LLM', headings: ['Локальная LLM'] },
   { id: 'secrets', title: 'Секреты', headings: ['Секреты рантайма'] },
   { id: 'check', title: 'Проверка', headings: ['Проверка', 'Обновление', 'Удаление'] },
