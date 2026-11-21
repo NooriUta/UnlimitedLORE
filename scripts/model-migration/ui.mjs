@@ -21,7 +21,8 @@ import { INSTALL_BUNDLE, DECISION_MILESTONES } from './resources.mjs';
 import { helpHtml } from './install-help.mjs';
 import { jwksVerdict, whoamiVerdict } from './setup-check.mjs';
 import { enrollBody, enrollVerdict } from './machine-enroll.mjs';
-import { realmPlan, applyRealm, issuerParts } from './kc-realm.mjs';
+import { realmPlan, applyRealm, issuerParts, kcForm, checkOwnClients, topUpRealm } from './kc-realm.mjs';
+import { infisicalConfig, upsertSecrets } from './infisical.mjs';
 import os from 'node:os';
 import { proposeRegroup, readRegroupInput, regroupOverrides, withRegroupOverrides } from './regroup.mjs';
 import { proposeProductKinds, readProductKindInput, productKindMap, productKindState, withProductKinds } from './product-kind.mjs';
@@ -153,6 +154,10 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <tr><td>Порт веба</td><td><input name="port" size="8" value="4400"></td></tr>
 <tr><td>Адрес области Keycloak</td><td><input name="issuer" size="40" placeholder="https://keycloak/realms/lore"></td></tr>
 <tr><td>Адрес веба LORE</td><td><input name="web" size="40" placeholder="https://lore.example.org"></td></tr>
+<tr><td>Keycloak: что у вас уже есть</td><td><select name="kcMode"><option value="ask" selected>— выберите —</option><option value="new">ничего: завести область и клиенты за меня</option><option value="own-realm">своя область: завести в ней клиенты за меня</option><option value="topup">LORE уже стоит: довести клиентов (только добавить)</option><option value="own">свои клиенты и секреты: только проверить токены</option></select></td></tr>
+<tr><td>Свои имена клиентов</td><td><input name="kcNames" size="40" placeholder="по умолчанию lore-app, lore-mcp-&lt;роль&gt;[_&lt;harness&gt;]; своё: lore-mcp-full=acme-full"></td></tr>
+<tr><td>Младшие роли для harness</td><td><input name="kcExtra" size="40" placeholder="через запятую, не выше главной: tester,developer"></td></tr>
+<tr><td>Свои секреты: переменные</td><td><input name="kcSecretVars" size="40" placeholder="по умолчанию LORE_MCP_CLIENT_SECRET_&lt;РОЛЬ&gt;[_&lt;HARNESS&gt;]; своё: full=ACME_FULL_SECRET"></td></tr>
 <tr><td>Администратор Keycloak (новая установка)</td><td><input name="kcAdmin" size="16" autocomplete="off" placeholder="admin"> <input name="kcPassword" type="password" size="16" autocomplete="new-password" placeholder="пароль — не сохраняется"></td></tr>
 <tr><td>Адрес Völva</td><td><input name="volva" size="40" placeholder="если Völva выбрана"></td></tr>
 <tr><td>Адрес своего Forgejo</td><td><input name="forgejoUrl" size="40" placeholder="если выбран свой Forgejo"></td></tr>
@@ -163,6 +168,7 @@ select,input{background:var(--bg0);color:var(--t1);border:1px solid var(--bd);bo
 <h3>Подключение агента на этой машине</h3>
 <div class="tw" style="padding:8px"><form id="af" autocomplete="off"><table class="cfg">
 <tr><td>Harness</td><td><select name="harness"><option value="claude">Claude Code</option><option value="kimi">Kimi Code</option><option value="qwen">Qwen Code</option><option value="dsh">DeepSeek Harness</option><option value="codex">Codex</option><option value="opencode">OpenCode</option><option value="cursor">Cursor</option></select></td></tr>
+<tr><td>Секрет учётки</td><td class="sub">ключ <span class="mono">LORE_MCP_CLIENT_SECRET_&lt;РОЛЬ&gt;[_&lt;HARNESS&gt;]</span> (Claude Code — <span class="mono">…_FULL</span>, Kimi — <span class="mono">…_FULL_KIMI</span>); строка MCP называет его в <span class="mono">LORE_MCP_SECRET_VAR</span>, значение — в окружении машины или в Infisical, в строку не кладётся. Подагенту младшей роли — своя учётка и свой ключ.</td></tr>
 <tr><td>Код машины</td><td><input name="machineId" size="30"></td></tr>
 <tr><td>Адрес бэкенда LORE</td><td><input name="backendUrl" size="40"></td></tr>
 <tr><td>Издатель (Keycloak, область)</td><td><input name="issuer" size="40"></td></tr>
@@ -663,18 +669,42 @@ export async function serve({ port = 2499, db: givenDb = null, decisionsFile = n
         // пароль администратора — только в этом запросе, не сохраняется и не пишется в журнал.
         if (req.headers.origin && req.headers.origin !== 'http://127.0.0.1:' + port) return json(res, 403, { error: 'только со страницы установщика' });
         const b = await readBody(req);
-        let steps, kcUrl;
-        try { ({ kcUrl } = issuerParts(b.issuer)); steps = realmPlan({ realm: issuerParts(b.issuer).realm, webOrigin: b.web, harnesses: b.harness ? [b.harness] : [] }); }
+        // OH-MCP-HOSTED-SWITCH (слово владелицы 21.11 «везде KC секреты спрашивай — может, у них свои уже установлены»):
+        // сначала выбор, что уже есть; заводить и писать секреты — только по явному «за меня».
+        let form, kcUrl, realm;
+        try { form = kcForm(b); ({ kcUrl, realm } = issuerParts(b.issuer)); }
+        catch (e) { return json(res, 400, { error: e.message }); }
+        if (form.mode === 'ask') return json(res, 400, { error: 'выберите, что уже есть в Keycloak: ничего / своя область / LORE уже стоит / свои клиенты и секреты' });
+        if (form.mode === 'own') {
+          // Свои клиенты и секреты: ни одного запроса к admin API — только токен по их паре из их окружения.
+          const accounts = form.accounts.map(a => ({ ...a, secretVar: form.secretVars[a.role] || a.secretKey }));
+          if (!b.apply) return json(res, 200, { plan: accounts.map(a => ({ id: 'token-check:' + a.clientId, method: 'POST', path: '/realms/' + realm + '/protocol/openid-connect/token (' + a.secretVar + ')' })) });
+          return json(res, 200, { results: (await checkOwnClients({ issuer: b.issuer, accounts })).map(r => ({ id: 'token-check:' + r.clientId, state: r.state === 'ok' ? 'exists' : r.state, reason: r.reason + '; LORE_MCP_SECRET_VAR=' + r.secretVar })) });
+        }
+        const writeSecrets = async sec => {
+          const NL = String.fromCharCode(10), inf = infisicalConfig();
+          const file = path.join(os.homedir(), 'kc-clients-' + realm + '.env');
+          if (inf) {
+            const out = await upsertSecrets(inf, sec);
+            const failed = out.filter(x => x.state !== 'written');
+            if (!failed.length) return 'Infisical (' + inf.environment + ', ' + inf.path + '): ' + out.map(x => x.key).join(', ');
+            // Сбой записи — секреты не теряются: файл 600 и громкая причина.
+            fs.writeFileSync(file, Object.entries(sec).map(([k, v]) => k + '=' + v).join(NL) + NL, { mode: 0o600 });
+            throw new Error('Infisical не принял ' + failed.map(x => x.key + ' (' + x.reason + ')').join(', ') + ' — все секреты лежат в ' + file + ' (права 600)');
+          }
+          fs.writeFileSync(file, Object.entries(sec).map(([k, v]) => k + '=' + v).join(NL) + NL, { mode: 0o600 });
+          return file + ' (права 600; запись в Infisical не настроена)';
+        };
+        if (form.mode === 'topup') {
+          if (!b.kcAdmin || !b.kcPassword) return json(res, 400, { error: 'доводке нужен вход администратора Keycloak: она читает, что уже заведено' });
+          return json(res, 200, await topUpRealm({ kcUrl, adminUser: b.kcAdmin, adminPassword: b.kcPassword, realm, accounts: form.accounts, apply: !!b.apply, writeSecrets }));
+        }
+        let steps;
+        try { steps = realmPlan({ realm, webOrigin: b.web, harnesses: form.harnesses, extraRoles: form.extraRoles, names: form.names, ownRealm: form.mode === 'own-realm' }); }
         catch (e) { return json(res, 400, { error: e.message }); }
         if (!b.apply) return json(res, 200, { plan: steps.map(x => ({ id: x.id, method: x.method, path: x.path })) });
         if (!b.kcAdmin || !b.kcPassword) return json(res, 400, { error: 'нужны логин и пароль администратора Keycloak' });
-        const writeSecrets = sec => {
-          const file = path.join(os.homedir(), 'kc-clients-' + steps[0].body.realm + '.env');
-          const NL = String.fromCharCode(10);
-          fs.writeFileSync(file, Object.entries(sec).map(([k, v]) => 'LORE_KC_SECRET_' + k.toUpperCase().replace(/[^A-Z0-9]/g, '_') + '=' + v).join(NL) + NL, { mode: 0o600 });
-          return file;
-        };
-        const out = await applyRealm({ kcUrl, adminUser: b.kcAdmin, adminPassword: b.kcPassword, steps, writeSecrets });
+        const out = await applyRealm({ kcUrl, adminUser: b.kcAdmin, adminPassword: b.kcPassword, steps, writeSecrets, realm });
         return json(res, 200, out);
       }
       if (req.method === 'POST' && req.url === '/api/setup/machine') {

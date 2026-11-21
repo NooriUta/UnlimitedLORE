@@ -90,7 +90,29 @@ class ModelServerConsistencyGuardTest {
      */
     @Test
     @SuppressWarnings("unchecked")
-    void flagsAreBoolAndNoKindExemptionsLeft() {
+    void flagsAreBoolAndNoKindExemptionsLeft() throws Exception {
+        // Патч 1.18.1: release.is_current был объявлен text — запись true давала FIELD_KIND_MISMATCH «не текст».
+        // Общее правило: свойство, которое схема установщика хранит булевым (BOOLEAN), в модели — вид bool.
+        Map<String, Set<String>> bools = new java.util.HashMap<>();
+        for (String file : List.of("sprint-phase-task.json", "all-objects.json")) {
+            com.fasterxml.jackson.databind.JsonNode types0 = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(Path.of("..", "scripts", "model-migration", "schema", file).toFile()).get("types");
+            types0.fields().forEachRemaining(e -> e.getValue().get("fields").fields().forEachRemaining(f -> {
+                if ("BOOLEAN".equals(f.getValue().get("db_type").asText()))
+                    bools.computeIfAbsent(e.getKey(), k -> new java.util.TreeSet<>()).add(f.getKey());
+            }));
+        }
+        List<String> notBool = new ArrayList<>();
+        for (Map.Entry<String, LoreModelTypes.Graph> e : LoreModelTypes.GRAPH.entrySet()) {
+            LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(e.getKey());
+            if (d == null) continue;
+            Map<String, String> al = LoreModelTypes.ALIASES.getOrDefault(e.getKey(), Map.of());
+            Set<String> b = new java.util.HashSet<>(bools.getOrDefault(e.getValue().vertex(), Set.of()));
+            if (e.getValue().hist() != null) b.addAll(bools.getOrDefault(e.getValue().hist(), Set.of()));
+            for (LoreRecordRegistry.Field f : d.fields())
+                if (b.contains(al.getOrDefault(f.key(), f.key())) && !"bool".equals(f.kind())) notBool.add(e.getKey() + "." + f.key() + ": " + f.kind());
+        }
+        assertEquals(List.of(), notBool, "схема хранит флаг, а модель объявляет его не bool");
         assertEquals(Map.of(), LoreModelConsistency.KIND_EXEMPT, "исключения вида закрыты видом bool");
         Map<String, Object> types = (Map<String, Object>) LoreModelGoldenTest.modelDoc().get("types");
         for (String id : List.of("sprint.no_release", "product.is_active")) {

@@ -63,14 +63,15 @@ export function resolveSurface(
 const build = readBuildInfo();
 
 /** Экземпляр сервера со всеми инструментами в рамках поверхности. */
-export function createLoreServer(surface: SurfaceScope, profiles: string[], legacy: boolean): McpServer {
+// OH-MCP-HOSTED-SWITCH: instructions — роли подагентов этой сессии и правило своей учётки (subagents.ts).
+export function createLoreServer(surface: SurfaceScope, profiles: string[], legacy: boolean, instructions?: string): McpServer {
   // MCPV2-3: legacy-ось поверх профильной. legacy → полная старая
   // поверхность + entity_*; профиль ≠ full → старые имена видны в рамках профиля
   // (профили ссылаются на них), entity_* — только если профиль разрешает запись;
   // дефолт (full) → покрытые старые имена скрыты, работа через entity_*.
   const narrowed = profiles.some(p => p !== 'full');
   const server = withStrictTools(
-    new McpServer({ name: 'aida-lore', version: build.commit }),
+    new McpServer({ name: 'aida-lore', version: build.commit }, instructions ? { instructions } : undefined),
     legacySurfaceGate(surface.gate, { legacy, narrowed }),
     // AO-02: след источников — копилка прочитанного, отправка после создания (бэкенд за флагом).
     (() => { const trail = new SourceTrail((p, b) => lorePost(p, b)); return (n: string, a: unknown, r: unknown) => trail.observe(n, a, r); })(),
