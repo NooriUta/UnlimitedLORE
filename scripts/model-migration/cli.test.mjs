@@ -6,7 +6,7 @@ import path from 'node:path';
 import { parseArgs, help, COMMANDS, VERSION } from './cli.mjs';
 
 test('команды названы в порядке шагов; пишущие в новую базу помечены', () => {
-  assert.deepEqual(COMMANDS.map(c => c.name), ['connect', 'census', 'orphans', 'statuses', 'dry-run', 'transfer', 'edges', 'ui', 'dst-fingerprint']);
+  assert.deepEqual(COMMANDS.map(c => c.name), ['install-bundle', 'connect', 'census', 'orphans', 'statuses', 'dry-run', 'transfer', 'edges', 'ui', 'dst-fingerprint']);
   assert.deepEqual(COMMANDS.filter(c => c.write).map(c => c.name), ['transfer', 'edges']);
   const h = help();
   for (const c of COMMANDS) assert.ok(h.includes(c.name), c.name);

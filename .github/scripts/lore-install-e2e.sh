@@ -55,12 +55,15 @@ web() { if [ "$REACH" = network ]; then echo "http://lore-app-next:80"; else ech
 plan() {
   echo "план трубы установщика, версия $V:"
   echo "  fetch    $BASE/$REPO/$V/ — пакет из lore-installer-publish.yml, сверка SHA256SUMS"
-  echo "  install  deploy/install/install.sh --build-from-source из src/lore-$V.tar.gz пакета, вход выключен, порт $BIND:$PORT"
-  echo "  probe    свежая установка: /lore/version, /lore/model"
+  echo "  install  lore-migrate install-bundle (пакет установки из бинаря, командный режим) → install.sh --selftest → install.sh --build-from-source из src/lore-$V.tar.gz, вход выключен, порт $BIND:$PORT"
+  echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows [])"
   echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
   echo "  switch   LORE_DB=$DST, перезапуск lore-backend"
-  echo "  probe    /lore/version, /lore/slice/open_tasks и /lore/slice/organizations — не пусты"
+  echo "  probe    /lore/version, /lore/slice/open_tasks, /lore/slice/organizations и /lore/slice/repositories — не пусты"
 }
+
+# Строка отчёта: шаг и итог — в $WORK/report/summary.md (артефакт трубы).
+note() { mkdir -p "$WORK/report"; echo "- $*" >> "$WORK/report/summary.md"; echo "$*"; }
 
 fetch() {
   mkdir -p "$PKG"; cd "$PKG" || die "нет каталога $PKG"
@@ -75,19 +78,32 @@ fetch() {
     curl -fsS "$BASE/$REPO/$V/$name" -o "$name" || die "файл пакета не скачан: $name"
     n=$((n + 1))
   done < SHA256SUMS
+  # SPEC-LORE-INSTALLER-PIPELINE «Готово, когда»: намеренно сломанный пакет обязан дать красную трубу с причиной.
+  if [ "${E2E_SABOTAGE:-none}" = sha256 ]; then
+    echo "намеренная порча (E2E_SABOTAGE=sha256): дописываю байт в $(basename "$BIN") — сверка обязана упасть"
+    printf 'x' >> "$BIN"
+  fi
   sha256sum -c --ignore-missing --quiet SHA256SUMS || die "SHA256SUMS не сошлись — пакет повреждён или подменён, установки не будет"
   [ -f "$BIN" ] && [ -f "src/lore-$V.tar.gz" ] || die "в пакете нет $(basename "$BIN") или src/lore-$V.tar.gz"
   chmod +x "$BIN"
-  echo "SHA256SUMS сошлись, файлов сверено: $n"
+  note "пакет $V: SHA256SUMS сошлись, файлов сверено: $n"
 }
 
 install_() {
   [ -f "$PKG/src/lore-$V.tar.gz" ] || die "пакет не скачан — сначала fetch"
+  # Исходники — только ради файла решений пакета (rules/decisions.lore.json) для переноса.
   mkdir -p "$TREE"; tar -xzf "$PKG/src/lore-$V.tar.gz" -C "$TREE" || die "архив исходников пакета не распаковался"
-  [ -f "$TREE/deploy/install/install.sh" ] || die "в исходниках пакета нет deploy/install/install.sh"
+  # Пакет установки — из бинаря, командой (как кнопка «План установки» окна, но без окна). В архиве исходников
+  # .env.example нет намеренно (сторож секретов), поэтому install.sh из архива не годится.
+  local b="$WORK/bundle"
+  "$BIN" install-bundle --out "$b" --force \
+    || die "пакет установки не выложен командой install-bundle — в этой сборке пакета нет командного режима установки (появился в MIG-04 e2e); нужна новая сборка lore-installer-publish.yml"
+  say "самопроверка установщика: install.sh --selftest"
+  bash "$b/install.sh" --selftest >"$WORK/selftest.log" 2>&1 || { tail -20 "$WORK/selftest.log"; die "install.sh --selftest не прошёл — каркас установки сломан"; }
   say "установка с нуля: install.sh --build-from-source (вход выключен, без KC, Infisical и Forgejo)"
-  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" bash "$TREE/deploy/install/install.sh" \
+  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" bash "$b/install.sh" \
     --dir "$DIR" --port "$PORT" --bind "$BIND" --forgejo none --build-from-source || die "install.sh упал"
+  note "установка с нуля: install.sh прошёл (selftest — зелёный)"
   # Джоба в контейнере раннера: порты установки на 127.0.0.1 хоста ей не видны — подключаемся к сети compose и ходим
   # по именам сервисов (arcadedb, lore-app-next). Сеть — <проект>_default; проект — COMPOSE_PROJECT_NAME (по умолчанию lore).
   if [ "$REACH" = network ] && [ -f /.dockerenv ]; then
@@ -109,9 +125,20 @@ nonempty() { # nonempty <срез> — строк больше нуля, ина�
 }
 
 probe_fresh() {
-  wait_up; echo "/lore/version: $(get /lore/version)"
-  get /lore/model >/dev/null || die "/lore/model не отвечает на свежей установке"
-  echo "свежая установка отвечает: /lore/version и /lore/model"
+  wait_up
+  local ver sha="${V##*.}"; ver="$(get /lore/version)"; echo "/lore/version: $ver"
+  # Версия пакета 1.18.0-rc.<sha8> — LORE обязана быть собрана из того же коммита.
+  case "$sha" in [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])
+    printf '%s' "$ver" | grep -q "\"commit\":\"$sha" || die "/lore/version не версия пакета: ждали коммит $sha, ответ $ver" ;;
+  esac
+  local m; m="$(get /lore/model)" || die "/lore/model не отвечает на свежей установке"
+  printf '%s' "$m" | grep -q '"seed_drift":false' || die "/lore/model не модель пакета: seed_drift не false (${m:0:120}…)"
+  # Списки на пустой базе пусты честно: 200 и rows [], а не ошибка.
+  local s b; for s in open_tasks organizations; do
+    b="$(get "/lore/slice/$s?limit=1")" || die "свежая установка: срез $s не отвечает (ошибка, а не пусто)"
+    printf '%s' "$b" | grep -q '"rows":\[' || die "свежая установка: срез $s ответил не списком: ${b:0:200}"
+  done
+  note "свежая установка: /lore/version — коммит пакета, /lore/model — seed_drift=false, списки отвечают (пусто — честно)"
 }
 
 migrate() {
@@ -134,7 +161,9 @@ migrate() {
   MIG_DB_URL="${MIG_DB_URL:-}" MIG_DB_USER="${MIG_DB_USER:-}" MIG_DB_PASSWORD="${MIG_DB_PASSWORD:-}" \
   MIG_DST_URL="$dst_url" MIG_DST_USER=root MIG_DST_PASSWORD="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")" \
   MIG_DECISIONS="$dec" MIG_NODE=env MIG_CLI="$BIN" MIG_REPORT_DIR="$WORK/report" \
-    bash "$HERE/model-migration-run.sh" || die "перенос упал — отчёт в $WORK/report"
+    bash "$HERE/model-migration-run.sh" | tee "$WORK/migrate.log"
+  [ "${PIPESTATUS[0]}" = 0 ] || die "перенос упал — отчёт в $WORK/report"
+  note "перенос: $(grep -m1 'отпечатки двух прогонов совпали' "$WORK/migrate.log")"
 }
 
 switch() {
@@ -147,8 +176,8 @@ switch() {
 probe() {
   wait_up
   echo "/lore/version: $(get /lore/version)"
-  nonempty open_tasks; nonempty organizations
-  echo "LORE на перенесённой базе $DST отвечает"
+  nonempty open_tasks; nonempty organizations; nonempty repositories
+  note "LORE на перенесённой базе $DST: срезы open_tasks, organizations, repositories не пусты"
 }
 
 down() {

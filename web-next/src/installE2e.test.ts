@@ -72,6 +72,13 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(r.out).toMatch(/SHA256SUMS не сошлись/);
   });
 
+  // SPEC-LORE-INSTALLER-PIPELINE, «Готово, когда»: намеренно сломанный пакет (неверный SHA256) — красная труба с причиной.
+  it('намеренная порча (E2E_SABOTAGE=sha256) — красный с причиной, на целом пакете', () => {
+    const r = run(E2E, { E2E_VERSION: '1.18.0-rc.abcdef12', KKREPO_BASE: fakeRepo('1.18.0-rc.abcdef12'), E2E_WORK: fwd(dir('e2e-work-')), E2E_SABOTAGE: 'sha256' }, dir('e2e-'), ['fetch']);
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/порча[\s\S]*SHA256SUMS не сошлись/);
+  });
+
   it('приёмник переноса — только migration_dst*: рабочая база красная до любых действий', () => {
     const r = run(E2E, { E2E_VERSION: '1.18.0-rc.abcdef12', E2E_DST_DB: 'system_aida_lore' }, dir('e2e-'), ['plan']);
     expect(r.code).toBe(1);
@@ -82,9 +89,10 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     const r = run(E2E, { E2E_VERSION: '1.18.0-rc.abcdef12', MIG_SRC_DB: 'migration_src_2026_11_20' }, dir('e2e-'), ['plan']);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/fetch .*lore-installer-publish\.yml/);
-    expect(r.out).toMatch(/install .*deploy\/install\/install\.sh --build-from-source/);
+    expect(r.out).toMatch(/install .*install-bundle.*install\.sh --selftest.*install\.sh --build-from-source/);
     expect(r.out).toMatch(/migrate .*model-migration-run\.sh STAGE=full/);
-    expect(r.out).toMatch(/probe .*\/lore\/version.*open_tasks.*organizations/);
+    expect(r.out).toMatch(/probe .*\/lore\/version.*open_tasks.*organizations.*repositories/);
+    expect(r.out).toMatch(/probe .*версия пакета.*seed_drift/);
   });
 
   it('сам перенос не написан заново — вызывается model-migration-run.sh с бинарём пакета', () => {
@@ -92,7 +100,8 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(s).toMatch(/model-migration-run\.sh/);
     expect(s).toMatch(/MIG_CLI=/);
     expect(s).not.toMatch(/dst-fingerprint/); // сверку отпечатков делает переиспользуемый скрипт
-    expect(s).toMatch(/install\.sh/);
+    expect(s).toMatch(/install-bundle --out/);
+    expect(s).toMatch(/install\.sh" --selftest/);
   });
 });
 
@@ -126,6 +135,7 @@ describe('MIG-04 · workflow трубы', () => {
   it('ручной запуск и тег rc; логика — в скрипте, пакет — из kkRepo', () => {
     const w = read(WF);
     expect(w).toMatch(/workflow_dispatch:/);
+    expect(w).toMatch(/sabotage:/);
     expect(w).toMatch(/tags:\s*\n\s*- 'v\*-rc\*'/);
     expect(code(w)).toMatch(/bash \.github\/scripts\/lore-install-e2e\.sh/);
     expect(code(w)).toMatch(/ci-teardown\.sh/);

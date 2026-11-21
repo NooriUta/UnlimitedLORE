@@ -11,6 +11,8 @@ import path from 'node:path';
 export const VERSION = '0.1.0';
 // Порядок — порядок шагов переноса. write: команда пишет в новую базу (источник не пишет ни одна).
 export const COMMANDS = [
+  // MIG-04: шаг 0 — выложить вшитый пакет установки (install.sh, compose, .env.example); баз не касается (noEnv).
+  { name: 'install-bundle', module: () => import('./install-bundle-write.mjs'), write: false, noEnv: true, about: 'выложить пакет установки LORE (install.sh, compose, .env.example, README) в каталог --out [--force] — командный режим, без окна' },
   { name: 'connect', module: () => import('./probe.mjs'), write: false, about: 'проверить подключение: сервер отвечает, источник читается, есть ли новая база (--create-dst — создать пустую)' },
   { name: 'census', module: () => import('./edge-census.mjs'), write: false, about: 'перепись связей источника (--out файл.json)' },
   { name: 'orphans', module: () => import('./orphan-census.mjs'), write: false, about: 'перепись потеряшек: записи без обязательной связи (--out файл.json)' },
@@ -56,7 +58,7 @@ export function parseArgs(argv) {
   if (command === 'help') return { help: true };
   const known = COMMANDS.find(c => c.name === command);
   if (!known) return { error: `команды «${command}» нет; есть: ${COMMANDS.map(c => c.name).join(', ')}` };
-  if (!env && !process.env.MIG_ENV_FILE) return { error: 'не указан файл доступа: --env <файл>' };
+  if (!known.noEnv && !env && !process.env.MIG_ENV_FILE) return { error: 'не указан файл доступа: --env <файл>' };
   // MIG-01 (проба MDL-08, 20.11.2026): шаг связей без файла решений молча шёл «без решений» — вид продукта,
   // перегруппировка, задачи без спринта не применялись, а сверка говорила «без вида 17». Пишущая команда без него не идёт.
   if (known.write && !decisions && !process.env.MIG_DECISIONS_FILE) return { error: `команда «${known.name}» пишет в новую базу по решениям человека (статусы, вид продукта, перегруппировка, задачи без спринта): нужен --decisions <файл решений>` };

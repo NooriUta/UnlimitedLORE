@@ -3,16 +3,19 @@ name: LORE installer e2e (установка с нуля и перенос)
 # SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 · труба установщика. Владелица 21.11.2026: «давай сделаем трубу, которая будет
 # тестировать установку с нуля и миграцию»; «отдельную у инсталлера на основе наших наработок».
 #
-# Свой здесь только каркас: пустая машина → пакет из kkRepo → установка → перенос → сверка → проба.
-# Шаги переиспользуются (логика — .github/scripts/lore-install-e2e.sh):
-#   А. пакет   — выложенный lore-installer-publish.yml (kkRepo, SHA256SUMS сверяются заново);
-#      установка — deploy/install/install.sh из архива исходников пакета (--build-from-source), вход выключен;
-#   Б. перенос — .github/scripts/model-migration-run.sh STAGE=full (как lore-migration-snapshot.yml): два прогона и
-#      сверка отпечатков; источник — снимок прода migration_src_* на ci-server (его делает lore-migration-snapshot.yml
-#      action=snapshot), приёмник — ArcadeDB самой установки;
-#   проба — /lore/version, срезы open_tasks и organizations (смоук стенда входит через Keycloak и на установке без
-#   входа не годится — пробу делает скрипт).
-#   Уборка — .github/scripts/ci-teardown.sh (как lore-migrate-live-check.yml): одноразовый проект compose, свои тома.
+# Спека — SPEC-LORE-INSTALLER-PIPELINE. Свой здесь только каркас: одноразовая площадка → пакет → установка → перенос →
+# сверка → проба → уборка. Логика — .github/scripts/lore-install-e2e.sh. Шаг → откуда:
+#   пакет                 lore-installer-publish.yml (kkRepo, каталог версии; SHA256SUMS сверяются заново)
+#   пакет установки       lore-migrate install-bundle — вшитый deploy/install (командный режим окна «План установки»)
+#   самопроверка          deploy/install/install.sh --selftest
+#   установка с нуля (А)  deploy/install/install.sh --build-from-source из src/ пакета, вход выключен
+#   снимок прода          lore-migration-snapshot.yml action=snapshot → migration_src_* на ci-server (вход source)
+#   перенос (Б)           .github/scripts/model-migration-run.sh STAGE=full: connect, два прогона transfer → edges →
+#                         dst-fingerprint и сверка отпечатков (тот же, что lore-migration-snapshot.yml action=migrate)
+#   сверка «до и после»   сверки transfer/edges конвейера (отчёты run1/run2 — артефакт)
+#   проба живой LORE      /lore/version, /lore/model, срезы open_tasks, organizations, repositories — скриптом:
+#                         смоук стенда (web-next/e2e/stand) входит через Keycloak, на установке без входа не годится
+#   уборка                lore-install-e2e.sh down (compose down -v) + .github/scripts/ci-teardown.sh
 #
 # Где: раннер ci-server (ubuntu-latest — контейнер с docker хоста, как migrate live check). Установка — отдельным
 # проектом compose lore-e2e-<run_id> со своей ArcadeDB и MinIO; порты наружу не публикуются, джоба подключается к
@@ -29,6 +32,13 @@ on:
         description: 'Снимок прода migration_src_* на ci-server (источник переноса)'
         required: true
         default: 'migration_src_2026_11_20'
+      # SPEC-LORE-INSTALLER-PIPELINE «Готово, когда»: намеренно сломанный пакет обязан дать красную трубу с причиной.
+      sabotage:
+        description: 'none — обычный прогон; sha256 — испортить бинарь после скачивания (труба обязана покраснеть на сверке)'
+        required: true
+        default: 'none'
+        type: choice
+        options: ['none', 'sha256']
   push:
     tags:
       - 'v*-rc*'
@@ -71,6 +81,8 @@ jobs:
         run: bash .github/scripts/lore-install-e2e.sh plan
 
       - name: А · пакет из kkRepo и сверка SHA256SUMS
+        env:
+          E2E_SABOTAGE: ${{ inputs.sabotage || 'none' }}
         run: bash .github/scripts/lore-install-e2e.sh fetch
 
       - name: А · установка с нуля
