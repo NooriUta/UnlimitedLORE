@@ -3,7 +3,7 @@
 // во всю ширину внизу окна — сеть, проекты, свежесть (когда сервер ответил).
 // Честно: «сервер не ответил» ≠ «ещё не спрашивали»; «нет сети» — словами.
 import { afterEach, describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen , cleanup } from '@testing-library/react';
 import { KitLangProvider } from '@seidr/kit';
 import { StatusBar } from './StatusBar';
 import { createServerPulse } from './serverPulse';
@@ -23,13 +23,19 @@ describe('строка состояния', () => {
     expect(screen.getByText('в сети')).toBeTruthy();
   });
 
-  it('проекты: без выбора — «все», с выбором — число (выбор в адресе ?proj=)', () => {
+  // PS-PRODUCT-FILTER (владелица 21.11.2026): верхний фильтр — по продукту; без выбора — «продукты: все».
+  it('без выбора — «продукты: все»; выбор проектов в адресе ?proj= — их число; выбор продуктов ?prod= — их число', () => {
     const { unmount } = show();
-    expect(screen.getByText('проекты: все')).toBeTruthy();
+    expect(screen.getByText('продукты: все')).toBeTruthy();
     unmount();
     window.history.replaceState(null, '', '/?proj=AIDA%2FminiLORE,NooriUta%2FUnlimitedLORE');
     show();
     expect(screen.getByText('проекты: 2')).toBeTruthy();
+    cleanup();
+    window.history.replaceState(null, '', '/?prod=HARPA');
+    show();
+    expect(screen.getByText('продуктов: 1')).toBeTruthy();
+    window.history.replaceState(null, '', '/');
   });
 
   it('свежесть: «ещё не спрашивали» → время ответа сервера → «сервер не ответил»', async () => {

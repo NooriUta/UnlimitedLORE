@@ -169,10 +169,11 @@ describe('оболочка v2 (S4-01)', () => {
   // S9-05 × MC-07 (приёмка v1.17.20): щелчок по человеку в паспорте проекта вёл на
   // ?sec=user&open=…, а открывались «Новости»: «Люди» (уровень admin) не в меню, и
   // оболочка откатывалась к первому пункту. Раздел вне меню открывается по адресу.
-  it('?sec=user&open=… открывает раздел человека, а не «Новости», хотя «Людей» нет в меню', () => {
+  // Владелица 21.11.2026: «Люди» теперь в меню (группа «Организация»); раздел по адресу открывается как раньше.
+  it('?sec=user&open=… открывает раздел человека, а не «Новости»; «Люди» — пункт меню', () => {
     const { container } = render(<App path="/" win={fakeWin('?mod=forseti&sec=user&open=kc-1')} storage={mem()} narrow={false} />);
     const side = screen.getByRole('navigation', { name: 'Разделы' });
-    expect(within(side).queryByRole('link', { name: 'Люди' })).toBeNull();
+    expect(within(side).getByRole('link', { name: 'Люди' })).toBeTruthy();
     expect(container.querySelector('[data-section="user"]')).toBeTruthy();
     expect(container.querySelector('[data-section="news"]')).toBeNull();
   });

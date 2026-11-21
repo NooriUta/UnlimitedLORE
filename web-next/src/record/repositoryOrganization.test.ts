@@ -13,14 +13,15 @@ const params = (href: string) => new URLSearchParams(href.slice(href.indexOf('?'
 const URL = 'https://git.seidrstudio.pro/AIDA/UnlimitedLORE';
 
 describe('репозиторий и организация — разделы и паспорта', () => {
-  it('оба типа — разделы оболочки в группе «Система», адрес записи и паспорт фасада', () => {
+  it('оба типа — разделы оболочки: репозиторий — «Устройство», организация — «Организация», адрес записи и паспорт фасада', () => {
     for (const t of ['repository', 'organization']) {
       expect(V2_SECTIONS as readonly string[]).toContain(t);
       expect(sectionOfType(t)).toBe(t);
       expect(PASSPORT_TYPES as readonly string[]).toContain(t);
     }
-    const sys = v2Config('ru').menu.groups.find(g => g.id === 'system');
-    expect(sys?.items.map(i => i.id)).toEqual(expect.arrayContaining(['repository', 'organization']));
+    const grp = (id: string) => v2Config('ru').menu.groups.find(g => g.id === id)?.items.map(i => i.id) ?? [];
+    expect(grp('system')).toContain('repository');
+    expect(grp('org')).toContain('organization');
     const h = recordHref('repository', URL);
     expect(h, 'ключ — адрес со «://» — доходит до паспорта целиком').not.toBeNull();
     expect(readRoute(params(h!)).record).toEqual({ kind: 'repository', id: URL });

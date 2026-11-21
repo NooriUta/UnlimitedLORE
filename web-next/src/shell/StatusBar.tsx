@@ -6,6 +6,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react
 import { useKitLang } from '@seidr/kit';
 import { appT } from '../i18n';
 import { useProjectScope } from '../scope/ProjectScope';
+import { useProductScope } from '../scope/ProductScope';
 import { serverPulse as defaultPulse, type ServerPulse } from './serverPulse';
 
 function useOnline(): boolean {
@@ -24,6 +25,8 @@ export function StatusBar({ pulse = defaultPulse, end }: { pulse?: ServerPulse; 
   const lang = useKitLang();
   const online = useOnline();
   const projects = useProjectScope();
+  // PS-PRODUCT-FILTER: верхний фильтр — по продукту; выбранные продукты называются раньше проектов.
+  const products = useProductScope();
   const p = useSyncExternalStore(pulse.subscribe, pulse.get, pulse.get);
   const time = (ms: number) => new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
   const failed = p.failAt !== undefined && (p.okAt === undefined || p.failAt > p.okAt);
@@ -33,8 +36,9 @@ export function StatusBar({ pulse = defaultPulse, end }: { pulse?: ServerPulse; 
   return (
     <>
       <span className="v2-status__item" data-tone={online ? undefined : 'wrn'}>{appT(lang, online ? 'status.online' : 'status.offline')}</span>
-      <span className="v2-status__item" title={projects.join(', ') || undefined}>
-        {projects.length ? appT(lang, 'status.projectsN', { n: projects.length }) : appT(lang, 'status.projectsAll')}
+      <span className="v2-status__item" title={(products.length ? products : projects).join(', ') || undefined}>
+        {products.length ? appT(lang, 'status.productsN', { n: products.length })
+          : projects.length ? appT(lang, 'status.projectsN', { n: projects.length }) : appT(lang, 'status.productsAll')}
       </span>
       <span className="v2-status__item" data-tone={failed ? 'dng' : undefined}>{server}</span>
       {end && <span className="v2-status__end">{end}</span>}
