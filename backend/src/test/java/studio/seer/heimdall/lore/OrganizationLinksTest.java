@@ -22,10 +22,12 @@ class OrganizationLinksTest {
     static final Map<String, String[]> EDGES = Map.of(
         "projects", new String[]{"ORG_HAS_PROJECT", "project"},
         "products", new String[]{"ORG_HAS_PRODUCT", "product"},
-        "members", new String[]{"ORG_MEMBER", "user"});
+        "members", new String[]{"ORG_MEMBER", "user"},
+        // владелица 21.11.2026: «в админке кроме организации должен быть и срез репозиториев к ней»
+        "repositories", new String[]{"ORG_HAS_REPOSITORY", "repository"});
 
     @Test
-    void связи_организации_вкладкой_связи_тремя_группами_управляемые() {
+    void связи_организации_вкладкой_связи_четырьмя_группами_управляемые() {
         LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get("organization");
         for (Map.Entry<String, String[]> e : EDGES.entrySet()) {
             LoreRecordRegistry.Relation r = d.relations().stream().filter(x -> x.key().equals(e.getKey())).findFirst().orElse(null);
@@ -35,14 +37,15 @@ class OrganizationLinksTest {
             assertNotNull(LoreRecordRelationRoutes.find("organization", r.rel(), "out"), e.getKey() + ": нет пути привязки");
         }
         LoreRecordRegistry.LinkTab tab = d.linkTabs().stream().filter(t -> t.key().equals("links")).findFirst().orElseThrow();
-        assertEquals(List.of("ORG_HAS_PROJECT", "ORG_HAS_PRODUCT", "ORG_MEMBER"), tab.rels().stream().map(LoreRecordRegistry.TabRel::rel).toList());
-        assertEquals(java.util.Set.of("projects", "products", "members"), LoreRecordValues.readByEdge("organization"),
+        assertEquals(List.of("ORG_HAS_PROJECT", "ORG_HAS_PRODUCT", "ORG_MEMBER", "ORG_HAS_REPOSITORY"), tab.rels().stream().map(LoreRecordRegistry.TabRel::rel).toList());
+        assertEquals(java.util.Set.of("projects", "products", "members", "repositories"), LoreRecordValues.readByEdge("organization"),
             "связи организации читаются по ребру");
     }
 
     @Test
     void у_проекта_продукта_человека_связь_организации_только_чтение() {
-        Map<String, String> want = Map.of("project", "ORG_HAS_PROJECT", "product", "ORG_HAS_PRODUCT", "user", "ORG_MEMBER");
+        Map<String, String> want = Map.of("project", "ORG_HAS_PROJECT", "product", "ORG_HAS_PRODUCT", "user", "ORG_MEMBER",
+            "repository", "ORG_HAS_REPOSITORY");
         for (Map.Entry<String, String> e : want.entrySet()) {
             LoreRecordRegistry.Relation r = LoreRecordRegistry.get(e.getKey()).relations().stream()
                 .filter(x -> x.key().equals("organizations")).findFirst().orElse(null);
@@ -52,6 +55,12 @@ class OrganizationLinksTest {
             assertTrue(LoreRecordValues.readByEdge(e.getKey()).contains("organizations"),
                 e.getKey() + ": по ребру — без новой колонки в главном срезе (на старой схеме ребра нет)");
         }
+    }
+
+    @Test
+    void путь_привязки_репозитория_к_организации_есть() {
+        assertEquals(List.of("KnowRepository", "url"), LoreOrganizationResource.target("ORG_HAS_REPOSITORY"));
+        assertNotNull(LoreRecordRelationRoutes.find("organization", "ORG_HAS_REPOSITORY", "out"));
     }
 
     @Test
@@ -88,7 +97,7 @@ class OrganizationLinksTest {
         assertEquals(List.of("KnowDictEntry", "code"), LoreOrganizationResource.target("ORG_HAS_PRODUCT"));
         assertEquals(List.of("KnowUser", "kc_sub"), LoreOrganizationResource.target("ORG_MEMBER"));
         assertNull(LoreOrganizationResource.target("BELONGS_TO_PROJECT"), "чужое ребро — не путь организации");
-        for (String e : List.of("ORG_HAS_PROJECT", "ORG_HAS_PRODUCT", "ORG_MEMBER"))
+        for (String e : List.of("ORG_HAS_PROJECT", "ORG_HAS_PRODUCT", "ORG_MEMBER", "ORG_HAS_REPOSITORY"))
             assertTrue(LoreModelConsistency.MODEL_SCHEMA_EDGES.containsKey(e), e);
     }
 }

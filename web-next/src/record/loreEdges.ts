@@ -121,6 +121,7 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   USES_REPOSITORY: { ru: 'использует', en: 'uses', color: '--t2' },
   ORG_HAS_PROJECT: { ru: 'проект организации', en: 'organization project', color: '--t2' },
   ORG_HAS_PRODUCT: { ru: 'продукт организации', en: 'organization product', color: '--t2' },
+  ORG_HAS_REPOSITORY: { ru: 'репозиторий организации', en: 'organization repository', color: '--t2' },
   ORG_MEMBER: { ru: 'в организации', en: 'organization member', color: '--t2' },
   BELONGS_TO: { ru: 'принадлежит', en: 'belongs to', color: '--t3', layer: S },
   PART_OF: { ru: 'входит в', en: 'part of', color: '--t3', layer: S },

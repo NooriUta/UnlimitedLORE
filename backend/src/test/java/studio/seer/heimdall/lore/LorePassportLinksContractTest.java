@@ -114,6 +114,8 @@ class LorePassportLinksContractTest {
         new Fact("organization", "ORG_HAS_PROJECT", "project", "LoreOrganizationResource organization/link"),
         new Fact("organization", "ORG_HAS_PRODUCT", "product", "LoreOrganizationResource organization/link"),
         new Fact("organization", "ORG_MEMBER", "user", "LoreOrganizationResource organization/link"),
+        // владелица 21.11.2026: «в админке кроме организации должен быть и срез репозиториев к ней»
+        new Fact("organization", "ORG_HAS_REPOSITORY", "repository", "LoreOrganizationResource organization/link; перенос 1.18 (orgs.mjs)"),
         // проект
         new Fact("sprint", "BELONGS_TO_PROJECT", "project", "LoreSprintTaskResource sprint_new / sprint_link"),
         new Fact("adr", "BELONGS_TO_PROJECT", "project", "LoreAdrResource adr_link(project)"),
@@ -290,6 +292,7 @@ class LorePassportLinksContractTest {
         "ORG_HAS_PROJECT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
         "ORG_HAS_PRODUCT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
         "ORG_MEMBER", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_HAS_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
         // MT-MCP-TRUTH A6, владелица 19.11.2026 «1а»: ответственный вопроса — ребро; тип заводит перенос 1.18 (question-owner.mjs)
         // и первая запись ответственного (QuestionOwner.ensureType).
         "ANSWERABLE_BY", "схема из модели (перенос 1.18, MT-MCP-TRUTH A6); в старой схеме шагов V этого ребра нет — тип заводит перенос и первая запись ответственного",

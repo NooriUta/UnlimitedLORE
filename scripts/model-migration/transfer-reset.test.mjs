@@ -44,7 +44,7 @@ test('новые связи модели сессий — свои типы: п�
 test('типы шага репозиториев и организации — свои: повторный перенос с --reset их пересоздаёт', async () => {
   const { REPO_TYPES } = await import('./repos.mjs');
   const own = ownTypes();
-  for (const t of ['KnowRepository', 'KnowOrganization', 'HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', 'ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER']) {
+  for (const t of ['KnowRepository', 'KnowOrganization', 'HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', 'ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER', 'ORG_HAS_REPOSITORY']) {
     assert.ok(REPO_TYPES.includes(t), t + ' в списке типов шага');
     assert.ok(own.includes(t), t);
   }
