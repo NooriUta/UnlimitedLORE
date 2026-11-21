@@ -213,8 +213,10 @@ describe('S7B-28 · «Люди и их проекты» и «Проекты» �
   });
 });
 
-describe('S7B-01 · вход из меню аватара', () => {
-  it('в меню аватара — ссылка «Админка» на модуль', async () => {
+// Владелица 21.11.2026: вход в админку перенесён в левое меню (группа «Личное», после «Настроек», только admin/superadmin —
+// adminMenuEntry.test.tsx); в меню аватара ссылки нет.
+describe('S7B-01 · вход в админку не в меню аватара', () => {
+  it('в меню аватара ссылки «Админка» нет', async () => {
     const backing = () => {
       const m = new Map<string, string>();
       return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); }, removeItem: (k: string) => { m.delete(k); } } as unknown as Storage;
@@ -223,7 +225,6 @@ describe('S7B-01 · вход из меню аватара', () => {
       root={document.createElement('div')} loadPalettes={async () => ({ options: [], default: null, fromModel: false, notes: [] })} />);
     fireEvent.click(screen.getByRole('button', { name: /личные настройки/i }));
     const dlg = await screen.findByRole('dialog');
-    const link = within(dlg).getByRole('link', { name: 'Админка' });
-    expect(link.getAttribute('href')).toBe('/?mod=admin');
+    expect(within(dlg).queryByRole('link', { name: 'Админка' })).toBeNull();
   });
 });
