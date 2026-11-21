@@ -69,6 +69,8 @@ export interface KitDocRelation {
    * из `values` каждой ссылки. Нет — общие колонки, как раньше.
    */
   props?: { key: string; label: string }[];
+  /** Привязка требует причины (MDL-13): уходит в KitRelationDef как есть — «Привязать» спросит причину. */
+  reasonRequired?: boolean;
 }
 
 export interface KitDocLink {
@@ -136,7 +138,7 @@ export interface PassportFromDocOptions {
    * принадлежат связи. Без них одна запись на двух отрезках выглядела двумя одинаковыми строками
    * (пилот 16.11). Нет — общие колонки списка.
    */
-  partColumns?: (part: KitDocPart) => (string | { key: string; label?: string })[] | undefined;
+  partColumns?: (part: KitDocPart) => KitPartColumns | undefined;
 }
 
 export interface PassportFromDoc {
@@ -150,8 +152,20 @@ export interface PassportFromDoc {
 
 /** Общие колонки таблицы связей (как у NestedList): Статус · Вид · Код · Запись. */
 export const DOC_NESTED_COLUMNS = ['status', 'kind', 'id', 'title'] as const;
+type KitPartColumn = string | { key: string; label?: string };
+/**
+ * Колонки таблицы части: список — сверх общих ({@link DOC_NESTED_COLUMNS}); {@code {columns, base: false}} —
+ * свой набор целиком (часть без статуса и с одним видом детей: общие колонки — шум; метрики гейта LORE, 20.11.2026).
+ */
+export type KitPartColumns = KitPartColumn[] | { columns: KitPartColumn[]; base: false };
 /** Ключ блока «не описано в модели» в полях записи. */
 export const UNMODELED_KEY = '_unmodeled';
+
+/** MDL-12: поля шапки строкой рядом со статусом (служебный ключ record.fields). */
+export const STATUS_NOTES_KEY = '_status_notes';
+export interface StatusNote { key: string; label: string; value: string }
+/** Поля шапки, у которых своё место (заголовок, статус, надзаголовок с кодом, цвет, вид гейта). */
+const HEAD_OWN = new Set(['title', 'status', 'code', 'short_code', 'color', 'qg_type']);
 
 /**
  * `body_md` — самостоятельный раздел тела, а не копия другого: схема называет его полем группы
@@ -217,6 +231,12 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   // Вне модели — последним полем свойств, только чтение (ключ служебный, с полями модели не совпадёт).
   const unmodeled = c.unmodeled && Object.keys(c.unmodeled).length ? c.unmodeled : null;
   if (unmodeled) record.fields[UNMODELED_KEY] = unmodeled;
+  // MDL-12: прочие поля шапки («Ждём», «Причина статуса») — строкой рядом со статусом. Значения нет — заметки нет.
+  const statusNotes: StatusNote[] = c.schema.fields
+    .filter(f => f.group === 'head' && !HEAD_OWN.has(f.key))
+    .map(f => ({ key: f.key, label: f.label, value: c.values[f.key] }))
+    .filter((n): n is StatusNote => typeof n.value === 'string' && n.value.trim() !== '');
+  if (statusNotes.length) record.fields[STATUS_NOTES_KEY] = statusNotes;
   // Связь-свойство без поля в схеме — поле-ссылка: иначе значение не показалось бы вовсе,
   // а в блоке связей стояло бы «Проекты 0».
   const propRels = c.schema.relations.filter(r => docPlaceOf(r) === 'prop' && !props.some(f => f.key === r.key));
@@ -249,11 +269,14 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   const partBody = (p: KitDocPart, ctx: KitCtx): ReactNode => {
     if (p.items.length === 0) return noLinks;
     // Колонки по связи: ключ и подпись приложения (подписи — list.fieldLabels, K4-FACET-LABELS: поля вне вида).
-    const extra = opts.partColumns?.(p)?.map(c => (typeof c === 'string' ? { key: c } : c));
+    const spec = opts.partColumns?.(p);
+    const own = spec && !Array.isArray(spec) ? spec : null;
+    const list: KitPartColumn[] | undefined = spec === undefined ? undefined : Array.isArray(spec) ? spec : spec.columns;
+    const extra = list?.map(c => (typeof c === 'string' ? { key: c } : c));
     const labels = Object.fromEntries((extra ?? []).filter(c => c.label).map(c => [c.key, c.label!]));
     return createElement(NestedList, {
       ctx, records: p.items.map(i => partRecord(p, i)), note: partShown(p),
-      ...(extra ? { columns: [...DOC_NESTED_COLUMNS, ...extra.map(c => c.key)] } : {}),
+      ...(extra ? { columns: [...(own ? [] : DOC_NESTED_COLUMNS), ...extra.map(c => c.key)] } : {}),
       ...(Object.keys(labels).length ? { fieldLabels: labels } : {}),
     });
   };

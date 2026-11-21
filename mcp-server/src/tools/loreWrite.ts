@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 import { registerEntity } from './entity.js';
 import { recordingInputKeys } from './toolInputKeys.js';
+import { bodyFileDescription, resolveBodyFiles } from './bodyFile.js';
 
 // ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
 // WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
@@ -1002,15 +1003,19 @@ export function registerLoreWrite(rawServer: McpServer): void {
   // метаданных значило бы прятать это различие.
   server.tool(
     'sprint_plan_set',
-    'Set SCD2 plan fields of a KnowSprint: priority, planned_start_date/planned_end_date (YYYY-MM-DD), ' +
-      'track_id. Opens a NEW hist revision (close-open), carrying everything else forward. ' +
-      'At least one field required. Does NOT change status — use status_set. Mutates system_aida_lore.',
+    'Set plan fields of a KnowSprint: priority, planned_start_date/planned_end_date (YYYY-MM-DD) open a NEW hist ' +
+      'revision (SCD2 close-open), carrying everything else forward. track_id sets the sprint\'s track: on a model-1.18 ' +
+      'base the track is the historic edge ON_TRACK sprint → track (KnowTrack, MDL-13) — setting another track closes the ' +
+      'previous edge (valid_to) instead of erasing it, and a track-only call opens no plan revision; track_id "" removes the ' +
+      'track (closes the edge). Codes come from slice track_options; an unknown code is refused (422 TRACK_NOT_FOUND). On a ' +
+      'pre-1.18 base the track is still the version field track_id. At least one field required. Does NOT change status — ' +
+      'use status_set. Mutates system_aida_lore.',
     {
       sprint_id:          z.string().describe('e.g. "SPRINT_LORE_ADMIN_PANEL"'),
       priority:           z.string().optional().describe('e.g. "high" | "normal" | "low" (dict priority)'),
       planned_start_date: z.string().optional().describe('YYYY-MM-DD'),
       planned_end_date:   z.string().optional().describe('YYYY-MM-DD'),
-      track_id:           z.string().optional(),
+      track_id:           z.string().optional().describe('track code from slice track_options (e.g. "2" = Hound / Parser); "" removes the track'),
       expected: z.object({
         priority:           z.string().nullable().optional(),
         planned_start_date: z.string().nullable().optional(),
@@ -1049,7 +1054,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       sprint_id: z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       rel:       z.enum(['project', 'dep', 'component', 'milestone']),
       target_id: z.string().describe('git_project slug (rel="project"), depended-on sprint_id (rel="dep"), component_id (rel="component"), or milestone_id (rel="milestone")'),
-      kind:      z.enum(['hard', 'soft', 'gate', 'informs']).optional().default('soft').describe('rel="dep" only'),
+      kind:      z.enum(['blocks', 'waits', 'soft', 'gate', 'informs', 'relates', 'hard']).optional().default('soft').describe('rel="dep" only; hard = old synonym of blocks (MDL-13 merged dictionary)'),
       reason:    z.string().optional().describe('rel="dep" only: brief reason for the dependency'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
@@ -1396,6 +1401,15 @@ export function registerLoreWrite(rawServer: McpServer): void {
   const CLOSED_VS_DROPPED =
     ' closed vs dropped: closed = answered/obsolete WITH a decision (set only via question_link rel="answers"; ' +
     'one decision may answer several questions); dropped = decided NOT to answer. Never use dropped for "obsolete".';
+  // MT-MCP-TRUTH A6 (владелица 19.11.2026, «1а»): ответственный — ребро ANSWERABLE_BY к записи реестра, а не текст.
+  // Прежнее «who owns getting the answer» молчало об этом и звало писать прозу.
+  const QUESTION_OWNER =
+    'responsible for getting the answer — a RECORD of the LORE registry, not free text: a person (login, e.g. ' +
+    '"omiloreadmin", or kc_sub) or an agent (actor_id, e.g. "AGENT-FULL-…"). The owner\'s spellings owner/владелец/' +
+    'владелица/alexa are mapped to the user omiloreadmin. Stored as the edge ANSWERABLE_BY (history kept: a change ' +
+    'closes the previous edge); the old text field owner is no longer written. Unknown value → 422 OWNER_UNKNOWN with ' +
+    'the reason, nothing written. When a decision answers the question (question_link rel="answers"), the decision\'s ' +
+    'author becomes the owner automatically.';
   definePostTool(server, {
     name: 'question_new',
     description: 'Create or update a KnowQuestion — an OPEN QUESTION (ADR-020/021), the "what have we not answered yet" ' +
@@ -1411,7 +1425,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       component_id: z.string().optional(),
       due_date:     z.string().optional().describe('YYYY-MM-DD — the answer deadline (drives overdue)'),
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
-      owner:        z.string().optional().describe('who owns getting the answer'),
+      owner:        z.string().optional().describe(QUESTION_OWNER),
       raised_by:    z.string().optional(),
       project:      PROJECT_PARAM,
     },
@@ -1441,7 +1455,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       component_id: z.string().optional(),
       due_date:     z.string().optional(),
       priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
-      owner:        z.string().optional(),
+      owner:        z.string().optional().describe(QUESTION_OWNER),
       raised_by:    z.string().optional(),
     },
     refuse: (a) => (a.status === 'closed' ? QUESTION_CLOSE_GUIDANCE : null),
@@ -1455,7 +1469,9 @@ export function registerLoreWrite(rawServer: McpServer): void {
 
   server.tool(
     'question_link',
-    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed); ' +
+    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed; ' +
+      'the decision\'s author — author of its first version — becomes the question owner, edge ANSWERABLE_BY; author ' +
+      'unknown → owner untouched, reason in owner_unchanged); ' +
       'rel="raised_in": where it was raised (needs target_type adr|sprint|task); rel="gates": it blocks a task (GATES — ' +
       'the gate that keeps the register self-cleaning); rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
       'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). Idempotent. Mutates system_aida_lore.',
@@ -1747,6 +1763,7 @@ export function registerLoreWrite(rawServer: McpServer): void {
       project:      z.string().optional().describe('owner project slug (KnowGitProject) — creates BELONGS_TO_PROJECT; required before status=active'),
       retired_reason: z.string().optional().describe('why the gate is retired — required with status=retired'),
       qg_type:      z.string().optional().describe('SPRINT_QG_REBUILD/QG-04: gate type, code of dictionary qg_type — universal: code | cicd | sec | know | doc; project: test | perf | data | ops | ux (lowercase)'),
+      scope:        z.enum(['global', 'project']).optional().describe('SPRINT_QG_REBUILD/QG-01: global = common gate, no owner project (its project links are removed; visible to every project, checks all projects; may be active without project); project = bound to exactly one project (pass project or have one already)'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/quality-gate', p)); }
@@ -1781,7 +1798,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'Idempotent — upserts by doc_id (only provided fields are set; omitted fields keep their ' +
       'existing value). Mutates system_aida_lore. ' +
       'Prefer content_md_en/content_md_ru (clean Markdown, rendered in-DOM with mermaid support) ' +
-      'over content_html, which is a legacy field kept for pre-existing HTML-fragment docs.',
+      'over content_html, which is a legacy field kept for pre-existing HTML-fragment docs. ' +
+      'Large bodies: pass content_md_ru_file / content_md_en_file / content_html_file (absolute path on the machine ' +
+      'running this MCP, inside LORE_MCP_FILE_ROOTS, max 20 MB, UTF-8) instead of the inline field — the MCP reads ' +
+      'the file itself. Not available in host mode (LORE_MCP_TRANSPORT=http): pass the content inline there.',
     {
       doc_id:         z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
       title:          z.string().optional().describe('required on first creation; omit on a content-only update to leave the existing title unchanged'),
@@ -1791,7 +1811,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
       file_path:      z.string().optional(),
       content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
       content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
-      content_html:   z.string().optional().describe('Legacy: HTML content (100 KB max), rendered sandboxed'),
+      content_html:   z.string().optional().describe('Legacy: HTML content; no size limit is enforced. Rendered in a sandbox (SandboxedHtmlFrame). For new docs prefer content_md_ru / content_md_en'),
+      content_md_en_file: z.string().optional().describe(bodyFileDescription('content_md_en')),
+      content_md_ru_file: z.string().optional().describe(bodyFileDescription('content_md_ru')),
+      content_html_file:  z.string().optional().describe(bodyFileDescription('content_html')),
       parent_doc_id:  z.string().optional().describe(
         'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
         'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
@@ -1802,8 +1825,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
     },
     async ({ project, ...p }) => {
       if (projectMissing(project)) return projectRequired();
+      const body = await resolveBodyFiles(p);
+      if (typeof body === 'string') return err(new Error(body));
       try {
-        const res = (await lorePost('/lore/doc', p)) as Record<string, unknown>;
+        const res = (await lorePost('/lore/doc', body)) as Record<string, unknown>;
         return json({ ...res, ...(await inlineProject('doc', p.doc_id, project)) });
       } catch (e) { return err(e); }
     },
@@ -2472,14 +2497,19 @@ export function registerLoreWrite(rawServer: McpServer): void {
       sort_order:    z.number().int().optional().describe('display order within the domain'),
       is_active:     z.boolean().optional().describe('soft-delete flag; default true'),
       is_extensible: z.boolean().optional().describe('true = admins may add values via UI; default false'),
-      kind:          z.enum(['tech', 'service']).optional().describe('only dict_type="product": tech = technology product (has a git repo), service = service/organisational product (no git required). D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE; other dictionaries refuse kind with 400'),
+      kind:          z.union([z.string(), z.array(z.string()).min(1)]).optional().describe('entry kind — only for dictionaries that have kinds; others refuse it with 400. ' +
+        'dict_type="product": a SET (ADR-LORE-044) — ["tech"], ["service"] or ["tech","service"]; tech = technology product (has a git repo), ' +
+        'service = service/organisational product (no git required); an empty set is refused, a plain string is read as a set of one. ' +
+        'dict_type="qg_type": ONE string, "universal" or "project". Changing the kind of an existing entry requires reason'),
+      reason:        z.string().max(500).optional().describe('why this edit is made — one sentence; stored on the new history version (change_reason). ' +
+        'REQUIRED when the kind of an existing entry changes (400 otherwise); optional for other edits'),
       human_approval: z.string().max(300).optional().describe('WHO approved and WHERE, e.g. "omiloreadmin: minilore channel 09.11". Dictionaries are human-only; the full profile may write only with a named human approval (owner decision 09.11.2026). Logged on the server.'),
     },
     headers: ({ human_approval }) =>
       human_approval && human_approval.trim() ? { 'X-Lore-Human-Approval': encodeURIComponent(human_approval.trim()) } : undefined,
     path: '/lore/dict/entry',
-    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind }) =>
-      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind }),
+    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind, reason }) =>
+      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind, reason }),
   });
 
   server.tool(

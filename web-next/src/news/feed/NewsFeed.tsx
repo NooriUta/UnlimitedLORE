@@ -11,7 +11,7 @@
 // нижний лист). Карточки метрик, разрез, матрица, сгорание, знания — по
 // нажатию «все метрики». Ничего не удалено: всё в одном действии.
 import { kitMinute } from '@seidr/kit/core';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, Fragment, useContext, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { BucketFigures, GameIcon, PersonFace } from '@seidr/kit';
 import { Pill } from '@seidr/kit';
@@ -734,7 +734,7 @@ function FeedDays({ data, query: q, lang, tz, hrefOf, onOpen, open, setOpen }: F
               </h3>
               {isOpen && <DayFigures day={day} data={data} t={t} lang={lang} />}
               {isOpen && (axis === 'day'
-                ? <CappedRows list={events} fold={dayFold} foldKey={day} lang={lang}
+                ? <CappedRows list={unreadFirst(events)} fold={dayFold} foldKey={day} lang={lang} readSep={t('readSep')}
                     render={e => <Row key={e.key} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />} />
                 : <Buckets day={day} events={events} axis={axis} rank={rank} counts={serverDay(data, day)?.groups} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />)}
             </section>
@@ -765,17 +765,27 @@ interface BucketsProps extends Omit<FeedProps, 'data' | 'query'> {
  * названо числом, «ещё N» добавляет следующий шаг. Та же механика, что у
  * таблицы задач и списков (`useStepLimits`).
  */
-function CappedRows({ list, fold, foldKey, render, lang }: {
+function CappedRows({ list, fold, foldKey, render, lang, readSep }: {
   list: NewsEvent[];
   fold: StepLimits;
   foldKey: string;
   render: (e: NewsEvent) => ReactNode;
   lang: KitLang;
+  /** Подпись линии между непрочитанным и прочитанным (K4-NEWS-ROW-COLUMNS); нет — линии нет. */
+  readSep?: string;
 }) {
   const lim = fold.limitOf(foldKey);
+  const shown = list.slice(0, lim);
+  // «Новое» не пишется на каждой строке (владелица 21.11.2026): непрочитанное сверху, затем ОДНА линия.
+  const sepAt = readSep ? shown.findIndex((e, i) => i > 0 && !e.unread && shown[i - 1].unread) : -1;
   return (
     <ul className="sk-news__rows">
-      {list.slice(0, lim).map(render)}
+      {shown.map((e, i) => (
+        <Fragment key={e.key}>
+          {i === sepAt && <li className="sk-news__readsep"><span role="separator" aria-label={readSep} data-testid="news-read-sep">{readSep}</span></li>}
+          {render(e)}
+        </Fragment>
+      ))}
       {list.length > lim && (
         <li className="sk-news__morerow">
           <span className="sk-news__shown">{kitT(lang, 'kit.fold.shownOf', { shown: lim, total: list.length })}</span>
@@ -820,7 +830,7 @@ function Buckets({ day, events, axis, rank, counts, lang, tz, hrefOf, onOpen }: 
             </h4>
             {fig && <BucketFigures {...fig} testid={`news-gfigs-${k}`} />}
             {isOpen && (
-              <CappedRows list={list} fold={fold} foldKey={k} lang={lang}
+              <CappedRows list={unreadFirst(list)} fold={fold} foldKey={k} lang={lang} readSep={newsT(lang, 'readSep')}
                 render={e => <Row key={`${day}|${k}|${e.key}`} e={e} lang={lang} tz={tz} hrefOf={hrefOf} onOpen={onOpen} />} />
             )}
           </div>
@@ -856,65 +866,92 @@ function Row({ e, lang, tz, hrefOf, onOpen }: RowProps) {
       else { ev.preventDefault(); ev.currentTarget.click(); }
     }
   };
-  const main = (
-    <>
-      <GameIcon slug={NEWS_TYPE_META[e.type]?.icon ?? 'scroll-quill'} size={14} label={typeLabel(e.type, lang)} />
-      {/* Слот одной ширины: плашка своей ширины, заголовки — с одной линии (владелица 09.11). */}
-      <span className="sk-news__tagslot">
-        <span className="sk-news__tag" data-kind-tag={e.kind} data-tone={km.tone}
-          style={{ '--pill-c': `var(--${km.tone})` } as CSSProperties}>
-          <GameIcon slug={km.icon} size={12} />
-          {kindLabel(e.kind, lang)}
-        </span>
-      </span>
-      <span className="sk-news__rtitle">{e.title ?? e.el}</span>
-    </>
-  );
+  // K4-NEWS-ROW-COLUMNS (прототип docs/prototypes/k4-news-row-columns.html, «ок» владелицы 21.11.2026 на
+  // телефоне и десктопе): строка — девять ячеек одной сетки ленты (--news-cols в seidr.css), у всех строк
+  // столбцы на одних вертикалях. Пустая ячейка остаётся ячейкой: статус и «раз» не съезжают.
+  const kind = kindLabel(e.kind, lang);
+  const titleText = e.title ?? e.el;
+  const linked = href !== null || onOpen;
+  const timeTip = [e.time_local ? t('time.local.hint', { tz }) : t('time.none.hint'), utc ? `${utc} UTC · ${t('time.utc.hint')}` : null]
+    .filter(Boolean).join(' · ');
   return (
     <li className="sk-news__row" data-testid={`news-row-${e.key}`} data-type={e.type} data-unread={e.unread ? 'true' : undefined}>
-      {href !== null || onOpen
-        ? <a className="sk-news__link" href={href ?? '#'} onClick={open} onKeyDown={onKey} data-ref={e.el} data-ref-type={e.type}>{main}</a>
-        : <span className="sk-news__link is-static">{main}</span>}
-      <span className="sk-news__meta">
-        {e.unread && <span className="sk-news__unread">{t('unread')}</span>}
-        {/* Код — ссылка на запись (владелица 09.11: «нет переходов у кодов»). Если
-            заголовок строки и есть код (у спек), второй раз его не пишем — остаётся
-            только «скопировать»: «код повторяется, хотя копировать приятно». */}
-        {(e.title ?? e.el) !== e.el && (href !== null
-          ? <a className="sk-news__code" href={href} data-testid="news-code" onClick={open} onKeyDown={onKey} data-ref={e.el} data-ref-type={e.type}>{e.el}</a>
-          : <Pill variant="id">{e.el}</Pill>)}
-        <CopyCode code={e.el} label={t('code.copy', { code: e.el })} done={t('code.copied')} />
+      {/* Тип — он же «скопировать код» (владелица: «кнопку копировать убрать — можно с иконки первой копировать»). */}
+      <span className="sk-news__c sk-news__c--type" data-col="type">
+        <CopyCode code={e.el} label={t('code.copy', { code: e.el })} done={t('code.copied')}
+          icon={NEWS_TYPE_META[e.type]?.icon ?? 'scroll-quill'} kind={typeLabel(e.type, lang)} />
+      </span>
+      {/* Вид события — значок; слово — в подсказке (владелица: «со второго шильдика подписи — в подсказку»). */}
+      <span className="sk-news__c sk-news__c--kind" data-col="kind">
+        <span className="sk-news__kind" data-kind-tag={e.kind} data-tone={km.tone} role="img" aria-label={kind} title={kind}
+          style={{ '--pill-c': `var(--${km.tone})` } as CSSProperties}>
+          <GameIcon slug={km.icon} size={12} />
+        </span>
+      </span>
+      <span className="sk-news__c sk-news__c--title" data-col="title">
+        {linked
+          ? <a className="sk-news__link" href={href ?? '#'} onClick={open} onKeyDown={onKey} data-ref={e.el} data-ref-type={e.type} title={titleText}>
+              <span className="sk-news__rtitle">{titleText}</span>
+            </a>
+          : <span className="sk-news__link is-static" title={titleText}><span className="sk-news__rtitle">{titleText}</span></span>}
+        {e.future && <span data-testid="news-future"><Pill tone="wrn" title={t('future.hint')}>{t('future')}</Pill></span>}
+      </span>
+      {/* Код — ссылка на запись; без префикса SPRINT_ (место — в своём столбце), полностью — в подсказке.
+          Если заголовок и есть код (у спек), второй раз не пишется. */}
+      <span className="sk-news__c sk-news__c--code" data-col="code">
+        {titleText !== e.el && (href !== null
+          ? <a className="sk-news__code" href={href} data-testid="news-code" title={e.el} onClick={open} onKeyDown={onKey} data-ref={e.el} data-ref-type={e.type}>{shortCode(e.el)}</a>
+          : <span title={e.el}><Pill variant="id">{shortCode(e.el)}</Pill></span>)}
+      </span>
+      {/* Время — местное; UTC — в подсказке, а не отдельным столбцом. */}
+      <span className="sk-news__c sk-news__c--time" data-col="time">
         {e.time_local
-          ? <span className="sk-news__time" title={t('time.local.hint', { tz })} data-testid="news-time-local">{e.time_local}</span>
-          : <span className="sk-news__time is-none" title={t('time.none.hint')} data-testid="news-time-none">{t('time.none')}</span>}
-        {utc && <span className="sk-news__utc" title={t('time.utc.hint')} data-testid="news-time-utc">{`${utc} UTC`}</span>}
+          ? <span className="sk-news__time" title={timeTip} data-testid="news-time-local">{e.time_local}</span>
+          : <span className="sk-news__time is-none" title={timeTip} data-testid="news-time-none" aria-label={t('time.none')}>—</span>}
+      </span>
+      <span className="sk-news__c sk-news__c--where" data-col="where">
         {(e.projects ?? []).map(p => <span key={p} className="sk-news__proj" title={p}>{shortProject(p)}</span>)}
         {/* П24 (решение владелицы 10.11): связанное — ссылкой, если у него есть паспорт. */}
         {e.type === 'task' && e.sprint && <RowRef type="sprint" id={e.sprint} testId="news-ref-sprint" title={t('ref.sprint')} />}
         {e.type === 'decision' && e.parent && <RowRef type="adr" id={e.parent} testId="news-ref-adr" title={t('ref.adr')} />}
+      </span>
+      <span className="sk-news__c sk-news__c--who" data-col="who">
         {e.who && e.author === 'human' && <HumanWho sub={e.who} title={t('ref.person')} label={newsGroupLabel('who', e.who, lang)} />}
         {e.who && e.author !== 'human' && (
           <RowRef type={e.author === 'agent' ? 'agent' : 'person'} id={e.who} testId="news-who"
             title={t(e.author === 'agent' ? 'ref.agent' : 'ref.person')} icon={e.author === 'agent' ? 'robot-golem' : 'person'}
             label={newsGroupLabel('who', e.who, lang)} />
         )}
+      </span>
+      {/* Переход статусов — значками; стрелки на одной вертикали у всех строк (своя ячейка). */}
+      <span className="sk-news__c sk-news__c--status" data-col="status">
         {(e.from || e.to) && e.type === 'task' && (
-          // Переход статусов — значками со своим цветом (владелица 09.11: «невыделенным
-          // шрифтом написан, может значками сделать?»). Иконка и цвет — общая таблица kit.
           <span className="sk-news__status" data-testid="news-status">
             <NewsStatusMark code={e.from} />
             <span className="sk-news__arrow" aria-hidden="true">{' → '}</span>
             <NewsStatusMark code={e.to} />
           </span>
         )}
+      </span>
+      {/* «Раз» — узкий столбец; у строки без повторов пустой. */}
+      <span className="sk-news__c sk-news__c--times" data-col="times">
         {e.mult > 1 && <span className="sk-news__mult" title={t('mult.hint', { n: e.mult })} data-testid="news-mult">{`×${e.mult}`}</span>}
         {e.groups_n > 1 && (
           <span className="sk-news__gn" title={t('groupsN.hint', { n: e.groups_n })} data-testid="news-groups-n">{`×${e.groups_n}`}</span>
         )}
-        {e.future && <span data-testid="news-future"><Pill tone="wrn" title={t('future.hint')}>{t('future')}</Pill></span>}
       </span>
     </li>
   );
+}
+
+/** Непрочитанное — сверху, порядок внутри частей прежний (K4-NEWS-ROW-COLUMNS: «прочитанное в конце»). */
+function unreadFirst(events: NewsEvent[]): NewsEvent[] {
+  return [...events.filter(e => e.unread), ...events.filter(e => !e.unread)];
+}
+
+/** Код в строке без префикса SPRINT_: место уже стоит в столбце «проект · спринт»; полный код — в подсказке. */
+function shortCode(el: string): string {
+  return el.replace(/^SPRINT_/, '');
 }
 
 /**
@@ -1013,8 +1050,11 @@ function HumanWho({ sub, title, label }: { sub: string; title: string; label: st
   return <RowRef type="person" id={sub} testId="news-who" title={title} icon="person" label={label} {...(face ? { face } : {})} />;
 }
 
-/** «Скопировать код» — кнопка рядом с кодом; буфер недоступен — молча не врём, что скопировали. */
-function CopyCode({ code, label, done }: { code: string; label: string; done: string }) {
+/**
+ * «Скопировать код» — иконка типа записи в первом столбце (K4-NEWS-ROW-COLUMNS: отдельной кнопки нет).
+ * Буфер недоступен — молча не врём, что скопировали.
+ */
+function CopyCode({ code, label, done, icon, kind }: { code: string; label: string; done: string; icon: string; kind: string }) {
   const [ok, setOk] = useState(false);
   const copy = async (ev: MouseEvent) => {
     ev.preventDefault();
@@ -1028,8 +1068,8 @@ function CopyCode({ code, label, done }: { code: string; label: string; done: st
     }
   };
   return (
-    <button type="button" className="sk-news__copy" data-testid="news-copy" aria-label={label} title={ok ? done : label} onClick={copy}>
-      <GameIcon slug={ok ? 'check-mark' : 'papers'} size={12} />
+    <button type="button" className="sk-news__ctype" data-testid="news-copy" aria-label={label} title={ok ? done : `${kind} · ${label}`} onClick={copy}>
+      <GameIcon slug={ok ? 'check-mark' : icon} size={14} label={kind} />
     </button>
   );
 }

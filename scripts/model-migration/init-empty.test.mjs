@@ -1,0 +1,76 @@
+// MIG-01 · «схема и база собираются заново из нормализованной модели». Свежая установка (сценарий А трубы установщика)
+// создаёт пустую базу ИЗ МОДЕЛИ тем же путём, что перенос: создать приёмник → схема из модели → справочники; источника
+// нет, записей нет. Шаги V на новой установке не запускаются. Эмуляция на ryzenai 21.11.2026: свежая установка строила
+// старую схему шагами V (schema_version 93), и срез organizations отвечал 500 — типа KnowOrganization не было.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { emptySourceResult } from './empty-source.mjs';
+import { initEmpty, dictEntriesFromRules } from './init-empty.mjs';
+
+test('пустой источник: счёт — ноль, границы ряда — пусто, остальное — ни одной строки', () => {
+  assert.deepEqual(emptySourceResult('SELECT count(*) AS n FROM KnowTask'), [{ n: 0 }]);
+  assert.deepEqual(emptySourceResult('SELECT o, i, count(*) AS n FROM (SELECT @out.@type AS o FROM X) GROUP BY o, i'), []);
+  assert.deepEqual(emptySourceResult('SELECT min(ts) AS a, max(ts) AS b FROM AuditDbLogin'), [{ a: null, b: null }]);
+  assert.deepEqual(emptySourceResult('SELECT name, type FROM schema:types'), []);
+  assert.deepEqual(emptySourceResult('SELECT FROM KnowTask WHERE @rid > #-1:-1 ORDER BY @rid LIMIT 5000'), []);
+});
+
+/** Приёмник в памяти: помнит типы и команды; запросы счёта — ноль, список типов — заведённые. */
+function fakeDst() {
+  const types = new Set(), commands = [];
+  let rid = 0;
+  return {
+    commands, types,
+    env: { MIG_SRC_DB: '(нет источника)', MIG_DST_DB: 'lore', MIG_DB_URL: 'http://x', MIG_PLAN_BOARD: 'drop' },
+    async src(q) { return emptySourceResult(q); },
+    async *scan() {},
+    async dstQuery(q) {
+      if (/FROM schema:types/i.test(q)) return [...types].map(name => ({ name }));
+      // как ArcadeDB: чтение несуществующего типа — ошибка (ryzenai 21.11: DEPENDS_ON на пустой базе)
+      for (const m of String(q).matchAll(/\bFROM\s+([A-Z][A-Za-z0-9_]*)/g))
+        if (!types.has(m[1])) throw new Error(`Type with name '${m[1]}' was not found`);
+      if (/count\(\*\)/i.test(q)) return [{ n: 0 }];
+      return [];
+    },
+    async dstCommand(q) {
+      commands.push(q);
+      const m = /^CREATE (?:VERTEX|EDGE|DOCUMENT)? ?TYPE (\w+)/i.exec(q) || /^CREATE TIMESERIES TYPE (\w+)/i.exec(q);
+      if (m) types.add(m[1]);
+      const d = /^DROP TYPE (\w+)/i.exec(q); if (d) types.delete(d[1]);
+      return [{ '@rid': '#9:' + (rid++), count: 1 }];
+    },
+  };
+}
+
+test('пустая база из модели: типы 1.18, отметка схемы из модели, справочники; записей источника нет', async () => {
+  const db = fakeDst();
+  const r = await initEmpty(db, { log: () => {} });
+  for (const T of ['KnowOrganization', 'KnowRepository', 'KnowPR', 'KnowTask', 'KnowSprint', 'LoreModelSchema'])
+    assert.ok(db.types.has(T), 'нет типа ' + T + ' в пустой базе из модели');
+  assert.ok(db.commands.some(c => /^INSERT INTO LoreModelSchema/.test(c)), 'нет отметки «схема из модели»');
+  assert.ok(db.commands.some(c => /^INSERT INTO MigDictEntry/.test(c)), 'нет справочников');
+  assert.ok(!db.types.has('LoreSchemaVersion'), 'журнал шагов V в базе из модели не заводится');
+  assert.equal(r.ok, true, JSON.stringify(r.problems || []));
+  assert.equal(r.records, 0, 'записей источника нет');
+});
+
+test('справочники сервера (KnowDictEntry) — из правил переноса: статусы задач и спринтов, остальные словари', async () => {
+  const rows = dictEntriesFromRules();
+  const todo = rows.find(r => r.dict_type === 'task_status' && r.code === 'TODO');
+  assert.ok(todo, 'нет task_status/TODO');
+  assert.equal(todo.label_ru, 'К выполнению');
+  assert.equal(todo.label_en, 'To Do');
+  assert.equal(todo.is_active, true);
+  for (const d of ['sprint_status', 'adr_status', 'decision_status', 'spec_status', 'question_status', 'feature_status', 'qg_status', 'priority'])
+    assert.ok(rows.some(r => r.dict_type === d), 'нет словаря ' + d);
+  const db = fakeDst();
+  await initEmpty(db, { log: () => {} });
+  assert.ok(db.commands.some(c => /^INSERT INTO KnowDictEntry/.test(c)), 'справочники сервера не записаны');
+});
+
+test('связи модели заводятся видом, даже без данных: код сервера пишет их на пустой базе', async () => {
+  const db = fakeDst();
+  await initEmpty(db, { log: () => {} });
+  for (const E of ['HAS_STATE', 'BELONGS_TO_PROJECT', 'HAS_PROJECT_ROLE', 'PART_OF', 'HAS_REPOSITORY'])
+    assert.ok(db.types.has(E), 'нет связи ' + E);
+});

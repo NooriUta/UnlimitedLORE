@@ -145,6 +145,8 @@ public class TaskRoleService {
         }
 
         boolean agent = isAgent(identity);
+
+        // valid_from — в set выше: новое ребро роли открывается сейчас (MDL-02).
         command(String.format(
             "CREATE EDGE ROLE_HELD_BY FROM (SELECT FROM KnowTask WHERE task_uid = '%s') "
             + "TO (SELECT FROM %s WHERE %s = '%s')%s",
@@ -169,7 +171,7 @@ public class TaskRoleService {
     List<String> peopleOfTaskProject(String taskUid) {
         List<String> out = new ArrayList<>();
         for (Map<String, Object> r : ingest.queryPublic(
-                "SELECT @out.display_name AS person FROM HAS_PROJECT_ROLE WHERE @in.slug IN "
+                "SELECT @out.display_name AS person FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug IN "
                 + "(SELECT expand(out('PART_OF').out('BELONGS_TO_PROJECT').slug) FROM KnowTask "
                 + "WHERE task_uid = :u)", Map.of("u", taskUid))) {
             Object p = r.get("person");
@@ -185,7 +187,7 @@ public class TaskRoleService {
     List<String> peopleOfSprintProject(String sprintId) {
         List<String> out = new ArrayList<>();
         for (Map<String, Object> r : ingest.queryPublic(
-                "SELECT @out.display_name AS person FROM HAS_PROJECT_ROLE WHERE @in.slug IN "
+                "SELECT @out.display_name AS person FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug IN "
                 + "(SELECT expand(out('BELONGS_TO_PROJECT').slug) FROM KnowSprint "
                 + "WHERE sprint_id = :s)", Map.of("s", sprintId))) {
             Object p = r.get("person");
@@ -331,6 +333,7 @@ public class TaskRoleService {
                 set.append(set.isEmpty() ? " SET " : ", ").append(k).append(" = '").append(esc(String.valueOf(v))).append('\'');
             }
             // CREATE EDGE — через String.format (именованные параметры в нём не связываются, см. apply).
+            // valid_from переносится в CARRIED — версия ребра остаётся прежней (MDL-02).
             command(String.format("CREATE EDGE ROLE_HELD_BY FROM (SELECT FROM KnowTask WHERE task_uid = '%s') TO %s%s",
                 esc(toUid), holder, set), Map.of());
             n++;

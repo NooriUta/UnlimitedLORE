@@ -2,6 +2,8 @@ package studio.seer.heimdall.lore;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -14,8 +16,83 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class LoreDictKindTest {
 
-    static LoreDictResource.DictEntryRequest req(String dt, String kind) {
-        return new LoreDictResource.DictEntryRequest(dt, "X", null, null, null, null, null, null, null, kind);
+    static LoreDictResource.DictEntryRequest req(String dt, Object kind) {
+        return req(dt, kind, null);
+    }
+
+    static LoreDictResource.DictEntryRequest req(String dt, Object kind, String reason) {
+        return new LoreDictResource.DictEntryRequest(dt, "X", null, null, null, null, null, null, null, kind, reason);
+    }
+
+    // ── WK-01, правка вида (слово владелицы 20.11.2026): вид продукта — НАБОР (ADR-LORE-044,
+    // решение 19.11: tech, service или оба). Пустой набор — отказ; правка вида — новая версия с причиной.
+
+    @Test
+    void productKindIsASetInCanonicalOrder() {
+        assertEquals(List.of("tech", "service"), LoreDictResource.normalizeKind("product", List.of("service", "tech", "tech")),
+            "повтор — один раз, порядок как в наборе словаря");
+        assertEquals(List.of("service"), LoreDictResource.normalizeKind("product", List.of("service")));
+        assertEquals(List.of("tech"), LoreDictResource.normalizeKind("product", "tech"), "строка — набор из одного (прежний клиент)");
+        assertNull(LoreDictResource.normalizeKind("product", null), "не прислан — не трогаем");
+    }
+
+    @Test
+    void emptyOrForeignProductKindIsRefused() {
+        String empty = LoreDictResource.kindRefusal("product", List.of());
+        assertNotNull(empty, "пустой набор — отказ, а не «снять вид»");
+        assertTrue(empty.contains("пуст"), empty);
+        String bad = LoreDictResource.kindRefusal("product", List.of("tech", "IT"));
+        assertNotNull(bad);
+        assertTrue(bad.contains("IT") && bad.contains("tech") && bad.contains("service"), bad);
+        assertNotNull(LoreDictResource.kindRefusal("product", List.of(42)), "не строка — отказ");
+    }
+
+    @Test
+    void singleKindDictionaryRefusesASet() {
+        assertEquals("universal", LoreDictResource.normalizeKind("qg_type", "universal"));
+        assertNotNull(LoreDictResource.kindRefusal("qg_type", List.of("universal", "project")),
+            "у гейта вид один — набор не принимается");
+    }
+
+    @Test
+    void storedStringKindEqualsTheSameSet() {
+        assertTrue(LoreDictResource.sameAsStored(req("product", List.of("tech")), Map.of("kind", "tech")),
+            "в базе прежняя строка — тот же вид, правки нет");
+        assertTrue(LoreDictResource.sameAsStored(req("product", List.of("service", "tech")), Map.of("kind", List.of("tech", "service"))));
+        assertFalse(LoreDictResource.sameAsStored(req("product", List.of("tech", "service")), Map.of("kind", List.of("tech"))),
+            "добавить второй вид — правка");
+    }
+
+    @Test
+    void changingKindOfExistingEntryNeedsReason() {
+        Map<String, Object> stored = Map.of("kind", List.of("tech"));
+        String r = LoreDictResource.reasonRefusal(req("product", List.of("tech", "service")), stored);
+        assertNotNull(r, "смена вида без причины — отказ");
+        assertTrue(r.contains("reason"), r);
+        assertNull(LoreDictResource.reasonRefusal(req("product", List.of("tech", "service"), "HARPA продаёт услуги"), stored));
+        assertNotNull(LoreDictResource.reasonRefusal(req("product", List.of("service"), "   "), stored), "пробелы — не причина");
+        assertNull(LoreDictResource.reasonRefusal(req("product", List.of("tech")), stored), "вид тот же — причина не нужна");
+        assertNull(LoreDictResource.reasonRefusal(req("product", List.of("tech")), null), "новая статья — не правка вида");
+        assertNull(LoreDictResource.reasonRefusal(req("product", null), stored), "вид не прислан — не правка вида");
+        Map<String, Object> none = new HashMap<>();
+        none.put("kind", null);
+        assertNull(LoreDictResource.reasonRefusal(req("product", List.of("tech")), none), "вид впервые — разметка, а не смена");
+        assertNotNull(LoreDictResource.reasonRefusal(req("product", List.of("tech"), "x".repeat(501)), Map.of("kind", "service")),
+            "причина длиннее 500 — отказ");
+    }
+
+    @Test
+    void historyVersionCarriesTheReason() {
+        assertTrue(LoreDictResource.HIST_INSERT.contains("change_reason=:reason"), LoreDictResource.HIST_INSERT);
+    }
+
+    /** Паспорт продукта показывает вид: фасад отдаёт kind списком (строка прежней записи — список из одного). */
+    @Test
+    void productPassportShowsKind() {
+        Map<String, Object> row = new HashMap<>(Map.of("code", "HARPA", "label_ru", "HARPA", "kind", List.of("tech", "service")));
+        assertEquals(List.of("tech", "service"), LoreRecordValues.values("product", row).get("kind"));
+        row.put("kind", "service");
+        assertEquals(List.of("service"), LoreRecordValues.values("product", row).get("kind"));
     }
 
     @Test

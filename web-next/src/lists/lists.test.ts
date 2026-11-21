@@ -83,7 +83,9 @@ describe('конфиги экранов списков', () => {
   it('все одиннадцать разделов на месте; иконки статусов, вида и «Быстро» есть в наборе game-icons', () => {
     expect(Object.keys(LIST_SCREENS)).toEqual([
       'sprints', 'adrs', 'tasks',
-      'decisions', 'specs', 'docs', 'quality_gates', 'runbooks', 'users', 'agents', 'questions', 'milestones', 'releases', 'components', 'projects', 'tech', 'features',
+      'decisions', 'specs', 'docs', 'quality_gates', 'runbooks', 'users', 'agents', 'questions', 'milestones', 'prs', 'releases', 'components', 'projects',
+      // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — раздел «Система».
+      'repositories', 'organizations', 'tech', 'features',
       // S4-PRODUCTS-NODE: нода «Продукт».
       'products', 'actors', 'pains', 'gains', 'jobs',
     ]);
@@ -113,7 +115,9 @@ describe('конфиги экранов списков', () => {
     // S5-DOC-PASSPORT: у документа статуса нет вовсе (KnowDoc без статуса и SCD2).
     // S9-05 A: у человека и агента статуса нет.
     // MD-04: у ранбука статуса в срезе нет. У гейта качества ось есть — состояние из словаря qg_status.
-    const noAxis = ['docs', 'runbooks', 'users', 'agents', 'milestones', 'releases', 'components', 'projects', 'tech', 'products', 'actors', 'pains', 'gains', 'jobs'] as const;
+    const noAxis = ['docs', 'runbooks', 'users', 'agents', 'milestones', 'prs', 'releases', 'components', 'projects', 'tech', 'products', 'actors', 'pains', 'gains', 'jobs',
+      // D-2026-MIG-REPOSITORY-ORGANIZATION: у репозитория роль — поле, не статус; у организации статуса нет.
+      'repositories', 'organizations'] as const;
     for (const [id, s] of Object.entries(LIST_SCREENS)) {
       const c = s.config('ru');
       const hasAxis = c.statuses.items.length > 0;

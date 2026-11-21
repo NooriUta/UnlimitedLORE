@@ -11,6 +11,8 @@
     "search": "allow",
     "search_similar": "allow",
     "graph": "allow",
+    "graph_path": "allow",
+    "find": "allow",
     "pain_*": "allow",
     "gain_*": "allow",
     "job_*": "allow",

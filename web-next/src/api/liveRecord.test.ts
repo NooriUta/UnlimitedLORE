@@ -19,6 +19,7 @@
 //   facts.tasks {done,total}        {done,total,open}
 import { describe, expect, it } from 'vitest';
 import { fetchLoreRecord, recordFromServer, RecordNotFound, RecordForbidden, RecordShape } from './liveRecord';
+import { fromLoreRecord } from '../record/loreRecordContract';
 
 const LOADED = '2026-11-09T04:00:00.000Z';
 
@@ -158,6 +159,42 @@ describe('S4-MODEL-PASSPORT-LIST · форма сервера → контрак
     b.links = [{ rel: 'BELONGS_TO', dir: 'in', id: 'D-1', type: 'decision', title: 'Р', status: '', fromKind: 'decision', toKind: 'component' } as never];
     const c = recordFromServer(b, LOADED);
     expect(c.links[0]).toMatchObject({ fromKind: 'decision', toKind: 'component' });
+  });
+
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: «зависит от» — одна связь между задачей, фазой, спринтом и вехой; вид и
+  // причина лежат на ребре. Подписи свойств — из модели (schema.relations[].props), значения — в values связи;
+  // kit рисует их колонками вкладки связей (KitDocRelation.props).
+  it('свойства ребра (вид, причина) доходят до kit: подписи из схемы, значения из связи', () => {
+    const b = sprintBody();
+    b.links = [{ rel: 'DEPENDS_ON', dir: 'out', id: 'SPRINT_B/PHASE_1', type: 'phase', title: 'Фаза', status: '',
+      values: { kind: 'hard', reason: 'ждём схему' } } as never];
+    b.schema.relations = [{ key: 'dependsOn', label: 'Зависит от', relation: 'association', rel: 'DEPENDS_ON', dir: 'out',
+      target_type: 'any', place: 'link_tab', manageable: true,
+      props: [{ key: 'kind', label: 'Вид', dict: 'dependency_kind' }, { key: 'reason', label: 'Причина' }] } as never];
+    const c = recordFromServer(b, LOADED);
+    const r = c.schema.relations.find(x => x.key === 'dependsOn');
+    expect(r?.props).toEqual([{ key: 'kind', label: 'Вид' }, { key: 'reason', label: 'Причина' }]);
+    expect(r?.count).toBe(1);
+    expect(c.links[0].values).toEqual({ kind: 'hard', reason: 'ждём схему' });
+    b.schema.relations = [{ key: 'adrs', label: 'ADR', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'adr', place: 'link_tab', manageable: false }];
+    expect(recordFromServer(b, LOADED).schema.relations[0]).not.toHaveProperty('props');
+  });
+
+  // MDL-13: признак «привязка требует причины» — из модели (reason_required связи); kit по нему открывает ReasonDialog.
+  it('reason_required связи доходит до kit как reasonRequired; нет признака — нет ключа', () => {
+    const b = sprintBody();
+    b.links = [];
+    b.schema.relations = [
+      { key: 'dependsOn', label: 'Зависит от', relation: 'association', rel: 'DEPENDS_ON', dir: 'out', target_type: 'any', place: 'link_tab', manageable: true, reason_required: true, target_types: ['task', 'sprint', 'milestone'] },
+      { key: 'adrs', label: 'ADR', relation: 'attribute', rel: 'BELONGS_TO', dir: 'in', target_type: 'adr', place: 'link_tab', manageable: false },
+    ] as never;
+    const c = recordFromServer(b, LOADED);
+    expect(c.schema.relations[0].reasonRequired).toBe(true);
+    expect(c.schema.relations[0].target_types).toEqual(['task', 'sprint', 'milestone']);
+    expect(c.schema.relations[1]).not.toHaveProperty('reasonRequired');
+    const view = fromLoreRecord(c, 'ru');
+    const kind = Object.values(view.config.kinds).find(k => (k.relations ?? []).some(r => r.key === 'dependsOn'));
+    expect(kind?.relations?.find(r => r.key === 'dependsOn')?.reasonRequired).toBe(true);
   });
 
   it('одно ребро в двух связях — счётчик по типу цели', () => {

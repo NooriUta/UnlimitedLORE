@@ -101,16 +101,12 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
           <button type="button" className="sk-btn" data-testid="account-profile" onClick={() => setView('profile')}>{t(lang, 'settings.profile')}</button>
         </div>
       )}
-      {/* S7B-01: вход в админку — из меню аватара (прототип v6), модуль ?mod=admin.
-          Ссылку видят все: права проверяет сервер, и экран без прав скажет
-          «нет прав», а не притворится пустым. */}
+      {/* Вход в админку перенесён в левое меню (группа «Личное», после «Настроек»), только для admin/superadmin —
+          владелица 21.11.2026; прежняя ссылка здесь вела viewer-а на экран отказа. */}
       {/* S4-11: «Горячие клавиши» — всегда, и на телефоне: к нему или к планшету
           могут подключить клавиатуру (владелица 11.11). Панель — общая, kit. */}
       <div className="memory-actions">
         <KeymapMenuButton />
-      </div>
-      <div className="memory-actions">
-        <a className="sk-btn" href="/?mod=admin" data-testid="account-admin">{t(lang, 'settings.admin')}</a>
       </div>
       {onLogout && (
         <div className="memory-actions">

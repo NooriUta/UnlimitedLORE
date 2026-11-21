@@ -52,12 +52,44 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
+    @Inject LoreOrganizationResource organizationResource;
+    @Inject LoreStatusResource statusResource;   // MDL-13: трек спринта — тот же путь, что sprint/plan
 
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
 
     /** release_uid «проект#тег» (AIDA/UnlimitedLORE#v1.17.4): как SAFE_ID, плюс «#». */
     static final java.util.regex.Pattern RELEASE_UID = java.util.regex.Pattern.compile("[A-Za-z0-9_./\\-]{1,100}#[A-Za-z0-9_.\\-]{1,60}");
+
+    /**
+     * D-2026-MIG-REPOSITORY-ORGANIZATION: ключ репозитория — его адрес (url уникален у KnowRepository), «https://хост/владелец/имя».
+     * Двоеточие и «//» общий шаблон чтения не пропускает — допустимы только у репозитория.
+     */
+    static final java.util.regex.Pattern REPO_URL =
+        java.util.regex.Pattern.compile("(https?|ssh|git)://[A-Za-z0-9_.@:\\-]{1,120}(/[A-Za-z0-9_.\\-]{1,120}){1,8}/?");
+
+    /** Ключ записи допустим у типа: релиз — release_uid «проект#тег», репозиторий — адрес, остальные — общий шаблон. */
+    static boolean idAllowed(String type, String id) {
+        if (id == null) return false;
+        // 8877957a: голый тег (старые ссылки) — общим шаблоном; запись найдёт разбор тега в record()
+        if ("release".equals(type)) return RELEASE_UID.matcher(id).matches() || SAFE_READ_ID.matcher(id).matches();
+        if ("repository".equals(type)) return REPO_URL.matcher(id).matches();
+        // MD-05: ключ PR — pr_uid «проект#номер», та же форма, что у релиза; легаси-ключи без «#» — общим шаблоном.
+        if ("pr".equals(type)) return RELEASE_UID.matcher(id).matches() || SAFE_READ_ID.matcher(id).matches();
+        return SAFE_READ_ID.matcher(id).matches();
+    }
+
+    /** Разбор голого тега релиза: один релиз — его ключ; несколько — кандидаты; ни одного — пусто. */
+    record TagMatch(String uid, List<String> candidates) {}
+
+    static TagMatch releaseByTag(List<Map<String, Object>> rows) {
+        List<String> uids = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Object u = r.get("release_uid");
+            if (u != null && !uids.contains(String.valueOf(u))) uids.add(String.valueOf(u));
+        }
+        return uids.size() == 1 ? new TagMatch(uids.get(0), List.of()) : new TagMatch(null, List.copyOf(uids));
+    }
 
     static Source sourceOf(String type) {
         return switch (type) {
@@ -70,6 +102,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "decision" -> new Source("decision", "id", false);
             case "question" -> new Source("question_by_id", "id", false);
             case "milestone" -> new Source("milestone_by_id", "id", false);
+            // MDL-13: паспорт трека — справочник KnowTrack (на старой схеме PlanTrack), ключ track_id.
+            case "track" -> new Source("track_by_id", "id", false);
             case "release" -> new Source("release_by_id", "id", false);
             // S4-V2-SECTIONS: компонент, технология (спека SPEC-TECH-…), фича — сценарий любого уровня.
             case "component" -> new Source("component", "id", false);
@@ -92,6 +126,11 @@ public class LoreRecordResource extends LoreResourceBase {
             case "runbook" -> new Source("runbook_by_id", "id", false);
             // MD-04, второй заход по QG: паспорт гейта качества — та же строка, что читает страница QG.
             case "quality_gate" -> new Source("quality_gate_by_id", "id", false);
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес url) и организация (org_id).
+            case "repository" -> new Source("repo_by_id", "id", false);
+            case "organization" -> new Source("org_by_id", "id", false);
+            // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — строка KnowPR по pr_uid «проект#номер».
+            case "pr" -> new Source("pr_by_id", "id", false);
             default -> null;
         };
     }
@@ -114,9 +153,7 @@ public class LoreRecordResource extends LoreResourceBase {
         if (!LoreRecordRegistry.TYPES.contains(type))
             return noStore(Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("UNKNOWN_TYPE",
                 "тип паспорта '" + type + "' не заведён; есть: " + LoreRecordRegistry.TYPES)));
-        // Ключ релиза — release_uid «проект#тег»: «#» допустим только у релиза.
-        boolean idOk = "release".equals(type) ? RELEASE_UID.matcher(id).matches() : SAFE_READ_ID.matcher(id).matches();
-        if (!NEW_ID.equals(id) && !idOk)
+        if (!NEW_ID.equals(id) && !idAllowed(type, id))
             return badParams("id contains illegal characters");
         Set<String> scope;
         try {
@@ -127,6 +164,25 @@ public class LoreRecordResource extends LoreResourceBase {
         }
         boolean identified = role != null && !role.isBlank();
         if (NEW_ID.equals(id)) return newRecord(type, role, identified);
+        // 8877957a: старые ссылки и закладки на релиз — голым тегом (v1.17.25). Ключ записи — «проект#тег»:
+        // однозначный тег открывает запись своего проекта, неоднозначный — список кандидатов, а не «не найдена».
+        if ("release".equals(type) && id.indexOf('#') < 0) {
+            TagMatch m;
+            try {
+                m = releaseByTag(ingestService.queryPublic(
+                    "SELECT release_uid FROM KnowRelease WHERE release_id = :t OR git_tag = :t ORDER BY release_uid", Map.of("t", id)));
+            } catch (RuntimeException e) {
+                return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+            }
+            if (m.uid() != null) id = m.uid();
+            else if (!m.candidates().isEmpty()) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("error", "AMBIGUOUS_RELEASE_TAG");
+                body.put("detail", "тег " + id + " есть у нескольких проектов — откройте релиз по ключу «проект#тег»");
+                body.put("candidates", m.candidates());
+                return noStore(Response.status(Response.Status.CONFLICT).entity(body));
+            }
+        }
         Response found = existing(type, id, role, identified, scope);
         // LINKS-VIEW-HOLDER: «сессия у записи» — только по просьбе (?with=holders) и только у найденной записи:
         // скоуп уже проверен выше, а лишний поход к серверу miniLORE не ложится на каждое открытие паспорта.
@@ -293,7 +349,11 @@ public class LoreRecordResource extends LoreResourceBase {
         if (LoreRecordUnmodeled.reads(type)) try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordUnmodeled.sql(type), Map.of("id", id));
             if (v.isEmpty()) facts.put("unmodeled_state", "not_read");
-            else unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+            else {
+                unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+                // описанное полем модели, но без колонки в главном срезе — значение из вершины, а не пустое поле
+                LoreRecordUnmodeled.fillModeled(type, values, v.get(0));
+            }
         } catch (RuntimeException e) {
             facts.put("unmodeled_error", e.getMessage());
         }
@@ -352,7 +412,7 @@ public class LoreRecordResource extends LoreResourceBase {
                     if (sprint != null) inherit(SPRINT_AXES + "sprint_id = :id", Map.of("id", sprint), "sprint",
                         scope, inhP, inhC, true, true);
                 }
-                case "milestone" -> inherit(SPRINT_AXES + "out('TARGETS_MILESTONE').milestone_id CONTAINS :id",
+                case "milestone" -> inherit(SPRINT_AXES + "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id CONTAINS :id",
                     Map.of("id", id), "sprint", scope, inhP, inhC, true, true);
                 case "component" -> inherit(SPRINT_AXES + "out('BELONGS_TO').component_id CONTAINS :id",
                     Map.of("id", id), "sprint", scope, inhP, inhC, true, false);
@@ -384,7 +444,7 @@ public class LoreRecordResource extends LoreResourceBase {
             state.add(LoreRecordDataState.entry("chips:inherited", null, new Read(List.of(), "error",
                 "унаследованные проекты/компоненты не прочитаны: " + e.getMessage(), e)));
         }
-        Map<String, String> pLabels = labels("SELECT slug AS k, name AS v FROM KnowGitProject WHERE slug IN :ids",
+        Map<String, String> pLabels = labels("SELECT slug AS k, coalesce(short_title, name) AS v FROM KnowGitProject WHERE slug IN :ids",
             ids(ownP, inhP), "chips:project_labels", state);
         Map<String, String> cLabels = labels("SELECT component_id AS k, full_name AS v FROM LoreComponent WHERE component_id IN :ids",
             ids(ownC, inhC), "chips:component_labels", state);
@@ -562,7 +622,8 @@ public class LoreRecordResource extends LoreResourceBase {
 
     // ── POST relation ───────────────────────────────────────────────────────
 
-    public record RelationRequest(String rel, String dir, String target, String action, String kind, String reason) {}
+    /** {@code target_type} — тип другого конца, где он неоднозначен (MDL-13: DEPENDS_ON ведёт к задаче, фазе, спринту или вехе; не задан — ищется по ключу). */
+    public record RelationRequest(String rel, String dir, String target, String action, String kind, String reason, String target_type) {}
 
     @POST
     @Path("{type}/{id: .+}/relation")
@@ -598,8 +659,10 @@ public class LoreRecordResource extends LoreResourceBase {
         String a = id, b = target;
         if (r.reversed()) { a = target; b = id; }
         return switch (r.handler()) {
-            case SPRINT_DEP -> sprintTask.linkSprintDep(
-                new LoreSprintTaskResource.SprintDepRequest(a, b, req.kind(), req.reason(), action), role);
+            // MDL-13: «зависит от» — запись from, цель to; у reversed («от неё зависят») запись — to.
+            case DEPENDS_ON -> sprintTask.linkDependency(r.reversed()
+                ? new LoreSprintTaskResource.DepRequest(req.target_type(), target, type, id, req.kind(), req.reason(), action)
+                : new LoreSprintTaskResource.DepRequest(type, id, req.target_type(), target, req.kind(), req.reason(), action), role);
             case SPRINT_PROJECT -> sprintTask.linkSprintProject(
                 new LoreSprintTaskResource.SprintProjectRequest(a, b, action), role);
             case SPRINT_COMPONENT -> sprintTask.linkSprintComponent(
@@ -631,6 +694,11 @@ public class LoreRecordResource extends LoreResourceBase {
             case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
             case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
                 new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
+            // MDL-13: трек спринта — путь sprint/plan (на базе 1.18 — ребро ON_TRACK, прежнее закрывается); снять — пустой трек.
+            case SPRINT_TRACK -> statusResource.updateSprintPlan(new LoreStatusResource.SprintPlanRequest(
+                a, null, null, null, "remove".equals(action) ? "" : b), role).await().indefinitely();
+            case ORG_LINK -> organizationResource.linkOrganization(
+                new LoreOrganizationResource.OrgLinkRequest(a, r.rel(), b, action), role);
         };
     }
 }

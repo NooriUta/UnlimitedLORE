@@ -26,6 +26,8 @@ export interface RelationChange {
   dir: 'out' | 'in';
   target: string;
   action: 'add' | 'remove';
+  /** MDL-13: причина из ReasonDialog kit — только у связи с обязательной причиной (reason_required). */
+  reason?: string;
 }
 
 /** Отказ пути привязки: текст уже пригоден для показа человеку. */
@@ -69,7 +71,7 @@ export async function saveRelation(c: RelationChange, fetchImpl?: typeof fetch):
   const res = await http(`/lore/record/${c.type}/${recordPath(c.id)}/relation`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ rel: c.rel, dir: c.dir, target: c.target, action: c.action }),
+    body: JSON.stringify({ rel: c.rel, dir: c.dir, target: c.target, action: c.action, ...(c.reason !== undefined ? { reason: c.reason } : {}) }),
   });
   if (res.ok) return;
   let body: Record<string, unknown> = {};

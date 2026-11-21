@@ -11,6 +11,7 @@ import java.util.List;
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -27,12 +28,17 @@ class LoreModelTypesLiveDbTest {
         String body = given().header("X-Seer-Role", "admin").when().get("/lore/model").then().statusCode(200)
             .extract().asString();
         JsonPath m = new JsonPath(body);
-        assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
+        assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "track", "release",
             "component", "tech", "feature", "product", "user", "agent",
-            "actor", "pain", "gain", "job", "runbook", "quality_gate", "project"), List.copyOf(m.getMap("types").keySet()));
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr", "project"), List.copyOf(m.getMap("types").keySet()));
         assertEquals("task_uid", m.getString("types.task.key"));
         assertFalse(m.getList("missing").contains("types"), "раздел есть — в missing его нет: " + m.getList("missing"));
-        assertFalse(body.contains("\"@rid\"") || body.contains("\"valid_to\"") || body.contains("\"state_uid\""),
+        // MDL-02: раздел edge_history называет поля версии ребра (valid_from, valid_to) как описание модели —
+        // это не утечка свойств записи; проверяется документ без него.
+        io.vertx.core.json.JsonObject doc = new io.vertx.core.json.JsonObject(body);
+        assertNotNull(doc.remove("edge_history"), "раздел историчных связей в документе модели");
+        String rest = doc.encode();
+        assertFalse(rest.contains("\"@rid\"") || rest.contains("\"valid_to\"") || rest.contains("\"state_uid\""),
             "system-поля в документе модели");
         assertTrue(m.getList("types.task.fields.findAll { it.source == 'CONFIRMS' }").size() > 0,
             "часть полей задачи подтверждена живой схемой");

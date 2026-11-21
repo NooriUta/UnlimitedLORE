@@ -66,6 +66,7 @@ class LorePassportLinksContractTest {
         new Fact("sprint", "IMPLEMENTED_IN_RELEASE", "release", "LoreReleaseResource release_link, LoreForgejoResource"),
         new Fact("pr", "SHIPPED_IN", "release", "LoreReleaseResource release_link, LoreForgejoResource"),
         new Fact("sprint", "TARGETS_MILESTONE", "milestone", "LoreMilestoneResource milestone_link / sprint_link"),
+        new Fact("sprint", "ON_TRACK", "track", "SprintTrack.assign — sprint/plan на базе 1.18 (MDL-13), перенос tracks.mjs"),
         new Fact("use_case", "TARGETS_MILESTONE", "milestone", "LoreProductResource feature_link(rel:milestone)"),
         new Fact("use_case", "DECOMPOSES_INTO", "use_case", "LoreProductResource uc_new (родитель → сценарий)"),
         // ADR ↔ компонент пишет и ingest (LoreIngestService), то же ребро, что adr_new.
@@ -104,6 +105,17 @@ class LorePassportLinksContractTest {
         new Fact("product", "PARENT_PRODUCT", "product", "LoreProductAxisResource product_link(rel:parent)"),
         new Fact("product", "SERVES", "product", "LoreProductAxisResource product_link(rel:serves)"),
         new Fact("milestone", "TARGETS_PRODUCT", "product", "LoreMilestoneResource milestone_product"),
+        // репозитории и организации (D-2026-MIG-REPOSITORY-ORGANIZATION): рёбра ставит перенос данных 1.18
+        new Fact("project", "HAS_REPOSITORY", "repository", "перенос 1.18 (MIG-03): основной репозиторий проекта, role=primary"),
+        new Fact("component", "COMPONENT_REPOSITORY", "repository", "перенос 1.18 (MIG-03): свой репозиторий компонента"),
+        new Fact("repository", "MIRRORED_TO", "repository", "перенос 1.18 (MIG-03): зеркало"),
+        new Fact("repository", "USES_REPOSITORY", "repository", "перенос 1.18 (MIG-03): «использует»"),
+        // организация (решение владелицы 19.11.2026) — связи правятся в админке
+        new Fact("organization", "ORG_HAS_PROJECT", "project", "LoreOrganizationResource organization/link"),
+        new Fact("organization", "ORG_HAS_PRODUCT", "product", "LoreOrganizationResource organization/link"),
+        new Fact("organization", "ORG_MEMBER", "user", "LoreOrganizationResource organization/link"),
+        // владелица 21.11.2026: «в админке кроме организации должен быть и срез репозиториев к ней»
+        new Fact("organization", "ORG_HAS_REPOSITORY", "repository", "LoreOrganizationResource organization/link; перенос 1.18 (orgs.mjs)"),
         // проект
         new Fact("sprint", "BELONGS_TO_PROJECT", "project", "LoreSprintTaskResource sprint_new / sprint_link"),
         new Fact("adr", "BELONGS_TO_PROJECT", "project", "LoreAdrResource adr_link(project)"),
@@ -150,6 +162,7 @@ class LorePassportLinksContractTest {
         Map.entry("HAS_STATE", "строка истории SCD2 — раздел «История», а не связь"),
         Map.entry("ATTACHED_TO", "вложения тела (MinIO) — показываются в тексте MD, а не связью"),
         Map.entry("ROLE_HELD_BY", "роли задачи — поля автор/исполнитель/принимающий (выбор из task_identities)"),
+        Map.entry("ANSWERABLE_BY", "ответственный вопроса — поле «Ответственный» (edge_fields question.owner), как роли задачи"),
         Map.entry("OWNED_BY", "личность: агент → его владелец (права, AL-104)"),
         Map.entry("FILLS_ROLE", "личность: агент → роль продукта (профиль клиента)"),
         Map.entry("USES_MACHINE", "личность: агент → машина (miniLORE)"),
@@ -175,7 +188,6 @@ class LorePassportLinksContractTest {
         Map.entry("qg_job", "прогон гейта — служебная запись QG"),
         Map.entry("qg_recommendation", "рекомендация QG — служебная запись прогона"),
         Map.entry("qg_metric", "метрика гейта — служебная запись QG"),
-        Map.entry("pr", "PR — внешняя запись Forgejo, без паспорта"),
         Map.entry("file", "файл репозитория — без паспорта"),
         Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
         Map.entry("tag", "тег — справочник"),
@@ -270,7 +282,22 @@ class LorePassportLinksContractTest {
      * Рёбра, объявленные в паспорте, которых нет среди CREATE EDGE TYPE схемы, — с причиной.
      * ArcadeDB создаёт тип на первой записи, поэтому такие рёбра живут на проде без объявления.
      */
-    static final Map<String, String> UNDECLARED_EDGES = Map.of();
+    static final Map<String, String> UNDECLARED_EDGES = Map.of(
+        "HAS_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "COMPONENT_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "MIRRORED_TO", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "USES_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        // Решение владелицы 19.11.2026: связи организации; тип ребра заводит создание организации (LoreOrganizationResource).
+        "ORG_HAS_PROJECT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_HAS_PRODUCT", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_MEMBER", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        "ORG_HAS_REPOSITORY", "схема из модели (установщик MIG-01, перенос 1.18, D-2026-MIG-REPOSITORY-ORGANIZATION); в старой схеме шагов V этого ребра нет — новый шаг V накатил бы его на прод",
+        // MT-MCP-TRUTH A6, владелица 19.11.2026 «1а»: ответственный вопроса — ребро; тип заводит перенос 1.18 (question-owner.mjs)
+        // и первая запись ответственного (QuestionOwner.ensureType).
+        "ANSWERABLE_BY", "схема из модели (перенос 1.18, MT-MCP-TRUTH A6); в старой схеме шагов V этого ребра нет — тип заводит перенос и первая запись ответственного",
+        // MDL-13, владелица 20.11.2026 «треки б»: трек спринта — ребро к KnowTrack; тип заводит перенос 1.18 (tracks.mjs)
+        // и первая запись трека на базе 1.18 (SprintTrack.ensureType); на старой схеме трек пишется полем версии.
+        "ON_TRACK", "схема из модели (перенос 1.18, MDL-13); в старой схеме шагов V этого ребра нет — тип заводит перенос треков и первая запись трека");
 
     /**
      * Снятые из схемы рёбра, которые обходят только шаги миграций, убирающие их легаси-экземпляры
@@ -628,7 +655,18 @@ class LorePassportLinksContractTest {
         Map.entry("gain|projects", "выгода — общий профиль клиента, проекта нет (MD-04)"),
         Map.entry("gain|components", "выгода — общий профиль клиента, компонента нет (MD-04)"),
         Map.entry("job|projects", "работа — глобальная вершина (AL-113), проекта нет (MD-04)"),
-        Map.entry("job|components", "работа — глобальная вершина (AL-113), компонента нет (MD-04)"));
+        Map.entry("job|components", "работа — глобальная вершина (AL-113), компонента нет (MD-04)"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: у репозитория проект и компонент — связи вкладки «Связи»
+        // (основной у проекта HAS_REPOSITORY, репозиторий компонента COMPONENT_REPOSITORY), как в прототипе; у организации связей пока нет.
+        Map.entry("repository|projects", "проект репозитория — связь «основной у проекта» (HAS_REPOSITORY) во вкладке «Связи»"),
+        Map.entry("repository|components", "компонент репозитория — связь COMPONENT_REPOSITORY во вкладке «Связи»"),
+        Map.entry("organization|projects", "проекты организации — вкладка «Связи» (ORG_HAS_PROJECT), правится в админке"),
+        Map.entry("organization|components", "у организации компонентов нет: связи — проекты, продукты, люди (решение владелицы 19.11.2026)"),
+        // MDL-13: трек — справочник студии без проекта и компонента (как веха без проекта); спринты на нём — вкладкой.
+        Map.entry("track|projects", "трек — справочник студии, проекта нет (MDL-13)"),
+        Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"),
+        // MD-05: у PR компонентов нет — ни ребра, ни наследования; работа PR видна через задачи (вкладка «Закрывает задачи»).
+        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"));
 
     @Test
     void chipValuesHaveADeclaredField() {

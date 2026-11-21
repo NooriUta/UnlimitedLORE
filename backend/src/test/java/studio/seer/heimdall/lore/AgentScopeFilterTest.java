@@ -52,7 +52,8 @@ class AgentScopeFilterTest {
         // record добавлен ADR-LORE-047 A2: путь привязки паспорта ведёт в обработчики разных
         // семейств — строкой матрицы он расширил бы профиль; агенты привязывают через свои *_link.
         // users добавлен AP-07: профиль автора (имя, аватар) — свой меняет человек, чужой — админ, агенту не дан.
-        assertEquals(Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model"), AgentScopeFilter.humanOnlyFamilies(), "model — правка модели LORE, MC-05; users — профиль автора, AP-07");
+        // organization — решение владелицы 19.11.2026: организации заводит и связывает человек (super-admin) в админке.
+        assertEquals(Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model", "organization"), AgentScopeFilter.humanOnlyFamilies(), "model — правка модели LORE, MC-05; users — профиль автора, AP-07; organization — админка");
     }
 
     @Test

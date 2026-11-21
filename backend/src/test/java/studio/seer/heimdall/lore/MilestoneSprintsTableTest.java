@@ -21,7 +21,7 @@ class MilestoneSprintsTableTest {
         LoreSlices.SliceDef d = LoreSlices.get("milestone_sprints");
         assertNotNull(d, "срез спринтов вехи заведён");
         String sql = d.baseSql();
-        assertTrue(sql.contains("out('TARGETS_MILESTONE').milestone_id CONTAINS :mid"), sql);
+        assertTrue(sql.contains("outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id CONTAINS :mid"), sql);
         assertTrue(sql.contains("name") && sql.contains("status_raw"), "название и статус спринта: " + sql);
         assertEquals(List.of("mid"), d.required());
         assertEquals(LoreSlices.PROJECT_SCOPED.get("component_sprints"), LoreSlices.PROJECT_SCOPED.get("milestone_sprints"),

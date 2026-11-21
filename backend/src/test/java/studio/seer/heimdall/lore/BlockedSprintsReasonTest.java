@@ -44,7 +44,8 @@ class BlockedSprintsReasonTest {
     @Test
     void reasonSliceCarriesTheExplanation() {
         String s = sql("blocked_sprints_reason");
-        assertTrue(s.contains("SELECT sprint_id, name, "), "name выбирается без псевдонима: " + s);
+        // D-2026-MIG-SPRINT-PHASE-TITLE: название спринта — title новой схемы, name старой; ключ ответа прежний — name
+        assertTrue(s.contains("SELECT sprint_id, coalesce(title, name) AS name, "), "название спринта под ключом name: " + s);
         for (String col : new String[] {"block_reason", "task_count", "deps", "open_deps", "open_questions"}) {
             assertTrue(s.contains(" AS " + col), "колонка " + col + ": " + s);
         }
@@ -53,7 +54,8 @@ class BlockedSprintsReasonTest {
     @Test
     void openDependencyMeansNotDoneAndNotCancelled() {
         String s = sql("blocked_sprints_reason");
-        assertTrue(s.contains("out('DEPENDS_ON')[out('HAS_STATE')[valid_to IS NULL AND ("), s);
+        // MDL-13: DEPENDS_ON историчная — только текущие рёбра зависимости.
+        assertTrue(s.contains("outE('DEPENDS_ON')[valid_to IS NULL].inV()[out('HAS_STATE')[valid_to IS NULL AND ("), s);
         assertTrue(s.contains(LoreStatusVocabulary.anySql("status_raw", "done", "cancelled")), s);
     }
 
@@ -74,7 +76,9 @@ class BlockedSprintsReasonTest {
         assertTrue(s.contains("out('GATES')[out('HAS_STATE')[valid_to IS NULL AND ("), "закрытость — по ТЕКУЩЕМУ состоянию задачи: " + s);
         assertTrue(s.contains(LoreStatusVocabulary.anySql("status_raw", "done", "cancelled")), s);
         assertTrue(s.contains(" AS closed_tasks"), s);
-        assertTrue(s.contains("SELECT question_id, title, status, priority, owner, "), "owner — без псевдонима: " + s);
+        // MT-MCP-TRUTH A6: колонка по-прежнему зовётся owner, но берётся с ребра ANSWERABLE_BY, без ребра — текст.
+        assertTrue(s.contains("SELECT question_id, title, status, priority, " + QuestionOwner.OWNER_COLUMNS + ", "), "owner: " + s);
+        assertTrue(QuestionOwner.OWNER_COLUMNS.contains(" AS owner,"), "имя колонки owner сохранено для потребителей");
     }
 
     @Test

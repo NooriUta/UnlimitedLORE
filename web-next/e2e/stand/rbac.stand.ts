@@ -13,9 +13,11 @@
 // к прогону не попадает. Они идут в CI с секретом из Infisical — отдельным шагом.
 import { readFileSync } from 'node:fs';
 import { expect, test as base, type Page } from '@playwright/test';
-import { authFileFor, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';
-import { storedAccessToken } from './tokens.ts';
+import { authFileFor, expiredCopy, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';
+import { preprodTestWriteRefusal, WRITES_TAG } from './writeGuard.ts';
+import { call, ensureTestProject, TEST_PROJECT_A, TEST_PROJECT_B } from './testData.ts';import { storedAccessToken } from './tokens.ts';
 import { asAccount, requireStandUrl, shot } from './stand.ts';
+import { roleClaimsOf } from '../../src/standSmoke/roleClaims.ts';
 
 const AUTH_DIR = process.env.LORE_STAND_AUTH_DIR?.trim() || 'e2e/stand/.auth';
 
@@ -74,11 +76,19 @@ const ROLE_CASES = [
 ] as const;
 
 for (const [id, account, role] of ROLE_CASES) {
-  test(`${id} Роль из токена: ${account} → ${role}`, async ({ login }) => {
+  test(`${id} Роль из токена: ${account} → ${role}`, async ({ login }, info) => {
     const page = await login(account);
     const me = await whoami(page);
+    // AP-02 (20.11.2026): test-admin/test-viewer опознаются как superadmin. Роли из своего токена — в отчёт
+    // (только роли и группы, не токен): по ним видно, что выдал Keycloak, без входа в его админку.
+    const token = await page.evaluate(() => {
+      const k = Object.keys(localStorage).find(x => x.includes('oidc.user:'));
+      return k ? (JSON.parse(localStorage.getItem(k) ?? '{}') as { access_token?: string }).access_token ?? null : null;
+    });
+    const claims = roleClaimsOf(token);
+    await info.attach('role-claims', { body: JSON.stringify(claims), contentType: 'application/json' });
     expect(me.kind, 'учётка человека, не агента').toBe('human');
-    expect(me.seer_role, `seer_role ${account}`).toBe(role);
+    expect(me.seer_role, `seer_role ${account}; роли токена: ${JSON.stringify(claims)}`).toBe(role);
   });
 }
 
@@ -127,15 +137,27 @@ test('RB-07 Без токена: запись и чтение → 401', async ({
 
 test('RB-08 Просроченный токен → 401', async ({ login }) => {
   // Токен, записанный в файле входа, живёт минуты; приложение при загрузке берёт новый.
-  // Если записанный уже истёк — это и есть просроченный токен настоящей учётки.
+  // Если записанный уже истёк — это и есть просроченный токен настоящей учётки. Не истёк — тест делает
+  // просроченный сам (координатор 21.11.2026): копия живого токена с exp на час в прошлом (подпись прежняя).
   let stale: string | null = null;
   try { stale = storedAccessToken(JSON.parse(readFileSync(authFileFor(AUTH_DIR, RBAC_ACCOUNTS.viewer), 'utf8'))); } catch { /* нет файла — скажет login */ }
   const page = await login(RBAC_ACCOUNTS.viewer);
   const claims = stale ? jwtPayload(stale) : null;
-  test.skip(!stale || !claims || !isExpired(claims, Date.now()), 'токен в файле входа ещё не истёк — просроченного нет, кейс не выполнен');
-  const r = await api(page, 'GET', '/lore/whoami', { token: stale! });
+  const realStale = !!stale && !!claims && isExpired(claims, Date.now());
+  const live = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(k => k.includes('oidc.user:'));
+    return key ? (JSON.parse(localStorage.getItem(key) ?? '{}') as { access_token?: string }).access_token ?? null : null;
+  });
+  expect(live, 'у вошедшей учётки есть живой токен').toBeTruthy();
+  // Положительный контроль: живой токен этой же учётки сервер принимает.
+  const ok = await api(page, 'GET', '/lore/whoami', { token: live! });
+  expect(ok.status, `живой токен принят: ${ok.text}`).toBe(200);
+  const expired = realStale ? stale! : expiredCopy(live!, Date.now());
+  expect(expired, 'просроченный токен собран').toBeTruthy();
+  test.info().annotations.push({ type: 'note', description: realStale ? 'просроченный — настоящий из файла входа' : 'просроченный — копия живого с exp в прошлом (подпись не сходится)' });
+  const r = await api(page, 'GET', '/lore/whoami', { token: expired! });
   expect(r.status, `просроченный токен: ${r.text}`).toBe(401);
-  const w = await api(page, 'POST', '/lore/task', { body: {}, token: stale! });
+  const w = await api(page, 'POST', '/lore/task', { body: {}, token: expired! });
   expect(w.status, `запись просроченным токеном: ${w.text}`).toBe(401);
 });
 
@@ -156,14 +178,38 @@ test('RB-11a super-admin проходит гейт создания проект
 
 // ── §5 Проектные роли ───────────────────────────────────────────────────────
 
-test('RB-40 Владелец видит свой проект: test-user-1 — owner в TEST-proj-a', async ({ login }) => {
-  const page = await login(RBAC_ACCOUNTS.user1);
-  const me = await whoami(page);
+// Владелица 21.11.2026: «у нас же есть тестовые пользователи, пусть заводят тестовые проекты». На препроде test-sa
+// заводит TEST-proj-a и TEST-proj-b (повтор — переиспользует) и даёт test-user-1 роль owner в TEST-proj-a. Удаления
+// проекта в API нет — проекты постоянные тестовые. Вне препрода (и без метки @writes) — только чтение, как прежде.
+test('RB-40 Владелец видит свой проект: test-user-1 — owner в TEST-proj-a', { tag: WRITES_TAG }, async ({ login }) => {
+  const writeRefusal = preprodTestWriteRefusal(process.env.LORE_STAND_URL?.trim(),
+    { writer: test.info().tags.includes(WRITES_TAG), ids: [TEST_PROJECT_A, TEST_PROJECT_B] });
+  const user = await login(RBAC_ACCOUNTS.user1);
+  if (writeRefusal === null) {
+    const sub = String((await whoami(user)).sub ?? '');
+    expect(sub, 'kc_sub test-user-1 из whoami').not.toBe('');
+    const sa = await login(RBAC_ACCOUNTS.superAdmin);
+    for (const slug of [TEST_PROJECT_A, TEST_PROJECT_B]) {
+      const outcome = await ensureTestProject(sa, slug);
+      info(`проект ${slug}: ${outcome}`);
+    }
+    const g = await call(sa, 'POST', '/lore/user/role', { kc_sub: sub, project: TEST_PROJECT_A, role: 'owner', display_name: RBAC_ACCOUNTS.user1 });
+    expect(g.status, `owner test-user-1 в ${TEST_PROJECT_A}: ${g.text}`).toBe(200);
+  } else info(`записи нет: ${writeRefusal}`);
+  const me = await whoami(user);
   const roles = (me.project_roles ?? []) as { project?: string; role?: string }[];
-  test.skip(roles.length === 0, 'у test-user-1 нет проектных ролей — тестовые проекты (TEST-proj-a) на стенде не заведены, кейс не выполнен');
-  expect(roles, 'роль owner в TEST-proj-a').toContainEqual(expect.objectContaining({ project: 'TEST-proj-a', role: 'owner' }));
+  test.skip(roles.length === 0, `у test-user-1 нет проектных ролей — тестовые проекты не заведены (${writeRefusal ?? 'запись прошла, а роли нет?'}), кейс не выполнен`);
+  expect(roles, 'роль owner в TEST-proj-a').toContainEqual(expect.objectContaining({ project: TEST_PROJECT_A, role: 'owner' }));
   for (const r of roles) expect(String(r.project), 'только тестовые проекты').toMatch(/^TEST-/);
+  // Видит свой проект: «мои проекты» и паспорт проекта.
+  const mine = await api(user, 'GET', '/lore/me/projects');
+  expect(mine.status, `/lore/me/projects: ${mine.text}`).toBe(200);
+  expect(mine.text, `${TEST_PROJECT_A} среди «моих проектов»`).toContain(TEST_PROJECT_A);
+  const rec = await api(user, 'GET', `/lore/record/project/${encodeURIComponent(TEST_PROJECT_A)}`);
+  expect(rec.status, `test-user-1 открывает паспорт ${TEST_PROJECT_A}: ${rec.text}`).toBe(200);
 });
+
+const info = (d: string) => test.info().annotations.push({ type: 'note', description: d });
 
 const STAND_BACK_ON = Date.parse('2026-11-21T00:00:00Z');
 
@@ -175,10 +221,13 @@ test('AD-01 Админка viewer-у: честный отказ, а не пус�
   test.skip(Date.now() < STAND_BACK_ON, 'выключен владелицей 18.11 до 21.11.2026 — вернётся сам');
   const page = await login(RBAC_ACCOUNTS.viewer);
   await page.goto('/?mod=admin&sec=adm-home');
-  const card = page.locator('[data-testid="adm-home-403"]');
-  await expect(card, 'карточка Главной админки показана').toBeVisible({ timeout: 30_000 });
-  await expect(card, 'карточка дочиталась').not.toHaveAttribute('data-state', 'loading', { timeout: 30_000 });
-  await expect(card, 'журнал отказов viewer-у закрыт — «нет прав», не «0»').toHaveAttribute('data-state', 'forbidden');
+  // AP-08 (SPRINT_LORE_ADMIN_POLISH/AP-08): админка закрыта viewer-у ЦЕЛИКОМ — экран «только для администраторов»
+  // с его ролью (WhoamiBar.AdminForbidden), а не Главная с карточкой «нет прав». Смоук 39054 (21.11) показал ровно
+  // это (скрин AD-01): прежняя проверка ждала карточку adm-home-403, которой при закрытой админке нет по замыслу.
+  const denied = page.getByText('Админка — только для администраторов');
+  await expect(denied, 'честный отказ: экран «только для администраторов»').toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Ваша роль — viewer/), 'в отказе названа роль вызывающего').toBeVisible();
+  await expect(page.locator('[data-testid="adm-home-403"]'), 'карточек Главной с нулями viewer не видит').toHaveCount(0);
 });
 
 for (const [id, account, role] of [['AD-02', RBAC_ACCOUNTS.admin, 'admin'], ['AD-02v', RBAC_ACCOUNTS.viewer, 'viewer']] as const) {

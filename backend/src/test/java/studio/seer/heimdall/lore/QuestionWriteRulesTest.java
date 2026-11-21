@@ -28,18 +28,23 @@ class QuestionWriteRulesTest {
         assertTrue(g.contains("нескольк"), "одно решение закрывает несколько: " + g);
     }
 
+    /**
+     * A6, решение владелицы 19.11.2026 («1а»): прежняя нормализация строки (пять написаний → «omiloreadmin» текстом,
+     * прочее — как есть) заменена ребром ANSWERABLE_BY; правила — {@link QuestionOwnerTest}, SQL —
+     * {@link QuestionOwnerEmbeddedTest}. Здесь — что пять написаний остались одной личностью и что составное
+     * значение больше не проходит текстом.
+     */
     @Test
     void ownerSpellingsOfTheOwnerCollapseToOneIdentity() {
-        for (String alias : new String[] {"owner", "владелец", "владелица", "alexa", "Владелица", " omiloreadmin ", "OWNER"})
-            assertEquals("omiloreadmin", LoreQuestionResource.normalizeOwner(alias), alias);
+        assertEquals(java.util.Set.of("owner", "владелец", "владелица", "alexa", "omiloreadmin"), QuestionOwner.OWNER_ALIASES);
+        assertEquals("omiloreadmin", QuestionOwner.OWNER_IDENTITY);
     }
 
     @Test
-    void otherOwnersAreLeftAsTheyAre() {
-        assertEquals("AGENT-FULL-msbt0fed", LoreQuestionResource.normalizeOwner("AGENT-FULL-msbt0fed"));
-        assertEquals("сессия шлюза (link/), 3c1c2362", LoreQuestionResource.normalizeOwner("сессия шлюза (link/), 3c1c2362"));
-        assertEquals("owner + claude", LoreQuestionResource.normalizeOwner("owner + claude"),
-            "составное значение — не синоним, решает человек");
-        assertNull(LoreQuestionResource.normalizeOwner(null), "не передан — не трогаем");
+    void compositeOwnerIsNoLongerWrittenAsText() {
+        java.util.List<java.util.Map<String, Object>> users = java.util.List.of(
+            java.util.Map.of("kc_sub", "52f6-uuid", "display_name", "omiloreadmin"));
+        assertNotNull(QuestionOwner.resolve("owner + claude", users, java.util.List.of()).refusal(),
+            "составное значение — не запись реестра: отказ, а не текст в поле");
     }
 }

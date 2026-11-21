@@ -938,7 +938,7 @@ public class AidaLoreResource extends LoreResourceBase {
      * говорится числом ({@code scope.hidden}). sprint_deps — ребро между двумя
      * спринтами: без числа «зависимостей нет» неотличимо от «они ведут в чужие проекты».
      */
-    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps");
+    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps", "deps", "deps_of");
 
     /** «Скрыто N» в метке скоупа: total — без скоупа, shown — под скоупом. */
     static void putHidden(Map<String, Object> marker, int total, int shown) {
@@ -983,7 +983,7 @@ public class AidaLoreResource extends LoreResourceBase {
     static final String MACHINE_ACL = "machine_acl";
     /** Проекты владельцев машин — по ролям {@code HAS_PROJECT_ROLE} (S7B-ACL-3). */
     static final String MACHINE_ACL_OWNER_ROLES_SQL =
-        "SELECT kc_sub, out('HAS_PROJECT_ROLE').slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
+        "SELECT kc_sub, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
     /** Агенты и их машины — для harness машины (S7B-ACL-3; те же поля, что agent_owners). */
     static final String MACHINE_ACL_AGENTS_SQL =
         "SELECT actor_id, client_id, machine_id, harness, out('USES_MACHINE').machine_id AS machines "
@@ -1045,6 +1045,17 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
         }
+        // D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION: доску плана при установке не перенесли — раздел снят, словами.
+        // Общий случай: срез читает тип вне модели 1.18, которого в базе из модели нет, — 410 с причиной, а не 502.
+        String notMigrated = ModelSchemaAdapter.sliceUnavailable(id);
+        if (notMigrated != null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
+                .entity(new LoreError("TYPE_NOT_MIGRATED", notMigrated))));
+        }
+        if (ModelSchemaAdapter.planSectionRemoved(id)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
+                .entity(new LoreError("SECTION_REMOVED", "срез " + id + " — старая доска плана: при установке её не перенесли (MIG_PLAN_BOARD=drop)"))));
+        }
         // AP-08: админские журналы — только admin/superadmin, отказ словами, а не «0» в выдаче.
         if (LoreSlices.adminOnlyDenied(id, role)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
@@ -1055,6 +1066,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
 
         LoreSlices.Composed composed;
         final SlicePage page;
@@ -1065,7 +1077,9 @@ public class AidaLoreResource extends LoreResourceBase {
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
             callerScope = allowedProjectsOrNull(role);
+            Map<String, Object> fromProducts1 = expandProductScope(given);
             narrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            if (fromProducts1 != null && narrowing.meta() != null) narrowing.meta().put("from_products", fromProducts1);
             rowScope = narrowing.scope();
             composed = LoreSlices.compose(id, given, rowScope);
         } catch (IllegalArgumentException e) {
@@ -1341,6 +1355,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
         LoreSlices.Composed composed;
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
@@ -1352,7 +1367,9 @@ public class AidaLoreResource extends LoreResourceBase {
             countPage = SlicePage.extract(new LinkedHashMap<>(given));
             callerScope = allowedProjectsOrNull(role);
             // Выбор проектов в шапке сужает и счётчик — иначе число в разделе не сойдётся со списком.
+            Map<String, Object> fromProducts2 = expandProductScope(given);
             countNarrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            if (fromProducts2 != null && countNarrowing.meta() != null) countNarrowing.meta().put("from_products", fromProducts2);
             rowScope = countNarrowing.scope();
             filters = LoreSectionCount.filtersOf(given);
             composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
@@ -1422,6 +1439,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
         final List<String> axes;
         final String groupBy;
         final Map<String, String> filters;
@@ -1436,7 +1454,9 @@ public class AidaLoreResource extends LoreResourceBase {
             axes = LoreListFacets.axes(id, given.get(LoreListFacets.AXES_PARAM));
             groupBy = LoreListFacets.groupBy(id, given.get(LoreListFacets.GROUP_PARAM));
             callerScope = allowedProjectsOrNull(role);
+            Map<String, Object> fromProducts3 = expandProductScope(given);
             narrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            if (fromProducts3 != null && narrowing.meta() != null) narrowing.meta().put("from_products", fromProducts3);
             rowScope = narrowing.scope();
             filters = LoreListFacets.filtersOf(given);
             sets.add(filters);
@@ -1681,6 +1701,47 @@ public class AidaLoreResource extends LoreResourceBase {
         result.put("releases",     report.releases());
         result.put("errors",       report.errors());
         return noStore(Response.ok(result));
+    }
+
+
+    /**
+     * PS-PRODUCT-FILTER (владелица 21.11.2026): {@code ?scope_products=} — продукт как логическая группа проектов;
+     * раскрывается в проекты продуктов и сужает выдачу тем же путём, что выбор проектов ({@link SliceProjectNarrowing}).
+     */
+    private Map<String, Object> expandProductScope(Map<String, String> given) {
+        if (!given.containsKey(SliceProjectNarrowing.PRODUCTS_PARAM)) return null;
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT code, out('BELONGS_TO_PROJECT').slug AS projects, out('PARENT_PRODUCT').code AS parent_code "
+                + "FROM KnowDictEntry WHERE dict_type = 'product'", Map.of());
+        return SliceProjectNarrowing.expandProducts(given, productProjects(rows), productParents(rows));
+    }
+
+    /** Продукт → его проекты (BELONGS_TO_PROJECT): один запрос на вызов с выбором продукта. */
+    static Map<String, List<String>> productProjects(List<Map<String, Object>> rows) {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        for (Map<String, Object> r : rows) {
+            Object code = r.get("code");
+            if (code == null) continue;
+            List<String> ps = new ArrayList<>();
+            if (r.get("projects") instanceof List<?> l) for (Object x : l) if (x != null) ps.add(String.valueOf(x));
+            out.put(String.valueOf(code), ps);
+        }
+        return out;
+    }
+
+    /**
+     * PS-PRODUCT-FILTER (владелица 21.11.2026): подпродукт → родитель (PARENT_PRODUCT, parent_code — список или строка);
+     * выбор родителя в шапке раскрывается вместе с подпродуктами.
+     */
+    static Map<String, String> productParents(List<Map<String, Object>> rows) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map<String, Object> r : rows) {
+            Object code = r.get("code"), p = r.get("parent_code");
+            if (code == null) continue;
+            Object first = p instanceof List<?> l ? l.stream().filter(java.util.Objects::nonNull).findFirst().orElse(null) : p;
+            if (first != null && !String.valueOf(first).isBlank()) out.put(String.valueOf(code), String.valueOf(first));
+        }
+        return out;
     }
 
 }

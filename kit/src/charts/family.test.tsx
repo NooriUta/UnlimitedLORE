@@ -61,6 +61,41 @@ describe('bar: ось Y от нуля', () => {
     expect(ticks[0]).toBe('0');
     expect(container.querySelectorAll('[data-bar]')).toHaveLength(2);
   });
+
+  // Графики 19.11.2026 (№14 «отказы по кодам» за 30 дней на телефоне 390): подпись под КАЖДЫМ
+  // столбиком слипалась в кашу «2122232425…». Подписи — через одну-две, как у линии; все — в «Таблицей».
+  it('много категорий — подписи прореживаются (не теснее ~40 px), столбики все', () => {
+    const data = Array.from({ length: 30 }, (_, i) => ({ category: `${String(i + 1).padStart(2, '0')}.11`, values: { a: i } }));
+    const { container } = wrap(<BarChart title="По дням" groups={[{ key: 'a', label: 'n' }]} data={data} />);
+    const labels = [...container.querySelectorAll('[data-cat]')].map(e => e.textContent);
+    expect(labels.length).toBeLessThanOrEqual(15);
+    expect(labels[0]).toBe('01.11');
+    expect(container.querySelectorAll('[data-bar]')).toHaveLength(30);
+  });
+
+  // Графики 19.11.2026 (№3 WIP по исполнителям на 390): «Claude Code (full)» налезало на соседнюю
+  // подпись. Подпись длиннее полосы — обрезается многоточием, полное имя — в подсказке и в «Таблицей».
+  it('длинная подпись категории не шире своей полосы — многоточие и полное имя в <title>', () => {
+    const data = ['Claude Code (full)', 'Claude Code (pm)', '(без исполнителя)', 'Ирина', 'a', 'b', 'c', 'd', 'e', 'f']
+      .map(category => ({ category, values: { a: 1 } }));
+    const { container } = wrap(<BarChart title="WIP" groups={[{ key: 'a', label: 'n' }]} data={data} />);
+    const first = container.querySelector('[data-cat]')!;
+    expect(first.textContent!.endsWith('…')).toBe(true);
+    expect(first.querySelector('title')?.textContent).toBe('Claude Code (full)');
+    expect([...container.querySelectorAll('[data-cat]')].find(e => e.textContent === 'Ирина')).toBeTruthy();
+  });
+});
+
+describe('scatter: ось времени', () => {
+  // Графики 19.11.2026 (время цикла, ритм релизов): x — момент, а «Таблицей» печатала epoch-мс числом.
+  it('xLabel — подпись x в таблице и три деления под рисунком', () => {
+    const pts = [0, 10, 20].map(d => ({ x: T0 + d * DAY, y: d + 1, label: `p${d}` }));
+    const fmt = (x: number) => new Date(x).toISOString().slice(5, 10);
+    const { container } = wrap(<ScatterChart title="Цикл" points={pts} xLabel={fmt} />);
+    expect([...container.querySelectorAll('[data-xtick]')].map(e => e.textContent)).toEqual(['10-03', '10-13', '10-23']);
+    fireEvent.click(screen.getByRole('button', { name: 'Таблицей' }));
+    expect(within(container.querySelector('table')!).getByText('10-13')).toBeTruthy();
+  });
 });
 
 describe('scatter и heat', () => {

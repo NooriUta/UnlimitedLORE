@@ -93,6 +93,13 @@ class LoreRecordSnapshotLiveDbTest {
                     assertTrue(ch.has("id") && ch.has("label") && ch.has("inherited_from"), type + " " + chip + ": форма чипа " + ch);
             }
         }
+        // 21.11.2026 («опиши»): поля модели без колонки в главном срезе берут значение из вершины
+        // (LoreRecordUnmodeled.fillModeled) — их у снимка не было; сверка сборки из модели идёт без них.
+        java.util.Set<String> fromSlice = new java.util.HashSet<>();
+        for (LoreRecordFrom.Val v : LoreRecordFrom.VALUES.getOrDefault(type, List.of())) fromSlice.add(v.key());
+        java.util.List<String> fromVertex = new java.util.ArrayList<>();
+        actualValues.fieldNames().forEachRemaining(k -> { if (!fromSlice.contains(k) && !expectedValues.containsKey(k)) fromVertex.add(k); });
+        for (String k : fromVertex) actualValues.remove(k);
         same(expectedValues, actualValues, type + " values");
 
         List<Map<String, Object>> links = new ArrayList<>(LoreRecordSnapshotTest.Legacy.rowLinks(type, row));

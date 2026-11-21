@@ -59,7 +59,12 @@ export function withStrictTools(server: McpServer, gate?: (name: string) => bool
     // просто не регистрируется (и не попадает в payload сессии); пропуски видны
     // в stderr, чтобы отличить «инструмента нет» от «инструмент запрещён».
     if (gate && !gate(name)) {
-      console.error(`[aida-lore-mcp] tool hidden by surface profile: ${name}`);
+      // AO-MCP-HOSTED: в HTTP-режиме сервер собирается на каждую сессию — построчный
+      // список скрытых дал бы десятки строк на подключение; поверхность сессии видна
+      // одной строкой «сессия … открыта, поверхность: …» (http.ts).
+      if ((process.env.LORE_MCP_TRANSPORT ?? '').trim() !== 'http') {
+        console.error(`[aida-lore-mcp] tool hidden by surface profile: ${name}`);
+      }
       return undefined;
     }
     let description: string | undefined;

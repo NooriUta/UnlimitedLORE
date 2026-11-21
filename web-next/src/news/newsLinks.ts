@@ -15,15 +15,15 @@ export function newsHrefV2(e: NewsEvent): string | null {
  * Решение владелицы 10.11.2026: «всё, что можно открыть, делать ссылкой: в ленте
  * открываются люди и любой объект, у которого есть паспорт».
  *
- * Человек — его карточка в «Кто где» админки (раскрыта по kc_sub: автор правки
- * пишется именно им, S2-12). Агент — раздел агентов: автор-агент записан
- * client_id, а раскрытие там по actor_id, и подставлять одно вместо другого
- * значило бы открыть не того. Записи — раздел своего типа v2 (проект — с S4-29). Паспорта нет
+ * Человек — его личная страница вне админки (?sec=user, ключ kc_sub: автор правки пишется
+ * именно им, S2-12). Агент — его карточка вне админки (?sec=agent): автор-агент записан
+ * client_id, и срез agent_by_id находит агента и по client_id. Владелица 21.11.2026: «ни одна
+ * связь не ведёт в админку из общих поверхностей». Записи — раздел своего типа v2 (проект — с S4-29). Паспорта нет
  * у типа — null: kit рисует текст, а не ссылку-пустышку.
  */
 export function newsRefHrefV2(type: string, id: string): string | null {
   if (!id) return null;
-  if (type === 'person') return `/admin?${new URLSearchParams({ adm: 'who', 'adm-open': id })}`;
-  if (type === 'agent') return '/admin?adm=agents';
+  if (type === 'person') return recordHref('user', id);
+  if (type === 'agent') return recordHref('agent', id);
   return recordHref(type, id);
 }

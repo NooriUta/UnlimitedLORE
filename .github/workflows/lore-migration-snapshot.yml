@@ -7,10 +7,17 @@ name: LORE migration snapshot (prod → preprod) and model-migration run
 #                     кредом прод-бэкенда, как migrate-live-check), sha256, счёт KnowSprint /
 #                     KnowTask / KnowPhase, развёртывание на препроде отдельной базой
 #                     migration_src_<дата>. Имя занято — отказ.
-#   action=migrate  — конвейер scripts/model-migration/ из ветки code_ref (по умолчанию
-#                     migration/model-v2) на препроде: источник → приёмник, этап stage.
-#                     Доступ — секреты MIG_DB_USER / MIG_DB_PASSWORD (учётка препрод-ArcadeDB,
-#                     вносит владелица); файл доступа собирается во временный каталог и удаляется.
+#   action=migrate  — конвейер scripts/model-migration/ из ветки code_ref (по умолчанию develop)
+#                     на препроде: источник → приёмник, этап stage; логика —
+#                     .github/scripts/model-migration-run.sh. Этап full (MIG-01, выкатка 1.18 на
+#                     препрод) — как tools/run/ryzen-full-all.sh: connect --create-dst, два прогона
+#                     transfer → edges → dst-fingerprint и сверка отпечатков. Файл решений — decisions
+#                     (по умолчанию scripts/model-migration/rules/decisions.lore.json). Приёмник
+#                     препрода — migration_dst_preprod: проходит и ворота препрода (*_preprod), и
+#                     сторож переноса (migration_dst*).
+#                     Доступ — root препродного ArcadeDB и секрет ARCADEDB_ROOT_PASSWORD (владелица 20.11; прежде MIG_DB_*,
+#                     вносит владелица или CICDGitHub); секретов нет — шаг отвечает BLOCKED и
+#                     называет, что завести. Файл доступа собирается во временный каталог и удаляется.
 #                     Приёмник не может быть system_aida_lore* и не может совпасть с источником.
 #
 # Первый запуск каждого действия — только по прямому слову владелицы.
@@ -31,14 +38,14 @@ on:
       dest:
         description: 'migrate: база-приёмник'
         required: false
-        default: 'migration_dst'
+        default: 'migration_dst_preprod'
         type: string
       stage:
         description: 'migrate: этап'
         required: false
         default: 'dry-run'
         type: choice
-        options: ['dry-run', 'transfer', 'transfer-edges', 'orphan-census']
+        options: ['dry-run', 'transfer', 'transfer-edges', 'orphan-census', 'full']
       reset:
         description: 'migrate/transfer: очистить непустой приёмник (--reset)'
         required: false
@@ -47,7 +54,12 @@ on:
       code_ref:
         description: 'migrate: ветка или SHA кода конвейера'
         required: false
-        default: 'migration/model-v2'
+        default: 'develop'
+        type: string
+      decisions:
+        description: 'migrate: файл решений (путь в репозитории)'
+        required: false
+        default: 'scripts/model-migration/rules/decisions.lore.json'
         type: string
 
 concurrency:
@@ -107,37 +119,40 @@ jobs:
         with:
           ref: ${{ inputs.code_ref }}
 
+      # Логика сторожа и конвейера — в .github/scripts/model-migration-run.sh (тесты:
+      # web-next/src/preprod-118-switch.test.ts). Сторож — отдельным шагом, чтобы отказ по имени
+      # базы был виден до обращения к секретам.
       - name: Сторож баз (дублирует env.mjs)
-        run: |
-          set -eu
-          lc() { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
-          src="$(lc "$MIG_SRC_DB")"; dst="$(lc "$MIG_DST_DB")"
-          [ -n "$src" ] || { echo "::error::источник (name) не задан"; exit 1; }
-          case "$src" in migration_src_*) ;; *) echo "::error::источник должен называться migration_src_*: $src"; exit 1 ;; esac
-          case "$dst" in system_aida_lore*) echo "::error::приёмник — рабочая база: $dst"; exit 1 ;; esac
-          case "$dst" in migration_dst*) ;; *) echo "::error::приёмник должен называться migration_dst*: $dst"; exit 1 ;; esac
-          [ "$src" != "$dst" ] || { echo "::error::приёмник совпадает с источником"; exit 1; }
-          echo "источник $src → приёмник $dst, этап $STAGE"
+        env:
+          GUARD_ONLY: "true"
+        run: bash .github/scripts/model-migration-run.sh
 
+      # Учётка — root препродного ArcadeDB и существующий секрет ARCADEDB_ROOT_PASSWORD (владелица 20.11:
+      # «секрет от базы по миграции такой же как и у root обычного не надо плодить»); базу приёмника
+      # создаёт сам конвейер, а это право только root. Секрета нет — BLOCKED (код 2), конвейер не
+      # запускается. Этап full — два прогона transfer → edges → dst-fingerprint и сверка.
       - name: Конвейер model-migration
         env:
-          MIG_DB_USER: ${{ secrets.MIG_DB_USER }}
-          MIG_DB_PASSWORD: ${{ secrets.MIG_DB_PASSWORD }}
-        run: |
-          set -euo pipefail
-          [ -n "${MIG_DB_USER:-}" ] && [ -n "${MIG_DB_PASSWORD:-}" ] \
-            || { echo "::error::BLOCKED: секреты MIG_DB_USER / MIG_DB_PASSWORD не заданы — их вносит владелица"; exit 2; }
-          d="$(mktemp -d)"; trap 'rm -rf "$d"' EXIT; umask 077
-          {
-            echo "MIG_DB_URL=http://172.17.0.1:2480"
-            echo "MIG_SRC_DB=$MIG_SRC_DB"; echo "MIG_SRC_USER=$MIG_DB_USER"; echo "MIG_SRC_PASSWORD=$MIG_DB_PASSWORD"
-            echo "MIG_DST_DB=$MIG_DST_DB"; echo "MIG_DST_USER=$MIG_DB_USER"; echo "MIG_DST_PASSWORD=$MIG_DB_PASSWORD"
-          } > "$d/migration.env"
-          export MIG_ENV_FILE="$d/migration.env"
-          mkdir -p migration-report
-          node scripts/model-migration/env.mjs
-          extra=""; [ "$STAGE" = transfer ] && [ "$RESET" = true ] && extra="--reset"
-          node "scripts/model-migration/$STAGE.mjs" $extra --out "migration-report/$STAGE.json"
+          MIG_DB_USER: root
+          MIG_DB_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+          MIG_DECISIONS: ${{ inputs.decisions }}
+        run: bash .github/scripts/model-migration-run.sh
+
+      # MIG-02: раздел админки препрода читает отчёт из lore.migration.dir (том lore-preprod-migration,
+      # docker-compose.preprod.yml). Этап full сухого прогона не делает — делаем его здесь, затем кладём
+      # dry-run.json и transfer.json (второй прогон) в том. Решения людей (decisions.json) не трогаются.
+      - name: Сухой прогон — для админки препрода
+        if: success() && inputs.stage == 'full' && inputs.dest == 'migration_dst_preprod'
+        env:
+          STAGE: dry-run
+          MIG_DB_USER: root
+          MIG_DB_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+          MIG_DECISIONS: ${{ inputs.decisions }}
+        run: bash .github/scripts/model-migration-run.sh
+
+      - name: Отчёт — в каталог админки препрода
+        if: success() && inputs.stage == 'full' && inputs.dest == 'migration_dst_preprod'
+        run: bash .github/scripts/migration-report-publish.sh
 
       - name: Отчёт — артефактом
         if: always()

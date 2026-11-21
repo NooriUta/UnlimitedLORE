@@ -69,12 +69,21 @@ describe('ссылки ленты ведут в разделы v2 с откры�
 // S7A-08, п.24 — решение владелицы 10.11.2026: «всё, что можно открыть, делать
 // ссылкой: в ленте открываются люди и любой объект, у которого есть паспорт».
 describe('S7A-08 · П24: ссылки на людей и связанные записи строки ленты', () => {
-  it('человек — его карточка в «Кто где» (раскрыта по kc_sub)', () => {
-    expect(newsRefHrefV2('person', 'sub-anna')).toBe('/admin?adm=who&adm-open=sub-anna');
+  // Владелица 21.11.2026: «переход по логину переходит в админку, а людей я просила повторить личными страницами вне
+  // админки» · «агенты вне админки тоже — личная карта» · «проверь, что ни одна связь не ведёт в админку из общих
+  // поверхностей». Человек — его личная страница (?sec=user, ключ kc_sub); агент — его карточка (?sec=agent).
+  it('человек — его личная страница вне админки (ключ kc_sub)', () => {
+    const h = newsRefHrefV2('person', 'sub-anna')!;
+    expect(h).not.toMatch(/admin/);
+    expect(new URLSearchParams(h.split('?')[1]).get('sec')).toBe('user');
+    expect(new URLSearchParams(h.split('?')[1]).get('open')).toBe('sub-anna');
   });
 
-  it('агент — раздел агентов админки', () => {
-    expect(newsRefHrefV2('agent', 'mcp-lore')).toBe('/admin?adm=agents');
+  it('агент — его карточка вне админки (автор-агент записан учёткой — сервер найдёт по client_id)', () => {
+    const h = newsRefHrefV2('agent', 'mcp-lore')!;
+    expect(h).not.toMatch(/admin/);
+    expect(new URLSearchParams(h.split('?')[1]).get('sec')).toBe('agent');
+    expect(new URLSearchParams(h.split('?')[1]).get('open')).toBe('mcp-lore');
   });
 
   it.each([

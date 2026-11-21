@@ -798,6 +798,48 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-ref__msg { margin: 0; font-size: var(--fs-sm); }
 .sk-ref__msg--block { color: var(--dng); }
 .sk-ref__msg--warn { color: var(--wrn); }
+/* SUPERTAGS-SPIKE: окно тегов «#тег» — список тегов (сколько записей, какие поля) и поля тега к заполнению */
+.sk-tagpick { max-height: min(70vh, 460px); overflow: auto; }
+.sk-tagpick__list { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow: auto; }
+.sk-tagpick__opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 8px; border-bottom: 1px solid var(--bd); cursor: pointer; min-width: 0; }
+.sk-tagpick__opt:hover, .sk-tagpick__opt.is-on { background: var(--bg3); outline: 1px solid var(--acc); outline-offset: -1px; }
+.sk-tagpick__name { color: var(--acc); font-weight: 700; overflow-wrap: anywhere; }
+.sk-tagpick__uses { color: var(--t3); font-size: var(--fs-2xs); justify-self: end; }
+.sk-tagpick__keys { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-tagpick__key { border: 1px solid var(--bd); border-radius: var(--r-pill); padding: 0 6px; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); }
+.sk-tagpick__link { appearance: none; background: none; border: 0; padding: 0; color: var(--acc); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.sk-tagpick__new { display: block; padding: 8px 10px; text-align: left; }
+.sk-tagpick__form { display: grid; gap: 6px; padding: 8px 10px 10px; }
+.sk-tagpick__edge { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t2); border-left: 2px solid var(--acc); padding-left: 8px; overflow-wrap: anywhere; }
+.sk-tagpick__row { display: grid; grid-template-columns: minmax(0, 7em) minmax(0, 1fr); gap: 6px; align-items: center; min-width: 0; }
+.sk-tagpick__row--new { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.sk-tagpick__lab { color: var(--t2); font-family: var(--mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.sk-tagpick__row input { min-width: 0; width: 100%; background: var(--bg1); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-sm); padding: 5px 8px; font-family: inherit; font-size: var(--fs-touch-input); }
+.sk-tagpick__note { margin: 0; color: var(--t3); font-size: var(--fs-2xs); line-height: 1.5; }
+.sk-tagpick__btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
+.sk-tagpick__btns > button:not(.sk-tagpick__link) { appearance: none; border: 1px solid var(--bd); background: var(--bg3); color: var(--t1); border-radius: var(--r-sm); padding: 4px 10px; font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.sk-tagpick__btns > button.is-pri { border-color: var(--acc); color: var(--acc); }
+.sk-tagpick__btns > button:disabled { opacity: .5; cursor: default; }
+/* SUPERTAGS шаг «г»: чип тега в TipTap — pill, как .sk-wref--tag в чтении; рядом с «#тег» — до трёх значений полей. */
+.sk-md .ProseMirror .sk-md__tagchip { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; padding: 0 8px; border: 1px solid var(--acc); border-radius: var(--r-pill); background: var(--bg2); font-family: var(--body, inherit); font-size: var(--fs-sm); line-height: 1.5; vertical-align: baseline; cursor: default; }
+.sk-md .ProseMirror .sk-md__tagchip[role='button'] { cursor: pointer; }
+.sk-md .ProseMirror .sk-md__tagchip[role='button']:hover { background: color-mix(in srgb, var(--acc) 14%, var(--bg2)); }
+.sk-md__tagchip-name { color: var(--acc); font-weight: 700; white-space: nowrap; }
+.sk-md__tagchip-vals { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-md__tagchip-vals:empty { display: none; }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='loading'] { opacity: .7; }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='error'] { border-color: var(--wrn); }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='error'] .sk-md__tagchip-vals { color: var(--wrn); }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='noedge'] { border-style: dashed; }
+.sk-md .ProseMirror .sk-md__tagchip[data-tag-state='foreign'] { border-color: var(--bd); }
+.sk-tagchip-pop { min-width: min(320px, calc(100vw - 32px)); }
+.sk-tagchip-pop__stamp { margin-left: auto; color: var(--t3); font-size: var(--fs-2xs); white-space: nowrap; }
+.sk-tagchip-pop__row { grid-template-columns: minmax(0, 7em) minmax(0, 1fr) auto; }
+.sk-tagchip-pop__ask { display: grid; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--bd); }
+.sk-tagchip-pop [role='dialog'] > .sk-tagpick__btns,
+.sk-tagchip-pop [role='dialog'] > .sk-ref__state { padding: 0 10px 8px; margin: 0; }
+.sk-tagpick__btns > button.is-danger { border-color: var(--dng); color: var(--dng); }
+.sk-tagpick__btns > button.sk-tagchip-pop__remove { margin-right: auto; color: var(--dng); }
 .sk-ref__row { display: flex; gap: 6px; flex-wrap: wrap; }
 .sk-ref__btn { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t2); font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; border-radius: var(--r-pill); padding: 3px 10px; cursor: pointer; }
 .sk-ref__btn--pri { background: var(--acc); border-color: var(--acc); color: var(--bg0); }
@@ -1599,6 +1641,11 @@ code, pre, kbd, samp { font-family: var(--mono); }
   font-weight: 600;
   cursor: pointer;
 }
+/* Полоса не помещается (KitShell ставит data-compact; админка 1.18, ноутбук 1280: «Админка» обрезалась и уходила
+   под выбор проекта) — прочие модули иконкой (подпись — в aria-label и подсказке), текущий — со словом. */
+.sk-shell__mods[data-compact='true'] .sk-shell__mod:not([aria-current='page']) { padding: 0 8px; }
+.sk-shell__mods[data-compact='true'] .sk-shell__mod:not([aria-current='page']) .sk-shell__label,
+.sk-shell__mods[data-compact='true'] .sk-shell__mod:not([aria-current='page']) .sk-shell__tag { display: none; }
 .sk-shell__mod:hover { color: var(--t1); }
 .sk-shell__mod[aria-current="page"] { color: var(--t1); border-bottom-color: var(--acc); }
 .sk-shell__mod[aria-current="page"] .sk-icon { color: var(--acc); }
@@ -2164,6 +2211,8 @@ code, pre, kbd, samp { font-family: var(--mono); }
 .sk-prose a { color: var(--acc); text-decoration: underline; text-underline-offset: 2px; }
 /* Вики-ссылка [[ID]] — рамкой, без скобок (владелица 08.11). */
 .sk-wref { display: inline-block; padding: 0 5px; border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent); border-radius: var(--r-sm); background: color-mix(in srgb, var(--acc) 8%, transparent); color: var(--acc); font-family: var(--mono); font-size: .9em; line-height: 1.35; white-space: nowrap; }
+/* SUPERTAGS-SPIKE: токен [[ЗАПИСЬ#тег]] — чип тега (pill), значения полей живут на ребре */
+.sk-wref--tag { border-radius: var(--r-pill); border-color: var(--acc); background: var(--bg2); font-family: var(--body, inherit); }
 /* Рамка-ссылка в чтении (MD-READ-PEEK): переход в паспорт записи; вид рамки тот же, без подчёркивания. */
 a.sk-wref { text-decoration: none; cursor: pointer; }
 a.sk-wref:hover { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent); }
@@ -3526,6 +3575,12 @@ a.sk-wref:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 .sk-list__vicon { display: inline-flex; flex-shrink: 0; }
 /* PU-07: свёрнутая многозначная ячейка — одна строка: значение сжимается, «+N» на виду. */
 .sk-list__vals.is-folded { flex-wrap: nowrap; }
+/* Карточка — не строка таблицы: высоту строки беречь незачем, а колонка карточки на телефоне узкая (~170 px).
+   Значение переносится целиком, а не режется многоточием (админка 1.18, «Доступ к машинам» на 390: проект и
+   harness в карточке обрезались). «+N» остаётся рядом. */
+.sk-cards__fields .sk-list__vals.is-folded { flex-wrap: wrap; }
+.sk-cards__fields .sk-list__val { overflow: visible; }
+.sk-cards__fields .sk-list__val-t { white-space: normal; overflow-wrap: anywhere; }
 .sk-list__valmore {
   flex: 0 0 auto;
   padding: 0 6px;
@@ -4338,6 +4393,8 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-rec-facts__tail { color: var(--t3); }
 .sk-rec-head__kind { display: inline-flex; align-items: center; gap: 4px; color: var(--t2); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
 .sk-rec-head__time { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* MDL-12: «Ждём: …», «Причина статуса: …» — рядом со статусом (шапка и строка фактов). */
+.sk-rec-snote { color: var(--wrn); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .sk-rec-head__title { margin: 0; font-family: var(--display); font-weight: var(--display-weight); font-size: var(--fs-xl); line-height: 1.2; color: var(--t1); word-break: break-word; }
 /* Телефон (S4-MOBILE-COMPARE, замер 360 px): --fs-xl давал заголовок задачи в семь
    строк и сдвигал текст заметки на второй экран. Как в v1 — не крупнее --fs-lg. */
@@ -4411,6 +4468,10 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
    край панели свойств 320 px — это и видно как наложение подписей (находка P0
    аудита 08.11.2026). */
 .sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); min-width: 0; max-width: 100%; }
+/* MD-05: адрес у хоста git (PR, репозиторий) — ссылка; длинный адрес переносится, а не раздвигает панель. */
+.sk-rec-fields__url { color: var(--acc); overflow-wrap: anywhere; text-decoration: none; }
+.sk-rec-fields__url:hover { text-decoration: underline; }
+.sk-rec-fields__url:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
 .sk-rec-ref {
   display: inline-flex; align-items: center; gap: 4px;
@@ -5818,6 +5879,21 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-scope__row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-md); }
 .sk-scope__row:hover { background: var(--bg2); }
 .sk-scope__row--missing .sk-scope__title { color: var(--t2); font-style: italic; }
+/* PS-PRODUCT-FILTER: дерево — потомок отступом под родителем, кнопка раскрытия у составной записи; выбор она не меняет. */
+.sk-scope__row[data-depth="1"] { padding-inline-start: calc(var(--gap) * 3); }
+.sk-scope__row[data-depth="2"] { padding-inline-start: calc(var(--gap) * 6); }
+.sk-scope__exp {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--t2); cursor: pointer;
+}
+.sk-scope__exp:hover { color: var(--acc); background: var(--bg3); }
+.sk-scope__exp:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-scope__exp .sk-icon { transition: transform .15s; }
+.sk-scope__exp[aria-expanded="true"] .sk-icon { transform: rotate(90deg); }
+.sk-scope__exp--leaf { cursor: default; }
+/* На телефоне кнопка раскрытия — не меньше 32px: палец, а не курсор. */
+.sk-scope__sheet .sk-scope__exp { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
 .sk-scope__check {
   display: flex;
   flex: 1;
@@ -5950,6 +6026,12 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-views .sk-btn:disabled { opacity: .5; cursor: not-allowed; }
 .sk-views__remove { color: var(--dng); }
 .sk-views__hint { color: var(--t3); font-size: var(--fs-sm); }
+/* Поделиться видом и флажки умолчания (20.11.2026): ссылка на вид — поле только для чтения, на узком экране
+   во всю ширину; флажок — с целью касания от --tap. */
+.sk-views__check { min-height: max(var(--tap), 22px); color: var(--t2); font-size: var(--fs-sm); cursor: pointer; }
+.sk-views__check input { accent-color: var(--acc); }
+.sk-views__share { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.sk-views__share .sk-views__input { width: min(360px, 100%); max-width: 100%; }
 /* ═══════════ S4-12: цели касания ≥ 44px у оболочки и списков ═══════════
    SPRINT_UXR_S4_UI_SHELL_LISTS/S4-12. Гейт — web-next/src/a11y/: у каждого
    интерактивного элемента оболочки и списков есть правило с высотой от --tap.
@@ -6137,20 +6219,48 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-news__bucket { border-left: 1px solid var(--bd); }
 .sk-news__bh { margin: 0; color: var(--t2); font-size: var(--fs-sm); font-weight: 600; }
 .sk-news__bbtn { display: inline-flex; align-items: center; gap: 6px; }
-.sk-news__rows { margin: 0; padding: 0; list-style: none; }
+/* K4-NEWS-ROW-COLUMNS (прототип docs/prototypes/k4-news-row-columns.html, «ок» владелицы 21.11.2026): строка —
+   девять столбцов одного шаблона у всей ленты: тип · что · запись · код · время · проект и спринт · кто · статус · раз.
+   Ширины фиксированы (кроме записи), поэтому у всех строк столбцы на одних вертикалях. */
+.sk-news__rows {
+  --news-cols: 26px 24px minmax(160px, 1fr) minmax(0, 15em) 4.5em minmax(0, 10em) minmax(0, 11em) 6.5em 3em;
+  margin: 0; padding: 0; list-style: none;
+}
 .sk-news__row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: var(--news-cols);
   align-items: center;
-  gap: 4px 10px;
+  column-gap: 6px;
   min-height: max(var(--tap), var(--row-h));
   padding: 2px 6px;
   border-bottom: 1px solid var(--bd);
 }
-.sk-news__row[data-unread='true'] { box-shadow: inset 2px 0 0 var(--acc); }
+.sk-news__row[data-unread='true'] { box-shadow: inset 3px 0 0 var(--acc); }
+.sk-news__row[data-unread='true'] .sk-news__rtitle { font-weight: 700; }
+.sk-news__c { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; color: var(--t3); font-size: var(--fs-xs); }
+.sk-news__c--type, .sk-news__c--kind { justify-content: center; }
+.sk-news__c--time { justify-content: flex-end; }
+.sk-news__c--where { flex-wrap: wrap; gap: 0 6px; }
+.sk-news__c--status { justify-content: center; }
+.sk-news__c--times { justify-content: flex-end; }
+.sk-news__ctype {
+  display: inline-grid; place-items: center;
+  min-width: max(var(--tap, 20px), 22px); min-height: max(var(--tap, 20px), 22px);
+  padding: 0; border: 1px solid var(--bd); border-radius: var(--r-sm); background: none; color: var(--t2); cursor: copy;
+}
+.sk-news__ctype:hover, .sk-news__ctype:focus-visible { border-color: var(--acc); color: var(--t1); }
+.sk-news__kind {
+  display: inline-grid; place-items: center; width: 22px; height: 22px;
+  border: 1px solid color-mix(in srgb, var(--pill-c, var(--t2)) 50%, transparent); border-radius: var(--r-pill);
+  color: var(--pill-c, var(--t2));
+}
+.sk-news__readsep {
+  padding: 2px 12px; border-top: 2px solid var(--acc); background: var(--bg2);
+  color: var(--t3); font-size: var(--fs-2xs);
+}
 .sk-news__link {
   display: inline-flex;
-  flex: 1 1 280px;
+  flex: 1 1 auto;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -6162,42 +6272,22 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-news__link.is-static { cursor: default; }
 .sk-news__link.is-static:hover .sk-news__rtitle { color: inherit; text-decoration: none; }
 .sk-news__rtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Владелица 09.11: «название выровняй», «плашки не растягивать». Плашка вида — своей ширины
-   внутри слота одной ширины (под «готово к выкатке» / «ready for deploy»), заголовки — с одной линии. */
-.sk-news__tagslot { flex: none; display: inline-flex; min-width: 12.5em; font-size: var(--fs-2xs); }
-.sk-news__tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--pill-c, var(--t2)) 50%, transparent);
-  border-radius: var(--r-pill);
-  color: var(--pill-c, var(--t2));
-  font-size: var(--fs-2xs);
-  font-weight: 600;
-  white-space: nowrap;
-}
-.sk-news__meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--t3); font-size: var(--fs-xs); }
 .sk-news__time { font-family: var(--mono); color: var(--t1); }
-.sk-news__time.is-none { font-family: inherit; color: var(--t3); font-style: italic; }
-.sk-news__utc { font-family: var(--mono); color: var(--t3); }
-.sk-news__proj { color: var(--t2); }
+.sk-news__time.is-none { color: var(--t3); }
+.sk-news__proj { color: var(--t2); white-space: nowrap; }
 /* П24 (владелица 10.11): автор, спринт задачи, ADR решения — ссылкой, если есть паспорт. */
 .sk-news__ref { display: inline-flex; align-items: center; gap: 3px; color: var(--inf); font: var(--fs-2xs) var(--mono); text-decoration: none; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-news__ref:hover, .sk-news__ref:focus-visible { text-decoration: underline; }
 .sk-news__ref.is-static { color: var(--t2); }
 .sk-news__status { display: inline-flex; align-items: center; gap: 2px; font-family: var(--mono); color: var(--t2); }
 /* Владелица 09.11: код — ссылка, статусы — значками, «скопировать» рядом с кодом. */
-.sk-news__code { padding: 0 6px; border: 1px solid var(--bd); border-radius: 999px; color: var(--acc); font: 600 var(--fs-2xs) var(--mono); text-decoration: none; }
+.sk-news__code { max-width: 100%; padding: 0 6px; border: 1px solid var(--bd); border-radius: 999px; color: var(--acc); font: 600 var(--fs-2xs) var(--mono); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-news__code:hover, .sk-news__code:focus-visible { text-decoration: underline; }
-.sk-news__copy { display: inline-flex; align-items: center; min-width: max(var(--tap, 20px), 20px); min-height: max(var(--tap, 20px), 20px); padding: 0 2px; border: 0; background: none; color: var(--t3); cursor: pointer; }
-.sk-news__copy:hover, .sk-news__copy:focus-visible { color: var(--t1); }
 .sk-news__st { --st-c: var(--t3); display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border: 1px solid color-mix(in srgb, var(--st-c) 55%, transparent); border-radius: 999px; color: var(--st-c); font: 600 var(--fs-2xs) var(--mono); }
 .sk-news__st .sk-icon { color: var(--st-c); }
 .sk-news__arrow { color: var(--t3); }
 .sk-news__mult,
 .sk-news__gn { font-family: var(--mono); color: var(--acc); }
-.sk-news__unread { color: var(--acc); font-weight: 700; text-transform: uppercase; font-size: var(--fs-2xs); }
 
 /* S7A-03: число метрики — кнопка-фильтр ленты; свёртки по типам/событиям — чипы. */
 .sk-news__num {
@@ -6407,11 +6497,25 @@ span.sk-news__chip { display: inline-flex; align-items: center; cursor: default;
   }
   .sk-news__grip { display: block; width: 40px; height: 4px; margin: 8px auto 0; border-radius: 2px; background: var(--bdh); }
   .sk-news__rtitle { white-space: normal; overflow-wrap: anywhere; }
-  /* Телефон: слот одной ширины съел бы треть строки — плашка вида встаёт после заголовка,
-     заголовки по-прежнему с одной линии (сразу за иконкой типа). */
-  .sk-news__tagslot { order: 2; min-width: 0; }
-  .sk-news__link > .sk-news__rtitle { order: 1; flex: 0 1 auto; }
-  .sk-news__link { flex-basis: 100%; }
+  /* K4-NEWS-ROW-COLUMNS · телефон («ок по мобилке» 21.11.2026): запись — карточка. Сверху тип · что · заголовок
+     (до двух строк) · время; ниже место и «раз»; затем код и «было → стало». Правый столбец одной ширины (84px)
+     у всех карточек — время, «раз» и статус на одной вертикали («места переноса времени выровнены»). */
+  .sk-news__row {
+    grid-template-columns: 26px 24px minmax(0, 1fr) 84px;
+    grid-template-areas: "type kind title time" ". . where times" ". . code status";
+    row-gap: 2px;
+    padding: 6px;
+  }
+  .sk-news__c--type { grid-area: type; }
+  .sk-news__c--kind { grid-area: kind; }
+  .sk-news__c--title { grid-area: title; }
+  .sk-news__c--time { grid-area: time; align-self: start; }
+  .sk-news__c--where { grid-area: where; }
+  .sk-news__c--times { grid-area: times; }
+  .sk-news__c--code { grid-area: code; }
+  .sk-news__c--status { grid-area: status; justify-content: flex-end; }
+  .sk-news__c--who { display: none; }
+  .sk-news__row .sk-news__rtitle { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
 
 /* S7A-12 — лента под пальцем (телефон и планшет; решает вид указателя, а не ширина).
@@ -6669,7 +6773,10 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    полоса ~45 px и асимметрия 15/22 px — плавающая кнопка сужала весь паспорт). Тот же приём, что
    на телефоне: отрицательное нижнее поле снимает обтекание, место кнопке держит бар. */
 .sk-dock:not([data-placement='full']) .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px)); }
-.sk-dock:not([data-placement='full']) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }
+/* Место под плавающий «×» — только когда док его рисует (controls='dock'). Если «×» уже в строке инструментов
+   паспорта, запас справа давал пустоту ~32 px после крестика (владелица 21.11: «после крестика много свободного
+   места необосновано»). */
+.sk-dock:not([data-placement='full']) .sk-dock__panel:has(> .sk-dock__close) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 8px); }
 .sk-dock[data-placement='full'] .sk-prose { line-height: 1.7; font-size: var(--fs-lg); }
 .sk-dock[data-placement='full'] .sk-rec-head { margin-bottom: 10px; }
 .sk-dock[data-placement='full'] .sk-tabpanel { padding-top: 16px; }
@@ -6795,6 +6902,12 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
   min-height: 0;
   overflow: auto;
 }
+/* K4-PASSPORT-NO-LIST-RESET: список стоит в ОДНОМ узле дерева и без записи, и под ней. Без записи
+   обёртки дока в раскладке нет (display: contents) — список в потоке страницы, крутится страницей,
+   как прежде. Во весь экран место списка скрыто, но список не выброшен из дерева. */
+.sk-dock-off,
+.sk-dock-off > .sk-dock__list { display: contents; }
+.sk-dock__backdrop[hidden] { display: none; }
 .sk-dock__panel {
   position: relative;
   min-height: 0;
@@ -6852,7 +6965,7 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
      ширину кнопки по всей высоте. Отрицательное нижнее поле снимает обтекание,
      кнопка остаётся на месте (липкой), а место ей держит строка крошек. */
   .sk-dock[data-placement] .sk-dock__close { margin-bottom: calc(-1 * max(var(--tap), 28px) - 8px); }
-  .sk-dock[data-placement] .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 4px); }
+  .sk-dock[data-placement] .sk-dock__panel:has(> .sk-dock__close) .sk-rec-reader__bar { padding-right: calc(max(var(--tap), 28px) + 4px); }
 }
 
 /* ---------- Шапка v4 (S4-23, волна 3): охват за приложениями, поиск строкой, «Команды» с подписью ---------- */
@@ -6966,6 +7079,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    Отдельные классы, а не общий: места разные (панель вкладки и хвост текста), и
    первый же отступ разошёлся бы. */
 .sk-rec-group { display: flex; flex-direction: column; gap: 20px; }
+/* Вкладка «Графики» в «Аналитике» (владелица 21.11: графики не над шапкой, а вкладкой): блоки графиков столбиком. */
+.sk-rec-charts { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .sk-rec-group__sec { min-width: 0; }
 .sk-rec-group__head {
   display: flex;
@@ -7653,3 +7768,48 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-attn__list .sk-pill--id { display: none; }
 .sk-attn__list .sk-mention { max-width: 100%; }
 .sk-attn__list .sk-mention__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+
+/* MC-06 (SPRINT_LORE_MODEL_AS_CONFIG): окно по центру, подтверждение с причиной, порядок строк, языки текстов.
+   Узкий экран — общий порог kit (NARROW_QUERY): окно во весь экран. */
+.sk-dialog-backdrop { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--bg0) 60%, transparent); }
+.sk-dialog {
+  position: fixed; z-index: 81; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; width: min(460px, calc(100vw - 24px)); max-height: 90vh; overflow: auto;
+  background: var(--bg1); border: 1px solid var(--bd); border-radius: 10px;
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--bg0) 70%, transparent);
+}
+.sk-dialog--wide { width: min(680px, calc(100vw - 24px)); }
+.sk-dialog:focus { outline: none; }
+.sk-dialog__head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--bd); position: sticky; top: 0; background: var(--bg1); z-index: 1; }
+.sk-dialog__title { flex: 1; margin: 0; min-width: 0; font: 800 var(--fs-md)/1.3 var(--display, var(--font)); color: var(--t1); overflow-wrap: anywhere; }
+.sk-dialog__body { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--bd); position: sticky; bottom: 0; background: var(--bg1); }
+.sk-dialog__lead { color: var(--t2); font-size: var(--fs-sm); }
+.sk-dialog__field { color: var(--t3); font-size: var(--fs-xs); }
+.sk-dialog__input { width: 100%; box-sizing: border-box; background: var(--bg0); border: 1px solid var(--bd); border-radius: 6px; color: var(--t1); padding: 4px 8px; font: var(--fs-sm) var(--font); }
+.sk-dialog__input:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-dialog__error { margin: 0; color: var(--dng); font-size: var(--fs-xs); }
+
+.sk-sortable { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-sortable__row { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border: 1px solid transparent; border-bottom-color: var(--bd); border-radius: 6px; min-width: 0; }
+.sk-sortable__row[data-changed] { background: color-mix(in srgb, var(--wrn) 8%, transparent); box-shadow: inset 2px 0 0 var(--wrn); }
+.sk-sortable__row[data-over] { border-top: 2px solid var(--acc); }
+.sk-sortable__grip { color: var(--t3); cursor: grab; user-select: none; font-size: var(--fs-sm); }
+.sk-sortable__body { flex: 1; min-width: 0; }
+.sk-sortable__btns { display: inline-flex; gap: 2px; flex: 0 0 auto; }
+.sk-sortable__up, .sk-sortable__down { flex: 0 0 auto; }
+
+.sk-langtabs { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-langtabs__list { display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-langtabs__tab { border: 1px solid var(--bd); border-radius: 999px; background: var(--bg2); color: var(--t2); font: 600 var(--fs-xs) var(--font); padding: 2px 10px; cursor: pointer; min-height: max(var(--tap, 24px), 24px); }
+.sk-langtabs__tab[aria-selected='true'] { border-color: var(--acc); color: var(--t1); }
+.sk-langtabs__tab:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-langtabs__miss { color: var(--wrn); margin-left: 2px; }
+.sk-langtabs__panel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-langtabs__key { color: var(--t3); font-size: var(--fs-2xs); }
+.sk-langtabs__key code { font-family: var(--mono); }
+
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-dialog, .sk-dialog--wide { top: 0; left: 0; transform: none; width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border-width: 0; }
+  .sk-sortable__row { align-items: flex-start; }
+}

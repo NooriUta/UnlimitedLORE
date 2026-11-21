@@ -60,7 +60,20 @@ final class LoreRecordFrom {
          * задач, всего): готово — статус с токеном плана {@code done} (тот же словарь, что факт
          * «готово x/y» паспорта спринта). Числа «всего» нет — null («не посчитали»), а не 0/0.
          */
-        PROGRESS
+        PROGRESS,
+        /** Код строки таблицы гейта из metric_id «{qg_id}:{ID}:{номер}» ({@link QgMetricState#rowCode}). */
+        ROW_CODE,
+        /**
+         * MDL-13: ссылка-чип одной записи — {@code [{id, label, inherited_from: null}]}: код из первой колонки, подпись
+         * из второй (нет — только код); кода нет — null. Форма та же, что у чипов проектов: kit рисует подпись и
+         * ссылку на паспорт (трек спринта по ребру ON_TRACK).
+         */
+        CHIP,
+        /**
+         * Дефект 8877957a: ссылки на релизы — чипами {id: release_uid «проект#тег», label: тег}. Ключ записи релиза —
+         * release_uid; голый тег (release_id) у разных проектов повторяется и паспорт по нему не открывался.
+         */
+        RELEASE_CHIPS
     }
 
     /**
@@ -124,6 +137,9 @@ final class LoreRecordFrom {
             case FIRST_OF -> firstOf(f.columns(), row);
             case HEAD_OR -> headOr(f.columns(), row);
             case PROGRESS -> progress(f.columns(), row);
+            case ROW_CODE -> QgMetricState.rowCode(LoreRecordValues.str(first));
+            case CHIP -> chip(f.columns(), row);
+            case RELEASE_CHIPS -> releaseChips(LoreRecordValues.arr(first));
         };
     }
 
@@ -137,6 +153,36 @@ final class LoreRecordFrom {
         m.put("done", done);
         m.put("total", t.intValue());
         return m;
+    }
+
+    private static List<Map<String, Object>> chip(List<String> columns, Map<String, Object> row) {
+        String id = LoreRecordValues.str(row.get(columns.get(0)));
+        if (id == null) return null;
+        String label = columns.size() > 1 ? LoreRecordValues.str(row.get(columns.get(1))) : null;
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", id);
+        m.put("label", label != null ? label : id);
+        m.put("inherited_from", null);
+        return List.of(m);
+    }
+
+    /** Подпись релиза по ключу «проект#тег» — тег; ключ без «#» (прежний) — как есть. */
+    static String releaseTag(String uid) {
+        if (uid == null) return null;
+        int i = uid.lastIndexOf('#');
+        return i >= 0 && i < uid.length() - 1 ? uid.substring(i + 1) : uid;
+    }
+
+    private static List<Map<String, Object>> releaseChips(List<String> uids) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (String uid : new java.util.LinkedHashSet<>(uids)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", uid);
+            m.put("label", releaseTag(uid));
+            m.put("inherited_from", null);
+            out.add(m);
+        }
+        return out;
     }
 
     private static String trim(String s) { return s == null ? null : s.trim(); }
@@ -180,7 +226,8 @@ final class LoreRecordFrom {
             if (l.unionColumn() != null) ids.addAll(LoreRecordValues.arr(row.get(l.unionColumn())));
             for (String id : ids) {
                 String t = l.techByPrefix() && id.startsWith(LoreRecordValues.TECH_SPEC_PREFIX) ? "tech" : l.type();
-                out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, id, null));
+                // 8877957a: у релиза подпись — тег, ключ — «проект#тег»
+                out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, "release".equals(t) ? releaseTag(id) : id, null));
             }
         }
         return out;
@@ -223,20 +270,22 @@ final class LoreRecordFrom {
     /** Значения записи по типу (строка главного среза {@link LoreRecordResource#sourceOf}). */
     static final Map<String, List<Val>> VALUES = Map.ofEntries(
         Map.entry("sprint", List.of(
-            v("title", Transform.FIRST_OF, "name", "sprint_id"),
+            v("title", Transform.FIRST_OF, "title", "name", "sprint_id"),
             s("body_md", "context_md"),
             s("context_md", "context_md"),
             s("outcome_md", "outcome_md"),
             s("priority", "priority"),
             list("projects", "git_projects"),
             list("components", "components"),
-            list("releases", "release_ids"),
+            // 8877957a: ссылка на релиз — ключ release_uid «проект#тег», подпись — тег
+            v("releases", Transform.RELEASE_CHIPS, "release_uids"),
             list("milestones", "milestone_ids"),
             s("planned_start", "planned_start_date"),
             s("planned_end_date", "planned_end_date"),
             v("created", Transform.DATE10, "created_date"),
             v("no_release", Transform.BOOL, "no_release_required"),
-            s("track", "track_id"),
+            // MDL-13: трек — ребро ON_TRACK; значение — чип {id, label}, kit ведёт ссылкой в паспорт трека.
+            v("track", Transform.CHIP, "track_id", "track_label"),
             v("status", Transform.PLAN_TOKEN, "status_raw"))),
         Map.entry("task", List.of(
             v("title", Transform.FIRST_OF, "title", "task_uid"),
@@ -290,12 +339,17 @@ final class LoreRecordFrom {
             v("body_md", Transform.FIRST_OF, "content_md_ru", "content_md_en"),
             s("content_md_ru", "content_md_ru"),
             s("content_md_en", "content_md_en"),
+            // MDL-08 ч.2 (владелица 20.11.2026: «HTML выведи отдельной вкладкой в паспорт»): HTML-тело дока — вкладкой
+            // «HTML» паспорта, рендер только в песочнице (SandboxedHtmlFrame); скрытие тела (body_redacted) его обнуляет.
+            s("content_html", "content_html"),
             s("kind", "kind"),
             s("component", "component_id"),
             list("projects", "projects"),
             s("parent", "parent_doc_id"),
             list("sprints", "sprint_ids"),
             s("file_path", "file_path"),
+            // MDL-05: признак внешнего CDN в HTML — поле читал срез, а в модели его не было.
+            s("has_ext_deps", "has_ext_deps"),
             when("body_redacted", "body_redacted", "body_redacted"),
             when("body_redacted_reason", "body_redacted_reason", "body_redacted"))),
         // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта, профиль клиента и ранбук — шапка и тело из
@@ -338,6 +392,7 @@ final class LoreRecordFrom {
         Map.entry("quality_gate", List.of(
             v("title", Transform.FIRST_OF, "name", "qg_id"),
             s("status", "status"),
+            s("scope", "scope"), // QG-01: общий (global) или проектный (project)
             s("last_run_status", "last_run_status"),
             v("date", Transform.DATE10, "date_created"),
             v("retired_at", Transform.DATE10, "retired_at"),
@@ -350,7 +405,10 @@ final class LoreRecordFrom {
         // S9-05 A: человек и агент — шапка из строки, дети (задачи по открытым ролям) — срезом.
         Map.entry("user", List.of(
             v("title", Transform.FIRST_OF, "display_name", "kc_sub"),
-            list("projects", "projects"))),
+            list("projects", "projects"),
+            // Пакет 1.18: имя из KC — логин подсказкой и источник имени видны в паспорте.
+            s("login", "login"),
+            s("name_source", "name_source"))),
         Map.entry("agent", List.of(
             v("title", Transform.FIRST_OF, "name", "actor_id"),
             s("client_id", "client_id"),
@@ -392,9 +450,14 @@ final class LoreRecordFrom {
             s("goal_md", "goal_md"),
             s("decisions_md", "decisions_md"),
             v("status", Transform.DOC_TOKEN, "status"))),
+        // MDL-13 (владелица 20.11.2026: «трек как веха но меньше паспорт ему тоже сделай»): подпись, код, вид.
+        Map.entry("track", List.of(
+            v("title", Transform.FIRST_OF, "label", "track_id"),
+            s("code", "track_id"),
+            s("area", "area"))),
         Map.entry("release", List.of(
-            // У релиза подпись — версия, иначе тег (release_id, иначе git_tag).
-            v("title", Transform.FIRST_OF, "version", "release_id", "git_tag"),
+            // У релиза подпись — тег (release_id, иначе git_tag). MDL-08 ч.2: version снят — дубль git_tag/release_id.
+            v("title", Transform.FIRST_OF, "release_id", "git_tag"),
             v("code", Transform.FIRST_OF, "release_id", "git_tag"),
             s("type", "type"),
             s("date", "release_date"),
@@ -450,8 +513,46 @@ final class LoreRecordFrom {
         Map.entry("project", List.of(
             v("title", Transform.FIRST_OF, "name", "slug"),
             s("code", "slug"),
+            // 1.18, слово владелицы 21.11.2026: «код, краткое название, полное название, описание» (+ ru/en/pl).
+            s("short_code", "short_code"),
+            v("short_title", Transform.FIRST_OF, "short_title", "name", "slug"),
+            s("short_title_en", "short_title_en"),
+            s("short_title_pl", "short_title_pl"),
+            s("title_en", "title_en"),
+            s("title_pl", "title_pl"),
+            s("description", "description"),
+            s("description_en", "description_en"),
+            s("description_pl", "description_pl"),
             s("default_branch", "default_branch"),
-            v("is_private", Transform.BOOL_YES, "is_private"))),
+            v("is_private", Transform.BOOL_YES, "is_private"),
+            // Адреса репозиториев — строкой JSON или списком {remote, role, base_url}: kit рисует таблицей (вид kv).
+            v("hosts", Transform.RAW, "hosts"),
+            list("aliases", "aliases"))),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий — хост, владелец на хосте, имя, полный путь; ключ — адрес.
+        // Подпись — имя, иначе полный путь (прототип: «Репозиторий UnlimitedLORE», путь — полем).
+        Map.entry("repository", List.of(
+            v("title", Transform.FIRST_OF, "name", "full_path", "url"),
+            s("full_path", "full_path"),
+            s("host", "host"),
+            s("owner", "owner"),
+            s("default_branch", "default_branch"),
+            s("url", "url"))),
+        // Организация — самостоятельный объект {org_id, name}, пока без связей.
+        Map.entry("organization", List.of(
+            v("title", Transform.FIRST_OF, "name", "org_id"),
+            s("code", "org_id"))),
+        // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: PR — заголовок и ссылка у хоста git; ключ pr_uid «проект#номер».
+        // Заголовка у старых PR нет (до #1641 мерж его отбрасывал) — подпись ключом, а не пустая шапка.
+        Map.entry("pr", List.of(
+            v("title", Transform.FIRST_OF, "title", "pr_uid"),
+            s("code", "pr_uid"),
+            s("url", "url"),
+            s("state", "state"),
+            s("merged_at", "merged_at"),
+            // Проект — поле git_project и ребро BELONGS_TO_PROJECT одним списком (срез сводит их unionall); чипы без повтора.
+            list("projects", "git_projects"),
+            s("head_ref", "head_ref"),
+            s("base_ref", "base_ref"))),
         // S4-PRODUCTS-NODE: продукт — статья словаря (ключ code); подпись — label_ru, иначе код.
         // Цвет — колонка color статьи как есть: нет её — null, цвет не выдумывается.
         Map.entry("product", List.of(
@@ -462,6 +563,9 @@ final class LoreRecordFrom {
             s("icon", "icon"),
             v("sort_order", Transform.RAW, "sort_order"),
             v("is_active", Transform.BOOL, "is_active"),
+            v("is_extensible", Transform.BOOL, "is_extensible"),
+            // WK-01: вид продукта — набор tech | service (ADR-LORE-044); прежняя строка — список из одного.
+            list("kind", "kind"),
             v("parent", Transform.HEAD_OR, "parent_code"),
             list("projects", "git_projects"),
             list("components", "components"))));
@@ -493,7 +597,17 @@ final class LoreRecordFrom {
             v("status", Transform.DOC_TOKEN, "status_raw"),
             s("code", "decision_id"),
             s("title", "title"),
-            s("date", "date_created"))));
+            s("date", "date_created"))),
+        // Метрика гейта — все поля спеки LORE_SCHEMA_V12_NEW_TYPES (срез qg_metrics). Измерения нет —
+        // current_value null, status unknown: «не измерено» словами рисует клиент, не ноль.
+        "qg_metric", new ItemDef("metric_id", "name", List.of(
+            s("status", "status"),
+            v("code", Transform.ROW_CODE, "metric_id"),
+            s("title", "name"),
+            s("threshold", "threshold"),
+            s("unit", "unit"),
+            s("direction", "direction"),
+            v("current_value", Transform.RAW, "current_value"))));
 
     /**
      * SPRINT_UXR_S9_SCALE_OPT/S9-05, решение владелицы D14 «колонки по типу ребёнка»: значения
@@ -514,8 +628,8 @@ final class LoreRecordFrom {
     /** Связи из строки главного среза (S4-29 v3); пустой список — «проверено, связей нет». */
     static final Map<String, List<LinkFrom>> ROW_LINKS = Map.ofEntries(
         Map.entry("sprint", List.of(
-            lf("DEPENDS_ON", "out", "sprint", "depends_on"),
-            lf("DEPENDS_ON", "in", "sprint", "blocks"),
+            // MDL-13: «зависит от» / «от него зависят» — по ребру (LoreRecordEdgeLinks) с видом и причиной,
+            // а не строкой sprint_tree: другой конец теперь любой из четырёх типов планирования.
             lf("IMPLEMENTED_IN", "in", "adr", "adr_ids"),
             // 11.11 (полнота модели рёбер): документы, реализованные в спринте.
             lf("IMPLEMENTED_IN", "in", "doc", "doc_ids"))),
@@ -528,7 +642,7 @@ final class LoreRecordFrom {
             lf("SUPERSEDES", "out", "adr", "supersedes_ids"),
             lf("SUPERSEDES", "in", "adr", "superseded_by_ids"),
             lf("IMPLEMENTED_IN", "out", "sprint", "implemented_in_ids"),
-            lf("IMPLEMENTED_IN_RELEASE", "out", "release", "release_ids"),
+            lf("IMPLEMENTED_IN_RELEASE", "out", "release", "release_uids"),
             lf("JUSTIFIED_BY", "in", "task", "justified_task_uids"),
             lf("TRACED_TO", "in", "use_case", "traced_by_ucs"))),
         Map.entry("decision", List.of(
@@ -562,6 +676,19 @@ final class LoreRecordFrom {
             lf("BELONGS_TO", "in", "doc", "docs"),
             lf("BELONGS_TO", "in", "qg", "qgs"),
             lf("IN_PRODUCT", "out", "product", "products"))),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: связи репозитория — из строки repo_by_id (колонки REPO_COLUMNS).
+        // Основной у проекта, компонент, зеркало и «использует» — в обе стороны.
+        Map.entry("repository", List.of(
+            lf("HAS_REPOSITORY", "in", "project", "projects"),
+            lf("COMPONENT_REPOSITORY", "in", "component", "components"),
+            lf("MIRRORED_TO", "out", "repository", "mirrors"),
+            lf("MIRRORED_TO", "in", "repository", "mirror_of"),
+            lf("USES_REPOSITORY", "out", "repository", "uses"),
+            lf("USES_REPOSITORY", "in", "repository", "used_by"))),
+        // MD-05: задачи, закрытые PR (CLOSED_BY задача → PR), и релизы PR (SHIPPED_IN) — из строки pr_by_id.
+        Map.entry("pr", List.of(
+            lf("CLOSED_BY", "in", "task", "task_uids"),
+            lf("SHIPPED_IN", "out", "release", "release_uids"))),
         // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
         Map.entry("product", List.of(
             lf("IN_PRODUCT", "in", "component", "components"),
@@ -602,14 +729,18 @@ final class LoreRecordFrom {
         "release", List.of(
             new SliceLink("sprints", "release_sprints", "ruid", "IMPLEMENTED_IN_RELEASE", "in", "sprint",
                 from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true),
+            // MD-05: PR без заголовка подписан ключом (как вкладка PR проекта), а не пустой строкой.
             new SliceLink("prs", "release_prs", "ruid", "SHIPPED_IN", "in", "pr",
-                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.STR, "title"), null, false)),
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, false)),
         // S4-29: Задачи · Спринты компонента — по рёбрам, срезами с пагинацией.
         "component", List.of(
             new SliceLink("tasks", "component_tasks", "cid", "TAGGED_WITH", "in", "task",
                 from(Transform.STR, "task_uid"), from(Transform.STR, "title"), from(Transform.PLAN_TOKEN, "status_raw"), true),
             new SliceLink("sprints", "component_sprints", "cid", "BELONGS_TO", "in", "sprint",
-                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+                from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: свой репозиторий компонента (COMPONENT_REPOSITORY).
+            new SliceLink("repositories", "repos_of_component", "id", "COMPONENT_REPOSITORY", "out", "repository",
+                from(Transform.STR, "url"), from(Transform.FIRST_OF, "full_path", "url"), null, true)),
         // S4-29 (53а): вкладки паспорта проекта — каждая своим срезом project_*, постранично.
         // Компоненты — через спринты проекта; агенты — через роль владельца (своего ребра к
         // проекту у них нет), поэтому rel у них тот же, что у людей, а различает тип цели.
@@ -618,10 +749,13 @@ final class LoreRecordFrom {
                 from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true),
             new SliceLink("components", "project_components", "project", "BELONGS_TO_PROJECT", "in", "component",
                 from(Transform.STR, "component_id"), from(Transform.FIRST_OF, "full_name", "component_id"), null, true),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: основной репозиторий проекта и репозитории его компонентов.
+            new SliceLink("repositories", "repos_of_project", "project", "HAS_REPOSITORY", "out", "repository",
+                from(Transform.STR, "url"), from(Transform.FIRST_OF, "full_path", "url"), null, true),
             new SliceLink("adrs", "project_adrs", "project", "BELONGS_TO_PROJECT", "in", "adr",
                 from(Transform.STR, "adr_id"), from(Transform.FIRST_OF, "name", "adr_id"), from(Transform.DOC_TOKEN, "status"), true),
             new SliceLink("releases", "project_releases", "project", "BELONGS_TO_PROJECT", "in", "release",
-                from(Transform.STR, "release_uid"), from(Transform.FIRST_OF, "version", "release_id", "git_tag", "release_uid"), null, true),
+                from(Transform.STR, "release_uid"), from(Transform.FIRST_OF, "release_id", "git_tag", "release_uid"), null, true),
             new SliceLink("people", "project_people", "project", "HAS_PROJECT_ROLE", "in", "user",
                 from(Transform.STR, "kc_sub"), from(Transform.FIRST_OF, "display_name", "kc_sub"), null, true),
             new SliceLink("agents", "project_agents", "project", "HAS_PROJECT_ROLE", "in", "agent",
@@ -652,6 +786,10 @@ final class LoreRecordFrom {
         "milestone", List.of(
             new SliceLink("sprints", "milestone_sprints", "mid", "TARGETS_MILESTONE", "in", "sprint",
                 from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+        // MDL-13: спринты на треке с историей — подпись «название · пришёл — ушёл | сейчас» (рёбра ON_TRACK, и закрытые).
+        "track", List.of(
+            new SliceLink("sprints", "track_sprints", "id", "ON_TRACK", "in", "sprint",
+                from(Transform.STR, "sprint_id"), from(Transform.FIRST_OF, "period", "name", "sprint_id"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
         // S9-05 A: «таблица детей» человека и агента — задачи, где у него ОТКРЫТАЯ роль.
         "user", List.of(
             new SliceLink("tasks", "user_tasks", "kc_sub", "ROLE_HELD_BY", "in", "task",

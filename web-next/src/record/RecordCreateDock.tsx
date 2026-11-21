@@ -22,7 +22,7 @@ export interface RecordCreateProps {
 
 const KIND_KEY: Record<CreateType, AppKey> = {
   sprint: 'create.kind.sprint', adr: 'create.kind.adr', task: 'create.kind.task',
-  decision: 'create.kind.decision', spec: 'create.kind.spec',
+  decision: 'create.kind.decision', spec: 'create.kind.spec', organization: 'create.kind.organization',
 };
 
 export function RecordCreate({ type, fetchImpl, onCreated, onCancel }: RecordCreateProps) {

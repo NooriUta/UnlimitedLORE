@@ -363,6 +363,36 @@ services:
     volumes:
       - ${TYR_RUNS_DIR:-./docs/tyr-runs}:/tyr-runs:ro
 
+  # SPRINT_LORE_AGENT_OBSERVABILITY/AO-MCP-HOSTED (владелица 19.11.2026: «мне надоело
+  # локально mcp пересобирать» → «mcp лучше по адресу lore host»): MCP-сервер LORE
+  # как сервис стенда. Наружу — ТОЛЬКО через nginx фронта (location /mcp в общем
+  # nginx.conf.template → http://lore-mcp:9200), своего опубликованного порта нет.
+  # Секретов нет: токен клиента приходит в каждом запросе и этим же токеном MCP
+  # идёт в бэкенд (права агента, не сервиса). Клиенты без headersHelper (OpenCode)
+  # шлют X-Lore-Client-Id/Secret — токен по ним сервер берёт у Keycloak, поэтому
+  # ему нужен issuer (адрес realm, не секрет).
+  lore-mcp:
+    restart: unless-stopped          # см. комментарий у minio
+    build:
+      context: ./mcp-server
+      args:
+        # SE-10: отметка сборки для /mcp/health — та же переменная, что у бэкенда.
+        LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
+    environment:
+      LORE_MCP_TRANSPORT: http
+      LORE_MCP_PORT: "9200"
+      # Бэкенд — по имени в сети compose, мимо nginx и Traefik.
+      LORE_BACKEND_URL: ${LORE_MCP_BACKEND_URL:-http://lore-backend:9100}
+      # forgejo_* ходят через мост бэкенда (токен Forgejo — только у бэкенда);
+      # true — инструменты видны. Выключить: LORE_MCP_FORGEJO=false.
+      LORE_FORGEJO: ${LORE_MCP_FORGEJO:-true}
+      # Вариант «г» (AO-MCP-HOSTED): token endpoint = <issuer>/protocol/openid-connect/token.
+      # Пусто — вход по паре id/секрет отвечает 503, Bearer работает как прежде.
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+    depends_on:
+      lore-backend:
+        condition: service_healthy
+
 volumes:
   lore-minio-data:
 

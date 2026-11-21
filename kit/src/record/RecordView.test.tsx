@@ -197,9 +197,12 @@ describe('K-04 · Связи', () => {
   it('группы по типу ребра с подписью из config.edges, направление, ссылки', () => {
     view('links');
     const groups = screen.getAllByTestId('kit-link-group');
-    expect(groups.map(g => g.getAttribute('data-type'))).toEqual(['PREREQ', 'QUIZ_OF']);
-    expect(groups[1].textContent).toContain('квиз темы');
-    const toTopic = within(groups[1]).getByRole('link', { name: /Руны/ });
+    // K5-MODEL-NAV-EDGE-LABELS: исходящие и входящие одной связи — разными группами; у входящих
+    // обратной подписи нет — сторона названа словами, а не то же слово.
+    expect(groups.map(g => `${g.getAttribute('data-type')}:${g.getAttribute('data-dir')}`)).toEqual(['PREREQ:out', 'PREREQ:in', 'QUIZ_OF:out']);
+    expect(groups[1].getAttribute('aria-label')).toBe('входящая: требует');
+    expect(groups[2].textContent).toContain('квиз темы');
+    const toTopic = within(groups[2]).getByRole('link', { name: /Руны/ });
     expect(toTopic.getAttribute('href')).toBe('#rec=T-1');
   });
 

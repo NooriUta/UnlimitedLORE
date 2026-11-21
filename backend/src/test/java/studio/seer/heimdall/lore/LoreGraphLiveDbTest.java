@@ -142,7 +142,7 @@ class LoreGraphLiveDbTest {
         assertEquals(1, edges.size(), jp.prettify());
         assertEquals(S_SEEN, edges.get(0).get("from"));
         assertEquals(S_HIDDEN, edges.get(0).get("to"));
-        assertEquals("hard", edges.get(0).get("kind"));
+        assertEquals("blocks", edges.get(0).get("kind"), "MDL-13: hard — синоним blocks в объединённом справочнике видов");
     }
 
     @Test

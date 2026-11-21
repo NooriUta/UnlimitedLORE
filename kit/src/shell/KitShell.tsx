@@ -337,6 +337,27 @@ export function KitShell({
   // S4-01: свёрнутые группы меню — id групп; переживают перезагрузку.
   const [collapsed, setCollapsed] = useState<string[]>(() => readList<string>(storage, `${storageKey}.collapsed`));
   const [drawer, setDrawer] = useState(false);
+  // Полоса модулей в шапке не помещается (админка 1.18 на ноутбуке 1280: 610 px в 552 — вкладка «Админка»
+  // обрезалась и уходила под выбор проекта): прочие модули — иконкой с подписью в подсказке, текущий — словом.
+  const modsRef = useRef<HTMLElement | null>(null);
+  const [modsCompact, setModsCompact] = useState(false);
+  useEffect(() => {
+    const nav = modsRef.current;
+    const top = nav?.parentElement;
+    if (!nav || !top || typeof ResizeObserver === 'undefined') return;
+    // Мерим полный вид: на миг снимаем отметку (без отрисовки между), смотрим, влезает ли, и возвращаем.
+    const fit = () => {
+      const was = nav.getAttribute('data-compact');
+      nav.removeAttribute('data-compact');
+      const over = nav.scrollWidth > nav.clientWidth + 1;
+      if (was !== null) nav.setAttribute('data-compact', was);
+      setModsCompact(over);
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(top);
+    fit();
+    return () => ro.disconnect();
+  }, [narrow, config.modules.length]);
   // S4-MENU-STATES: выбор человека — переживает перезагрузку.
   const [menuMode, setMenuModeState] = useState<KitMenuMode>(() => {
     const raw = storage.get(`${storageKey}.menuMode`);
@@ -570,7 +591,7 @@ export function KitShell({
           {/* На телефоне модули — нижней панелью (ниже), не в шапке:
               S4-MOBILE-COMPARE, замер 360 px — в шапке они выходили за край. */}
           {!narrow && (
-            <nav className="sk-shell__mods" aria-label={kitT(lang, 'kit.shell.modules')}>
+            <nav className="sk-shell__mods" ref={modsRef} data-compact={modsCompact ? 'true' : undefined} aria-label={kitT(lang, 'kit.shell.modules')}>
               {config.modules.map(m => moduleButton(m, 'top'))}
             </nav>
           )}

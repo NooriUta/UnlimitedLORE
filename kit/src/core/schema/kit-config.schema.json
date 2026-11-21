@@ -283,7 +283,13 @@
             "additionalProperties": false
           }
         },
-        "showClosed": { "enum": ["below", "all", "days30", "hide"] }
+        "showClosed": { "enum": ["below", "all", "days30", "hide"] },
+        "empty": {
+          "description": "D-2026-MIG-REPOSITORY-ORGANIZATION: пустое состояние раздела словами приложения — только для проверенного ноля.",
+          "type": "object",
+          "properties": { "title": { "type": "string" }, "hint": { "type": "string" } },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },

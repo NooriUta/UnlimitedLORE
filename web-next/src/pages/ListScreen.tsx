@@ -13,7 +13,13 @@ import {
   isDateRangeActive, isShowClosed, pushUrlState, readDateRangeUrl, readUrlState, showClosedOf, urlStateHref,
   useOptionalKitShell,
   useKitLang, useLoadState,
+  DEFAULT_LIST_STATE, LIST_URL_KEYS, ViewsBar, queryToListState, writeListState,
 } from '@seidr/kit';
+import type { ListState } from '@seidr/kit';
+import { LORE_VIEW_SECTIONS } from '../views/loreViews';
+import { createLoreViewApi } from '../views/loreViewsApi';
+import { getJson } from '../admin/actions';
+import { adminDenied, type WhoamiBody } from '../admin/WhoamiBar';
 import type { DateFilterScope, DateRangeValue, KitConfig, KitRecord, KitShowClosed, ListViewKind, RecordPlacement, UrlWindow } from '@seidr/kit';
 import { ListWithRecord, useRecordOpen } from '@seidr/kit';
 import { CALENDAR_DATE_PARAM, LIBRARY_OPEN_PARAM, LIBRARY_PARAM, calendarField, libraryGroups } from '../lists/library';
@@ -34,13 +40,17 @@ import { paintRecords, productIndex, productValueIcon, withProductColumn, type P
 import { appliedCollapseNavOnRead, appliedPassportPlace } from '../settings/applied';
 import { NEW_RECORD_ID, fetchCanCreate, isCreateType } from '../record/recordCreate';
 import { useProjectScope } from '../scope/ProjectScope';
+import { useProductScope } from '../scope/ProductScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
+import { PASSPORT_IN_SECTION } from '../nav/loreRoutes';
 import { loreListPeek } from '../record/lorePeek';
 import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
 import { browserZone } from '../time/browserZone';
 import { newsRefHrefV2 } from '../news/newsLinks';
+import { SECTION_CHARTS } from '../charts/sectionCharts';
+import type { ListAppView } from '@seidr/kit';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -69,7 +79,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   agents: 'agent',
   // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
   // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
-  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',
+  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release', prs: 'pr',
   // Появились 10.11 (серверный PR #1090), тоже только на чтение. Технология
   // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
   // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.
@@ -81,6 +91,8 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роли, боли, выгоды и работы пришли в v2 раньше паспорта —
   // теперь у каждого свой паспорт (только чтение); ранбук — раздел и паспорт.
   actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job', runbooks: 'runbook', quality_gates: 'quality_gate',
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: паспорта репозитория и организации (только чтение).
+  repositories: 'repository', organizations: 'organization',
 };
 const NO_RECORDS: readonly KitRecord[] = [];
 const NO_PINNED: readonly string[] = [];
@@ -94,6 +106,8 @@ export function passportTypeFor(screen: ListScreenId, okind: string | null | und
   // Известные виды — те, у которых в приложении есть паспорт (значения PASSPORT_OF):
   // список типов из passportAdapters сюда не тянем — он живёт в ленивом чанке паспорта.
   if (okind && (Object.values(PASSPORT_OF) as string[]).includes(okind)) return okind as PassportType;
+  // MDL-13: паспорт без своего раздела-списка (трек) — в разделе-хозяине по ?okind= (PASSPORT_IN_SECTION).
+  if (okind && PASSPORT_IN_SECTION[okind] && PASSPORT_IN_SECTION[okind] === PASSPORT_OF[screen]) return okind as PassportType;
   return PASSPORT_OF[screen];
 }
 /** Место записи по умолчанию — личная настройка (S4-24, одна с S4-17); не выбирал — справа. */
@@ -216,6 +230,13 @@ export interface ListScreenProps {
    * Заголовок — шапка экрана kit (ScreenHead): виды встают в его строку.
    */
   titleId?: string;
+  /** Экран открыт в админке: разделы «управление — только в админке» правятся здесь (ListScreenDef.manageOnlyInAdmin). */
+  manage?: boolean;
+}
+
+/** Можно ли на этом экране создавать и править: раздел «управление — в админке» правится только в ней. */
+export function screenManaged(def: ListScreenDef, manage = false): boolean {
+  return !def.manageOnlyInAdmin || manage;
 }
 
 /** Статусы и показ колонок типа из модели (K-14 п. 4); нет типа — null. */
@@ -249,8 +270,9 @@ function withModelStatuses(baseConfig: KitConfig, modelStatuses: TypeStatuses | 
   return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
 }
 
-export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId }: ListScreenProps) {
+export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId, manage = false }: ListScreenProps) {
   const def: ListScreenDef = LIST_SCREENS[screen];
+  const managed = screenManaged(def, manage);
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
   const client = useMemo(() => (fetchImpl ? createLoreClient({ fetch: fetchImpl }) : defaultLoreClient), [fetchImpl]);
@@ -357,21 +379,39 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Причина была не в фильтре: `useProjectScope()` не вызывал НИ ОДИН экран —
   // выбор доезжал до адреса `?proj=` и дальше никуда.
   const scope = useProjectScope();
-  const scopeParam = useMemo(
-    () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
-    [scope],
-  );
+  // PS-PRODUCT-FILTER (владелица 21.11.2026): верхний фильтр — по продукту; продукт раскрывает в проекты бэкенд.
+  const products = useProductScope();
+  const scopeParam = useMemo(() => {
+    const p: Record<string, string> = {};
+    if (scope.length) p.scope_projects = scope.join(',');
+    if (products.length) p.scope_products = products.join(',');
+    return Object.keys(p).length ? p : undefined;
+  }, [scope, products]);
   // Встроенный график Völva (SPRINT_VIZ_EMBED/EMB-L2, D-2026-LORE-VIZ-EMBED-PLACES):
   // вид РЯДОМ с видами раздела, только при charts.layer=volva; иначе ничего не
   // меняется. Проект — из скоупа шапки; подпись — бэкенд LORE.
   const volvaLayer = useChartLayer(fetchImpl, !!def.volvaChart, def.volvaChart);
   const volvaLabels = useVolvaSprintsLabels();
-  const appViews = useMemo(() => (def.volvaChart && volvaLayer === 'volva' ? [{
-    id: 'volva',
-    label: volvaLabels.view,
-    icon: VOLVA_VIEW_ICON,
-    render: () => <VolvaChart chart={def.volvaChart!} title={volvaLabels.title} projects={scope} fetchImpl={fetchImpl} />,
-  }] : undefined), [def.volvaChart, volvaLayer, volvaLabels.view, volvaLabels.title, scope, fetchImpl]);
+  // Графики раздела — видом «Аналитика» (lav=analytics), а не над списком (владелица 21.11.2026: «что опять делает
+  // тут график? у нас же должна быть вкладка аналитика или völva»). Нет графиков у раздела — нет и вида.
+  const sectionCharts = SECTION_CHARTS[screen];
+  const analyticsLabel = t('lists.view.analytics');
+  const appViews = useMemo(() => {
+    const out: ListAppView[] = [];
+    if (sectionCharts) out.push({
+      id: 'analytics',
+      label: analyticsLabel,
+      icon: ICON_CANON.recAnalytics,
+      render: () => <div className="sk-rec-charts">{sectionCharts(fetchImpl ? { fetchImpl } : {})}</div>,
+    });
+    if (def.volvaChart && volvaLayer === 'volva') out.push({
+      id: 'volva',
+      label: volvaLabels.view,
+      icon: VOLVA_VIEW_ICON,
+      render: () => <VolvaChart chart={def.volvaChart!} title={volvaLabels.title} projects={scope} fetchImpl={fetchImpl} />,
+    });
+    return out.length ? out : undefined;
+  }, [sectionCharts, analyticsLabel, def.volvaChart, volvaLayer, volvaLabels.view, volvaLabels.title, scope, fetchImpl]);
   // Фильтр «Изменены» (K2-DATE-RANGE): только у разделов, где у записи есть
   // время (у кого есть лента — FEEDS); у прочих он недоступен с причиной.
   const hasTime = !!def.feed;
@@ -399,6 +439,35 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Список держит режим сам; снять фильтр снаружи (переход на запись вне его)
   // значит пересобрать список с новым режимом — ключ меняется ровно тогда.
   const [listKey, setListKey] = useState(0);
+  // Сохранённые виды раздела (сервер — KnowSavedView, LoreMeResource; 20.11.2026: «чтобы все поля работали»).
+  // Вид — строка состояния списка; применяется через адрес (lv/lq/lg/ls/lf…) и пересборку списка: список
+  // сам читает адрес при монтировании. Ссылка «Поделиться» ведёт на сохранённый вид (vw), видимость решает
+  // сервер (visibility / roles). Без адреса (встроенный список) панели видов нет — применить вид некуда.
+  const viewSection = (LORE_VIEW_SECTIONS as readonly string[]).includes(screen) && urlWin ? screen : null;
+  const viewStore = useMemo(
+    // «свой» вид сервер помечает own — метка пользователя на клиенте лишь сравнивается, kc_sub не нужен
+    () => (viewSection ? createLoreViewApi({ user: 'me', ...(fetchImpl ? { fetchImpl } : {}) }) : null),
+    [viewSection, fetchImpl],
+  );
+  const [listState, setListState] = useState<ListState>(() => (urlWin ? { ...DEFAULT_LIST_STATE, ...queryToListState(readUrlState(urlWin).toString()) } : DEFAULT_LIST_STATE));
+  const urlHasList = useRef(!!urlWin && LIST_URL_KEYS.some(k => readUrlState(urlWin).has(k))).current;
+  const applyView = (s: ListState) => {
+    if (!urlWin) return;
+    pushUrlState(writeListState(s), { win: urlWin, replace: true });
+    setListState(s);
+    setListKey(k => k + 1);
+  };
+  // «Командный по умолчанию» предлагается только админу (сервер всё равно проверит сам: 403).
+  const [canTeamDefault, setCanTeamDefault] = useState(false);
+  useEffect(() => {
+    if (!viewStore) return;
+    let live = true;
+    (getJson('/lore/whoami', { fetchImpl }) as Promise<WhoamiBody>).then(
+      b => { if (live) setCanTeamDefault(!adminDenied(b)); },
+      () => { if (live) setCanTeamDefault(false); },
+    );
+    return () => { live = false; };
+  }, [viewStore, fetchImpl]);
   const loadClosed = !!def.closedSlice && closedMode !== 'hide';
   const result = useLoadState(
     async signal => {
@@ -457,11 +526,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     // (S4-STATUS-AXIS-CONFIG, 11.11): ось доходила до конфига, но не до чтения строки.
     () => {
       if (!body) return null;
-      const d = sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes });
+      const d = sliceToKitData(body, def.map, body.served_at ?? new Date().toISOString(), { statusCodes: modelCodes, lang });
       // S4-PRODUCT-HILITE: продукт записи — полем `product` (правило одно на все разделы).
       return paintIdx ? { ...d, records: paintRecords(d.records, paintIdx) } : d;
     },
-    [body, def, modelCodes, paintIdx],
+    [body, def, modelCodes, paintIdx, lang],
   );
   // Переход на запись вне фильтра (слово владелицы 11.11.2026): открыта запись,
   // которой в загруженном нет, а закрытые скрыты, — фильтр снимается сам
@@ -549,7 +618,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // (perms.can_create паспорта `_new`). Не смогли спросить — кнопки нет:
   // кнопка, которая откажет после заполнения формы, хуже её отсутствия.
   const passportOf = PASSPORT_OF[screen];
-  const createType = isCreateType(passportOf) ? passportOf : null;
+  const createType = managed && isCreateType(passportOf) ? passportOf : null;
   const [canCreate, setCanCreate] = useState(false);
   useEffect(() => {
     if (!createType) { setCanCreate(false); return; }
@@ -651,12 +720,15 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           // MP2-12: legacy-вход `?lib=1` — начальный вид «Библиотека».
           ...(libInitial && libSpec ? { view: 'library' as ListViewKind } : {}),
           ...(def.defaultSort ? { sort: def.defaultSort } : {}),
+          // Группировка по умолчанию (репозитории — по проекту, прототип 19.11); `lg` в адресе главнее.
+          ...(def.defaultGroup ? { group: def.defaultGroup } : {}),
           ...(listKey ? { closed: closedMode } : {}),
         }}
         library={libraryProp}
         key={listKey}
         onStateChange={s => {
           setListView(s.view);
+          setListState(s);
           if (def.closedSlice) setClosedMode(showClosedOf(s, config));
         }}
         // Иконки значений (S4-25, выбор владелицы): релиз — книга, компонент —
@@ -716,6 +788,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             onFull={slot.full} win={urlWin} backPlace={slot.backPlace}
             // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
             onPlace={slot.setPlace}
+            readOnly={!managed}
             onClose={slot.close} />
         </Suspense>
       ) : (
@@ -738,6 +811,10 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
           — техническое сообщение, его место под значком тех. сведений, как в паспорте, а не полосой
           над списком. Полоса выше — про ВЫДАЧУ (обрезано, закрытые скрыты), она остаётся на месте. */}
       <ModelNotes notes={modelStatuses?.notes ?? []} />
+      {viewStore && viewSection && (
+        <ViewsBar store={viewStore} section={viewSection} user="me" state={listState} onApply={applyView}
+          win={urlWin} applyStartView={!urlHasList} canTeamDefault={canTeamDefault} />
+      )}
       {content}
     </section>
   );

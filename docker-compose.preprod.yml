@@ -49,6 +49,12 @@ services:
       - headscale-net
     environment:
       - lore.db=${LORE_DB:?LORE_DB не задан — база препрода (system_aida_lore_preprod)}
+      # MIG-02: каталог раздела админки «Перенос на новую модель». Без него админка отвечает «прогона не было»
+      # (смоук 21.11: MA2/MA3/MA7). Отчёт кладёт lore-migration-snapshot.yml после этапа full
+      # (.github/scripts/migration-report-publish.sh); правила людей (decisions.json) живут здесь же.
+      - lore.migration.dir=/migration
+    volumes:
+      - lore-preprod-migration:/migration
     labels:
       traefik.enable: "true"
       traefik.docker.network: headscale-net
@@ -99,6 +105,19 @@ services:
       traefik.http.routers.lore-preprod-next.tls.certresolver: regru
       traefik.http.services.lore-preprod-next.loadbalancer.server.port: "80"
 
+  # AO-MCP-HOSTED: MCP препрода — по адресу https://preprod.lore.odal.seidrstudio.pro/mcp
+  # через nginx lore-app-next; порта наружу нет, сеть — только default проекта.
+  lore-mcp:
+    image: unlimitedlore-lore-mcp:${LORE_IMAGE_TAG:?LORE_IMAGE_TAG не задан}
+    build:
+      labels:
+        org.opencontainers.image.revision: ${LORE_BUILD_COMMIT:-}
+
 networks:
   headscale-net:
     external: true
+
+volumes:
+  # Имя без префикса проекта — его адресует workflow переноса (migration-report-publish.sh).
+  lore-preprod-migration:
+    name: lore-preprod-migration

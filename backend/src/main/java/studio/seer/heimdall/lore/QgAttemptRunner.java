@@ -39,8 +39,20 @@ final class QgAttemptRunner {
     private static final List<String> SEVERITY = List.of("PASS", "WARN", "FAIL");
     private static final Set<String> UNMEASURED = LoreQgRunWriter.UNMEASURED_STATUSES;
 
-    /** @return итоговый статус попытки */
+    /** Ключ строки суждения аналитика в метриках прогона (QG-15). */
+    static final String JUDGMENT_KEY = "analyst_judgment";
+
+    /** Попытка без аналитика — модель не вызывается ни при каких условиях. */
     static String run(QgRoutine r, Sink sink, Instant now) {
+        return run(r, sink, now, null);
+    }
+
+    /**
+     * @param analyst вызовы модели под потолком попытки; {@code null} — суждения нет
+     *                (у рутины может быть {@link QgRoutine#analystRequest}, но модель не подключена)
+     * @return итоговый статус попытки — худший среди измеренных метрик; суждение его не меняет
+     */
+    static String run(QgRoutine r, Sink sink, Instant now, studio.seer.heimdall.lore.llm.BudgetedModelCall analyst) {
         String runId = r.name() + "_" + now.toString().replaceAll("[-:.]", "");
         String runDate = now.atOffset(ZoneOffset.UTC).toLocalDate().toString();
         String started = now.toString();
@@ -49,6 +61,7 @@ final class QgAttemptRunner {
 
         String status;
         String flags = null;
+        String model = null;
         List<LoreQgResource.QGMetricEntry> metrics;
         try {
             QgRoutine.Precondition pre = r.check();
@@ -61,14 +74,45 @@ final class QgAttemptRunner {
                 metrics = r.normalize(r.collect());
                 if (metrics == null) metrics = List.of();
                 status = worstMeasured(metrics);
+                // Суждение — после метрик: от модели не зависит ни одно число (И-3), поэтому
+                // бюджет обрывает только суждение, а метрики к этому моменту уже готовы.
+                java.util.Optional<studio.seer.heimdall.lore.llm.LlmRequest> ask = r.analystRequest(metrics);
+                if (analyst != null && ask != null && ask.isPresent()) {
+                    studio.seer.heimdall.lore.llm.LlmAnswer a = analyst.ask(ask.get());
+                    model = analyst.answeredModel();
+                    List<LoreQgResource.QGMetricEntry> withJudgment = new ArrayList<>(metrics);
+                    withJudgment.add(judgment(r.name(), a, analyst, model));
+                    metrics = withJudgment;
+                    if (analyst.refusal() != null) flags = BUDGET_FLAG_PREFIX + analyst.refusal();
+                }
             }
         } catch (RuntimeException e) {
             metrics = List.of();
             status = "FAIL";
             flags = exceptionFlag(e);
         }
-        sink.write(req(runId, r.name(), runDate, status, started, Instant.now().toString(), flags, metrics));
+        sink.write(req(runId, r.name(), runDate, status, started, Instant.now().toString(), flags, metrics, model));
         return status;
+    }
+
+    static final String BUDGET_FLAG_PREFIX = "budget: ";
+
+    /**
+     * Строка суждения. Ответ — значение = израсходованные токены попытки, без статуса:
+     * суждение не меняет вердикт по метрикам. Отказ бюджета — {@code budget_exhausted};
+     * модель недоступна (вне ночного окна, сервис лёг) — {@code source_unreachable}.
+     */
+    private static LoreQgResource.QGMetricEntry judgment(String routine, studio.seer.heimdall.lore.llm.LlmAnswer a,
+                                                         studio.seer.heimdall.lore.llm.BudgetedModelCall analyst,
+                                                         String model) {
+        double tokens = analyst.spent().total();
+        if (a.ok()) {
+            return new LoreQgResource.QGMetricEntry(JUDGMENT_KEY, tokens, "tokens", null, null, routine, null, model);
+        }
+        String reason = analyst.refusal() != null
+            ? studio.seer.heimdall.lore.llm.BudgetedModelCall.BUDGET_EXHAUSTED
+            : "source_unreachable";
+        return new LoreQgResource.QGMetricEntry(JUDGMENT_KEY, tokens, "tokens", null, "NOT_MEASURED", routine, reason, model);
     }
 
     /** Худший статус среди измеренных; ни одной измеренной — {@code NOT_MEASURED}, не PASS. */
@@ -116,7 +160,14 @@ final class QgAttemptRunner {
     private static LoreQgResource.QGRunRequest req(String runId, String routine, String runDate, String status,
                                                    String started, String finished, String flags,
                                                    List<LoreQgResource.QGMetricEntry> metrics) {
+        return req(runId, routine, runDate, status, started, finished, flags, metrics, null);
+    }
+
+    /** {@code model} — модель, которая фактически вынесла суждение (QG-12/QG-15); {@code null} — суждения не было. */
+    private static LoreQgResource.QGRunRequest req(String runId, String routine, String runDate, String status,
+                                                   String started, String finished, String flags,
+                                                   List<LoreQgResource.QGMetricEntry> metrics, String model) {
         return new LoreQgResource.QGRunRequest(runId, routine, runDate, status, started, finished, flags,
-            CHANNEL, null, null, null, null, metrics);
+            CHANNEL, null, null, null, model, metrics);
     }
 }

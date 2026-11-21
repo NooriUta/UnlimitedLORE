@@ -3,6 +3,7 @@
 // named-slice composition + whitelisting. Writes carry either a bearer token
 // (A2, once LORE_MCP_CLIENT_ID/SECRET are set) or the legacy X-Seer-Role header.
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { hostname as osHostname } from 'node:os';
 
 const BASE = (process.env.LORE_BACKEND_URL ?? 'http://localhost:9100').replace(/\/$/, '');
@@ -181,6 +182,12 @@ async function fetchWithRetry(
   }
 }
 
+/** Token endpoint Keycloak для issuer realm — один для stdio-режима и для HTTP-режима
+ *  (вариант «г», clientCreds.ts), чтобы адрес не разъехался. */
+export function oidcTokenUrl(issuer: string): string {
+  return `${issuer.trim().replace(/\/+$/, '')}/protocol/openid-connect/token`;
+}
+
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
 /** Bearer token for the lore-mcp service account, cached until near expiry
@@ -188,7 +195,7 @@ let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 async function serviceAccountToken(): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now) return cachedToken.accessToken;
-  const res = await loreFetch('OIDC token request', `${OIDC_ISSUER}/protocol/openid-connect/token`, {
+  const res = await loreFetch('OIDC token request', oidcTokenUrl(OIDC_ISSUER as string), {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -281,7 +288,32 @@ function safeHostname(hostname: () => string): string {
   }
 }
 
+/**
+ * SPRINT_LORE_AGENT_OBSERVABILITY/AO-MCP-HOSTED: в HTTP-режиме MCP идёт в бэкенд
+ * ТЕМ ЖЕ токеном, что прислал клиент, — права и скоуп те же, что у агента.
+ * Токен живёт в контексте ЗАПРОСА (AsyncLocalStorage), а не в переменной модуля:
+ * параллельные сессии разных клиентов не видят токены друг друга.
+ * headers — заголовки наблюдаемости от клиента (X-Lore-Machine и т.п.), уже
+ * очищенные; env контейнера (его hostname, LORE_SEER_ROLE) в этом режиме не шлётся.
+ */
+export type ClientAuth = { token: string; headers: Record<string, string> };
+const clientAuth = new AsyncLocalStorage<ClientAuth>();
+
+export function runWithClientAuth<T>(auth: ClientAuth, fn: () => T): T {
+  return clientAuth.run(auth, fn);
+}
+
+/** HTTP-режим: обращение к бэкенду вне запроса клиента — ошибка, а не тихий откат на env. */
+function hostedMode(): boolean {
+  return (process.env.LORE_MCP_TRANSPORT ?? '').trim() === 'http';
+}
+
 async function writeAuthHeaders(): Promise<Record<string, string>> {
+  const ctx = clientAuth.getStore();
+  if (ctx) return { ...ctx.headers, Authorization: `Bearer ${ctx.token}` };
+  if (hostedMode()) {
+    throw new Error('HTTP-режим MCP: обращение к бэкенду вне запроса клиента — токена нет (LORE_MCP_CLIENT_ID/SECRET в этом режиме не используются)');
+  }
   const actAs = actAsHeader(process.env);
   const machine = machineHeader(process.env);
   const session = { ...sessionHeader(process.env), ...harnessHeader(process.env) };

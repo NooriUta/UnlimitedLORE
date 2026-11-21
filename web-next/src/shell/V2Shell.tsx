@@ -18,7 +18,8 @@ import { AnalyticsScreen } from '../analytics/AnalyticsScreen';
 import { planStatusOf } from '../sprints/taskStatus';
 import { newsHrefV2, newsRefHrefV2 } from '../news/newsLinks';
 import { NavSwitch } from '../settings/NavSwitch';
-import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
+import { ADMIN_ENTRY, V2_SECTIONS, canSeeAdmin, v2Config, type V2Section } from './v2Config';
+import { useWhoami } from '../admin/WhoamiBar';
 import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
 import { VersionCorner } from './VersionCorner';
@@ -28,6 +29,8 @@ import { StatusBar } from './StatusBar';
 
 // S7B-01: экраны модуля «Админка» — свой чанк, оболочка за них не платит.
 const AdminSectionView = lazyChunk(() => import('../admin/AdminScreens'));
+// SUPERTAGS-SPIKE: экран «сущности по тегу» — свой чанк, как и по прямому адресу /tags.
+const TagEntitiesPage = lazyChunk(() => import('../tags/TagEntitiesPage'));
 
 /** Модуль из адреса (?mod=): от него зависит меню оболочки. */
 function moduleOf(w: UrlWindow | undefined): string | null {
@@ -47,6 +50,8 @@ const OWN_HEAD: ReadonlySet<V2Section> = new Set<V2Section>([
   'milestone', 'release', 'decision', 'spec', 'question', 'component', 'tech', 'feature', 'project',
   // S4-PRODUCTS-NODE: нода «Продукт».
   'product', 'actor', 'pain', 'gain', 'job',
+  // SUPERTAGS-SPIKE: у экрана тегов своя шапка с h1.
+  'tags',
 ]);
 
 /** Экраны разделов: ключ — id пункта меню. Нет ключа — «экран не собран». */
@@ -67,6 +72,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   // щелчок по строке говорит это словами, а не открывает пустой паспорт.
   milestone: () => <ListScreen screen="milestones" titleId={SECTION_TITLE_ID} />,
   release: () => <ListScreen screen="releases" titleId={SECTION_TITLE_ID} />,
+  // 1.18: раздел PR под «Релизами».
+  pr: () => <ListScreen screen="prs" titleId={SECTION_TITLE_ID} />,
   decision: () => <ListScreen screen="decisions" titleId={SECTION_TITLE_ID} />,
   spec: () => <ListScreen screen="specs" titleId={SECTION_TITLE_ID} />,
   doc: () => <ListScreen screen="docs" titleId={SECTION_TITLE_ID} />,
@@ -82,6 +89,9 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   feature: () => <ListScreen screen="features" titleId={SECTION_TITLE_ID} />,
   // S4-29 (53а): раздел «Проекты» — тем же путём; щелчок открывает паспорт проекта.
   project: () => <ListScreen screen="projects" titleId={SECTION_TITLE_ID} />,
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — тем же путём.
+  repository: () => <ListScreen screen="repositories" titleId={SECTION_TITLE_ID} />,
+  organization: () => <ListScreen screen="organizations" titleId={SECTION_TITLE_ID} />,
   // S4-PRODUCTS-NODE: нода «Продукт» — тем же путём (общий ListScreen + описание экрана).
   // Паспорт — только у продукта; боли, выгоды, работы, роли отвечают «паспорта нет».
   product: () => <ListScreen screen="products" titleId={SECTION_TITLE_ID} />,
@@ -93,6 +103,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   // Статусы в ленте читаются тем же planStatusOf, что у задач и спринтов (иконки совпадают).
   // K4-CHARTS: «Аналитика» — блоки-графики kit во вкладках «Прогресс», «Поток» и в «Моей сводке».
   analytics: () => <AnalyticsScreen />,
+  // SUPERTAGS-SPIKE: «Теги» — тот же экран, что /tags, но внутри оболочки (меню и drawer на месте).
+  tags: () => <Suspense fallback={<Skeleton lines={8} />}><TagEntitiesPage titleId={SECTION_TITLE_ID} /></Suspense>,
   news: () => <NewsFeed source={newsSource} urlPrefix="n" title={null} statusOf={planStatusOf} hrefOf={newsHrefV2} refHrefOf={newsRefHrefV2} />,
   // Ссылка на витрину kit (S4-00d) и переключатель «новая навигация» (S3-07) —
   // раздел «Настройки» (S4-01). Сами личные настройки — под аватаром в шапке
@@ -140,7 +152,10 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
   const urlWin = win ?? (typeof window === 'undefined' ? undefined : window);
   const [mod, setMod] = useState<string | null>(() => moduleOf(urlWin));
   const isAdmin = mod === ADMIN_MODULE;
-  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined, statuses.nav), [lang, statuses.items, mod, statuses.nav]);
+  // Вход в админку — пунктом левого меню только для admin/superadmin (владелица 21.11.2026); роль — из «кто я».
+  const who = useWhoami();
+  const canAdmin = canSeeAdmin(who.data);
+  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined, statuses.model, canAdmin), [lang, statuses.items, mod, statuses.model, canAdmin]);
   useEffect(() => {
     if (!urlWin || typeof window === 'undefined' || urlWin !== window) return;
     const sync = () => setMod(moduleOf(window));
@@ -148,6 +163,12 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
     return () => window.removeEventListener('popstate', sync);
   }, [urlWin]);
   const onNavigate = useCallback((next: KitNav) => {
+    // Пункт «Админка» левого меню — не раздел: переключает модуль (адрес ?mod=admin, меню админки).
+    if (next.item === ADMIN_ENTRY) {
+      if (urlWin) urlWin.history.replaceState(null, '', `?mod=${ADMIN_MODULE}${urlWin.location.hash}`);
+      setMod(ADMIN_MODULE);
+      return;
+    }
     if ((next.module === ADMIN_MODULE) === isAdmin) return;
     // Другой модуль — другое меню: раздел прежнего в нём ничего не значит.
     if (urlWin) {

@@ -26,6 +26,7 @@ final class LoreRecordPerms {
     private LoreRecordPerms() {}
 
     static final String NO_RIGHTS = "нет прав: правка и смена статуса требуют роли admin или superadmin";
+    static final String NO_RIGHTS_SUPERADMIN = "нет прав: организацию заводит и связывает только superadmin (как проект)";
     static final String READ_ONLY_REASON = "только чтение: путей записи у этого типа в паспорте пока нет";
     /** AP-PROJECT-LINK-UI: тип только-для-чтения, но у него есть правимые поля (связи с путём записи). */
     static final String STATUS_READ_ONLY_REASON = "статус и создание в паспорте не меняются: правятся только поля с путём записи";
@@ -48,6 +49,17 @@ final class LoreRecordPerms {
     }
 
     /** У типа есть поле, которое правится: editable и с путём записи в модели. */
+    /** Типы, чьи пути записи — под super-admin (создание и связи организации, как у проекта). */
+    static final java.util.Set<String> SUPERADMIN_WRITES = java.util.Set.of("organization");
+
+    /** Есть ли у типа связь, которой управляют из паспорта ({@code manageable}) — путь /relation. */
+    static boolean hasManageableRelation(String type) {
+        LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+        if (d == null) return false;
+        for (LoreRecordRegistry.Relation r : d.relations()) if (r.manageable()) return true;
+        return false;
+    }
+
     static boolean hasWritableField(String type) {
         LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
         if (d == null) return false;
@@ -71,13 +83,17 @@ final class LoreRecordPerms {
             // есть поле с путём записи (проекты решения, вопроса, ранбука через /relation), правка
             // даётся по роли; прочие поля и так editable=false в модели.
             Map<String, Object> ro = new LinkedHashMap<>();
-            boolean writable = hasWritableField(type);
-            boolean can = writable && ("admin".equals(role) || "superadmin".equals(role));
+            boolean writable = hasWritableField(type) || hasManageableRelation(type);
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: у организации порог — super-admin, как у создания проекта.
+            boolean roleOk = SUPERADMIN_WRITES.contains(type) ? "superadmin".equals(role) : ("admin".equals(role) || "superadmin".equals(role));
+            boolean can = writable && roleOk;
             ro.put("can_edit", can);
             ro.put("can_status", false);
-            ro.put("can_create", false);
+            // Создание у типа только-чтения — если путь создания объявлен моделью (блок create) и он под super-admin.
+            ro.put("can_create", SUPERADMIN_WRITES.contains(type) && roleOk && LoreModelFile.content().create().containsKey(type));
             ro.put("status_next", List.of());
-            ro.put("reason", !writable ? READ_ONLY_REASON : can ? STATUS_READ_ONLY_REASON : identified ? NO_RIGHTS : NOT_IDENTIFIED);
+            ro.put("reason", !writable ? READ_ONLY_REASON : can ? STATUS_READ_ONLY_REASON
+                : !identified ? NOT_IDENTIFIED : SUPERADMIN_WRITES.contains(type) ? NO_RIGHTS_SUPERADMIN : NO_RIGHTS);
             return ro;
         }
         boolean can = "admin".equals(role) || "superadmin".equals(role);

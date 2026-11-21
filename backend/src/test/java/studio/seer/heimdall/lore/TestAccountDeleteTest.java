@@ -232,8 +232,8 @@ class TestAccountDeleteTest {
             .on("expand(in('OWNED_BY')) FROM KnowUser", List.of(row("actor_id", agentClient, "client_id", agentClient)))
             .on("expand(bothE()) FROM KnowUser", List.of(row("@type", "HAS_PROJECT_ROLE"), row("@type", "OWNED_BY")))
             .on("SELECT kc_sub, display_name FROM KnowUser WHERE kc_sub = :s", List.of(row("kc_sub", "sub-1", "display_name", "Test User 1")))
-            .on("FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :s", List.of(row("project", "lore-sandbox", "role", "owner")))
-            .on("FROM HAS_PROJECT_ROLE WHERE @in.slug = :p AND role = 'owner'", List.of(row("n", 2)));
+            .on("FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :s", List.of(row("project", "lore-sandbox", "role", "owner")))
+            .on("FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :p AND role = 'owner'", List.of(row("n", 2)));
         g.answers.putAll(agentGraph().answers);
         return g;
     }
@@ -267,7 +267,7 @@ class TestAccountDeleteTest {
     void personLastOwnerIsBlocked() throws Exception {
         FakeGraph g = personGraph("lore-mcp-full_TestUat");
         // замена значения на месте: порядок сопоставления фрагментов прежний
-        g.answers.put("FROM HAS_PROJECT_ROLE WHERE @in.slug = :p AND role = 'owner'", p -> List.of(row("n", 1)));
+        g.answers.put("FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :p AND role = 'owner'", p -> List.of(row("n", 1)));
         Map<String, Object> plan = TestAccountDelete.personPlan(new FakeKc(), g, "sub-1", "test-user-1");
         assertNotNull(TestAccountDelete.refusal(plan));
         assertTrue(TestAccountDelete.refusal(plan).contains("lore-sandbox"));

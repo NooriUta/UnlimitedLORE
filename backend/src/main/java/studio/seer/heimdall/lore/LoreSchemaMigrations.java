@@ -1983,7 +1983,9 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowRunbookHist", "KnowRunbookHist", List.of("content_md")),
         // content_md_en/ru — двуязычные тела доков: без них искалась только
         // основная колонка, а переводы в выдачу не попадали вовсе.
-        new FtIndex("ftKnowDoc",         "KnowDoc",         List.of("title", "content_md", "content_md_en", "content_md_ru")),
+        // MDL-08 ч.2: легаси content_md снят (писателя нет, 0 из 460) — индекс пересоздаётся без него (Java-часть,
+        // в checksum шага не входит; набор полей сверяется по имени и пересоздаётся при расхождении).
+        new FtIndex("ftKnowDoc",         "KnowDoc",         List.of("title", "content_md_en", "content_md_ru")),
         new FtIndex("ftKnowDocHist",     "KnowDocHist",     List.of("content_md")),
         new FtIndex("ftKnowDecision",    "KnowDecision",    List.of("title", "body_md")),
         new FtIndex("ftKnowQuestion",    "KnowQuestion",    List.of("title", "body_md")),

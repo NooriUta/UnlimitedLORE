@@ -241,3 +241,25 @@ describe('экран', () => {
     expect(screen.queryByTestId('adm-tidy-dismiss')).toBeNull();   // группа «код без спринта»
   });
 });
+
+// Дефект 1.18 (ryzenai, база из модели): раздел падал 502 на PlanVersion. Теперь сервер пропускает тип вне модели
+// и называет его в not_migrated — экран показывает «нет данных: тип не перенесён в 1.18», а не «всё чисто» и не пусто.
+describe('тип не перенесён в 1.18', () => {
+  const REASON = 'нет данных: тип PlanVersion не перенесён в 1.18 — старая доска плана снята';
+  it('модель разбирает not_migrated', () => {
+    expect(parseTidy({ ...CHECK, not_migrated: [{ type: 'PlanVersion', reason: REASON }] }).notMigrated)
+      .toEqual([{ type: 'PlanVersion', reason: REASON }]);
+    expect(parseTidy(CHECK).notMigrated).toEqual([]);
+  });
+  it('экран показывает пропущенный тип с причиной, даже когда остальное чисто', async () => {
+    const clean = { ...CHECK, auto: { edits: 0, records: 0, rules: {}, signatures: {} },
+      manual: { records: 0, places: 0, groups: {}, rows: [], dismissed: [] },
+      not_migrated: [{ type: 'PlanVersion', reason: REASON }] };
+    const f = vi.fn(async () => json(clean)) as unknown as typeof fetch;
+    mount(f);
+    const note = await screen.findByTestId('adm-tidy-not-migrated');
+    expect(note.textContent).toContain('PlanVersion');
+    expect(note.textContent).toContain('не перенесён в 1.18');
+    expect(screen.getByTestId('adm-tidy-clean')).toBeTruthy();
+  });
+});

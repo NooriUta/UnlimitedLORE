@@ -9,7 +9,7 @@
 // Фильтры — в адресе: ?adm-mcp-f=silent («только не видели») и =failures («только с отказами»;
 // с ним ведёт карточка Главной). Ниже — сами отказы построчно (S7B-30): столько, сколько насчитано.
 import { EmptyState, Forbidden, LoadError, Skeleton, useLoadState, useUrlParam } from '@seidr/kit';
-import { kitMinute } from '@seidr/kit/core';
+import { kitMinute, useStepLimits } from '@seidr/kit/core';
 import { useAppT, type AppKey } from '../i18n';
 import { QuickCommands } from './QuickCommands';
 import {
@@ -17,6 +17,8 @@ import {
 } from './mcp';
 import { mcpFailureTotal } from './home';
 import { MachineCell } from './machineMark';
+import { McpFailureCodesChart } from '../charts/AgentCharts';
+import { AdminViewSwitch, useAdminView } from './AdminViewSwitch';
 import './Admin.css';
 
 export interface McpScreenProps {
@@ -31,6 +33,7 @@ const HEALTH_LABEL: Record<McpHealth, AppKey> = {
 
 export function McpScreen({ fetchImpl, now }: McpScreenProps) {
   const t = useAppT();
+  const [view, setView] = useAdminView();
   const res = useLoadState<McpData>(
     signal => fetchMcp(now ?? Date.now(), signal, fetchImpl),
     [fetchImpl, now],
@@ -127,8 +130,11 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-profiles-note">{t('admin.mcp.profilesNote')}</p>
       {/* S7B-07: «последний вызов» здесь — счётчик запросов профиля; «Агенты» показывают ещё и отметку сессий. */}
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-source-note">{t('admin.mcp.sourceNote')}</p>
-      {body}
-      {data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
+      {/* №14 (графики 19.11.2026): отказы по кодам во времени — видом «Аналитика», не над отказами (21.11.2026). */}
+      <AdminViewSwitch view={view} onChange={setView} />
+      {view === 'analytics' && <div className="sk-rec-charts"><McpFailureCodesChart {...(fetchImpl ? { fetchImpl } : {})} {...(now !== undefined ? { now } : {})} /></div>}
+      {view === 'list' && body}
+      {view === 'list' && data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
       {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}
       <QuickCommands />
     </section>
@@ -152,8 +158,12 @@ function When({ ms }: { ms: number | null }) {
  * под пределом выдачи, и это сказано словами «показаны N из M».
  * Честные исходы: ноль — «отказов нет»; не прочитали — «не смогли», а не пусто.
  */
+/** Отказов бывает сотни (423 на ryzenai 19.11 — страница ~31 000 px на телефоне): показываем частями. */
+const MCP_FAILS_STEP = 50;
+
 function FailureRows({ fetchImpl, total }: { fetchImpl?: typeof fetch; total: number | null }) {
   const t = useAppT();
+  const step = useStepLimits(MCP_FAILS_STEP);
   const res = useLoadState<McpFailureRowsData>(
     signal => fetchMcpFailureRows(signal, fetchImpl),
     [fetchImpl],
@@ -200,7 +210,7 @@ function FailureRows({ fetchImpl, total }: { fetchImpl?: typeof fetch; total: nu
               </tr>
             </thead>
             <tbody>
-              {data.rows.map((r, i) => (
+              {data.rows.slice(0, step.limitOf('fails')).map((r, i) => (
                 <tr key={`${r.ts ?? 'x'}-${i}`} data-testid={`adm-mcp-fail-row-${i}`}>
                   <td><When ms={r.ts} /></td>
                   <td>{r.caller === null ? <span className="adm-missing">{t('admin.mcp.none')}</span> : <span className="adm-mono">{r.caller}</span>}</td>
@@ -214,6 +224,11 @@ function FailureRows({ fetchImpl, total }: { fetchImpl?: typeof fetch; total: nu
             </tbody>
           </table>
         </div>
+        {data.rows.length > step.limitOf('fails') && (
+          <button type="button" className="adm-btn" data-testid="adm-mcp-fails-more" onClick={() => step.showMore('fails')}>
+            {t('admin.mcp.fails.more', { n: Math.min(MCP_FAILS_STEP, data.rows.length - step.limitOf('fails')), shown: step.limitOf('fails'), m: data.rows.length })}
+          </button>
+        )}
       </>
     );
   }

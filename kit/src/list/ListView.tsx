@@ -2134,7 +2134,7 @@ export function ListView({
           );
         })}
         {/* Проверенный ноль: источник ответил целиком, провалов нет, записей нет. */}
-        {empty && shown.kind === 'complete' && records.length === 0 && <EmptyState />}
+        {empty && shown.kind === 'complete' && records.length === 0 && <EmptyState title={listCfg?.empty?.title} hint={listCfg?.empty?.hint} />}
         {/* Фильтр отсеял всё — это не «ничего не было», и чинится другим фильтром. */}
         {empty && records.length > 0 && emptyFilteredState}
         {/* Выдача неполная, а строк нет: «пусто» утверждать нельзя. */}
@@ -2148,7 +2148,8 @@ export function ListView({
       </div>
     );
   } else if (records.length === 0 && shown.kind === 'complete' && missingShown.length === 0) {
-    body = <EmptyState />;
+    // Проверенный ноль: слова раздела, если приложение их назвало (list.empty), иначе общие слова kit.
+    body = <EmptyState title={listCfg?.empty?.title} hint={listCfg?.empty?.hint} />;
   } else if (filtered.length === 0 && records.length > 0 && missingShown.length === 0) {
     body = emptyFilteredState;
   } else if (view === 'cards') {

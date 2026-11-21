@@ -28,8 +28,8 @@ name: LORE Release (publish on tag)
 #   4. ship — docker save | ssh docker load, сверка Id;
 #   5. compose — бэкап docker-compose.yml.bak-<тег> в /home/nooriuta/UnlimitedLORE-deploy
 #      и /home/nooriuta/lore-app-next, замена ТОЛЬКО тегов образов; .env не трогается;
-#   6. db — код новее схемы прода → BACKUP DATABASE кредом работающего бэкенда и
-#      накатка отдельным `compose run` (LORE_MIGRATE_ONLY, LORE_MART_AUTH=basic);
+#   6. db — код новее схемы прода → BACKUP DATABASE кредом сервиса lore-migrate (DBR-01) и
+#      накатка отдельным `compose run lore-migrate` (root, basic, LORE_MIGRATE_ONLY);
 #   7. up — compose up -d: бэкенд (ждём healthy) → v1 → v2;
 #   8. theme — тема KC из дерева тега → /home/nooriuta/keycloak/themes/lore;
 #   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит
@@ -75,6 +75,12 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      swap_from:
+        # 1.18: база переноса (migration_dst*) в LORE-ygg lore-host встаёт под имя базы прода, прежняя → _bak.
+        description: 'база переноса migration_dst* на lore-host для замены базы прода (пусто — без замены)'
+        required: false
+        default: ''
+        type: string
       deploy:
         # PL-05: true — боевая выкатка тега на lore-host (повтор или откат на
         # прошлый тег). По умолчанию ручной запуск прод НЕ трогает.
@@ -645,6 +651,14 @@ jobs:
       - name: Бэкап compose (*.bak-<тег>) и замена тегов образов
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/lore-host-deploy.sh compose
+
+      # 1.18 (владелица 21.11): база переноса встаёт под имя базы прода, прежняя → _bak — тот же алгоритм,
+      # что у препрода. Источник — поле swap_from или vars.LORE_PROD_SWAP_FROM (ставится перед тегом).
+      - name: База прода — замена базой переноса (если задан источник)
+        if: steps.mode.outputs.live == 'true'
+        env:
+          SWAP_FROM: ${{ inputs.swap_from || vars.LORE_PROD_SWAP_FROM }}
+        run: bash .github/scripts/lore-host-deploy.sh dbswap
 
       - name: База прода — бэкап и накатка, если тег несёт миграции
         if: steps.mode.outputs.live == 'true'

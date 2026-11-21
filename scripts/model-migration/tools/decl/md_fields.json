@@ -1,0 +1,278 @@
+{
+ "vertex": {
+  "BragiPublication": [
+   {
+    "f": "annotation_md",
+    "filled": 1,
+    "sample": 8,
+    "total": 8
+   },
+   {
+    "f": "todo_md",
+    "filled": 1,
+    "sample": 8,
+    "total": 8
+   }
+  ],
+  "BragiVariant": [
+   {
+    "f": "annotation_md",
+    "filled": 6,
+    "sample": 14,
+    "total": 14
+   },
+   {
+    "f": "todo_md",
+    "filled": 7,
+    "sample": 14,
+    "total": 14
+   }
+  ],
+  "ClRoutineMetric": [
+   {
+    "f": "note",
+    "filled": 6,
+    "sample": 861,
+    "total": 861
+   }
+  ],
+  "HAS_PR": [
+   {
+    "f": "note",
+    "filled": 1,
+    "sample": 159,
+    "total": 159
+   }
+  ],
+  "IMPLEMENTED_IN_RELEASE": [
+   {
+    "f": "note",
+    "filled": 1,
+    "sample": 965,
+    "total": 965
+   }
+  ],
+  "KnowADR": [
+   {
+    "f": "context_md",
+    "filled": 50,
+    "sample": 260,
+    "total": 260
+   },
+   {
+    "f": "decision_md",
+    "filled": 50,
+    "sample": 260,
+    "total": 260
+   },
+   {
+    "f": "consequences_md",
+    "filled": 42,
+    "sample": 260,
+    "total": 260
+   }
+  ],
+  "KnowFinding": [
+   {
+    "f": "summary_md",
+    "filled": 7,
+    "sample": 31,
+    "total": 31
+   },
+   {
+    "f": "summary",
+    "filled": 3,
+    "sample": 31,
+    "total": 31
+   }
+  ],
+  "KnowPR": [
+   {
+    "f": "body_md",
+    "filled": 4,
+    "sample": 1893,
+    "total": 1893
+   }
+  ],
+  "KnowSpec": [
+   {
+    "f": "content_md",
+    "filled": 432,
+    "sample": 478,
+    "total": 478
+   }
+  ],
+  "KnowSprint": [
+   {
+    "f": "outcome_md",
+    "filled": 255,
+    "sample": 541,
+    "total": 541
+   },
+   {
+    "f": "goal",
+    "filled": 1,
+    "sample": 541,
+    "total": 541
+   }
+  ],
+  "KnowTask": [
+   {
+    "f": "note_md",
+    "filled": 1249,
+    "sample": 2000,
+    "total": 6456
+   },
+   {
+    "f": "summary_md",
+    "filled": 1,
+    "sample": 2000,
+    "total": 6456
+   }
+  ],
+  "PlanCheckpoint": [
+   {
+    "f": "desc_md",
+    "filled": 17,
+    "sample": 17,
+    "total": 17
+   }
+  ],
+  "PlanConfig": [
+   {
+    "f": "note",
+    "filled": 1,
+    "sample": 1,
+    "total": 1
+   }
+  ],
+  "PlanVersion": [
+   {
+    "f": "changelog_md",
+    "filled": 167,
+    "sample": 167,
+    "total": 167
+   }
+  ],
+  "QualityGate": [
+   {
+    "f": "description",
+    "filled": 9,
+    "sample": 25,
+    "total": 25
+   },
+   {
+    "f": "content_md",
+    "filled": 24,
+    "sample": 25,
+    "total": 25
+   }
+  ],
+  "KnowGitProject": [
+   {
+    "f": "description",
+    "filled": 5,
+    "sample": 26,
+    "total": 26
+   }
+  ],
+  "KnowPhase": [
+   {
+    "f": "summary_md",
+    "filled": 0,
+    "sample": 252,
+    "total": 252
+   }
+  ],
+  "KnowDoc": [
+   {
+    "f": "content_md",
+    "filled": 0,
+    "sample": 457,
+    "total": 457
+   }
+  ],
+  "KnowUserDraft": [
+   {
+    "f": "body_md",
+    "filled": 3,
+    "sample": 3,
+    "total": 3
+   }
+  ],
+  "ClRoutineOutput": [
+   {
+    "f": "content_md",
+    "filled": 18,
+    "sample": 18,
+    "total": 18
+   }
+  ],
+  "ClRoutineRun": [
+   {
+    "f": "detail_md",
+    "filled": 37,
+    "sample": 164,
+    "total": 164
+   }
+  ],
+  "BragiInsight": [
+   {
+    "f": "statement_md",
+    "filled": 30,
+    "sample": 30,
+    "total": 30
+   }
+  ],
+  "BragiPage": [
+   {
+    "f": "description",
+    "filled": 0,
+    "sample": 6,
+    "total": 6
+   }
+  ],
+  "BragiRubric": [
+   {
+    "f": "description",
+    "filled": 9,
+    "sample": 9,
+    "total": 9
+   }
+  ],
+  "ROLE_HELD_BY": [
+   {
+    "f": "feedback_md",
+    "filled": 0,
+    "sample": 2000,
+    "total": 10437
+   }
+  ]
+ },
+ "hist": {
+  "KnowPhaseHist": [
+   {
+    "f": "note_md",
+    "filled": 3,
+    "sample": 354,
+    "total": 354
+   }
+  ],
+  "KnowSprintHist": [
+   {
+    "f": "note_md",
+    "filled": 6,
+    "sample": 1000,
+    "total": 2135
+   }
+  ],
+  "KnowDocHist": [
+   {
+    "f": "content_md",
+    "filled": 355,
+    "sample": 355,
+    "total": 355
+   }
+  ]
+ }
+}

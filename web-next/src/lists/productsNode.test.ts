@@ -21,7 +21,9 @@ import { PASSPORT_TYPES } from '../record/passportAdapters';
 import { TYPE_SECTION, recordHref } from '../nav/loreRoutes';
 import { passportHref } from '../record/passportHref';
 
-const PRODUCT_ITEMS = ['product', 'feature', 'actor', 'pain', 'gain', 'job'];
+// Владелица 21.11.2026: продукт — логическая группа проектов, его место в группе «Организация»;
+// в «Продукте» остались фичи, роли, боли, выгоды, работы.
+const PRODUCT_ITEMS = ['feature', 'actor', 'pain', 'gain', 'job'];
 
 describe('меню: группа «Продукт»', () => {
   const groups = v2Config('ru').menu.groups;
@@ -39,7 +41,10 @@ describe('меню: группа «Продукт»', () => {
     const ids = system.items.map(i => i.id);
     expect(ids).not.toContain('feature');
     expect(ids).not.toContain('product');
-    expect(ids).toEqual(['project', 'component', 'tech']);
+    // Владелица 21.11.2026: «в Устройстве оставила бы технологии, репозитории, компоненты»; организации, продукты,
+    // проекты и люди — группа «Организация».
+    expect(ids).toEqual(['tech', 'repository', 'component']);
+    expect(groups.find(x => x.id === 'org')!.items.map(i => i.id)).toEqual(['organization', 'product', 'project', 'user']);
     expect(groupOf('feature')).toBe('product');
   });
 
@@ -91,6 +96,15 @@ describe('мапперы строк продуктового слоя', () => {
     expect(r).toMatchObject({ id: 'LORE', kind: 'product', title: 'Лор', status: '' });
     expect(r.fields).toMatchObject({ parent: ['AIDA'], children: ['LORE-M'], components: ['HND', 'SEIDRKIT'], project: ['AIDA/UnlimitedLORE'] });
     expect(productRecord({ code: 'X' }).title, 'без подписи — код').toBe('X');
+  });
+
+  it('WK-01: вид продукта в списке — набор (строка прежней записи — набор из одного), колонка «Вид»', () => {
+    expect(productRecord({ code: 'HARPA', kind: ['tech', 'service'] }).fields.product_kind).toEqual(['tech', 'service']);
+    expect(productRecord({ code: 'FREYJA', kind: 'service' }).fields.product_kind).toEqual(['service']);
+    expect(productRecord({ code: 'X' }).fields.product_kind).toEqual([]);
+    const cfg = LIST_SCREENS.products.config('ru');
+    expect(cfg.list?.columns).toContain('product_kind');
+    expect(cfg.kinds.product.fields?.find(f => f.key === 'product_kind')?.title).toBe('Вид продукта');
   });
 
   it('боль, выгода, работа: акторы и «заявлено / снимает»', () => {

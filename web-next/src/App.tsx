@@ -27,7 +27,7 @@ import { legacyHashHref, legacyPassportHref } from './nav/loreRoutes';
 import { adminAxisHref, legacyAdminHref } from './admin/adminModule';
 import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
-import { ProjectScope } from './scope/ProjectScope';
+import { ProductScope } from './scope/ProductScope';
 import { AccountMenu } from './settings/AccountMenu';
 import { SectionPalette } from './palette/SectionPalette';
 import { OutsideShell } from './pages/OutsideShell';
@@ -44,6 +44,8 @@ const KitPage = lazyChunk(() => import('./pages/KitPage'));
 const PassportDemo = lazyChunk(() => import('./pages/PassportDemo'));
 // Новости v2 (SPRINT_UXR_S7A_NEWS/S7A-02) — свой чанк: лента, матрица, сгорание.
 const NewsPage = lazyChunk(() => import('./news/NewsPage'));
+// SUPERTAGS-SPIKE: сущности по тегу с полями (/tags?tag=…).
+const TagEntitiesPage = lazyChunk(() => import('./tags/TagEntitiesPage'));
 // Чтение задачи (S5-04) — тоже MD-чтение (MartProse, KaTeX, mermaid): свой чанк.
 // Админка v2 (SPRINT_UXR_S7B_ADMIN/S7B-01) — модуль оболочки ?mod=admin
 // (V2Shell, admin/adminModule.ts). Прежняя страница /admin?adm=… переписывается
@@ -61,7 +63,7 @@ const NewsPage = lazyChunk(() => import('./news/NewsPage'));
 // seer-prefs ещё до запроса, а ответ сервера её потом уточняет.
 const meClient = createLiveS2Client();
 
-export type Route = 'kit' | 'passport' | 'news' | 'admin' | 'home' | ListScreenId;
+export type Route = 'kit' | 'passport' | 'news' | 'tags' | 'admin' | 'home' | ListScreenId;
 
 const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adrs': 'adrs' };
 /**
@@ -74,8 +76,8 @@ const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adr
 const LIST_SECTION: Record<ListScreenId, V2Section> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task',
   decisions: 'decision', specs: 'spec', docs: 'doc', runbooks: 'runbook', quality_gates: 'quality_gate', users: 'user', agents: 'agent', questions: 'question', milestones: 'milestone',
-  releases: 'release', components: 'component', tech: 'tech', features: 'feature',
-  projects: 'project',
+  releases: 'release', prs: 'pr', components: 'component', tech: 'tech', features: 'feature',
+  projects: 'project', repositories: 'repository', organizations: 'organization',
   products: 'product', actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job',
 };
 
@@ -89,6 +91,7 @@ export function routeOf(path: string, search = ''): Route {
   if (p === '/kit') return 'kit';
   if (p === '/kit/passport') return 'passport';
   if (p === '/news') return 'news';
+  if (p === '/tags') return 'tags';
   if (p === '/admin') return 'admin';
   // Приёмка 14.11.2026 (PU-29): старая админка v1 жила на /lore?section=admin&tab=… —
   // на любом пути это админка (дальше legacyAdminHref разводит вкладки), а не «Новости».
@@ -162,6 +165,14 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
       </ErrorBoundary>
     );
   }
+  if (route === 'tags') {
+    return (
+      <ErrorBoundary lang={lang}>
+        <StaleChunkBanner />
+        <Suspense fallback={<Skeleton lines={8} />}><TagEntitiesPage /></Suspense>
+      </ErrorBoundary>
+    );
+  }
   if (route === 'sprints' || route === 'adrs') redirectListRoute(route, win ?? (typeof window === 'undefined' ? undefined : window));
   return (
     <>
@@ -172,7 +183,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
         {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
         <V2Shell storage={storage} win={win} narrow={narrow} brandTag={<Pill variant="id">v2</Pill>}
           // S4-23: охват проектов — сразу за приложениями, как в прототипе v4.
-          topStart={<ProjectScope />}
+          topStart={<ProductScope />}
           topEnd={(
             <>
               {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.

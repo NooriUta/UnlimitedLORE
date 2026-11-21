@@ -36,3 +36,27 @@ describe('relationOptionsHook', () => {
     await expect(relationOptionsHook(rels, vi.fn())({ type: 'sprint', id: 'S_A', rel: 'EDITED_IN', dir: 'in', query: 'x' })).rejects.toThrow(/нет источника/);
   });
 });
+
+// SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13: «зависит от» ведёт к любому из типов планирования (target_type any); какие
+// типы предлагать в выборе — список модели target_types. Без него выбор у спринта сломался бы: для any источника нет.
+describe('MDL-13 · связь к нескольким типам — варианты из каждого', () => {
+  const deps = [{ key: 'dependsOn', label: 'Зависит от', relation: 'association' as const, rel: 'DEPENDS_ON', dir: 'out' as const, count: 0,
+    target_type: 'any', target_types: ['task', 'sprint', 'milestone'] }];
+  const rows: Record<string, Record<string, unknown>[]> = {
+    open_tasks: [{ task_uid: 'S_B/T-1', title: 'Схема базы' }],
+    sprints: [{ sprint_id: 'S_A', name: 'Сама', status_raw: '📋 PLANNED' }, { sprint_id: 'S_B', name: 'Схема', status_raw: '📋 PLANNED' }],
+    milestones: [{ milestone_id: 'M-1', label: 'Схема готова' }],
+  };
+  it('задачи, спринты и вехи — каждый своим срезом, вид варианта — его тип; поиск общий', async () => {
+    const slice = vi.fn(async (name: string) => ({ rows: rows[name] ?? [] }));
+    const out = await relationOptionsHook(deps, slice)({ type: 'sprint', id: 'S_A', rel: 'DEPENDS_ON', dir: 'out', query: 'схем' });
+    expect(out).toEqual([
+      { id: 'S_B/T-1', title: 'Схема базы', type: 'task' },
+      { id: 'S_B', title: 'Схема', type: 'sprint' },
+      { id: 'M-1', title: 'Схема готова', type: 'milestone' },
+    ]);
+  });
+  it('any без списка типов — по-прежнему ошибка словами', async () => {
+    await expect(relationOptionsHook([{ ...deps[0], target_types: undefined }], vi.fn())({ type: 'sprint', id: 'S_A', rel: 'DEPENDS_ON', dir: 'out', query: '' })).rejects.toThrow(/нет источника/);
+  });
+});

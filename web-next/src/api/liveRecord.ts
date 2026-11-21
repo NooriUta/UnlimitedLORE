@@ -55,9 +55,16 @@ const arr = (v: unknown): Json[] => (Array.isArray(v) ? v.filter(x => x && typeo
  *
  * Отсюда кодирование ПО СЕГМЕНТАМ: `encodeURIComponent` каждому куску между
  * слэшами. Для обычных ключов (`S4-09`, `ADR-LORE-049`) это тождество.
+ *
+ *  3. **Пустых сегментов быть не должно.** Ключ репозитория — адрес
+ *     `https://хост/владелец/имя`. Сервер склеивает `//` в `/` до разбора пути,
+ *     и `https%3A//git…` доходит как `https:/git…` — 400 «id contains illegal
+ *     characters» (проба ryzenai, 19.11.2026). Поэтому каждый слэш серии,
+ *     кроме первого, уходит как `%2F`: `https%3A/%2Fgit…` сервер принимает.
  */
 export function recordPath(id: string): string {
-  return id.split('/').map(encodeURIComponent).join('/');
+  return id.split('/').map(encodeURIComponent).join('/')
+    .replace(/\/{2,}/g, run => '/' + '%2F'.repeat(run.length - 1));
 }
 
 /** Записи нет (404). Отдельно от «нет прав»: тут нечего ждать и не у кого просить. */
@@ -233,6 +240,12 @@ function tabsOf(relations: Json[]): LoreTab[] {
     }));
 }
 
+/** Свойства ребра связи: [{key, label}] с непустыми строками; нет или пусто — undefined (ключа не будет). */
+function propsOf(v: unknown): { key: string; label: string }[] | undefined {
+  const out = arr(v).map(p => ({ key: str(p.key), label: str(p.label) || str(p.key) })).filter(p => p.key);
+  return out.length ? out : undefined;
+}
+
 /** Разбор ответа фасада. `loadedAt` — время КЛИЕНТА: сервер о нём не говорит. */
 export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
   const b = obj(body);
@@ -311,6 +324,13 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
       // Потеря этого слова и давала «Проекты 0» рядом с живым значением.
       ...(placeOf(r.place) ? { place: placeOf(r.place)! } : {}),
       ...(str(r.target_type) ? { target_type: str(r.target_type) } : {}),
+      // MDL-13: свойства ребра (у «зависит от» — вид и причина) — подписи из модели; kit покажет их
+      // колонками вкладки связей, значения — из values каждой связи.
+      ...(propsOf(r.props) ? { props: propsOf(r.props)! } : {}),
+      // MDL-13: привязка требует причины — признак модели; kit по нему открывает ReasonDialog.
+      ...(r.reason_required === true ? { reasonRequired: true } : {}),
+      // MDL-13: типы другого конца связи к нескольким типам — для выбора с поиском.
+      ...(Array.isArray(r.target_types) && r.target_types.length ? { target_types: r.target_types.map(String) } : {}),
     };
   });
 

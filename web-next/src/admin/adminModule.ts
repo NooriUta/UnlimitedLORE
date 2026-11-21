@@ -10,7 +10,7 @@ import type { KitConfig, KitLang } from '@seidr/kit';
 export const ADMIN_MODULE = 'admin';
 
 /** Разделы админки — они же id пунктов меню и значения sec. */
-export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-roles', 'adm-dicts', 'adm-rules', 'adm-tidy', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
+export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs', 'adm-roles', 'adm-dicts', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
 
 export function isAdminSection(id: string | null): id is AdminSection {
@@ -25,10 +25,13 @@ const TITLE: Record<AdminSection, AppKey> = {
   'adm-machines': 'admin.macl.title',
   'adm-who': 'admin.who.title',
   'adm-projects': 'admin.projects.title',
+  'adm-orgs': 'admin.orgs.title',
   'adm-roles': 'admin.roles.title',
   'adm-dicts': 'admin.dicts.title',
+  'adm-model': 'admin.model.title',
   'adm-rules': 'admin.rules.title',
   'adm-tidy': 'admin.tidy.title',
+  'adm-migration': 'admin.mig.title',
   'adm-flags': 'admin.flags.title',
   'adm-mcp': 'admin.mcp.title',
   'adm-log': 'admin.log.title',
@@ -41,10 +44,13 @@ const ICON: Record<AdminSection, string> = {
   'adm-machines': 'laptop',
   'adm-who': 'person',
   'adm-projects': 'tree-branch',
+  'adm-orgs': 'castle',
   'adm-roles': 'key',
   'adm-dicts': 'spell-book',
+  'adm-model': 'cubes',
   'adm-rules': 'scroll-quill',
   'adm-tidy': 'broom',
+  'adm-migration': 'cargo-crate',
   'adm-flags': 'flying-flag',
   'adm-mcp': 'plug',
   'adm-log': 'open-book',
@@ -65,7 +71,8 @@ export function adminSectionTitle(lang: KitLang, id: AdminSection): string {
  *   • «Язык графа» — словари (S7B-31) и правила CLAUDE. Тон риска, как у «Доступа»:
  *     правка справочника меняет подписи, цвета и иконки на каждом экране, канон-словари
  *     зашиты в статусы всего корпуса — это меняет язык всей системы, а не одну запись;
- *     там же «Привести в порядок» (PU-20): пачка правит ссылки в текстах всего корпуса;
+ *     там же «Привести в порядок» (PU-20): пачка правит ссылки в текстах всего корпуса, и «Перенос
+ *     на новую модель» (MIG-02): правило решает судьбу значения у всех записей при переносе;
  *   • «Система» — флаги и версия, MCP, журнал действий.
  */
 export function adminMenu(lang: KitLang): KitConfig['menu'] {
@@ -75,9 +82,9 @@ export function adminMenu(lang: KitLang): KitConfig['menu'] {
     recent: false,
     groups: [
       { id: 'adm-start', title: appT(lang, 'shell.grp.admStart'), tone: 'var(--acc)', items: [item('adm-home'), item('adm-wiz')] },
-      { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-machines'), item('adm-who'), item('adm-projects')] },
+      { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-machines'), item('adm-who'), item('adm-projects'), item('adm-orgs')] },
       { id: 'adm-access', title: appT(lang, 'shell.grp.admAccess'), tone: 'var(--wrn)', items: [item('adm-roles')] },
-      { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-rules'), item('adm-tidy')] },
+      { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-model'), item('adm-rules'), item('adm-tidy'), item('adm-migration')] },
       { id: 'adm-system', title: appT(lang, 'shell.grp.admSystem'), tone: 'var(--inf)', items: [item('adm-flags'), item('adm-mcp'), item('adm-log')] },
     ],
   };
@@ -95,6 +102,8 @@ const V1_TABS: Record<string, { sec: AdminSection; params?: Record<string, strin
   settings: { sec: 'adm-flags' },
   quick: { sec: 'adm-mcp' },
   claudeRules: { sec: 'adm-rules' },
+  // MC-06: адрес из прототипа экрана «Модель»; вкладка (?mtab=) едет как есть.
+  model: { sec: 'adm-model' },
   agents: { sec: 'adm-agents' },
   roles: { sec: 'adm-roles' },
 };

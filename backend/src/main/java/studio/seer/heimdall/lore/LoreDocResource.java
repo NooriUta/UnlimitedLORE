@@ -59,7 +59,7 @@ public class LoreDocResource extends LoreResourceBase {
             return badParams("doc_id contains illegal characters");
         try {
             // LH-44: only SET provided fields — a metadata-only re-call must not wipe
-            // content_html (up to 100 KB of page content) or the other attributes.
+            // content_html (page content, no size limit enforced here) or the other attributes.
             StringBuilder dcsql = new StringBuilder("UPDATE KnowDoc SET doc_id=:id");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("id", req.doc_id());
@@ -121,11 +121,11 @@ public class LoreDocResource extends LoreResourceBase {
     }
 
     /**
-     * Тело версии дока — то, что показывает читатель: ru, иначе en, иначе легаси
-     * content_md. HTML-тело в MD-версию не кладём: версия у HTML-дока не заводится.
+     * Тело версии дока — то, что показывает читатель: ru, иначе en. HTML-тело в MD-версию не кладём: версия у
+     * HTML-дока не заводится. MDL-08 ч.2: запасное легаси KnowDoc.content_md снято — писателя нет, в проде 0 из 460.
      */
-    static String versionBodyOf(Object ru, Object en, Object legacy) {
-        for (Object v : new Object[]{ru, en, legacy})
+    static String versionBodyOf(Object ru, Object en) {
+        for (Object v : new Object[]{ru, en})
             if (v != null && !String.valueOf(v).isBlank()) return String.valueOf(v);
         return null;
     }
@@ -142,11 +142,10 @@ public class LoreDocResource extends LoreResourceBase {
     private void versionBody(String id) {
         List<Map<String, Object>> cur = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
             new LoreCommandClient.LoreCommand("sql",
-                "SELECT content_md_ru, content_md_en, content_md FROM KnowDoc WHERE doc_id = :id",
+                "SELECT content_md_ru, content_md_en FROM KnowDoc WHERE doc_id = :id",
                 Map.of("id", id))).await().indefinitely().result();
         if (cur == null || cur.isEmpty()) return;
-        String body = versionBodyOf(cur.get(0).get("content_md_ru"), cur.get(0).get("content_md_en"),
-            cur.get(0).get("content_md"));
+        String body = versionBodyOf(cur.get(0).get("content_md_ru"), cur.get(0).get("content_md_en"));
         if (body == null) return;
         List<Map<String, Object>> open = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
             new LoreCommandClient.LoreCommand("sql",

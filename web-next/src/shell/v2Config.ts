@@ -12,7 +12,7 @@
 //     v2 и kit не разошлись; подпись — из локалей web-next.
 import { appliedStatusConfirm } from '../settings/applied';
 import { ICON_CANON, SECTION_ICONS } from '@seidr/kit';
-import { statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
+import { navFromModel, statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { ADMIN_MODULE, adminMenu } from '../admin/adminModule';
 import { loreKinds } from './loreKinds';
@@ -32,11 +32,17 @@ export const V2_SECTIONS = [
   // MD-04, второй заход по QG: гейты качества — раздел «Работа» с паспортом (только чтение).
   'quality_gate',
   'component', 'tech', 'feature', 'project',
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — раздел «Система» с паспортом (только чтение).
+  'repository', 'organization',
+  // 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): раздел PR — список и паспорт (только чтение).
+  'pr',
   // S9-05 A: люди и агенты — паспорта «шапка + таблица детей».
   'user', 'agent',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
   'product', 'actor', 'pain', 'gain', 'job',
   'news', 'analytics', 'settings',
+  // SUPERTAGS-SPIKE: «Теги» — сущности по тегу с полями; раздел «Знание» (экран тот же, что по адресу /tags).
+  'tags',
 ] as const;
 export type V2Section = (typeof V2_SECTIONS)[number];
 
@@ -94,38 +100,45 @@ const STATUSES: [code: string, category: Category, allow: string[]][] = [
  * клиента. Рукописный список уже стоил находки аудита 09.11 — четыре кода в
  * него не попали, и у 89 задач корпуса чип выходил пустым.
  */
-/** Группа общего меню из модели (`surfaces.nav` в /lore/model, MC-07). Разделы — только уровня everywhere. */
-export interface ModelNavGroup {
-  id: string;
-  label_key: string;
-  tone: string;
-  pin_top?: boolean;
-  items: { section: string; icon: string; view?: string }[];
-}
-
 /**
  * SPRINT_LORE_MODEL_AS_CONFIG/MC-07 (D-2026-LORE-MODEL-AUDIENCE-VISIBILITY): общее меню — из модели, а
  * не из списка в коде. Видимость раздела (everywhere / detail / admin / hidden) решает сервер по
  * конфигу модели; сюда приходят только пункты уровня everywhere. Раздел, которого клиент не знает
  * (нет в V2_SECTIONS — нет экрана), отбрасывается, а не рисуется пустым пунктом.
+ *
+ * SPRINT_UXR_S14_KIT5/K5-MODEL-NAV-EDGE-LABELS: разбор документа — в kit (`navFromModel`); здесь только
+ * то, что знает приложение: словарь подписей, подпись раздела по умолчанию и список своих экранов.
+ * `model` — документ /lore/model как есть.
  */
-export function menuFromModel(lang: KitLang, nav: readonly ModelNavGroup[]): KitConfig['menu']['groups'] {
-  const t = (key: AppKey) => appT(lang, key);
-  const known = new Set<string>(V2_SECTIONS);
-  return nav
-    .map(g => ({
-      id: g.id,
-      title: t(g.label_key as AppKey),
-      tone: g.tone,
-      ...(g.pin_top ? { pinTop: true } : {}),
-      items: g.items.filter(i => known.has(i.section)).map(i => ({
-        id: i.section, title: t(`shell.sec.${i.section}` as AppKey), icon: i.icon, ...(i.view ? { view: i.view } : {}),
-      })),
-    }))
-    .filter(g => g.items.length > 0);
+export function menuFromModel(lang: KitLang, model: unknown): KitConfig['menu']['groups'] {
+  return navGroups(lang, model);
 }
 
-export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string, navFromModel?: readonly ModelNavGroup[]): KitConfig {
+function navGroups(lang: KitLang, model: unknown): KitConfig['menu']['groups'] {
+  const known = new Set<string>(V2_SECTIONS);
+  return navFromModel(model, {
+    t: key => appT(lang, key as AppKey),
+    sectionTitle: s => appT(lang, `shell.sec.${s}` as AppKey),
+    knows: s => known.has(s),
+  }).groups;
+}
+
+/**
+ * Вход в админку — пункт левого меню (владелица 21.11.2026: «админку пересадить на иконку настройки и показывать
+ * только логинам с admin, superadmin» · «не в шапке а в левом меню» · «у тебя есть шестерёнка в конце»): в группе
+ * «Личное» сразу после «Настроек». Пункт не раздел — оболочка по нему переключает модуль (V2Shell).
+ */
+export const ADMIN_ENTRY = 'admin-entry';
+
+/** Видеть ли вход в админку: admin/superadmin; копия без входа — да (ролей нет, решают 403 сервера); не прочитано — нет. */
+export function canSeeAdmin(b: { auth_enabled?: boolean; seer_role?: string | null } | null | undefined): boolean {
+  if (!b) return false;
+  if (b.auth_enabled === false) return true;
+  return b.seer_role === 'admin' || b.seer_role === 'superadmin';
+}
+
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string, model?: unknown, canAdmin = false): KitConfig {
+  const modelMenu = model === undefined ? [] : navGroups(lang, model);
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
     ({ id, title: t(`shell.sec.${id}` as AppKey), icon, ...(view ? { view } : {}) });
@@ -142,11 +155,11 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
       ...(module === ADMIN_MODULE ? [{ id: ADMIN_MODULE, title: t('shell.mod.admin'), icon: 'cog', status: 'active' as const }] : []),
     ],
     // S7B-01: у модуля admin своё меню — группы по смыслу и риску (adminMenu).
-    menu: module === ADMIN_MODULE ? adminMenu(lang) : navFromModel && navFromModel.length ? {
+    menu: module === ADMIN_MODULE ? adminMenu(lang) : modelMenu.length ? {
       myViews: true,
       recent: true,
-      // MC-07: меню из модели (surfaces.nav); рукописное ниже — только когда модели нет.
-      groups: menuFromModel(lang, navFromModel),
+      // MC-07: меню из модели (surfaces.nav, разбор — kit navFromModel); рукописное ниже — только когда модели нет.
+      groups: modelMenu,
     } : {
       myViews: true,
       recent: true,
@@ -162,13 +175,21 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
         {
           id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',
-          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book'), item('quality_gate', 'checkered-flag')],
+          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book'), item('pr', 'branch-arrow'), item('quality_gate', 'checkered-flag')],
         },
         // «Знание» — почему так: ADR, решения, спеки, вопросы.
         {
           id: 'knowledge', title: t('shell.grp.knowledge'), tone: 'var(--suc)',
           // S5-DOC-PASSPORT (владелица 13.11: «подготовить для docs в LORE паспорт — их нет»): документы — рядом со спеками.
-          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('doc', 'bookshelf'), item('runbook', 'spell-book'), item('question', 'help')],
+          items: [item('adr', 'scroll-quill'), item('decision', 'gavel'), item('spec', 'scroll-unfurled'), item('doc', 'bookshelf'), item('runbook', 'spell-book'), item('question', 'help'),
+            // SUPERTAGS-SPIKE: срез знаний по тегу — рядом с ADR, решениями и спеками, которые теги и метят.
+            item('tags', ICON_CANON.sectionTags)],
+        },
+        // «Организация» (владелица 21.11.2026: «Организация — организации, продукты, проекты, люди»): кто и что
+        // делает. Продукт — логическая группа проектов (PS-PRODUCT-FILTER); люди — общий список без прав и ролей.
+        {
+          id: 'org', title: t('shell.grp.org'), tone: 'var(--inf)',
+          items: [item('organization', 'castle'), item('product', SECTION_ICONS.value), item('project', 'open-folder'), item('user', 'person')],
         },
         // «Продукт» — зачем всё это (глава «Зачем» v1): продукты, фичи и сценарии,
         // роли, боли, выгоды, работы (S4-PRODUCTS-NODE). «Фичи» переехали сюда из
@@ -178,14 +199,15 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         {
           id: 'product', title: t('shell.grp.product'), tone: 'var(--wrn)',
           items: [
-            item('product', SECTION_ICONS.value), item('feature', 'gift-of-knowledge'), item('actor', 'hooded-figure'),
+            item('feature', 'gift-of-knowledge'), item('actor', 'hooded-figure'),
             item('pain', 'thorn-helix'), item('gain', 'gift-of-knowledge'), item('job', 'archery-target'),
           ],
         },
         // «Устройство» — из чего система сделана: проекты, компоненты, технологии.
         {
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
-          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears')],
+          // Владелица 21.11.2026: «в Устройстве оставила бы технологии, репозитории, компоненты».
+          items: [item('tech', 'gears'), item('repository', 'chest'), item('component', 'cog')],
         },
         // S9-05 A: «Участники» — кто делает работу: люди и агенты, у каждого паспорт с его задачами.
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', ICON_CANON.sectionSettings, 'settings')] },
@@ -209,6 +231,16 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
     },
   };
   if (module === ADMIN_MODULE) return cfg;
+  if (canAdmin) {
+    const entry = { id: ADMIN_ENTRY, title: t('shell.mod.admin'), icon: 'cog' };
+    cfg.menu.groups = cfg.menu.groups.map(g => {
+      if (g.id !== 'personal') return g;
+      const at = g.items.findIndex(i => i.id === 'settings');
+      const items = [...g.items];
+      items.splice(at < 0 ? items.length : at + 1, 0, entry);
+      return { ...g, items };
+    });
+  }
   // S9-05 × MC-07 (приёмка v1.17.20): разделы, которых нет в меню (люди и агенты — уровень
   // admin), открываются по ссылке ?sec=…&open=… своим паспортом; без этого оболочка
   // откатывалась к первому пункту меню, и вместо паспорта человека открывались «Новости».

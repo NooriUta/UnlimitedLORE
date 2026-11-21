@@ -85,7 +85,23 @@ final class StatusHistoryService {
         "changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine", "status_known_from", "status_backfilled", "rid",
         // MT-NOTE-APPEND п.3: пометка «версия — правка текста» принадлежит своей версии;
         // смена статуса после правки — уже не правка текста.
-        "version_kind");
+        "version_kind",
+        // WK-01: причина правки — у каждой версии своя; из прежней строки не переносится.
+        "change_reason");
+
+    /**
+     * MIG-03: поле происхождения строки из переноса (mig_src_rid …) принадлежит только своей строке — его индекс
+     * уникален, и копия в новую версию даёт «Duplicated key» (проба на копии migration_dst_linux, 18.11.2026).
+     */
+    static boolean migrationOwn(String f) { return f.startsWith("mig_"); }
+
+    /**
+     * MIG-03: на базе из модели статус версии живёт в status (код) и status_note (хвост прежней строки). При смене
+     * статуса они пишутся заново (status_raw → status переходником), прежние не переносятся.
+     */
+    static boolean modelStatusField(Kind k, String f) {
+        return ModelSchemaAdapter.enabled() && ("status".equals(f) || "status_note".equals(f));
+    }
 
     /** Имя переносимого поля: только идентификатор (имена приходят из БД, в SQL идут текстом). */
     private static final Pattern FIELD_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
@@ -167,6 +183,7 @@ final class StatusHistoryService {
                 String f = e.getKey();
                 if (e.getValue() == null || f.startsWith("@") || VERSION_FIELDS.contains(f)
                         || k.noCarry().contains(f) || f.equals(k.histMirror())
+                        || migrationOwn(f) || modelStatusField(k, f)
                         || !FIELD_NAME.matcher(f).matches()) continue;
                 // Причина и адресат принадлежат своему статусу (аудит 19.11.2026: «Ждёт владелицу…» у задач, давно
                 // вышедших из блокировки). Переносятся, только если статус тот же и у него причина — смысл; то же
@@ -323,7 +340,7 @@ final class StatusHistoryService {
         StringBuilder set = new StringBuilder();
         for (Map.Entry<String, Object> e : openRow.entrySet()) {
             String f = e.getKey();
-            if (e.getValue() == null || f.startsWith("@") || TEXT_NO_CARRY.contains(f)
+            if (e.getValue() == null || f.startsWith("@") || TEXT_NO_CARRY.contains(f) || migrationOwn(f)
                     || texts.containsKey(f) || !FIELD_NAME.matcher(f).matches()) continue;
             set.append(f).append(" = :c_").append(f).append(", ");
             p.put("c_" + f, e.getValue());

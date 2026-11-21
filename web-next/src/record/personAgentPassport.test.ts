@@ -28,15 +28,18 @@ describe('человек и агент: раздел, маршрут, паспо
     });
     expect(userRecord({ kc_sub: 'kc-2' }).title).toBe('kc-2');
     expect(agentRecord({ actor_id: 'AGENT-FULL', name: 'Claude Code', client_id: 'lore-mcp-full', agent_role: 'full', owner: 'kc-1', projects: [] })).toMatchObject({
-      id: 'AGENT-FULL', kind: 'agent', title: 'Claude Code', status: '',
+      // AO-AGENT-HUMAN-NAME (владелица 21.11.2026): «Claude Code · full» вместо голого имени; учётка — полем clientId.
+      id: 'AGENT-FULL', kind: 'agent', title: 'Claude Code · full', status: '',
       fields: { clientId: 'lore-mcp-full', agentRole: 'full', owner: 'kc-1', project: [] },
     });
   });
 
-  it('MC-07: людей и агентов нет в общем меню и без модели (уровень admin)', () => {
+  // Владелица 21.11.2026: «Организация — организации, продукты, проекты, люди» — люди в общем меню (список без прав и
+  // ролей); агенты по-прежнему только в админке (MC-07).
+  it('люди — в общем меню (группа «Организация»), агентов нет (уровень admin)', () => {
     const ids = v2Config('ru').menu.groups.flatMap(g => g.items.map(i => i.id));
     expect(ids).toContain('sprint');
-    expect(ids).not.toContain('user');
+    expect(ids).toContain('user');
     expect(ids).not.toContain('agent');
   });
 });

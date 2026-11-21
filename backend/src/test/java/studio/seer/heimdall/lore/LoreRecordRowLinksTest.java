@@ -97,7 +97,7 @@ class LoreRecordRowLinksTest {
             Map.entry("sprint", Map.of("depends_on", x, "blocks", x, "adr_ids", x, "doc_ids", x)),
             Map.entry("task", Map.of("closed_by_prs", x, "realizes_uc", x)),
             Map.entry("adr", Map.of("depends_on_ids", x, "blocks_ids", x, "supersedes_ids", x, "superseded_by_ids", x,
-                "implemented_in_ids", x, "release_ids", x, "justified_task_uids", x, "traced_by_ucs", x)),
+                "implemented_in_ids", x, "release_uids", x, "justified_task_uids", x, "traced_by_ucs", x)),
             Map.entry("spec", Map.of()), Map.entry("release", Map.of("adr_ids", x)), Map.entry("tech", Map.of()),
             // S5-DOC-PASSPORT: вложенные документы и «упоминает» читаются по ребру — из строки ничего.
             Map.entry("doc", Map.of()),
@@ -108,6 +108,13 @@ class LoreRecordRowLinksTest {
             Map.entry("job", Map.of()), Map.entry("runbook", Map.of()),
             // MD-04, второй заход по QG: у гейта вкладки только по рёбрам (ссылки) — из строки ничего.
             Map.entry("quality_gate", Map.of()),
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: связи репозитория — из строки repo_by_id; у организации связей нет.
+            Map.entry("repository", Map.of("projects", x, "components", x, "mirrors", x, "mirror_of", x, "uses", x, "used_by", x)),
+            Map.entry("organization", Map.of()),
+            // MDL-13: у трека вкладки — срезами (track_sprints, track_history), из строки ничего.
+            Map.entry("track", Map.of()),
+            // MD-05: задачи и релизы PR — из строки pr_by_id (CLOSED_BY, SHIPPED_IN).
+            Map.entry("pr", Map.of("task_uids", x, "release_uids", x)),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.

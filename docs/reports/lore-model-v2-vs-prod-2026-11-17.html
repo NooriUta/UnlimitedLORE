@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LORE: новая модель против прода — что изменится · 17.11.2026</title>
+<style>
+body{font-family:Manrope,system-ui,sans-serif;background:#f5f3ee;color:#1e1a12;margin:0;padding:12px;font-size:13px;line-height:1.45}
+h1{font-family:Unbounded,system-ui,sans-serif;font-weight:800;font-size:19px;margin:4px 0 4px}
+h2{font-family:Unbounded,system-ui,sans-serif;font-weight:800;font-size:15px;margin:18px 0 6px;color:#677528}
+.sub{color:#5c5240;margin:4px 0 10px}
+.kpi{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.kpi div{background:#fff;border:1px solid #d4ccb8;border-radius:8px;padding:6px 10px}.kpi b{display:block;font-size:18px;color:#677528}
+.tw{overflow-x:auto}table{border-collapse:collapse;background:#fff;min-width:680px;width:100%}
+th,td{border-bottom:1px solid #e6dfcf;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#eee9df;font-size:11px;text-transform:uppercase;color:#5c5240}
+td.w{width:22%;font-weight:700}
+code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#eee9df;border-radius:4px;padding:0 3px}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;white-space:nowrap}
+.done{background:#e3efd9;color:#3d7a38}.wip{background:#f6ead2;color:#8a5a08}.wait{background:#eef0f4;color:#4a5568}.gone{background:#f8e1dc;color:#9b3424}
+.note{background:#fff;border-left:4px solid #677528;border-radius:6px;padding:8px 12px;margin:10px 0}
+</style></head><body>
+<h1>Новая модель LORE против прода: что изменится</h1>
+<p class="sub">17.11.2026. Прод сейчас — v1.17.26, схема наращивается шагами V1…V93. Новая модель — ветка <code>migration/model-v2</code>: схема собирается из модели, данные переносятся установщиком за один проход. Ссылки на решения и задачи — в LORE.</p>
+
+<div class="kpi"><div><b>0</b>не привелось при пробном расчёте</div><div><b>6545</b>задач в каждой перенесённой копии</div><div><b>13</b>объектов получают историю</div><div><b>0</b>ваших открытых вопросов в декларации</div></div>
+
+<div class="note"><b>Главное.</b> Сейчас база меняется шагами-миграциями поверх живых данных, и каждый шаг тащит за собой прошлое. В новой модели схему строит генератор из файла модели (<code>lore-model.json</code>), а данные один раз переносятся в неё с правилами приведения. У новой базы стоит отметка «схема собрана из модели», по ней сервер её узнаёт.</div>
+
+<h2>1. Данные: было на проде → будет</h2>
+<div class="tw"><table><tr><th>Что</th><th>На проде сейчас</th><th>В новой модели</th><th>Состояние</th></tr>
+<tr><td class="w">Статус</td><td>строка со значком и припиской в <code>status_raw</code> («✅ DONE — ждёт релиза»), плюс <code>status_category</code></td><td>код в <code>status</code> (заглавными: DONE, ACTIVE…), подписи ru/en/pl — в справочнике, приписка — в <code>status_note</code>; 296 разных написаний сведены к кодам</td><td><span class="pill done">перенос готов</span> <span class="pill wip">сервер переходит</span></td></tr>
+<tr><td class="w">Приоритет</td><td>разные шкалы: P0–P3, medium, слова с пояснениями</td><td>одна шкала critical / high / normal / low, пояснение — в <code>priority_note</code></td><td><span class="pill done">готово</span></td></tr>
+<tr><td class="w">Даты</td><td>строки в разных форматах</td><td>настоящие даты и моменты времени, UTC</td><td><span class="pill done">готово</span></td></tr>
+<tr><td class="w">История полей</td><td>часть значений дублируется на записи и в версии</td><td>значение историчного поля живёт только в текущей версии; ключ записи в версии не хранится</td><td><span class="pill done">готово</span></td></tr>
+<tr><td class="w">Кто изменил</td><td><code>changed_by</code>, <code>changed_by_kind</code></td><td>плюс сессия, harness и машина правки (<code>changed_by_session</code>, <code>changed_by_harness</code> с пометкой сверки, <code>changed_by_machine</code>) — константы в настройках MCP</td><td><span class="pill done">в develop (#1574, #1575)</span></td></tr>
+<tr><td class="w">Компонент и проект</td><td>и поле-строка, и связь</td><td>только связь</td><td><span class="pill done">решено</span></td></tr>
+<tr><td class="w">Ссылки строкой</td><td><code>adr_refs</code>, <code>sprint_refs</code>, <code>pr_refs</code> текстом</td><td>связи; ненайденное — текстом в заметке версии</td><td><span class="pill wait">pr_refs ждёт переноса PR</span></td></tr>
+<tr><td class="w">Старые рёбра</td><td>HAS_PR (159), RELEASED_IN (19), INCLUDES (18) — никто не читает</td><td>уникальные пары — в живые связи, повторы отброшены, типы сняты</td><td><span class="pill done">решено</span></td></tr>
+<tr><td class="w">Ключ записи</td><td>одно поле с двумя смыслами</td><td>два поля: <code>_uid</code> и <code>_id</code></td><td><span class="pill done">решено</span></td></tr>
+<tr><td class="w">Статус фазы</td><td>ставится руками, в истории — статусы задач</td><td>минимальный по задачам фазы; отменённая фаза — CANCELLED</td><td><span class="pill done">готово</span></td></tr>
+<tr><td class="w">Несоответствия данных</td><td>правились вручную в базе</td><td>решения владельца установки в окне переноса, хранятся правилами; неприведённое — в служебный тип, не теряется</td><td><span class="pill done">готово</span></td></tr>
+</table></div>
+
+<h2>2. Что добавляется в модель</h2>
+<div class="tw"><table><tr><th>Что</th><th>Суть</th><th>Где записано</th></tr>
+<tr><td class="w">История у 13 объектов</td><td>PR, вопрос, компонент, сценарий, боль, выгода, работа, роль продукта, агент, человек, машина, личные настройки, технология</td><td>декларация модели; таблица историчности</td></tr>
+<tr><td class="w">Связи с историей</td><td>«действует с / по» на ребре: роль в проекте, роль продукта, фаза задачи, веха спринта</td><td>декларация (решено 15.11)</td></tr>
+<tr><td class="w">Зависимости</td><td>одна связь «зависит от» между задачами, фазами, спринтами и вехами, с видом (блокирует, ждёт, проверка, входные данные); треки спринтов уходят сюда</td><td>SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13</td></tr>
+<tr><td class="w">Тип гейта</td><td>справочник qg_type: универсальные code, cicd, sec, know, doc; проектные test, perf, data, ops, ux</td><td>SPRINT_QG_REBUILD/QG-04, #1572</td></tr>
+<tr><td class="w">Первый статус по умолчанию</td><td>новая запись любого типа получает первый статус своего справочника</td><td>SPRINT_LORE_MODEL_DOCS_TIDY/MDL-11, #1564</td></tr>
+<tr><td class="w">Формат поля</td><td>название, краткое название, определение, описание, слой (стабильное / опциональное), историчность</td><td>SPRINT_LORE_MODEL_DOCS_TIDY/MDL-02</td></tr>
+<tr><td class="w">Модель как данные</td><td>файл модели хранится в базе с версиями: кто, когда, почему правил</td><td>SPEC-LORE-MODEL-CONFIG-STORE</td></tr>
+<tr><td class="w">Сессия у записи</td><td>связь «запись ↔ сессия» ведёт miniLORE; LORE пишет в журнал, из какой сессии пришло действие</td><td>SPEC-LORE-TASK-SESSION-LINK</td></tr>
+</table></div>
+
+<h2>3. Что уходит</h2>
+<div class="tw"><table><tr><th>Что</th><th>Почему</th><th>Состояние</th></tr>
+<tr><td class="w">План-доска</td><td>ваше решение 16.11 «план доску удаляем»: PlanTrack, PlanSection, PlanConfig, PlanCheckpoint, PlanVersion не переносятся</td><td><span class="pill gone">D-2026-LORE-PLAN-BOARD-REMOVED</span></td></tr>
+<tr><td class="w"><code>status_raw</code>, <code>status_category</code></td><td>заменены кодом и справочником; в ответах сервера <code>status_raw</code> собирается из справочника, клиенты не меняются</td><td><span class="pill wip">сервер переходит</span></td></tr>
+<tr><td class="w">Журнал шагов V1…V93</td><td>у новой базы его нет по построению — вместо него отметка «схема из модели»</td><td><span class="pill done">сервер узнаёт отметку</span></td></tr>
+<tr><td class="w">hist_for у версий задач</td><td>повторяет связь версии с задачей (она есть у всех 996)</td><td><span class="pill done">не переносится</span></td></tr>
+</table></div>
+
+<h2>4. Для пользователя и клиентов</h2>
+<ul>
+<li><b>Телефон, веб и kit</b> — договор ответов сервера не меняется: поля срезов те же, <code>status_raw</code> в ответах сохраняется.</li>
+<li><b>Новое видно</b>: история у объектов, где её не было; «зависит от» с видом; тип гейта; кто, из какой сессии и с какой машины правил.</li>
+<li><b>Установка</b> — универсальный установщик: LORE / miniLORE / Völva, свой или новый Keycloak, перенос или новая установка (SPEC-LORE-UNIVERSAL-INSTALLER).</li>
+</ul>
+
+<h2>5. Где мы сейчас</h2>
+<div class="tw"><table><tr><th>Шаг</th><th>Состояние</th></tr>
+<tr><td class="w">Декларация модели</td><td><span class="pill done">закрыта</span> ваших вопросов 0</td></tr>
+<tr><td class="w">Перенос спринта, фазы, задачи</td><td><span class="pill done">готово</span> 6 копий на ryzenai, одинаковый итог на Windows и Linux</td></tr>
+<tr><td class="w">Сервер на новой базе</td><td><span class="pill wip">в работе</span> стартует; чтение статуса переходит на код (66 мест в срезах) — SPRINT_LORE_MODEL_DOCS_TIDY/MIG-03</td></tr>
+<tr><td class="w">Остальные объекты</td><td><span class="pill wait">ждут карт переноса</span> ADR, решения, спеки, документы, релизы и PR, вехи, вопросы, компоненты, проекты, люди</td></tr>
+<tr><td class="w">Переключение прода</td><td><span class="pill wait">только вашим словом</span> после переноса всех объектов и приёмки</td></tr>
+</table></div>
+
+
+
+
+
+
+
+
+
+<h2>6. Схемы новых объектов (после переноса)</h2>
+<p class="sub">По переписи связей прода 17.11 и пробному расчёту переноса всех объектов (отказов 0). На схеме — только объекты семейства и связи между ними; связи с другими семействами — строкой под схемой. У объекта — число записей и что с ним происходит.</p>
+<div class="legend"><span><i class="lg old"></i>⚪ без изменений</span><span><i class="lg chg"></i>🟠 меняется</span><span><i class="lg new"></i>🟢 новое</span><span><i class="lg rem"></i>🔴 снимается</span><span><i class="lg mini"></i>объект miniLORE (её модель)</span><span>✎ MCP — пишется через MCP</span><span>без MCP — пишет веб, админка или сервер</span><span>⏱ связь с историей</span><span>пунктир — переводится или снимается</span></div>
+<h3>Планирование: спринт, фаза, задача, веха, релиз, PR</h3>
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+  flowchart:
+    useMaxWidth: false
+    htmlLabels: true
+    wrappingWidth: 140
+---
+flowchart TB
+  n_KnowSprint["&lt;b&gt;Спринт&lt;/b&gt; · 542&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, аудит&lt;/small&gt;"]:::chg
+  n_KnowPhase["&lt;b&gt;Фаза&lt;/b&gt; · 254&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, аудит&lt;/small&gt;"]:::chg
+  n_KnowTask["&lt;b&gt;Задача&lt;/b&gt; · 6545&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, аудит&lt;/small&gt;"]:::chg
+  n_KnowMilestone["&lt;b&gt;Веха&lt;/b&gt; · 46&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, аудит&lt;/small&gt;"]:::chg
+  n_KnowRelease["&lt;b&gt;Релиз&lt;/b&gt; · 575&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowPR["&lt;b&gt;PR&lt;/b&gt; · 1970&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, поля→связи, история, аудит&lt;/small&gt;"]:::new
+  n_PlanTrack["&lt;b&gt;Трек плана&lt;/b&gt;&lt;br/&gt;🔴 снимается"]:::rem
+  n_PlanSection["&lt;b&gt;Раздел плана&lt;/b&gt;&lt;br/&gt;🔴 снимается"]:::rem
+  n_PlanCheckpoint["&lt;b&gt;Веха плана&lt;/b&gt;&lt;br/&gt;🔴 снимается"]:::rem
+  n_KnowTask -- "part_of" --&gt; n_KnowSprint
+  n_KnowPR -- "shipped_in" --&gt; n_KnowRelease
+  n_KnowTask -- "in_phase ⏱" --&gt; n_KnowPhase
+  n_KnowSprint -- "implemented_in_release" --&gt; n_KnowRelease
+  n_KnowSprint -- "targets_milestone ⏱" --&gt; n_KnowMilestone
+  n_KnowTask -- "closed_by" --&gt; n_KnowPR
+  n_KnowPhase -- "part_of" --&gt; n_KnowSprint
+  n_KnowSprint -. "has_pr" .-&gt; n_KnowPR
+  n_KnowSprint -- "depends_on" --&gt; n_KnowSprint
+  n_KnowTask -. "has_pr" .-&gt; n_KnowPR
+  n_KnowSprint -. "released_in" .-&gt; n_KnowRelease
+  n_KnowRelease -. "includes" .-&gt; n_KnowSprint
+  n_PlanCheckpoint -. "on_milestone" .-&gt; n_KnowMilestone
+  n_KnowRelease -. "has_pr" .-&gt; n_KnowPR
+  n_KnowTask == "depends_on 🟢" ==&gt; n_KnowTask
+  n_KnowPhase == "depends_on 🟢" ==&gt; n_KnowPhase
+  n_KnowMilestone == "depends_on 🟢" ==&gt; n_KnowMilestone
+  linkStyle 0 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 1 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 2 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 3 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 4 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 5 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 6 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 7 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 8 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 9 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 10 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 11 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 12 stroke:#b4412f,stroke-width:2.5px
+  linkStyle 13 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 14 stroke:#3d7a38,stroke-width:2.5px
+  linkStyle 15 stroke:#3d7a38,stroke-width:2.5px
+  linkStyle 16 stroke:#3d7a38,stroke-width:2.5px
+  classDef old fill:#ffffff,stroke:#b8ab94,stroke-width:1px,color:#1e1a12
+  classDef chg fill:#fff7e6,stroke:#b07a12,stroke-width:2px,color:#1e1a12
+  classDef new fill:#eaf4dd,stroke:#3d7a38,stroke-width:3px,color:#1e1a12
+  classDef ext fill:#f5f3ee,stroke:#b8ab94,stroke-dasharray:4 3,color:#5c5240
+  classDef mini fill:#eef3fb,stroke:#2f5f9e,stroke-width:2px,color:#1e1a12
+  classDef rem fill:#fbe9e5,stroke:#b4412f,stroke-width:2px,stroke-dasharray:5 3,color:#7a2a1e
+</pre>
+<p class="sub">Связи с другими семействами: Задача ↔ Агент 5824 · Задача ↔ Человек 5217 · Задача ↔ Компонент 1501 · Задача ↔ ADR 697 · Спринт ↔ Компонент 677 · Релиз ↔ Проект 591 · Спринт ↔ Проект 586 · PR ↔ Проект 334 · Задача ↔ UC / фича 274 · Спринт ↔ ADR 124</p>
+<h3>Знания: ADR, решение, спека, документ, ранбук, вопрос</h3>
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+  flowchart:
+    useMaxWidth: false
+    htmlLabels: true
+    wrappingWidth: 140
+---
+flowchart TB
+  n_KnowADR["&lt;b&gt;ADR&lt;/b&gt; · 262&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowDecision["&lt;b&gt;Решение&lt;/b&gt; · 1167&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowSpec["&lt;b&gt;Спека&lt;/b&gt; · 481&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowDoc["&lt;b&gt;Документ&lt;/b&gt; · 458&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowRunbook["&lt;b&gt;Ранбук&lt;/b&gt; · 57&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_KnowQuestion["&lt;b&gt;Вопрос&lt;/b&gt; · 464&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, поля→связи, история, аудит&lt;/small&gt;"]:::new
+  n_KnowAsset["&lt;b&gt;Вложение&lt;/b&gt; · 3&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_KnowDecision -- "decided_in" --&gt; n_KnowADR
+  n_KnowADR -- "depends_on" --&gt; n_KnowADR
+  n_KnowDecision -- "answers" --&gt; n_KnowQuestion
+  n_KnowDoc -- "doc_child_of" --&gt; n_KnowDoc
+  n_KnowQuestion -- "raised_in" --&gt; n_KnowADR
+  n_KnowRunbook -- "references_adr" --&gt; n_KnowADR
+  n_KnowADR -- "supersedes" --&gt; n_KnowADR
+  n_KnowADR -- "attached_to" --&gt; n_KnowAsset
+  linkStyle 0 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 1 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 2 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 3 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 4 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 5 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 6 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 7 stroke:#8a7a5a,stroke-width:1.5px
+  classDef old fill:#ffffff,stroke:#b8ab94,stroke-width:1px,color:#1e1a12
+  classDef chg fill:#fff7e6,stroke:#b07a12,stroke-width:2px,color:#1e1a12
+  classDef new fill:#eaf4dd,stroke:#3d7a38,stroke-width:3px,color:#1e1a12
+  classDef ext fill:#f5f3ee,stroke:#b8ab94,stroke-dasharray:4 3,color:#5c5240
+  classDef mini fill:#eef3fb,stroke:#2f5f9e,stroke-width:2px,color:#1e1a12
+  classDef rem fill:#fbe9e5,stroke:#b4412f,stroke-width:2px,stroke-dasharray:5 3,color:#7a2a1e
+</pre>
+<p class="sub">Связи с другими семействами: Решение ↔ Тег 2291 · Решение ↔ Компонент 861 · ADR ↔ Тег 780 · Спека ↔ Компонент 720 · ADR ↔ Задача 697 · Решение ↔ Проект 551 · Спека ↔ Проект 497 · ADR ↔ Компонент 435 · Документ ↔ Проект 430 · Вопрос ↔ Компонент 363</p>
+<h3>Проекты, компоненты, люди, агенты, машины</h3>
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+  flowchart:
+    useMaxWidth: false
+    htmlLabels: true
+    wrappingWidth: 140
+---
+flowchart TB
+  n_KnowGitProject["&lt;b&gt;Проект&lt;/b&gt; · 28&lt;br/&gt;⚪ без изменений · ✎ MCP&lt;br/&gt;&lt;small&gt;аудит&lt;/small&gt;"]:::old
+  n_LoreComponent["&lt;b&gt;Компонент&lt;/b&gt; · 110&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, поля→связи, история, аудит&lt;/small&gt;"]:::new
+  n_KnowUser["&lt;b&gt;Человек&lt;/b&gt; · 9&lt;br/&gt;🟢 новое · без MCP&lt;br/&gt;&lt;small&gt;история, аудит&lt;/small&gt;"]:::new
+  n_KnowActor["&lt;b&gt;Агент&lt;/b&gt; · 18&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;история, аудит&lt;/small&gt;"]:::new
+  n_KnowMachine["&lt;b&gt;Машина&lt;/b&gt; · 1&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, история, аудит&lt;/small&gt;"]:::new
+  n_KnowAgentSession["&lt;b&gt;Сессия (журнал LORE; машина и проект — поля)&lt;/b&gt; · 121&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowProjectRoleEvent["&lt;b&gt;Событие роли&lt;/b&gt; · 87&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_KnowAgentSession -- "logged_by" --&gt; n_KnowActor
+  n_LoreComponent -- "parent_of" --&gt; n_LoreComponent
+  n_KnowUser -- "has_project_role ⏱" --&gt; n_KnowGitProject
+  n_LoreComponent -- "belongs_to_project" --&gt; n_KnowGitProject
+  n_KnowActor -- "owned_by" --&gt; n_KnowUser
+  n_KnowActor -- "uses_machine" --&gt; n_KnowMachine
+  n_KnowActor -- "belongs_to_project" --&gt; n_KnowGitProject
+  linkStyle 0 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 1 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 2 stroke:#b07a12,stroke-width:2.5px
+  linkStyle 3 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 4 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 5 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 6 stroke:#8a7a5a,stroke-width:1.5px
+  classDef old fill:#ffffff,stroke:#b8ab94,stroke-width:1px,color:#1e1a12
+  classDef chg fill:#fff7e6,stroke:#b07a12,stroke-width:2px,color:#1e1a12
+  classDef new fill:#eaf4dd,stroke:#3d7a38,stroke-width:3px,color:#1e1a12
+  classDef ext fill:#f5f3ee,stroke:#b8ab94,stroke-dasharray:4 3,color:#5c5240
+  classDef mini fill:#eef3fb,stroke:#2f5f9e,stroke-width:2px,color:#1e1a12
+  classDef rem fill:#fbe9e5,stroke:#b4412f,stroke-width:2px,stroke-dasharray:5 3,color:#7a2a1e
+</pre>
+<p class="sub">Связи с другими семействами: Агент ↔ Задача 5824 · Человек ↔ Задача 5217 · Компонент ↔ Задача 1501 · Компонент ↔ Решение 861 · Компонент ↔ Спека 720 · Компонент ↔ Спринт 677 · Проект ↔ Релиз 591 · Проект ↔ Спринт 586 · Проект ↔ Решение 551 · Проект ↔ Спека 497</p>
+<h3>Продукт: UC и фичи, профиль клиента</h3>
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+  flowchart:
+    useMaxWidth: false
+    htmlLabels: true
+    wrappingWidth: 140
+---
+flowchart TB
+  n_KnowUseCase["&lt;b&gt;UC / фича&lt;/b&gt; · 88&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, даты, поля→связи, история, аудит&lt;/small&gt;"]:::new
+  n_KnowProjectActor["&lt;b&gt;Роль продукта&lt;/b&gt; · 15&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;история, аудит&lt;/small&gt;"]:::new
+  n_KnowPain["&lt;b&gt;Боль&lt;/b&gt; · 38&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, история, аудит&lt;/small&gt;"]:::new
+  n_KnowGain["&lt;b&gt;Выгода&lt;/b&gt; · 25&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, история, аудит&lt;/small&gt;"]:::new
+  n_KnowJob["&lt;b&gt;Работа&lt;/b&gt; · 14&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, история, аудит&lt;/small&gt;"]:::new
+  n_KnowTask["&lt;b&gt;Задача&lt;/b&gt;&lt;br/&gt;&lt;small&gt;соседний объект&lt;/small&gt;"]:::ext
+  n_KnowDictEntry["&lt;b&gt;Продукт&lt;/b&gt;&lt;br/&gt;&lt;small&gt;соседний объект&lt;/small&gt;"]:::ext
+  n_LoreComponent["&lt;b&gt;Компонент&lt;/b&gt;&lt;br/&gt;&lt;small&gt;соседний объект&lt;/small&gt;"]:::ext
+  n_KnowTask -- "realizes" --&gt; n_KnowUseCase
+  n_KnowUseCase -- "has_actor" --&gt; n_KnowProjectActor
+  n_KnowUseCase -- "decomposes_into" --&gt; n_KnowUseCase
+  n_KnowUseCase -- "relieves" --&gt; n_KnowPain
+  n_KnowUseCase -- "addresses" --&gt; n_KnowPain
+  n_KnowUseCase -- "delivers" --&gt; n_KnowGain
+  n_KnowUseCase -- "performs" --&gt; n_KnowJob
+  n_KnowUseCase -- "promises" --&gt; n_KnowGain
+  n_KnowJob -- "performed_by" --&gt; n_KnowProjectActor
+  n_KnowUseCase -- "helps_with" --&gt; n_KnowJob
+  n_KnowPain -- "blocks" --&gt; n_KnowJob
+  n_KnowPain -- "felt_by" --&gt; n_KnowProjectActor
+  n_KnowGain -- "success_of" --&gt; n_KnowJob
+  n_KnowGain -- "desired_by" --&gt; n_KnowProjectActor
+  linkStyle 0 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 1 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 2 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 3 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 4 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 5 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 6 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 7 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 8 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 9 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 10 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 11 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 12 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 13 stroke:#8a7a5a,stroke-width:1.5px
+  classDef old fill:#ffffff,stroke:#b8ab94,stroke-width:1px,color:#1e1a12
+  classDef chg fill:#fff7e6,stroke:#b07a12,stroke-width:2px,color:#1e1a12
+  classDef new fill:#eaf4dd,stroke:#3d7a38,stroke-width:3px,color:#1e1a12
+  classDef ext fill:#f5f3ee,stroke:#b8ab94,stroke-dasharray:4 3,color:#5c5240
+  classDef mini fill:#eef3fb,stroke:#2f5f9e,stroke-width:2px,color:#1e1a12
+  classDef rem fill:#fbe9e5,stroke:#b4412f,stroke-width:2px,stroke-dasharray:5 3,color:#7a2a1e
+</pre>
+<p class="sub">Связи с другими семействами: Задача ↔ Спринт 6641 · Задача ↔ Агент 5824 · Задача ↔ Человек 5217 · Задача ↔ Фаза 1070 · Компонент ↔ Решение 861 · Компонент ↔ Спека 720 · Задача ↔ ADR 697 · Компонент ↔ Спринт 677 · Задача ↔ PR 598 · Компонент ↔ ADR 435</p>
+<h3>Качество: гейты, находки, рутины</h3>
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+  flowchart:
+    useMaxWidth: false
+    htmlLabels: true
+    wrappingWidth: 140
+---
+flowchart TB
+  n_QualityGate["&lt;b&gt;Гейт&lt;/b&gt; · 25&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;статус→код, поля→связи, аудит&lt;/small&gt;"]:::chg
+  n_QGJobTask["&lt;b&gt;Задание гейта&lt;/b&gt; · 85&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_QGRecommendation["&lt;b&gt;Рекомендация&lt;/b&gt; · 14&lt;br/&gt;⚪ без изменений · ✎ MCP&lt;br/&gt;&lt;small&gt;аудит&lt;/small&gt;"]:::old
+  n_KnowFinding["&lt;b&gt;Находка&lt;/b&gt; · 31&lt;br/&gt;⚪ без изменений · без MCP&lt;br/&gt;&lt;small&gt;аудит&lt;/small&gt;"]:::old
+  n_ClRoutineRun["&lt;b&gt;Прогон&lt;/b&gt; · 164&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_ClRoutineMetric["&lt;b&gt;Замер&lt;/b&gt; · 861&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_ClRoutineSprintFlag["&lt;b&gt;Флаг спринта&lt;/b&gt; · 1503&lt;br/&gt;🟠 меняется · без MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_ClRoutineOutput["&lt;b&gt;Вывод&lt;/b&gt; · 18&lt;br/&gt;🟠 меняется · без MCP&lt;br/&gt;&lt;small&gt;даты, аудит&lt;/small&gt;"]:::chg
+  n_QualityGate -- "yielded" --&gt; n_QGJobTask
+  n_ClRoutineRun -- "clroutinehasoutput" --&gt; n_ClRoutineOutput
+  n_QGJobTask -- "produced" --&gt; n_QGRecommendation
+  linkStyle 0 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 1 stroke:#8a7a5a,stroke-width:1.5px
+  linkStyle 2 stroke:#8a7a5a,stroke-width:1.5px
+  classDef old fill:#ffffff,stroke:#b8ab94,stroke-width:1px,color:#1e1a12
+  classDef chg fill:#fff7e6,stroke:#b07a12,stroke-width:2px,color:#1e1a12
+  classDef new fill:#eaf4dd,stroke:#3d7a38,stroke-width:3px,color:#1e1a12
+  classDef ext fill:#f5f3ee,stroke:#b8ab94,stroke-dasharray:4 3,color:#5c5240
+  classDef mini fill:#eef3fb,stroke:#2f5f9e,stroke-width:2px,color:#1e1a12
+  classDef rem fill:#fbe9e5,stroke:#b4412f,stroke-width:2px,stroke-dasharray:5 3,color:#7a2a1e
+</pre>
+<p class="sub">Связи с другими семействами: Гейт ↔ Компонент 25 · Гейт ↔ Проект 24 · Находка ↔ Спринт 23 · Рекомендация ↔ Компонент 12 · Рекомендация ↔ Задача 10</p>
+<h3>Контракт LORE ↔ miniLORE: объекты с общим ключом</h3>
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX
+  flowchart:
+    useMaxWidth: false
+    htmlLabels: true
+    wrappingWidth: 140
+---
+flowchart TB
+  n_KnowAgentSession["&lt;b&gt;Сессия (журнал LORE; машина и проект — поля)&lt;/b&gt; · 121&lt;br/&gt;🟠 меняется · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, поля→связи, аудит&lt;/small&gt;&lt;br/&gt;&lt;b&gt;мастер: сессия — miniLORE; журнал прав о ней — LORE&lt;/b&gt;"]:::chg
+  n_KnowMachine["&lt;b&gt;Машина&lt;/b&gt; · 1&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;даты, история, аудит&lt;/small&gt;&lt;br/&gt;&lt;b&gt;мастер: LORE — реестр и владелец; связь онлайн — miniLORE&lt;/b&gt;"]:::new
+  n_KnowActor["&lt;b&gt;Агент&lt;/b&gt; · 18&lt;br/&gt;🟢 новое · ✎ MCP&lt;br/&gt;&lt;small&gt;история, аудит&lt;/small&gt;&lt;br/&gt;&lt;b&gt;мастер: LORE — учётки агентов; коды harness — miniLORE&lt;/b&gt;"]:::new
+  n_KnowGitProject["&lt;b&gt;Проект&lt;/b&gt; · 28&lt;br/&gt;⚪ без изменений · ✎ MCP&lt;br/&gt;&lt;small&gt;аудит&lt;/small&gt;&lt;br/&gt;&lt;b&gt;мастер: проект и роли — LORE; «место → проект» — на решение&lt;/b&gt;"]:::old
+  n_KnowUser["&lt;b&gt;Человек&lt;/b&gt; · 9&lt;br/&gt;🟢 новое · без MCP&lt;br/&gt;&lt;small&gt;история, аудит&lt;/small&gt;&lt;br/&gt;&lt;b&gt;мастер: Keycloak → LORE&lt;/b&gt;"]:::new
+  mini_session["miniLORE: сессия KnownSession&lt;br/&gt;ключ машина + код, название — атрибут&lt;br/&gt;&lt;b&gt;мастер сессии: miniLORE&lt;/b&gt;"]:::mini
+  mini_machine["miniLORE: машина = установка link&lt;br/&gt;machineId, minilore-link-‹id›&lt;br/&gt;&lt;b&gt;мастер связи: miniLORE&lt;/b&gt;"]:::mini
+  mini_place["miniLORE: рабочее место&lt;br/&gt;папка cwd + repo / projectSlug&lt;br/&gt;&lt;b&gt;мастер: miniLORE&lt;/b&gt;"]:::mini
+  mini_harness["miniLORE: справочник harness — ХОЗЯИН&lt;br/&gt;claude, kimi, dsh… (ADR-LORE-054 п.8)&lt;br/&gt;&lt;b&gt;мастер: miniLORE&lt;/b&gt;"]:::mini
+  mini_person["miniLORE: человек&lt;br/&gt;сейчас два ключа: preferred_username и sub&lt;br/&gt;&lt;b&gt;мастер: Keycloak → LORE&lt;/b&gt;"]:::mini
+  mini_mention["miniLORE: LoreMention&lt;br/&gt;сессия → запись LORE&lt;br/&gt;&lt;b&gt;мастер следа: LORE (событие)&lt;/b&gt;"]:::mini
+  subgraph k_session["🔑 ключ: машина + код сессии"]
+    n_KnowAgentSession
+    mini_session
+    mini_mention
+  end
+  style k_session fill:#f3f6fb,stroke:#2f5f9e,stroke-width:2px
+  subgraph k_machine["🔑 ключ: machineId строчными"]
+    n_KnowMachine
+    mini_machine
+  end
+  style k_machine fill:#f3f6fb,stroke:#2f5f9e,stroke-width:2px
+  subgraph k_harness["🔑 ключ: код harness"]
+    n_KnowActor
+    mini_harness
+  end
+  style k_harness fill:#f3f6fb,stroke:#2f5f9e,stroke-width:2px
+  subgraph k_project["🔑 ключ: адрес репозитория с хостом"]
+    n_KnowGitProject
+    mini_place
+  end
+  style k_project fill:#f3f6fb,stroke:#2f5f9e,stroke-width:2px
+  subgraph k_person["🔑 ключ: sub Keycloak"]
+    n_KnowUser
+    mini_person
+  end
+  style k_person fill:#f3f6fb,stroke:#2f5f9e,stroke-width:2px
+  mini_session &lt;-. "пара машина + код (не один код);&lt;br/&gt;журнал LORE, название — у miniLORE" .-&gt; n_KnowAgentSession
+  mini_machine &lt;-. "тот же код; machine_new — ПЛАН&lt;br/&gt;(LINK-IMPORT-AUTH, MIG-04)" .-&gt; n_KnowMachine
+  mini_place &lt;-. "проект по адресу; ручное&lt;br/&gt;«место → проект» — пока только телефон" .-&gt; n_KnowGitProject
+  mini_harness &lt;-. "LORE — копия; решено 17.11: коды miniLORE&lt;br/&gt;(старые — синонимы в правилах)" .-&gt; n_KnowActor
+  mini_person &lt;-. "должен быть sub&lt;br/&gt;(PERSON-ONE-KEY у miniLORE)" .-&gt; n_KnowUser
+  mini_mention &lt;-. "след на записи: событие LORE (source=lore);&lt;br/&gt;miniLORE — выведенная отметка (derived)" .-&gt; n_KnowAgentSession
+  linkStyle 0 stroke:#2f5f9e,stroke-width:2.5px
+  linkStyle 1 stroke:#2f5f9e,stroke-width:2.5px
+  linkStyle 2 stroke:#2f5f9e,stroke-width:2.5px
+  linkStyle 3 stroke:#2f5f9e,stroke-width:2.5px
+  linkStyle 4 stroke:#2f5f9e,stroke-width:2.5px
+  linkStyle 5 stroke:#2f5f9e,stroke-width:2.5px
+  classDef old fill:#ffffff,stroke:#b8ab94,stroke-width:1px,color:#1e1a12
+  classDef chg fill:#fff7e6,stroke:#b07a12,stroke-width:2px,color:#1e1a12
+  classDef new fill:#eaf4dd,stroke:#3d7a38,stroke-width:3px,color:#1e1a12
+  classDef ext fill:#f5f3ee,stroke:#b8ab94,stroke-dasharray:4 3,color:#5c5240
+  classDef mini fill:#eef3fb,stroke:#2f5f9e,stroke-width:2px,color:#1e1a12
+  classDef rem fill:#fbe9e5,stroke:#b4412f,stroke-width:2px,stroke-dasharray:5 3,color:#7a2a1e
+</pre>
+<p class="sub">Связи с другими семействами: нет</p>
+
+<h3>Контракт LORE ↔ miniLORE: мастер и несоответствия</h3>
+<p class="sub">Мастер — по ADR-LORE-054 и ответу miniLORE 17.11; несоответствия — замер прода 17.11.</p>
+<div class="tw"><table><tr><th>Объект LORE</th><th>Пара в miniLORE</th><th>Мастер</th><th>Несоответствие</th><th>Что делаем</th></tr>
+<tr><td><b>Сессия</b> <code>KnowAgentSession</code></td><td>KnownSession</td><td>сессия — miniLORE (ADR-LORE-054 п.3); журнал прав о ней — LORE</td><td>ключ один session_id, у неё пара; название у 4 из 123</td><td>ключ — пара машина + код (MIG-01); название читать у miniLORE</td></tr>
+<tr><td><b>Машина</b> <code>KnowMachine</code></td><td>machineId, link</td><td>LORE — реестр и владелец; связь онлайн — miniLORE</td><td>одна вершина; у сессий 4 написания (старый хук слал COMPUTERNAME как есть; сервер нормализует с PU-18); нет ни одного актора minilore-link-* — miniLORE ищет владельца машины по запасному пути</td><td>код строчными при переносе; machine_new из link (MIG-04, LINK-IMPORT-AUTH)</td></tr>
+<tr><td><b>Агент</b> <code>KnowActor</code></td><td>harness сессии</td><td>LORE — учётки; коды harness — miniLORE</td><td>9 агентов на старых кодах</td><td>перенос сводит по правилам (сделано в коде)</td></tr>
+<tr><td><b>Проект</b> <code>KnowGitProject</code></td><td>место: cwd + repo</td><td>проект и роли — LORE; «место → проект» — ⚠ на решение владелицы (п.6: хранят обе стороны)</td><td>сопоставление только на телефоне; адрес без хоста</td><td>адрес с хостом; сопоставление — у miniLORE</td></tr>
+<tr><td><b>Человек</b> <code>KnowUser</code></td><td>автор, владелец</td><td>Keycloak → LORE</td><td>у miniLORE два ключа человека</td><td>её задача: свести к sub</td></tr>
+<tr><td><b>След на записи</b> (changed_by_session)</td><td>LoreMention</td><td>LORE — событие; miniLORE — выведенная отметка</td><td>пары машина + код в следе нет</td><td>писать машину рядом с сессией (AO-SESSION-LOG)</td></tr>
+</table></div>
+
+<h2>7. Аудит записи через MCP: чего не хватает и что добавляем</h2>
+<div class="note"><b>Правило (предложение исполнителя по вашему поручению).</b> Любая запись, которую создаёт или меняет MCP, отвечает: кто (учётка и её вид), когда, из какой сессии, с какого harness и машины.
+<ul><li><b>Объекты с историей</b> — в каждой версии: changed_by, changed_by_kind и новые changed_by_session, changed_by_harness, changed_by_machine; у записи — created_at, created_by.</li>
+<li><b>Объекты без истории</b> — те же поля последней правки на самой записи плюс created_at, created_by.</li>
+<li><b>События</b> (прогоны рутин, замеры, сессии, события ролей) — recorded_by и та же тройка: кто записал событие.</li>
+<li><b>Связи</b> — сейчас аудита нет ни у одной, кроме роли задачи. Каждая связь от MCP получает created_at, created_by, created_by_session, created_by_harness, created_by_machine; у связей с историей — ещё «действует с / по».</li></ul>
+Значения ставит сервер из проверенного токена и заголовков MCP, а не из тела запроса: подделать автора нельзя. Поля служебные, в общий перечень.</div>
+<div class="tw"><table><tr><th>Объект</th><th>Записей</th><th>Вид</th><th>Через MCP</th><th>Аудит сейчас</th><th>Добавляем</th></tr>
+<tr><td><b>BragiAsset</b> <code>BragiAsset</code></td><td class="n">11</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiCampaign</b> <code>BragiCampaign</code></td><td class="n">1</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiChannel</b> <code>BragiChannel</code></td><td class="n">5</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiCompetitor</b> <code>BragiCompetitor</code></td><td class="n">5</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiInsight</b> <code>BragiInsight</code></td><td class="n">30</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiIntegration</b> <code>BragiIntegration</code></td><td class="n">7</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiKeyword</b> <code>BragiKeyword</code></td><td class="n">8</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiPage</b> <code>BragiPage</code></td><td class="n">6</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiPublication</b> <code>BragiPublication</code></td><td class="n">8</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiRubric</b> <code>BragiRubric</code></td><td class="n">9</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>BragiVariant</b> <code>BragiVariant</code></td><td class="n">14</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Замер</b> <code>ClRoutineMetric</code></td><td class="n">861</td><td>событие</td><td>✎ qg_run_log, metric_log</td><td>—</td><td>recorded_by + сессия, harness, машина (кто записал событие)</td></tr>
+<tr><td><b>Вывод</b> <code>ClRoutineOutput</code></td><td class="n">18</td><td>событие</td><td>нет — рутины сервера</td><td>—</td><td>recorded_by + сессия, harness, машина (кто записал событие)</td></tr>
+<tr><td><b>Прогон</b> <code>ClRoutineRun</code></td><td class="n">164</td><td>событие</td><td>✎ qg_run_log</td><td>—</td><td>recorded_by + сессия, harness, машина (кто записал событие)</td></tr>
+<tr><td><b>Флаг спринта</b> <code>ClRoutineSprintFlag</code></td><td class="n">1503</td><td>событие</td><td>нет — рутины сервера</td><td>—</td><td>recorded_by + сессия, harness, машина (кто записал событие)</td></tr>
+<tr><td><b>ADR</b> <code>KnowADR</code></td><td class="n">262</td><td>с историей</td><td>✎ adr_new/set</td><td>created_at, updated_at, date_created</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Агент</b> <code>KnowActor</code></td><td class="n">18</td><td>без истории</td><td>✎ actor_new</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Сессия (журнал LORE; машина и проект — поля)</b> <code>KnowAgentSession</code></td><td class="n">121</td><td>событие</td><td>✎ agent_session_log</td><td>—</td><td>recorded_by + сессия, harness, машина (кто записал событие)</td></tr>
+<tr><td><b>Вложение</b> <code>KnowAsset</code></td><td class="n">3</td><td>без истории</td><td>✎ asset_up</td><td>created_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowCanvas</b> <code>KnowCanvas</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>created_at, updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowCanvasItem</b> <code>KnowCanvasItem</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowCanvasLink</b> <code>KnowCanvasLink</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Решение</b> <code>KnowDecision</code></td><td class="n">1167</td><td>с историей</td><td>✎ decision_new/set</td><td>created_at, updated_at, date_created</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Продукт</b> <code>KnowDictEntry</code></td><td class="n">151</td><td>с историей</td><td>✎ dict_set</td><td>—</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Документ</b> <code>KnowDoc</code></td><td class="n">458</td><td>с историей</td><td>✎ doc_new</td><td>—</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Файл</b> <code>KnowFile</code></td><td class="n">71</td><td>без истории</td><td>✎ task_link (file)</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Находка</b> <code>KnowFinding</code></td><td class="n">31</td><td>с историей</td><td>нет — загрузка находок (сервер)</td><td>—</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Выгода</b> <code>KnowGain</code></td><td class="n">25</td><td>без истории</td><td>✎ gain_new</td><td>date_created</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Проект</b> <code>KnowGitProject</code></td><td class="n">28</td><td>без истории</td><td>✎ project_new</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Работа</b> <code>KnowJob</code></td><td class="n">14</td><td>без истории</td><td>✎ job_new</td><td>date_created</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Машина</b> <code>KnowMachine</code></td><td class="n">1</td><td>без истории</td><td>✎ machine_new, machine_owner_set, machine_access_set</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Веха</b> <code>KnowMilestone</code></td><td class="n">46</td><td>с историей</td><td>✎ milestone_new/set</td><td>updated_at</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Модель</b> <code>KnowModelConfig</code></td><td class="n">1</td><td>с историей</td><td>нет — админка модели</td><td>—</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>PR</b> <code>KnowPR</code></td><td class="n">1970</td><td>без истории</td><td>✎ forgejo_pr_merge, task_link, release_link</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Боль</b> <code>KnowPain</code></td><td class="n">38</td><td>без истории</td><td>✎ pain_new</td><td>date_created</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Роль продукта</b> <code>KnowProjectActor</code></td><td class="n">15</td><td>без истории</td><td>✎ project_actor_new</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Событие роли</b> <code>KnowProjectRoleEvent</code></td><td class="n">87</td><td>событие</td><td>✎ project_role_set</td><td>—</td><td>recorded_by + сессия, harness, машина (кто записал событие)</td></tr>
+<tr><td><b>Вопрос</b> <code>KnowQuestion</code></td><td class="n">464</td><td>без истории</td><td>✎ question_new/set</td><td>updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Релиз</b> <code>KnowRelease</code></td><td class="n">575</td><td>с историей</td><td>✎ release_new/set</td><td>updated_at</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Ранбук</b> <code>KnowRunbook</code></td><td class="n">57</td><td>с историей</td><td>✎ runbook_new</td><td>date_created</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>KnowSavedView</b> <code>KnowSavedView</code></td><td class="n">0</td><td>без истории</td><td>нет — веб</td><td>created_at, updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Спека</b> <code>KnowSpec</code></td><td class="n">481</td><td>с историей</td><td>✎ spec_new/set</td><td>updated_at</td><td>created_at, created_by на записи; сессия, harness, машина — в версиях</td></tr>
+<tr><td><b>Тег</b> <code>KnowTag</code></td><td class="n">1075</td><td>без истории</td><td>✎ adr_new (tags)</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>UC / фича</b> <code>KnowUseCase</code></td><td class="n">88</td><td>без истории</td><td>✎ uc_new, feature_new</td><td>updated_at, date_created</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Человек</b> <code>KnowUser</code></td><td class="n">9</td><td>без истории</td><td>нет — Keycloak и админка</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowUserDraft</b> <code>KnowUserDraft</code></td><td class="n">3</td><td>без истории</td><td>нет — веб</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowUserFavorite</b> <code>KnowUserFavorite</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowUserHabit</b> <code>KnowUserHabit</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowUserMemoryPref</b> <code>KnowUserMemoryPref</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>KnowUserRecent</b> <code>KnowUserRecent</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Настройки</b> <code>KnowUserSettings</code></td><td class="n">2</td><td>без истории</td><td>нет — веб</td><td>updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Компонент</b> <code>LoreComponent</code></td><td class="n">110</td><td>без истории</td><td>✎ component_new/set</td><td>updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>LoreNewsReadMark</b> <code>LoreNewsReadMark</code></td><td class="n">1</td><td>без истории</td><td>нет — веб</td><td>updated_by, updated_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>LoreRefDismissal</b> <code>LoreRefDismissal</code></td><td class="n">0</td><td>без истории</td><td>нет — веб</td><td>created_by, created_at</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Технология</b> <code>LoreTechnology</code></td><td class="n">13</td><td>без истории</td><td>✎ tech_set</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Задание гейта</b> <code>QGJobTask</code></td><td class="n">85</td><td>без истории</td><td>✎ qg_job_new</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>QGMetric</b> <code>QGMetric</code></td><td class="n">0</td><td>без истории</td><td>нет — веб или сервер</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Рекомендация</b> <code>QGRecommendation</code></td><td class="n">14</td><td>без истории</td><td>✎ rec_new</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+<tr><td><b>Гейт</b> <code>QualityGate</code></td><td class="n">25</td><td>без истории</td><td>✎ qg_new</td><td>—</td><td>created_at, created_by + последняя правка: кто, вид, сессия, harness, машина</td></tr>
+</table></div>
+
+<h2>8. Перенос всех объектов: пробный расчёт</h2>
+<div class="tw"><table><tr><th>Объект</th><th>Записей</th><th>Отказов</th><th>Ждёт шага связей</th></tr>
+<tr><td><b>Задача</b> <code>KnowTask</code></td><td class="n">6545</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>PR</b> <code>KnowPR</code></td><td class="n">1970</td><td class="n">0</td><td>git_project 1970</td></tr>
+<tr><td><b>Флаг спринта</b> <code>ClRoutineSprintFlag</code></td><td class="n">1503</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Решение</b> <code>KnowDecision</code></td><td class="n">1167</td><td class="n">0</td><td>adr_refs 103, sprint_refs 103, pr_refs 103, release_refs 103, component_id 470</td></tr>
+<tr><td><b>Тег</b> <code>KnowTag</code></td><td class="n">1075</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Замер</b> <code>ClRoutineMetric</code></td><td class="n">861</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Релиз</b> <code>KnowRelease</code></td><td class="n">575</td><td class="n">0</td><td>git_project 575</td></tr>
+<tr><td><b>Спринт</b> <code>KnowSprint</code></td><td class="n">542</td><td class="n">0</td><td>pr_refs 3</td></tr>
+<tr><td><b>Спека</b> <code>KnowSpec</code></td><td class="n">481</td><td class="n">0</td><td>component_id 92</td></tr>
+<tr><td><b>Вопрос</b> <code>KnowQuestion</code></td><td class="n">464</td><td class="n">0</td><td>component_id 215</td></tr>
+<tr><td><b>Документ</b> <code>KnowDoc</code></td><td class="n">458</td><td class="n">0</td><td>component_id 122</td></tr>
+<tr><td><b>ADR</b> <code>KnowADR</code></td><td class="n">262</td><td class="n">0</td><td>component_id 3</td></tr>
+<tr><td><b>Фаза</b> <code>KnowPhase</code></td><td class="n">254</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Прогон</b> <code>ClRoutineRun</code></td><td class="n">164</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Продукт</b> <code>KnowDictEntry</code></td><td class="n">151</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Сессия (журнал LORE; машина и проект — поля)</b> <code>KnowAgentSession</code></td><td class="n">121</td><td class="n">0</td><td>project 120</td></tr>
+<tr><td><b>Компонент</b> <code>LoreComponent</code></td><td class="n">110</td><td class="n">0</td><td>component_id 110, project 39</td></tr>
+<tr><td><b>UC / фича</b> <code>KnowUseCase</code></td><td class="n">88</td><td class="n">0</td><td>component_id 17</td></tr>
+<tr><td><b>Событие роли</b> <code>KnowProjectRoleEvent</code></td><td class="n">87</td><td class="n">0</td><td>project 87</td></tr>
+<tr><td><b>Задание гейта</b> <code>QGJobTask</code></td><td class="n">85</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Файл</b> <code>KnowFile</code></td><td class="n">71</td><td class="n">0</td><td>project 71</td></tr>
+<tr><td><b>Ранбук</b> <code>KnowRunbook</code></td><td class="n">57</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Веха</b> <code>KnowMilestone</code></td><td class="n">46</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Боль</b> <code>KnowPain</code></td><td class="n">38</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Находка</b> <code>KnowFinding</code></td><td class="n">31</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiInsight</b> <code>BragiInsight</code></td><td class="n">30</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Проект</b> <code>KnowGitProject</code></td><td class="n">28</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Выгода</b> <code>KnowGain</code></td><td class="n">25</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Гейт</b> <code>QualityGate</code></td><td class="n">25</td><td class="n">0</td><td>component_id 2</td></tr>
+<tr><td><b>Вывод</b> <code>ClRoutineOutput</code></td><td class="n">18</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Агент</b> <code>KnowActor</code></td><td class="n">18</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Роль продукта</b> <code>KnowProjectActor</code></td><td class="n">15</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiVariant</b> <code>BragiVariant</code></td><td class="n">14</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Работа</b> <code>KnowJob</code></td><td class="n">14</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Рекомендация</b> <code>QGRecommendation</code></td><td class="n">14</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Технология</b> <code>LoreTechnology</code></td><td class="n">13</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiAsset</b> <code>BragiAsset</code></td><td class="n">11</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiRubric</b> <code>BragiRubric</code></td><td class="n">9</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Человек</b> <code>KnowUser</code></td><td class="n">9</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiKeyword</b> <code>BragiKeyword</code></td><td class="n">8</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiPublication</b> <code>BragiPublication</code></td><td class="n">8</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiIntegration</b> <code>BragiIntegration</code></td><td class="n">7</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiPage</b> <code>BragiPage</code></td><td class="n">6</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiChannel</b> <code>BragiChannel</code></td><td class="n">5</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiCompetitor</b> <code>BragiCompetitor</code></td><td class="n">5</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Вложение</b> <code>KnowAsset</code></td><td class="n">3</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowUserDraft</b> <code>KnowUserDraft</code></td><td class="n">3</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Настройки</b> <code>KnowUserSettings</code></td><td class="n">2</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>BragiCampaign</b> <code>BragiCampaign</code></td><td class="n">1</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Машина</b> <code>KnowMachine</code></td><td class="n">1</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>Модель</b> <code>KnowModelConfig</code></td><td class="n">1</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>LoreNewsReadMark</b> <code>LoreNewsReadMark</code></td><td class="n">1</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowCanvas</b> <code>KnowCanvas</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowCanvasItem</b> <code>KnowCanvasItem</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowCanvasLink</b> <code>KnowCanvasLink</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowSavedView</b> <code>KnowSavedView</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowUserFavorite</b> <code>KnowUserFavorite</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowUserHabit</b> <code>KnowUserHabit</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowUserMemoryPref</b> <code>KnowUserMemoryPref</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>KnowUserRecent</b> <code>KnowUserRecent</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>LoreRefDismissal</b> <code>LoreRefDismissal</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+<tr><td><b>QGMetric</b> <code>QGMetric</code></td><td class="n">0</td><td class="n">0</td><td>—</td></tr>
+</table></div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'base', themeVariables: { fontFamily: 'Manrope, system-ui, sans-serif', fontSize: '13px', lineColor: '#8a7a5a' } });
+await mermaid.run({ querySelector: 'pre.mermaid' });
+document.body.dataset.rendered = String(document.querySelectorAll('pre.mermaid svg').length);
+</script>
+<script>for(const t of document.querySelectorAll('table')){const h=[...t.querySelectorAll('tr:first-child th')].map(x=>x.textContent);for(const r of t.querySelectorAll('tr'))[...r.querySelectorAll('td')].forEach((c,i)=>c.dataset.l=h[i]||'')}</script>
+<style>
+pre.mermaid{background:#fff;border:1px solid #d4ccb8;border-radius:8px;padding:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+td.n{text-align:right;font-family:'IBM Plex Mono',monospace}h3{font-size:14px;margin:14px 0 6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;margin:6px 0 10px}.legend span{display:inline-flex;align-items:center;gap:4px}
+.lg{display:inline-block;width:14px;height:10px;border-radius:3px;border:2px solid}.lg.old{background:#fff;border-color:#b8ab94}.lg.chg{background:#fff7e6;border-color:#b07a12}.lg.new{background:#eaf4dd;border-color:#3d7a38}.lg.mini{background:#eef3fb;border-color:#2f5f9e}.lg.rem{background:#fbe9e5;border-color:#b4412f;border-style:dashed}
+@media (max-width:640px){body{padding:8px;font-size:14px}.tw{overflow:visible}table{min-width:0!important;width:100%;background:transparent}
+table tr:first-child{display:none}table tr{display:block;background:#fff;border:1px solid #d4ccb8;border-radius:8px;margin:0 0 8px;padding:4px 8px}
+table td{display:block;border:0;padding:3px 0;width:auto!important}table td::before{content:attr(data-l);display:block;font-size:11px;text-transform:uppercase;color:#76694f}
+td.n{text-align:left}.kpi div{flex:1 1 40%}h1{font-size:17px}h2{font-size:15px}}
+</style>
+
+</body></html>

@@ -112,6 +112,8 @@ export function createLoreViewApi({ user, fetchImpl = loreFetch }: LoreViewApiOp
       return one(await post('/lore/me/views', {
         name: draft.name, section: draft.section, query: draft.query, ...wireVisibility(draft.visibility),
         ...(draft.personal_default === undefined ? {} : { is_personal_default: draft.personal_default }),
+        // командный по умолчанию — право админа; проверяет сервер (403 TEAM_VIEW_FORBIDDEN), клиент лишь передаёт
+        ...(draft.team_default ? { is_team_default: true } : {}),
       }));
     },
     async update(id: string, patch: KitViewPatch) {

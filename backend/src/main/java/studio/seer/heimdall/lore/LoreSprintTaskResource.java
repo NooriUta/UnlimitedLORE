@@ -109,7 +109,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.sprint_id()).matches()) {
             return badParams("sprint_id contains illegal characters");
         }
-        String status = (req.status() == null || req.status().isBlank()) ? "todo" : req.status();
+        // Спринт без статуса — начальный статус по модели (sprint.status.initial; 16.11.2026 «в беклог»,
+        // правило владелицы 19.11.2026). Раньше — «todo», который писался «📋 PLANNED».
+        final CreateDefaultStatus.Pick statusPick = CreateDefaultStatus.pick("sprint", req.status());
+        String status = statusPick.value();
         if (!PLAN_STATUSES.contains(status)) {
             return badParams("status must be one of: " + PLAN_STATUSES);
         }
@@ -143,6 +146,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (req.context_md() != null || req.outcome_md() != null)
                 out.put("mentions", autoLinkMentions("sprint", req.sprint_id(), false, req.context_md(), req.outcome_md()));
             out.put("quality", WorkQuality.compact(sprintQuality(req.sprint_id())));
+            if (r.created()) CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
@@ -302,6 +306,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         // MT-SPRINT-DONE-GUARD — до первой записи: «не создана» должно быть правдой.
         String closed = closedSprintRefusalFor(req.sprint_id());
         if (closed != null) return Uni.createFrom().item(badParams(closed));
+        String full = fullSprintRefusalFor(req.sprint_id());
+        if (full != null) return Uni.createFrom().item(badParams(full));
         if (req.effort_days() != null && (req.effort_days().isNaN() || req.effort_days() < 0)) {
             return Uni.createFrom().item(badParams("effort_days must be a non-negative number of person-days (or omitted)"));
         }
@@ -364,10 +370,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "bk", req.bookkeeping() != null && req.bookkeeping());
                 p.put("st0", createStatusRaw);
                 by.bind(p);
-                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
+                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads outE('IN_PHASE')[valid_to IS NULL].inV())
                 if (phase != null) {
                     script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
-                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid);");
+                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid) SET valid_from = :now;");
                     p.put("puid", phase);
                 }
                 // PL-14 (D16): uc-задача обязана нести REALIZES. Ребро создаётся В ТОМ
@@ -401,6 +407,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             // MDL-11: в каком статусе родилась задача и назвал ли его создающий.
                             body.put("status", createStatusRaw);
                             body.put("status_defaulted", TaskCreateStatus.defaulted(req.status()));
+                            CreateDefaultStatus.report(body, CreateDefaultStatus.pick("task", req.status())); // правило 19.11
                             body.put("task_id", tid);
                             body.put("order_index", order);
                             body.put("quality", WorkQuality.compact(taskQuality(uid)));
@@ -540,7 +547,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
 
     // ── ADR-LORE-013: move a task between sprints (cancel + recreate) ────────
     // Creates a fresh copy in the target sprint (title/note_md/effort_days +
-    // TAGGED_WITH component links, initial PLANNED state) and cancels the source
+    // TAGGED_WITH component links, status carried from the source — none → BACKLOG) and cancels the source
     // (stays as a ❌ tombstone in the old sprint, note carried forward per #88).
     // No PK re-key / SCD2 surgery — reuses the create + status write paths.
     public record TaskMoveRequest(String task_uid, String target_sprint_id, String new_task_id) {}
@@ -548,11 +555,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     /**
      * MT-TASK-MV-HISTORY (Völva 05.11.2026): перенос задачи создавал новую с историей
      * «📋 PLANNED» — статус терялся, его восстанавливали руками у каждой перенесённой
-     * задачи. Переносится статус открытой строки истории; нет его — PLANNED, как раньше.
+     * задачи. Переносится статус открытой строки истории.
+     *
+     * <p>MT-MCP-TRUTH Б5 (MDL-11, ST-08): статуса нет — первый статус задачи, бэклог ({@link TaskCreateStatus#DEFAULT}),
+     * как при создании без статуса; прежний PLANNED выдумывал «запланирована» для задачи, о которой это неизвестно.
      */
     static String carriedStatus(Object statusRaw) {
         String v = statusRaw == null ? null : String.valueOf(statusRaw).strip();
-        return (v == null || v.isEmpty()) ? "📋 PLANNED" : v;
+        return (v == null || v.isEmpty()) ? TaskCreateStatus.raw(null) : v;
     }
 
     /**
@@ -573,6 +583,36 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             + (since != null ? ", с " + since : "") + ") — задачи в закрытый спринт не заводят и не переносят. "
             + "Выберите открытый спринт (срез sprints со status) или заведите новый; если работа "
             + "правда продолжает этот спринт — сначала переоткройте его status_set, осознанно.";
+    }
+
+    /**
+     * Владелица 21.11.2026: «внеси в ограничение добавки новых задач в спринт наличие в спринте 35 задач — у нас
+     * пухнут мега спринты». Предел задач спринта; отменённые не считаются (это не нагрузка спринта), задача без
+     * строки статуса — считается («не знаем статус» ≠ «её нет»). Касается только ДОБАВЛЕНИЯ (заведение и перенос
+     * в спринт); правка и смена статуса уже лежащих задач не запрещаются.
+     */
+    static final int SPRINT_TASK_LIMIT = 35;
+
+    /** @return текст отказа или null; statuses — status_raw открытых строк истории задач спринта. */
+    static String fullSprintRefusal(String sprintId, java.util.List<String> statuses) {
+        long n = statuses.stream()
+            .filter(st -> st == null || st.isBlank() || !"cancelled".equals(LoreStatusVocabulary.classify(st)))
+            .count();
+        if (n < SPRINT_TASK_LIMIT) return null;
+        return "в спринте " + sprintId + " уже " + n + " задач (предел " + SPRINT_TASK_LIMIT + ", отменённые не в счёт) — "
+            + "новые задачи в него не заводят и не переносят: спринт распух. Заведите новый спринт под эту работу "
+            + "(sprint_new / entity_upsert type=sprint) или закройте/отмените лишнее в этом.";
+    }
+
+    /** Подсчёт задач спринта по префиксу task_uid; отказ или null. Блокирующий — звать только с @Blocking/worker. */
+    private String fullSprintRefusalFor(String sprintId) {
+        String prefix = sprintId + "/";
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS st FROM KnowTask "
+            + "WHERE task_uid.substring(0, :plen) = :prefix", Map.of("plen", prefix.length(), "prefix", prefix));
+        java.util.List<String> st = new java.util.ArrayList<>(rows.size());
+        for (Map<String, Object> r : rows) st.add(r.get("st") == null ? null : String.valueOf(r.get("st")));
+        return fullSprintRefusal(sprintId, st);
     }
 
     /** Статус ОТКРЫТОЙ строки истории спринта; отказ или null. Блокирующий — звать только с @Blocking/worker. */
@@ -621,6 +661,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return badParams("target sprint not found: " + targetSid);
             String closedMv = closedSprintRefusalFor(targetSid);
             if (closedMv != null) return badParams(closedMv);
+            String fullMv = fullSprintRefusalFor(targetSid);
+            if (fullMv != null) return badParams(fullMv);
             Map<String, Object> s = src.get(0);
             String title    = (String) s.get("title");
             String note     = (String) s.get("note_md");
@@ -764,7 +806,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         // A1: atomic sqlscript — a partial failure leaves no KnowPhase
                         // without its PART_OF/HAS_STATE edges.
                         String script =
-                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
+                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, " + ModelSchemaAdapter.titleSet("name") + ", " +
                             "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
@@ -828,23 +870,18 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 Map<String, Object> params = req.phase_uid() != null
                     ? Map.of("t", req.task_uid(), "p", req.phase_uid())
                     : Map.of("t", req.task_uid());
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE " + where, params);
-                for (Map<String, Object> e : edges) {
-                    String rid = e.get("@rid").toString();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM IN_PHASE WHERE @rid=" + rid, null)).await().indefinitely();
-                }
+                // MDL-02: IN_PHASE историчная — снятие закрывает ребро (valid_to), а не стирает его.
+                deleteEdges("IN_PHASE", where, params);
             } else {
                 List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p",
+                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p AND valid_to IS NULL",
                     Map.of("t", req.task_uid(), "p", req.phase_uid()));
                 if (existing.isEmpty()) {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         String.format(
                             "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
-                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s')",
-                            req.task_uid(), req.phase_uid()),
+                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s') SET valid_from = '%s'",
+                            req.task_uid(), req.phase_uid(), Instant.now()),
                         null)).await().indefinitely();
                 }
             }
@@ -907,10 +944,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 String note = req.note_append() != null
                     ? appendText(currentTaskNote(req.task_uid()), req.note_append())
                     : req.note_md();
-                writeClient.command(db, basicAuth(),
+                // MT-MCP-TRUTH Б11: пункт с несуществующей задачей — ошибка пункта, а не «updated»
+                if (WriteCount.missed(writeClient.command(db, basicAuth(),
                     taskVertexUpdate(req.task_uid(), req.title(), note, req.effort_days(), req.actual_days(), req.bookkeeping(),
                         req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
-                    .await().indefinitely();
+                    .await().indefinitely())) {
+                    errors.add("skipped (NOT_FOUND): задача " + req.task_uid() + " не найдена — ни одна строка не изменена");
+                    continue;
+                }
                 writeTaskHist(req.task_uid(), note, req.effort_days(), batchAuthor);
                 if (note != null)
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.task_uid());
@@ -1068,7 +1109,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 throw new Scd2Guard.ConflictException(c.detail(), c.current());
             if (o instanceof StatusHistoryService.Outcome.Ok) return;
         }
-        mirrorTaskHist(uid, note, effortDays).await().indefinitely();
+        // MT-MCP-TRUTH Б11: открытой строки нет (её закрыли между пробой и записью) — правка истории не легла
+        if (WriteCount.missed(mirrorTaskHist(uid, note, effortDays).await().indefinitely()))
+            throw new WriteCount.MissedException(WriteCount.conflict("NO_OPEN_STATE", "task", uid,
+                "у задачи " + uid + " нет открытой строки истории: note_md/effort_days легли только на вершину, "
+                    + "срезы их не покажут. Сначала status_set (откроет строку), затем повтори task_set."));
     }
 
     @POST
@@ -1125,7 +1170,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
             .chain(__ -> writeClient.command(db, basicAuth(),
                 taskVertexUpdate(uid, req.title(), note[0], req.effort_days(), req.actual_days(), req.bookkeeping(),
-                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class())))
+                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type(), req.work_class()))
+                // MT-MCP-TRUTH Б11: правка несуществующей задачи — 404, а не ok:true (UPDATE задел 0 строк)
+                .map(r -> WriteCount.requireHit(r, "task", uid, "правка задачи (task_set)")))
             // The vertex note_md/effort_days above are denormalisations the UI never reads.
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
@@ -1169,6 +1216,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
+                if (ex instanceof WriteCount.MissedException me) return me.response();
                 if (ex instanceof Scd2Guard.ConflictException ce) return ce.response();
                 if (Scd2Guard.isConcurrentModification(ex))
                     return Scd2Guard.conflict("task '" + uid + "': concurrent write to the same version — re-read and retry", Map.of());
@@ -1251,9 +1299,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 }
             }
             String updated = sb.toString().trim();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE " + rid + " SET pr_refs = :refs",
-                Map.of("refs", updated))).await().indefinitely();
+            // MT-MCP-TRUTH Б11: строку прочитали по @rid, но записать в неё не вышло (удалена между чтением и записью)
+            if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE " + rid + " SET pr_refs = :refs",
+                    Map.of("refs", updated))).await().indefinitely()))
+                return WriteCount.conflict("STALE_VERSION", "sprint", req.sprint_id(),
+                    "открытая строка истории спринта исчезла между чтением и записью — pr_refs не записаны; перечитайте и повторите");
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
@@ -1396,7 +1447,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         String[] finalTexts = null;
         if (req.context_md() != null || req.outcome_md() != null || req.context_append() != null || req.outcome_append() != null) {
             List<Map<String, Object>> cur = ingestService.queryPublic(
-                "SELECT context_md, outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
+                "SELECT COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md FROM KnowSprint WHERE sprint_id=:s", Map.of("s", req.sprint_id()));
             if (cur.isEmpty()) return badParams("sprint not found: " + req.sprint_id());
             String ctx0 = cur.get(0).get("context_md") == null ? null : String.valueOf(cur.get(0).get("context_md"));
             String out0 = cur.get(0).get("outcome_md") == null ? null : String.valueOf(cur.get(0).get("outcome_md"));
@@ -1408,7 +1459,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
         Map<String, Object> p = new LinkedHashMap<>();
-        if (req.name()       != null) { sb.append("name=:name, ");            p.put("name",       req.name()); }
+        if (req.name()       != null) { sb.append(ModelSchemaAdapter.titleSet("name")).append(", ");           p.put("name",       req.name()); }
         if (outcomeNew != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    outcomeNew); }
         if (contextNew != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        contextNew); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
@@ -1431,8 +1482,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         p.put("upd", java.time.Instant.now().toString());
         p.put("sid", req.sprint_id());
         try {
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                set + " WHERE sprint_id=:sid", p)).await().indefinitely();
+            // MT-MCP-TRUTH Б11: правка несуществующего спринта — 404, а не ok:true
+            if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    set + " WHERE sprint_id=:sid", p)).await().indefinitely()))
+                return WriteCount.notFound("sprint", req.sprint_id(), "правка спринта (sprint_set)");
             // MT-NOTE-APPEND п.4 (+ основа п.3): тела — и на открытую строку истории, затем хэш.
             // Без этого content_hash спринта считался по пустым полям строки (одинаков при любом
             // тексте), а смена статуса переносила на новую версию null вместо текста.
@@ -1447,9 +1500,14 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     texts, changeAuthor());
                 if (tv instanceof StatusHistoryService.Outcome.Conflict c)
                     return Scd2Guard.conflict(c.detail() + " (sprint vertex already updated; repeat the call)", c.current());
-                if (!(tv instanceof StatusHistoryService.Outcome.Ok))
-                    writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
-                        .await().indefinitely();
+                // MT-MCP-TRUTH Б11: зеркало не нашло открытую строку — тексты легли только на вершину
+                if (!(tv instanceof StatusHistoryService.Outcome.Ok)
+                        && WriteCount.missed(writeClient.command(db, basicAuth(), sprintHistMirror(req.sprint_id(), finalTexts[0], finalTexts[1]))
+                            .await().indefinitely()))
+                    return WriteCount.conflict("NO_OPEN_STATE", "sprint", req.sprint_id(),
+                        "у спринта " + req.sprint_id() + " нет открытой строки истории: context_md/outcome_md легли только "
+                            + "на вершину (sprint vertex already updated), история их не хранит. Откройте строку сменой статуса "
+                            + "(status_set) и повторите правку.");
                 hashStamper.stampOpenHist("KnowSprintHist", "KnowSprint", "sprint_id", req.sprint_id());
             }
             Map<String, Object> out = new LinkedHashMap<>();
@@ -1907,10 +1965,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
     }
 
-    // ── Write-path: link sprint ↔ sprint (DEPENDS_ON) ────────────────────────
+    // ── Write-path: зависимость DEPENDS_ON (MDL-13) ──────────────────────────
 
     public record SprintDepRequest(String from_sprint, String to_sprint, String kind, String reason, String action) {}
 
+    /**
+     * Прежний путь «спринт зависит от спринта» — теперь частный случай одной связи «зависит от»
+     * ({@link #linkDependency}): те же проверки вида, цикла (409 с путём) и история в ребре. Форма ответа
+     * сохраняет from_sprint / to_sprint для прежних вызывающих.
+     */
     @POST
     @Path("sprint/dep")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -1921,61 +1984,65 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.from_sprint() == null || req.to_sprint() == null)
             return badParams("from_sprint and to_sprint required");
-        if (!SAFE_ID.matcher(req.from_sprint()).matches() || !SAFE_ID.matcher(req.to_sprint()).matches())
-            return badParams("sprint ids contain illegal characters");
-        if (req.from_sprint().equals(req.to_sprint()))
-            return badParams("self-loop not allowed");
-        boolean remove = "remove".equalsIgnoreCase(req.action());
-        try {
-            if (remove) {
-                // DELETE EDGE doesn't work in ArcadeDB — use SELECT @rid + DELETE FROM
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM DEPENDS_ON WHERE @out.sprint_id=:f AND @in.sprint_id=:t",
-                    Map.of("f", req.from_sprint(), "t", req.to_sprint()));
-                for (Map<String, Object> e : edges) {
-                    String rid = e.get("@rid").toString();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM DEPENDS_ON WHERE @rid=" + rid, null)).await().indefinitely();
-                }
-            } else {
-                // Cycle guard: if to_sprint can reach from_sprint → adding edge creates a cycle
-                // @depth is not filterable in ArcadeDB TRAVERSE; self-loop guard above
-                // already ensures from != to, so sprint_id=from_sprint at any depth = cycle
-                List<Map<String, Object>> cycleCheck = ingestService.queryPublic(
-                    "SELECT sprint_id FROM (TRAVERSE out('DEPENDS_ON') FROM " +
-                    "(SELECT FROM KnowSprint WHERE sprint_id=:t) MAXDEPTH 50) " +
-                    "WHERE sprint_id=:f",
-                    Map.of("t", req.to_sprint(), "f", req.from_sprint()));
-                if (!cycleCheck.isEmpty())
-                    return badParams("cycle detected: " + req.to_sprint() + " already depends (transitively) on " + req.from_sprint());
-                // Idempotent: skip if already linked
-                List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM DEPENDS_ON WHERE @out.sprint_id=:f AND @in.sprint_id=:t",
-                    Map.of("f", req.from_sprint(), "t", req.to_sprint()));
-                if (existing.isEmpty()) {
-                    // Named params don't work for CREATE EDGE in ArcadeDB — use String.format
-                    String kind   = req.kind() != null && !req.kind().isBlank() ? req.kind() : "soft";
-                    String reason = req.reason() != null ? req.reason().replace("'", "\\'").replace("\n", " ") : "";
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        String.format(
-                            "CREATE EDGE DEPENDS_ON FROM (SELECT FROM KnowSprint WHERE sprint_id='%s') " +
-                            "TO (SELECT FROM KnowSprint WHERE sprint_id='%s') " +
-                            "SET kind='%s', reason='%s'",
-                            req.from_sprint(), req.to_sprint(), kind, reason),
-                        null)).await().indefinitely();
-                }
-            }
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("ok", true);
+        Response r = linkDependency(new DepRequest("sprint", req.from_sprint(), "sprint", req.to_sprint(),
+            req.kind(), req.reason(), req.action()), role);
+        if (r.getStatus() == 200 && r.getEntity() instanceof Map<?, ?> body) {
+            @SuppressWarnings("unchecked") Map<String, Object> out = new LinkedHashMap<>((Map<String, Object>) body);
             out.put("from_sprint", req.from_sprint());
             out.put("to_sprint", req.to_sprint());
-            out.put("action", remove ? "removed" : "added");
             return noStore(Response.ok(out));
+        }
+        return r;
+    }
+
+    /**
+     * Зависимость между задачей, фазой, спринтом и вехой в любом сочетании: {@code from} зависит от
+     * {@code to}. Тип конца не назван — ищется по ключу среди четырёх типов. Вид — из справочника
+     * {@code dependency_kind} (нет справочника в базе — виды спринтов), иначе 422; связь с собой — 400;
+     * нет конца — 404; цикл — 409 с путём цикла. Снятие закрывает ребро (связь историчная).
+     */
+    public record DepRequest(String from_type, String from_id, String to_type, String to_id,
+                             String kind, String reason, String action) {}
+
+    @POST
+    @Path("dep")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkDependency(DepRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.from_id() == null || req.to_id() == null)
+            return badParams("from_id and to_id required");
+        if (!SAFE_ID.matcher(req.from_id()).matches() || !SAFE_ID.matcher(req.to_id()).matches())
+            return badParams("ids contain illegal characters");
+        try {
+            LoreDependency.Graph g = dependencyGraph();
+            LoreDependency.Resolved from = LoreDependency.resolve(g, req.from_type(), req.from_id().trim());
+            if (from.ref() == null) return noStore(Response.status(from.status()).entity(from.error()));
+            LoreDependency.Resolved to = LoreDependency.resolve(g, req.to_type(), req.to_id().trim());
+            if (to.ref() == null) return noStore(Response.status(to.status()).entity(to.error()));
+            LoreDependency.Result r = LoreDependency.link(g, from.ref(), to.ref(), req.kind(), req.reason(), req.action(),
+                activeDictCodes(LoreDependency.DICT, LoreDependency.DEFAULT_KINDS), java.time.Instant.now().toString());
+            return noStore(Response.status(r.status()).entity(r.body()));
         } catch (Exception e) {
-            LOG.warnf("[LORE SPRINT DEP] %s → %s: %s", req.from_sprint(), req.to_sprint(), e.getMessage());
+            LOG.warnf("[LORE DEP] %s → %s: %s", req.from_id(), req.to_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(LoreUpstream.error(e)));
         }
+    }
+
+    private LoreDependency.Graph dependencyGraph() {
+        return new LoreDependency.Graph() {
+            @Override
+            public List<Map<String, Object>> query(String sql, Map<String, Object> params) {
+                return ingestService.queryPublic(sql, params);
+            }
+            @Override
+            public void exec(String sql, Map<String, Object> params) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql,
+                    params == null || params.isEmpty() ? null : params)).await().indefinitely();
+            }
+        };
     }
 
     /**

@@ -25,6 +25,8 @@ import { fetchKcUsers } from './wizards';
 import { fetchAgents, type AgentRow } from './agents';
 import { HarnessMark, callerHarness } from './HarnessMark';
 import { MachineCell } from './machineMark';
+import { AgentActionsChart } from '../charts/AgentCharts';
+import { AdminViewSwitch, useAdminView } from './AdminViewSwitch';
 import './Admin.css';
 
 export interface ActionsScreenProps {
@@ -66,6 +68,7 @@ function useUrlQuery(): ActionsQuery {
 
 export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
   const t = useAppT();
+  const [view, setView] = useAdminView();
   const applied = useUrlQuery();
   const key = actionsSearch(applied);
   const [draft, setDraft] = useState<ActionsQuery>(applied);
@@ -253,6 +256,10 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
     <section className="adm" aria-labelledby="adm-log-h">
       <h2 id="adm-log-h" className="adm-h">{t('admin.log.title')}</h2>
       <p className="adm-lead">{t('admin.log.lead')}</p>
+      {/* №13 (графики 19.11.2026): действия агентов по дням — видом «Аналитика», не над журналом (21.11.2026). */}
+      <AdminViewSwitch view={view} onChange={setView} />
+      {view === 'analytics' && <div className="sk-rec-charts"><AgentActionsChart {...(fetchImpl ? { fetchImpl } : {})} /></div>}
+      {view === 'list' && (<>
       <form className="adm-filters" onSubmit={e => { e.preventDefault(); apply(); }}>
         <label className="adm-field">
           <span className="adm-field__l">{t('admin.log.f.caller')}</span>
@@ -305,6 +312,7 @@ export function ActionsScreen({ fetchImpl }: ActionsScreenProps) {
         </p>
       </form>
       {body}
+      </>)}
       {/* S7B-31 п.4а: отказы доступа KC (буфер до рестарта) — из старой вкладки «Настройки». */}
       <KcDenials fetchImpl={fetchImpl} />
     </section>

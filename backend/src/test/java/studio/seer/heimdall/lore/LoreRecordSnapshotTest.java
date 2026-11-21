@@ -40,7 +40,13 @@ class LoreRecordSnapshotTest {
         // MD-04: роль продукта, профиль клиента и ранбук — паспорта после рефакторинга.
         "actor", "pain", "gain", "job", "runbook",
         // MD-04, второй заход по QG: гейт качества — тоже после рефакторинга.
-        "quality_gate");
+        "quality_gate",
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий и организация — после рефакторинга.
+        "repository", "organization",
+        // MDL-13: паспорт трека — после рефакторинга.
+        "track",
+        // MD-05: паспорт PR — после рефакторинга.
+        "pr");
 
     /**
      * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга
@@ -83,7 +89,7 @@ class LoreRecordSnapshotTest {
     static {
         ROWS.put("sprint",m("sprint_id", "SPRINT_SNAP", "name", "Спринт снимка", "status_raw", "✅ DONE — закрыт",
             "context_md", "ctx", "outcome_md", "итог", "priority", "P1", "git_projects", List.of("AIDA/UnlimitedLORE", "x/y"),
-            "components", List.of("CMP-A"), "release_ids", List.of("v1.0.0"), "milestone_ids", List.of("M-1"),
+            "components", List.of("CMP-A"), "release_ids", List.of("v1.0.0"), "release_uids", List.of("AIDA/UnlimitedLORE#v1.0.0"), "milestone_ids", List.of("M-1"),
             "planned_start_date", "2026-11-01", "planned_end_date", "2026-11-20", "created_date", "2026-10-30T10:11:12Z",
             "no_release_required", true, "track_id", "TRK", "depends_on", List.of("SPRINT_A"), "blocks", List.of("SPRINT_B"),
             "adr_ids", List.of("ADR-1")));
@@ -95,7 +101,7 @@ class LoreRecordSnapshotTest {
             "decision_md", "р\n", "consequences_md", " с", "date_created", "2026-11-01", "components", List.of("CMP-A"),
             "git_projects", List.of("AIDA/UnlimitedLORE"), "tags", List.of("t1", "t2"), "depends_on_ids", List.of("ADR-D"),
             "supersedes_ids", List.of("ADR-OLD"), "file_path", "docs/adr.md", "blocks_ids", List.of("ADR-B"),
-            "superseded_by_ids", List.of("ADR-NEW"), "implemented_in_ids", List.of("SPRINT_SNAP"), "release_ids", List.of("v1"),
+            "superseded_by_ids", List.of("ADR-NEW"), "implemented_in_ids", List.of("SPRINT_SNAP"), "release_ids", List.of("v1"), "release_uids", List.of("AIDA/UnlimitedLORE#v1"),
             "justified_task_uids", List.of("SPRINT_SNAP/T-1"), "traced_by_ucs", List.of("UC-2")));
         ROWS.put("spec", m("spec_id", "SPEC-SNAP", "title", "Спека", "status", "Draft (v0)", "content_md", "тело",
             "version", "0.1.0", "summary", "кратко", "projects", List.of("AIDA/UnlimitedLORE"), "component_id", "CMP-A",
@@ -110,7 +116,7 @@ class LoreRecordSnapshotTest {
         ROWS.put("milestone", m("milestone_id", "M-SNAP", "label", "Веха", "status", "planned", "week", "W45",
             "date_display", "10.11", "priority", "P0", "products", List.of("LORE"), "goal_md", "цель", "decisions_md", "реш",
             "direct_sprint_ids", List.of("SPRINT_SNAP", "SPRINT_A")));
-        ROWS.put("release", m("release_id", "v1.17.4", "git_tag", "v1.17.4-tag", "version", "1.17.4", "status", "released",
+        ROWS.put("release", m("release_id", "v1.17.4", "git_tag", "v1.17.4-tag", "status", "released",
             "type", "patch", "release_date", "2026-11-05", "is_current", true, "week", "W45", "projects", List.of("AIDA/UnlimitedLORE"),
             "description_md", "описание", "sprint_count", 2, "pr_count", 3));
         ROWS.put("component", m("component_id", "CMP-SNAP", "full_name", "Компонент", "status", "active", "area", "backend",
@@ -268,7 +274,8 @@ class LoreRecordSnapshotTest {
         Map<String, Object> sp = Legacy.values("spec", ROWS.get("spec"));
         assertEquals(true, sp.get("body_redacted"));
         Map<String, Object> r = Legacy.values("release", ROWS.get("release"));
-        assertEquals("1.17.4", r.get("title"));
+        // MDL-08 ч.2: подпись релиза — тег (version снят как дубль release_id/git_tag)
+        assertEquals("v1.17.4", r.get("title"));
         assertEquals("v1.17.4", r.get("code"));
         assertEquals("true", r.get("is_current"));
         Map<String, Object> f = Legacy.values("feature", ROWS.get("feature"));
@@ -350,7 +357,10 @@ class LoreRecordSnapshotTest {
             v.put("priority", str(r.get("priority")));
             v.put("projects", arr(r.get("git_projects")));
             v.put("components", arr(r.get("components")));
-            v.put("releases", arr(r.get("release_ids")));
+            // 8877957a: релизы спринта — чипами по ключу «проект#тег», подпись — тег (был голый тег release_id)
+            List<Map<String, Object>> rel = new ArrayList<>();
+            for (String u : arr(r.get("release_uids"))) { Map<String, Object> c = new LinkedHashMap<>(); c.put("id", u); c.put("label", u.substring(u.lastIndexOf('#') + 1)); c.put("inherited_from", null); rel.add(c); }
+            v.put("releases", rel);
             v.put("milestones", arr(r.get("milestone_ids")));
             v.put("planned_start", str(r.get("planned_start_date")));
             v.put("planned_end_date", str(r.get("planned_end_date")));
@@ -359,7 +369,17 @@ class LoreRecordSnapshotTest {
             // MC-08: сознательная смена контракта — флаг Boolean (null — не задан), было «Да»/null.
             Object nrr = r.get("no_release_required");
             v.put("no_release", nrr instanceof Boolean b ? b : "true".equals(nrr) ? Boolean.TRUE : "false".equals(nrr) ? Boolean.FALSE : null);
-            v.put("track", str(r.get("track_id")));
+            // MDL-13 (владелица 20.11.2026 «треки б»): сознательная смена контракта — трек по ребру ON_TRACK, значение —
+            // чип {id, label} (подпись — label трека, без неё код), kit ведёт ссылкой в паспорт трека; было — строка кода.
+            String track = str(r.get("track_id"));
+            if (track == null) v.put("track", null);
+            else {
+                Map<String, Object> chip = new LinkedHashMap<>();
+                chip.put("id", track);
+                chip.put("label", str(r.get("track_label")) != null ? str(r.get("track_label")) : track);
+                chip.put("inherited_from", null);
+                v.put("track", List.of(chip));
+            }
             return v;
         }
 
@@ -477,7 +497,9 @@ class LoreRecordSnapshotTest {
         static Map<String, Object> release(Map<String, Object> r) {
             Map<String, Object> v = new LinkedHashMap<>();
             String tag = str(r.get("release_id")) != null ? str(r.get("release_id")) : str(r.get("git_tag"));
-            v.put("title", str(r.get("version")) != null ? str(r.get("version")) : tag);
+            // MDL-08 ч.2 (20.11.2026): KnowRelease.version снят — дубль release_id/git_tag (снимок 18.11: 92 из 92);
+            // подпись — тег, как и было у всех релизов прода (version там всегда равнялся release_id).
+            v.put("title", tag);
             v.put("code", tag);
             v.put("type", str(r.get("type")));
             v.put("date", str(r.get("release_date")));
@@ -596,8 +618,8 @@ class LoreRecordSnapshotTest {
             List<Map<String, Object>> l = new ArrayList<>();
             switch (type) {
                 case "sprint" -> {
-                    l.addAll(links("DEPENDS_ON", "out", "sprint", arr(row.get("depends_on"))));
-                    l.addAll(links("DEPENDS_ON", "in", "sprint", arr(row.get("blocks"))));
+                    // MDL-13: «зависит от» / «блокирует» ушли из строки sprint_tree — читаются по ребру
+                    // (LoreRecordEdgeLinks) с видом и причиной; другой конец — любой из четырёх типов.
                     l.addAll(links("IMPLEMENTED_IN", "in", "adr", arr(row.get("adr_ids"))));
                 }
                 case "task" -> {
@@ -610,7 +632,8 @@ class LoreRecordSnapshotTest {
                     l.addAll(links("SUPERSEDES", "out", "adr", arr(row.get("supersedes_ids"))));
                     l.addAll(links("SUPERSEDES", "in", "adr", arr(row.get("superseded_by_ids"))));
                     l.addAll(links("IMPLEMENTED_IN", "out", "sprint", arr(row.get("implemented_in_ids"))));
-                    l.addAll(links("IMPLEMENTED_IN_RELEASE", "out", "release", arr(row.get("release_ids"))));
+                    // 8877957a: ссылка на релиз — ключ «проект#тег», подпись — тег
+                    for (String u : arr(row.get("release_uids"))) l.add(link("IMPLEMENTED_IN_RELEASE", "out", u, "release", u.substring(u.lastIndexOf('#') + 1), null));
                     l.addAll(links("JUSTIFIED_BY", "in", "task", arr(row.get("justified_task_uids"))));
                     l.addAll(links("TRACED_TO", "in", "use_case", arr(row.get("traced_by_ucs"))));
                 }

@@ -104,7 +104,7 @@ public class LoreProjectResource extends LoreResourceBase {
     private void grantCreatorOwnerIfOrphan(String slug, String byRole, Map<String, Object> out) {
         try {
             boolean hasRoles = !ingestService.queryPublic(
-                "SELECT @rid AS rid FROM HAS_PROJECT_ROLE WHERE @in.slug = :proj LIMIT 1",
+                "SELECT @rid AS rid FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :proj LIMIT 1",
                 Map.of("proj", slug)).isEmpty();
             if (hasRoles) { out.put("roles_granted", java.util.List.of()); return; }
 
@@ -123,8 +123,8 @@ public class LoreProjectResource extends LoreResourceBase {
             }
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
-                "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role='owner'",
-                Map.of("sub", grantee, "proj", slug))).await().indefinitely();
+                "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role='owner', valid_from=:now",
+                Map.of("sub", grantee, "proj", slug, "now", java.time.Instant.now().toString()))).await().indefinitely();
             // DBR-17: CREATE EDGE по пустой выборке — тихий no-op; без сверки
             // ответ заявил бы выданную роль, которой в графе нет.
             if (!edgeExists("HAS_PROJECT_ROLE", "kc_sub", grantee, "slug", slug)) {

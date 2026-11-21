@@ -767,9 +767,10 @@
       "icon": "string?",
       "is_active": "boolean?",
       "is_extensible": "boolean?",
-      "kind": "enum(service|tech)?",
+      "kind": "string | string[]?",
       "label_en": "string?",
       "label_ru": "string?",
+      "reason": "string?",
       "sort_order": "number?"
     },
     "output": {
@@ -826,8 +827,11 @@
     "input": {
       "component_id": "string?",
       "content_html": "string?",
+      "content_html_file": "string?",
       "content_md_en": "string?",
+      "content_md_en_file": "string?",
       "content_md_ru": "string?",
+      "content_md_ru_file": "string?",
       "doc_id": "string",
       "file_path": "string?",
       "has_ext_deps": "boolean?",
@@ -883,7 +887,7 @@
       "id": "string",
       "rel": "enum(actor|adr|answers|blocks|builds_on|component|decision|delivers|dep|depends_on|desired_by|extends|felt_by|file|fills_role|gain|gates|includes|job|milestone|pain|parent|performed_by|performs|phase|pr|produced_by|product|project|raised_in|release|relieves|rubric|serves|shipped_in|sprint|success_of|supersedes|tag|task)",
       "target_id": "number | number | string[] | string?",
-      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|product|question|release|runbook|spec|sprint|task|uc|vp)"
+      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|phase|product|question|release|runbook|spec|sprint|task|uc|vp)"
     },
     "output": {
       "content": [
@@ -983,6 +987,31 @@
             },
             "project_linked": "boolean",
             "project_source": "string",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "find": {
+    "input": {
+      "changed_within_days": "number?",
+      "fields": "string[]?",
+      "id_in": "string[]?",
+      "limit": "number?",
+      "links_to": "{depth:number?,dir:enum(both|in|out)?,id:string,rels:string[]?} | {depth:number?,dir:enum(both|in|out)?,id:string,rels:string[]?}[]?",
+      "not_linked": "{dir:enum(both|in|out)?,rels:string[]}?",
+      "sort": "{dir:enum(asc|desc)?,field:string}[]?",
+      "type": "enum(adr|decision|spec|sprint|task)",
+      "where": "lazy[]?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
             "rows": []
           }
         }
@@ -1109,13 +1138,40 @@
   "graph": {
     "input": {
       "depth": "number?",
+      "dir": "enum(both|in|out)?",
       "id": "string?",
       "limit": "number?",
       "rels": "string?",
+      "return_types": "string?",
       "scope": "string?",
       "structural": "boolean?",
       "type": "string?",
-      "types": "string?"
+      "types": "string?",
+      "walk_types": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "graph_path": {
+    "input": {
+      "dir": "enum(both|in|out)?",
+      "from": "string",
+      "k": "number?",
+      "max_depth": "number?",
+      "rels": "string?",
+      "structural": "boolean?",
+      "to": "string",
+      "walk_types": "string?"
     },
     "output": {
       "content": [
@@ -1612,6 +1668,7 @@
       "qg_id": "string",
       "qg_type": "string?",
       "retired_reason": "string?",
+      "scope": "enum(global|project)?",
       "sprint_id": "string?",
       "status": "string?"
     },
@@ -2156,7 +2213,7 @@
   "sprint_link": {
     "input": {
       "action": "enum(add|remove)?",
-      "kind": "enum(gate|hard|informs|soft)?",
+      "kind": "enum(blocks|gate|hard|informs|relates|soft|waits)?",
       "reason": "string?",
       "rel": "enum(component|dep|milestone|project)",
       "sprint_id": "string",

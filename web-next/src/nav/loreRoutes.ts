@@ -32,8 +32,8 @@ export type SearchHitType = (typeof SEARCH_HIT_TYPES)[number];
  * Тип записи → раздел v2. Единственная такая карта в приложении.
  * Технологии — это спеки SPEC-TECH-*: поиск отдаёт их типом spec; тип tech — у связей
  * паспорта (вкладка «Технологии» компонента) и у ссылок [[tech:…]].
- * Типов без раздела в v2 (quality_gate, finding, pr…) здесь нет:
- * открыть их в v2 пока негде, и ссылка честно null.
+ * Типов без раздела в v2 (finding…) здесь нет: открыть их в v2 пока негде, и ссылка честно null.
+ * Паспорта без своего раздела (трек, PR) открываются в разделе-хозяине — PASSPORT_IN_SECTION.
  */
 export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   sprint: 'sprint',
@@ -66,6 +66,11 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   runbook: 'runbook',
   // MD-04, второй заход по QG: у гейта качества появились раздел и паспорт.
   quality_gate: 'quality_gate',
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес) и организация — разделы и паспорта.
+  repository: 'repository',
+  organization: 'organization',
+  // 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): раздел и паспорт PR.
+  pr: 'pr',
 };
 
 /** Модуль оболочки по умолчанию: адрес записи без модуля открывал бы «Новости». */
@@ -124,9 +129,22 @@ export function recordIdOf(type: string, id: string, project?: string | null): s
 }
 
 /** Ссылка на запись: раздел её типа + ?open=<id>; null — тип в v2 открыть негде. */
+/**
+ * Типы с паспортом, но без своего раздела-списка: паспорт открывается в разделе-хозяине с видом в адресе
+ * (?okind=, PU-29 — так же открывается задача в «Спринтах»). MDL-13: трек — в «Спринтах» (владелица 20.11.2026:
+ * «паспорт ему тоже сделай»; раздела-списка нет, пока нет прототипа).
+ */
+export const PASSPORT_IN_SECTION: Readonly<Record<string, V2Section>> = {
+  track: 'sprint',
+  // PR с 21.11.2026 — свой раздел «PR» под «Релизами» (TYPE_SECTION); до того паспорт открывался в «Релизах».
+};
+
 export function recordHref(type: string, id: string, from?: URLSearchParams): string | null {
+  if (!id) return null;
+  const host = Object.prototype.hasOwnProperty.call(PASSPORT_IN_SECTION, type) ? PASSPORT_IN_SECTION[type] : null;
+  if (host) return href({ sec: host, open: id, okind: type }, from);
   const sec = sectionOfType(type);
-  if (!sec || !id) return null;
+  if (!sec) return null;
   return href({ sec, open: id }, from);
 }
 

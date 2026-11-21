@@ -1,0 +1,118 @@
+name: LORE installer → kkRepo
+
+# SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 · Сборка универсального установщика LORE и выкладка в kkRepo.
+# Слово владелицы 18.11.2026: «нам надо доделать инсталятор и выложить его в kkrepo».
+#
+# Собирает на Linux-раннере: lore-migrate.mjs (любая операционка, Node 20+) и исполняемый файл
+# для Linux x64 (Node внутри). Кладёт в raw-hosted репозиторий kkRepo каталогом версии вместе с
+# SHA256SUMS и читает каждый файл обратно — код ответа PUT не доказательство.
+#
+# ТОЛЬКО ручной запуск. dry_run — сборка и план без записи. Для publish нужны секреты
+# KKREPO_USER / KKREPO_PASSWORD (учётка с правом записи в репозиторий lore-installer);
+# без них шаг падает громко с BLOCKED, а не пропускается молча.
+# После выкладки — чистка старых версий (prune-plan.mjs).
+# Логика — scripts/model-migration/publish-plan.mjs (многострочный bash в run: ломал разбор у Forgejo).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия 1.2.3[-метка]; пусто — 0.0.0-preview.<коммит>'
+        required: false
+        default: ''
+      mode:
+        description: 'dry_run — собрать и показать план; publish — выложить в kkRepo'
+        required: true
+        default: 'dry_run'
+        type: choice
+        options: ['dry_run', 'publish']
+      forgejo_mcp:
+        description: 'include — собрать образ forgejo-mcp и положить архивом в images/ (без реестра); skip — без него'
+        required: true
+        default: 'include'
+        type: choice
+        options: ['include', 'skip']
+      source_archive:
+        description: 'include — положить исходники LORE архивом src/lore-<версия>.tar.gz (собственная сборка); skip — без него'
+        required: true
+        default: 'include'
+        type: choice
+        options: ['include', 'skip']
+
+concurrency:
+  group: lore-installer-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: lore-only
+    env:
+      KKREPO_BASE: http://192.168.3.131:8081/repository
+      KKREPO_REPO: lore-installer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      - name: Use kkRepo mirror (npm)
+        run: bash .github/scripts/use-nexus.sh
+
+      - name: Node из образа раннера
+        run: node --version
+
+      - name: Сборщики esbuild и postject
+        run: npm install --no-save --no-audit --no-fund --prefix .installer-tools esbuild@0.28.1 postject@1.0.0-alpha.6
+
+      - name: Тесты установщика
+        run: node --test scripts/model-migration/*.test.mjs
+
+      - name: Сборка — .mjs и исполняемый файл Linux x64
+        env:
+          ESBUILD_DIR: .installer-tools
+          POSTJECT_DIR: .installer-tools
+        run: node scripts/model-migration/build-installer.mjs --out build --exe
+
+      - name: Исполняемый файл запускается
+        run: ./build/lore-migrate --help | head -5
+
+      # Образ forgejo-mcp — архивом docker save в build/images/ (слово владелицы 20.11.2026: «не публиковать, включить
+      # в инсталятор»). Ни push, ни login: образ живёт только в архиве рядом с установщиком. Репозиторий приватный —
+      # токен чтения — секрет LORE_FJ_MCP_CLONE_TOKEN (приставки FORGEJO_/GITEA_/GITHUB_ у секретов Forgejo зарезервированы), в шаге — переменная FORGEJO_MCP_CLONE_TOKEN; его нет — BLOCKED громко (scripts/model-migration/forgejo-mcp-image.mjs).
+      - name: Образ forgejo-mcp → архив images/
+        if: inputs.forgejo_mcp == 'include'
+        env:
+          FORGEJO_MCP_CLONE_TOKEN: ${{ secrets.LORE_FJ_MCP_CLONE_TOKEN }}
+        run: node scripts/model-migration/forgejo-mcp-image.mjs --out build
+
+      # Исходники LORE архивом в build/src/ (слово владелицы 20.11.2026: «так же там же архивом наш проект для собственной
+      # сборки если что»). git archive этого коммита, без .env*/*.secret/*.key (.gitattributes export-ignore + сверка
+      # путей в source-archive.mjs). Ни push, ни реестров: архив едет каталогом src/ версии рядом с установщиком.
+      - name: Архив исходников → src/
+        if: inputs.source_archive == 'include'
+        run: node scripts/model-migration/source-archive.mjs --out build --version "${{ inputs.version }}"
+
+      - name: План выкладки
+        run: node scripts/model-migration/publish-plan.mjs --dir build --version "${{ inputs.version }}" --dry
+
+      - name: Выкладка в kkRepo
+        if: inputs.mode == 'publish'
+        env:
+          KKREPO_USER: ${{ secrets.KKREPO_USER }}
+          KKREPO_PASSWORD: ${{ secrets.KKREPO_PASSWORD }}
+        run: node scripts/model-migration/publish-plan.mjs --dir build --version "${{ inputs.version }}"
+
+      # Слово владелицы 18.11.2026: «сразу сделай prune — не оставляй версий старше 10 минорных, и только мажорные».
+      # Правило — scripts/model-migration/prune-plan.mjs; удаление проверяется чтением (файл больше не отдаётся).
+      - name: План чистки
+        run: node scripts/model-migration/publish-plan.mjs --prune-only --dry
+
+      - name: Чистка kkRepo
+        if: inputs.mode == 'publish'
+        env:
+          KKREPO_USER: ${{ secrets.KKREPO_USER }}
+          KKREPO_PASSWORD: ${{ secrets.KKREPO_PASSWORD }}
+        run: node scripts/model-migration/publish-plan.mjs --prune-only

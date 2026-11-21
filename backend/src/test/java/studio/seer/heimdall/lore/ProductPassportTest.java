@@ -21,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProductPassportTest {
 
     private static final List<String> TABS =
-        List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones");
+        List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones",
+            // Решение владелицы 19.11.2026: организации продукта — по ребру ORG_HAS_PRODUCT (правятся в админке).
+            "organizations");
 
     @Test
     void productIsAPassportTypeReadOnly() {

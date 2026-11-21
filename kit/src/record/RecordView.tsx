@@ -52,9 +52,9 @@ import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, rel
 import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
-export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
+export const RECORD_TABS = { overview: 'overview', props: 'props', charts: 'charts', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
 /** Служебные вкладки конструктора — не разделы записи (порядок: applySections). */
-const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
+const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.charts, RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -163,6 +163,12 @@ export interface RecordViewProps {
    */
   widthStore?: WidthStore;
   /**
+   * Графики записи (сгорание, поток, время цикла…) — вкладкой «Графики» первой в режиме «Аналитика»
+   * (владелица 21.11.2026: «перенеси блок графиков в паспорте во вкладку аналитика», а не над шапкой).
+   * Нет — вкладки нет.
+   */
+  charts?: ReactNode;
+  /**
    * Узкий экран (S4-MOBILE-COMPARE). Не задан — по общему порогу kit
    * (`useNarrow`, NARROW_QUERY); задан — без matchMedia (тесты, встройка).
    * На узком: один ряд вкладок без сегмента видов, вкладка по умолчанию — первая
@@ -242,7 +248,9 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, k
   if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} labels={keyLabels} />;
   // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
   // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
-  if (type === 'list') {
+  // WK-01: массив в поле text/enum (вид продукта — набор, а в модели text) — тоже пунктами списка,
+  // а не сырым JSON «["tech","service"]».
+  if (type === 'list' || ((type === 'text' || type === 'enum') && Array.isArray(value))) {
     const items = (Array.isArray(value) ? value : [value]).map(listItemText).filter(s => s !== '');
     if (items.length === 0) return <span className="sk-rec-fields__none">—</span>;
     return <MiniList kind="plain" label={title ?? ''} items={items.map((text, i) => ({ id: String(i), text }))} />;
@@ -262,8 +270,16 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, k
     const b = boolOf(value);
     return b === null ? <span className="sk-rec-fields__none">—</span> : <span>{kitT(lang, b ? 'kit.field.yes' : 'kit.field.no')}</span>;
   }
-  return <span>{valueText(value)}</span>;
+  // MD-05: текстовое значение — целиком адрес http(s) (PR, репозиторий у хоста git) — ссылка в новой вкладке.
+  const text = valueText(value);
+  if (type === 'text' && WEB_URL.test(text)) {
+    return <a className="sk-rec-fields__url" href={text} target="_blank" rel="noopener noreferrer">{text}</a>;
+  }
+  return <span>{text}</span>;
 }
+
+/** Адрес целиком, только http(s), без пробелов: иная схема (javascript:, data:) и текст с адресом внутри — текстом. */
+const WEB_URL = /^https?:\/\/[^\s"'<>]+$/i;
 
 /** Виды, которые правятся на месте FieldEditor'ом. ref и md идут своими путями (связи, MD-редактор). */
 const INLINE_KINDS = new Set(['text', 'number', 'date', 'enum', 'bool']);
@@ -417,7 +433,7 @@ export function RecordView(props: RecordViewProps) {
     : <RecordViewBody {...props} />;
 }
 
-function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp }: RecordViewProps) {
+function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp, charts }: RecordViewProps) {
   const lang = useKitLang();
   const narrow = useNarrow(narrowProp);
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
@@ -570,11 +586,17 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     // (B13): вкладка без числа рядом с вкладками с числом читается как «тут
     // считать нечего», а у частей считать есть что.
     ...kindTabs.map(t => ({ id: t.key, label: t.title, count: t.count, zone: zoned ? 'record' as const : undefined })),
-    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: tabCount(rt.id, rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined })),
+    // K5-EMPTY-LINK-TABS: вкладка связи с ПРОЧИТАННЫМ нулём ряд не занимает — уходит под «Ещё»
+    // (secondary), оставаясь доступной со своим «0». «Не смогли прочитать» (count null) и «нет
+    // доступа» остаются в ряду со знаком «?»: иначе «связей нет» и «не проверили» неразличимы.
+    // Выбранная вкладка в ряду всегда (foldRow), даже пустая. Вкладку вида с тем же ключом (часть
+    // записи от приложения) правило не трогает: mergeTabs добрал бы признак у двойника-связи.
+    ...relTabs.map(rt => { const count = tabCount(rt.id, rt.defs); return { id: rt.id, label: rt.label, count, relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined, ...(count === 0 && !kindTabs.some(t => t.key === rt.id) ? { secondary: true } : {}) }; }),
   ]);
   // Счётчики служебного — тем же правилом: блок не прочитался, значит число
   // неизвестно («?»), а не ноль. Имена блоков рёбер и журнала у kit свои.
   const aroundItems: TabItem[] = [
+    ...(charts ? [{ id: RECORD_TABS.charts, label: kitT(lang, 'kit.record.tab.charts') }] : []),
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: failed.has('edges') ? null : recordLinks(record.id, ctx.data.edges).length },
     { id: RECORD_TABS.graph, label: kitT(lang, 'kit.record.tab.graph') },
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: failed.has('journal') ? null : recordJournal(record.id, ctx.data.journal).length },
@@ -647,7 +669,9 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
       if (!g) { out.push(it); continue; }
       if (placed.has(g.key)) continue;
       placed.add(g.key);
-      out.push({ id: g.key, label: g.label, count: groupCount(g), zone: zoned ? 'record' : undefined });
+      // Группа с суммой ноль — тем же правилом, что пустая вкладка связи (K5-EMPTY-LINK-TABS).
+      const count = groupCount(g);
+      out.push({ id: g.key, label: g.label, count, zone: zoned ? 'record' : undefined, ...(count === 0 ? { secondary: true } : {}) });
     }
     return out;
   };
@@ -742,6 +766,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     panel = (
       <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
         <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />
+      </BlockBoundary>
+    );
+  } else if (current === RECORD_TABS.charts && charts) {
+    panel = (
+      <BlockBoundary block="charts" label={kitT(lang, 'kit.record.tab.charts')} lang={lang} resetKey={reset}>
+        <div className="sk-rec-charts">{charts}</div>
       </BlockBoundary>
     );
   } else if (current === RECORD_TABS.history && history) {
@@ -943,7 +973,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
           <section key={i.id} className="sk-rec__around-block" data-block={i.id}>
             <h2 className="sk-rec__around-head">{i.label}<TabCount count={i.count} lang={lang} /></h2>
             <BlockBoundary block={i.id} label={i.label} lang={lang} resetKey={record.id}>
-              {Body ? <Body record={record} ctx={ctx} lang={lang} /> : history ? <RecordHistory record={record} source={history} lang={lang} /> : null}
+              {i.id === RECORD_TABS.charts ? <div className="sk-rec-charts">{charts}</div> : Body ? <Body record={record} ctx={ctx} lang={lang} /> : history ? <RecordHistory record={record} source={history} lang={lang} /> : null}
             </BlockBoundary>
           </section>
         );

@@ -1,0 +1,751 @@
+{
+ "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. Общая карта переноса СВЯЗЕЙ всех объектов. Источник перечня — перепись прода (tools/census/edge-triples.tsv). Сгенерирована tools/census/gen-edge-map.cjs; правки — в генераторе. Правила: keep, drop, convert (to, reverse). basis: owner / delegated / proposal.",
+ "_vocab": {
+  "meaning": [
+   "состав",
+   "история",
+   "зависимость",
+   "роли",
+   "принадлежность",
+   "обоснование и результат"
+  ],
+  "kind": {
+   "version": "запись → её версия",
+   "composition": "состав жёсткий: часть не живёт без целого, владелец один",
+   "aggregation": "состав мягкий: целое показывает состав, часть живёт сама",
+   "attribute": "свойство записи, выраженное связью",
+   "association": "ссылка"
+  },
+  "place": {
+   "part": "таблица-часть в теле паспорта",
+   "prop": "свойство",
+   "link_tab": "строка во вкладке связей",
+   "history": "раздел истории",
+   "none": "не показывается"
+  },
+  "place_sides": "out — в паспорте записи, из которой связь выходит; in — в паспорте записи, в которую входит",
+  "analysis": [
+   "дерево",
+   "граф зависимостей",
+   "срез «кто что ведёт»",
+   "срез по владельцу",
+   "история во времени",
+   "счёт"
+  ]
+ },
+ "edges": {
+  "ADDRESSES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "ANSWERABLE_BY": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {},
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: QuestionOwner.java; свойства — старая схема (DDL в коде)"
+  },
+  "ANSWERS": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "ATTACHED_TO": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "BELONGS_TO": {
+   "rule": "keep",
+   "basis": "owner",
+   "waits": [
+    "LoreComponent"
+   ],
+   "note": "компонент — только связью",
+   "shape": {
+    "meaning": "принадлежность",
+    "kind": "attribute",
+    "place": {
+     "out": "prop",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "срез по владельцу"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "BELONGS_TO_PROJECT": {
+   "rule": "keep",
+   "basis": "owner",
+   "waits": [
+    "KnowGitProject"
+   ],
+   "note": "проект — только связью",
+   "shape": {
+    "meaning": "принадлежность",
+    "kind": "attribute",
+    "place": {
+     "out": "prop",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "срез по владельцу"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "BLOCKS": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "CLOSED_BY": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowPR"
+   ],
+   "note": "блок «Релиз и PR» проектируется отдельно (MD-05)",
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "ClRoutineHasOutput": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "DECIDED_IN": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "DECOMPOSES_INTO": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "DELIVERS": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "DEPENDS_ON": {
+   "rule": "keep",
+   "basis": "proposal",
+   "props": [
+    "kind",
+    "reason"
+   ],
+   "note": "спринт → спринт; у связи есть вид и причина",
+   "shape": {
+    "meaning": "зависимость",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "граф зависимостей"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "DESIRED_BY": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "DOC_CHILD_OF": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "DOCUMENTED_IN": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "EDITED_IN": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowFile"
+   ],
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "FELT_BY": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "FILLS_ROLE": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "FOR_VARIANT": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "GATES": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowQuestion"
+   ],
+   "props": [
+    "solved_at"
+   ],
+   "shape": {
+    "meaning": "зависимость",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "граф зависимостей"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "HAS_ACTOR": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "HAS_ASSET": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "HAS_PR": {
+   "rule": "convert",
+   "by_from": {
+    "KnowTask": {
+     "to": "CLOSED_BY"
+    },
+    "KnowRelease": {
+     "to": "SHIPPED_IN",
+     "reverse": true
+    }
+   },
+   "basis": "owner",
+   "note": "release.Q37 (16.11.2026, «ничего не теряется»): HAS_PR своим типом не переносится, уникальные пары — в живые рёбра: задача → PR в CLOSED_BY, релиз → PR в SHIPPED_IN (PR → релиз); пара, уже живая в цели, не дублируется; роль на связи снята (HAS_PR.role: снять)",
+   "from_note": "спринт → PR не переносится: вида связи спринт → PR в модели нет (sprint.Q6 — номера PR спринта связью с записью PR, вид связи не согласован; 110 из 122 PR уже в релизе живым SHIPPED_IN)"
+  },
+  "HAS_PROJECT_ROLE": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "HAS_STATE": {
+   "rule": "keep",
+   "basis": "owner",
+   "note": "запись → версия; переносится этапом записи версий. В снимке одна связь стоит наоборот (версия спринта → спринт) — в отчёт, не переносится",
+   "shape": {
+    "meaning": "история",
+    "kind": "version",
+    "place": {
+     "out": "history",
+     "in": "none"
+    },
+    "analysis": [
+     "история во времени"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "HAS_STATUS": {
+   "rule": "drop",
+   "basis": "owner",
+   "note": "снята V89 (#1401): статус — код в строке версии (status_raw), словари Status* сняты; MD-02"
+  },
+  "HAS_VARIANT": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "HELPS_WITH": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "IMPLEMENTED_IN": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowADR",
+    "KnowDoc"
+   ],
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "граф зависимостей"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "IMPLEMENTED_IN_RELEASE": {
+   "rule": "keep",
+   "basis": "owner",
+   "waits": [
+    "KnowRelease"
+   ],
+   "props": [
+    "source",
+    "created_at",
+    "note"
+   ],
+   "note": "source остаётся со справочником «по дате / проверено вручную / по PR»",
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "aggregation",
+    "place": {
+     "out": "prop",
+     "in": "part"
+    },
+    "analysis": [
+     "история во времени",
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "IN_AREA": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "IN_CHANNEL": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "IN_PHASE": {
+   "rule": "keep",
+   "basis": "owner",
+   "note": "задача → фаза. Решение владелицы: история связи ведётся в самой связи («действует с / по»); дат в старой базе у связи нет — переносится без них",
+   "shape": {
+    "meaning": "состав",
+    "kind": "aggregation",
+    "place": {
+     "out": "prop",
+     "in": "part"
+    },
+    "analysis": [
+     "дерево",
+     "история во времени"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "IN_PRODUCT": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "IN_RUBRIC": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "INCLUDES": {
+   "rule": "convert",
+   "to": "IMPLEMENTED_IN_RELEASE",
+   "reverse": true,
+   "basis": "proposal",
+   "note": "мёртвая связь релиз → спринт; разворот в IMPLEMENTED_IN_RELEASE (спринт → релиз) без дублей. Предложение исполнителя"
+  },
+  "JUSTIFIED_BY": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowADR"
+   ],
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "граф зависимостей"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "LED_TO": {
+   "rule": "keep",
+   "basis": "open",
+   "waits": [
+    "BragiInsight"
+   ],
+   "note": "Bragi вне первого захода",
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "LOGGED_BY": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "MACHINE_ACCESS": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {
+    "role": "STRING",
+    "projects": "LIST",
+    "harnesses": "LIST",
+    "granted_by": "STRING",
+    "granted_at": "STRING"
+   },
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: LoreUserResource.java; свойства — старая схема (DDL в коде)"
+  },
+  "MEASURED_BY": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {},
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: LoreIngestService.java; свойства — старая схема (DDL в коде)"
+  },
+  "OF_TYPE": {
+   "rule": "drop",
+   "basis": "owner",
+   "note": "снята V89 (#1401): вид трека — поле PlanTrack.area, словарь TrackType снят; MD-02"
+  },
+  "ON_MILESTONE": {
+   "rule": "drop",
+   "basis": "owner",
+   "note": "начало связи — PlanCheckpoint; план-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED)"
+  },
+  "OWNED_BY": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PARENT_OF": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PARENT_PRODUCT": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PART_OF": {
+   "rule": "keep",
+   "basis": "proposal",
+   "note": "фаза → спринт и задача → спринт: состав спринта",
+   "shape": {
+    "meaning": "состав",
+    "kind": "aggregation",
+    "place": {
+     "out": "link_tab",
+     "in": "part"
+    },
+    "analysis": [
+     "дерево",
+     "счёт"
+    ],
+    "ends": {
+     "KnowPhase>KnowSprint": {
+      "kind": "composition",
+      "why": "фаза без спринта не существует, спринт у фазы один"
+     },
+     "KnowTask>KnowSprint": {
+      "kind": "aggregation",
+      "why": "задачу переносят между спринтами — она живёт сама"
+     }
+    },
+    "shape_basis": "proposal"
+   }
+  },
+  "PERFORMED_BY": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PERFORMS": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PRODUCED": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PROMISES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "PROMOTED_TO": {
+   "rule": "keep",
+   "basis": "open",
+   "waits": [
+    "QGRecommendation"
+   ],
+   "note": "гейты качества — второй заход",
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "RAISED_IN": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowQuestion"
+   ],
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "REALIZES": {
+   "rule": "keep",
+   "basis": "proposal",
+   "waits": [
+    "KnowUseCase"
+   ],
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "prop",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "срез по владельцу",
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "REFERENCES_ADR": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "RELEASED_IN": {
+   "rule": "convert",
+   "to": "IMPLEMENTED_IN_RELEASE",
+   "basis": "proposal",
+   "note": "мёртвая связь: код её не пишет и не читает; спринт → релиз живёт в IMPLEMENTED_IN_RELEASE. Перевод без дублей. Предложение исполнителя"
+  },
+  "RELIEVES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "ROLE_HELD_BY": {
+   "rule": "keep",
+   "basis": "owner",
+   "waits": [
+    "KnowActor",
+    "KnowUser"
+   ],
+   "note": "роль задачи; история в самой связи — решение владелицы",
+   "shape": {
+    "meaning": "роли",
+    "kind": "attribute",
+    "place": {
+     "out": "prop",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "срез «кто что ведёт»",
+     "история во времени"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "SERVES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "SHIPPED_IN": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "SOURCED_FROM": {
+   "rule": "keep",
+   "basis": "owner",
+   "schema_only": true,
+   "props": {
+    "at": "STRING",
+    "via": "STRING"
+   },
+   "note": "пустая связь — только схема, без данных: её пишет или читает код сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»); код: AgentSourceTrail.java; свойства — старая схема (DDL в коде)"
+  },
+  "SUCCESS_OF": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "SUPERSEDES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "TAGGED_WITH": {
+   "rule": "keep",
+   "basis": "open",
+   "waits": [
+    "KnowTag",
+    "LoreComponent"
+   ],
+   "note": "спринт → тег ждёт решения о судьбе плана-доски и тегов; задача → компонент под этим именем — разобрать",
+   "shape": {
+    "meaning": "принадлежность",
+    "kind": "attribute",
+    "place": {
+     "out": "prop",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "срез по владельцу"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "TARGETS_KEY": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "TARGETS_MILESTONE": {
+   "rule": "keep",
+   "basis": "owner",
+   "waits": [
+    "KnowMilestone"
+   ],
+   "note": "веха спринта; история в самой связи — решение владелицы",
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "aggregation",
+    "place": {
+     "out": "prop",
+     "in": "part"
+    },
+    "analysis": [
+     "история во времени",
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  },
+  "TARGETS_PAGE": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "TARGETS_PRODUCT": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "TRACED_TO": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "UC_INCLUDES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "USES": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "USES_MACHINE": {
+   "rule": "keep",
+   "basis": "delegated",
+   "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+  },
+  "YIELDED": {
+   "rule": "keep",
+   "basis": "open",
+   "waits": [
+    "KnowFinding"
+   ],
+   "note": "гейты качества и находки — второй заход",
+   "shape": {
+    "meaning": "обоснование и результат",
+    "kind": "association",
+    "place": {
+     "out": "link_tab",
+     "in": "link_tab"
+    },
+    "analysis": [
+     "счёт"
+    ],
+    "shape_basis": "proposal"
+   }
+  }
+ }
+}

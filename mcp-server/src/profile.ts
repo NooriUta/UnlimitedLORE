@@ -12,7 +12,8 @@
 // Профили разрешений читаются из agent-profiles/*.json — тех же файлов, что
 // OpenCode-агенты (mcp-server/agent-profiles/README.md); двойного учёта нет.
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type Verdict = 'allow' | 'deny';
@@ -21,7 +22,7 @@ export type Permission = Record<string, Verdict>;
 /** Read-only профиль: срезы, поиск, граф, качество, версия. Ничего не пишет. */
 const CORE_TOOLS = [
   'list_slices', 'query_slice', 'changed', 'run_block', 'search', 'search_similar',
-  'task_shape', 'machine_acl', 'harness_list', 'graph', 'quality_check', 'lore_version', 'whoami',
+  'task_shape', 'machine_acl', 'harness_list', 'graph', 'graph_path', 'find', 'quality_check', 'lore_version', 'whoami',
 ] as const;
 
 export function corePermission(): Permission {
@@ -63,6 +64,27 @@ export function profileNameFromJwt(jwt: string): string | null | 'ambiguous' {
   if (profiles.size === 0) return null;
   if (profiles.size > 1) return 'ambiguous';
   return [...profiles][0];
+}
+
+/**
+ * AO-MCP-HOSTED: список допустимых имён профиля — core, full и файлы
+ * agent-profiles/*.json с блоком permission (tool-paths.json — не профиль).
+ * В HTTP-режиме имя приходит заголовком от клиента, поэтому сверяется с этим
+ * списком ДО чтения файла: иначе «../что-угодно» читало бы произвольный json.
+ */
+export function knownProfiles(): string[] {
+  const names = new Set<string>(['core', 'full']);
+  const dir = fileURLToPath(new URL('../agent-profiles/', import.meta.url));
+  try {
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith('.json')) continue;
+      try {
+        const doc = JSON.parse(readFileSync(join(dir, f), 'utf-8')) as { permission?: unknown };
+        if (doc.permission && typeof doc.permission === 'object') names.add(f.slice(0, -'.json'.length));
+      } catch { /* битый файл — не профиль */ }
+    }
+  } catch { /* нет каталога — только core/full */ }
+  return [...names].sort();
 }
 
 /** Загрузить профиль разрешений: имя файла из agent-profiles/, либо core/full. */

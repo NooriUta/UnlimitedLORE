@@ -148,13 +148,16 @@ export function diffVersions(older: Record<string, unknown> | null, newer: Recor
 
 export type KitAuthorView =
   | { kind: 'human'; name: string }
-  | { kind: 'agent'; name: string; owner: string | null }
+  /** hint — учётка агента подсказкой, когда приложение дало подпись (AO-AGENT-HUMAN-NAME): учётка текстом не видна, но не потеряна. */
+  | { kind: 'agent'; name: string; owner: string | null; hint?: string }
   | { kind: 'unknown'; name: null };
 
 /** Автор словами: человек — имя (иначе id), агент — имя (иначе id) и владелец. */
 export function historyAuthor(a: KitHistoryAuthor): KitAuthorView {
   if (a.kind === 'human') return { kind: 'human', name: a.name || a.id };
-  if (a.kind === 'agent') return { kind: 'agent', name: a.name || a.id, owner: a.owner };
+  if (a.kind === 'agent') return a.name && a.name !== a.id
+    ? { kind: 'agent', name: a.name, owner: a.owner, hint: a.id }
+    : { kind: 'agent', name: a.name || a.id, owner: a.owner };
   return { kind: 'unknown', name: null };
 }
 
