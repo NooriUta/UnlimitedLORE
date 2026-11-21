@@ -183,6 +183,12 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
             // SUPERTAGS-SPIKE: срез знаний по тегу — рядом с ADR, решениями и спеками, которые теги и метят.
             item('tags', ICON_CANON.sectionTags)],
         },
+        // «Организация» (владелица 21.11.2026: «Организация — организации, продукты, проекты, люди»): кто и что
+        // делает. Продукт — логическая группа проектов (PS-PRODUCT-FILTER); люди — общий список без прав и ролей.
+        {
+          id: 'org', title: t('shell.grp.org'), tone: 'var(--inf)',
+          items: [item('organization', 'castle'), item('product', SECTION_ICONS.value), item('project', 'open-folder'), item('user', 'person')],
+        },
         // «Продукт» — зачем всё это (глава «Зачем» v1): продукты, фичи и сценарии,
         // роли, боли, выгоды, работы (S4-PRODUCTS-NODE). «Фичи» переехали сюда из
         // «Устройства» (S4-PRODUCT-HILITE) — перенос, раздел и его экран те же.
@@ -191,16 +197,15 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         {
           id: 'product', title: t('shell.grp.product'), tone: 'var(--wrn)',
           items: [
-            item('product', SECTION_ICONS.value), item('feature', 'gift-of-knowledge'), item('actor', 'hooded-figure'),
+            item('feature', 'gift-of-knowledge'), item('actor', 'hooded-figure'),
             item('pain', 'thorn-helix'), item('gain', 'gift-of-knowledge'), item('job', 'archery-target'),
           ],
         },
         // «Устройство» — из чего система сделана: проекты, компоненты, технологии.
         {
           id: 'system', title: t('shell.grp.system'), tone: 'var(--inf)',
-          items: [item('project', 'open-folder'), item('component', 'cog'), item('tech', 'gears'),
-            // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий — отдельный объект; организация — самостоятельный, пока пустой.
-            item('repository', 'chest'), item('organization', 'castle')],
+          // Владелица 21.11.2026: «в Устройстве оставила бы технологии, репозитории, компоненты».
+          items: [item('tech', 'gears'), item('repository', 'chest'), item('component', 'cog')],
         },
         // S9-05 A: «Участники» — кто делает работу: люди и агенты, у каждого паспорт с его задачами.
         { id: 'personal', title: t('shell.grp.personal'), tone: 'var(--wrn)', items: [item('settings', ICON_CANON.sectionSettings, 'settings')] },

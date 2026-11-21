@@ -7287,13 +7287,27 @@
       "icon" : "price-tag"
     } ]
   }, {
+    "id" : "org",
+    "labelKey" : "shell.grp.org",
+    "tone" : "var(--inf)",
+    "items" : [ {
+      "section" : "organization",
+      "icon" : "castle"
+    }, {
+      "section" : "product",
+      "icon" : "bullseye"
+    }, {
+      "section" : "project",
+      "icon" : "open-folder"
+    }, {
+      "section" : "user",
+      "icon" : "person"
+    } ]
+  }, {
     "id" : "product",
     "labelKey" : "shell.grp.product",
     "tone" : "var(--wrn)",
     "items" : [ {
-      "section" : "product",
-      "icon" : "bullseye"
-    }, {
       "section" : "feature",
       "icon" : "gift-of-knowledge"
     }, {
@@ -7314,20 +7328,14 @@
     "labelKey" : "shell.grp.system",
     "tone" : "var(--inf)",
     "items" : [ {
-      "section" : "project",
-      "icon" : "open-folder"
-    }, {
-      "section" : "component",
-      "icon" : "cog"
-    }, {
       "section" : "tech",
       "icon" : "gears"
     }, {
       "section" : "repository",
       "icon" : "chest"
     }, {
-      "section" : "organization",
-      "icon" : "castle"
+      "section" : "component",
+      "icon" : "cog"
     } ]
   }, {
     "id" : "personal",
@@ -7368,7 +7376,7 @@
     "tags" : "everywhere",
     "task" : "everywhere",
     "tech" : "everywhere",
-    "user" : "admin"
+    "user" : "everywhere"
   },
   "create" : {
     "decision" : {

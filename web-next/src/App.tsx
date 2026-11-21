@@ -27,7 +27,7 @@ import { legacyHashHref, legacyPassportHref } from './nav/loreRoutes';
 import { adminAxisHref, legacyAdminHref } from './admin/adminModule';
 import { createLiveS2Client } from './api/liveS2';
 import { v2Auth } from './auth/session';
-import { ProjectScope } from './scope/ProjectScope';
+import { ProductScope } from './scope/ProductScope';
 import { AccountMenu } from './settings/AccountMenu';
 import { SectionPalette } from './palette/SectionPalette';
 import { OutsideShell } from './pages/OutsideShell';
@@ -183,7 +183,7 @@ export default function App({ path, search, win, storage = appStorage, narrow }:
         {/* Метка версии — ID-пилюля kit в шапке: v2 нельзя спутать с v1. */}
         <V2Shell storage={storage} win={win} narrow={narrow} brandTag={<Pill variant="id">v2</Pill>}
           // S4-23: охват проектов — сразу за приложениями, как в прототипе v4.
-          topStart={<ProjectScope />}
+          topStart={<ProductScope />}
           topEnd={(
             <>
               {/* S4-14: «/» — поиск через слайс search, Ctrl+K — команды над записью/выделением.
