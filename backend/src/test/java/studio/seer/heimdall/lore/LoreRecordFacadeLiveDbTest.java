@@ -302,13 +302,18 @@ class LoreRecordFacadeLiveDbTest {
 
     /** Общий минимум контракта lore.record/1 для паспорта только-для-чтения. */
     private JsonPath readOnlyContract(String type, String id) {
+        return readOnlyContract(type, id, false);
+    }
+
+    /** canEdit — у типа только чтения есть управляемая связь (веха: «зависит от», MDL-13): правка связей обещается админу. */
+    private JsonPath readOnlyContract(String type, String id, boolean canEdit) {
         JsonPath r = record(type, id);
         String w = type + ": ";
         assertEquals("lore.record/1", r.getString("contract"), w + "контракт");
         assertEquals(type, r.getString("record.type"), w + "тип");
         assertEquals(id, r.getString("record.id"), w + "деловой ключ, не @rid");
         assertNull(r.get("record.version"), w + "истории SCD2 нет — версии нет");
-        assertFalse(r.getBoolean("perms.can_edit"), w + "только чтение — правка не обещается");
+        assertEquals(canEdit, r.getBoolean("perms.can_edit"), w + (canEdit ? "связи правятся из паспорта" : "только чтение — правка не обещается"));
         assertFalse(r.getBoolean("perms.can_status"), w + "смена статуса не обещается");
         assertEquals(List.of(), r.getList("perms.status_next"), w);
         assertEquals(type, r.getString("schema.type"), w + "раскладка из реестра");
@@ -324,7 +329,7 @@ class LoreRecordFacadeLiveDbTest {
     void milestonePassportContract() {
         admin().body(Map.of("milestone_id", "M-REC-PASS", "label", "веха для паспорта", "goal_md", "цель"))
             .post("/lore/milestone").then().statusCode(200);
-        JsonPath m = readOnlyContract("milestone", "M-REC-PASS");
+        JsonPath m = readOnlyContract("milestone", "M-REC-PASS", true); // MDL-13: зависимости вехи — из паспорта
         assertEquals("веха для паспорта", m.getString("values.title"));
         assertEquals("цель", m.getString("values.goal_md"));
         assertEquals(0, m.getInt("computed.sprints_total.value"));

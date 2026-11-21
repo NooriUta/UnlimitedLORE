@@ -44,16 +44,37 @@ final class SliceProjectNarrowing {
      * пересечение). Возвращает отметку для ответа или {@code null}, если параметра не было.
      */
     static Map<String, Object> expandProducts(Map<String, String> given, Map<String, List<String>> projectsOf) {
+        return expandProducts(given, projectsOf, Map.of());
+    }
+
+    /**
+     * Владелица 21.11.2026: в шапке подпродукты — раскрывашкой под продуктом, выбор родителя включает подпродукты.
+     * {@code parentOf} — подпродукт → родитель (PARENT_PRODUCT): к выбранному продукту добавляются все его потомки
+     * (по цепочке), проекты — объединением без дублей. Выбранный подпродукт родителя не тянет.
+     */
+    static Map<String, Object> expandProducts(Map<String, String> given, Map<String, List<String>> projectsOf,
+                                              Map<String, String> parentOf) {
         String raw = given.remove(PRODUCTS_PARAM);
         if (raw == null) return null;
         List<String> products = LoreSlices.listValue(PRODUCTS_PARAM, raw);
+        Map<String, List<String>> childrenOf = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : new java.util.TreeMap<>(parentOf).entrySet())
+            childrenOf.computeIfAbsent(e.getValue(), k -> new ArrayList<>()).add(e.getKey());
+        Set<String> codes = new LinkedHashSet<>(products);
+        List<String> subproducts = new ArrayList<>();
+        java.util.Deque<String> queue = new java.util.ArrayDeque<>(products);
+        while (!queue.isEmpty()) {
+            for (String child : childrenOf.getOrDefault(queue.poll(), List.of())) {
+                if (codes.add(child)) { subproducts.add(child); queue.add(child); }
+            }
+        }
         Set<String> projects = new LinkedHashSet<>();
         List<String> unknown = new ArrayList<>();
         List<String> withoutProjects = new ArrayList<>();
-        for (String code : products) {
+        for (String code : codes) {
             List<String> ps = projectsOf.get(code);
             if (ps == null) { unknown.add(code); continue; }
-            if (ps.isEmpty()) withoutProjects.add(code);
+            if (ps.isEmpty() && products.contains(code)) withoutProjects.add(code);
             projects.addAll(ps);
         }
         String chosen = given.get(PARAM);
@@ -61,6 +82,7 @@ final class SliceProjectNarrowing {
         given.put(PARAM, projects.isEmpty() ? NO_PROJECT : String.join(",", projects));
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("products", products);
+        if (!subproducts.isEmpty()) meta.put("subproducts", subproducts);
         meta.put("projects", List.copyOf(projects));
         if (!unknown.isEmpty()) meta.put("unknown", unknown);
         if (!withoutProjects.isEmpty()) meta.put("without_projects", withoutProjects);

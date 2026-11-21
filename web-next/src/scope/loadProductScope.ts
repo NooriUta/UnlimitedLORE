@@ -11,7 +11,13 @@ export interface ProductRow {
   kind?: string[] | string | null;
   git_projects?: (string | null)[] | null;
   is_active?: boolean | null;
+  /** Родитель подпродукта (out('PARENT_PRODUCT').code) — списком из одного или строкой. */
+  parent_code?: (string | null)[] | string | null;
 }
+
+/** Родитель подпродукта: первый непустой код; нет — продукт верхнего уровня. */
+const parentOf = (p: ProductRow['parent_code']): string | undefined =>
+  (Array.isArray(p) ? p.find((x): x is string => typeof x === 'string' && !!x) : (typeof p === 'string' && p ? p : undefined));
 
 export type ProductScopeData = SliceCompletenessMeta & {
   rows: ScopeOption[];
@@ -41,6 +47,10 @@ export async function loadProductScope({ fetch, me, signal, noProject = 'без 
       const projects = (r.git_projects ?? []).filter((p): p is string => !!p);
       const o: ScopeOption = { id: r.code as string, title: r.label_ru || (r.code as string), hint: projects.length ? projects.map(noOrg).join(' · ') : noProject };
       if (mine) o.mine = projects.some(p => mine.has(p));
+      // PS-PRODUCT-FILTER (владелица 21.11.2026: «раскрытием дерева с кнопочкой рядом с составным продуктом»):
+      // подпродукт — под родителем в дереве ScopePicker; выбор родителя раскрывает подпродукты бэкенд.
+      const parent = parentOf(r.parent_code);
+      if (parent) o.parent = parent;
       return { o, tech: kinds(r.kind).includes('tech') };
     });
   // Порядок: технологические, затем сервисные; внутри — как отдал срез (sort_order).

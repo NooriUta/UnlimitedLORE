@@ -32,6 +32,19 @@ describe('продукты для верхнего фильтра', () => {
     expect(d.mine).toBe('known');
     expect(d.mineCount).toBe(2);
   });
+  // Владелица 21.11.2026: «сделать раскрытием дерева с кнопочкой рядом с составным продуктом». Подпродукт несёт родителя
+  // (parent_code среза products) — kit ScopePicker кладёт его под родителя раскрывашкой; выбор родителя раскрывает
+  // в проекты вместе с подпродуктами бэкенд (scope_products).
+  it('подпродукт знает родителя (parent_code — список или строка); у продукта верхнего уровня родителя нет', async () => {
+    const tree = [
+      { code: 'AIDA', label_ru: 'AIDA', kind: ['tech'], git_projects: ['NooriUta/AIDA'], parent_code: [] },
+      { code: 'HOUND', label_ru: 'Hound', kind: ['tech'], git_projects: [], parent_code: ['AIDA'] },
+      { code: 'TYR', label_ru: 'TYR', kind: ['tech'], git_projects: [], parent_code: 'OMILORE' },
+      { code: 'OMILORE', label_ru: 'OMILORE', kind: ['tech'], git_projects: ['NooriUta/UnlimitedLORE'] },
+    ];
+    const d = await loadProductScope({ fetch: (async () => ({ rows: tree })) as never, me: async () => [] });
+    expect(d.rows.map(r => [r.id, r.parent ?? null])).toEqual([['AIDA', null], ['HOUND', 'AIDA'], ['TYR', 'OMILORE'], ['OMILORE', null]]);
+  });
   it('мои проекты не проверены — «мои» неизвестно, список остаётся', async () => {
     const d = await loadProductScope({ fetch, me: async () => { throw new Error('500'); } });
     expect(d.mine).toBe('unknown');
