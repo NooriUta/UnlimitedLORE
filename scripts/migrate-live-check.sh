@@ -25,6 +25,9 @@
 #      удаляются на копии) → должно совпасть с ПОСЛЕ: шаг идемпотентен, даже если
 #      ledger записан, а работа прервана (ловушка, найденная на live-DB тестах);
 #   7. отчёт report.md в REPORT_DIR; база-копия удаляется ВСЕГДА (trap).
+#   База из модели (1.18+, отметка LoreModelSchema, ledger-а нет): версия снимка —
+#   номер модели; «накатка» — старт нового кода в режиме накатки (шаги V пропущены,
+#   номер модели дописан), повтор — без изменений; фаза 6 пропускается.
 #
 # Вердикт: 0 — зелёно, 1 — красно (убыль без объявления, пропажа записи, новая
 # двойная открытая версия, неидемпотентный повтор, накатка упала), 2 — проверка
@@ -70,6 +73,26 @@ snap_mode() {
   # старт бэкенда неизвестен — архиву верить нельзя
   [ -n "$start" ] && [ "$arch" -gt "$start" ] && echo latest || echo fresh
 }
+# Действует ли строка declared-decrease.tsv на этот снимок (патч 1.18.1).
+# База шагов V (ledger LoreSchemaVersion): числовая строка новее схемы снимка.
+# База из модели (отметка LoreModelSchema): шаги V на неё не накатываются, их
+# объявления не действуют; действует «model:N» с N больше номера модели снимка
+# (отметка без номера, до 1.18.1, — номер 0).
+#   decl_applies <steps|model> <версия снимка> <версия строки>
+decl_applies() {
+  local src="$1" snap="${2:-0}" ver="$3"
+  case "$src:$ver" in
+    model:model:*) [ "${ver#model:}" -gt "$snap" ] 2>/dev/null ;;
+    steps:model:*|model:*) return 1 ;;
+    *) [ "$ver" -gt "$snap" ] 2>/dev/null ;;
+  esac
+}
+# Накатка подтверждена: код 0 и строка конца шага. На базе из модели раннер шаги V
+# пропускает (дописав номер модели) и пишет свою строку — это тоже «накатано».
+#   migrate_ok <код> <лог>
+migrate_ok() {
+  [ "$1" = 0 ] && grep -qE "lore.migrate.only=true — (схема накатана|схема собрана из модели .*шаги V пропущены)" "$2"
+}
 if [ "${1:-}" = "--selftest" ]; then
   fail=0
   t() { got="$(snap_mode "$1" "$2" "$3" "$4" "$5")"; [ "$got" = "$6" ] || { echo "::error::selftest: snap_mode $* → $got"; fail=1; }; }
@@ -79,6 +102,22 @@ if [ "${1:-}" = "--selftest" ]; then
   t auto 2 24 1000 "" fresh       # старт бэкенда неизвестен
   t auto 2 24 "" 900 fresh        # архива нет
   t latest 2 24 1000 1003 latest  # явный режим не трогаем
+  # патч 1.18.1: снимок прода — база из модели (шагов V нет, ledger-а нет)
+  d() { decl_applies "$1" "$2" "$3" && got=yes || got=no; [ "$got" = "$4" ] || { echo "::error::selftest: decl_applies $* → $got"; fail=1; }; }
+  d steps 88 89 yes               # шаг новее снимка — объявление действует
+  d steps 89 89 no                # шаг уже на проде
+  d model 1 89 no                 # база из модели: шаги V не накатываются, их убыль не разрешается
+  d model 1 model:2 yes           # следующий номер модели — действует
+  d model 1 model:1 no
+  d model "" model:1 yes          # отметка без номера (до 1.18.1) — как model:0
+  d steps 88 model:2 no           # объявление модели к базе шагов V не относится
+  m() { printf '%s\n' "$2" > "$tmp"; migrate_ok "$1" "$tmp" && got=yes || got=no; [ "$got" = "$3" ] || { echo "::error::selftest: migrate_ok $1 «$2» → $got"; fail=1; }; }
+  tmp="$(mktemp)"
+  m 0 "[LORE MIGRATE] lore.migrate.only=true — схема накатана, процесс завершается (шаг накатки CD)" yes
+  m 0 "[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)" yes
+  m 1 "[LORE MIGRATE] lore.migrate.only=true — схема накатана, процесс завершается (шаг накатки CD)" no
+  m 0 "Started" no
+  rm -f "$tmp"
   [ "$fail" = 0 ] && echo "selftest ok"; exit "$fail"
 fi
 
@@ -239,11 +278,14 @@ $INV snapshot "$API" "$DB" "$REPORT_DIR/before.json" || skip "инвентарь
 # объявление перестаёт действовать само. На pull_request вход ALLOW_DECREASE пуст,
 # и без файла каждый PR со схемой краснел бы на чужом уже смерженном шаге (#1316).
 snap_ver="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["schema_version"] or 0)' "$REPORT_DIR/before.json")"
+# База 1.18 собрана из модели: ledger-а шагов нет, версия — номер модели из LoreModelSchema.
+snap_src="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("schema_source") or "steps")' "$REPORT_DIR/before.json")"
+[ "$snap_src" = model ] && note "- снимок — база из модели (LoreModelSchema, номер ${snap_ver}): шаги V не накатываются, «накатка» — старт нового кода в режиме накатки"
 for decl in "$SRC_DIR/scripts/migrate-live-check/declared-decrease.tsv" "$HERE/migrate-live-check/declared-decrease.tsv"; do
   [ -f "$decl" ] || continue
   while IFS=$'\t' read -r ver types why; do
     case "$ver" in ''|\#*) continue ;; esac
-    [ "$ver" -gt "$snap_ver" ] 2>/dev/null || continue
+    decl_applies "$snap_src" "$snap_ver" "$ver" || continue
     case ",$ALLOW_DECREASE," in *",$types,"*) continue ;; esac
     ALLOW_DECREASE="${ALLOW_DECREASE:+$ALLOW_DECREASE,}$types"
     note "- объявлено в declared-decrease.tsv: V$ver — $types ($why)"
@@ -291,7 +333,7 @@ migrate() { # migrate <имя-лога> → 0, если накатка подт�
     "$IMG" > "$REPORT_DIR/$1.log" 2>&1
   local rc=$?
   grep -E "LORE MIGRATE" "$REPORT_DIR/$1.log" | tail -40
-  [ "$rc" = 0 ] && grep -q "lore.migrate.only=true — схема накатана" "$REPORT_DIR/$1.log"
+  migrate_ok "$rc" "$REPORT_DIR/$1.log"
 }
 
 VERDICT=0
@@ -392,6 +434,11 @@ $INV snapshot "$API" "$DB" "$REPORT_DIR/repeat.json" || skip "инвентарь
 section "Повтор накатки (ledger): после → повтор" after repeat repeat
 
 # ── 6. повтор с выполнением новых шагов заново ──────────────────────────────
+# На базе из модели ledger-а нет и шагов V нет — выполнять заново нечего; повтор
+# старта (фаза 5) — и есть проверка идемпотентности.
+if [ "$snap_src" = model ]; then
+  note ""; note "## Шаги заново"; note ""; note "- база из модели: шагов V нет, фаза пропущена (идемпотентность — повтор выше)"
+else
 vb="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["schema_version"] or 0)' "$REPORT_DIR/before.json")"
 say "накатка №3: шаги > v$vb выполняются заново (строки ledger удалены на копии)"
 d="$(sql_cmd "DELETE FROM LoreSchemaVersion WHERE version > $vb")"
@@ -399,6 +446,7 @@ case "$d" in *'"result"'*) ;; *) skip "строки ledger на копии не 
 migrate migrate-3 || { note "## 🔴 Повторное выполнение шагов упало"; echo "::error::повторное выполнение шагов упало"; exit 1; }
 $INV snapshot "$API" "$DB" "$REPORT_DIR/rerun.json" || skip "инвентарь после повторного выполнения не снят"
 section "Шаги заново (идемпотентность): после → заново" after rerun repeat
+fi
 
 # ── 7. рантайм на новой схеме ───────────────────────────────────────────────
 # Красно: прежний образ (код прода) не поднимается на новой схеме или отвечает на

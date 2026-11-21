@@ -37,7 +37,8 @@ SCD2 = {
 }
 # Служебные типы, чьи записи меняются самим раннером миграций (applied_at), —
 # в сверке образцов повтора не участвуют; число записей сверяется всегда.
-VOLATILE_SAMPLES = {"LoreSchemaVersion"}
+# LoreModelSchema: накатка 1.18.1 дописывает в отметку model_version — тело меняется по замыслу.
+VOLATILE_SAMPLES = {"LoreSchemaVersion", "LoreModelSchema"}
 
 
 NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -75,8 +76,8 @@ def snapshot(api, db, out):
     if not types:
         raise CheckFailed("schema:types пуст — база не открыта или нет прав")
     inv = {"db": db, "types": {}, "samples": {}, "scd2": {}}
-    vers = q(api, db, "SELECT max(version) AS v, count(*) AS n FROM LoreSchemaVersion")
-    inv["schema_version"] = vers[0].get("v") if vers else None
+    src, ver, mhash = schema_of([t["name"] for t in types], lambda sql: q(api, db, sql))
+    inv["schema_source"], inv["schema_version"], inv["model_hash"] = src, ver, mhash
     for t in sorted(types, key=lambda x: x["name"]):
         name, kind = t["name"], t.get("type")
         cnt = q(api, db, f"SELECT count(*) AS c FROM `{name}`")
@@ -113,7 +114,29 @@ def snapshot(api, db, out):
     with open(out, "w", encoding="utf-8") as f:
         json.dump(inv, f, ensure_ascii=False, indent=1, sort_keys=True)
     print(f"инвентарь {db}: типов {len(inv['types'])}, записей {sum(v['count'] for v in inv['types'].values())}, "
-          f"схема v{inv['schema_version']}")
+          f"схема {schema_label(inv)}")
+
+
+def schema_of(type_names, qf):
+    """Версия схемы снимка: (источник, номер, хэш модели).
+
+    База 1.18 собрана из модели: ledger-а шагов LoreSchemaVersion в ней нет, есть отметка
+    LoreModelSchema (model_version, model_hash). Запрос к несуществующему LoreSchemaVersion —
+    HTTP 500, и прежде из-за него каждый PR со схемой выходил «проверка не выполнилась».
+    """
+    if "LoreModelSchema" in type_names:
+        rows = qf("SELECT model_version, model_hash FROM LoreModelSchema")
+        r = rows[0] if rows else {}
+        return "model", r.get("model_version"), r.get("model_hash")
+    rows = qf("SELECT max(version) AS v, count(*) AS n FROM LoreSchemaVersion")
+    return "steps", (rows[0].get("v") if rows else None), None
+
+
+def schema_label(inv):
+    v = inv.get("schema_version")
+    if inv.get("schema_source") == "model":
+        return f"model:{v if v is not None else '—'} (хэш {inv.get('model_hash')})"
+    return f"v{v}"
 
 
 def compare(before_p, after_p, mode, allow_csv, out_md):
@@ -195,16 +218,27 @@ def compare(before_p, after_p, mode, allow_csv, out_md):
         if new_dups:
             red.append(f"{hist}: новые двойные открытые версии у {new_dups[:10]}")
 
+    model = b.get("schema_source") == "model"
+    if model and a.get("schema_source") != "model":
+        red.append("накатка превратила базу шагов V в базу из модели — так не накатывают, базу из модели строит переливка")
     if mode == "migrate":
         va, vb = a.get("schema_version"), b.get("schema_version")
-        lines.insert(0, f"Схема: v{va} → v{vb}\n")
-        if va is None or vb is None or vb < va:
+        lines.insert(0, f"Схема: {schema_label(a)} → {schema_label(b)}\n")
+        if model:
+            # Отметка до 1.18.1 номера не несла: «нет» → 1 — это дописанный номер, а не убыль.
+            if vb is None or (va is not None and vb < va):
+                red.append(f"номер модели не прочитан или убыл ({schema_label(a)} → {schema_label(b)})")
+            elif a.get("model_hash") != b.get("model_hash"):
+                warn.append(f"старт нового кода сменил хэш модели {a.get('model_hash')} → {b.get('model_hash')} — сверить с переливкой")
+            else:
+                lines.insert(1, "База из модели: шаги V не накатываются, сверяется, что старт нового кода не тронул данные.\n")
+        elif va is None or vb is None or vb < va:
             red.append(f"версия схемы не прочитана или упала (v{va} → v{vb})")
         elif vb == va:
             lines.insert(1, "Новых шагов схемы в проверяемом коде нет — сверяется, что накатка ничего не тронула.\n")
     else:
-        if a.get("schema_version") != b.get("schema_version"):
-            red.append(f"повтор изменил версию схемы v{a.get('schema_version')} → v{b.get('schema_version')}")
+        if a.get("schema_version") != b.get("schema_version") or a.get("model_hash") != b.get("model_hash"):
+            red.append(f"повтор изменил версию схемы {schema_label(a)} → {schema_label(b)}")
 
     verdict = "🔴 КРАСНО" if red else ("🟡 зелёно с замечаниями" if warn else "🟢 зелёно")
     head = [f"**{verdict}**"] + [f"- 🔴 {x}" for x in red] + [f"- 🟡 {x}" for x in warn] + [""]
@@ -258,6 +292,31 @@ def selftest():
         "повтор без изменений — зелёно": case(same, "repeat", "", 0),
         "повтор изменил запись — красно": case(changed, "repeat", "", 1),
     }
+    # Патч 1.18.1: снимок прода — база 1.18 из модели: LoreSchemaVersion нет, есть отметка LoreModelSchema.
+    # Прежде снимок падал «SELECT … FROM LoreSchemaVersion → HTTP 500» и каждый PR со схемой «не выполнялся».
+    def no_ledger(sql):
+        if "LoreSchemaVersion" in sql:
+            raise CheckFailed("LoreSchemaVersion → HTTP 500 (типа нет)")
+        return [{"model_version": 1, "model_hash": "d7e16a827891d5e0"}]
+    m_base = {**json.loads(json.dumps(base)), "schema_source": "model", "schema_version": None, "model_hash": "d7e16a827891d5e0"}
+    m_one = {**json.loads(json.dumps(m_base)), "schema_version": 1}
+    m_down = {**json.loads(json.dumps(m_one)), "schema_version": 0}
+
+    def case_from(before, after, mode, want):
+        with tempfile.TemporaryDirectory() as d:
+            a, b, m = (os.path.join(d, x) for x in ("a.json", "b.json", "r.md"))
+            json.dump(before, open(a, "w")); json.dump(after, open(b, "w"))
+            return compare(a, b, mode, "", m) == want
+
+    checks.update({
+        "база из модели: версия из LoreModelSchema, LoreSchemaVersion не трогается":
+            schema_of(["KnowTask", "LoreModelSchema"], no_ledger) == ("model", 1, "d7e16a827891d5e0"),
+        "база шагов V: версия из LoreSchemaVersion":
+            schema_of(["KnowTask", "LoreSchemaVersion"], lambda sql: [{"v": 93, "n": 93}]) == ("steps", 93, None),
+        "база из модели: номер модели появился (нет → 1) — зелёно": case_from(m_base, m_one, "migrate", 0),
+        "база из модели: номер модели убыл — красно": case_from(m_one, m_down, "migrate", 1),
+        "база из модели: повтор без изменений — зелёно": case_from(m_one, json.loads(json.dumps(m_one)), "repeat", 0),
+    })
     bad = [k for k, v in checks.items() if not v]
     for k, v in checks.items():
         print(f"selftest {'ok ' if v else 'FAIL'} {k}")
