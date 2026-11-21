@@ -84,6 +84,14 @@ describe('D · GroupCard — фон-картинка (как фото комна
   });
 });
 
+describe('D · GroupCard — большая подробная карточка', () => {
+  it('подробности приложения показываются под чипами; размер large — классом', () => {
+    const { container } = render(<GroupCard title="Гостиная" main="22,6 °C" chips={[]} size="large" details={<ul><li>Люстра · 4 из 5</li></ul>} />);
+    expect(screen.getByText('Люстра · 4 из 5')).toBeTruthy();
+    expect(container.firstElementChild!.className).toMatch(/sk-groupcard--large/);
+  });
+});
+
 describe('E · TileGauge — кольцо-шкала', () => {
   it('дуга по доле; тревога — классом; значение в центре', () => {
     const { container } = render(<TileGauge label="CO₂" value="1167" icon={<i />} fraction={0.7} alarm />);

@@ -7871,3 +7871,8 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-groupcard.has-photo .sk-groupcard__title, .sk-groupcard.has-photo .sk-groupcard__main, .sk-groupcard.has-photo .sk-groupcard__empty { text-shadow: 0 1px 2px var(--bg0), 0 0 12px var(--bg0); }
 .sk-groupcard.has-photo .sk-groupcard__main.is-estimate { opacity: 0.92; }
 .sk-groupcard.has-photo .sk-groupcard__chip { background: var(--bg0); }
+.sk-groupcard__details { position: relative; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; font-size: var(--fs-xs); color: var(--t1); }
+.sk-groupcard--large { min-height: 320px; padding: 18px; }
+.sk-groupcard--large .sk-groupcard__main { font-size: calc(var(--fs-2xl) * 1.6); }
+.sk-groupcard--large .sk-groupcard__bg { height: 120px; }
+.sk-groupcard--large .sk-groupcard__title { font-size: var(--fs-lg); }

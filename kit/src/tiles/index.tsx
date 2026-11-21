@@ -124,11 +124,15 @@ export function TileBar(p: TileCommon & { fraction: number | null }) {
 // ── D ──────────────────────────────────────────────────────────────────────
 export interface GroupChip { key: string; icon: ReactNode; text: string; tone?: string; alarm?: boolean }
 
-export function GroupCard({ title, main, empty, chips, series, estimate, alarm, tone, onOpen, background }: {
+export function GroupCard({ title, main, empty, chips, series, estimate, alarm, tone, onOpen, background, details, size }: {
   title: string; main: string | null; empty?: string; chips: GroupChip[]; series?: readonly SparkPoint[];
   estimate?: boolean; alarm?: boolean; tone?: string; onOpen?: () => void;
   /** Фон-картинка (фото комнаты, как в GLADSHEIM /app): адрес даёт приложение; поверх — затемнение для читаемости. */
   background?: string;
+  /** Подробности (крупная карточка): списки и строки приложения под чипами. */
+  details?: ReactNode;
+  /** large — крупная карточка (2×2 в раскладке «бенто»): линия выше, главное значение крупнее. */
+  size?: 'normal' | 'large';
 }) {
   const lang = useKitLang();
   const body = (
@@ -148,9 +152,10 @@ export function GroupCard({ title, main, empty, chips, series, estimate, alarm, 
             <span key={c.key} className={c.alarm ? 'sk-groupcard__chip is-alarm' : 'sk-groupcard__chip'} style={toneVar(c.tone)}>
               <span className="sk-tile__icon">{c.icon}</span>{c.text}</span>))}
         </span>)}
+      {details && <span className="sk-groupcard__details">{details}</span>}
     </>
   );
-  const className = cls('sk-groupcard', { alarm }, background ? 'has-photo' : '');
+  const className = cls('sk-groupcard', { alarm }, [background ? 'has-photo' : '', size === 'large' ? 'sk-groupcard--large' : ''].filter(Boolean).join(' '));
   return onOpen
     ? <button type="button" className={className} style={toneVar(tone)} onClick={onOpen}>{body}</button>
     : <div className={className} style={toneVar(tone)}>{body}</div>;
