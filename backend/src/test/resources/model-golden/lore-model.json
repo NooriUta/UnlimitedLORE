@@ -1,8 +1,8 @@
 {
   "format" : "model/0",
-  "version" : "b799c68bf7ff088b",
+  "version" : "517198510ad5b3b5",
   "partial" : true,
-  "missing" : [ "surfaces:list", "statuses:*" ],
+  "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
   "statuses" : {
     "task" : {
@@ -6777,7 +6777,7 @@
         "key" : "is_current",
         "label" : "Текущий",
         "label_key" : "pp.field.isCurrent",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,
@@ -6799,9 +6799,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : null,
         "property_type" : null,
@@ -13221,7 +13221,7 @@
         "key" : "is_private",
         "label" : "Приватный",
         "label_key" : "pp.field.isPrivate",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,
@@ -13243,9 +13243,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : null,
         "property_type" : null,
@@ -15440,7 +15440,298 @@
         "icon" : "material-symbols:settings-outline",
         "view" : "settings"
       } ]
-    } ]
+    } ],
+    "list" : {
+      "actor" : {
+        "slice" : "actors",
+        "id_key" : "actor_id",
+        "title_key" : "name",
+        "record_path" : "/lore/record/actor/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "kind" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "adr" : {
+        "slice" : "adrs",
+        "id_key" : "adr_id",
+        "title_key" : "name",
+        "status_key" : "status",
+        "record_path" : "/lore/record/adr/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "agent" : {
+        "slice" : "agents",
+        "id_key" : "actor_id",
+        "title_key" : "name",
+        "record_path" : "/lore/record/agent/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "agent_role", "harness" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "component" : {
+        "slice" : "components",
+        "id_key" : "component_id",
+        "title_key" : "full_name",
+        "record_path" : "/lore/record/component/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "area" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "decision" : {
+        "slice" : "decisions",
+        "id_key" : "decision_id",
+        "title_key" : "title",
+        "status_key" : "status_raw",
+        "record_path" : "/lore/record/decision/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status_raw" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "doc" : {
+        "slice" : "docs",
+        "id_key" : "doc_id",
+        "title_key" : "title",
+        "record_path" : "/lore/record/doc/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "feature" : {
+        "slice" : "use_cases",
+        "id_key" : "uc_id",
+        "title_key" : "title",
+        "status_key" : "status",
+        "record_path" : "/lore/record/feature/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status", "goal_level" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "gain" : {
+        "slice" : "gains",
+        "id_key" : "gain_id",
+        "title_key" : "title",
+        "record_path" : "/lore/record/gain/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "rank" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "job" : {
+        "slice" : "jobs",
+        "id_key" : "job_id",
+        "title_key" : "title",
+        "record_path" : "/lore/record/job/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "kind", "importance" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "milestone" : {
+        "slice" : "milestones",
+        "id_key" : "milestone_id",
+        "title_key" : "label",
+        "status_key" : "status",
+        "record_path" : "/lore/record/milestone/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "priority" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "organization" : {
+        "slice" : "organizations",
+        "id_key" : "org_id",
+        "title_key" : "name",
+        "record_path" : "/lore/record/organization/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "since" : "1.18.0"
+      },
+      "pain" : {
+        "slice" : "pains",
+        "id_key" : "pain_id",
+        "title_key" : "title",
+        "record_path" : "/lore/record/pain/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "severity" ],
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "pr" : {
+        "slice" : "prs",
+        "id_key" : "pr_uid",
+        "title_key" : "title",
+        "status_key" : "state",
+        "record_path" : "/lore/record/pr/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "git_project" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "1.18.0"
+      },
+      "product" : {
+        "slice" : "products",
+        "id_key" : "code",
+        "title_key" : "label_ru",
+        "record_path" : "/lore/record/product/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "project" : {
+        "slice" : "git_projects",
+        "id_key" : "slug",
+        "title_key" : "name",
+        "record_path" : "/lore/record/project/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "quality_gate" : {
+        "slice" : "quality_gates",
+        "id_key" : "qg_id",
+        "title_key" : "name",
+        "status_key" : "status",
+        "record_path" : "/lore/record/quality_gate/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "question" : {
+        "slice" : "questions",
+        "id_key" : "question_id",
+        "title_key" : "title",
+        "status_key" : "status",
+        "record_path" : "/lore/record/question/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "release" : {
+        "slice" : "releases",
+        "id_key" : "release_uid",
+        "title_key" : "git_tag",
+        "record_path" : "/lore/record/release/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "type" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "repository" : {
+        "slice" : "repositories",
+        "id_key" : "url",
+        "title_key" : "full_path",
+        "record_path" : "/lore/record/repository/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "host" ],
+        "requires_role" : null,
+        "since" : "1.18.0"
+      },
+      "runbook" : {
+        "slice" : "runbooks",
+        "id_key" : "runbook_id",
+        "title_key" : "name",
+        "record_path" : "/lore/record/runbook/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "area" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "spec" : {
+        "slice" : "specs",
+        "id_key" : "spec_id",
+        "title_key" : "title",
+        "status_key" : "status",
+        "record_path" : "/lore/record/spec/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "sprint" : {
+        "slice" : "sprints",
+        "id_key" : "sprint_id",
+        "title_key" : "name",
+        "status_key" : "status_raw",
+        "record_path" : "/lore/record/sprint/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status_raw" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "task" : {
+        "slice" : "open_tasks",
+        "segments" : [ {
+          "key" : "open",
+          "slice" : "open_tasks",
+          "label_key" : "lists.status.open",
+          "default" : true
+        }, {
+          "key" : "closed",
+          "slice" : "closed_tasks",
+          "label_key" : "lists.status.closed"
+        }, {
+          "key" : "all",
+          "slice" : "all_tasks"
+        } ],
+        "id_key" : "task_uid",
+        "title_key" : "title",
+        "status_key" : "status_raw",
+        "record_path" : "/lore/record/task/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status_raw" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "<=1.17"
+      },
+      "tech" : {
+        "slice" : "tech_registry",
+        "id_key" : "spec_id",
+        "title_key" : "tech_name",
+        "record_path" : "/lore/record/tech/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "track" : {
+        "slice" : "track_options",
+        "id_key" : "code",
+        "title_key" : "title",
+        "record_path" : "/lore/record/track/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "since" : "<=1.17"
+      },
+      "user" : {
+        "slice" : "users",
+        "id_key" : "kc_sub",
+        "title_key" : "display_name",
+        "record_path" : "/lore/record/user/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "since" : "<=1.17"
+      }
+    }
   },
   "audience" : {
     "actor" : "everywhere",
@@ -16188,6 +16479,64 @@
       "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
       "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег.",
       "owners" : [ "adr", "decision" ]
+    }
+  },
+  "agent_profiles" : {
+    "about" : "OH-MCP-HOSTED-SWITCH (решения владелицы 21.11.2026): роли учёток MCP и их порядок — full > architect > pm > (product-analyst | analyst | developer | marketer) > tester. «Роль A не выше B» — A == B или B среди предков A по parents; rank — порядок показа. У harness одна главная роль (main), младшие — допом: учётка выше главной для harness не выпускается. Имя учётки — lore-mcp-<роль>[_<suffix>] (у Claude Code суффикса нет), ключ секрета — LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<SUFFIX>].",
+    "profiles" : [ {
+      "code" : "full",
+      "rank" : 10,
+      "parents" : [ ],
+      "about" : "Полная поверхность MCP: всё, что разрешено учётке."
+    }, {
+      "code" : "architect",
+      "rank" : 20,
+      "parents" : [ "full" ],
+      "about" : "Архитектор: ADR, решения, спеки."
+    }, {
+      "code" : "pm",
+      "rank" : 30,
+      "parents" : [ "architect" ],
+      "about" : "Менеджер: спринты, задачи, статусы, релизы."
+    }, {
+      "code" : "product-analyst",
+      "rank" : 40,
+      "parents" : [ "pm" ],
+      "about" : "Продуктовый аналитик: сценарии, профиль клиента, ценность."
+    }, {
+      "code" : "analyst",
+      "rank" : 41,
+      "parents" : [ "pm" ],
+      "about" : "Аналитик: спеки, требования, сценарии."
+    }, {
+      "code" : "developer",
+      "rank" : 42,
+      "parents" : [ "pm" ],
+      "about" : "Разработчик: задачи, PR, статусы своей работы."
+    }, {
+      "code" : "marketer",
+      "rank" : 43,
+      "parents" : [ "pm" ],
+      "about" : "Маркетолог: линия BRAGI — публикации, каналы (решение владелицы: marketer под pm)."
+    }, {
+      "code" : "tester",
+      "rank" : 50,
+      "parents" : [ "product-analyst", "analyst", "developer", "marketer" ],
+      "about" : "Тестировщик: задачи тестирования, гейты качества."
+    } ],
+    "harness" : {
+      "claude-code" : {
+        "main" : "full",
+        "suffix" : ""
+      },
+      "codex" : {
+        "main" : "full",
+        "suffix" : "codex"
+      },
+      "kimi-code" : {
+        "main" : "full",
+        "suffix" : "kimi"
+      }
     }
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]

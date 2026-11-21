@@ -65,6 +65,133 @@ class ModelDescribesRecordPropsTest {
         return out;
     }
 
+    // ── SPRINT_LORE_MODEL_DOCS_TIDY/MDL-05: обратное направление — «поле либо в DDL, либо в модели» ──────────────────
+    // Срез читает свойство записи (колонку SELECT … FROM <тип>), которого нет ни в схеме установщика, ни в модели (поле,
+    // псевдоним, service_fields), ни среди свойств шагов переноса, — сборка красная. Повод: 204 поля оказались в проде
+    // без объявления, потому что ничто не мешало читать поле, которого нигде нет.
+
+    /** Легаси: срез читает свойство вне схемы и модели — с причиной; новое такое чтение валит сторож. */
+    static final Map<String, String> LEGACY_READS = Map.ofEntries(
+        // в 1.18 проект записи — ребро BELONGS_TO_PROJECT; плоское поле читается для старой схемы (до переноса)
+        Map.entry("timeline_releases: KnowRelease.git_project", "1.18: проект релиза — ребро; поле — для старой схемы"),
+        Map.entry("releases_since: KnowRelease.git_project", "1.18: проект релиза — ребро; поле — для старой схемы"),
+        Map.entry("release_by_id: KnowRelease.git_project", "1.18: проект релиза — ребро; поле — для старой схемы"),
+        Map.entry("releases: KnowRelease.git_project", "1.18: проект релиза — ребро; поле — для старой схемы"),
+        Map.entry("release_prs: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
+        Map.entry("pr_by_id: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
+        Map.entry("release_prs_by_tag: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
+        Map.entry("prs: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит (раздел «PR», #1714)"),
+        Map.entry("pr_ship_lag: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
+        Map.entry("files_of_task: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
+        Map.entry("project_files: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
+        Map.entry("agent_sessions: KnowAgentSession.project", "сессия: проект строкой становится связью при переносе (session-model.mjs); поле — для старой схемы"),
+        Map.entry("project_role_events: KnowProjectRoleEvent.project", "журнал событий роли — проект строкой, тип вне модели"),
+        Map.entry("agent_owners: KnowActor.activity_window_h", "окно активности машины: свойство заводит сервер (MachineActivity:44), установщик — нет"),
+        Map.entry("agent_owners: KnowActor.activity_window_harness", "окно активности по harness: свойство заводит сервер (MachineActivity), установщик — нет"),
+        Map.entry("machine_acl: KnowActor.activity_window_h", "окно активности машины: свойство заводит сервер (MachineActivity:44), установщик — нет"),
+        Map.entry("machine_acl: KnowActor.activity_window_harness", "окно активности по harness: свойство заводит сервер (MachineActivity), установщик — нет"),
+        Map.entry("decision: KnowDecision.rationale_md", "обоснование решения: поле среза decision без объявления в схеме установщика и в модели — ждёт решения"),
+        Map.entry("history_sprint: KnowSprintHist.track_id", "1.18: трек — ребро ON_TRACK (MDL-13); строка версии — для старой схемы"),
+        Map.entry("history_sprint: KnowSprintHist.pr_refs", "1.18: номера PR спринта удержаны переносом (MDL-06); строка версии — для старой схемы"),
+        Map.entry("bragi_insights: BragiInsight.subject_id", "BRAGI вне модели паспорта; поле пишет LoreBragiResource:805"));
+
+    private static final java.util.regex.Pattern BARE = java.util.regex.Pattern.compile("(?i)^([a-z_][a-z0-9_]*)(\\s+AS\\s+[a-z_][a-z0-9_]*)?$");
+
+    /** Колонки SELECT верхнего уровня (по запятым вне скобок). */
+    static List<String> selectItems(String list) {
+        List<String> out = new java.util.ArrayList<>();
+        int depth = 0, from = 0;
+        boolean quote = false;
+        for (int i = 0; i < list.length(); i++) {
+            char c = list.charAt(i);
+            if (c == '\'') quote = !quote;
+            if (quote) continue;
+            if (c == '(' || c == '[') depth++;
+            else if (c == ')' || c == ']') depth--;
+            else if (c == ',' && depth == 0) { out.add(list.substring(from, i).trim()); from = i + 1; }
+        }
+        out.add(list.substring(from).trim());
+        return out;
+    }
+
+    /** Что вершина {@code vertex} знает: схема установщика (и её версия), модель, служебное, шаги переноса. */
+    static Set<String> knownProps(String vertex, Map<String, Set<String>> installer) {
+        Set<String> k = new java.util.HashSet<>(installer.getOrDefault(vertex, Set.of()));
+        installer.getOrDefault(vertex + "Hist", Set.of()).forEach(k::add);
+        k.addAll(STEP_PROPS.get("*"));
+        k.addAll(STEP_PROPS.getOrDefault(vertex, List.of()));
+        k.addAll(LoreModelFile.content().serviceFields().keySet());
+        k.addAll(LoreRecordUnmodeled.SERVICE);
+        for (Map.Entry<String, LoreModelTypes.Graph> e : LoreModelTypes.GRAPH.entrySet()) {
+            if (!vertex.equals(e.getValue().vertex())) continue;
+            k.add(e.getValue().key());
+            Map<String, String> al = LoreModelTypes.ALIASES.getOrDefault(e.getKey(), Map.of());
+            k.addAll(al.values());
+            LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(e.getKey());
+            if (d == null) d = LoreRecordRegistry.childDef(e.getKey());
+            if (d != null) for (LoreRecordRegistry.Field f : d.fields()) k.add(f.key());
+        }
+        return k;
+    }
+
+    /** Свойства, которые срез читает у типа, а их нет ни в схеме, ни в модели: «срез: Тип.свойство». */
+    static List<String> unknownReads(String sliceId, String sql, Map<String, Set<String>> installer) {
+        List<String> out = new java.util.ArrayList<>();
+        // первый FROM верхнего уровня (вне скобок): подзапрос (FROM ( … )) — не чтение свойств записи
+        String u = sql.toUpperCase(java.util.Locale.ROOT);
+        int depth = 0, at = -1;
+        for (int i = 0; i < u.length() && at < 0; i++) {
+            char c = u.charAt(i);
+            if (c == '(') depth++;
+            else if (c == ')') depth--;
+            else if (depth == 0 && u.startsWith(" FROM ", i)) at = i;
+        }
+        if (at < 0 || !u.stripLeading().startsWith("SELECT ")) return out;
+        java.util.regex.Matcher t = java.util.regex.Pattern.compile("^\\s+FROM\\s+([A-Za-z][A-Za-z0-9_]*)\\b").matcher(sql.substring(at));
+        if (!t.find()) return out;
+        String vertex = t.group(1);
+        if (!installer.containsKey(vertex)) return out;   // тип вне схемы установщика (Bragi*, служебные) — не наша ось
+        Set<String> known = knownProps(vertex, installer);
+        // старые имена, которые сервер на базе 1.18 переписывает на новые (ModelSchemaAdapter.RENAMES)
+        ModelSchemaAdapter.RENAMES.forEach((old, now) -> { if (known.contains(now)) known.add(old); });
+        String list = sql.substring(sql.toUpperCase(java.util.Locale.ROOT).indexOf("SELECT") + 6, at);
+        for (String item : selectItems(list)) {
+            java.util.regex.Matcher b = BARE.matcher(item);
+            if (!b.matches()) continue;               // функции, обходы рёбер, литералы — не свойство записи
+            String p = b.group(1);
+            if (p.equalsIgnoreCase("count") || known.contains(p)) continue;
+            out.add(sliceId + ": " + vertex + "." + p);
+        }
+        return out;
+    }
+
+    @Test
+    void everySliceReadsOnlyDeclaredOrModeledProps() throws Exception {
+        Map<String, Set<String>> installer = installerProps();
+        List<String> bad = new java.util.ArrayList<>();
+        for (String id : LoreSlices.ids())
+            for (String r : unknownReads(id, LoreSlices.get(id).baseSql(), installer))
+                if (!LEGACY_READS.containsKey(r)) bad.add(r);
+        List<String> stale = LEGACY_READS.keySet().stream().filter(r -> {
+            String id = r.substring(0, r.indexOf(':'));
+            try { return LoreSlices.get(id) == null || !unknownReads(id, LoreSlices.get(id).baseSql(), installer).contains(r); }
+            catch (Exception e) { return true; }
+        }).sorted().toList();
+        assertEquals(List.of(), bad, "срез читает свойство, которого нет ни в схеме установщика, ни в модели");
+        assertEquals(List.of(), stale, "исключение без случая — убрать из LEGACY_READS");
+    }
+
+    /** Обратная проверка: выдуманное поле в срезе — сторож краснеет; поле схемы и поле модели — нет. */
+    @Test
+    void madeUpFieldInSliceIsCaught() throws Exception {
+        Map<String, Set<String>> installer = installerProps();
+        assertEquals(List.of("fake: KnowTask.made_up_field"),
+            unknownReads("fake", "SELECT task_uid, title, made_up_field, out('PART_OF').sprint_id AS sid FROM KnowTask", installer));
+        assertEquals(List.of(), unknownReads("ok", "SELECT task_uid, task_id, order_index AS oi FROM KnowTask WHERE x = 1", installer));
+        assertEquals(List.of(), unknownReads("other", "SELECT whatever FROM NoSuchVertexType", installer), "тип вне схемы установщика — не наша ось");
+        assertEquals(List.of(), unknownReads("sub", "SELECT made_up FROM (SELECT expand(unionall($a)) LET $a = (SELECT FROM KnowTask))", installer), "подзапрос — не чтение свойств");
+    }
+
     @Test
     void projectAndProductHaveNothingUnmodeled() throws Exception {
         Map<String, Set<String>> u = unmodeled();

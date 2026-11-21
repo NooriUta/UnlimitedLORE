@@ -127,6 +127,25 @@ describe('scripts/lore-mcp-headers.mjs', () => {
     expect(h['X-Lore-Machine']).toBe('odal-box');
   });
 
+  // Патч 1.18.1: обёртка «infisical run … -- node lore-mcp-headers.mjs» отдаёт секрет под своим именем
+  // (LORE_MCP_CLIENT_SECRET_FULL). LORE_MCP_SECRET_VAR — имя переменной, откуда брать секрет.
+  it('LORE_MCP_SECRET_VAR: секрет берётся из названной переменной', async () => {
+    const { LORE_MCP_CLIENT_SECRET: _drop, ...rest } = base();
+    const r = await run({ ...rest, LORE_MCP_SECRET_VAR: 'LORE_MCP_CLIENT_SECRET_FULL', LORE_MCP_CLIENT_SECRET_FULL: SECRET,
+      LORE_MCP_TOKEN_CACHE: join(dir, 'var.json') });
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout).Authorization).toMatch(/^Bearer tok-\d+$/);
+    expect(r.stdout + r.stderr).not.toContain(SECRET);
+  });
+
+  it('LORE_MCP_SECRET_VAR названа, а переменной нет — понятная ошибка с её именем, без значения секрета', async () => {
+    const r = await run({ ...base(), LORE_MCP_SECRET_VAR: 'LORE_MCP_CLIENT_SECRET_FULL', LORE_MCP_TOKEN_CACHE: join(dir, 'var2.json') });
+    expect(r.status).toBe(2);
+    expect(r.stdout).toBe('');
+    expect(r.stderr).toMatch(/LORE_MCP_CLIENT_SECRET_FULL/);
+    expect(r.stderr).not.toContain(SECRET);
+  });
+
   it('нет переменных — код 2, stdout пуст, в stderr названы недостающие', async () => {
     const r = await run({ LORE_MCP_TOKEN_CACHE: join(dir, 'none.json') });
     expect(r.status).toBe(2);

@@ -461,7 +461,7 @@ final class LoreRecordFrom {
             v("code", Transform.FIRST_OF, "release_id", "git_tag"),
             s("type", "type"),
             s("date", "release_date"),
-            v("is_current", Transform.TEXT, "is_current"),
+            v("is_current", Transform.BOOL, "is_current"),
             s("week", "week"),
             list("projects", "projects"),
             s("description_md", "description_md"),
@@ -524,7 +524,7 @@ final class LoreRecordFrom {
             s("description_en", "description_en"),
             s("description_pl", "description_pl"),
             s("default_branch", "default_branch"),
-            v("is_private", Transform.BOOL_YES, "is_private"),
+            v("is_private", Transform.BOOL, "is_private"),
             // Адреса репозиториев — строкой JSON или списком {remote, role, base_url}: kit рисует таблицей (вид kv).
             v("hosts", Transform.RAW, "hosts"),
             list("aliases", "aliases"))),

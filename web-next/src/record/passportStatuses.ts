@@ -20,6 +20,7 @@
 // бы чужие статусы.
 import { configFromModel, loadModel, type KitConfig } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { listContractOf, type ListContract } from '../lists/listContract';
 
 export interface TypeStatuses {
   /** Статьи цикла для `config.statuses.items`; пусто — умолчание приложения. */
@@ -38,6 +39,8 @@ export interface TypeStatuses {
    * статус в цикле спринта.
    */
   byKind?: Record<string, KitConfig['statuses']['items']>;
+  /** MC-09: контракт экрана-списка типа (`surfaces.list.<type>`); нет в модели — поля нет. */
+  list?: ListContract;
 }
 
 export interface TypeStatusesOptions {
@@ -76,7 +79,8 @@ export async function fetchTypeStatuses(type: string, opts: TypeStatusesOptions 
   const byKind = Object.fromEntries(Object.keys(model.statuses ?? {})
     .map(k => [k, k === type ? parsed.statuses : configFromModel(model, { statusDict: k }).statuses] as const)
     .filter(([, items]) => items.length > 0));
-  const withKinds = Object.keys(byKind).length ? { byKind } : {};
+  const contract = listContractOf(model, type);
+  const withKinds = { ...(Object.keys(byKind).length ? { byKind } : {}), ...(contract ? { list: contract } : {}) };
   const typeDisplay = parsed.display[type];
   if (parsed.statuses.length === 0) {
     return {

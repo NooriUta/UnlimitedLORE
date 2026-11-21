@@ -31,6 +31,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 # Профили поверхности читаются рядом с dist (profile.ts: ../agent-profiles).
 COPY --from=build /app/agent-profiles ./agent-profiles
+# OH-MCP-HOSTED-SWITCH: порядок ролей из модели — список ролей подагентов в instructions (subagents.ts).
+COPY --from=build /app/model ./model
 USER node
 EXPOSE 9200
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

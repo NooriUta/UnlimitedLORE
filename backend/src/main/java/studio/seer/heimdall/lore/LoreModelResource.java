@@ -87,6 +87,9 @@ public class LoreModelResource extends LoreResourceBase {
         config.put("hash", store.hash());
         config.put("seed_drift", store.seedDrift());
         doc.put("config", config);
+        // MC-09: версия сервера рядом с моделью — с ней клиент сравнивает since контракта списка (404 UNKNOWN_SLICE
+        // на сервере старше since — «раздел ещё не отдаётся», а не «пусто»). Как config — вне отпечатка версии.
+        doc.put("server", LoreVersionResource.info(System.getenv("LORE_RELEASE_TAG")));
         if (store.warning() != null && doc.get("warnings") instanceof List<?> w) {
             List<Object> ws = new java.util.ArrayList<>(w);
             ws.add("config: " + store.warning());
