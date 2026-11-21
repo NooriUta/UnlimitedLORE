@@ -80,6 +80,7 @@ class ModelDescribesRecordPropsTest {
         Map.entry("release_prs: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
         Map.entry("pr_by_id: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
         Map.entry("release_prs_by_tag: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
+        Map.entry("prs: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит (раздел «PR», #1714)"),
         Map.entry("pr_ship_lag: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
         Map.entry("files_of_task: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
         Map.entry("project_files: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
