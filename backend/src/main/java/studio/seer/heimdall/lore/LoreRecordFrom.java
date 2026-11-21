@@ -68,7 +68,12 @@ final class LoreRecordFrom {
          * из второй (нет — только код); кода нет — null. Форма та же, что у чипов проектов: kit рисует подпись и
          * ссылку на паспорт (трек спринта по ребру ON_TRACK).
          */
-        CHIP
+        CHIP,
+        /**
+         * Дефект 8877957a: ссылки на релизы — чипами {id: release_uid «проект#тег», label: тег}. Ключ записи релиза —
+         * release_uid; голый тег (release_id) у разных проектов повторяется и паспорт по нему не открывался.
+         */
+        RELEASE_CHIPS
     }
 
     /**
@@ -134,6 +139,7 @@ final class LoreRecordFrom {
             case PROGRESS -> progress(f.columns(), row);
             case ROW_CODE -> QgMetricState.rowCode(LoreRecordValues.str(first));
             case CHIP -> chip(f.columns(), row);
+            case RELEASE_CHIPS -> releaseChips(LoreRecordValues.arr(first));
         };
     }
 
@@ -158,6 +164,25 @@ final class LoreRecordFrom {
         m.put("label", label != null ? label : id);
         m.put("inherited_from", null);
         return List.of(m);
+    }
+
+    /** Подпись релиза по ключу «проект#тег» — тег; ключ без «#» (прежний) — как есть. */
+    static String releaseTag(String uid) {
+        if (uid == null) return null;
+        int i = uid.lastIndexOf('#');
+        return i >= 0 && i < uid.length() - 1 ? uid.substring(i + 1) : uid;
+    }
+
+    private static List<Map<String, Object>> releaseChips(List<String> uids) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (String uid : new java.util.LinkedHashSet<>(uids)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", uid);
+            m.put("label", releaseTag(uid));
+            m.put("inherited_from", null);
+            out.add(m);
+        }
+        return out;
     }
 
     private static String trim(String s) { return s == null ? null : s.trim(); }
@@ -201,7 +226,8 @@ final class LoreRecordFrom {
             if (l.unionColumn() != null) ids.addAll(LoreRecordValues.arr(row.get(l.unionColumn())));
             for (String id : ids) {
                 String t = l.techByPrefix() && id.startsWith(LoreRecordValues.TECH_SPEC_PREFIX) ? "tech" : l.type();
-                out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, id, null));
+                // 8877957a: у релиза подпись — тег, ключ — «проект#тег»
+                out.add(LoreRecordValues.link(l.rel(), l.dir(), id, t, "release".equals(t) ? releaseTag(id) : id, null));
             }
         }
         return out;
@@ -251,7 +277,8 @@ final class LoreRecordFrom {
             s("priority", "priority"),
             list("projects", "git_projects"),
             list("components", "components"),
-            list("releases", "release_ids"),
+            // 8877957a: ссылка на релиз — ключ release_uid «проект#тег», подпись — тег
+            v("releases", Transform.RELEASE_CHIPS, "release_uids"),
             list("milestones", "milestone_ids"),
             s("planned_start", "planned_start_date"),
             s("planned_end_date", "planned_end_date"),
@@ -598,7 +625,7 @@ final class LoreRecordFrom {
             lf("SUPERSEDES", "out", "adr", "supersedes_ids"),
             lf("SUPERSEDES", "in", "adr", "superseded_by_ids"),
             lf("IMPLEMENTED_IN", "out", "sprint", "implemented_in_ids"),
-            lf("IMPLEMENTED_IN_RELEASE", "out", "release", "release_ids"),
+            lf("IMPLEMENTED_IN_RELEASE", "out", "release", "release_uids"),
             lf("JUSTIFIED_BY", "in", "task", "justified_task_uids"),
             lf("TRACED_TO", "in", "use_case", "traced_by_ucs"))),
         Map.entry("decision", List.of(

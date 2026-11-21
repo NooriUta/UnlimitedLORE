@@ -1628,7 +1628,11 @@
       "priority" : "P1",
       "projects" : [ "AIDA/UnlimitedLORE", "x/y" ],
       "components" : [ "CMP-A" ],
-      "releases" : [ "v1.0.0" ],
+      "releases" : [ {
+        "id" : "AIDA/UnlimitedLORE#v1.0.0",
+        "label" : "v1.0.0",
+        "inherited_from" : null
+      } ],
       "milestones" : [ "M-1" ],
       "planned_start" : "2026-11-01",
       "planned_end_date" : "2026-11-20",
@@ -5577,7 +5581,7 @@
     }, {
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "out",
-      "id" : "v1",
+      "id" : "AIDA/UnlimitedLORE#v1",
       "type" : "release",
       "title" : "v1",
       "status" : "",
