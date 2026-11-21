@@ -20,6 +20,8 @@ export const AREAS = [
   { id: 'knowledge', nav: 'knowledge', title: 'Решения и знания' },
   { id: 'product', nav: 'product', title: 'Продукт' },
   { id: 'system', nav: 'system', title: 'Проекты и система' },
+  // #1694 (PS-PRODUCT-FILTER): группа меню «Организация» — организации, продукты, проекты, люди.
+  { id: 'org', nav: 'org', title: 'Организация' },
   { id: 'people', nav: null, title: 'Люди и агенты' },
 ];
 // Типы, которых нет в model.nav: часть паспорта и админские. Новый тип без места здесь и в nav валит тест.
