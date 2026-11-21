@@ -61,12 +61,35 @@ final class LoreRecordUnmodeled {
             if (p.startsWith("@") || p.equals(g.key()) || modeled.contains(p)) continue;
             if (SERVICE.contains(p) || LoreModelTypes.isSystem(p) || LoreModelTypes.isInternal(p, g.key())) continue;
             if ("task".equals(type) && LoreModelTypes.LEGACY_ROLE_STRINGS.contains(p)) continue;
+            // Служебные свойства, объявленные моделью (service_fields: перенос 1.18, хранение справочника) — не «вне модели».
+            if (LoreModelFile.content().serviceFields().containsKey(p)) continue;
             Object v = e.getValue();
             if (v == null || (v instanceof String s && s.isBlank()) || (v instanceof Collection<?> c && c.isEmpty())
                 || (v instanceof Map<?, ?> m && m.isEmpty())) continue;
             out.put(p, v instanceof String s && s.length() > MAX_TEXT ? s.substring(0, MAX_TEXT) + "…" : v);
         }
         return out;
+    }
+
+    /**
+     * Поле модели, которого нет в значениях главного среза (у среза нет такой колонки), берёт значение из вершины —
+     * по псевдониму или ключу поля. Описание поля в модели не должно прятать его значение: до описания его показывал
+     * блок «вне модели» (владелица 21.11.2026: «опиши»). Значение среза не перезаписывается; служебное и связи — нет.
+     */
+    static void fillModeled(String type, Map<String, Object> values, Map<String, Object> vertex) {
+        if (values == null || vertex == null || !reads(type)) return;
+        LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+        if (d == null) return;
+        Map<String, String> aliases = LoreModelTypes.ALIASES.getOrDefault(type, Map.of());
+        Map<String, String> service = LoreModelFile.content().serviceFields();
+        for (LoreRecordRegistry.Field f : d.fields()) {
+            if (values.containsKey(f.key()) || "ref".equals(f.kind())) continue;
+            String p = aliases.getOrDefault(f.key(), f.key());
+            if (service.containsKey(p) || SERVICE.contains(p)) continue;
+            Object v = vertex.get(p);
+            if (v == null || (v instanceof String s && s.isBlank())) continue;
+            values.put(f.key(), v instanceof String s && s.length() > MAX_TEXT ? s.substring(0, MAX_TEXT) + "…" : v);
+        }
     }
 
     /** Имена свойств, которыми заняты поля модели типа: псевдоним, поле пути записи, ключ поля. */

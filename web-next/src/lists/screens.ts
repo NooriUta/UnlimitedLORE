@@ -556,13 +556,14 @@ const runbooksSpec: SectionSpec = {
 /** S9-05 A: люди — статуса нет, разрез по проектам. */
 const usersSpec: SectionSpec = {
   kind: 'user', titleKey: 'lists.users.title', icon: 'person',
-  fields: [['project', 'ref']],
+  // Пакет 1.18: заголовок — имя (профиль или KC), логин — своей колонкой рядом.
+  fields: [['project', 'ref'], ['login', 'text']],
   statuses: [],
   views: ['list', 'cards'],
   quick: [['no-projects', 'lists.quick.noProjects', { project: '' }]],
   filters: [LORE_FILTER_FIELDS.project],
   groupings: [LORE_FILTER_FIELDS.project],
-  columns: ['title', 'project'],
+  columns: ['title', 'login', 'project'],
 };
 
 /** S9-05 A: агенты — профиль и владелец; статуса нет. */
@@ -647,12 +648,12 @@ const componentsSpec: SectionSpec = {
 /** Проекты (S4-29, 53а): СТАТУСА НЕТ — справочник git-проектов; щелчок — паспорт проекта. */
 const projectsSpec: SectionSpec = {
   kind: 'project', titleKey: 'lists.projects.title', icon: 'open-folder',
-  fields: [['default_branch', 'text']],
+  fields: [['full_title', 'text'], ['default_branch', 'text']],
   views: ['list', 'cards'],
   quick: [['no-branch', 'lists.quick.noBranch', { default_branch: '' }]],
   filters: [],
   groupings: [],
-  columns: ['id', 'title', 'default_branch'],
+  columns: ['id', 'title', 'full_title', 'default_branch'],
 };
 
 /**

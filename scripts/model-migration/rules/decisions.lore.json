@@ -1123,7 +1123,7 @@
     ]
   },
   "projects": {
-    "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at).",
+    "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at). 21.11.2026: NooriUta/UnlimitedLORE → OMILORE записан явно (проект — у двух продуктов, OMILORE и HARPA; без правки группа бралась первой из двух).",
     "map": {
       "NooriUta/BRAGI": "SEIDR_BACKOFFICE",
       "AIDA/freyja": "SEIDR_BACKOFFICE",
@@ -1131,6 +1131,7 @@
       "AIDA/studio": "SEIDR_BACKOFFICE",
       "AIDA/core-services": "SEIDR_BACKOFFICE",
       "AIDA/forgejo-mcp": "OMILORE",
+      "NooriUta/UnlimitedLORE": "OMILORE",
       "AIDA/miniLoremobilekit": "SEIDR_BACKOFFICE",
       "AIDA/qwen-code-fork": "MINILORE",
       "NooriUta/AIDA-TestPlayGround": "AIDA",
@@ -1170,5 +1171,61 @@
     },
     "by": "владелица (omiloreadmin, мастер переноса на копии ryzenai, 19.11.2026)",
     "at": "2026-11-19T13:31:00.187Z"
+  },
+  "project_links": {
+    "_about": "Явные соответствия ключей проекта для релизов и PR (шаг project-links.mjs): префикс ключа записи, проекта которого в приёмнике нет, → проект. Владелица 21.11.2026: «два релиза: Mobilepoc привяжи к miniLORE, последний — к Odin». Цель ищется по ключу или прежнему ключу — после перегруппировки это опора группы.",
+    "by": "владелица (21.11.2026)",
+    "at": "2026-11-21",
+    "map": {
+      "NooriUta/Mobilepoc": "AIDA/miniLORE",
+      "AIDA/research-llm-sql-dialect": "NooriUta/ODIN"
+    }
+  },
+  "project_names": {
+    "_about": "Код, краткое и полное название, описание проекта (владелица 21.11.2026: «не вижу на препроде полей … код, краткое название, полное название, описание»; таблица владелицы 21.11). Русский — слова владелицы; en и pl — перевод агента, на проверку владелице. slugs — прежние ключи проектов строки: проект приёмника находится по ключу или по прежним ключам (aliases) после перегруппировки; group — ожидаемая группа перегруппировки (null — проект без группы).",
+    "by": "владелица (таблица 21.11.2026); en/pl — перевод агента, на проверку",
+    "at": "2026-11-21",
+    "list": [
+      { "code": "DW", "slugs": ["AIDA/Datawanderers-ServerandLore", "AIDA/Datawanderers-Unity"], "group": "DW",
+        "short_title": { "ru": "Дата-странники", "en": "Data Wanderers", "pl": "Wędrowcy Danych" },
+        "title": { "ru": "Дата-странники: лор и сервер", "en": "Data Wanderers: lore and server", "pl": "Wędrowcy Danych: lore i serwer" },
+        "description": { "ru": "Игра: лор и сервер, клиент Unity (Datawanderers-ServerandLore, Datawanderers-Unity)", "en": "Game: lore and server, Unity client (Datawanderers-ServerandLore, Datawanderers-Unity)", "pl": "Gra: lore i serwer, klient Unity (Datawanderers-ServerandLore, Datawanderers-Unity)" } },
+      { "code": "MIDGARD", "slugs": ["AIDA/MIDGARD", "AIDA/GLADSHEIM", "AIDA/TEIKN", "AIDA/BOKVIT"], "group": "MIDGARD",
+        "short_title": { "ru": "MIDGARD", "en": "MIDGARD", "pl": "MIDGARD" },
+        "title": { "ru": "MIDGARD", "en": "MIDGARD", "pl": "MIDGARD" },
+        "description": { "ru": "Хаб GLADSHEIM и сервисы BOKVIT, TEIKN", "en": "GLADSHEIM hub and the BOKVIT and TEIKN services", "pl": "Hub GLADSHEIM oraz usługi BOKVIT i TEIKN" } },
+      { "code": "CORE", "slugs": ["AIDA/core-services", "NooriUta/seidr-site", "NooriUta/BRAGI", "AIDA/studio", "AIDA/freyja", "AIDA/miniLoremobilekit"], "group": "SEIDR_BACKOFFICE",
+        "short_title": { "ru": "core-services", "en": "core-services", "pl": "core-services" },
+        "title": { "ru": "Общие сервисы студии", "en": "Shared studio services", "pl": "Wspólne usługi studia" },
+        "description": { "ru": "Keycloak, Infisical, kkRepo, CoreDNS, раннеры CI, ryzenai; ведёт CICDGitHub. Сюда же влиты seidr-site, BRAGI, studio, freyja, miniLoremobilekit", "en": "Keycloak, Infisical, kkRepo, CoreDNS, CI runners, ryzenai; maintained by CICDGitHub. Also merged here: seidr-site, BRAGI, studio, freyja, miniLoremobilekit", "pl": "Keycloak, Infisical, kkRepo, CoreDNS, runnery CI, ryzenai; prowadzi CICDGitHub. Włączono tu też: seidr-site, BRAGI, studio, freyja, miniLoremobilekit" } },
+      { "code": "MINILORE", "slugs": ["AIDA/miniLORE", "AIDA/miniLore_serverside", "AIDA/qwen-code-fork"], "group": "MINILORE",
+        "short_title": { "ru": "miniLORE", "en": "miniLORE", "pl": "miniLORE" },
+        "title": { "ru": "miniLORE — мобильный монитор сессий", "en": "miniLORE — mobile session monitor", "pl": "miniLORE — mobilny monitor sesji" },
+        "description": { "ru": "Телефонный клиент и сервер сессий (miniLore_serverside), форк qwen-code", "en": "Phone client and session server (miniLore_serverside), qwen-code fork", "pl": "Klient na telefon i serwer sesji (miniLore_serverside), fork qwen-code" } },
+      { "code": "MIGGEN", "slugs": ["AIDA/udwe-mig-gen", "AIDA/udwe-engine", "AIDA/udwe-rollout", "ivanovalex32/UDWE"], "group": "MIGGEN",
+        "short_title": { "ru": "udwe-mig-gen", "en": "udwe-mig-gen", "pl": "udwe-mig-gen" },
+        "title": { "ru": "Конвейер миграций UDW-DWH", "en": "UDW-DWH migration pipeline", "pl": "Potok migracji UDW-DWH" },
+        "description": { "ru": "Генератор, движок udwe-engine и выкатка udwe-rollout", "en": "Generator, the udwe-engine engine and the udwe-rollout deployment", "pl": "Generator, silnik udwe-engine i wdrożenie udwe-rollout" } },
+      { "code": "AIDA", "slugs": ["NooriUta/AIDA", "NooriUta/AIDA-TestPlayGround"], "group": "AIDA",
+        "short_title": { "ru": "AIDA", "en": "AIDA", "pl": "AIDA" },
+        "title": { "ru": "AIDA (монорепо)", "en": "AIDA (monorepo)", "pl": "AIDA (monorepo)" },
+        "description": { "ru": "Основной монорепо SEER Studio: Hound, Shuttle, Verdandi, Dali, Chur; TestPlayGround", "en": "Main SEER Studio monorepo: Hound, Shuttle, Verdandi, Dali, Chur; TestPlayGround", "pl": "Główne monorepo SEER Studio: Hound, Shuttle, Verdandi, Dali, Chur; TestPlayGround" } },
+      { "code": "ODIN", "slugs": ["NooriUta/ODIN"], "group": "ODIN",
+        "short_title": { "ru": "ODIN", "en": "ODIN", "pl": "ODIN" },
+        "title": { "ru": "ODIN", "en": "ODIN", "pl": "ODIN" },
+        "description": null },
+      { "code": "LORE", "slugs": ["NooriUta/UnlimitedLORE", "AIDA/forgejo-mcp"], "group": "OMILORE",
+        "short_title": { "ru": "LORE", "en": "LORE", "pl": "LORE" },
+        "title": { "ru": "UnlimitedLORE — граф знаний проектов", "en": "UnlimitedLORE — project knowledge graph", "pl": "UnlimitedLORE — graf wiedzy o projektach" },
+        "description": { "ru": "Бэкенд, фронт v2, MCP LORE и forgejo-mcp", "en": "Backend, v2 frontend, LORE MCP and forgejo-mcp", "pl": "Backend, frontend v2, MCP LORE i forgejo-mcp" } },
+      { "code": "DOCS", "slugs": ["NooriUta/aida-documentation"], "group": null,
+        "short_title": { "ru": "aida-documentation", "en": "aida-documentation", "pl": "aida-documentation" },
+        "title": { "ru": "Документация AIDA", "en": "AIDA documentation", "pl": "Dokumentacja AIDA" },
+        "description": { "ru": "ADR, спринты, план, блог seidrstudio.pro", "en": "ADRs, sprints, plan, seidrstudio.pro blog", "pl": "ADR, sprinty, plan, blog seidrstudio.pro" } },
+      { "code": "VOLVA", "slugs": ["NooriUta/volva"], "group": "VOLVA",
+        "short_title": { "ru": "Völva", "en": "Völva", "pl": "Völva" },
+        "title": { "ru": "Völva — BI и аналитика", "en": "Völva — BI and analytics", "pl": "Völva — BI i analityka" },
+        "description": { "ru": "Форк Metabase", "en": "Metabase fork", "pl": "Fork Metabase" } }
+    ]
   }
 }

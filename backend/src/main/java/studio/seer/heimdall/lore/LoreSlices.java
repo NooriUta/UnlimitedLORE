@@ -575,6 +575,7 @@ public final class LoreSlices {
             "outE('DEPENDS_ON')[valid_to IS NULL].inV().adr_id AS depends_on_ids, " +
             "out('IMPLEMENTED_IN').sprint_id      AS implemented_in_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
             "out('TAGGED_WITH').tag_id            AS tags, " +
             "out('BELONGS_TO_PROJECT').slug       AS git_projects, " + // ADRPROJ-01
@@ -984,6 +985,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             DONE_DATE_SQL + " AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
@@ -1020,6 +1022,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].priority[0], out('HAS_STATE')[priority IS NOT NULL].priority[0])     AS priority, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestone_ids, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_start_date[0], out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0])     AS planned_start_date, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_end_date[0], out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0])         AS planned_end_date, " +
@@ -2137,7 +2140,7 @@ public final class LoreSlices {
 
         // Git projects — for the T43 multi-project picker (question/decision forms).
         slice("git_projects",
-            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -2217,7 +2220,7 @@ public final class LoreSlices {
             "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components, " +
-            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " + CHILD_SPRINT_COLS + " " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, in('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('BELONGS_TO').component_id CONTAINS :cid",
             // pattern — принимается и НИЧЕГО не фильтрует: v1 (src/, выкатывается вручную) ещё
             // шлёт его, и отказ «unknown param» уронил бы вкладку спринтов в v1.
@@ -2238,7 +2241,8 @@ public final class LoreSlices {
         // первую порцию и сверх неё data_state truncated с total. ORDER BY — в хвосте: скоуп
         // вставляется перед ним. Параметр у всех один — project (slug), как у прочих срезов.
         slice("project_by_id",
-            "SELECT slug, name, default_branch, is_private FROM KnowGitProject WHERE slug = :project",
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, title_en, title_pl, " +
+            "description, description_en, description_pl, default_branch, is_private, hosts, aliases FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
         slice("project_sprints",
             "SELECT sprint_id, coalesce(title, name) AS name, " +
@@ -2269,7 +2273,8 @@ public final class LoreSlices {
         // valid_to: сменённый исполнитель в детях не числится). Человека задача знает по
         // display_name, но ключ паспорта — kc_sub (имя меняется, sub нет; так ведёт и проект).
         slice("user_by_id",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
             "FROM KnowUser WHERE kc_sub = :kc_sub",
             List.of("kc_sub"), Map.of(), "");
         slice("agent_by_id",
@@ -2281,7 +2286,8 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // Списки разделов «Люди» и «Агенты» v2: строка — человек (агент) и его проекты.
         slice("users",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
             List.of(), Map.of(), " ORDER BY display_name");
         slice("agents",
             "SELECT actor_id, name, client_id, agent_role, harness, " +
@@ -3299,6 +3305,7 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
@@ -3337,6 +3344,7 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
