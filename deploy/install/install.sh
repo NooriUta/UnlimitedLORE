@@ -549,15 +549,19 @@ init_model_db() {
   [ -n "$bin" ] && [ -f "$bin" ] || die "$(migrate_bin_say): без него свежая база из модели не собирается"
   db="$(env_get LORE_DB "$DIR/.env")"; pw="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")"
   say "пустая база из модели: lore-migrate init-empty → $db"
-  envf="$(mktemp)"; trap 'rm -f "$envf"' RETURN
+  # файл доступа с паролем root базы — удаляется сразу после запуска, в том числе при отказе (без trap: он пережил бы функцию)
+  envf="$(mktemp)"
   ( umask 077; {
     echo "MIG_DB_URL=http://arcadedb:2480"
     # источника у свежей установки нет — init-empty его не читает; ключи нужны разбору файла доступа
     echo "MIG_SRC_DB=fresh_install_no_source"; echo "MIG_SRC_USER=none"; echo "MIG_SRC_PASSWORD=none"
     echo "MIG_DST_DB=$db"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$pw"
   } > "$envf" )
+  local rc=0
   docker run --rm --network "$(project)_default" -v "$bin:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
-    "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || die "пустая база из модели не собрана (lore-migrate init-empty) — схема и справочники не записаны"
+    "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || rc=$?
+  rm -f "$envf"
+  [ "$rc" = 0 ] || die "пустая база из модели не собрана (lore-migrate init-empty) — схема и справочники не записаны"
   say "база $db собрана из модели: шаги V не катятся (LORE_MIGRATE=false)"
 }
 
@@ -665,6 +669,9 @@ selftest() {
   printf '%s' "$out" | grep -q 'пустая база из модели: lore-migrate init-empty' || fail "свежая установка: нет шага «пустая база из модели»: $out"; ok
   printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
   printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
+  # trap … RETURN остаётся после выхода из функции и срабатывает в чужом return, где её local уже нет (set -u) —
+  # установка на ryzenai 21.11 прошла, а код выхода был 1 («envf: unbound variable»).
+  grep -qE "trap '[^']*' RETURN" "$0" && fail "trap … RETURN в install.sh — срабатывает после функции (set -u роняет установку)"; ok
   # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, ryzenai 21.11.2026)
   sed -n '/^wait_db()/,/^}/p' "$0" | grep -q 'FRESH=1' || fail "свежая установка определяется не по базе (wait_db не ставит FRESH)"; ok
   LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
