@@ -268,6 +268,12 @@ describe('K-01 · JSON-схема согласована с валидаторо
       expect(typeof s.$id).toBe('string');
     }
   });
+  // SELF-PROVISION-STANDALONE: $id — идентификатор схемы, а не адрес. Наш домен в нём попадал в бандл
+  // и намекал, что схему где-то скачивают; валидатор kit ручной (validate.ts, без ajv) и по $id не ходит.
+  it('$id — URN seidr-kit, без http(s)-адреса', () => {
+    expect(KIT_CONFIG_SCHEMA.$id).toBe('urn:seidr-kit:schema:kit-config');
+    expect(KIT_DATA_SCHEMA.$id).toBe('urn:seidr-kit:schema:kit-data');
+  });
   it('каждый required верхнего уровня схемы конфига ловится валидатором', () => {
     for (const key of KIT_CONFIG_SCHEMA.required) {
       const cfg = minimalConfig() as unknown as Record<string, unknown>;

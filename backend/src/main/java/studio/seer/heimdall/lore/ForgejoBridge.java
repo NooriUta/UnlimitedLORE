@@ -327,6 +327,48 @@ public class ForgejoBridge {
         return f;
     }
 
+    /**
+     * MD-05: git-хост для дотяжки данных PR ({@link PrBackfill}). Репозиторий — из hosts[] primary проекта
+     * (резолв кэшируется на время прогона); записанный адрес PR на том же хосте уточняет репозиторий, когда у
+     * проекта их несколько. Проект без primary-хоста и публичные хостинги (github.com …) — пропуск с причиной:
+     * токен моста туда не уходит.
+     */
+    PrBackfill.GitHost prHost() {
+        Map<String, Optional<Repo>> cache = new java.util.HashMap<>();
+        return (gitProject, number, knownUrl) -> {
+            Optional<Repo> repo = cache.computeIfAbsent(gitProject, this::resolve);
+            if (repo.isEmpty())
+                return PrBackfill.Fetch.skip(PrBackfill.FOREIGN_REPO, "проект " + gitProject
+                    + " не на нашем Forgejo: в hosts[] нет primary-хоста — данные PR не дотягиваются");
+            Repo r = repo.get();
+            if (PrBackfill.foreignHost(r.apiBase()))
+                return PrBackfill.Fetch.skip(PrBackfill.FOREIGN_REPO, "чужой git-хост " + URI.create(r.apiBase()).getHost()
+                    + " (проект " + gitProject + ") — токен моста туда не отправляется");
+            String path = r.path();
+            if (knownUrl != null) {
+                // Адрес PR пишется по шаблону ВНЕШНЕГО base_url, а apiBase мог быть подменён base-override.
+                String host = primaryHostName(gitProject);
+                String fromUrl = PrBackfill.repoPathFromUrl(knownUrl, number, host);
+                if (fromUrl != null) path = fromUrl;
+            }
+            HttpResponse<String> resp = api(r, "GET", "/repos/" + path + "/pulls/" + number, null);
+            return PrBackfill.fromForgejo(path, number, resp.statusCode(), resp.body());
+        };
+    }
+
+    /** Хост primary base_url проекта (как пишется в адресах PR); null — нет. */
+    private String primaryHostName(String gitProjectSlug) {
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT hosts FROM KnowGitProject WHERE slug=:slug", Map.of("slug", gitProjectSlug));
+            if (rows.isEmpty()) return null;
+            return primaryHost(rows.get(0).get("hosts"))
+                .map(h -> URI.create(h.getString("base_url", "")).getHost()).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** MD-05: коды задач из заголовка PR, разложенные на найденные в LORE и нет. */
     record TaskMatch(List<String> matched, List<String> unmatched) {}
 

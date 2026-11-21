@@ -39,6 +39,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     @Inject
     LoreStatusResource statusResource;
 
+    // MD-05: task_link rel=pr заводил KnowPR одним ключом и не дотягивал данные — корень PR без заголовка
+    // для PR, влитых мимо моста. Теперь после записи — дотяжка из Forgejo (как у мержа и release_link).
+    @Inject
+    ForgejoBridge forgejo;
+
     public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers,
         String git_project, String repo_url, Boolean replace) {}
     // priority moved to SprintPlanRequest/POST /lore/sprint/plan — it's SCD2-tracked
@@ -1829,6 +1834,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 Map.of("t", req.task_uid(), "p", ref.uid())).isEmpty();
             out.put("outcome", made ? LoreOutcome.CREATED : LoreOutcome.NOOP);
             if (!made) { out.put("ok", false); out.put("reason", "ребро CLOSED_BY не появилось в графе"); }
+            // MD-05: данные PR (title, url, state, merged_at…) — сразу; неудача связь не откатывает, а видна в ответе.
+            if (!forgejo.configured()) out.put("pr_details_missing", "мост Forgejo не сконфигурирован — данные PR не подтянуты");
+            else out.putAll(PrBackfill.fillOne(prStore(), forgejo.prHost(), ref.gitProject(), ref.number()));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE TASK PR] %s → %s: %s", req.task_uid(), req.pr(), e.getMessage());

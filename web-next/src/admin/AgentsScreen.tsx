@@ -25,6 +25,7 @@ import {
 import { useAdminNav } from './adminNav';
 import { WHY_AGENT } from './WhyNotSee';
 import { HarnessMark } from './HarnessMark';
+import { HarnessAccountsPane } from './HarnessAccountsPane';
 import './Admin.css';
 
 export interface AgentsScreenProps {
@@ -32,7 +33,7 @@ export interface AgentsScreenProps {
   fetchImpl?: typeof fetch;
 }
 
-export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
+function AgentsList({ fetchImpl }: AgentsScreenProps) {
   const t = useAppT();
   const lang = useKitLang();
   const adminNav = useAdminNav();
@@ -137,15 +138,36 @@ export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
     );
   }
   return (
-    <section className="adm" aria-labelledby="adm-agents-h">
-      <h2 id="adm-agents-h" className="adm-h">{t('admin.agents.title')}</h2>
-      <p className="adm-lead">{t('admin.agents.lead')}</p>
+    <>
       {/* AO-AGENT-ADD: новый агент — тем же мастером, что «Дать человеку агента» (клиент по шаблону, проверка токена). */}
       <div className="adm-filters">
         <button type="button" className="adm-btn" data-testid="adm-agents-new"
           onClick={() => adminNav.go('wiz', { 'adm-wiz': 'agent' })}>{t('admin.agents.new')}</button>
       </div>
       {body}
+    </>
+  );
+}
+
+/**
+ * Экран «Агенты»: вкладки «Агенты» (список, как был) и «Учётки harness» — «гирлянда» учёток MCP
+ * (SPRINT_LORE_OWN_HOST/OH-MCP-HOSTED-SWITCH, 1.18.2). Вкладка — в адресе: ?adm-agents-tab=accounts.
+ */
+export function AgentsScreen({ fetchImpl }: AgentsScreenProps) {
+  const t = useAppT();
+  const [tab, setTab] = useUrlParam('adm-agents-tab');
+  const accounts = tab === 'accounts';
+  return (
+    <section className="adm" aria-labelledby="adm-agents-h">
+      <h2 id="adm-agents-h" className="adm-h">{t('admin.agents.title')}</h2>
+      <p className="adm-lead">{t('admin.agents.lead')}</p>
+      <div className="adm-tabs" role="tablist" aria-label={t('admin.agents.title')}>
+        <button type="button" role="tab" className="adm-tab" aria-selected={!accounts} aria-current={!accounts ? 'page' : undefined}
+          data-testid="adm-agents-tab-list" onClick={() => setTab(null, { replace: true })}>{t('admin.agents.tabAgents')}</button>
+        <button type="button" role="tab" className="adm-tab" aria-selected={accounts} aria-current={accounts ? 'page' : undefined}
+          data-testid="adm-agents-tab-accounts" onClick={() => setTab('accounts', { replace: true })}>{t('admin.agents.tabAccounts')}</button>
+      </div>
+      {accounts ? <HarnessAccountsPane fetchImpl={fetchImpl} /> : <AgentsList fetchImpl={fetchImpl} />}
     </section>
   );
 }

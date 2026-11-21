@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lore.seidrstudio.pro/schemas/seidr-kit/kit-data.schema.json",
+  "$id": "urn:seidr-kit:schema:kit-data",
   "title": "Seiðr-kit · KitData (window.X_DATA)",
   "description": "Формат данных kit (SPRINT_UXR_S10_SEIDR_KIT/K-01): то, что сервер приложения отдаёт и что single-file HTML кладёт в window.X_DATA. Всё, что относится к записи, но не входит в контракт (summary, verdict, review…), лежит в fields.",
   "type": "object",

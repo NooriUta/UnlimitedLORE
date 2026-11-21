@@ -17,7 +17,8 @@ set -euo pipefail
 GHCR_OWNER="${GHCR_OWNER:-nooriuta}"
 GHCR_LOGIN="${GHCR_LOGIN:-NooriUta}"
 # Сервис на 131 → имя пакета в ghcr.
-PAIRS="lore-backend:lore-backend lore-app-next:lore-web"
+# 1.18.2: lore-mcp — MCP пакета установки (deploy/install, сервис lore-mcp).
+PAIRS="lore-backend:lore-backend lore-app-next:lore-web lore-mcp:lore-mcp"
 
 is_major() { [[ "${1:-}" =~ ^v[0-9]+\.[0-9]+\.0$ ]]; }
 

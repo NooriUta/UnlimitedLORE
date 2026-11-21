@@ -113,6 +113,8 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 
 По умолчанию входа нет (`LORE_AUTH_ENABLED=false`, см. «Безопасность»). Вход включается через Keycloak: свой или поставленный по ссылкам из окна установщика.
 
+Наш Keycloak работает на встроенной H2 (dev-file). Для своей установки — внешняя БД (Postgres) и режим start, не start-dev.
+
 Что нужно:
 
 - Keycloak, до которого достают браузер и контейнер бэкенда. Нет своего — на «Старте» выберите «нет — скачать и настроить»: окно даст официальные ссылки и шаги запуска.
@@ -133,7 +135,7 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 1. В окне впишите «Адрес области Keycloak» (`https://<keycloak>/realms/<область>`) и «Адрес веба LORE», затем выберите, что уже есть.
 2. «План области Keycloak» показывает запросы без записи: область, роли `superadmin`, `admin`, `viewer`, клиент веба `lore-app` и учётки MCP. Для доводки план читает область (нужен вход администратора), и каждая доводка видна отдельным шагом `fix-…`.
 3. «Завести область» выполняет план. То, что уже есть, не трогается, поэтому повтор безопасен. Секреты выдаются только клиентам, заведённым в этом прогоне, ключами `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]`. Они уходят в Infisical, если запись настроена (ниже), иначе в файл `~/kc-clients-<область>.env` с правами 600. На экран секреты не выводятся.
-4. «Собрать .env» включает вход: `LORE_AUTH_ENABLED=true`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID=lore-app`. Флаг впекается в веб при сборке образа, поэтому после смены нужен повтор `install.sh`.
+4. «Собрать .env» включает вход: `LORE_AUTH_ENABLED=true`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID=lore-app`. Веб берёт их при запуске контейнера, в образ они не впекаются: после смены адреса или клиента достаточно `docker compose up -d`. Включение и выключение входа (`LORE_AUTH_ENABLED`) бэкенд фиксирует при сборке (`quarkus.oidc.enabled`), поэтому смена этого флага — повтор `install.sh`.
 5. Первому владельцу выдайте в Keycloak роль `superadmin`.
 
 Настройки клиентов совпадают с ранбуком LORE RUNBOOK-CORE-KC-INFISICAL-LOREHOST: так заведены 9 клиентов прод-KC.
@@ -168,9 +170,83 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 
 Секреты учёток MCP можно класть в отдельный проект Infisical, например `lore-mcp-secrets` с окружением `prod`. Машинной учётке LORE нужна в нём роль member, и только в нём: свои роли проекта Infisical бесплатно не даёт, поэтому узкий доступ делается отдельным проектом. Запись включается, когда заданы `LORE_MCP_SECRETS_INFISICAL_URL`, `LORE_MCP_SECRETS_INFISICAL_PROJECT_ID`, `LORE_MCP_SECRETS_INFISICAL_CLIENT_ID` и `LORE_MCP_SECRETS_INFISICAL_CLIENT_SECRET`. Необязательные: `LORE_MCP_SECRETS_INFISICAL_ENVIRONMENT` (по умолчанию `prod`) и `LORE_MCP_SECRETS_INFISICAL_PATH` (по умолчанию `/`).
 
-- **Кто пишет.** В 1.18.1 пишет окно установщика. Запись из админки LORE (после выпуска учётки и после смены секрета) придёт в 1.18.2; до неё админка показывает секрет один раз и называет его ключ.
+- **Кто пишет.** Окно установщика (переменные выше) и, с 1.18.2, бэкенд LORE — после выпуска учётки и после смены секрета в админке (Агенты → «Учётки harness»). У бэкенда свои имена: `LORE_MCP_SECRETS_URL`, `LORE_MCP_SECRETS_PROJECT_ID`, `LORE_MCP_SECRETS_ENVIRONMENT` (по умолчанию `prod`), `LORE_MCP_SECRETS_PATH` (по умолчанию `/`); учётку записи `LORE_MCP_SECRETS_CLIENT_ID` и `LORE_MCP_SECRETS_CLIENT_SECRET` он берёт сначала из своего хранилища секретов (Infisical `lore-secrets`), а из окружения — запасным путём. Не задано — админка говорит «запись в Infisical не настроена» и показывает секрет один раз; сбой записи — громкая ошибка, секрет всё равно показан один раз.
+- **stdio-подключение.** MCP читает секрет из переменной, имя которой задано `LORE_MCP_SECRET_VAR` (по умолчанию `LORE_MCP_CLIENT_SECRET`); переменной нет — ошибка называет её имя, значение не печатается.
 - **Не настроено.** Секрет показывается один раз, как раньше.
 - **Сбой записи.** Секрет всё равно показывается один раз, а ошибка выводится громко.
+
+## Подключить агента к MCP
+
+MCP-сервер LORE ставится вместе со стеком (сервис `lore-mcp`). Своего порта у него нет: агент ходит на `https://<хост>/mcp` через nginx веба — тот же адрес и порт, что у веба LORE (`LORE_PUBLIC_URL`). Проверка без входа — `https://<хост>/mcp/health`. После установки `install.sh` проверяет оба адреса: `/mcp/health` отвечает 200, `POST /mcp` без входа — 401 (или 405). 502 значит, что nginx не достал `lore-mcp`, 404 — что `/mcp` не проксируется.
+
+- **Вход выключен** (`LORE_AUTH_ENABLED=false`, по умолчанию). `/mcp` всё равно ждёт заголовок `Authorization: Bearer <что-нибудь>`, но бэкенд без входа токен не проверяет. Пускайте агентов только с этой машины или через свой прокси с авторизацией: MCP пишет в базу так же, как веб (см. «Безопасность»).
+- **Вход через Keycloak.** У каждого агента своя учётка `lore-mcp-<роль>[_<harness>]`, её заводит окно установщика (раздел «Keycloak» выше). Секрет учётки лежит под ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]`, например `LORE_MCP_CLIENT_SECRET_FULL` для Claude Code или `LORE_MCP_CLIENT_SECRET_FULL_OPENCODE`. Переменная `LORE_MCP_SECRET_VAR` называет ключ, из которого подключение берёт секрет; без неё берётся `LORE_MCP_CLIENT_SECRET`. Значение секрета держите в окружении машины агента или в Infisical, в файлы настроек его не вписывайте. Подагенту младшей роли — своя учётка и свой ключ.
+- **Без MCP.** Если образа `lore-mcp` нет (своего `LORE_MCP_IMAGE` нет, а в реестре выпуска его не оказалось), установка не падает. Она громко пишет «MCP не будет запущен», а проверка показывает строку «НЕТ lore-mcp». Выход — свой `LORE_MCP_IMAGE` или повтор с `--build`.
+
+### Claude Code (http + headersHelper)
+
+Токен client_credentials живёт минуты, поэтому его выдаёт помощник `mcp-server/scripts/lore-mcp-headers.mjs` из исходников LORE. Claude Code запускает его при подключении и после 401. В окружении Claude Code нужны `LORE_OIDC_ISSUER` (`https://<keycloak>/realms/<область>`), `LORE_MCP_CLIENT_ID` (`lore-mcp-full`), `LORE_MCP_SECRET_VAR` (`LORE_MCP_CLIENT_SECRET_FULL`) и сам ключ `LORE_MCP_CLIENT_SECRET_FULL`. По желанию — `LORE_MCP_PROFILE` (по умолчанию `full`), `LORE_HARNESS`, `LORE_MACHINE_ID`.
+
+```json
+{
+  "mcpServers": {
+    "aida-lore": {
+      "type": "http",
+      "url": "https://<хост>/mcp",
+      "headersHelper": "node <путь>/mcp-server/scripts/lore-mcp-headers.mjs"
+    }
+  }
+}
+```
+
+### OpenCode
+
+Удалённо (`remote`). OpenCode не умеет обновлять токен, поэтому он шлёт пару «клиент + секрет», а токен по ней берёт сам сервер MCP. Для этого у сервиса `lore-mcp` должен быть задан `LORE_OIDC_ISSUER` в `.env` установки, иначе вход парой отвечает 503. `"oauth": false` обязателен: без него OpenCode на 401 уходит искать OAuth и отправляет заголовки с секретом на чужие пути. Адрес — только `https://`, потому что секрет едет в каждом запросе.
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "aida-lore": {
+      "type": "remote",
+      "url": "https://<хост>/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "X-Lore-Client-Id": "lore-mcp-full_opencode",
+        "X-Lore-Client-Secret": "{env:LORE_MCP_CLIENT_SECRET_FULL_OPENCODE}",
+        "X-Lore-Mcp-Profile": "full",
+        "X-Lore-Harness": "opencode",
+        "X-Lore-Machine": "{env:LORE_MACHINE_ID}"
+      }
+    }
+  }
+}
+```
+
+Локально (`local`). MCP запускается на машине агента из исходников (`cd mcp-server && npm ci && npm run build`) и ходит в LORE через тот же nginx: `LORE_BACKEND_URL` — адрес веба, без `/mcp`. Токен процесс берёт сам и обновляет его.
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "aida-lore": {
+      "type": "local",
+      "command": ["node", "<путь>/mcp-server/dist/index.js"],
+      "enabled": true,
+      "environment": {
+        "LORE_BACKEND_URL": "https://<хост>",
+        "LORE_OIDC_ISSUER": "https://<keycloak>/realms/<область>",
+        "LORE_MCP_CLIENT_ID": "lore-mcp-full_opencode",
+        "LORE_MCP_CLIENT_SECRET": "{env:LORE_MCP_CLIENT_SECRET_FULL_OPENCODE}",
+        "LORE_HARNESS": "opencode"
+      }
+    }
+  }
+}
+```
+
+Файл настроек OpenCode — `opencode.json` в проекте или в `~/.config/opencode/`.
 
 ## Völva — встроенные графики
 
@@ -202,13 +278,14 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 
 В вариантах install и own в пакет входит **forgejo-mcp**: репозиторий `AIDA/forgejo-mcp`, версия 0.1.7 (форк `@ric_/forgejo-mcp` с инструментами Actions/CI). Исходники прибиты к коммиту `bbe9f59c`.
 
-Образ forgejo-mcp ни в какой реестр не публикуется. Он едет в пакете установщика архивом `images/forgejo-mcp-bbe9f59c.tar` с файлом `.tar.sha256`, в том же каталоге версии, что и установщик. Положите каталог `images/` рядом с `install.sh`. Порядок выбора образа:
+Образ forgejo-mcp ни в какой реестр не публикуется. Пакет установщика везёт его двумя способами, оба со сверкой sha256: архивом образа `images/forgejo-mcp-bbe9f59c.tar` и исходником того же коммита `src/forgejo-mcp-bbe9f59c.tar.gz` (рядом лицензия MIT — `src/forgejo-mcp-bbe9f59c.LICENSE`). Положите каталоги `images/` и `src/` рядом с `install.sh`. Сети к чьему-либо git установке не нужно. Порядок выбора:
 
 1. `FORGEJO_MCP_IMAGE` — ваш готовый образ, перекрывает всё остальное.
-2. Архив из `images/` — `docker load`, только если sha256 сходится. При несовпадении установка останавливается.
-3. `--forgejo-mcp-build` — сборка из git на том же коммите. Это запасной путь, нужен доступ к репозиторию.
+2. `FORGEJO_MCP_SRC` — ваши исходники (каталог или git-адрес#коммит), сборка.
+3. Архив образа из `images/` — `docker load`, только если sha256 сходится. `--forgejo-mcp-build` этот шаг пропускает.
+4. Исходник из `src/` — распаковка в каталог установки и сборка, только если sha256 сходится.
 
-Если нет ни одного из трёх, инсталлятор отказывается и называет причину. Агенты подключаются по HTTP: `http://127.0.0.1:4430/mcp` с заголовком `Authorization: Bearer ${FORGEJO_MCP_API_KEY}`.
+Если нет ни одного источника, инсталлятор в терминале спрашивает: git-адрес исходников, готовый образ или «без forgejo-mcp». Без терминала он отказывается и называет варианты — молча ничего не подставляет. Агенты подключаются по HTTP: `http://127.0.0.1:4430/mcp` с заголовком `Authorization: Bearer ${FORGEJO_MCP_API_KEY}`.
 
 После установки:
 
@@ -263,7 +340,7 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
 
 | переменная | что | пример |
 |---|---|---|
-| `LORE_LLM_LOCAL_URL` | адрес сервера модели **без** `/v1`. Модель на той же машине — `host.docker.internal`, пакет пробрасывает это имя в контейнер бэкенда | `http://host.docker.internal:11434`, `http://192.168.3.50:8086` |
+| `LORE_LLM_LOCAL_URL` | адрес сервера модели **без** `/v1`. Модель на той же машине — `host.docker.internal`, пакет пробрасывает это имя в контейнер бэкенда | `http://host.docker.internal:11434`, `http://llm.example.org:8086` |
 | `LORE_LLM_LOCAL_MODEL` | имя модели, как его отдаёт `/v1/models`. Пусто — провайдер отвечает «локальная модель не задана» | `qwen3:4b`, `qwen3-4b` |
 | `LORE_LLM_LOCAL_API_KEY` | ключ, только если раннер его требует (`--api-key`). Уходит заголовком `Authorization: Bearer` | пусто |
 

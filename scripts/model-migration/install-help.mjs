@@ -7,7 +7,8 @@
 /** Шаги справки окна и разделы README (по началу заголовка), которые на них видны. */
 export const HELP_STEPS = [
   { id: 'start', title: 'Старт', headings: ['Требования', 'Установка одной строкой', 'Настройка окружения', 'Собрать самому', 'Версии и образы', 'Что создаётся'] },
-  { id: 'keycloak', title: 'Keycloak', headings: ['Keycloak', 'Безопасность'] },
+  // 1.18.2: «Подключить агента к MCP» — рядом с учётками MCP по ролям, которые заводит этот шаг.
+  { id: 'keycloak', title: 'Keycloak', headings: ['Keycloak', 'Безопасность', 'Подключить агента к MCP'] },
   { id: 'volva', title: 'Völva', headings: ['Völva'] },
   { id: 'forgejo', title: 'Forgejo', headings: ['Forgejo'] },
   // Раздел «Локальная LLM…» — из #1663 (docs/installer-local-llm).

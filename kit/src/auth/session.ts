@@ -44,7 +44,8 @@ export interface UserManagerLike {
   };
 }
 
-export type AuthStatus = 'disabled' | 'loading' | 'signed_in' | 'signed_out' | 'expired' | 'error';
+/** unconfigured — вход включён, но адрес входа настройками запуска не задан (SELF-PROVISION-STANDALONE). */
+export type AuthStatus = 'disabled' | 'loading' | 'signed_in' | 'signed_out' | 'expired' | 'error' | 'unconfigured';
 
 export interface AuthUserInfo {
   name: string | null;
@@ -72,7 +73,11 @@ export interface LocationLike {
 }
 
 export interface AuthSessionOptions {
-  enabled: boolean;
+  /**
+   * Включён ли вход. Функция читается в init(): у приложения, чьи настройки входа задаются при
+   * ЗАПУСКЕ (/config.json), ответ известен только после загрузки конфига. До init — «загрузка».
+   */
+  enabled: boolean | (() => boolean);
   /** Создать менеджер OIDC (лениво: при выключенном входе не создаётся вовсе). */
   manager?: () => UserManagerLike;
   /** Путь redirect_uri (callback-маршрут); по умолчанию «/». */
@@ -95,7 +100,19 @@ export class AuthRequiredError extends Error {
   }
 }
 
-export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+/**
+ * Вход включён, а адреса входа нет (настройки запуска его не задали). Менеджер OIDC бросает это —
+ * сессия переходит в честное «вход не настроен», а не в «вход не удался» с кнопкой, которая никуда не ведёт.
+ */
+export class AuthNotConfiguredError extends Error {
+  readonly code = 'AUTH_NOT_CONFIGURED';
+  constructor(message = 'адрес входа не задан настройками запуска') {
+    super(message);
+    this.name = 'AuthNotConfiguredError';
+  }
+}
+
+export type FetchFn =(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export interface AuthSession {
   readonly enabled: boolean;
@@ -150,7 +167,10 @@ function info(u: OidcUserLike): AuthUserInfo {
 }
 
 export function createAuthSession(opts: AuthSessionOptions): AuthSession {
-  const enabled = opts.enabled;
+  // null — ещё не зафиксировано: enabled-функция фиксируется в init(). До init её спрашивают на каждом
+  // обращении (заголовки, fetch), а AuthGate показывает загрузку.
+  let enabled: boolean | null = typeof opts.enabled === 'function' ? null : opts.enabled;
+  const off = (): boolean => (enabled ?? (opts.enabled as () => boolean)()) === false;
   const now = opts.now ?? Date.now;
   const where = opts.location ?? browserLocation;
   const replaceUrl = opts.replaceUrl ?? browserReplace;
@@ -159,7 +179,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
 
   let mgr: UserManagerLike | null = null;
   let user: OidcUserLike | null = null;
-  let state: AuthState = { status: enabled ? 'loading' : 'disabled', user: null, interrupted: false, loggedOut: false };
+  let state: AuthState = { status: enabled === false ? 'disabled' : 'loading', user: null, interrupted: false, loggedOut: false };
   let renewing: Promise<OidcUserLike | null> | null = null;
   // S4-34: oidc-client-ts шлёт userLoaded ВНУТРИ signinRedirectCallback, до возврата.
   // Пока идёт callback, событие вход не объявляет: иначе AuthGate нарисует App на
@@ -182,7 +202,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
 
   const manager = (): UserManagerLike => {
     if (mgr) return mgr;
-    if (!opts.manager) throw new Error('вход включён, но менеджер OIDC не задан (VITE_OIDC_ISSUER?)');
+    if (!opts.manager) throw new AuthNotConfiguredError('вход включён, но менеджер OIDC не задан');
     mgr = opts.manager();
     mgr.events.addUserLoaded(u => { if (!inCallback && valid(u)) signedIn(u); });
     mgr.events.addUserUnloaded(() => {
@@ -196,7 +216,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
   };
 
   function expire(): void {
-    if (!enabled) return;
+    if (off()) return;
     const interrupted = state.status === 'signed_in' || (state.status === 'expired' && state.interrupted);
     user = null;
     if (state.status === 'expired' && state.interrupted === interrupted) return;
@@ -233,7 +253,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
   }
 
   return {
-    enabled,
+    get enabled() { return !off(); },
     getState: () => state,
     subscribe(fn) {
       listeners.add(fn);
@@ -241,6 +261,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
     },
 
     async init() {
+      if (typeof opts.enabled === 'function') enabled = opts.enabled();
       if (!enabled) { set({ status: 'disabled' }); return; }
       const l = where();
       try {
@@ -264,12 +285,12 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
         else { user = null; set({ status: 'signed_out', user: null }); }
       } catch (error) {
         user = null;
-        set({ status: 'error', user: null, error });
+        set({ status: error instanceof AuthNotConfiguredError ? 'unconfigured' : 'error', user: null, error });
       }
     },
 
     headers(): Record<string, string> {
-      if (!enabled) return { ...devHeaders };
+      if (off()) return { ...devHeaders };
       return valid(user) ? { Authorization: `Bearer ${user.access_token}` } : {};
     },
 
@@ -277,7 +298,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
       const doFetch: FetchFn = base ?? ((i, init) => globalThis.fetch(i, init));
       return async (input, init) => {
         const headers = new Headers(init?.headers);
-        if (!enabled) {
+        if (off()) {
           for (const [k, v] of Object.entries(devHeaders)) if (!headers.has(k)) headers.set(k, v);
           return doFetch(input, { ...init, headers });
         }
@@ -298,7 +319,7 @@ export function createAuthSession(opts: AuthSessionOptions): AuthSession {
     login,
 
     async logout() {
-      if (!enabled) return;
+      if (off()) return;
       const m = manager();
       try {
         await m.signoutRedirect();

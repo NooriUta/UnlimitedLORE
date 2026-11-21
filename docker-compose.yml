@@ -180,6 +180,9 @@ services:
       # LINKS-VIEW-HOLDER: адрес сервера miniLORE для читателя «держателей» записи. Пусто → not_configured.
       # Препрод: http://minilore-srv-preprod:8080 (общая сеть headscale-net; задаётся в lore-cd.yml).
       - lore.minilore.url=${LORE_MINILORE_URL:-}
+      # Адрес выдачи токена Keycloak для читателя miniLORE — умолчания в коде нет (SELF-PROVISION-STANDALONE).
+      # Пусто → not_configured. Препрод задаёт его в lore-cd.yml.
+      - lore.minilore.token-url=${LORE_MINILORE_TOKEN_URL:-}
       - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
       # НЕ ${KC_ADMIN_URL}: в .env он localhost (для host-скриптов), а внутри
       # контейнера localhost = сам контейнер. Ходим через kc:host-gateway.
@@ -331,10 +334,7 @@ services:
       context: .
       dockerfile: web-next/Dockerfile
       args:
-        # build-time, как у lore-app: Vite впекает их в бандл.
-        VITE_LORE_AUTH_ENABLED: ${VITE_LORE_AUTH_ENABLED:-}
-        VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER:-}
-        VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+        # Настроек входа в сборке нет (SELF-PROVISION-STANDALONE) — они ниже, в environment.
         # S4-30: коммит выкатки доводится до бандла — метка версии в правом
         # нижнем углу сверяет его с коммитом бэкенда из /lore/version и
         # показывает ОДНУ версию только когда они совпали. Переменная та же,
@@ -349,6 +349,11 @@ services:
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
       LORE_BACKEND_URL: ${LORE_BACKEND_URL:-}
       LORE_BACKEND_HOST: ${LORE_BACKEND_HOST:-}
+      # Настройки входа — при ЗАПУСКЕ, в /config.json (SELF-PROVISION-STANDALONE): смена — `docker compose up -d`,
+      # без пересборки. Те же переменные, что у бэкенда; пусто — фронт спросит бэкенд своей среды.
+      LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-}
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+      LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
       # Метка в логе скрипта старта: «[LORE v2] …», чтобы по docker logs было
       # видно, чей это контейнер. В шаблон nginx НЕ попадает.
       LORE_FRONT: v2

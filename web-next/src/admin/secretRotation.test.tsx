@@ -140,6 +140,15 @@ describe('экран · ротация без простоя', () => {
     expect(document.body.textContent).not.toContain(SECRET);
   });
 
+  it('1.18.2: после ротации сказано, записан ли новый секрет в Infisical; сервер не сказал — так и сказано', async () => {
+    const { f } = fake();
+    await rotate(f);
+    const note = screen.getByTestId('adm-hacc-infisical');
+    expect(note.getAttribute('data-tone')).toBe('wrn');
+    expect(parseRotation({ secret_key: 'LORE_MCP_CLIENT_SECRET_FULL', infisical_written: true, infisical_state: 'written' }).infisical?.written).toBe(true);
+    expect(parseRotation({ secret_key: 'LORE_MCP_CLIENT_SECRET_FULL' }).secretKey).toBe('LORE_MCP_CLIENT_SECRET_FULL');
+  });
+
   it('пока перехода нет — «Отозвать прежний» заблокирован, отзыв не уходит', async () => {
     const { f, calls } = fake({ policy: true, switched: false });
     await rotate(f);
