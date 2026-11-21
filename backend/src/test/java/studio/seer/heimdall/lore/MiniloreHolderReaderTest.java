@@ -17,6 +17,20 @@ class MiniloreHolderReaderTest {
     static final String ONE = "{\"v\":1,\"sessionId\":\"s-1\",\"machineId\":\"lorcetus\",\"since\":\"2026-11-16T09:00:00Z\","
         + "\"source\":\"minilore\",\"derived\":true,\"dialogueName\":\"Модель\",\"x\":{\"probe\":1},\"future_key\":\"как есть\"}";
 
+    /**
+     * SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE: адрес токена Keycloak — настройка, без
+     * умолчания на наш Keycloak. Не задан — честное «не настроено» (старт не падает, в сеть не ходим).
+     */
+    @Test
+    void tokenUrlWithoutSettingIsNotConfiguredNotOurKeycloak() {
+        MiniloreHolderReader r = new MiniloreHolderReader();
+        r.url = java.util.Optional.of("http://minilore.example:8080");
+        r.tokenUrl = java.util.Optional.empty();
+        MiniloreHolderReader.Result res = r.read("SPRINT_X/T-1");
+        assertEquals("not_configured", res.state());
+        assertTrue(res.reason().contains("lore.minilore.token-url"), res.reason());
+    }
+
     @Test
     void validObjectsOfVersionOneAreKeptWithUnknownKeys() {
         MiniloreHolderReader.Result r = MiniloreHolderReader.fromResponse(200, "[" + ONE + "]");

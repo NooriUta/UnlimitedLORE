@@ -82,7 +82,7 @@ test('compose: Forgejo и forgejo-mcp — под профилями (без вы
   assert.match(c, /- FORGEJO_API_TOKEN=\$\{FORGEJO_API_TOKEN:-\}/, 'мост LORE: токен из .env');
   assert.match(c, /- lore\.forgejo\.base-override=\$\{FORGEJO_BASE_OVERRIDE:-\}/, 'мост LORE: адрес Forgejo в сети compose');
   assert.match(c, /forgejo-data:\/forgejo-data:ro/, 'get_job_log читает логи Actions с тома Forgejo только на чтение');
-  assert.match(c, /FORGEJO_MCP_SRC:-https:\/\/git\.seidrstudio\.pro\/AIDA\/forgejo-mcp\.git#[0-9a-f]{40}/, 'дистрибутив forgejo-mcp прибит к коммиту');
+  assert.ok(c.includes('context: ${FORGEJO_MCP_SRC:-./forgejo-mcp-src}'),'forgejo-mcp по умолчанию собирается из исходника пакета — сетевого умолчания нет');
 });
 
 test('строка MCP forgejo-mcp для агента: http, /mcp, ключ — ссылкой на переменную, не значением', () => {

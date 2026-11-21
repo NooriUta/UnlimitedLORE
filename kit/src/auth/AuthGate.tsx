@@ -5,7 +5,8 @@
 //   signed_out  — сам уводит на вход (после осознанного выхода — только кнопка);
 //   expired     — «Сессия истекла, войти снова»: если отвалилась посреди работы,
 //                 экран остаётся под плашкой (несохранённое не пропадает);
-//   error       — причина и «Войти снова».
+//   error       — причина и «Войти снова»;
+//   unconfigured — вход включён, адреса входа нет: «вход не настроен», без кнопки.
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { kitT, useKitLang } from '../i18n';
 import { LoadError, Skeleton } from '../states';
@@ -78,6 +79,20 @@ export function AuthGate({ session, children, brand }: AuthGateProps) {
       </div>
     );
     return st.interrupted ? <>{children}{bar}</> : <AuthPage brand={brand} state="expired">{bar}</AuthPage>;
+  }
+
+  // Вход включён, а адреса входа нет (SELF-PROVISION-STANDALONE): кнопке «Войти» вести некуда —
+  // честно называем, что не настроено и где это задаётся, без кнопки.
+  if (st.status === 'unconfigured') {
+    return (
+      <AuthPage brand={brand} state="unconfigured">
+        <LoadError
+          title={kitT(lang, 'kit.auth.unconfigured.title')}
+          hint={kitT(lang, 'kit.auth.unconfigured.hint')}
+          error={st.error}
+        />
+      </AuthPage>
+    );
   }
 
   if (st.status === 'error') {
