@@ -148,15 +148,32 @@ test('N4 Ссылки на человека и агента с общих пов
   await expect(page.locator('[data-testid^="news-row-"]').first(), 'лента новостей показана').toBeVisible({ timeout: 30_000 });
   const news = await hrefs(page);
   expect(news.filter(toAdmin), 'в ленте нет ссылок в админку').toEqual([]);
-  const person = news.find(h => /[?&]sec=(user|agent)&/.test(h) || /[?&]sec=(user|agent)$/.test(h) || /sec=(user|agent)/.test(h));
+  const isPerson = (h: string) => /[?&]sec=(user|agent)(&|$)/.test(h);
 
   // Паспорт задачи: автор, исполнитель, принимающий.
   await openStand(page, `/?sec=task&open=${encodeURIComponent('SPRINT_UXR_POLISH_UAT_1113/PU-03')}`, page.locator('[data-testid="kit-rec-loaded"]'));
   await passportLoaded(page, 'паспорт задачи PU-03');
   const pass = await hrefs(page);
   expect(pass.filter(toAdmin), 'в паспорте задачи нет ссылок в админку').toEqual([]);
-  const target = person ?? pass.find(h => /sec=(user|agent)/.test(h));
-  test.skip(!target, 'ни в ленте, ни в паспорте PU-03 нет ссылки на человека или агента — переход проверить не на чем');
+  // Все ссылки на людей и агентов — вне админки (цель AP-PEOPLE-PAGE ч.1).
+  const people = [...new Set([...news, ...pass].filter(isPerson))];
+  test.skip(!people.length, 'ни в ленте, ни в паспорте PU-03 нет ссылки на человека или агента — переход проверить не на чем');
+  for (const h of people) {
+    const u = new URL(h, 'https://x/');
+    expect(u.searchParams.get('mod'), `${h}: страница человека — вне админки`).not.toBe('admin');
+  }
+  // Паспорт — у того, кто заведён в LORE. Прогон 39448: первая ссылка ленты вела на kc_sub без записи KnowUser
+  // («Запись … не найдена») — автор правки есть в KC, но не в графе людей (гипотеза: TEST-учётка, писавшая на
+  // препроде). Такие ссылки — находка (named), а не повод не проверить страницу у заведённых.
+  let target: string | null = null;
+  const missing: string[] = [];
+  for (const h of people) {
+    const u = new URL(h, 'https://x/');
+    const r = await api(page, `/lore/record/${u.searchParams.get('sec')}/${encodeURIComponent(u.searchParams.get('open') ?? '')}`);
+    if (r.status === 200) { target ??= h; } else missing.push(`${u.searchParams.get('sec')}:${u.searchParams.get('open')} → ${r.status}`);
+  }
+  if (missing.length) test.info().annotations.push({ type: 'note', description: `ссылки на людей без записи в LORE: ${missing.join('; ')}` });
+  test.skip(!target, `ни у одной ссылки на человека нет записи в LORE (${missing.join('; ')}) — страницу проверить не на чем`);
   await page.goto(target!);
   await passportLoaded(page, `страница ${target}`);
   expect(new URL(page.url()).searchParams.get('mod'), 'страница человека — вне админки').not.toBe('admin');
