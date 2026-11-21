@@ -13,8 +13,7 @@
 // к прогону не попадает. Они идут в CI с секретом из Infisical — отдельным шагом.
 import { readFileSync } from 'node:fs';
 import { expect, test as base, type Page } from '@playwright/test';
-import { authFileFor, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';
-import { storedAccessToken } from './tokens.ts';
+import { authFileFor, expiredCopy, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';import { storedAccessToken } from './tokens.ts';
 import { asAccount, requireStandUrl, shot } from './stand.ts';
 import { roleClaimsOf } from '../../src/standSmoke/roleClaims.ts';
 
@@ -136,15 +135,27 @@ test('RB-07 Без токена: запись и чтение → 401', async ({
 
 test('RB-08 Просроченный токен → 401', async ({ login }) => {
   // Токен, записанный в файле входа, живёт минуты; приложение при загрузке берёт новый.
-  // Если записанный уже истёк — это и есть просроченный токен настоящей учётки.
+  // Если записанный уже истёк — это и есть просроченный токен настоящей учётки. Не истёк — тест делает
+  // просроченный сам (координатор 21.11.2026): копия живого токена с exp на час в прошлом (подпись прежняя).
   let stale: string | null = null;
   try { stale = storedAccessToken(JSON.parse(readFileSync(authFileFor(AUTH_DIR, RBAC_ACCOUNTS.viewer), 'utf8'))); } catch { /* нет файла — скажет login */ }
   const page = await login(RBAC_ACCOUNTS.viewer);
   const claims = stale ? jwtPayload(stale) : null;
-  test.skip(!stale || !claims || !isExpired(claims, Date.now()), 'токен в файле входа ещё не истёк — просроченного нет, кейс не выполнен');
-  const r = await api(page, 'GET', '/lore/whoami', { token: stale! });
+  const realStale = !!stale && !!claims && isExpired(claims, Date.now());
+  const live = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(k => k.includes('oidc.user:'));
+    return key ? (JSON.parse(localStorage.getItem(key) ?? '{}') as { access_token?: string }).access_token ?? null : null;
+  });
+  expect(live, 'у вошедшей учётки есть живой токен').toBeTruthy();
+  // Положительный контроль: живой токен этой же учётки сервер принимает.
+  const ok = await api(page, 'GET', '/lore/whoami', { token: live! });
+  expect(ok.status, `живой токен принят: ${ok.text}`).toBe(200);
+  const expired = realStale ? stale! : expiredCopy(live!, Date.now());
+  expect(expired, 'просроченный токен собран').toBeTruthy();
+  test.info().annotations.push({ type: 'note', description: realStale ? 'просроченный — настоящий из файла входа' : 'просроченный — копия живого с exp в прошлом (подпись не сходится)' });
+  const r = await api(page, 'GET', '/lore/whoami', { token: expired! });
   expect(r.status, `просроченный токен: ${r.text}`).toBe(401);
-  const w = await api(page, 'POST', '/lore/task', { body: {}, token: stale! });
+  const w = await api(page, 'POST', '/lore/task', { body: {}, token: expired! });
   expect(w.status, `запись просроченным токеном: ${w.text}`).toBe(401);
 });
 
