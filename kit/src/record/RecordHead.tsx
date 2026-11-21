@@ -6,6 +6,7 @@ import { kitT, type KitLang } from '../i18n';
 import { verdictTone } from './graph';
 import { verdictCode, verdictHint, verdictText } from '../core/verdict';
 import { StatusSlot } from './StatusSlot';
+import { StatusNotes } from './StatusNotes';
 import { kitMinute } from '../core/fmtValue';
 
 /**
@@ -36,6 +37,7 @@ export function RecordHead({ record, ctx, lang, titleId, withStatus = true, tail
         <div className="sk-rec-head__status">
           {/* PU-29 (владелица 14.11.2026): статус в шапке паспорта — значком, как в списке; название в подсказке. */}
           <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} compact />
+          <StatusNotes record={record} />
           {record.updated_at && (
             <time className="sk-rec-head__time" dateTime={record.updated_at}>
               {kitT(lang, 'kit.record.updated', { at: kitMinute(record.updated_at)?.text ?? record.updated_at })}

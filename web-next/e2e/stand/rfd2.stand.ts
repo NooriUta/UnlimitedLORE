@@ -7,6 +7,8 @@
 // сохранённого входа (Bearer из хранилища OIDC страницы, как create.stand.ts): page.request без него получает 401.
 import { expect, test, type Page } from '@playwright/test';
 import { attr, keepLoginFresh, openStand, requireStand, shot, textOf } from './stand.ts';
+import { preprodTestWriteRefusal, WRITES_TAG } from './writeGuard.ts';
+import { call, ensureTestProject, TEST_PROJECT_A } from './testData.ts';
 
 test.beforeEach(() => requireStand());
 // Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
@@ -156,11 +158,12 @@ test('RFD2-MD02 Функции «пустых» типов: метрики ге�
   expect(gates.length, 'гейты качества есть').toBeGreaterThan(0);
   let gate: string | null = null;
   let metrics: Row[] = [];
-  for (const g of gates.slice(0, 40)) {
+  // Все гейты, а не первые 40 (прогон 39448: «нет у первых 40» не значит «нет ни у одного»).
+  for (const g of gates) {
     metrics = await slice(page, 'qg_metrics', { qg_id: str(g.qg_id) });
     if (metrics.length) { gate = str(g.qg_id); break; }
   }
-  test.skip(!gate, 'ни у одного из первых 40 гейтов нет метрик (MEASURED_BY) — вкладку «Метрики» проверить не на чем');
+  test.skip(!gate, `ни у одного из ${gates.length} гейтов базы нет метрик (MEASURED_BY) — вкладку «Метрики» проверить не на чем`);
   // #1649: направление, число и единица — из порога; current_value — последний прогон; status pass/fail/unknown.
   for (const k of ['threshold', 'unit', 'direction', 'current_value', 'status']) expect(Object.keys(metrics[0]), `колонка ${k} в qg_metrics`).toContain(k);
   expect(metrics.map(m => str(m.status)).filter(s => s && !['pass', 'fail', 'unknown'].includes(s)), 'status метрики — pass | fail | unknown').toEqual([]);
@@ -265,9 +268,33 @@ test('RFD2-QGSTALE Рутина qg-doc-links прогоняется и пише�
 });
 
 // ── SPRINT_LORE_MEASURE_TRUTH/MT-CAL-CLASS-REQUIRED ─────────────────────────────────────────────────────
-test('RFD2-MTCAL task_new без work_class отвечает подсказкой uc/jtd/enb (SPRINT_LORE_MEASURE_TRUTH/MT-CAL-CLASS-REQUIRED)', async () => {
-  test.skip(true, 'приёмка — ответ task_new (запись задачи); на стенде *.seidrstudio.pro запись запрещена (writeGuard.ts). '
-    + 'Повторный замер доли без класса сделан 20.11 по проду (50,8%) — это данные, не поведение стенда');
+// Запись TEST-данных на препроде разрешена (владелица 21.11.2026, writeGuard @writes): своя TEST-задача в своём
+// TEST-спринте, сразу после проверки — отмена (cancelled не в счёт предела 35, спринт не пухнет).
+test('RFD2-MTCAL task_new без work_class отвечает подсказкой uc/jtd/enb (SPRINT_LORE_MEASURE_TRUTH/MT-CAL-CLASS-REQUIRED)', { tag: WRITES_TAG }, async ({ page }) => {
+  const SPRINT = 'TEST_SPRINT_WORK_CLASS';
+  const taskId = `TEST-WC-${Date.now().toString(36).toUpperCase()}`;
+  const refusal = preprodTestWriteRefusal(process.env.LORE_STAND_URL?.trim(),
+    { writer: test.info().tags.includes(WRITES_TAG), ids: [SPRINT, taskId, TEST_PROJECT_A] });
+  test.skip(refusal !== null, `запись не выполняется: ${refusal}`);
+  await boot(page);
+  await ensureTestProject(page, TEST_PROJECT_A);
+  if ((await call(page, 'GET', `/lore/record/sprint/${SPRINT}`)).status !== 200) {
+    const c = await call(page, 'POST', '/lore/sprint/create', { sprint_id: SPRINT, name: 'Тестовый спринт: класс работы (смоук стенда)', git_project: TEST_PROJECT_A });
+    expect(c.status, `завести ${SPRINT}: ${c.text}`).toBe(200);
+  }
+  const r = await call(page, 'POST', '/lore/task', { sprint_id: SPRINT, task_id: taskId, title: `Тестовая задача ${taskId} без класса работы` });
+  expect(r.status, `задача без work_class создаётся (решение D5 — подсказка, а не отказ): ${r.text}`).toBe(200);
+  const warning = r.body?.warning as { code?: string; allowed?: string[] } | undefined;
+  expect(warning?.code, `в ответе — заметная подсказка: ${r.text}`).toBe('WORK_CLASS_MISSING');
+  expect(warning?.allowed, 'допустимые классы названы').toEqual(['uc', 'jtd', 'enb']);
+  // Положительный контроль: с классом подсказки нет.
+  const id2 = `${taskId}-C`;
+  const r2 = await call(page, 'POST', '/lore/task', { sprint_id: SPRINT, task_id: id2, title: `Тестовая задача ${id2} с классом`, work_class: 'enb' });
+  expect(r2.status, r2.text).toBe(200);
+  expect(r2.body?.warning, 'с классом — без подсказки').toBeUndefined();
+  for (const id of [taskId, id2]) {
+    await call(page, 'POST', '/lore/status', { entity_type: 'task', id: `${SPRINT}/${id}`, status: 'cancelled', reason: 'смоук стенда MT-CAL: TEST-задача отработала' });
+  }
 });
 
 // ── SPRINT_LORE_MEASURE_TRUTH/MT-MCP-TRUTH ──────────────────────────────────────────────────────────────
