@@ -21,6 +21,16 @@ test('выкладывает все файлы пакета установки, 
   assert.ok(r.files.includes('.env.example') && r.files.includes('install.sh'));
 });
 
+// MIG-01: свежая установка собирает базу из модели этим же исполняемым файлом — install.sh находит его по пути рядом.
+test('путь к исполняемому файлу установщика — рядом с install.sh, только если запущен сам установщик', () => {
+  const d = tmp();
+  writeInstallBundle(d, { execPath: '/opt/pkg/lore-migrate-1.18.0-rc.x-linux-x64' });
+  assert.equal(fs.readFileSync(path.join(d, '.lore-migrate-path'), 'utf8').trim(), '/opt/pkg/lore-migrate-1.18.0-rc.x-linux-x64');
+  const d2 = tmp();
+  writeInstallBundle(d2, { execPath: '/usr/bin/node' });
+  assert.equal(fs.existsSync(path.join(d2, '.lore-migrate-path')), false, 'node — не установщик, путь не пишется');
+});
+
 test('уже выложенный пакет не перезаписывается молча; --force — перезапись', () => {
   const d = tmp();
   writeInstallBundle(d);

@@ -98,6 +98,9 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     // Решение владелицы 21.11: «пока ставь указать s3 хранилище или без опции файлов» — сценарий А идёт без файлов.
     expect(r.out).toMatch(/install .*--files none/);
     expect(r.out).toMatch(/probe .*хранилище файлов не подключено/);
+    // MIG-01: свежая установка — база из модели: schema_version модели, срезы типов 1.18 — 200 и пусто.
+    expect(r.out).toMatch(/probe .*schema_version — модель/);
+    expect(r.out).toMatch(/probe .*organizations, repositories, project_prs — 200 и пусто/);
   });
 
   // Эмуляция на ryzenai 21.11: имя проекта переменной окружения расходилось с .env — compose поднимал lore-e2e,
@@ -117,6 +120,8 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(s).toMatch(/--files none/);
     // ryzenai 21.11: на базе из модели бэкенд отказывает старт при lore.migrate=true — переключение ставит false.
     expect(s).toMatch(/LORE_MIGRATE=false/);
+    expect(s).toMatch(/LORE_MIGRATE_BIN=/);
+    expect(s).toMatch(/"schema_version":"model:/);
     expect(s).toMatch(/FILES_NOT_CONFIGURED/);
     // ryzenai 21.11: ArcadeDB, пересозданная с портом, ещё не отвечала — connect получил ECONNRESET.
     expect(s).toMatch(/\/api\/v1\/ready/);

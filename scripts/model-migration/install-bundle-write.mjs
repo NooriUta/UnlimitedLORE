@@ -9,7 +9,7 @@ import path from 'node:path';
 import { INSTALL_BUNDLE } from './resources.mjs';
 
 /** Выкладка пакета в каталог; уже выложенный не перезаписывается без force. Возвращает имена файлов. */
-export function writeInstallBundle(dir, { force = false } = {}) {
+export function writeInstallBundle(dir, { force = false, execPath = process.execPath } = {}) {
   const out = path.resolve(dir);
   if (!force && fs.existsSync(path.join(out, 'install.sh')))
     throw new Error(`пакет установки уже есть в ${out} — не перезаписываю; заново — с ключом --force`);
@@ -20,6 +20,9 @@ export function writeInstallBundle(dir, { force = false } = {}) {
     fs.writeFileSync(path.join(out, name), text, { mode });
     files.push(name);
   }
+  // MIG-01: свежая установка собирает базу из модели этим же исполняемым файлом (lore-migrate init-empty) — install.sh
+  // находит его по пути рядом. Запущен не сам установщик (node + .mjs) — путь не пишется: install.sh попросит LORE_MIGRATE_BIN.
+  if (/^lore-migrate/.test(path.basename(String(execPath || '')))) fs.writeFileSync(path.join(out, '.lore-migrate-path'), String(execPath) + '\n');
   return { dir: out, files };
 }
 

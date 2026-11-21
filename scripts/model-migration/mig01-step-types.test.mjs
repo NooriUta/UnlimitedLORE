@@ -39,6 +39,7 @@ const LOOP_SITES = {
   'transfer.mjs': 'T — типы схемы переноса (SCHEMA)',
   'transfer-edges.mjs': 'T — связи карты (keptEdges), E — связи модели сессий (SESSION_EDGES)',
   'repos.mjs': 't — ORG_EDGES и связи репозиториев (REPO_TYPES)',
+  'init-empty.mjs': 'e — связи карты (keptEdges) без данных: свежая установка, MIG-01',
   'edge-plan.mjs': 'e — связи карты «только схема» (MD-02 8а, schema_only) — проверяются отдельным тестом ниже',
 };
 test('сторож: любой тип, который заводит код установщика, — в ownTypes', () => {

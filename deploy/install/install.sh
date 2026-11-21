@@ -56,6 +56,10 @@ FORGEJO_URL_ARG=""
 # Хранилище файлов (решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов»):
 # none — без файлов (по умолчанию), s3 — своё S3. Своего хранилища пакет не ставит.
 FILES=""
+# MIG-01: свежая установка — база из модели (lore-migrate init-empty), шаги V не катятся. FRESH=1 — .env ещё не было.
+FRESH=0
+FRESH_DB="${LORE_FRESH_DB:-lore}"
+MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
 FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
 # forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
@@ -288,6 +292,12 @@ write_env() {
   if [ ! -f "$env" ]; then
     (umask 077; cp "$SCRIPT_DIR/.env.example" "$env")
     say "создан $env"
+    FRESH=1
+  fi
+  # Свежая установка: база из модели 1.18 под своим именем (не system_aida_lore — сторож переноса), шаги V выключены.
+  if [ "$FRESH" = 1 ]; then
+    env_set LORE_DB "$FRESH_DB" "$env"
+    env_set LORE_MIGRATE false "$env"
   fi
   local k cur
   for k in ARCADEDB_ROOT_PASSWORD; do
@@ -513,6 +523,38 @@ s3_probe() {
   say "S3: пробный объект записан и прочитан — хранилище файлов подключено"
 }
 
+# Исполняемый файл установщика (lore-migrate) — для базы из модели. LORE_MIGRATE_BIN, иначе путь, который оставила
+# команда `lore-migrate install-bundle` рядом с install.sh (.lore-migrate-path).
+migrate_bin() {
+  local b="${LORE_MIGRATE_BIN-}"
+  if [ -z "${LORE_MIGRATE_BIN+x}" ] && [ -f "$SCRIPT_DIR/.lore-migrate-path" ]; then b="$(head -1 "$SCRIPT_DIR/.lore-migrate-path")"; fi
+  printf '%s' "$b"
+}
+migrate_bin_say() {
+  local b; b="$(migrate_bin)"
+  if [ -n "$b" ]; then printf '%s' "$b"; else printf 'исполняемый файл установщика не найден — задайте LORE_MIGRATE_BIN (lore-migrate-<версия>-linux-x64 из пакета)'; fi
+}
+
+# MIG-01: «схема и база собираются заново из нормализованной модели». Пустая база из модели — тем же кодом, что перенос,
+# без источника: lore-migrate init-empty в одноразовом контейнере в сети стека (порт базы наружу не публикуется).
+init_model_db() {
+  local bin db pw envf
+  bin="$(migrate_bin)"
+  [ -n "$bin" ] && [ -f "$bin" ] || die "$(migrate_bin_say): без него свежая база из модели не собирается"
+  db="$(env_get LORE_DB "$DIR/.env")"; pw="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")"
+  say "пустая база из модели: lore-migrate init-empty → $db"
+  envf="$(mktemp)"; trap 'rm -f "$envf"' RETURN
+  ( umask 077; {
+    echo "MIG_DB_URL=http://arcadedb:2480"
+    # источника у свежей установки нет — init-empty его не читает; ключи нужны разбору файла доступа
+    echo "MIG_SRC_DB=fresh_install_no_source"; echo "MIG_SRC_USER=none"; echo "MIG_SRC_PASSWORD=none"
+    echo "MIG_DST_DB=$db"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$pw"
+  } > "$envf" )
+  docker run --rm --network "$(project)_default" -v "$bin:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
+    "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || die "пустая база из модели не собрана (lore-migrate init-empty) — схема и справочники не записаны"
+  say "база $db собрана из модели: шаги V не катятся (LORE_MIGRATE=false)"
+}
+
 do_install() {
   [ "$FROM_SOURCE" = 0 ] || src_archive
   check_prereq
@@ -525,11 +567,16 @@ do_install() {
   run compose up -d arcadedb
   if [ "$DRY" = 1 ]; then
     printf '[dry-run] ждать ArcadeDB, создать базу, если её нет\n'
+    if [ ! -f "$DIR/.env" ]; then
+      say "свежая установка: база $FRESH_DB, LORE_MIGRATE=false (шаги V не катятся)"
+      say "пустая база из модели: lore-migrate init-empty — $(migrate_bin_say)"
+    fi
     run compose up -d
     printf '[dry-run] ждать здоровья бэкенда, проверить dictionary и слайсы: %s use_cases_of_feature search\n' "$SLICES"
     return 0
   fi
   wait_db
+  [ "$FRESH" = 1 ] && init_model_db
   say "запуск бэкенда и фронта"
   start_stack
   wait_backend
@@ -606,6 +653,14 @@ selftest() {
   grep -q 'BUILD_COMMIT export-subst' "$SCRIPT_DIR/../../.gitattributes" 2>/dev/null || [ ! -f "$SCRIPT_DIR/../../.gitattributes" ] \
     || fail ".gitattributes: backend/BUILD_COMMIT без export-subst — коммит не доедет до архива"; ok
   grep -q 'env_set LORE_BUILD_COMMIT' "$0" || fail "install.sh не передаёт коммит исходников в сборку (LORE_BUILD_COMMIT)"; ok
+  # MIG-01: «схема и база собираются заново из нормализованной модели» — свежая установка строит пустую базу из модели
+  # (lore-migrate init-empty) и запускает бэкенд без шагов V; база установки — lore, не system_aida_lore.
+  LORE_MIGRATE_BIN=/opt/x/lore-migrate expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
+  printf '%s' "$out" | grep -q 'пустая база из модели: lore-migrate init-empty' || fail "свежая установка: нет шага «пустая база из модели»: $out"; ok
+  printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
+  printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
+  LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
+  printf '%s' "$out" | grep -q 'исполняемый файл установщика не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
   # дальше проверки читают план сборки — вернуть его в $out
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok

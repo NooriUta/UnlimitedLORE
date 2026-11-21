@@ -14,6 +14,8 @@ export const COMMANDS = [
   // MIG-04: шаг 0 — выложить вшитый пакет установки (install.sh, compose, .env.example); баз не касается (noEnv).
   { name: 'install-bundle', module: () => import('./install-bundle-write.mjs'), write: false, noEnv: true, about: 'выложить пакет установки LORE (install.sh, compose, .env.example, README) в каталог --out [--force] — командный режим, без окна' },
   { name: 'connect', module: () => import('./probe.mjs'), write: false, about: 'проверить подключение: сервер отвечает, источник читается, есть ли новая база (--create-dst — создать пустую)' },
+  // MIG-01: свежая установка — пустая база из модели тем же путём, что перенос, без источника (решения не нужны: записей нет).
+  { name: 'init-empty', module: () => import('./init-empty.mjs'), write: true, noDecisions: true, about: 'пустая база LORE из модели для свежей установки: схема из модели, связи, справочники; источник не читается (нужны только MIG_DST_*)' },
   { name: 'census', module: () => import('./edge-census.mjs'), write: false, about: 'перепись связей источника (--out файл.json)' },
   { name: 'orphans', module: () => import('./orphan-census.mjs'), write: false, about: 'перепись потеряшек: записи без обязательной связи (--out файл.json)' },
   { name: 'statuses', module: () => import('./status-check.mjs'), write: false, about: 'проверка статусов и справочников: что свелось само, что ждёт решения; код выхода 1, пока есть строка без решения (--out диалог.json)' },
@@ -61,7 +63,7 @@ export function parseArgs(argv) {
   if (!known.noEnv && !env && !process.env.MIG_ENV_FILE) return { error: 'не указан файл доступа: --env <файл>' };
   // MIG-01 (проба MDL-08, 20.11.2026): шаг связей без файла решений молча шёл «без решений» — вид продукта,
   // перегруппировка, задачи без спринта не применялись, а сверка говорила «без вида 17». Пишущая команда без него не идёт.
-  if (known.write && !decisions && !process.env.MIG_DECISIONS_FILE) return { error: `команда «${known.name}» пишет в новую базу по решениям человека (статусы, вид продукта, перегруппировка, задачи без спринта): нужен --decisions <файл решений>` };
+  if (known.write && !known.noDecisions && !decisions && !process.env.MIG_DECISIONS_FILE) return { error: `команда «${known.name}» пишет в новую базу по решениям человека (статусы, вид продукта, перегруппировка, задачи без спринта): нужен --decisions <файл решений>` };
   return { command: known, env, decisions, rest };
 }
 

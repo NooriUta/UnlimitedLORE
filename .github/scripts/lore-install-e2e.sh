@@ -62,7 +62,7 @@ plan() {
   echo "план трубы установщика, версия $V:"
   echo "  fetch    $BASE/$REPO/$V/ — пакет из lore-installer-publish.yml, сверка SHA256SUMS"
   echo "  install  lore-migrate install-bundle (пакет установки из бинаря, командный режим) → install.sh --selftest → install.sh --build-from-source --files none из src/lore-$V.tar.gz, вход выключен, без файлов, порт $BIND:$PORT"
-  echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows []); загрузка ассета — 503 «хранилище файлов не подключено»"
+  echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows []); загрузка ассета — 503 «хранилище файлов не подключено»; schema_version — модель; organizations, repositories, project_prs — 200 и пусто"
   echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
   echo "  pr-data  «Дотянуть данные PR» из git-хоста (Forgejo; GitHub/GitLab потом): план «без заголовка N, дотянется M» → подтверждение → отчёт поимённо — шаг предусмотрен, код после 1.18 (SPEC-LORE-INSTALLER-PIPELINE)"
   echo "  switch   LORE_DB=$DST, LORE_MIGRATE=false (база из модели 1.18), перезапуск lore-backend"
@@ -113,7 +113,7 @@ install_() {
     grep -q "^COMPOSE_PROJECT_NAME=$PROJECT_WANT$" "$DIR/.env" || echo "COMPOSE_PROJECT_NAME=$PROJECT_WANT" >> "$DIR/.env"
   fi
   say "установка с нуля: install.sh --build-from-source (вход выключен, без KC, Infisical и Forgejo), проект $(project)"
-  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" env -u COMPOSE_PROJECT_NAME bash "$b/install.sh" \
+  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" LORE_MIGRATE_BIN="$BIN" env -u COMPOSE_PROJECT_NAME bash "$b/install.sh" \
     --dir "$DIR" --port "$PORT" --bind "$BIND" --forgejo none --files none --build-from-source || die "install.sh упал"
   note "установка с нуля: install.sh прошёл (selftest — зелёный)"
   # Джоба в контейнере раннера: порты установки на 127.0.0.1 хоста ей не видны — подключаемся к сети compose и ходим
@@ -145,10 +145,13 @@ probe_fresh() {
   esac
   local m; m="$(get /lore/model)" || die "/lore/model не отвечает на свежей установке"
   printf '%s' "$m" | grep -q '"seed_drift":false' || die "/lore/model не модель пакета: seed_drift не false (${m:0:120}…)"
-  # Списки на пустой базе пусты честно: 200 и rows [], а не ошибка.
-  local s b; for s in open_tasks organizations; do
-    b="$(get "/lore/slice/$s?limit=1")" || die "свежая установка: срез $s не отвечает (ошибка, а не пусто)"
-    printf '%s' "$b" | grep -q '"rows":\[' || die "свежая установка: срез $s ответил не списком: ${b:0:200}"
+  # MIG-01: база свежей установки собрана из модели — schema_version модели, а не номер шага V.
+  printf '%s' "$ver" | grep -q '"schema_version":"model:' || die "свежая установка: схема не из модели (schema_version не model:…): $ver"
+  # Списки на пустой базе пусты честно: 200 и rows [] — и у типов 1.18 (KnowOrganization, KnowRepository, KnowPR).
+  local s b; for s in open_tasks organizations repositories 'project_prs?project=e2e-probe&'; do
+    case "$s" in *\?*) b="$(get "/lore/slice/${s}limit=1")" ;; *) b="$(get "/lore/slice/$s?limit=1")" ;; esac \
+      || die "свежая установка: срез ${s%%\?*} не отвечает (ошибка, а не пусто)"
+    printf '%s' "$b" | grep -q '"rows":\[\]' || die "свежая установка: срез ${s%%\?*} не пуст или не список: ${b:0:200}"
   done
   # Установка «без файлов» (решение владелицы 21.11.2026): загрузка ассета — 503 со словами, а не 500 и не тишина.
   local f code body; f="$(mktemp)"; printf '\x89PNG\r\n\x1a\nprobe' > "$f"
