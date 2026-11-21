@@ -7876,3 +7876,20 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-groupcard--large .sk-groupcard__main { font-size: calc(var(--fs-2xl) * 1.6); }
 .sk-groupcard--large .sk-groupcard__bg { height: 120px; }
 .sk-groupcard--large .sk-groupcard__title { font-size: var(--fs-lg); }
+/* ═══ SPRINT_UXR_S15_KIT6 — меню «сверху» и нижняя панель телефона ═══ */
+.sk-topnav { border-bottom: 1px solid var(--bd); background: var(--bg1); }
+.sk-topnav__spaces, .sk-topnav__chapters { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; padding: 0 8px; }
+.sk-topnav__space, .sk-topnav__chapter { border: 0; background: none; cursor: pointer; padding: 6px 10px; font: inherit; font-size: var(--fs-xs); color: var(--t2); border-bottom: 2px solid transparent; }
+.sk-topnav__space { text-transform: uppercase; letter-spacing: 0.04em; }
+.sk-topnav__space[aria-current], .sk-topnav__chapter[aria-current] { color: var(--acc); border-bottom-color: var(--acc); }
+.sk-topnav__space:focus-visible, .sk-topnav__chapter:focus-visible, .sk-bottombar__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-topnav__end { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.sk-bottombar { display: none; }
+@media (max-width: 720px) {
+  .sk-bottombar { display: flex; position: sticky; bottom: 0; z-index: 20; justify-content: space-around; gap: 2px; padding: 4px 6px calc(4px + env(safe-area-inset-bottom)); background: var(--bg1); border-top: 1px solid var(--bd); }
+  .sk-topnav__spaces .sk-topnav__space { display: none; }
+}
+.sk-bottombar__btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; border: 0; background: none; color: var(--t2); font: inherit; font-size: var(--fs-2xs); cursor: pointer; border-radius: 10px; }
+.sk-bottombar__btn[aria-current] { color: var(--acc); background: var(--bg2); }
+.sk-bottombar__icon { display: inline-flex; }
+.sk-bottombar__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
