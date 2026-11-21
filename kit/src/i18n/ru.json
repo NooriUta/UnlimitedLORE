@@ -1337,5 +1337,6 @@
   "kit.stat.stale": "устарело",
   "kit.stat.age.s": "{n} с назад",
   "kit.stat.age.m": "{n} мин назад",
-  "kit.stat.age.h": "{n} ч назад"
+  "kit.stat.age.h": "{n} ч назад",
+  "kit.tile.estimate": "оценка: значение не с датчика (макет или сводка)"
 }

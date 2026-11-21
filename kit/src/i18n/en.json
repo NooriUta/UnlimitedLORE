@@ -1337,5 +1337,6 @@
   "kit.stat.stale": "stale",
   "kit.stat.age.s": "{n} s ago",
   "kit.stat.age.m": "{n} min ago",
-  "kit.stat.age.h": "{n} h ago"
+  "kit.stat.age.h": "{n} h ago",
+  "kit.tile.estimate": "estimate: not read from a sensor (mock-up or summary)"
 }

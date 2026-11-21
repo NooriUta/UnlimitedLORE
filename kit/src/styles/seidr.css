@@ -7815,3 +7815,57 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-stattile__age { font-size: var(--fs-2xs); color: var(--t3); }
 .sk-stattile.is-stale .sk-stattile__value, .sk-stattile.is-stale .sk-stattile__age { color: var(--wrn); }
 .sk-stattile.is-empty .sk-stattile__value { color: var(--t3); }
+
+/* ═══ SPRINT_UXR_S15_KIT6 — плитки показаний и устройств: A строка, B квадрат, C заливка, D карточка группы, E кольцо; мини-линия ═══ */
+.sk-spark { display: block; width: 100%; color: var(--tile-tone, var(--acc)); }
+.sk-spark__line { fill: none; stroke: currentColor; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.sk-spark__area { fill: currentColor; opacity: 0.15; }
+.sk-tile__label { font-size: var(--fs-sm); font-weight: 600; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-tile__value { font-size: var(--fs-xs); color: var(--t1); white-space: nowrap; }
+.sk-tile__value.is-estimate { opacity: 0.7; }
+.sk-tile__mark { color: var(--t3); margin-left: 1px; }
+.sk-tile__sub { font-size: var(--fs-2xs); color: var(--t2); font-family: var(--mono); }
+.sk-tile__icon { display: inline-flex; color: var(--tile-tone, var(--acc)); }
+.sk-tile__bubble { position: relative; width: 38px; height: 38px; flex: none; border-radius: 999px; display: grid; place-items: center; }
+.sk-tile__bubble-bg { position: absolute; inset: 0; border-radius: 999px; background: var(--tile-tone, var(--acc)); opacity: 0.2; }
+.sk-tile__bubble .sk-tile__icon { position: relative; }
+.is-alarm .sk-tile__value, .is-alarm .sk-groupcard__main { color: var(--dng); }
+.sk-tilerow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg2); min-width: 0; }
+.sk-tilerow.is-alarm { box-shadow: inset 0 0 0 1px var(--dng); }
+.sk-tilerow__text { display: flex; flex-direction: column; min-width: 0; }
+.sk-tilesq { aspect-ratio: 1 / 1; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; background: var(--bg2); color: var(--t2); overflow: hidden; }
+.sk-tilesq .sk-tile__icon { color: var(--t3); }
+.sk-tilesq.is-on { background: var(--t1); color: var(--bg0); }
+.sk-tilesq.is-on .sk-tile__label, .sk-tilesq.is-on .sk-tile__value { color: var(--bg0); }
+.sk-tilesq.is-on .sk-tile__icon { color: var(--tile-tone, var(--acc)); }
+.sk-tilesq.is-alarm { box-shadow: inset 0 0 0 2px var(--dng); }
+.sk-tilesq__text { display: flex; flex-direction: column; min-width: 0; }
+.sk-tilebar { position: relative; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px 0 6px; border-radius: 999px; background: var(--bg2); overflow: hidden; }
+.sk-tilebar__fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--tile-tone, var(--acc)); opacity: 0.22; }
+.sk-tilebar.is-alarm .sk-tilebar__fill { background: var(--dng); }
+.sk-tilebar__bubble { position: relative; width: 40px; height: 40px; flex: none; border-radius: 999px; display: grid; place-items: center; background: var(--bg1); }
+.sk-tilebar__label { position: relative; flex: 1; }
+.sk-tilebar .sk-tile__value { position: relative; font-family: var(--display); font-weight: 800; font-size: var(--fs-md); }
+.sk-groupcard { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 150px; padding: 14px; border-radius: 18px; background: var(--bg2); border: 0; color: var(--t1); text-align: left; overflow: hidden; font: inherit; }
+button.sk-groupcard { cursor: pointer; }
+button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-groupcard.is-alarm { box-shadow: inset 0 0 0 1px var(--dng); }
+.sk-groupcard__bg { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; opacity: 0.35; }
+.sk-groupcard__head { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sk-groupcard__title { font-family: var(--display); font-weight: 800; font-size: var(--fs-md); }
+.sk-groupcard__main { position: relative; font-family: var(--display); font-weight: 800; font-size: var(--fs-2xl); color: var(--tile-tone, var(--t1)); }
+.sk-groupcard__main.is-estimate { opacity: 0.75; }
+.sk-groupcard__empty { position: relative; font-family: var(--display); font-weight: 800; font-size: var(--fs-xl); color: var(--t3); }
+.sk-groupcard__chips { position: relative; display: flex; gap: 6px; flex-wrap: wrap; }
+.sk-groupcard__chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px; background: var(--bg1); font-size: var(--fs-xs); color: var(--t1); }
+.sk-groupcard__chip.is-alarm { color: var(--dng); }
+.sk-tilegauge { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px; border-radius: 18px; background: var(--bg2); }
+.sk-tilegauge__ring { width: 96px; height: 96px; transform: rotate(135deg); }
+.sk-tilegauge__track { fill: none; stroke: var(--bd); stroke-width: 7; stroke-linecap: round; }
+.sk-tilegauge__arc { fill: none; stroke: var(--tile-tone, var(--acc)); stroke-width: 7; stroke-linecap: round; }
+.sk-tilegauge.is-alarm .sk-tilegauge__arc { stroke: var(--dng); }
+.sk-tilegauge__center { margin-top: -70px; height: 52px; display: flex; flex-direction: column; align-items: center; }
+.sk-tilegauge .sk-tile__value { font-family: var(--display); font-weight: 800; font-size: var(--fs-sm); }
+.sk-groupcard__photo { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.sk-groupcard__photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg0) 0%, transparent 45%, var(--bg0) 100%); opacity: 0.85; }
+.sk-groupcard.has-photo .sk-groupcard__chip { background: var(--bg0); }
