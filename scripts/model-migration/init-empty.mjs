@@ -28,12 +28,28 @@ export function dictEntriesFromRules(rules = RULES) {
   return out;
 }
 
+/** Виды связей карты (keep) без данных — те, которых ещё нет в приёмнике; код сервера пишет в них на пустой базе. */
+async function createModelEdges(db) {
+  const have = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
+  const created = [];
+  for (const e of keptEdges()) {
+    if (have.has(e)) continue;
+    await db.dstCommand(`CREATE EDGE TYPE ${e} IF NOT EXISTS`);
+    created.push(e);
+  }
+  return created;
+}
+
 /** Пустая база из модели в приёмнике db (источник не читается). Возвращает итог: ok, записей, связей, проблемы. */
 export async function initEmpty(db, { log = console.log } = {}) {
   const src = withEmptySource(db);
   const problems = [];
   const t = await transfer(src, { decisions: [] }, { freshInstall: true, log });
   const records = Object.values((t.stages && t.stages.write && t.stages.write.records) || {}).reduce((a, n) => a + n, 0);
+  // Связи модели без данных — видом ДО шага связей: его подшаги читают виды связей приёмника (ожидающие ссылки читают
+  // DEPENDS_ON — ryzenai 21.11.2026: «Type with name 'DEPENDS_ON' was not found»). Шаг связей пересоздаёт только виды,
+  // в которые пишет; на пустой базе таких нет.
+  const created = await createModelEdges(db);
   // момент снимка нужен связям без своего момента — на пустой базе их нет; постоянное значение держит детерминизм
   const e = await transferEdges(src, { log, freshInstall: true, at: '1970-01-01T00:00:00.000Z' });
   // Сверка шага связей на пустой базе: правила охвата гейтов (qg_scope) называют гейты прода поимённо — на пустой базе
@@ -46,14 +62,8 @@ export async function initEmpty(db, { log = console.log } = {}) {
     }
     if (!Object.values(e).some(v => v && typeof v === 'object' && v.ok === false) && e.ok === false) problems.push('шаг связей: сверка не сошлась');
   }
-  // связи модели без данных: вид связи нужен коду сервера, пишущему в пустую базу (правило keep и цели перевода)
-  const have = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
-  const created = [];
-  for (const e of keptEdges()) {
-    if (have.has(e)) continue;
-    await db.dstCommand(`CREATE EDGE TYPE ${e} IF NOT EXISTS`);
-    created.push(e);
-  }
+  // после шага связей — те виды, которые он не завёл и не оставил (повторно ничего не создаётся)
+  created.push(...await createModelEdges(db));
   // справочники сервера — из правил (на пустой базе KnowDictEntry пуст: записей источника нет)
   const dicts = dictEntriesFromRules();
   for (const row of dicts) await db.dstCommand('INSERT INTO KnowDictEntry CONTENT :c', { c: row });

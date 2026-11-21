@@ -439,6 +439,12 @@ wait_db() {
   if dcurl "http://arcadedb:2480/api/v1/databases" | grep -q "\"$db\""; then
     say "база $db уже есть"
   else
+    # MIG-01: базы установки ещё нет — свежая установка: база из модели под своим именем (не system_aida_lore), шаги V
+    # не катятся. Признак — сама база, а не .env (его могли положить заранее, ryzenai 21.11.2026).
+    if [ "$db" = system_aida_lore ]; then db="$FRESH_DB"; env_set LORE_DB "$db" "$DIR/.env"; fi
+    env_set LORE_MIGRATE false "$DIR/.env"
+    FRESH=1
+    say "свежая установка: база $db, LORE_MIGRATE=false (шаги V не катятся)"
     say "создание базы $db"
     dcurl -X POST -H 'Content-Type: application/json' -d "{\"command\":\"create database $db\"}" \
       "http://arcadedb:2480/api/v1/server" | grep -q '"ok"' || die "база $db не создана"
@@ -659,6 +665,8 @@ selftest() {
   printf '%s' "$out" | grep -q 'пустая база из модели: lore-migrate init-empty' || fail "свежая установка: нет шага «пустая база из модели»: $out"; ok
   printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
   printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
+  # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, ryzenai 21.11.2026)
+  sed -n '/^wait_db()/,/^}/p' "$0" | grep -q 'FRESH=1' || fail "свежая установка определяется не по базе (wait_db не ставит FRESH)"; ok
   LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
   printf '%s' "$out" | grep -q 'исполняемый файл установщика не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
   # дальше проверки читают план сборки — вернуть его в $out

@@ -26,6 +26,9 @@ function fakeDst() {
     async *scan() {},
     async dstQuery(q) {
       if (/FROM schema:types/i.test(q)) return [...types].map(name => ({ name }));
+      // как ArcadeDB: чтение несуществующего типа — ошибка (ryzenai 21.11: DEPENDS_ON на пустой базе)
+      for (const m of String(q).matchAll(/\bFROM\s+([A-Z][A-Za-z0-9_]*)/g))
+        if (!types.has(m[1])) throw new Error(`Type with name '${m[1]}' was not found`);
       if (/count\(\*\)/i.test(q)) return [{ n: 0 }];
       return [];
     },
