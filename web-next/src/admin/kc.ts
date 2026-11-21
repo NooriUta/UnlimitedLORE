@@ -16,6 +16,7 @@
 import type { BatchResult, DiffCheck, DiffRow } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 import { LoreHttpError } from '../api/loreSlice';
+import { parseInfisical, type InfisicalOutcome } from './harnessAccounts';
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v : null);
 
@@ -113,11 +114,16 @@ export interface Rotation {
   oldSecretKept: boolean | null;
   oldSecretExpiresAt: string | null;
   oldSecretNote: string | null;
+  /** 1.18.2: ключ секрета по схеме harness (LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]); null — имя учётки не по схеме. */
+  secretKey: string | null;
+  /** 1.18.2: итог записи нового секрета в Infisical; null — сервер не сказал. */
+  infisical: InfisicalOutcome | null;
 }
 
 export function parseRotation(body: unknown): Rotation {
   const b = (body ?? {}) as Record<string, unknown>;
   return {
+    secretKey: str(b.secret_key), infisical: parseInfisical(b),
     clientId: str(b.client_id), secret: str(b.secret), undoReason: str(b.undo_reason),
     oldSecretKept: typeof b.old_secret_kept === 'boolean' ? b.old_secret_kept : null,
     oldSecretExpiresAt: str(b.old_secret_expires_at),
