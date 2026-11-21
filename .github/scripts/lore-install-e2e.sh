@@ -11,7 +11,7 @@
 #   switch   LORE_DB установки → перенесённая база, перезапуск бэкенда
 #   probe    /lore/version отвечает, срезы open_tasks и organizations не пусты
 #
-# Запуск: lore-install-e2e.sh <plan|fetch|install|probe-fresh|migrate|switch|probe|all|down>
+# Запуск: lore-install-e2e.sh <plan|fetch|install|probe-fresh|migrate|pr-data|switch|probe|all|down>
 # Входы (env):
 #   E2E_VERSION   версия пакета в kkRepo (1.18.0-rc.<sha8>) — обязательна
 #   KKREPO_BASE   http://192.168.3.131:8081/repository; KKREPO_REPO lore-installer
@@ -64,6 +64,7 @@ plan() {
   echo "  install  lore-migrate install-bundle (пакет установки из бинаря, командный режим) → install.sh --selftest → install.sh --build-from-source из src/lore-$V.tar.gz, вход выключен, порт $BIND:$PORT"
   echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows [])"
   echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
+  echo "  pr-data  «Дотянуть данные PR» из git-хоста (Forgejo; GitHub/GitLab потом): план «без заголовка N, дотянется M» → подтверждение → отчёт поимённо — шаг предусмотрен, код после 1.18 (SPEC-LORE-INSTALLER-PIPELINE)"
   echo "  switch   LORE_DB=$DST, перезапуск lore-backend"
   echo "  probe    /lore/version, /lore/slice/open_tasks, /lore/slice/organizations и /lore/slice/repositories — не пусты"
 }
@@ -166,6 +167,12 @@ migrate() {
     compose up -d arcadedb >/dev/null || die "ArcadeDB установки не поднялась с портом $DBPORT"
     dst_url="http://$BIND:$DBPORT"
   fi
+  # Пересозданная с портом ArcadeDB отвечает не сразу (ryzenai 21.11: connect получил ECONNRESET и приёмник не создался).
+  local i; for i in $(seq 1 60); do
+    curl -fsS -m 5 -o /dev/null "$dst_url/api/v1/ready" && break
+    [ "$i" = 60 ] && die "ArcadeDB установки не ответила на $dst_url/api/v1/ready за 120 с"
+    sleep 2
+  done
   local dec="${E2E_DECISIONS:-$TREE/scripts/model-migration/rules/decisions.lore.json}"
   say "перенос: model-migration-run.sh STAGE=full, бинарь пакета, приёмник $DST на $dst_url"
   MIG_SRC_DB="${MIG_SRC_DB:-}" MIG_DST_DB="$DST" STAGE=full \
@@ -202,9 +209,12 @@ case "$STAGE" in
   install) install_ ;;
   probe-fresh) probe_fresh ;;
   migrate) migrate ;;
+  # Шаг предусмотрен спекой (владелица 21.11: «ок и шагом» · «в инсталляции»), код — после 1.18. Не притворяется
+  # выполненным: говорит, что не реализован, и выходит с кодом 0 только потому, что в трубу пока не включён.
+  pr-data) note "pr-data: «Дотянуть данные PR» — шаг предусмотрен, ещё не реализован (после 1.18)" ;;
   switch) switch ;;
   probe) probe ;;
   all) plan; fetch; install_; probe_fresh; migrate; switch; probe ;;
   down) down ;;
-  *) die "шаг «$STAGE» неизвестен: plan | fetch | install | probe-fresh | migrate | switch | probe | all | down" 2 ;;
+  *) die "шаг «$STAGE» неизвестен: plan | fetch | install | probe-fresh | migrate | pr-data | switch | probe | all | down" 2 ;;
 esac
