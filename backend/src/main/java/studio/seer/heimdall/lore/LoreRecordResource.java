@@ -349,7 +349,11 @@ public class LoreRecordResource extends LoreResourceBase {
         if (LoreRecordUnmodeled.reads(type)) try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordUnmodeled.sql(type), Map.of("id", id));
             if (v.isEmpty()) facts.put("unmodeled_state", "not_read");
-            else unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+            else {
+                unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+                // описанное полем модели, но без колонки в главном срезе — значение из вершины, а не пустое поле
+                LoreRecordUnmodeled.fillModeled(type, values, v.get(0));
+            }
         } catch (RuntimeException e) {
             facts.put("unmodeled_error", e.getMessage());
         }

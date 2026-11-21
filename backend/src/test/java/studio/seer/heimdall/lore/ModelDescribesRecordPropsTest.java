@@ -33,19 +33,8 @@ class ModelDescribesRecordPropsTest {
         "KnowDictEntry", List.of("kind", "dict_type", "is_extensible"));
 
     /** Неописанные свойства прочих типов — ждут описания в модели (найдены этим сторожем 21.11.2026). */
-    static final Map<String, Set<String>> PENDING = Map.ofEntries(
-        // Данные, а не служебное переноса: ждут описания в модели (поле с подписью ru/en/pl или решение «снять»).
-        Map.entry("decision", Set.of("refs_raw")),
-        Map.entry("doc", Set.of("content_html", "content_html_bytes", "content_html_sha256", "content_md_en_bytes",
-            "content_md_en_sha256", "content_md_ru_bytes", "content_md_ru_sha256", "sort_order")),
-        Map.entry("feature", Set.of("feature_id")),
-        Map.entry("pr", Set.of("pr_number")),
-        Map.entry("quality_gate", Set.of("routine_name")),
-        Map.entry("question", Set.of("trigger")),
-        Map.entry("release", Set.of("git_tag", "release_name", "released_at")),
-        Map.entry("sprint", Set.of("effort_days", "goal", "unplanned_intentional")),
-        Map.entry("task", Set.of("order_index", "priority", "priority_note", "src", "summary_md", "task_id")),
-        Map.entry("tech", Set.of("file_path", "status")));
+    // Владелица 21.11.2026: «опиши — нужно в инсталлятор отдать». Все свойства базы 1.18 описаны моделью или service_fields.
+    static final Map<String, Set<String>> PENDING = Map.of();
 
     static Map<String, Set<String>> installerProps() throws Exception {
         Map<String, Set<String>> out = new HashMap<>();
@@ -89,6 +78,30 @@ class ModelDescribesRecordPropsTest {
         assertEquals(PENDING, u, "свойства базы 1.18 без описания в модели (описать полем или service_fields): " + u);
     }
 
+    /** Поля, описанные 21.11.2026 (бывший список «ждёт описания»): в схеме установщика каждое — с типом базы. */
+    @Test
+    void describedFieldsAreInInstallerSchemaWithType() throws Exception {
+        Map<String, List<String>> was = Map.of(
+            "KnowTask", List.of("task_id", "priority", "priority_note", "order_index", "src", "summary_md"),
+            "KnowSprint", List.of("effort_days", "goal", "unplanned_intentional"),
+            "KnowRelease", List.of("git_tag", "release_name", "released_at"),
+            "KnowDoc", List.of("content_html", "content_html_bytes", "content_html_sha256", "content_md_en_bytes",
+                "content_md_en_sha256", "content_md_ru_bytes", "content_md_ru_sha256", "sort_order"),
+            "KnowDecision", List.of("refs_raw"), "KnowQuestion", List.of("trigger"), "KnowUseCase", List.of("feature_id"),
+            "KnowPR", List.of("pr_number"), "QualityGate", List.of("routine_name"), "KnowSpec", List.of("file_path", "status"));
+        ObjectMapper m = new ObjectMapper();
+        Map<String, JsonNode> types = new HashMap<>();
+        for (String file : List.of("sprint-phase-task.json", "all-objects.json"))
+            m.readTree(Path.of("..", "scripts", "model-migration", "schema", file).toFile()).get("types").fields()
+                .forEachRemaining(e -> types.put(e.getKey(), e.getValue()));
+        for (Map.Entry<String, List<String>> e : was.entrySet())
+            for (String f : e.getValue()) {
+                JsonNode n = types.get(e.getKey()).get("fields").get(f);
+                assertNotNull(n, e.getKey() + "." + f + ": нет в схеме установщика");
+                assertFalse(n.get("db_type").asText().isBlank(), e.getKey() + "." + f + ": без типа базы");
+            }
+    }
+
     @Test
     void serviceFieldsAreDeclaredWithReason() {
         Map<String, String> s = LoreModelFile.content().serviceFields();
@@ -97,6 +110,25 @@ class ModelDescribesRecordPropsTest {
             assertFalse(s.get(p).isBlank(), p + ": причина");
             assertTrue(LoreModelTypes.isInternal(p, "slug"), p + ": на поверхности не выводится");
         }
+    }
+
+    /**
+     * Описанное поле не должно пропасть из паспорта: раньше его значение показывал блок «Не описано в модели» (чтение
+     * вершины), а у главного среза такой колонки нет. Поле модели без значения в строке среза берётся из вершины;
+     * значение среза не перезаписывается, служебное не подставляется.
+     */
+    @Test
+    void describedFieldTakesValueFromVertexWhenSliceHasNone() {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("title", "Задача");
+        Map<String, Object> vertex = Map.of("task_uid", "S/MD-05", "task_id", "MD-05", "order_index", 3, "title", "другое",
+            "src", "manual", "mig_src_rid", "#1:2");
+        LoreRecordUnmodeled.fillModeled("task", values, vertex);
+        assertEquals("MD-05", values.get("task_id"));
+        assertEquals(3, values.get("order_index"));
+        assertEquals("Задача", values.get("title"), "значение среза не перезаписано");
+        assertFalse(values.containsKey("src"), "служебное не подставляется");
+        assertFalse(values.containsKey("mig_src_rid"));
     }
 
     /** Положительный контроль: свойство, которого нет в модели, блок показывает. */
