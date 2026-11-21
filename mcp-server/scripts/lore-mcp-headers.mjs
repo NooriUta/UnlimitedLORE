@@ -10,7 +10,8 @@
 // до истечения минус 60 с, чтобы не ходить в Keycloak на каждое подключение. Ключ записи —
 // issuer + client_id + SHA-256 секрета; сам секрет в файл не пишется. Файл — права 0600.
 //
-// Вход (env): LORE_OIDC_ISSUER, LORE_MCP_CLIENT_ID, LORE_MCP_CLIENT_SECRET — те же, что у
+// Вход (env): LORE_OIDC_ISSUER, LORE_MCP_CLIENT_ID, LORE_MCP_CLIENT_SECRET (или переменная, названная в
+// LORE_MCP_SECRET_VAR) — те же, что у
 // stdio-режима; LORE_MCP_PROFILE (по умолчанию full); LORE_MACHINE_ID | COMPUTERNAME |
 // HOSTNAME | os.hostname() — машина (X-Lore-Machine); LORE_HARNESS (по умолчанию claude-code).
 // X-Lore-Session-Id помощник не выдаёт: номер сессии Claude Code в headersHelper не приходит
@@ -24,15 +25,24 @@ import { dirname, join } from 'node:path';
 const MARGIN_MS = 60_000;
 const env = (k) => (process.env[k] ?? '').trim();
 
-const need = ['LORE_OIDC_ISSUER', 'LORE_MCP_CLIENT_ID', 'LORE_MCP_CLIENT_SECRET'];
+// Патч 1.18.1: LORE_MCP_SECRET_VAR — ИМЯ переменной, где лежит секрет (обёртка «infisical run … -- node
+// lore-mcp-headers.mjs» отдаёт его под своим именем, например LORE_MCP_CLIENT_SECRET_FULL). По умолчанию
+// LORE_MCP_CLIENT_SECRET. В ошибке называется имя переменной, значение секрета — никогда.
+const secretVar = env('LORE_MCP_SECRET_VAR') || 'LORE_MCP_CLIENT_SECRET';
+if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(secretVar)) {
+  console.error('lore-mcp-headers: LORE_MCP_SECRET_VAR — не имя переменной окружения');
+  process.exit(2);
+}
+const need = ['LORE_OIDC_ISSUER', 'LORE_MCP_CLIENT_ID', secretVar];
 const missing = need.filter((k) => !env(k));
 if (missing.length) {
-  console.error(`lore-mcp-headers: нет ${missing.join(', ')} — токен взять не из чего`);
+  console.error(`lore-mcp-headers: нет ${missing.join(', ')} — токен взять не из чего`
+    + (secretVar !== 'LORE_MCP_CLIENT_SECRET' && missing.includes(secretVar) ? ` (имя переменной секрета задано LORE_MCP_SECRET_VAR)` : ''));
   process.exit(2);
 }
 const issuer = env('LORE_OIDC_ISSUER').replace(/\/+$/, '');
 const clientId = env('LORE_MCP_CLIENT_ID');
-const secret = env('LORE_MCP_CLIENT_SECRET');
+const secret = env(secretVar);
 const cacheFile = env('LORE_MCP_TOKEN_CACHE') || join(homedir(), '.lore', 'mcp-token.json');
 const key = `${issuer}|${clientId}|${createHash('sha256').update(secret).digest('hex')}`;
 
