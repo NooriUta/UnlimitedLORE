@@ -23,6 +23,8 @@ export const COMMANDS = [
   { name: 'transfer', module: () => import('./transfer.mjs'), write: true, about: 'перенос записей с историей в новую базу и сверка (--out отчёт.json); не начинается, пока есть статусы без решения или продукты без вида (--allow-pending — обход для пробы)' },
   { name: 'edges', module: () => import('./transfer-edges.mjs'), write: true, about: 'перенос связей в новую базу и сверка; после transfer (--out отчёт.json)' },
   { name: 'ui', module: () => import('./ui.mjs'), write: false, about: 'интерфейс переноса в браузере на 127.0.0.1 (--port 2499): диалог по данным этой установки, решения пишутся в файл --decisions; --proposals <файл> — предложенные коды подсказкой «предложено» (в решения — только по «принять»)' },
+  // MD-05: после замены базы и старта бэкенда — дотянуть данные PR из Forgejo (делает сервер, здесь ни баз, ни секретов).
+  { name: 'pr-backfill', module: () => import('./pr-backfill.mjs'), write: false, noEnv: true, about: 'дотянуть данные PR (заголовок, адрес, состояние, дата мержа) из Forgejo через бэкенд: --url <адрес бэкенда> [--limit N] [--dry-run] [--out отчёт.json]; токен super-admin — в LORE_TOKEN; чужие репо — пропуск с причиной, повтор — 0 изменений' },
   { name: 'dst-fingerprint', module: () => import('./dst-fingerprint.mjs'), write: false, about: 'отпечаток содержимого новой базы — сверка двух переносов: одинаковые настройки и источник → одинаковый отпечаток (--out файл.json)' },
 ];
 

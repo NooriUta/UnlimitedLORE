@@ -101,6 +101,28 @@ public abstract class LoreResourceBase {
     @Inject
     LoreIngestService ingestService;
 
+    /**
+     * SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: хранилище KnowPR для дотяжки данных PR — чтение через ingestService,
+     * запись обычным путём PR (UPDATE вершины по pr_uid, как у мержа и release_link: истории у KnowPR нет).
+     */
+    PrBackfill.Store prStore() {
+        return new PrBackfill.Store() {
+            @Override public List<Map<String, Object>> candidates(String after, int limit) {
+                return ingestService.queryPublic(PrBackfill.candidatesSql(limit), Map.of("cursor", after == null ? "" : after));
+            }
+            @Override public Map<String, Object> row(String prUid) {
+                List<Map<String, Object>> r = ingestService.queryPublic(PrBackfill.ROW_SQL, Map.of("uid", prUid));
+                return r.isEmpty() ? null : r.get(0);
+            }
+            @Override public void write(String prUid, Map<String, Object> fields) {
+                Map<String, Object> p = new java.util.LinkedHashMap<>(fields);
+                p.put("uid", prUid);
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    PrBackfill.writeSql(fields.keySet()), p)).await().indefinitely();
+            }
+        };
+    }
+
     // Throws LoreExceptions.Forbidden (→ 403 JSON via LoreExceptionMapper) when the
     // caller is not admin/superadmin. Call as a guard: `requireAdmin(role);`.
     void requireAdmin(String role) {
