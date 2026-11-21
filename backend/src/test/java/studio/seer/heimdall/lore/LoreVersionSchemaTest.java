@@ -21,6 +21,23 @@ class LoreVersionSchemaTest {
         assertEquals("model", s.get("schema_source"));
     }
 
+    /** Патч 1.18.1, владелица: «версию модели после миграции начни с 1». Номер — из отметки, хэш — отдельным полем. */
+    @Test
+    void базаИзМодели_номерМодели_хэшОтдельно() {
+        Map<String, Object> s = LoreVersionResource.schemaOf(93, List.of(Map.of("model_hash", "d7e16a827891d5e0", "model_version", 1, "source", "installer")));
+        assertEquals("model:1", s.get("schema_version"));
+        assertEquals("d7e16a827891d5e0", s.get("model_hash"));
+        assertEquals("model", s.get("schema_source"));
+    }
+
+    @Test
+    void модельВФайле_номер1_отметкаБезНомера_дописываетсяИдемпотентно() {
+        assertEquals(1, LoreModelFile.content().modelVersion(), "модель 1.18 — версия 1");
+        String sql = LoreSchemaMigrationRunner.modelVersionBackfillSql();
+        assertTrue(sql.startsWith("UPDATE LoreModelSchema SET model_version = 1"), sql);
+        assertTrue(sql.contains("WHERE model_version IS NULL"), "только если номера нет — повтор ничего не меняет: " + sql);
+    }
+
     @Test
     void базаШагов_номерШага() {
         Map<String, Object> s = LoreVersionResource.schemaOf(93, List.of());

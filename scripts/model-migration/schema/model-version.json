@@ -1,0 +1,5 @@
+{
+ "_about": "Патч 1.18.1 (владелица: «версию модели после миграции начни с 1»). Закреплённая пара: номер модели (model_version в shared/model/lore-model.json) и хэш схемы из модели (отметка LoreModelSchema.model_hash). Схема сменилась — поднять номер и закрепить новый хэш (сторож model-version.test.mjs).",
+ "model_version": 1,
+ "schema_hash": "d7e16a827891d5e0"
+}

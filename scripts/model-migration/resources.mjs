@@ -37,3 +37,5 @@ export const INSTALL_BUNDLE = installBundle;
 export const DECISION_MILESTONES = decisionMilestones;
 // DBR-07: временные ряды модели 1.18 (AuditDbLogin — сторож входов в ArcadeDB); заводит их шаг 3 переноса.
 export const SERIES = loreModel.series || {};
+// Патч 1.18.1 (владелица: «версию модели после миграции начни с 1»): номер модели — в отметку LoreModelSchema.
+export const MODEL_VERSION = Number.isInteger(loreModel.model_version) ? loreModel.model_version : null;

@@ -20,7 +20,7 @@ import crypto from 'node:crypto';
 import { connect } from './db.mjs';
 import { applyMap } from './apply-map.mjs';
 
-import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES } from './resources.mjs';
+import { MAP, SCHEMA, VOCAB, CODE_CASE, EDGES, RULES, NOT_MOVED, notMovedFor, SERIES, MODEL_VERSION } from './resources.mjs';
 import { seriesPlan, copySeries, seriesIo } from './series.mjs';
 import { writeDictionaries, ENTRY as DICT_ENTRY, LABEL as DICT_LABEL } from './dicts.mjs';
 import { EDGE_STEP_TYPES } from './step-types.mjs';
@@ -44,7 +44,8 @@ export const keptEdges = () => Object.entries(EDGES).filter(([n, r]) => r.rule =
 /** MIG-03: отметка «схема собрана из модели» — по ней сервер узнаёт базу без журнала шагов V. Хэш — от схемы. */
 export function modelMarker(schema, at = new Date().toISOString()) {
   const model_hash = crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0, 16);
-  return { model_hash, source: 'installer', built_at: at };
+  // патч 1.18.1: номер модели (model_version lore-model.json) — рядом с хэшем; /lore/version отдаёт model:<N>
+  return { model_hash, model_version: MODEL_VERSION, source: 'installer', built_at: at };
 }
 /** DDL поля: имя в обратных кавычках — поле с именем-ключевым словом SQL (KnowQuestion.trigger, 18.11.2026) иначе роняет перенос. */
 // MDL-11 (ответ владелицы 19.11.2026 «5а»): поле схемы с notnull — MANDATORY + NOTNULL, пустое значение база не примет.
