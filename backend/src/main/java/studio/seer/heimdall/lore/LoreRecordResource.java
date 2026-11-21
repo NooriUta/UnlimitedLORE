@@ -52,12 +52,29 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreMilestoneResource milestoneResource;
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
+    @Inject LoreOrganizationResource organizationResource;
+    @Inject LoreStatusResource statusResource;   // MDL-13: трек спринта — тот же путь, что sprint/plan
 
     /** Главный срез записи типа и имя его параметра. */
     record Source(String slice, String param, boolean list) {}
 
     /** release_uid «проект#тег» (AIDA/UnlimitedLORE#v1.17.4): как SAFE_ID, плюс «#». */
     static final java.util.regex.Pattern RELEASE_UID = java.util.regex.Pattern.compile("[A-Za-z0-9_./\\-]{1,100}#[A-Za-z0-9_.\\-]{1,60}");
+
+    /**
+     * D-2026-MIG-REPOSITORY-ORGANIZATION: ключ репозитория — его адрес (url уникален у KnowRepository), «https://хост/владелец/имя».
+     * Двоеточие и «//» общий шаблон чтения не пропускает — допустимы только у репозитория.
+     */
+    static final java.util.regex.Pattern REPO_URL =
+        java.util.regex.Pattern.compile("(https?|ssh|git)://[A-Za-z0-9_.@:\\-]{1,120}(/[A-Za-z0-9_.\\-]{1,120}){1,8}/?");
+
+    /** Ключ записи допустим у типа: релиз — release_uid «проект#тег», репозиторий — адрес, остальные — общий шаблон. */
+    static boolean idAllowed(String type, String id) {
+        if (id == null) return false;
+        if ("release".equals(type)) return RELEASE_UID.matcher(id).matches();
+        if ("repository".equals(type)) return REPO_URL.matcher(id).matches();
+        return SAFE_READ_ID.matcher(id).matches();
+    }
 
     static Source sourceOf(String type) {
         return switch (type) {
@@ -70,6 +87,8 @@ public class LoreRecordResource extends LoreResourceBase {
             case "decision" -> new Source("decision", "id", false);
             case "question" -> new Source("question_by_id", "id", false);
             case "milestone" -> new Source("milestone_by_id", "id", false);
+            // MDL-13: паспорт трека — справочник KnowTrack (на старой схеме PlanTrack), ключ track_id.
+            case "track" -> new Source("track_by_id", "id", false);
             case "release" -> new Source("release_by_id", "id", false);
             // S4-V2-SECTIONS: компонент, технология (спека SPEC-TECH-…), фича — сценарий любого уровня.
             case "component" -> new Source("component", "id", false);
@@ -92,6 +111,9 @@ public class LoreRecordResource extends LoreResourceBase {
             case "runbook" -> new Source("runbook_by_id", "id", false);
             // MD-04, второй заход по QG: паспорт гейта качества — та же строка, что читает страница QG.
             case "quality_gate" -> new Source("quality_gate_by_id", "id", false);
+            // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес url) и организация (org_id).
+            case "repository" -> new Source("repo_by_id", "id", false);
+            case "organization" -> new Source("org_by_id", "id", false);
             default -> null;
         };
     }
@@ -114,9 +136,7 @@ public class LoreRecordResource extends LoreResourceBase {
         if (!LoreRecordRegistry.TYPES.contains(type))
             return noStore(Response.status(Response.Status.BAD_REQUEST).entity(new LoreError("UNKNOWN_TYPE",
                 "тип паспорта '" + type + "' не заведён; есть: " + LoreRecordRegistry.TYPES)));
-        // Ключ релиза — release_uid «проект#тег»: «#» допустим только у релиза.
-        boolean idOk = "release".equals(type) ? RELEASE_UID.matcher(id).matches() : SAFE_READ_ID.matcher(id).matches();
-        if (!NEW_ID.equals(id) && !idOk)
+        if (!NEW_ID.equals(id) && !idAllowed(type, id))
             return badParams("id contains illegal characters");
         Set<String> scope;
         try {
@@ -352,7 +372,7 @@ public class LoreRecordResource extends LoreResourceBase {
                     if (sprint != null) inherit(SPRINT_AXES + "sprint_id = :id", Map.of("id", sprint), "sprint",
                         scope, inhP, inhC, true, true);
                 }
-                case "milestone" -> inherit(SPRINT_AXES + "out('TARGETS_MILESTONE').milestone_id CONTAINS :id",
+                case "milestone" -> inherit(SPRINT_AXES + "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id CONTAINS :id",
                     Map.of("id", id), "sprint", scope, inhP, inhC, true, true);
                 case "component" -> inherit(SPRINT_AXES + "out('BELONGS_TO').component_id CONTAINS :id",
                     Map.of("id", id), "sprint", scope, inhP, inhC, true, false);
@@ -562,7 +582,8 @@ public class LoreRecordResource extends LoreResourceBase {
 
     // ── POST relation ───────────────────────────────────────────────────────
 
-    public record RelationRequest(String rel, String dir, String target, String action, String kind, String reason) {}
+    /** {@code target_type} — тип другого конца, где он неоднозначен (MDL-13: DEPENDS_ON ведёт к задаче, фазе, спринту или вехе; не задан — ищется по ключу). */
+    public record RelationRequest(String rel, String dir, String target, String action, String kind, String reason, String target_type) {}
 
     @POST
     @Path("{type}/{id: .+}/relation")
@@ -598,8 +619,10 @@ public class LoreRecordResource extends LoreResourceBase {
         String a = id, b = target;
         if (r.reversed()) { a = target; b = id; }
         return switch (r.handler()) {
-            case SPRINT_DEP -> sprintTask.linkSprintDep(
-                new LoreSprintTaskResource.SprintDepRequest(a, b, req.kind(), req.reason(), action), role);
+            // MDL-13: «зависит от» — запись from, цель to; у reversed («от неё зависят») запись — to.
+            case DEPENDS_ON -> sprintTask.linkDependency(r.reversed()
+                ? new LoreSprintTaskResource.DepRequest(req.target_type(), target, type, id, req.kind(), req.reason(), action)
+                : new LoreSprintTaskResource.DepRequest(type, id, req.target_type(), target, req.kind(), req.reason(), action), role);
             case SPRINT_PROJECT -> sprintTask.linkSprintProject(
                 new LoreSprintTaskResource.SprintProjectRequest(a, b, action), role);
             case SPRINT_COMPONENT -> sprintTask.linkSprintComponent(
@@ -631,6 +654,11 @@ public class LoreRecordResource extends LoreResourceBase {
             case QUESTION_PROJECT -> questionResource.linkProject(new LoreQuestionResource.QProjectRequest(a, b, action), role);
             case RUNBOOK_PROJECT -> runbookResource.linkRunbookProject(
                 new LoreRunbookResource.RunbookProjectLinkRequest(a, b, action), role);
+            // MDL-13: трек спринта — путь sprint/plan (на базе 1.18 — ребро ON_TRACK, прежнее закрывается); снять — пустой трек.
+            case SPRINT_TRACK -> statusResource.updateSprintPlan(new LoreStatusResource.SprintPlanRequest(
+                a, null, null, null, "remove".equals(action) ? "" : b), role).await().indefinitely();
+            case ORG_LINK -> organizationResource.linkOrganization(
+                new LoreOrganizationResource.OrgLinkRequest(a, r.rel(), b, action), role);
         };
     }
 }

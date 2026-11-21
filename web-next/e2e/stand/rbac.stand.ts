@@ -16,6 +16,7 @@ import { expect, test as base, type Page } from '@playwright/test';
 import { authFileFor, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';
 import { storedAccessToken } from './tokens.ts';
 import { asAccount, requireStandUrl, shot } from './stand.ts';
+import { roleClaimsOf } from '../../src/standSmoke/roleClaims.ts';
 
 const AUTH_DIR = process.env.LORE_STAND_AUTH_DIR?.trim() || 'e2e/stand/.auth';
 
@@ -74,11 +75,19 @@ const ROLE_CASES = [
 ] as const;
 
 for (const [id, account, role] of ROLE_CASES) {
-  test(`${id} Роль из токена: ${account} → ${role}`, async ({ login }) => {
+  test(`${id} Роль из токена: ${account} → ${role}`, async ({ login }, info) => {
     const page = await login(account);
     const me = await whoami(page);
+    // AP-02 (20.11.2026): test-admin/test-viewer опознаются как superadmin. Роли из своего токена — в отчёт
+    // (только роли и группы, не токен): по ним видно, что выдал Keycloak, без входа в его админку.
+    const token = await page.evaluate(() => {
+      const k = Object.keys(localStorage).find(x => x.includes('oidc.user:'));
+      return k ? (JSON.parse(localStorage.getItem(k) ?? '{}') as { access_token?: string }).access_token ?? null : null;
+    });
+    const claims = roleClaimsOf(token);
+    await info.attach('role-claims', { body: JSON.stringify(claims), contentType: 'application/json' });
     expect(me.kind, 'учётка человека, не агента').toBe('human');
-    expect(me.seer_role, `seer_role ${account}`).toBe(role);
+    expect(me.seer_role, `seer_role ${account}; роли токена: ${JSON.stringify(claims)}`).toBe(role);
   });
 }
 

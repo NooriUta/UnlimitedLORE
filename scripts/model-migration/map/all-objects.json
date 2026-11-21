@@ -1,0 +1,3275 @@
+{
+ "_about": "MIG-01 · карта переноса всех объектов, кроме первого; выведена propose-map-all.mjs из переписи полей снимка прода. Не править руками — править правила.",
+ "types": {
+  "BragiAsset": {
+   "alt": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "asset_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "asset_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "file_url": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "size_bytes": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiCampaign": {
+   "campaign_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "period": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "target_url": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "utm_campaign": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "utm_medium": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "utm_source": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiChannel": {
+   "channel_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "channel_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "funnel_role": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "rules_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "url_handle": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiCompetitor": {
+   "competitor_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiInsight": {
+   "evidence_ref": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "insight_date": {
+    "rule": "transform",
+    "to": "insight_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "insight_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "statement_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiIntegration": {
+   "endpoint": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "integration_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "last_called_at": {
+    "rule": "transform",
+    "to": "last_called_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "purpose": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "scope": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "secret_ref": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "service": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiKeyword": {
+   "cluster": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "freq_broad": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "freq_exact": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "intent": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "keyword_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "measured_at": {
+    "rule": "transform",
+    "to": "measured_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "phrase": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "region_engine": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "source": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiPage": {
+   "deployed_at": {
+    "rule": "transform",
+    "to": "deployed_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "description": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "page_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "page_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "url": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiPublication": {
+   "annotation_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "main_text_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "publication_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "source_file_path": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status_general": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "todo_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "topic": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiRubric": {
+   "description": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "order_index": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "rubric_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "BragiVariant": {
+   "annotation_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "published_at": {
+    "rule": "transform",
+    "to": "published_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "text_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "todo_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "url": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "variant_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "ClRoutineMetric": {
+   "metric_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "metric_key": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "model": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "not_measured_reason": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "note": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; никуда: заметка к метрике, QG-писатель (LoreQgRunWriter) поле не ставит",
+    "basis": "owner"
+   },
+   "routine_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "run_date": {
+    "rule": "transform",
+    "to": "run_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "run_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "skip_reason": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; предшественник not_measured_reason; в него не переводилось — значение остаётся в остатке",
+    "basis": "owner"
+   },
+   "source": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "target": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "unit": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "value": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "ClRoutineOutput": {
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "output_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "routine_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "run_date": {
+    "rule": "transform",
+    "to": "run_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "ClRoutineRun": {
+   "channel": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "commit_sha": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "detail_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "finished_at": {
+    "rule": "transform",
+    "to": "finished_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "flags": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "gates_failed_ids": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "model": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "pr_number": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "routine_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "run_date": {
+    "rule": "transform",
+    "to": "run_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "run_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "run_ts": {
+    "rule": "transform",
+    "to": "run_ts",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "source": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; никуда: QG пишет source_url, не source",
+    "basis": "owner"
+   },
+   "source_url": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "started_at": {
+    "rule": "transform",
+    "to": "started_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "ClRoutineSprintFlag": {
+   "flag": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "git_status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "lore_status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "routine_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "run_date": {
+    "rule": "transform",
+    "to": "run_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "sprint_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowADR": {
+   "adr_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "consequences_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "context_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "created_at": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "decision_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "file_path": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "KnowADRHist": {
+   "adr_id": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; ключ ADR — на записи; версия связана с записью ребром HAS_STATE",
+    "basis": "owner"
+   },
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "consequences_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "context_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "decision_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "file_path": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; путь md-файла ведёт KnowADR.file_path (ингест пишет туда)",
+    "basis": "owner"
+   },
+   "source_commit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "sprint_id": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; связь ADR → спринт — ребро IMPLEMENTED_IN",
+    "basis": "owner"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status_backfilled": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status_category": {
+    "rule": "drop",
+    "why": "категория выводится из кода статуса и справочника",
+    "basis": "owner"
+   },
+   "status_known_from": {
+    "rule": "transform",
+    "to": "status_known_from",
+    "how": "DATETIME",
+    "basis": "owner",
+    "note": "служебное; момент UTC — «даты переводи» (19.11.2026)"
+   },
+   "status_raw": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowActor": {
+   "activity_window_h": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "activity_window_harness": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "actor_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "agent_role": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "client_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "harness": {
+    "rule": "transform",
+    "to": "harness",
+    "how": "harness",
+    "basis": "owner",
+    "note": "коды miniLORE: claude, kimi, dsh, qwen; известные codex, opencode, cursor"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "machine_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "session_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowAgentSession": {
+   "dialogue_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "entrypoint": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "last_activity_at": {
+    "rule": "transform",
+    "to": "last_activity_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "machine_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "project": {
+    "rule": "open",
+    "question": "связь с проектом (BELONGS_TO_PROJECT) — строится на шаге связей; до него значение удерживается"
+   },
+   "session_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "started_at": {
+    "rule": "transform",
+    "to": "started_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "KnowAsset": {
+   "alt": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "asset_key": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "created_at": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "entity_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "entity_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "mime": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "size_bytes": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowCanvas": {
+   "canvas_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "created_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "project": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "row_version": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "template": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "updated_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowCanvasItem": {
+   "canvas_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "color": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "h": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "item_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "ref_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "ref_type": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "slot": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "text": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "updated_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "w": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "x": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "y": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowCanvasLink": {
+   "canvas_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "edge": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "from_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "graph_state": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: выведено из кода: LoreCanvasResource.java — UPSERT graph_state = :g, значения «drawing» | «created», чтение ifnull(graph_state, 'drawing')"
+   },
+   "link_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "to_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowDecision": {
+   "adr_refs": {
+    "rule": "drop",
+    "edge": "REFERENCES",
+    "why": "ссылки строкой → связи REFERENCES на шаге связей (decision-refs.mjs); дубль не плодит ребро, ненайденное — в остаток; MDL-08, владелица 20.11.2026: «refs с релизов разобрать пересадить на связи но с проверкой дублей и с проверкой что оставшийся функционал перешёл на связи»",
+    "basis": "owner"
+   },
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "created_at": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "decision_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "pr_refs": {
+    "rule": "drop",
+    "edge": "REFERENCES",
+    "why": "ссылки строкой → связи REFERENCES на шаге связей (decision-refs.mjs); дубль не плодит ребро, ненайденное — в остаток; MDL-08, владелица 20.11.2026: «refs с релизов разобрать пересадить на связи но с проверкой дублей и с проверкой что оставшийся функционал перешёл на связи»",
+    "basis": "owner"
+   },
+   "refs_raw": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "release_refs": {
+    "rule": "drop",
+    "edge": "REFERENCES",
+    "why": "ссылки строкой → связи REFERENCES на шаге связей (decision-refs.mjs); дубль не плодит ребро, ненайденное — в остаток; MDL-08, владелица 20.11.2026: «refs с релизов разобрать пересадить на связи но с проверкой дублей и с проверкой что оставшийся функционал перешёл на связи»",
+    "basis": "owner"
+   },
+   "sprint_refs": {
+    "rule": "drop",
+    "edge": "REFERENCES",
+    "why": "ссылки строкой → связи REFERENCES на шаге связей (decision-refs.mjs); дубль не плодит ребро, ненайденное — в остаток; MDL-08, владелица 20.11.2026: «refs с релизов разобрать пересадить на связи но с проверкой дублей и с проверкой что оставшийся функционал перешёл на связи»",
+    "basis": "owner"
+   },
+   "status_raw": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "KnowDecisionHist": {
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "source_commit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status_backfilled": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status_category": {
+    "rule": "drop",
+    "why": "категория выводится из кода статуса и справочника",
+    "basis": "owner"
+   },
+   "status_known_from": {
+    "rule": "transform",
+    "to": "status_known_from",
+    "how": "DATETIME",
+    "basis": "owner",
+    "note": "служебное; момент UTC — «даты переводи» (19.11.2026)"
+   },
+   "status_raw": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowDictEntry": {
+   "code": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "color": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "dict_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "icon": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_active": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_extensible": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "label_en": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "label_ru": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "sort_order": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowDictEntryHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "code": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "color": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "dict_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "icon": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_active": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_extensible": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "label_en": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "label_ru": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "sort_order": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowDoc": {
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "content_html": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_html_bytes": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_html_sha256": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «тоже с релизами»; «HTML выведи отдельной вкладкой в паспорт и посмотри рендеринг»; тело дока — content_md_ru / content_md_en (HTML — content_html); писателя нет, в проде 0 из 460; запасное чтение снято (LoreDocResource, поиск, ftKnowDoc)",
+    "basis": "owner"
+   },
+   "content_md_en": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md_en_bytes": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md_en_sha256": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md_ru": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md_ru_bytes": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md_ru_sha256": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "doc_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "file_path": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "has_ext_deps": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "sort_order": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowDocHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "doc_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowFile": {
+   "file_path": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "project": {
+    "rule": "open",
+    "question": "связь с проектом (BELONGS_TO_PROJECT) — строится на шаге связей; до него значение удерживается"
+   },
+   "summary_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowFinding": {
+   "external_ref": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "finding_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "source_sprint": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "summary": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "summary_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "verified": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowFindingHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowGain": {
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "gain_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "metric_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "rank": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowGitProject": {
+   "default_branch": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "description": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "full_name": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; название проекта — name",
+    "basis": "owner"
+   },
+   "hosts": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_private": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "repo_url": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; адрес репозитория — hosts[] (primary-хост)",
+    "basis": "owner"
+   },
+   "slug": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowJob": {
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "importance": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "job_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowMachine": {
+   "first_seen_at": {
+    "rule": "transform",
+    "to": "first_seen_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "last_seen_at": {
+    "rule": "transform",
+    "to": "last_seen_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "machine_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowMilestone": {
+   "date_display": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "подпись срока, не дата; владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "label": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "milestone_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "priority": {
+    "rule": "transform",
+    "to": "priority",
+    "how": "priority",
+    "basis": "owner",
+    "note": "одна шкала, приписка — в priority_note"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "week": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowMilestoneHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "goal_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "planned_date": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; никуда: в проде пусто; срок вехи — date_display и week",
+    "basis": "owner"
+   },
+   "source_commit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status_raw": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowModelConfig": {
+   "config_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "format": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowModelConfigHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "reason": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowPR": {
+   "base_ref": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "body_md": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; никуда: синхронизация Forgejo пишет title, url, merged_at, head_ref, base_ref",
+    "basis": "owner"
+   },
+   "git_project": {
+    "rule": "open",
+    "question": "связь с проектом (BELONGS_TO_PROJECT) — строится на шаге связей; до него значение удерживается"
+   },
+   "head_ref": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "merged_at": {
+    "rule": "transform",
+    "to": "merged_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "pr_id": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; ключ PR — pr_uid",
+    "basis": "owner"
+   },
+   "pr_number": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "pr_state": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; никуда: состояние PR не ведётся",
+    "basis": "owner"
+   },
+   "pr_uid": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "release_id": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; релиз PR — ребро SHIPPED_IN",
+    "basis": "owner"
+   },
+   "repo": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; проект PR — git_project",
+    "basis": "owner"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "url": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowPain": {
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "pain_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "severity": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowProjectActor": {
+   "actor_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowProjectRoleEvent": {
+   "action": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "at": {
+    "rule": "transform",
+    "to": "at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "batch_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "by_role": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "event_uid": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "kc_sub": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "project": {
+    "rule": "open",
+    "question": "связь с проектом (BELONGS_TO_PROJECT) — строится на шаге связей; до него значение удерживается"
+   },
+   "role": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "role_before": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowQuestion": {
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "closed_date": {
+    "rule": "transform",
+    "to": "closed_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "due_date": {
+    "rule": "transform",
+    "to": "due_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "opened_date": {
+    "rule": "transform",
+    "to": "opened_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "owner": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "priority": {
+    "rule": "transform",
+    "to": "priority",
+    "how": "priority",
+    "basis": "owner",
+    "note": "одна шкала, приписка — в priority_note"
+   },
+   "question_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "raised_by": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "trigger": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "KnowRelease": {
+   "description_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "git_project": {
+    "rule": "open",
+    "question": "связь с проектом (BELONGS_TO_PROJECT) — строится на шаге связей; до него значение удерживается"
+   },
+   "git_tag": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_current": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "release_date": {
+    "rule": "transform",
+    "to": "release_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "release_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "release_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "release_uid": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "released_at": {
+    "rule": "transform",
+    "to": "released_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "version": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «тоже с релизами»; «HTML выведи отдельной вкладкой в паспорт и посмотри рендеринг»; дубль git_tag и release_id: на снимке 18.11 совпали 92 из 92; срезы релизов отдают version = git_tag",
+    "basis": "owner"
+   },
+   "week": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowReleaseHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "description_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "is_current": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "source_commit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowRunbook": {
+   "area": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "runbook_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowRunbookHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowSavedView": {
+   "created_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "is_personal_default": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "is_team_default": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "query": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "roles": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "row_version": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "section": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "updated_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "view_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "visibility": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowSpec": {
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "file_path": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "spec_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "version": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowSpecHist": {
+   "changed_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "changed_by_kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_hash": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "source_commit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "spec_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "state_uid": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "status_backfilled": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "status_category": {
+    "rule": "drop",
+    "why": "категория выводится из кода статуса и справочника",
+    "basis": "owner"
+   },
+   "status_known_from": {
+    "rule": "transform",
+    "to": "status_known_from",
+    "how": "DATETIME",
+    "basis": "owner",
+    "note": "служебное; момент UTC — «даты переводи» (19.11.2026)"
+   },
+   "status_raw": {
+    "rule": "drop",
+    "why": "дубль status: без него не встречается (0 из 102, прод 17.11)",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "summary": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "valid_from": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "valid_to": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное"
+   },
+   "version": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "changed_by_session": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_harness_note": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "changed_by_machine": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: сессия, harness и машина, записавшие версию (AO-SESSION-LOG; D-2026-LORE-SESSION-MACHINE-PLACE-MODEL)"
+   },
+   "change_reason": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "служебное поле правки: причина, с которой записана версия (SPRINT_LORE_WORK_ANY_KIND/WK-01)"
+   }
+  },
+  "KnowTag": {
+   "tag_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowUseCase": {
+   "acceptance_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "actor": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «mdl08 мы же утвердили уже, все поля»; актор сценария — ребро HAS_ACTOR с ролью",
+    "basis": "owner"
+   },
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "context_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "date_created": {
+    "rule": "transform",
+    "to": "created_at",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "feature_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "goal_level": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "parent_uc_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "priority": {
+    "rule": "transform",
+    "to": "priority",
+    "how": "priority",
+    "basis": "owner",
+    "note": "одна шкала, приписка — в priority_note"
+   },
+   "rigor": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "scenario_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "shipped_at": {
+    "rule": "transform",
+    "to": "shipped_at",
+    "how": "DATE",
+    "basis": "owner",
+    "note": "день, хоть и _at — «даты переводи» (19.11.2026)"
+   },
+   "status": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "uc_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "KnowUser": {
+   "avatar_ref": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "display_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "kc_sub": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "login": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "KnowUserDraft": {
+   "base_record_version": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "base_version": {
+    "rule": "drop",
+    "legacy": true,
+    "why": "легаси, MDL-08, утверждено владелицей 20.11.2026: «а) снять base_version при переносе 1.18»; заменено base_record_version (строка record.version, заполнено у 3 из 3); прежнее целое — 0 из 3 на переписи 18.11; запись null и запасное чтение сняты (LoreMeResource, LoreMeDrafts.out)",
+    "basis": "owner"
+   },
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "field": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "ref_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "ref_type": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "saved_at": {
+    "rule": "transform",
+    "to": "saved_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "KnowUserFavorite": {
+   "added_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "ref_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "ref_type": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowUserHabit": {
+   "first_seen": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "habit_key": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "hits": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "label": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "last_seen": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "memory_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowUserMemoryPref": {
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "remembering": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "updated_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowUserRecent": {
+   "first_seen": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "ref_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "ref_type": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "visited_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "visits": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "KnowUserSettings": {
+   "owner_sub": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "row_version": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "settings_json": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "LoreComponent": {
+   "area": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "children": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "component_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "ключ записи своего типа"
+   },
+   "full_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "game_icon": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "owner": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "parent_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "project": {
+    "rule": "open",
+    "question": "связь с проектом (BELONGS_TO_PROJECT) — строится на шаге связей; до него значение удерживается"
+   },
+   "team": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "tech": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   }
+  },
+  "LoreNewsReadMark": {
+   "mark_at": {
+    "rule": "transform",
+    "to": "mark_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "mark_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "updated_at": {
+    "rule": "transform",
+    "to": "updated_at",
+    "how": "DATETIME",
+    "basis": "owner"
+   },
+   "updated_by": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "LoreRefDismissal": {
+   "created_at": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "created_by": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "dismissal_key": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "kind": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "record_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "record_type": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   }
+  },
+  "LoreTechnology": {
+   "category": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "tech_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "QGJobTask": {
+   "inv_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "job_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "note_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "qg_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "run_date": {
+    "rule": "transform",
+    "to": "run_date",
+    "how": "DATE",
+    "basis": "owner"
+   },
+   "severity": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "QGMetric": {
+   "current_value": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: current_value — «последнее измерение (NULL если нет)», число; пишет QgMetricState (значение метрики последнего прогона гейта, ClRoutineMetric.value — DOUBLE)"
+   },
+   "direction": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: direction — «gte · lte · eq», код-строка; пишет QgMetricState (из текста порога)"
+   },
+   "metric_id": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: свойство старой схемы как есть (MD-02 8а)"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: выведено из кода: LoreIngestService.upsertQGMetric — name = truncate(metric.name(), 500), строка"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: status — «pass · fail · unknown», код-строка; пишет QgMetricState (по порогу и направлению)"
+   },
+   "threshold": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES называет поле («пороговое значение»), тип не задаёт; тип выведен из кода: LoreIngestService.upsertQGMetric — threshold = truncate(metric.threshold(), 200), строка"
+   },
+   "unit": {
+    "rule": "keep",
+    "basis": "owner",
+    "note": "тип «только схема»: спека LORE_SCHEMA_V12_NEW_TYPES: unit — «% · s · MB/s · count», строка; пишет QgMetricState (из порога, иначе из прогона)"
+   }
+  },
+  "QGRecommendation": {
+   "body_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "effort_days": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "fix_cmd": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "how_to_verify": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "inv_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "job_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "priority": {
+    "rule": "transform",
+    "to": "priority",
+    "how": "priority",
+    "basis": "owner",
+    "note": "одна шкала, приписка — в priority_note"
+   },
+   "qg_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "rec_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "severity": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "tags": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "title": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   }
+  },
+  "QualityGate": {
+   "component_id": {
+    "rule": "open",
+    "question": "связь с компонентом (BELONGS_TO) — строится на шаге связей; до него значение удерживается"
+   },
+   "content_md": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "description": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "last_run_status": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "qg_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "routine_name": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "sprint_id": {
+    "rule": "keep",
+    "basis": "delegated",
+    "note": "владелица 17.11.2026: «перенеси по собственным рекомендациям и нашим правилам все объекты»"
+   },
+   "status": {
+    "rule": "transform",
+    "to": "status",
+    "how": "status",
+    "basis": "owner",
+    "note": "код справочника, приписка — в status_note"
+   }
+  }
+ },
+ "skipped": {
+  "LoreSchemaVersion": "журнал шагов V заменён отметкой LoreModelSchema (MIG-03)",
+  "PlanCheckpoint": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
+  "PlanConfig": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
+  "PlanSection": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
+  "PlanTrack": "как тип доски не переносится (D-2026-LORE-PLAN-BOARD-REMOVED); треки переносит шаг связей вершинами KnowTrack — MDL-13 «треки б» (tracks.mjs)",
+  "PlanVersion": "план-доска снята: D-2026-LORE-PLAN-BOARD-REMOVED («план доску удаляем»)",
+  "StatusAdr": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
+  "StatusDecision": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
+  "StatusMilestone": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
+  "StatusPhase": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
+  "StatusSprint": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
+  "StatusTask": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»",
+  "TrackType": "снят V89 (#1401): статус — код в строке версии, вид трека — поле; MD-02 «что выключаем»"
+ },
+ "schema_only": {
+  "KnowCanvas": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowCanvasItem": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowCanvasLink": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowFindingHist": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowSavedView": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowUserFavorite": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowUserHabit": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowUserMemoryPref": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "KnowUserRecent": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "LoreRefDismissal": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)",
+  "QGMetric": "пустой тип — только схема, без данных: тип нужен живому коду сервера (решение владелицы 19.11.2026, MD-02 8а «функции оставить»)"
+ }
+}

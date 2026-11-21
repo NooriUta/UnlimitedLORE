@@ -27,8 +27,11 @@ export interface DictRow {
   sort_order: number | null;
   is_active: boolean;
   is_extensible: boolean;
-  /** WK-01: вид статьи — только у словаря с набором видов (DICT_KINDS); null — не задан. */
-  kind: string | null;
+  /**
+   * WK-01: вид статьи — только у словаря с набором видов (DICT_KINDS). Набор (ADR-LORE-044):
+   * у продукта tech, service или оба; пусто — не задан. Прежняя строка — набор из одного.
+   */
+  kind: string[];
 }
 
 /** То, что правится в форме: код (только у нового), метки, вид, порядок, активность. */
@@ -40,18 +43,43 @@ export interface DictDraft {
   icon: string | null;
   sort_order: number | null;
   is_active: boolean;
-  /** WK-01: вид (tech | service у product); null — не задан и не шлётся (сервер: null = не трогать). */
-  kind?: string | null;
+  /** WK-01: набор видов (tech | service у product); пустой не записывается (сервер: пустой набор — 400). */
+  kind?: string[];
 }
 
 /**
- * WK-01: наборы видов по словарям — зеркало LoreDictResource.KINDS. Вид продукта ИТ / не ИТ.
- * Снять заданный вид запись не умеет (null = «не трогать»), поэтому форма его не предлагает.
+ * WK-01: наборы видов по словарям-наборам — зеркало LoreDictResource.KINDS + MULTI_KINDS. Вид продукта
+ * ИТ / не ИТ: tech, service или оба (ADR-LORE-044). Порядок — канонический, в нём вид и пишется.
  */
 export const DICT_KINDS: Record<string, readonly string[]> = { product: ['tech', 'service'] };
 
 export function dictKinds(dictType: string): readonly string[] | null {
   return Object.prototype.hasOwnProperty.call(DICT_KINDS, dictType) ? DICT_KINDS[dictType] : null;
+}
+
+/** Набор видов из значения среза: список — как есть, строка — набор из одного, прочее — пусто. */
+function kindList(v: unknown): string[] {
+  if (Array.isArray(v)) return [...new Set(v.filter((x): x is string => typeof x === 'string' && x !== ''))];
+  return typeof v === 'string' && v !== '' ? [v] : [];
+}
+
+/** Набор в каноническом порядке словаря; незнакомые сервером коды — в конце, не теряются. */
+export function orderedKinds(dictType: string, kinds: readonly string[] | undefined): string[] {
+  const all = dictKinds(dictType) ?? [];
+  const set = new Set(kinds ?? []);
+  return [...all.filter(k => set.has(k)), ...[...set].filter(k => !all.includes(k))];
+}
+
+/** Сменился ли набор видов (порядок не в счёт). Новая статья с видом — тоже смена. */
+export function kindChanged(before: DictRow | null, after: DictDraft): boolean {
+  const a = new Set(before?.kind ?? []);
+  const b = new Set(after.kind ?? []);
+  return a.size !== b.size || [...b].some(k => !a.has(k));
+}
+
+/** Почему вид записать нельзя: у словаря-набора пустой набор. null — можно. */
+export function dictKindProblem(dictType: string, d: DictDraft): 'empty' | null {
+  return dictKinds(dictType) && !(d.kind && d.kind.length) ? 'empty' : null;
 }
 
 export interface TagRow { tag_id: string; uses: number }
@@ -86,7 +114,7 @@ export function parseDictRows(rows: readonly unknown[]): DictRow[] {
     // Слайс маскирует NULL через ifnull(is_active, true); не пришло вовсе — тоже «активно».
     is_active: r.is_active !== false,
     is_extensible: r.is_extensible === true,
-    kind: strOrNull(r.kind),
+    kind: kindList(r.kind),
   }));
 }
 
@@ -141,6 +169,7 @@ type Field = (typeof FIELDS)[number];
 const shown = (f: Field, v: unknown): string | null => {
   if (v === null || v === undefined || v === '') return null;
   if (f === 'is_active') return v ? 'true' : 'false';
+  if (Array.isArray(v)) return v.length ? v.join(', ') : null;
   return String(v);
 };
 
@@ -151,9 +180,10 @@ const shown = (f: Field, v: unknown): string | null => {
  */
 export function dictEntryDiff(before: DictRow | null, after: DictDraft, dictType?: string): DiffRow[] {
   const withKind = dictKinds(dictType ?? before?.dict_type ?? '') !== null;
+  const dt = dictType ?? before?.dict_type ?? '';
   return FIELDS.filter(f => f !== 'kind' || withKind).map(f => {
-    const from = before ? shown(f, before[f]) : null;
-    const to = shown(f, f === 'code' ? after.code.trim() : after[f]);
+    const from = before ? shown(f, f === 'kind' ? orderedKinds(dt, before.kind) : before[f]) : null;
+    const to = shown(f, f === 'code' ? after.code.trim() : f === 'kind' ? orderedKinds(dt, after.kind) : after[f]);
     const base = { id: f, text: f, check: { state: 'checked' as const } };
     if (from === to) return { ...base, kind: 'same' as const, detail: to ?? '' };
     if (from === null) return { ...base, kind: 'add' as const, detail: to ?? '' };
@@ -167,8 +197,11 @@ export function needsDictConfirm(dictType: string, before: DictRow | null, after
   return isCanonDict(dictType) || (before !== null && before.is_active && !after.is_active);
 }
 
-/** Тело POST /lore/dict/entry — контракт v1: пустое → null (поле не трогается). */
-export function dictEntryBody(dictType: string, d: DictDraft): Record<string, unknown> {
+/**
+ * Тело POST /lore/dict/entry — контракт v1: пустое → null (поле не трогается). `reason` — причина правки
+ * (WK-01: обязательна при смене вида, сервер кладёт её в версию истории); нет — ключа нет.
+ */
+export function dictEntryBody(dictType: string, d: DictDraft, reason?: string): Record<string, unknown> {
   const s = (v: string | null) => (v && v.trim() !== '' ? v : null);
   return {
     dict_type: dictType,
@@ -180,9 +213,10 @@ export function dictEntryBody(dictType: string, d: DictDraft): Record<string, un
     sort_order: d.sort_order ?? null,
     is_active: d.is_active,
     is_extensible: null,
-    // WK-01: вид — только у словаря с видами (у прочих ключа нет: контракт v1 тот же);
-    // не задан — null, сервер его не трогает.
-    ...(dictKinds(dictType) ? { kind: d.kind && dictKinds(dictType)!.includes(d.kind) ? d.kind : null } : {}),
+    // WK-01: вид — только у словаря с видами (у прочих ключа нет: контракт v1 тот же); набор — списком
+    // в каноническом порядке; пустой — null (не трогать: пустой набор сервер отвергает, форма его не шлёт).
+    ...(dictKinds(dictType) ? { kind: d.kind && d.kind.length ? orderedKinds(dictType, d.kind) : null } : {}),
+    ...(reason && reason.trim() ? { reason: reason.trim() } : {}),
   };
 }
 

@@ -242,7 +242,9 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, k
   if (type === 'kv') return <KvValue value={value} label={title ?? fieldKey ?? ''} labels={keyLabels} />;
   // K5-FIELD-LIST: значения списком — отдельными пунктами, а не склеенной строкой.
   // Пустой список — пустое поле («—»), а не пустая рамка: пустое не выдаём за данные.
-  if (type === 'list') {
+  // WK-01: массив в поле text/enum (вид продукта — набор, а в модели text) — тоже пунктами списка,
+  // а не сырым JSON «["tech","service"]».
+  if (type === 'list' || ((type === 'text' || type === 'enum') && Array.isArray(value))) {
     const items = (Array.isArray(value) ? value : [value]).map(listItemText).filter(s => s !== '');
     if (items.length === 0) return <span className="sk-rec-fields__none">—</span>;
     return <MiniList kind="plain" label={title ?? ''} items={items.map((text, i) => ({ id: String(i), text }))} />;
@@ -570,7 +572,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     // (B13): вкладка без числа рядом с вкладками с числом читается как «тут
     // считать нечего», а у частей считать есть что.
     ...kindTabs.map(t => ({ id: t.key, label: t.title, count: t.count, zone: zoned ? 'record' as const : undefined })),
-    ...relTabs.map(rt => ({ id: rt.id, label: rt.label, count: tabCount(rt.id, rt.defs), relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined })),
+    // K5-EMPTY-LINK-TABS: вкладка связи с ПРОЧИТАННЫМ нулём ряд не занимает — уходит под «Ещё»
+    // (secondary), оставаясь доступной со своим «0». «Не смогли прочитать» (count null) и «нет
+    // доступа» остаются в ряду со знаком «?»: иначе «связей нет» и «не проверили» неразличимы.
+    // Выбранная вкладка в ряду всегда (foldRow), даже пустая. Вкладку вида с тем же ключом (часть
+    // записи от приложения) правило не трогает: mergeTabs добрал бы признак у двойника-связи.
+    ...relTabs.map(rt => { const count = tabCount(rt.id, rt.defs); return { id: rt.id, label: rt.label, count, relation: rt.relation, mark: RELATION_MARK[rt.relation as keyof typeof RELATION_MARK], markTitle: relationName(lang, rt.relation), zone: zoned ? 'record' as const : undefined, ...(count === 0 && !kindTabs.some(t => t.key === rt.id) ? { secondary: true } : {}) }; }),
   ]);
   // Счётчики служебного — тем же правилом: блок не прочитался, значит число
   // неизвестно («?»), а не ноль. Имена блоков рёбер и журнала у kit свои.
@@ -647,7 +654,9 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
       if (!g) { out.push(it); continue; }
       if (placed.has(g.key)) continue;
       placed.add(g.key);
-      out.push({ id: g.key, label: g.label, count: groupCount(g), zone: zoned ? 'record' : undefined });
+      // Группа с суммой ноль — тем же правилом, что пустая вкладка связи (K5-EMPTY-LINK-TABS).
+      const count = groupCount(g);
+      out.push({ id: g.key, label: g.label, count, zone: zoned ? 'record' : undefined, ...(count === 0 ? { secondary: true } : {}) });
     }
     return out;
   };

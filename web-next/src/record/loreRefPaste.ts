@@ -11,6 +11,7 @@
 // остальное — «не смогли проверить» (null, ссылку не красим: отказ проверки — не «записи нет»).
 import type { BareRefForm, MdRef } from '@seidr/kit/content';
 import { loreFetch } from '../auth/session';
+import { recordPath } from '../api/liveRecord';
 import { typeByForm } from './loreRefForms';
 
 export const LORE_ID_FORMS: readonly BareRefForm[] = [
@@ -31,7 +32,7 @@ export async function loreRefsExist(refs: readonly MdRef[], fetchImpl?: typeof f
     const type = r.type ?? typeByForm(r.id);
     if (!type) { out[r.id] = null; return; }
     try {
-      const res = await http(`/lore/record/${type}/${r.id.split('/').map(encodeURIComponent).join('/')}`);
+      const res = await http(`/lore/record/${type}/${recordPath(r.id)}`);
       out[r.id] = res.ok || res.status === 403 ? true : res.status === 404 ? false : null;
     } catch {
       out[r.id] = null;

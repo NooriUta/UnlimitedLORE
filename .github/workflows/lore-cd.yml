@@ -63,7 +63,8 @@ on:
         required: false
         default: 'both'
         type: choice
-        options: [both, backend, frontend, frontend-next]
+        # mcp — только MCP-сервер стенда (lore-mcp, AO-MCP-HOSTED); both включает и его.
+        options: [both, backend, frontend, frontend-next, mcp]
       dry_run:
         # PL-04: true — только ворота и разбор (что было бы собрано, какие
         # порты/имена/база), без сборок, выкаток, пометок образов и Telegram.
@@ -384,6 +385,12 @@ jobs:
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: bash .github/scripts/compose-build-retry.sh lore-app-next
 
+      # AO-MCP-HOSTED (владелица 19.11.2026: «мне надоело локально mcp пересобирать»):
+      # образ MCP-сервера из mcp-server/ — выкатывается вместе со стендом.
+      - name: Build MCP image (lore-mcp)
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.mcp == 'true'
+        run: bash .github/scripts/compose-build-retry.sh lore-mcp
+
       # DBR-06: накатка схемы — отдельный ВИДИМЫЙ шаг, а не побочный эффект
       # старта. Тот же образ, root-кред (LORE_MART_AUTH=basic), процесс
       # накатывает и выходит (lore.migrate.only). Упавший шаг — ненулевой код,
@@ -395,18 +402,9 @@ jobs:
           LORE_MIGRATE: "true"
           LORE_MIGRATE_ONLY: "true"
           LORE_MART_AUTH: basic
-        run: |
-          rc=0
-          timeout 1800 docker compose run --rm --no-deps -T lore-backend > /tmp/migrate.log 2>&1 || rc=$?
-          grep -E "LORE MIGRATE|LORE MART|ERROR|Exception" /tmp/migrate.log | tail -80 || true
-          if [ "$rc" != "0" ]; then
-            echo "::error::накатка схемы упала (код $rc) — работающий бэкенд НЕ подменён. Хвост лога:"
-            tail -60 /tmp/migrate.log
-            exit 1
-          fi
-          grep -q "lore.migrate.only=true — схема накатана" /tmp/migrate.log \
-            || { echo "::error::процесс вышел с 0, но строки о завершённой накатке нет — накатка не подтверждена"; tail -60 /tmp/migrate.log; exit 1; }
-          echo "накатка подтверждена"
+        # MIG-01: на базе из модели (LoreModelSchema, 1.18) бэкенд пропускает шаги V и выходит с 0 —
+        # скрипт принимает это как законный исход; на старой базе всё как раньше.
+        run: bash .github/scripts/migrate-schema.sh
 
       # PL-04: у препрода свой MinIO (порты 19000/19001, том lore-preprod_*).
       # Бэкенд поднимается с --no-deps, поэтому MinIO сам не стартует — без этого
@@ -448,6 +446,12 @@ jobs:
       - name: Deploy frontend (v2, lore-app-next)
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: docker compose up -d --no-deps lore-app-next
+
+      # AO-MCP-HOSTED: MCP-сервер стенда (https://<хост LORE>/mcp). --no-deps —
+      # бэкенд уже поднят шагом выше или работает с прошлой выкатки.
+      - name: Deploy MCP (lore-mcp)
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.mcp == 'true'
+        run: docker compose up -d --no-deps lore-mcp
 
       # PL-04: v1 заморожен и по пушу не собирается, но на препроде он нужен —
       # релиз везёт на прод все три образа, прошедшие препрод. Если v1 в проекте
@@ -851,6 +855,13 @@ jobs:
       - name: Probe /lore/version через nginx v2
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         run: PROBE_NETWORK="${COMPOSE_PROJECT_NAME}_default" bash .github/scripts/post-deploy-probe.sh version "v2 nginx" http://lore-app-next/lore/version
+
+      # AO-MCP-HOSTED: MCP по адресу хоста — /mcp/health через nginx v2 (тот же
+      # путь, что у клиента: location /mcp → lore-mcp:9200), JSON, а не SPA, и
+      # коммит выкатки. Ручка без входа, поэтому коммит сверяется всегда.
+      - name: Probe /mcp/health через nginx v2
+        if: steps.mode.outputs.live == 'true' && steps.which.outputs.mcp == 'true'
+        run: PROBE_NETWORK="${COMPOSE_PROJECT_NAME}_default" bash .github/scripts/post-deploy-probe.sh version "MCP через nginx v2" http://lore-app-next/mcp/health "$LORE_BUILD_COMMIT"
 
       # new.lore (D-2026-UXR-V2-HOST): отдаётся ли по публичному имени именно
       # v2. DNS, сертификат и роутер — S3-03/04 (другая сессия); до их

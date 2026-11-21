@@ -49,22 +49,22 @@ public class LoreMilestoneResource extends LoreResourceBase {
             if (remove) {
                 // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
                 List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM TARGETS_MILESTONE WHERE @out.sprint_id=:sid AND @in.milestone_id=:mid",
+                    "SELECT @rid FROM TARGETS_MILESTONE WHERE @out.sprint_id=:sid AND @in.milestone_id=:mid AND valid_to IS NULL",
                     Map.of("sid", req.sprint_id(), "mid", req.milestone_id()));
                 for (Map<String, Object> e : edges) {
                     String rid = e.get("@rid").toString();
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM TARGETS_MILESTONE WHERE @rid=" + rid, null)).await().indefinitely();
+                        closeOrDeleteEdge("TARGETS_MILESTONE", rid), null)).await().indefinitely();
                 }
             } else {
                 List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM TARGETS_MILESTONE WHERE @out.sprint_id=:sid AND @in.milestone_id=:mid",
+                    "SELECT @rid FROM TARGETS_MILESTONE WHERE @out.sprint_id=:sid AND @in.milestone_id=:mid AND valid_to IS NULL",
                     Map.of("sid", req.sprint_id(), "mid", req.milestone_id()));
                 if (existing.isEmpty()) {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE TARGETS_MILESTONE " +
                         "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                        "TO   (SELECT FROM KnowMilestone WHERE milestone_id=:mid)",
+                        "TO   (SELECT FROM KnowMilestone WHERE milestone_id=:mid) SET valid_from = '" + java.time.Instant.now() + "'",
                         Map.of("sid", req.sprint_id(), "mid", req.milestone_id()))).await().indefinitely();
                 }
             }
@@ -206,11 +206,11 @@ public class LoreMilestoneResource extends LoreResourceBase {
                     if (had) {
                         List<Map<String, Object>> edges = ingestService.queryPublic(
                             "SELECT @rid FROM TARGETS_MILESTONE "
-                            + "WHERE @out.sprint_id=:sid AND @in.milestone_id=:mid",
+                            + "WHERE @out.sprint_id=:sid AND @in.milestone_id=:mid AND valid_to IS NULL",
                             Map.of("sid", sid, "mid", req.milestone_id()));
                         for (Map<String, Object> e : edges) {
                             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "DELETE FROM TARGETS_MILESTONE WHERE @rid=" + e.get("@rid"), null))
+                                closeOrDeleteEdge("TARGETS_MILESTONE", String.valueOf(e.get("@rid"))), null))
                                 .await().indefinitely();
                         }
                         removed++;
@@ -228,7 +228,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE TARGETS_MILESTONE "
                         + "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) "
-                        + "TO   (SELECT FROM KnowMilestone WHERE milestone_id=:mid)",
+                        + "TO   (SELECT FROM KnowMilestone WHERE milestone_id=:mid) SET valid_from = '" + java.time.Instant.now() + "'",
                         Map.of("sid", sid, "mid", req.milestone_id()))).await().indefinitely();
                     // Признак записи — ФАКТ, а не отсутствие ошибки: CREATE EDGE
                     // возвращает пустоту и когда конца нет (ADR-LORE-043).

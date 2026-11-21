@@ -27,6 +27,8 @@
 import type { KindConfig, KitConfig, KitRelation, KitRelationDef } from '../core/contract';
 import type { LoreModelDoc } from './loadModel';
 import { normalizeAxisCategory, type AxisStatusCategory } from '../core/statusAxis';
+import { edgeLabelsFromModel, type EdgeLabelPair } from './edgeLabelsFromModel';
+import { navFromModel, type NavFromModel, type NavFromModelOptions } from './navFromModel';
 
 type StatusItem = KitConfig['statuses']['items'][number];
 type Category = StatusItem['category'];
@@ -48,6 +50,13 @@ export interface ConfigFromModel {
   /** Показ поля по типам: `display[тип][поле]`. Нужен колонкам, не виду. */
   display: Record<string, Record<string, FieldDisplay>>;
   /**
+   * Подписи связи в обе стороны (K5-MODEL-NAV-EDGE-LABELS): `edgeLabels[ребро] = {out, in}` —
+   * с обеих сторон связи и на любом месте показа. Кладётся в `KitConfig.edgeLabels`.
+   */
+  edgeLabels: Record<string, EdgeLabelPair>;
+  /** Меню из `surfaces.nav` (K5-MODEL-NAV-EDGE-LABELS); `decided: false` — раздела в документе нет. */
+  nav: NavFromModel;
+  /**
    * Что в документе пропущено или не той формы — словами, ПО ЧАСТЯМ.
    *
    * Почему не одной кучей: потребитель, которому нужен только словарь
@@ -55,7 +64,7 @@ export interface ConfigFromModel {
    * человеку — про то, чем сам не пользуется. Поймано тестом: словарь пришёл
    * целым, а на экране висело замечание не по делу.
    */
-  notes: { statuses: string[]; kinds: string[] };
+  notes: { statuses: string[]; kinds: string[]; edges: string[] };
 }
 
 export interface ConfigFromModelOptions {
@@ -72,6 +81,8 @@ export interface ConfigFromModelOptions {
    * сработает таблица по умолчанию, а незнакомое будет НАЗВАНО, а не спрятано.
    */
   categoryOf?: (raw: string) => Category | undefined;
+  /** Подписи и разделы приложения для меню (см. navFromModel). Нет — подписи из документа или код. */
+  nav?: NavFromModelOptions;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
@@ -134,10 +145,13 @@ const UML: readonly string[] = ['composition', 'aggregation', 'association', 're
 export function configFromModel(model: LoreModelDoc, opts: ConfigFromModelOptions): ConfigFromModel {
   const statusNotes: string[] = [];
   const kindNotes: string[] = [];
+  const edges = edgeLabelsFromModel(model);
   return {
     statuses: statusesOf(model, opts, statusNotes),
     ...kindsOf(model, kindNotes),
-    notes: { statuses: statusNotes, kinds: kindNotes },
+    edgeLabels: edges.labels,
+    nav: navFromModel(model, opts.nav),
+    notes: { statuses: statusNotes, kinds: kindNotes, edges: edges.notes },
   };
 }
 

@@ -59,6 +59,10 @@ public class LoreSpecResource extends LoreResourceBase {
         return upsertSpec(req, role, null);
     }
 
+
+    /** MIG-03: на базе из модели тело спеки живёт только в версии; на записи — лишь в старой схеме. */
+    static boolean bodyOnVertex() { return !ModelSchemaAdapter.enabled(); }
+
     @POST
     @Path("spec")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -100,14 +104,15 @@ public class LoreSpecResource extends LoreResourceBase {
                 new LoreCommandClient.LoreCommand("sql", "SELECT count(*) AS n FROM KnowSpec WHERE spec_id=:id",
                     Map.of("id", req.spec_id()))).await().indefinitely().result();
             boolean isNewSpec = had == null || had.isEmpty() || !(had.get(0).get("n") instanceof Number hn) || hn.intValue() == 0;
-            final String st = isNewSpec ? CreateDefaultStatus.forNew("spec", req.status()) : req.status();
+            final CreateDefaultStatus.Pick statusPick = isNewSpec ? CreateDefaultStatus.pick("spec", req.status()) : null;
+            final String st = statusPick != null ? statusPick.value() : req.status();
             StringBuilder sql = new StringBuilder("UPDATE KnowSpec SET spec_id=:id");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("id", req.spec_id());
             if (req.title() != null)        { sql.append(", title=:title");             p.put("title", req.title()); }
             if (req.version() != null)      { sql.append(", version=:version");         p.put("version", req.version()); }
             if (req.component_id() != null) { sql.append(", component_id=:cid");        p.put("cid", req.component_id()); }
-            if (req.content_md() != null)   { sql.append(", content_md=:content");      p.put("content", req.content_md()); }
+            if (req.content_md() != null && bodyOnVertex())   { sql.append(", content_md=:content");      p.put("content", req.content_md()); }
             if (req.file_path() != null)    { sql.append(", file_path=:fp");            p.put("fp", req.file_path()); }
             // S4-04 (свежесть): тело без checkpoint и поля вершины версию не открывают —
             // момент правки на вершине; changed_at — максимум с открытой версией.
@@ -196,8 +201,11 @@ public class LoreSpecResource extends LoreResourceBase {
                     if (req.summary() != null)    { hsql.append(", summary=:summary");    hp.put("summary", req.summary()); }
                     // S2-13: статус на месте больше не правится — его пишет версия выше.
                     hsql.append(" WHERE @rid=:rid");
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        hsql.toString(), hp)).await().indefinitely();
+                    // MT-MCP-TRUTH Б11: открытую версию прочитали, запись её не нашла — тело не легло, 409
+                    if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            hsql.toString(), hp)).await().indefinitely()))
+                        throw new Scd2Guard.ConflictException("spec '" + req.spec_id()
+                            + "': the open body version disappeared between read and write — nothing written, re-read and retry", Map.of());
                 } else {
                     String nsid = UUID.randomUUID().toString();
                     Map<String, Object> hp = mapOfNullable(
@@ -242,6 +250,7 @@ public class LoreSpecResource extends LoreResourceBase {
             // тема покрыта. Advisory, на запись не влияет.
             WorkQuality.Result quality = specQuality(req.spec_id());
             if (quality != null) out.put("quality", WorkQuality.compact(quality));
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Scd2Guard.ConflictException c) {
             return c.response(); // S2-09

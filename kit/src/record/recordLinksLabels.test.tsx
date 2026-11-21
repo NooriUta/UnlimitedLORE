@@ -38,7 +38,9 @@ describe('RecordLinks · подпись ребра', () => {
   it('нет config.edges — подпись связи вида записи; ребро чужого вида — подпись того вида; неизвестное — кодом', () => {
     const c = ctx();
     render(<KitLangProvider lang="ru"><RecordLinks record={c.data.records[0]} ctx={c} lang="ru" /></KitLangProvider>);
-    expect(titles()).toEqual(['ODD_ONE', 'Лежит на тропах', 'Квизы темы']);
+    // QUIZ_OF у квиза исходящая, а подписана только входящая сторона («Квизы темы» у темы) — словами
+    // «исходящая: …», а не молча чужое слово (K5-MODEL-NAV-EDGE-LABELS, шаг 4).
+    expect(titles()).toEqual(['ODD_ONE', 'Лежит на тропах', 'исходящая: Квизы темы']);
   });
 
   it('config.edges главнее — подписи LORE не меняются', () => {

@@ -21,7 +21,7 @@
 #
 # Режимы:
 #   ci        → v1, v2, backend, mcp (true/false) + reason
-#   cd        → backend, frontend (v1), frontend_next (v2) + reason
+#   cd        → backend, frontend (v1), frontend_next (v2), mcp (lore-mcp) + reason
 #   guard-v1  → ПРЕДУПРЕЖДЕНИЕ (код 0), если PR трогает src/** без метки
 #               v1-hotfix: ::warning:: на файл + блок в $GITHUB_STEP_SUMMARY.
 #               Не блок — решение владелицы 07.11.2026 («ставь не обязательным,
@@ -96,17 +96,17 @@ classify() {
     src/*|public/*|index.html|vite.config.ts|tsconfig*.json|eslint.config.js|postcss.config.cjs|package.json|package-lock.json|Dockerfile|.dockerignore)
                                         echo "v1" ;;
     nginx.conf.template|docker/*)       echo "v1 v2" ;;
-    backend/*)                          echo "v1 v2 backend mcp deploy_backend" ;;
-    mcp-server/*)                       echo "v1 v2 backend mcp" ;;
-    shared/*|docker-compose*.yml)       echo "v1 v2 backend mcp deploy_backend" ;;
-    .github/*)                          echo "v1 v2 backend mcp deploy_backend" ;;
+    backend/*)                          echo "v1 v2 backend mcp deploy_backend deploy_mcp" ;;
+    mcp-server/*)                       echo "v1 v2 backend mcp deploy_mcp" ;;
+    shared/*|docker-compose*.yml)       echo "v1 v2 backend mcp deploy_backend deploy_mcp" ;;
+    .github/*)                          echo "v1 v2 backend mcp deploy_backend deploy_mcp" ;;
     docs/*|*.md|renovate.json|.claude/*|.gitignore|.gitattributes|.editorconfig|LICENSE)
                                         echo "" ;;
-    *)                                  echo "v1 v2 backend mcp deploy_backend" ;;
+    *)                                  echo "v1 v2 backend mcp deploy_backend deploy_mcp" ;;
   esac
 }
 
-V1=false V2=false BACKEND=false MCP=false DEPLOY_BACKEND=false
+V1=false V2=false BACKEND=false MCP=false DEPLOY_BACKEND=false DEPLOY_MCP=false
 SRC_TOUCHED=""
 REASON=""
 # ── полный или сокращённый прогон (правило владелицы 11.11.2026, PL-02) ──────
@@ -158,7 +158,7 @@ decide_full() {
 }
 
 scope_all() {
-  V1=true V2=true BACKEND=true MCP=true DEPLOY_BACKEND=true
+  V1=true V2=true BACKEND=true MCP=true DEPLOY_BACKEND=true DEPLOY_MCP=true
   REASON="$1"
   echo "::warning::ci-scope: $1 — гоняем всё"
 }
@@ -183,6 +183,7 @@ compute_scope() {
     case "$t" in *" backend "*) BACKEND=true ;; esac
     case "$t" in *" mcp "*) MCP=true ;; esac
     case "$t" in *" deploy_backend "*) DEPLOY_BACKEND=true ;; esac
+    case "$t" in *" deploy_mcp "*) DEPLOY_MCP=true ;; esac
   done <<< "$list"
   REASON="по путям: $n файл(ов)"
 }
@@ -262,17 +263,20 @@ case "$MODE" in
         case "$svc" in
           # both — бэкенд и v2. v1 сюда НЕ входит: он заморожен и пересобирается
           # только явным хотфиксом (service=frontend).
-          both)          BE=true  FE=false NEXT=true ;;
-          backend)       BE=true  FE=false NEXT=false ;;
-          frontend)      BE=false FE=true  NEXT=false ;;
-          frontend-next) BE=false FE=false NEXT=true ;;
-          *) echo "::error::неизвестный сервис '$svc' (both | backend | frontend | frontend-next)"; exit 2 ;;
+          # AO-MCP-HOSTED: lore-mcp (MCP по адресу хоста) едет с бэкендом в both.
+          both)          BE=true  FE=false NEXT=true  MCPD=true ;;
+          backend)       BE=true  FE=false NEXT=false MCPD=false ;;
+          frontend)      BE=false FE=true  NEXT=false MCPD=false ;;
+          frontend-next) BE=false FE=false NEXT=true  MCPD=false ;;
+          mcp)           BE=false FE=false NEXT=false MCPD=true ;;
+          *) echo "::error::неизвестный сервис '$svc' (both | backend | frontend | frontend-next | mcp)"; exit 2 ;;
         esac
         REASON="ручной запуск: $svc"
         ;;
       *)
         compute_scope
         BE="$DEPLOY_BACKEND"
+        MCPD="$DEPLOY_MCP"
         # v2 выкатывается вместе с бэкендом: его тесты гоняются на каждую
         # правку бэкенда, и стенд v2 должен стоять на том же бэкенде.
         NEXT="$V2"
@@ -282,8 +286,8 @@ case "$MODE" in
         fi
         ;;
     esac
-    echo "cd-scope: backend=$BE frontend(v1)=$FE frontend_next(v2)=$NEXT ($REASON)"
-    emit backend "$BE"; emit frontend "$FE"; emit frontend_next "$NEXT"
+    echo "cd-scope: backend=$BE frontend(v1)=$FE frontend_next(v2)=$NEXT mcp=$MCPD ($REASON)"
+    emit backend "$BE"; emit frontend "$FE"; emit frontend_next "$NEXT"; emit mcp "$MCPD"
     emit reason "$REASON"
     ;;
 esac

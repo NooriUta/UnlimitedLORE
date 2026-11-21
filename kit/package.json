@@ -1,30 +1,84 @@
 {
   "name": "@seidr/kit",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Seiðr-kit: общие токены, тема и элементы UI на React (SPRINT_UXR_S10_SEIDR_KIT, D-2026-UXR-KIT-REACT)",
+  "files": [
+    "dist"
+  ],
+  "types": "./dist/src/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./content": "./src/content/index.ts",
-    "./auth": "./src/auth/index.ts",
-    "./core": "./src/core/index.ts",
-    "./demo/lore": "./demo/lore.ts",
-    "./demo/datawanderers": "./demo/datawanderers.ts",
-    "./styles/seidr.css": "./src/styles/seidr.css",
-    "./style-guard": "./src/tokens/styleGuard.ts",
-    "./demo/*": "./demo/*.ts",
-    "./record": "./src/record/index.ts",
-    "./graph": "./src/graph/index.ts"
+    ".": {
+      "seidr-source": "./src/index.ts",
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./content": {
+      "seidr-source": "./src/content/index.ts",
+      "types": "./dist/src/content/index.d.ts",
+      "import": "./dist/src/content/index.js"
+    },
+    "./auth": {
+      "seidr-source": "./src/auth/index.ts",
+      "types": "./dist/src/auth/index.d.ts",
+      "import": "./dist/src/auth/index.js"
+    },
+    "./core": {
+      "seidr-source": "./src/core/index.ts",
+      "types": "./dist/src/core/index.d.ts",
+      "import": "./dist/src/core/index.js"
+    },
+    "./demo/lore": {
+      "seidr-source": "./demo/lore.ts",
+      "types": "./dist/demo/lore.d.ts",
+      "import": "./dist/demo/lore.js"
+    },
+    "./demo/datawanderers": {
+      "seidr-source": "./demo/datawanderers.ts",
+      "types": "./dist/demo/datawanderers.d.ts",
+      "import": "./dist/demo/datawanderers.js"
+    },
+    "./styles/seidr.css": {
+      "seidr-source": "./src/styles/seidr.css",
+      "default": "./dist/src/styles/seidr.css"
+    },
+    "./style-guard": {
+      "seidr-source": "./src/tokens/styleGuard.ts",
+      "types": "./dist/src/tokens/styleGuard.d.ts",
+      "import": "./dist/src/tokens/styleGuard.js"
+    },
+    "./demo/*": {
+      "seidr-source": "./demo/*.ts",
+      "types": "./dist/demo/*.d.ts",
+      "import": "./dist/demo/*.js"
+    },
+    "./record": {
+      "seidr-source": "./src/record/index.ts",
+      "types": "./dist/src/record/index.d.ts",
+      "import": "./dist/src/record/index.js"
+    },
+    "./graph": {
+      "seidr-source": "./src/graph/index.ts",
+      "types": "./dist/src/graph/index.d.ts",
+      "import": "./dist/src/graph/index.js"
+    }
   },
   "sideEffects": [
     "*.css",
     "./src/content/markdown.ts",
-    "./src/content/MartProse.tsx"
+    "./src/content/MartProse.tsx",
+    "./dist/src/content/markdown.js",
+    "./dist/src/content/MartProse.js"
   ],
   "scripts": {
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "node scripts/build-package.mjs",
+    "prepack": "npm run build",
+    "consumer-check": "node scripts/consumer-check.mjs"
+  },
+  "publishConfig": {
+    "registry": "https://git.seidrstudio.pro/api/packages/AIDA/npm/"
   },
   "peerDependencies": {
     "@iconify/react": "^6.0.2",

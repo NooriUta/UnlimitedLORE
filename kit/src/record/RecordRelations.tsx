@@ -15,6 +15,7 @@ import { kitT, type KitLang } from '../i18n';
 import { RecordRef } from './fmt';
 import { RelationTable } from './RelationTable';
 import { RelationPicker } from './RelationPicker';
+import { ReasonDialog } from '../shell/Dialog';
 
 export const RELATION_MARK: Record<KitRelation, string> = {
   composition: '◆', aggregation: '◇', association: '⇢', attribute: '·', realization: '▷', generalization: '△',
@@ -98,6 +99,9 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  // MDL-13: связь с обязательной причиной — «Привязать» сперва спрашивает причину (ReasonDialog).
+  const [askReason, setAskReason] = useState<string | null>(null);
+  const [reasonFailed, setReasonFailed] = useState<string | null>(null);
   const { ids, unknown, values } = relationTargetsWithKind(record, ctx, def);
   const manage = onRelation && canManage(def);
   /**
@@ -112,20 +116,36 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
    * Молчаливый отказ хуже ошибки: ошибку читают и идут просить доступ, а
    * молчание заставляет перебирать варианты.
    */
-  const call = async (target: string, action: 'add' | 'remove'): Promise<boolean> => {
+  const call = async (target: string, action: 'add' | 'remove', reason?: string): Promise<boolean> => {
     if (!onRelation) return false;
+    // Причину спрашиваем ДО записи: без неё сервер всё равно откажет.
+    if (action === 'add' && def.reasonRequired && reason === undefined) {
+      setReasonFailed(null);
+      setAskReason(target);
+      return false;
+    }
     setBusy(true);
     setFailed(null);
     try {
-      await onRelation({ type: record.kind, id: record.id, rel: def.rel, dir: def.dir, target, action });
+      await onRelation({ type: record.kind, id: record.id, rel: def.rel, dir: def.dir, target, action, ...(reason !== undefined ? { reason } : {}) });
       return true;
     } catch (e) {
-      setFailed(e instanceof Error && e.message ? e.message : String(e));
+      const why = e instanceof Error && e.message ? e.message : String(e);
+      // Отказ записи с причиной — словами в самом диалоге: он не закрывается, причину набирать заново не нужно.
+      if (reason !== undefined) setReasonFailed(why); else setFailed(why);
       return false;
     } finally {
       setBusy(false);
     }
   };
+  const reasonDialog = askReason !== null && (
+    <ReasonDialog open onClose={() => setAskReason(null)} busy={busy} error={reasonFailed}
+      title={kitT(lang, 'kit.record.rel.reasonTitle', { label: def.label, id: askReason })}
+      confirmLabel={kitT(lang, 'kit.record.rel.linkBtn')}
+      onConfirm={reason => { const t = askReason; void call(t, 'add', reason).then(ok => { if (ok) { setAskReason(null); setDraft(''); } }); }}>
+      {kitT(lang, 'kit.record.rel.reasonLead', { label: def.label, id: askReason })}
+    </ReasonDialog>
+  );
   // Связи — таблицей с общими колонками списка (замечание владелицы по
   // v1.17.4: «связи пока там, где я хотела бы видеть таблицы… наши любимые
   // общие колонки»). Пустую таблицу не рисуем: о пустоте говорим словами,
@@ -173,11 +193,11 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   const unknownNote = unknown.length > 0 && (
     <p className="sk-rel__unknown" data-testid="kit-relation-unknown-kind">{kitT(lang, 'kit.record.rel.unknownKind', { ids: unknown.join(', ') })}</p>
   );
-  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{unknownNote}{form}{complaint}</div>;
+  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{unknownNote}{form}{complaint}{reasonDialog}</div>;
   return (
     <section role="group" aria-label={def.label} className="sk-rel__group" data-relation={def.relation}>
       <h3 className="sk-rel__head"><span className="sk-rel__mark" aria-hidden="true">{RELATION_MARK[def.relation]}</span>{def.label}</h3>
-      {list}{unknownNote}{form}{complaint}
+      {list}{unknownNote}{form}{complaint}{reasonDialog}
     </section>
   );
 }

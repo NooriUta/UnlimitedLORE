@@ -180,23 +180,25 @@ class LoreModelContractTest {
     }
 
     /**
-     * S4-24: трек спринта — ссылка на вершину PlanTrack; выбирается из среза треков плана,
-     * а не набирается текстом (опечатка в коде трека раньше молча писалась в track_id).
+     * S4-24: трек спринта выбирается, а не набирается текстом (опечатка в коде трека раньше молча писалась в track_id).
+     * MDL-13 (владелица 20.11.2026 «треки б»): трек — ссылка на запись «трек» по ребру ON_TRACK; путь записи — общий
+     * путь связей паспорта, варианты — срез треков ({@link LoreSprintTracks#SLICE}, приложение по типу цели).
      */
     @Test
-    void sprintTrackIsPickedFromPlanTracks() {
+    void sprintTrackIsARefToTrackByOnTrackEdge() {
         Map<String, Object> model = map(map(doc().get("types"), "types").get("sprint"), "types.sprint");
         for (Map<String, Object> holder : List.of(model, LoreRecordRegistry.schemaJson("sprint"))) {
             Map<String, Object> f = null;
             for (Object fo : list(holder.get("fields"), "sprint.fields"))
                 if ("track".equals(map(fo, "f").get("key"))) f = map(fo, "f");
             assertNotNull(f, "sprint.track");
-            assertEquals("enum", f.get("kind"), "sprint.track.kind — выбор, а не свободный текст");
-            assertNull(f.get("dict"), "sprint.track.dict — значения не из справочника, а из среза треков");
-            assertEquals(Map.of("slice", LoreSprintTracks.SLICE, "value", "code", "label", "title"),
-                f.get("options"), "sprint.track.options");
-            checkOptions(f, "sprint.track");
+            assertEquals("ref", f.get("kind"), "sprint.track.kind — ссылка на запись трека, а не свободный текст");
+            assertNull(f.get("dict"), "sprint.track.dict — не справочник");
+            assertNull(f.get("options"), "sprint.track.options — выбор по типу цели связи, а не срезом поля");
         }
+        assertNotNull(LoreRecordRelationRoutes.find("sprint", "ON_TRACK", "out"), "у связи трека есть путь записи");
+        assertEquals("track", LoreRecordRegistry.get("sprint").relations().stream()
+            .filter(r -> "ON_TRACK".equals(r.rel())).findFirst().orElseThrow().targetType());
     }
 
     @Test

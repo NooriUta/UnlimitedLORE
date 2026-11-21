@@ -18,7 +18,8 @@ class AdminOnlySlicesGateTest {
 
     private static final List<String> JOURNALS = List.of(
         "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions",
-        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix");
+        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
+        "agent_action_points");
 
     @Test
     void журналыЗакрытыДляНеАдминов() {

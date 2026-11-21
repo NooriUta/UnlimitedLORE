@@ -134,7 +134,7 @@ public class LoreAccessResource extends LoreResourceBase {
             if (!SAFE_ID.matcher(kcSub).matches()) return badParams("kc_sub contains illegal characters");
             Map<String, String> roles = new LinkedHashMap<>();
             for (Map<String, Object> r : ingestService.queryPublic(
-                    "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub", Map.of("sub", kcSub)))
+                    "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub", Map.of("sub", kcSub)))
                 if (r.get("slug") != null) roles.put(String.valueOf(r.get("slug")), r.get("role") == null ? null : String.valueOf(r.get("role")));
             Map<String, Object> body = LoreAccessExplain.explain(scopeEnforce, realmRole, roles, project);
             body.put("kc_sub", kcSub);
@@ -150,7 +150,7 @@ public class LoreAccessResource extends LoreResourceBase {
         List<Map<String, Object>> people = new ArrayList<>();
         for (Map<String, Object> r : ingestService.queryPublic(
                 "SELECT @out.kc_sub AS kc_sub, @out.display_name AS display_name, role FROM HAS_PROJECT_ROLE "
-                + "WHERE @in.slug = :p ORDER BY kc_sub", Map.of("p", project))) {
+                + "WHERE valid_to IS NULL AND @in.slug = :p ORDER BY kc_sub", Map.of("p", project))) {
             if (r.get("kc_sub") == null) continue;
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("kc_sub", r.get("kc_sub"));

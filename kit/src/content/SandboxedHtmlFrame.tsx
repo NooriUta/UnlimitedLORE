@@ -27,6 +27,7 @@ const RESIZE_SHIM = `<script>
   function post(){window.parent.postMessage({_skResize:document.documentElement.scrollHeight},'*');}
   post();
   new MutationObserver(post).observe(document.body,{childList:true,subtree:true,attributes:true});
+  if(window.ResizeObserver)new ResizeObserver(post).observe(document.body);
   window.addEventListener('load',post);
 })();
 </script>`;

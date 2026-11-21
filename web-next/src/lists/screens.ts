@@ -12,7 +12,7 @@ import { TOTALS_FIELDS, loadSprintTotals } from '../sprints/sprintTotals';
 import { SprintTasks } from '../sprints/SprintTasks';
 import { loadSprintChildren } from '../sprints/sprintChildren';
 import { MILESTONE_TOTALS_FIELDS, loadMilestoneTotals } from '../milestone/milestoneTotals';
-import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { MilestoneRowDetail } from '../milestone/MilestoneRowDetail';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
@@ -21,7 +21,7 @@ import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
   painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, runbookRecord, qualityGateRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
-  techRecord,
+  techRecord, repositoryRecord, organizationRecord,
 } from './records';
 import type { RowMapCtx } from './records';
 import { staleByStatus, withCalendar, withLibrary, type CalendarDate, type LibrarySpec } from './library';
@@ -110,6 +110,16 @@ export interface ListScreenDef {
    * в срезе умолчания не получает — поле не выдумывается.
    */
   defaultSort?: ListSort;
+  /**
+   * Группировка по умолчанию (`list.groupings` раздела): репозитории — по проекту (прототип 19.11.2026).
+   * Это умолчание, а не выбор: `lg` в адресе главнее. Нет — без группировки.
+   */
+  defaultGroup?: string;
+  /**
+   * Управление разделом — только в админке (организации, решение владелицы 19.11.2026): в пользовательском меню
+   * раздел только для чтения — без «+ Новая» и без правки связей в паспорте, даже у super-admin.
+   */
+  manageOnlyInAdmin?: boolean;
   /**
    * Лента раздела (K2-FEED-VIEW): то же описание, из которого собран
    * `list.feed` конфига, — экрану оно нужно, чтобы отдать kit тело записи и
@@ -237,6 +247,8 @@ function sprintsConfig(lang: KitLang): KitConfig {
           { key: 'components', title: f(lang, 'components'), type: 'ref', refKind: 'component' },
           { key: 'release', title: f(lang, 'release'), type: 'ref', refKind: 'release' },
           { key: 'milestone', title: f(lang, 'milestone'), type: 'ref', refKind: 'milestone' },
+          // MDL-13 «треки б»: трек спринта по ребру ON_TRACK — дорожки списка (группировка «Трек»).
+          { key: 'track', title: f(lang, 'track'), type: 'ref', refKind: 'track' },
           { key: 'priority', title: f(lang, 'priority'), type: 'number' },
           { key: 'tasks', title: f(lang, 'tasks'), type: 'number' },
           // Итоги спринта (S4-09, просьба владелицы 09.11). Единица — в
@@ -273,7 +285,7 @@ function sprintsConfig(lang: KitLang): KitConfig {
       // Имена фасетов — из общего набора loreFilters (S4-05): пока они жили
       // строками здесь и ключами там, наборы разошлись молча.
       filters: [STATUS_FACET, LORE_FILTER_FIELDS.release, LORE_FILTER_FIELDS.project, LORE_FILTER_FIELDS.component],
-      groupings: ['status', 'project', 'priority', 'milestone', 'release'],
+      groupings: ['status', 'project', 'priority', 'milestone', 'track', 'release'],
       // S9-02: релизов у LORE больше сотни — разрез свёрнут при первом показе,
       // иначе раскрытые группы снова дают стену строк, из которой задача и выросла.
       collapsedGroupings: ['release'],
@@ -408,6 +420,8 @@ interface SectionSpec {
    * order нужен виду «Дерево»; в таблице соседи одного уровня идут порядком сортировки списка.
    */
   tree?: NonNullable<KitConfig['list']>['tree'];
+  /** Слова проверенного ноля раздела (kit list.empty): почему записей нет. Нет — общие слова kit. */
+  empty?: [title: AppKey, hint: AppKey];
 }
 
 /**
@@ -453,6 +467,7 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
       ...(spec.collapsedGroupings ? { collapsedGroupings: spec.collapsedGroupings } : {}),
       columns: spec.columns,
       ...(spec.tree ? { tree: spec.tree } : {}),
+      ...(spec.empty ? { empty: { title: appT(lang, spec.empty[0]), hint: appT(lang, spec.empty[1]) } } : {}),
     },
   };
 }
@@ -640,6 +655,40 @@ const projectsSpec: SectionSpec = {
   columns: ['id', 'title', 'default_branch'],
 };
 
+/**
+ * D-2026-MIG-REPOSITORY-ORGANIZATION (прототип mig-repos-orgs.html): репозитории — полный путь, роль, проект /
+ * компонент, зеркала. Статуса нет. Группировка по проекту — общий механизм: репозиторий в нескольких — в каждой группе.
+ */
+const repositoriesSpec: SectionSpec = {
+  kind: 'repository', titleKey: 'lists.repositories.title', icon: 'chest',
+  fields: [
+    ['role', 'text'], ['project', 'ref'], ['component', 'ref'], ['components', 'ref'],
+    ['mirrors', 'text'], ['mirrorOf', 'text'], ['host', 'text'], ['hostOwner', 'text'], ['default_branch', 'text'],
+  ],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-project', 'lists.quick.noProjects', { project: '' }]],
+  filters: ['fields.host', 'fields.hostOwner', 'fields.role', LORE_FILTER_FIELDS.project],
+  groupings: [LORE_FILTER_FIELDS.project, 'fields.role', 'fields.host', 'fields.hostOwner'],
+  columns: ['title', 'role', 'project', 'component', 'mirrors'],
+};
+
+/**
+ * Организации — самостоятельный объект, пока пустой: тип заведён переносом, какие организации завести и с чем
+ * связать — решает владелица. Пустой раздел говорит это словами, а не общим «пусто».
+ */
+const organizationsSpec: SectionSpec = {
+  kind: 'organization', titleKey: 'lists.organizations.title', icon: 'castle',
+  fields: [['name', 'text']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-name', 'lists.quick.noName', { name: '' }]],
+  filters: [],
+  groupings: [],
+  columns: ['id', 'title'],
+  empty: ['lists.organizations.emptyTitle', 'lists.organizations.emptyHint'],
+};
+
 /** Технологии: СТАТУСА НЕТ — это реестр версий (спеки SPEC-TECH-*). */
 const techSpec: SectionSpec = {
   kind: 'tech', titleKey: 'lists.tech.title', icon: 'gears',
@@ -731,12 +780,14 @@ const LIBRARIES = {
 /** Продукты: статья словаря product; родитель и подпродукты — рёбра PARENT_PRODUCT. */
 const productsSpec: SectionSpec = {
   kind: 'product', titleKey: 'lists.products.title', icon: 'bullseye',
-  fields: [['parent', 'ref'], ['children', 'ref'], ['components', 'ref'], ['project', 'ref']],
+  // WK-01: вид продукта (tech | service, набор) — колонка, фильтр и группировка списка. Ключ не «kind»:
+  // kind у записи kit — её тип (product), и колонка «kind» показала бы «Продукты».
+  fields: [['product_kind', 'text'], ['parent', 'ref'], ['children', 'ref'], ['components', 'ref'], ['project', 'ref']],
   views: ['list', 'cards'],
   quick: [['top-level', 'lists.quick.topLevel', { parent: '' }]],
-  filters: [LORE_FILTER_FIELDS.project, 'fields.parent'],
-  groupings: ['fields.parent'],
-  columns: ['id', 'title', 'parent', 'children', 'components', 'project'],
+  filters: [LORE_FILTER_FIELDS.project, 'fields.product_kind', 'fields.parent'],
+  groupings: ['fields.parent', 'fields.product_kind'],
+  columns: ['id', 'title', 'product_kind', 'parent', 'children', 'components', 'project'],
   tree: { parent: 'parent', order: 'title' },
 };
 
@@ -873,11 +924,12 @@ export const LIST_SCREENS = {
     defaultSort: FRESH_FIRST,
     map: milestoneRecord, config: lang => withFeed(lang, sectionConfig(lang, milestonesSpec), FEEDS.milestones), feed: FEEDS.milestones, quickIcons: {},
     // PU-27: «задачи x/y» вехи — сумма итогов её спринтов (sprint_totals считает сервер);
-    // в раскрытой строке — сгорание вехи (BURN-DOWN и «Цель к сроку»), тем же кодом, что у спринта.
+    // в раскрытой строке — сгорание вехи (BURN-DOWN и «Цель к сроку»), тем же кодом, что у спринта,
     nested: {
       lateFields: MILESTONE_TOTALS_FIELDS,
       load: loadMilestoneTotals,
-      render: id => createElement(MilestoneBurnLine, { milestoneId: id }),
+      // K4-CHARTS (19.11, «можно и на дорожную карту»): под сгоранием — графики спринтов вехи.
+      render: id => createElement(MilestoneRowDetail, { milestoneId: id }),
     },
   },
   releases: {
@@ -894,6 +946,17 @@ export const LIST_SCREENS = {
   projects: {
     slice: 'git_projects', titleKey: 'lists.projects.title', icon: 'open-folder',
     map: projectRecord, config: lang => sectionConfig(lang, projectsSpec), quickIcons: {},
+  },
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — раздел «Система», паспорт (только чтение).
+  repositories: {
+    slice: 'repositories', titleKey: 'lists.repositories.title', icon: 'chest',
+    map: repositoryRecord, config: lang => sectionConfig(lang, repositoriesSpec), quickIcons: {},
+    defaultGroup: LORE_FILTER_FIELDS.project,
+  },
+  organizations: {
+    slice: 'organizations', titleKey: 'lists.organizations.title', icon: 'castle',
+    map: organizationRecord, config: lang => sectionConfig(lang, organizationsSpec), quickIcons: {},
+    manageOnlyInAdmin: true,
   },
   tech: {
     slice: 'tech_registry', titleKey: 'lists.tech.title', icon: 'gears',

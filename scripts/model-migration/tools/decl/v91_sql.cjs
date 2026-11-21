@@ -1,0 +1,12 @@
+const fs=require("fs");const o=JSON.parse(fs.readFileSync("C:/AIDA/_audit_scripts/decl/v91-verify.json","utf8"));
+const src=fs.readFileSync("C:/AIDA/UnlimitedLORE/.claude/worktrees/mdl-03-v91/backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java","utf8")+fs.readFileSync("C:/AIDA/UnlimitedLORE/.claude/worktrees/mdl-03-v91/backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaInitializer.java","utf8");
+const take=[...o.B_tech,...o.E_check].filter(i=>!/\.component_id$/.test(i.k)&&!/^(Plan|LoreTechnology)/.test(i.k));
+const hold=[...o.A_code_declares,...o.C_copy_on_vertex,...o.D_mixed,...[...o.B_tech,...o.E_check].filter(i=>!take.includes(i))];
+const types=[...new Set(take.map(i=>i.k.split(".")[0]))];
+const missing=types.filter(t=>!new RegExp("TYPE\s+"+t+"\b").test(src)&&!new RegExp("\""+t+"\"").test(src));
+console.log("take",take.length,"hold",hold.length,"types",types.length,"types not created in code:",missing.join(",")||"none");
+const pad=Math.max(...take.map(i=>i.k.length));
+fs.writeFileSync("C:/AIDA/_audit_scripts/decl/v91.sql.txt",take.map(i=>'            "CREATE PROPERTY '+i.k.padEnd(pad)+' IF NOT EXISTS '+i.ddl+'"').join(",\n"));
+fs.writeFileSync("C:/AIDA/_audit_scripts/decl/v91.take.txt",take.map(i=>i.k+":"+i.ddl).join("\n"));
+fs.writeFileSync("C:/AIDA/_audit_scripts/decl/v91.hold.txt",hold.map(i=>i.k).join("\n"));
+console.log(hold.map(i=>i.k).join(", "));

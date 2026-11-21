@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fetchLoreRecord } from './liveRecord';
 import { fetchModelStatuses } from '../shell/useModelStatuses';
+import { menuFromModel } from '../shell/v2Config';
 import { fetchTypeStatuses } from '../record/passportStatuses';
 import { fetchPassportOrder } from '../record/passportOrder';
 
@@ -60,7 +61,8 @@ describe('CT-KIT-FIXTURES: снимки сервера проходят разб
 
   it('модель: меню (surfaces.nav) приходит и разбирается', async () => {
     const r = await fetchModelStatuses({ fetchImpl: fixtureFetch, url: pathOf('model') });
-    expect(r.nav?.length ?? 0, `меню из модели пустое: ${r.notes.join('; ')}`).toBeGreaterThan(0);
+    // K5-MODEL-NAV-EDGE-LABELS: документ уходит в kit (navFromModel через menuFromModel) как есть.
+    expect(menuFromModel('ru', r.model).length, `меню из модели пустое: ${r.notes.join('; ')}`).toBeGreaterThan(0);
   });
 
   it.each(['sprint', 'task', 'adr'])('модель: цикл статусов типа %s есть', async type => {

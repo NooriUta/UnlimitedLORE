@@ -154,10 +154,12 @@ public class LoreProductResource extends LoreResourceBase {
             StringBuilder sql = new StringBuilder("UPDATE KnowUseCase SET uc_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("id", req.feature_id());
+            final CreateDefaultStatus.Pick statusPick = ucStatusPick(req.feature_id(), req.status());
+            final String status = statusPick != null ? statusPick.value() : req.status();
             if (req.title() != null)        { sql.append(", title=:t");        p.put("t", req.title()); }
             if (req.body_md() != null)      { sql.append(", body_md=:b");      p.put("b", req.body_md()); }
             if (req.context_md() != null)   { sql.append(", context_md=:cx");  p.put("cx", req.context_md()); } // D13
-            if (req.status() != null)       { sql.append(", status=:s");       p.put("s", req.status()); }
+            if (status != null)             { sql.append(", status=:s");       p.put("s", status); }
             if (req.component_id() != null) { sql.append(", component_id=:c"); p.put("c", req.component_id()); }
             // Уровень обязателен по существу: слайс «Фичи» отбирает корни именно
             // по goal_level, и корень без него был бы невидим в своём же разделе.
@@ -179,11 +181,25 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("feature_id", req.feature_id());
             linkComponentEdge("KnowUseCase", "uc_id", req.feature_id(), req.component_id(), out);
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /**
+     * Правило владелицы 19.11.2026: фича/сценарий без статуса (новый или со статусом null) получает начальный
+     * статус типа по модели (feature.status.initial). Статус уже есть — null: подстановки нет.
+     */
+    @SuppressWarnings("unchecked")
+    private CreateDefaultStatus.Pick ucStatusPick(String ucId, String given) {
+        List<Map<String, Object>> had = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+            new LoreCommandClient.LoreCommand("sql", "SELECT status FROM KnowUseCase WHERE uc_id=:id", Map.of("id", ucId)))
+            .await().indefinitely().result();
+        boolean noStatusYet = had == null || had.isEmpty() || had.get(0).get("status") == null;
+        return noStatusYet ? CreateDefaultStatus.pick("feature", given) : null;
     }
 
     // ── UseCase ──────────────────────────────────────────────────────────────
@@ -247,7 +263,9 @@ public class LoreProductResource extends LoreResourceBase {
                 sql.append(", scenario_md = ifnull(scenario_md, :sc)"); p.put("sc", scenario);
             }
             if (req.acceptance_md() != null) { sql.append(", acceptance_md=:ac"); p.put("ac", req.acceptance_md()); }
-            if (req.status() != null)        { sql.append(", status=:s");         p.put("s", req.status()); }
+            final CreateDefaultStatus.Pick statusPick = ucStatusPick(req.uc_id(), req.status());
+            final String ucStatus = statusPick != null ? statusPick.value() : req.status();
+            if (ucStatus != null)            { sql.append(", status=:s");         p.put("s", ucStatus); }
             if (req.parent_uc_id() != null)  { sql.append(", parent_uc_id=:f");   p.put("f", req.parent_uc_id()); }
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
@@ -270,6 +288,7 @@ public class LoreProductResource extends LoreResourceBase {
             // чинит оформление в той же сессии, не дожидаясь ревью.
             out.put("quality", qualityOf(req.uc_id()));
             out.put("uc_id", req.uc_id());
+            CreateDefaultStatus.report(out, statusPick); // правило владелицы 19.11.2026: подстановка видна
             if (req.parent_uc_id() != null && !req.parent_uc_id().isBlank()) {
                 // Само-иерархия допускает цикл, которого раньше не было по
                 // построению (два разных типа). Проверяем явно: сценарий,
@@ -1215,15 +1234,21 @@ public class LoreProductResource extends LoreResourceBase {
             if (!"agent".equals(agentRows.get(0).get("kind")))
                 return badParams("actor '" + req.actor_id() + "' не kind=agent — FILLS_ROLE заводится от агента к роли");
 
-            // Один агент — одна действующая роль в любой момент: снести старое
-            // ребро, поставить новое (тот же паттерн, что OWNED_BY/
-            // HAS_PROJECT_ROLE reassign) — не накапливать историю рёбер.
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM (SELECT expand(outE('FILLS_ROLE')) FROM KnowActor WHERE actor_id=:id)",
-                Map.of("id", req.actor_id()))).await().indefinitely();
+            // Один агент — одна действующая роль в любой момент. MDL-02: связь историчная —
+            // прежнее ребро не сносится, а закрывается (valid_to), новое открывается
+            // (valid_from); видно, кто исполнял роль раньше. Та же роль — без новой версии.
+            List<Map<String, Object>> current = ingest.queryPublic(
+                "SELECT @in.actor_id AS t FROM FILLS_ROLE WHERE @out.actor_id = :id AND valid_to IS NULL",
+                Map.of("id", req.actor_id()));
+            boolean same = !remove && current != null && current.size() == 1
+                && req.target_id().equals(current.get(0).get("t"));
+            if (!same)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE FILLS_ROLE SET valid_to = :now WHERE @out.actor_id = :id AND valid_to IS NULL",
+                    Map.of("id", req.actor_id(), "now", java.time.Instant.now().toString()))).await().indefinitely();
 
-            boolean linked = false;
-            if (!remove) {
+            boolean linked = same;
+            if (!remove && !same) {
                 // AC-03: цель ребра — РОЛЬ, а она после развода живёт в
                 // KnowProjectActor. FILLS_ROLE стало межтиповым, и это не
                 // побочный эффект, а точная запись смысла: личность исполняет
@@ -1240,7 +1265,7 @@ public class LoreProductResource extends LoreResourceBase {
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) IF NOT EXISTS",
+                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) SET valid_from = '" + java.time.Instant.now() + "'",
                         Map.of("id", req.actor_id(), "t", req.target_id())))
                     .await().indefinitely().result();
                 linked = created != null && !created.isEmpty();
@@ -1541,9 +1566,13 @@ public class LoreProductResource extends LoreResourceBase {
                         // одно ребро, а писалось бы другое (ADR-LORE-043).
             boolean had = edgeExists(edge, "uc_id", req.feature_id(), inField, req.target_id());
 
+            boolean historic = LoreEdgeHistory.historic(edge);
             if (remove) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
+                // MDL-02: историчная связь (веха фичи) закрывается valid_to, а не стирается.
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", historic
+                    ? "UPDATE " + edge + " SET valid_to = '" + java.time.Instant.now() + "' "
+                        + "WHERE @out.uc_id = :fid AND @in." + inField + " = :tid AND valid_to IS NULL"
+                    : "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid OR @in.uc_id=:tid", p))
                     .await().indefinitely();
@@ -1551,11 +1580,13 @@ public class LoreProductResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "feature_id", req.feature_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
+            // MDL-02: у историчной связи IF NOT EXISTS увидел бы и закрытое ребро — повтор
+            // решает проба текущей связи (had), новое ребро получает valid_from.
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> created = (List<Map<String, Object>>)
+            List<Map<String, Object>> created = historic && had ? List.of() : (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE " + edge + " FROM (SELECT FROM KnowUseCase WHERE uc_id=:fid) " +
-                    "TO " + toSql + " IF NOT EXISTS", p))
+                    "TO " + toSql + (historic ? " SET valid_from = '" + java.time.Instant.now() + "'" : " IF NOT EXISTS"), p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
             if (linked && !had) touchUpdatedAt("KnowUseCase", "uc_id", req.feature_id());

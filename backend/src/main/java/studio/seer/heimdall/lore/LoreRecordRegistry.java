@@ -49,19 +49,24 @@ final class LoreRecordRegistry {
 
     /**
      * Поле записи. {@code group}: head | body | props. {@code relation} — вид связи,
-     * если поле показывает ребро (attribute/composition), иначе null.
+     * если поле показывает ребро (attribute/composition), иначе null. {@code notnull} — MDL-11: в схеме 1.18 поле
+     * объявлено MANDATORY + NOTNULL (установщик, {@code scripts/model-migration/notnull.mjs}); на живой базе
+     * обязательность читает {@link LoreFieldRequirement} из схемы БД. {@code initial} — начальное значение поля
+     * для записи, которой его не назвали (правило владелицы 19.11.2026 «ставить начальный, где без статуса»);
+     * читает {@link CreateDefaultStatus}, в форме хранения бэкенда.
      */
     record Field(String key, String label, String labelKey, String kind, String group, String dict,
                  boolean editable, Write write, boolean multi, boolean required,
                  String refType, String rel, String dir, String relation, Options options,
                  String shortLabel, String definition, String description, String layer, boolean historic,
                  String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
-                 String labelPl, String shortLabelPl, String definitionPl, String descriptionPl) {
+                 String labelPl, String shortLabelPl, String definitionPl, String descriptionPl,
+                 boolean notnull, String initial) {
         Field(String key, String label, String labelKey, String kind, String group, String dict,
               boolean editable, Write write, boolean multi, boolean required,
               String refType, String rel, String dir, String relation) {
             this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
-                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null);
+                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null, false, null);
         }
     }
 
@@ -131,9 +136,22 @@ final class LoreRecordRegistry {
      * Ребро типа с видом UML и местом в паспорте. {@code place}: part | link_tab |
      * prop | head | history | body | links. {@code manageable} — у ребра есть путь
      * привязки через {@code POST /lore/record/{type}/{id}/relation}.
+     * {@code inverseLabel} — подпись связи с ДРУГОГО конца («Зависит от» ↔ «Блокирует»), K5-MODEL-NAV-EDGE-LABELS,
+     * решение владелицы 20.11.2026 (вариант «а»); в ответе — {@code inverse_label}, {@code null} — не задана.
      */
     record Relation(String key, String label, String rel, String dir, String targetType,
-                    String relation, String place, boolean manageable) {}
+                    String relation, String place, boolean manageable, List<EdgeProp> props,
+                    /* MDL-13: привязка требует причины — kit открывает ReasonDialog, причина уходит в запись связи */
+                    boolean reasonRequired,
+                    /* MDL-13: типы другого конца у связи с targetType any — откуда клиенту брать варианты выбора */
+                    List<String> targetTypes,
+                    String inverseLabel) {}
+
+    /**
+     * MDL-13: свойство самого ребра, которое паспорт показывает колонкой связи (у DEPENDS_ON — вид и причина).
+     * {@code dict} — справочник значений (вид зависимости — {@code dependency_kind}); нет — свободный текст.
+     */
+    record EdgeProp(String key, String label, String dict) {}
 
     record TypeDef(String type, String label, String labelKey, String icon,
                    List<Field> fields, List<Body> body, List<PropSection> props,
@@ -182,7 +200,13 @@ final class LoreRecordRegistry {
         out.put("label_pl", d.labelPl());
         out.put("icon", d.icon());
         List<Map<String, Object>> fields = new ArrayList<>();
-        for (Field f : d.fields()) fields.add(fieldJson(d, f));
+        for (Field f : d.fields()) {
+            // D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION: выбор из снятого раздела (трек спринта — из доски плана)
+            // паспорту не отдаётся — иначе он зовёт срез и получает 410 «раздел снят»
+            if (f.options() != null && (ModelSchemaAdapter.planSectionRemoved(f.options().slice())
+                    || ModelSchemaAdapter.sliceUnavailable(f.options().slice()) != null)) continue;
+            fields.add(fieldJson(d, f));
+        }
         for (Body b : d.body()) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("key", b.key());
@@ -211,6 +235,21 @@ final class LoreRecordRegistry {
             m.put("target_type", r.targetType());
             m.put("place", r.place());
             m.put("manageable", r.manageable());
+            // K5-MODEL-NAV-EDGE-LABELS: ключ есть всегда; null — обратной подписи в модели нет.
+            m.put("inverse_label", r.inverseLabel());
+            if (!r.props().isEmpty()) {
+                List<Map<String, Object>> edgeProps = new ArrayList<>();
+                for (EdgeProp p : r.props()) {
+                    Map<String, Object> pm = new LinkedHashMap<>();
+                    pm.put("key", p.key());
+                    pm.put("label", p.label());
+                    if (p.dict() != null) pm.put("dict", p.dict());
+                    edgeProps.add(pm);
+                }
+                m.put("props", edgeProps);
+            }
+            if (r.reasonRequired()) m.put("reason_required", true);
+            if (!r.targetTypes().isEmpty()) m.put("target_types", r.targetTypes());
             rels.add(m);
         }
         out.put("relations", rels);

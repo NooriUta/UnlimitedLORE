@@ -137,8 +137,11 @@ describe('паспорт v2 — управление связями', () => {
   const openDeps = async () => {
     // Реализация живёт в своей вкладке «Реализация», а не в общей «Связи»:
     // общая — это RecordLinks, там управления нет и быть не должно.
-    const tab = await screen.findByRole('tab', { name: /Реализация/ }, { timeout: 8000 });
-    tab.click();
+    // K5-EMPTY-LINK-TABS: связей ноль — вкладка не в ряду, а под «Ещё»; форма привязки там же.
+    // Адрес jsdom общий на файл: вкладка могла остаться выбранной прошлым тестом — тогда она в ряду.
+    const tab = await screen.findByRole('tab', { name: /Реализация|Ещё/ }, { timeout: 8000 });
+    fireEvent.click(tab);
+    if (/Ещё/.test(tab.textContent ?? '')) fireEvent.click(await screen.findByRole('menuitem', { name: /Реализация/ }));
   };
 
   // S4-24: цель — выбором с поиском из среза её типа (у ADR — adrs), а не вводом кода.

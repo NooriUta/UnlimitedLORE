@@ -17,7 +17,9 @@ import java.util.Set;
  *   <li>срезы, на которые ссылаются части паспорта и варианты полей, существуют;</li>
  *   <li>ребро каждой связи объявлено в схеме графа (опечатка в имени ребра — пустая вкладка навсегда);</li>
  *   <li>вид поля не противоречит объявленному типу свойства схемы; исключения — {@link #KIND_EXEMPT} с причиной;</li>
- *   <li>порядок разделов паспорта ссылается только на разделы, которые у типа есть.</li>
+ *   <li>порядок разделов паспорта ссылается только на разделы, которые у типа есть;</li>
+ *   <li>MC-06: группа поля — одна из {@link #GROUPS}; поле {@code title} — в группе {@code head}
+ *       (паспорт без названия в шапке не строится; группу правит экран «Модель» админки).</li>
  * </ol>
  * Вкладка связи без своего среза читается по ребру всегда (LoreRecordValues#readByEdge), поэтому
  * отдельного правила «вкладка читается» здесь нет — его заменяет правило 2.
@@ -28,6 +30,28 @@ final class LoreModelConsistency {
 
     /** Вид поля, расходящийся с типом свойства схемы сознательно: тип.поле → причина. */
     static final Map<String, String> KIND_EXEMPT = Map.of();
+
+    /** MC-06: группы поля, которые понимает паспорт ({@link LoreRecordRegistry.Field}: head | body | props). */
+    static final Set<String> GROUPS = Set.of("head", "body", "props");
+
+    /**
+     * D-2026-MIG-REPOSITORY-ORGANIZATION: рёбра, которые есть только в схеме, собранной из модели (установщик MIG-01,
+     * перенос 1.18). В старой схеме шагов V их нет, и новый шаг V накатил бы их на прод — поэтому их отсутствие в
+     * схеме базы правку модели не останавливает. Ребро → причина. Сторож описания рёбер — LorePassportLinksContractTest.
+     */
+    static final Map<String, String> MODEL_SCHEMA_EDGES = Map.of(
+        "HAS_REPOSITORY", "основной репозиторий проекта — схема из модели (MIG-01)",
+        "COMPONENT_REPOSITORY", "репозиторий компонента — схема из модели (MIG-01)",
+        "MIRRORED_TO", "зеркало репозитория — схема из модели (MIG-01)",
+        "USES_REPOSITORY", "«использует» между репозиториями — схема из модели (MIG-01)",
+        // Решение владелицы 19.11.2026: связи организации с проектами, продуктами и людьми (правятся в админке).
+        "ORG_HAS_PROJECT", "проект организации — схема из модели; тип ребра заводит создание организации",
+        "ORG_HAS_PRODUCT", "продукт организации — схема из модели; тип ребра заводит создание организации",
+        "ORG_MEMBER", "человек организации — схема из модели; тип ребра заводит создание организации",
+        // MT-MCP-TRUTH A6 (владелица 19.11.2026 «1а»): ответственный вопроса — ребро.
+        "ANSWERABLE_BY", "ответственный вопроса — схема из модели; тип ребра заводит перенос 1.18 и первая запись ответственного",
+        // MDL-13 (владелица 20.11.2026 «треки б»): трек спринта — ребро к KnowTrack.
+        "ON_TRACK", "трек спринта — схема из модели; тип ребра заводит перенос треков 1.18 и первая запись трека на базе 1.18");
 
     /**
      * @param schemaNames имена типов схемы графа (вершины и рёбра); {@code null} — схема не читалась,
@@ -43,12 +67,17 @@ final class LoreModelConsistency {
             for (LoreRecordRegistry.Part p : d.parts())
                 if (p.slice() != null && !sliceExists.test(p.slice()))
                     out.add(t + ": часть «" + p.key() + "» читает срез «" + p.slice() + "», которого нет");
-            for (LoreRecordRegistry.Field f : d.fields())
+            for (LoreRecordRegistry.Field f : d.fields()) {
                 if (f.options() != null && !sliceExists.test(f.options().slice()))
                     out.add(t + "." + f.key() + ": варианты из среза «" + f.options().slice() + "», которого нет");
+                if (f.group() != null && !GROUPS.contains(f.group()))
+                    out.add(t + "." + f.key() + ": группы «" + f.group() + "» паспорт не знает — ждали одну из head, body, props");
+                else if ("title".equals(f.key()) && !"head".equals(f.group()))
+                    out.add(t + ".title: поле названия обязано быть в группе head — паспорт без названия в шапке не строится");
+            }
             if (schemaNames != null)
                 for (LoreRecordRegistry.Relation r : d.relations())
-                    if (!schemaNames.contains(r.rel()))
+                    if (!schemaNames.contains(r.rel()) && !MODEL_SCHEMA_EDGES.containsKey(r.rel()))
                         out.add(t + "." + r.key() + ": ребра «" + r.rel() + "» в схеме графа нет");
             Set<String> sections = new LinkedHashSet<>();
             if (!d.body().isEmpty()) sections.add(LorePassportSurface.CONTENT);
@@ -76,10 +105,21 @@ final class LoreModelConsistency {
                 String prop = aliases.getOrDefault(f.key(), f.write() != null && f.write().field() != null ? f.write().field() : f.key());
                 String pt = types.get(prop);
                 if (pt == null) pt = types.get(f.key());
-                if (pt != null && !compatible(f.kind(), pt)) out.add(id + ": вид «" + f.kind() + "» против типа схемы " + pt);
+                if (pt != null && !compatible(f.kind(), f.multi(), pt)) out.add(id + ": вид «" + f.kind() + "» против типа схемы " + pt);
             }
         }
         return out;
+    }
+
+    /**
+     * SPRINT_LORE_WORK_ANY_KIND/WK-01: поле-список ({@code multi}, не связь) хранится свойством LIST — вид продукта
+     * tech | service, технологии компонента. Одиночное поле против LIST и список против строки — расхождение.
+     */
+    static boolean compatible(String kind, boolean multi, String schemaType) {
+        if ("ref".equals(kind)) return compatible(kind, schemaType);
+        boolean list = Set.of("LIST", "EMBEDDEDLIST").contains(schemaType);
+        if (multi) return list;
+        return !list && compatible(kind, schemaType);
     }
 
     static boolean compatible(String kind, String schemaType) {

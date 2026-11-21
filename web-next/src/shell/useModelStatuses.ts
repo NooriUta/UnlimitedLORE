@@ -14,7 +14,6 @@
 import { useEffect, useState } from 'react';
 import { configFromModel, loadModel, type KitConfig } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
-import type { ModelNavGroup } from './v2Config';
 
 /** Словарь статусов LORE для задач, спринтов и ADR — один справочник. */
 export const LORE_STATUS_DICT = 'task_status';
@@ -32,8 +31,11 @@ export const LORE_STATUS_TYPE = 'task';
 export interface ModelStatuses {
   /** Статьи для `v2Config`; пусто — остаётся рукописное умолчание. */
   items: KitConfig['statuses']['items'];
-  /** MC-07: общее меню из модели (surfaces.nav); нет — рукописное меню оболочки. */
-  nav?: ModelNavGroup[];
+  /**
+   * MC-07: документ модели для общего меню; разбор раздела меню — в kit (`navFromModel`, через
+   * v2Config), здесь его нет (K5-MODEL-NAV-EDGE-LABELS). Нет — рукописное меню оболочки.
+   */
+  model?: unknown;
   /** Что случилось: словами, для показа человеку. */
   notes: string[];
   /** Модель ещё грузится — чтобы не мигать умолчанием, если это важно экрану. */
@@ -81,10 +83,8 @@ export async function fetchModelStatuses(
   // Берём замечания ТОЛЬКО про статусы: про виды записей этот потребитель не
   // спрашивал, и печатать человеку жалобу о том, чем сам не пользуешься, —
   // шум, а не честность.
-  // MC-07: меню — тем же ответом /lore/model; формы не проверенной сервером модели здесь нет.
-  const surfaces = (res.model as { surfaces?: { nav?: unknown } }).surfaces;
-  const nav = Array.isArray(surfaces?.nav) ? (surfaces.nav as ModelNavGroup[]) : undefined;
-  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses], ...(nav ? { nav } : {}) };
+  // MC-07: меню — тем же ответом /lore/model; документ уходит в kit как есть (K5-MODEL-NAV-EDGE-LABELS).
+  return { items: parsed.statuses, notes: [...notes, ...parsed.notes.statuses], model: res.model };
 }
 
 function reason(e: unknown): string {

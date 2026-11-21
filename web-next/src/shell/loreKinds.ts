@@ -37,6 +37,8 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     news: { title: t('shell.sec.news'), icon: ICON_CANON.sectionNews },
     // K4-CHARTS: раздел «Аналитика» (вкладки и «Моя сводка») — вид нужен палитре и «Недавнему».
     analytics: { title: t('shell.sec.analytics'), icon: 'lucide:chart-column' },
+    // SUPERTAGS-SPIKE: раздел «Теги» (сущности по тегу) — вид нужен палитре и «Недавнему», как у «Аналитики».
+    tags: { title: t('shell.sec.tags'), icon: ICON_CANON.sectionTags },
     // S4-V2-SECTIONS: виды записей новых разделов. Нужны палитре и
     // «Недавнему» — без вида запись в них рисуется безымянной.
     milestone: { title: t('shell.sec.milestone'), icon: 'crossed-axes' },
@@ -51,6 +53,10 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     tech: { title: t('shell.sec.tech'), icon: 'gears' },
     feature: { title: t('shell.sec.feature'), icon: 'gift-of-knowledge', inherited: t('shell.inherited.feature') },
     project: { title: t('shell.sec.project'), icon: 'open-folder' },
+    repository: { title: t('shell.sec.repository'), icon: 'chest' },
+    organization: { title: t('shell.sec.organization'), icon: 'castle' },
+    // MDL-13: трек — паспорт без раздела-списка (открывается из спринта).
+    track: { title: t('shell.sec.track'), icon: 'path-distance' },
     user: { title: t('shell.sec.user'), icon: 'person' },
     agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
     product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },

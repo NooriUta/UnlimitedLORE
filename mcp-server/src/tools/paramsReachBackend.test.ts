@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { collect, isEnum, isRecord, MARK, NUM, variantsOf } from './writeToolHarness.js';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { collect, fileTwinOf, isEnum, isRecord, MARK, NUM, variantsOf } from './writeToolHarness.js';
 
 // Сторож «параметр принят схемой, но до бэкенда не дошёл».
 //
@@ -26,8 +29,15 @@ vi.mock('../backend.js', () => ({
 
 const { registerLoreWrite } = await import('./loreWrite.js');
 
+const fileRoot = mkdtempSync(join(tmpdir(), 'params-reach-'));
+const savedRoots = process.env.LORE_MCP_FILE_ROOTS;
+
 describe('каждый параметр схемы записи доходит до бэкенда', () => {
-  beforeEach(() => { sent.length = 0; });
+  beforeEach(() => { sent.length = 0; process.env.LORE_MCP_FILE_ROOTS = fileRoot; });
+  afterAll(() => {
+    if (savedRoots === undefined) delete process.env.LORE_MCP_FILE_ROOTS; else process.env.LORE_MCP_FILE_ROOTS = savedRoots;
+    rmSync(fileRoot, { recursive: true, force: true });
+  });
 
   it('ни один инструмент записи не теряет параметр', async () => {
     const tools = collect(registerLoreWrite);
@@ -41,7 +51,15 @@ describe('каждый параметр схемы записи доходит �
       const reached = new Set<string>();
       for (const args of variantsOf(tool)) {
         sent.length = 0;
-        try { await tool.handler(args); } catch { /* ветка с отказом валидации — не потеря */ }
+        // Файловый двойник (content_md_ru_file): дошедшим считается СОДЕРЖИМОЕ — пишем метку
+        // в настоящий файл внутри разрешённого корня и передаём его путь.
+        const call = { ...args };
+        for (const k of Object.keys(call)) if (fileTwinOf(k, tool.schema)) {
+          const f = join(fileRoot, `${tool.name}.${k}`);
+          writeFileSync(f, MARK(k), 'utf8');
+          call[k] = f;
+        }
+        try { await tool.handler(call); } catch { /* ветка с отказом валидации — не потеря */ }
         const wire = JSON.stringify(sent);
         for (const k of keys) {
           const v = args[k];

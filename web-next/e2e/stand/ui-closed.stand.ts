@@ -120,7 +120,8 @@ test('UI-SPRINT-TASKS Задачи спринта: статусы не «?», ф
   await screenHealth(page, `задачи спринта ${id}`);
 });
 
-const ADMIN = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-roles', 'adm-dicts',
+// adm-orgs — раздел организаций (SPRINT_LORE_MODEL_DOCS_TIDY/MIG-03, решение владелицы 19.11.2026).
+const ADMIN = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs', 'adm-roles', 'adm-dicts',
   'adm-rules', 'adm-tidy', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
 
 test('UI-ADMIN Все разделы админки открываются под super-admin (S7B-01…31, S7B-ACL-*, PU-03, PU-04, PU-05, PU-13, PU-20, AP-08, AP-09)', async ({ page }) => {

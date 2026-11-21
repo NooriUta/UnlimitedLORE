@@ -10,3 +10,13 @@ backend/gradlew text eol=lf
 *.ico  binary
 *.woff binary
 *.woff2 binary
+
+# Архив исходников в пакете установщика (git archive, MIG-04): окружение и ключи в него не попадают.
+# Сторож — scripts/model-migration/source-archive.test.mjs; сборщик архива сверяет пути ещё раз.
+.env*     export-ignore
+*.secret  export-ignore
+*.key     export-ignore
+*.pem     export-ignore
+*.p12     export-ignore
+*.pfx     export-ignore
+*.jks     export-ignore

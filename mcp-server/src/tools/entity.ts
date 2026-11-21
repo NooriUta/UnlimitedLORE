@@ -38,6 +38,7 @@ import {
   type ProjectKind,
 } from './loreWrite.js';
 import { ignoredFields } from './toolInputKeys.js';
+import { resolveBodyFiles } from './bodyFile.js';
 
 const rec = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -69,6 +70,8 @@ type UpsertDef = {
   humanApproval?: boolean;
   /** своя сборка body (по умолчанию: fields + id); строка результата = текст отказа */
   build?: (id: string | undefined, fields: Record<string, unknown>) => Record<string, unknown> | string;
+  /** асинхронная подготовка полей до build (doc: *_file → содержимое); строка результата = текст отказа */
+  prepare?: (fields: Record<string, unknown>) => Promise<Record<string, unknown> | string>;
   /** Поля, которые build переводит сам, хотя в схеме заменённого инструмента их нет (не «ignored»). */
   extraKeys?: readonly string[];
   /** свой второй шаг после записи (по умолчанию для project-kind: inlineProject) */
@@ -120,6 +123,8 @@ const UPSERT_DEFS = {
   doc: {
     idField: 'doc_id', path: '/lore/doc', project: 'doc', stripProject: true, guardProject: true,
     replaces: ['doc_new'],
+    // Паритет doc_new: content_*_file читает MCP (корни, предел, отказ в HTTP-режиме — bodyFile.ts).
+    prepare: f => resolveBodyFiles(f),
   },
   feature: {
     idField: 'feature_id', path: '/lore/feature', project: 'uc', stripProject: true, guardProject: true,
@@ -220,9 +225,31 @@ const needTarget = (targetId: unknown, rel: string): string | null =>
     ? `target_id required for rel="${rel}"`
     : null;
 
+/**
+ * SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 — одна связь «зависит от» (DEPENDS_ON) у задачи, фазы, спринта и вехи:
+ * один путь /lore/dep. Запись `id` зависит от `target_id`; тип цели — fields.target_type (не задан — сервер
+ * ищет по ключу среди четырёх типов). Вид (fields.kind) MCP не подменяет и не отсекает: справочник
+ * dependency_kind у сервера, неизвестный вид — его 422; вид не задан — сервер ставит вид по умолчанию.
+ */
+const dependsOn = (type: string, id: string, t: unknown, action: LinkAction, f: Record<string, unknown>): LinkResult | string => {
+  if (needTarget(t, 'depends_on')) return needTarget(t, 'depends_on')!;
+  return { path: '/lore/dep', body: {
+    from_type: type, from_id: id, to_type: str(f.target_type) ?? null, to_id: t,
+    kind: str(f.kind) ?? null, reason: str(f.reason) ?? null, action: action ?? 'add',
+  } };
+};
+
 /** target_id у release — одиночный или массив (старый release_link брал ids[]). */
 const asIds = (targetId: unknown): (string | number)[] =>
   Array.isArray(targetId) ? (targetId as (string | number)[]) : targetId !== undefined ? [targetId as string | number] : [];
+
+/**
+ * SUPERTAGS-SPIKE: тег со свободными полями на ребре TAGGED_WITH — /lore/tag/apply. fields — поля тега
+ * (значение перезаписывает, null/"" снимает поле, истории нет).
+ */
+function tagApply(type: string, id: string, t: unknown, action: LinkAction, f: Record<string, unknown>): LinkResult {
+  return { path: '/lore/tag/apply', body: { type, id, tag_id: t, fields: f, action: action ?? 'add' } };
+}
 
 function bragiForsetiLink(entityType: 'publication' | 'variant', id: string, rel: string, t: unknown, action: string, f: Record<string, unknown>): LinkResult {
   const edge_type = rel === 'produced_by' ? 'PRODUCED_BY' : 'SHIPPED_IN';
@@ -247,7 +274,9 @@ const LINK_DEFS = {
         case 'component': return { path: '/lore/adr/component', body: { adr_id: id, component_id: t, action: action ?? 'add' } };
         case 'depends_on': return { path: '/lore/adr/depends_on', body: { adr_id: id, dep_adr_id: t, action: action ?? 'add' } };
         case 'supersedes': return { path: '/lore/adr/supersedes', body: { adr_id: id, superseded_adr_id: t, action: action ?? 'add' } };
-        case 'tag': return { path: '/lore/adr/tag', body: { adr_id: id, tag_id: t, action: action ?? 'add' } };
+        // голый тег — прежний путь (паритет с adr_link); с полями — общая дверь тегов
+        case 'tag': if (Object.keys(f).length) return tagApply('adr', id, t, action, f);
+          return { path: '/lore/adr/tag', body: { adr_id: id, tag_id: t, action: action ?? 'add' } };
         case 'project': return { path: '/lore/adr/project', body: { adr_id: id, project: t, action: action ?? 'add' } };
       }
       return `unreachable: adr/${rel}`;
@@ -288,10 +317,11 @@ const LINK_DEFS = {
     },
   },
   decision: {
-    rels: ['component', 'project'],
+    rels: ['component', 'project', 'tag'],
     replaces: ['decision_link'],
-    dispatch: (id, rel, t, action): LinkResult | string => {
+    dispatch: (id, rel, t, action, f): LinkResult | string => {
       if (needTarget(t, rel)) return needTarget(t, rel)!;
+      if (rel === 'tag') return tagApply('decision', id, t, action, f);
       if (rel === 'component') return { path: '/lore/decision/component', body: { decision_id: id, component_id: t, action: action ?? 'add' } };
       return { path: '/lore/decision/project', body: { decision_id: id, project: t, action: action ?? 'add' } };
     },
@@ -325,9 +355,10 @@ const LINK_DEFS = {
     },
   },
   milestone: {
-    rels: ['product'],
+    rels: ['product', 'depends_on'],
     replaces: ['milestone_link'],
-    dispatch: (id, rel, t, action): LinkResult | string => {
+    dispatch: (id, rel, t, action, f): LinkResult | string => {
+      if (rel === 'depends_on') return dependsOn('milestone', id, t, action, f);
       if (needTarget(t, rel)) return needTarget(t, rel)!;
       return { path: '/lore/milestone/product', body: { milestone_id: id, product_code: t, action: action ?? 'add' } };
     },
@@ -395,13 +426,20 @@ const LINK_DEFS = {
       return { path: '/lore/spec/link', body: { spec_id: id, target_id: t, rel, mode: f.mode ?? 'replace' } };
     },
   },
+  // MDL-13: у фазы через entity_link — только зависимость (фазу задаче ставит task rel=phase).
+  phase: {
+    rels: ['depends_on'],
+    replaces: [],
+    dispatch: (id, _rel, t, action, f): LinkResult | string => dependsOn('phase', id, t, action, f),
+  },
   sprint: {
-    rels: ['project', 'dep', 'component', 'milestone'],
+    rels: ['project', 'dep', 'depends_on', 'component', 'milestone'],
     replaces: ['sprint_link'],
     dispatch: (id, rel, t, action, f): LinkResult | string => {
       if (needTarget(t, rel)) return needTarget(t, rel)!;
       switch (rel) {
         case 'project': return { path: '/lore/sprint/project', body: { sprint_id: id, git_project: t, action: action ?? 'add' } };
+        case 'depends_on': return dependsOn('sprint', id, t, action, f);
         case 'dep': return { path: '/lore/sprint/dep', body: { from_sprint: id, to_sprint: t, kind: f.kind ?? 'soft', reason: f.reason ?? null, action: action ?? 'add' } };
         case 'component': return { path: '/lore/sprint/component', body: { sprint_id: id, component_id: t, action: action ?? 'add' } };
         case 'milestone': return { path: '/lore/milestone/sprint', body: { sprint_id: id, milestone_id: t, action: action ?? 'add' } };
@@ -410,10 +448,11 @@ const LINK_DEFS = {
     },
   },
   task: {
-    rels: ['phase', 'component', 'file', 'adr', 'pr'],
+    rels: ['phase', 'component', 'file', 'adr', 'pr', 'depends_on'],
     replaces: ['task_link'],
     dispatch: (id, rel, t, action, f): LinkResult | string => {
       switch (rel) {
+        case 'depends_on': return dependsOn('task', id, t, action, f);
         case 'phase': return { path: '/lore/task/phase', body: { task_uid: id, phase_uid: t ?? null, action: action ?? 'add' } };
         case 'file': {
           if (needTarget(t, rel)) return 'target_id (file path) required for rel="file"';
@@ -544,7 +583,9 @@ export function registerEntity(server: McpServer): void {
       'set (project arrives via the parent ADR). sprint maps fields.project/git_project → git_project with the ' +
       'session fallback; actor/project_actor carry project/projects as body fields.\n\n' +
       'dict: fields.human_approval ("who approved, where") travels as the X-Lore-Human-Approval header ' +
-      '(human-only family), not the body. question: fields.status="closed" is refused with guidance — close via ' +
+      '(human-only family), not the body; dict product kind is a set — fields.kind ["tech"], ["service"] or ' +
+      '["tech","service"] (empty refused), and changing the kind of an existing entry requires fields.reason ' +
+      '(stored on the history version). question: fields.status="closed" is refused with guidance — close via ' +
       'entity_link type=question rel=answers. Mutates the shared system_aida_lore.',
     {
       type: z.enum(UPSERT_TYPES).describe('entity family — the consolidated per-entity tool group to write through'),
@@ -571,7 +612,9 @@ export function registerEntity(server: McpServer): void {
       if (def.refuseClosed && fields.status === 'closed') {
         return { content: [{ type: 'text' as const, text: QUESTION_CLOSE_GUIDANCE }], isError: true };
       }
-      const body = def.build ? def.build(id, fields) : { ...omit(fields, def.stripProject ? 'project' : ''), [def.idField!]: id };
+      const prepared = def.prepare ? await def.prepare(fields) : fields;
+      if (typeof prepared === 'string') return err(new Error(prepared));
+      const body = def.build ? def.build(id, prepared) : { ...omit(prepared, def.stripProject ? 'project' : ''), [def.idField!]: id };
       if (typeof body === 'string') return err(new Error(body));
       try {
         const headers = def.humanApproval && str(fields.human_approval)?.trim()
@@ -602,9 +645,17 @@ export function registerEntity(server: McpServer): void {
       '*_link collapse tools plus vp/feature/uc/actor/decision/question/product/milestone/spec links and ' +
       'release_unlink). `type` picks the family, `rel` the edge; an unknown rel for the type is a 400 naming ' +
       'the rels valid for that type. `fields` carries rel-conditional extras exactly as the old tools did: ' +
-      'git_project (adr/release, bragi shipped_in), kind+reason (sprint dep), project+summary_md (task file/pr), ' +
+      'git_project (adr/release, bragi shipped_in), kind+reason (sprint dep; depends_on), ' +
+      'depends_on (MDL-13): ONE DEPENDS_ON edge for task, phase, sprint, milestone in any pair — fields.kind from the ' +
+      'merged dictionary dependency_kind: blocks, waits, soft, gate, informs, relates (hard = blocks; unknown → 422), ' +
+      'fields.reason REQUIRED for a new dependency (422 REASON_REQUIRED), fields.target_type when the target id is ambiguous; ' +
+      'a link that closes a cycle → 409 with the cycle path; remove closes the edge (history kept). ' +
+      'project+summary_md (task file/pr), ' +
       'actor_role (uc actor), target_type (question raised_in, bragi produced_by), role+kind (product), ' +
       'mode (spec — add|remove|replace, default "replace"; action is NOT accepted for spec). ' +
+      'rel="tag" (adr, decision; SUPERTAGS): fields are the tag free fields stored on the TAGGED_WITH edge ' +
+      '(e.g. {risk:"high", due:"2026-11-27"}) — a value overwrites (no history), null or "" removes the field; ' +
+      'read them back with query_slice tag_entities {tag}. ' +
       'target_id is a single id, or an array for type=release (the old release_link/release_unlink were batch). ' +
       'type=insight is add-only (parity with insight_link). Mutates system_aida_lore.',
     {

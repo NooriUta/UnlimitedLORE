@@ -31,15 +31,15 @@ final class LoreRecordEdgeLinks {
     /** Деловые ключи концов — первый непустой. */
     // qg_id — первым: у гейта качества есть и строковое поле sprint_id (код спринта), и без этого
     // порядка конец-гейт назывался бы кодом своего спринта (MD-04, второй заход по QG).
-    static final List<String> ID_FIELDS = List.of("qg_id", "task_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
+    static final List<String> ID_FIELDS = List.of("qg_id", "task_uid", "phase_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
         "question_id", "milestone_id", "release_uid", "component_id", "uc_id", "runbook_id", "doc_id",
-        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "slug");
+        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "org_id", "slug");
 
     static final List<String> TITLE_FIELDS = List.of("title", "name", "label", "full_name", "display_name", "statement_md");
 
     /** Вид конца по классу вершины — тот же словарь видов, что у паспорта. */
     static final Map<String, String> KIND_OF_VERTEX = Map.ofEntries(
-        Map.entry("KnowTask", "task"), Map.entry("KnowSprint", "sprint"), Map.entry("KnowADR", "adr"),
+        Map.entry("KnowTask", "task"), Map.entry("KnowPhase", "phase"), Map.entry("KnowSprint", "sprint"), Map.entry("KnowADR", "adr"),
         Map.entry("KnowSpec", "spec"), Map.entry("KnowDecision", "decision"), Map.entry("KnowQuestion", "question"),
         Map.entry("KnowMilestone", "milestone"), Map.entry("KnowRelease", "release"),
         Map.entry("LoreComponent", "component"), Map.entry("KnowUseCase", "feature"),
@@ -49,7 +49,9 @@ final class LoreRecordEdgeLinks {
         Map.entry("KnowPain", "pain"),
         Map.entry("KnowGain", "gain"), Map.entry("KnowJob", "job"), Map.entry("KnowProjectActor", "actor"),
         // S9-05 A: концы вкладок человека и агента.
-        Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"));
+        Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"),
+        // D-2026-MIG-REPOSITORY-ORGANIZATION: организация — конец связей проекта, продукта и человека.
+        Map.entry("KnowOrganization", "organization"));
 
     /** Имя источника в meta.data_state: видно, что вкладка прочитана по ребру, а не срезом. */
     static String source(LoreRecordRegistry.Relation r) {
@@ -66,11 +68,38 @@ final class LoreRecordEdgeLinks {
             default -> throw new IllegalArgumentException("направление " + r.dir() + " у связи " + type + "." + r.key());
         };
         if (!r.rel().matches("[A-Z_]+")) throw new IllegalArgumentException("ребро " + r.rel());
+        if (!r.props().isEmpty()) return edgeSql(g, r, dir);
         return "SELECT @type AS end_vertex, coalesce(" + String.join(", ", ID_FIELDS) + ") AS end_id, "
             + "coalesce(" + String.join(", ", TITLE_FIELDS) + ") AS end_title, "
             + "coalesce(status, status_raw, status_general) AS end_status, "
             + "unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects "
-            + "FROM (SELECT expand(" + dir + "('" + r.rel() + "')) FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
+            // MDL-02: у историчной связи — только текущие рёбра (valid_to IS NULL), закрытые — история.
+            + "FROM (SELECT expand(" + ("out".equals(dir) ? LoreEdgeHistory.out(r.rel()) : LoreEdgeHistory.in(r.rel()))
+            + ") FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
+            + "LIMIT " + (LIMIT + 1);
+    }
+
+    /**
+     * MDL-13: связь со свойствами ребра (у DEPENDS_ON — вид и причина) читается по самим рёбрам: свойства
+     * лежат на ребре, а переход по вершинам их не видит. Только текущие рёбра историчной связи.
+     */
+    private static String edgeSql(LoreModelTypes.Graph g, LoreRecordRegistry.Relation r, String dir) {
+        String end = "out".equals(dir) ? "@in" : "@out";
+        List<String> ids = new ArrayList<>(), titles = new ArrayList<>(), props = new ArrayList<>();
+        for (String f : ID_FIELDS) ids.add(end + "." + f);
+        for (String f : TITLE_FIELDS) titles.add(end + "." + f);
+        for (LoreRecordRegistry.EdgeProp p : r.props()) {
+            if (!p.key().matches("[a-z_]+")) throw new IllegalArgumentException("свойство ребра " + p.key());
+            props.add(p.key());
+        }
+        String edges = ("out".equals(dir) ? "outE" : "inE") + "('" + r.rel() + "')"
+            + (LoreEdgeHistory.historic(r.rel()) ? "[" + LoreEdgeHistory.CURRENT + "]" : "");
+        return "SELECT " + end + ".@type AS end_vertex, coalesce(" + String.join(", ", ids) + ") AS end_id, "
+            + "coalesce(" + String.join(", ", titles) + ") AS end_title, "
+            + "coalesce(" + end + ".status, " + end + ".status_raw, " + end + ".status_general) AS end_status, "
+            + "unionall(" + end + ".out('BELONGS_TO_PROJECT').slug, " + end + ".out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects, "
+            + String.join(", ", props) + " "
+            + "FROM (SELECT expand(" + edges + ") FROM " + g.vertex() + " WHERE " + g.key() + " = :id) "
             + "LIMIT " + (LIMIT + 1);
     }
 
@@ -87,6 +116,15 @@ final class LoreRecordEdgeLinks {
             String status = LoreRecordValues.docToken(row.get("end_status"));
             Map<String, Object> l = LoreRecordValues.link(r.rel(), r.dir(), id, kind,
                 LoreRecordValues.str(row.get("end_title")), status);
+            // MDL-13: свойства ребра — значениями связи; kit показывает их колонками (props связи в схеме).
+            if (!r.props().isEmpty()) {
+                Map<String, Object> values = new java.util.LinkedHashMap<>();
+                for (LoreRecordRegistry.EdgeProp p : r.props()) {
+                    String v = LoreRecordValues.str(row.get(p.key()));
+                    if (v != null) values.put(p.key(), v);
+                }
+                if (!values.isEmpty()) l.put("values", values);
+            }
             out.add(l);
             if (out.size() >= LIMIT) break;
         }

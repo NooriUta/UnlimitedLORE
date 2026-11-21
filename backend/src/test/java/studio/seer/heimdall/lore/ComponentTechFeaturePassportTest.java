@@ -17,9 +17,9 @@ class ComponentTechFeaturePassportTest {
 
     @Test
     void elevenPassportTypesInKitOrder() {
-        assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "release",
+        assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "track", "release",
             "component", "tech", "feature", "product", "user", "agent",
-            "actor", "pain", "gain", "job", "runbook", "quality_gate", "project"), LoreRecordRegistry.TYPES);
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "project"), LoreRecordRegistry.TYPES);
     }
 
     @Test
@@ -161,7 +161,7 @@ class ComponentTechFeaturePassportTest {
         String sql = LoreSlices.compose("use_cases", Map.of()).sql();
         assertTrue(sql.contains("out('DECOMPOSES_INTO').size()") && sql.contains("AS uc_total"), sql);
         assertTrue(sql.contains("out('DECOMPOSES_INTO')[status='shipped'].size()") && sql.contains("AS uc_shipped"), sql);
-        assertTrue(sql.contains("out('TARGETS_MILESTONE').milestone_id[0]") && sql.contains("AS milestone_id"), sql);
+        assertTrue(sql.contains("outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id[0]") && sql.contains("AS milestone_id"), sql);
         String feat = LoreSlices.compose("use_cases_of_feature", Map.of("id", "X")).sql();
         for (String expr : new String[]{
                 "in('DECOMPOSES_INTO').out('BELONGS_TO').component_id AS inherited_component_ids",

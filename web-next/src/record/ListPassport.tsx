@@ -23,7 +23,10 @@ import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { ProjectExportButton } from './ProjectExportButton';
 import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { MilestoneCharts, SprintCharts } from '../charts/TaskFlowCharts';
+import { GateCharts, ProjectCharts } from '../charts/Batch2Charts';
 import { withSprintTasksTab } from './sprintTasksTab';
+import { withDocHtmlTab } from './docHtmlTab';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
 import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
@@ -101,6 +104,11 @@ export interface ListPassportProps {
    */
   onClose?: () => void;
   /**
+   * Только чтение, что бы ни разрешал сервер: правки полей и связей нет (организации в пользовательском меню —
+   * управление в админке, решение владелицы 19.11.2026).
+   */
+  readOnly?: boolean;
+  /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
    * и читает список, — адрес остаётся одной правдой о месте записи.
@@ -116,7 +124,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose, readOnly = false }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -195,7 +203,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Редактор MD с карточкой «Новый», знающий родителей этой записи (MD-WINDOW).
   const parentsKey = JSON.stringify(parentsOf(view?.record));
   // S6-04: живые блоки исполняются и в правимом поле (раньше там оставались кодом).
-  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>, l => blocksFor(type, id, l)), [parentsKey, type, id]);
+  const mdEditor = useMemo(() => mdEditorWithRefs(JSON.parse(parentsKey) as Record<string, string>, l => blocksFor(type, id, l), { type, id }), [parentsKey, type, id]);
   // Граф (GC-04): вкладка «Граф» берёт окрестность записи с сервера на глубину из адреса —
   // фасад давал один шаг. Ошибка — строкой блока графа, а не пустым графом.
   // Глубина 1–4 и снятые типы связей (goff) — из адреса. Владелица 11.11: «показать связи
@@ -404,18 +412,21 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
   // Какими связями управлять можно, решает сервер (`manageable` из фасада), а
   // не вид UML: путь привязки есть не у всех. Отказ доходит словами — kit
   // печатает причину рядом с управлением.
-  const onRelation = async ({ rel, dir, target, action }: { rel: string; dir: 'out' | 'in'; target: string; action: 'add' | 'remove' }) => {
-    await saveRelation({ type, id: view.record.id, rel, dir, target, action }, fetchImpl);
+  // MDL-13: у связи с обязательной причиной kit сперва спрашивает её (ReasonDialog) — причина идёт тем же путём.
+  const onRelation = async ({ rel, dir, target, action, reason }: { rel: string; dir: 'out' | 'in'; target: string; action: 'add' | 'remove'; reason?: string }) => {
+    await saveRelation({ type, id: view.record.id, rel, dir, target, action, ...(reason !== undefined ? { reason } : {}) }, fetchImpl);
     pp.reload();
   };
   // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,
   // решение владелицы 10.11) из того же ответа /lore/record, и вторым видом —
   // прежняя таблица задач (группировка, правка, массовый статус) со строкой сгорания.
-  const baseConfig = type === 'sprint' && contract
+  const sprintConfig = type === 'sprint' && contract
     ? withSprintTasksTab(view.config, view.record.kind, t('sprintTasks.title'), () => (
       <SprintTasksPanel contract={contract} onStatusSaved={pp.reload} fetchImpl={fetchImpl} win={win} />
     ))
     : view.config;
+  // Документ: HTML-тело (content_html) — отдельной вкладкой «HTML», рендер только в песочнице (MDL-08 ч.2).
+  const baseConfig = type === 'doc' ? withDocHtmlTab(sprintConfig, view.record.kind, t('docHtml.tab'), contract?.values.content_html) : sprintConfig;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;
@@ -433,7 +444,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // причина уже названа в строке замечаний.
     // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
     statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
-    hooks: { ...baseConfig.hooks, onSave, onRelation, relationOptions },
+    hooks: readOnly ? { ...baseConfig.hooks } : { ...baseConfig.hooks, onSave, onRelation, relationOptions },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
     graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
   }, data: graphData, role: 'reader',
@@ -460,6 +471,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
         />
       )}
+      {/* Графики 19.11.2026 (пачка 1): веха — прогноз (№7) и поток (№2); спринт — поток (№2) и время цикла (№1). Вместе с Velocity и Burnup по спринтам вехи (#1632): на телефоне свёрнуты кнопкой, на компьютере открыты. */}
+      {type === 'milestone' && <MilestoneCharts milestoneId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
+      {type === 'sprint' && <SprintCharts sprintId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
+      {/* Пачка 2: проект — возраст открытых задач (№4) и ритм релизов (№8); гейт — доля пройденных (№16). */}
+      {type === 'project' && <ProjectCharts slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
+      {type === 'quality_gate' && <GateCharts qgId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».

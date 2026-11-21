@@ -93,6 +93,15 @@ public class LoreSearchResource extends LoreResourceBase {
     private static final String DIRECT_COMP = "out('BELONGS_TO').component_id";
     private static final String DIRECT_PROJ = "out('BELONGS_TO_PROJECT').slug";
 
+    /** Название родителя для ветки по версиям: поле или coalesce(полей) — каждое через in('HAS_STATE'). */
+    static String histTitle(String titleField) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)coalesce\\((.*)\\)").matcher(titleField.trim());
+        if (!m.matches()) return "in('HAS_STATE')." + titleField + "[0]";
+        List<String> parts = new ArrayList<>();
+        for (String a : m.group(1).split(",")) parts.add("in('HAS_STATE')." + a.trim() + "[0]");
+        return "coalesce(" + String.join(", ", parts) + ")";
+    }
+
     private static final List<Branch> BRANCHES = List.of(
         new Branch("adr", "KnowADR", "adr_id", "name", "ftKnowADR",
             List.of("name"),
@@ -102,8 +111,10 @@ public class LoreSearchResource extends LoreResourceBase {
             List.of("title"),
             "KnowSpecHist", "ftKnowSpecHist", List.of("content_md"),
             DIRECT_COMP, null, null, DIRECT_PROJ, 1.10),
-        new Branch("sprint", "KnowSprint", "sprint_id", "name", "ftKnowSprint",
-            List.of("name", "context_md"),
+        // D-2026-MIG-SPRINT-PHASE-TITLE: название спринта в новой схеме — title; context_md живёт в версии (KnowSprintHist)
+        // старая схема: name заполнено, title пуст — читаем оба (полный прогон 19.11: поиск спринта по имени был пуст)
+        new Branch("sprint", "KnowSprint", "sprint_id", "coalesce(title, name)", "ftKnowSprint",
+            List.of("title", "name"),
             "KnowSprintHist", "ftKnowSprintHist", List.of("context_md", "outcome_md"),
             DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
         // Задачи: прямые компоненты — TAGGED_WITH (task_link rel=component);
@@ -223,14 +234,30 @@ public class LoreSearchResource extends LoreResourceBase {
      *       индекса спринтов возвращает пусто: функция ищет документ в том же
      *       индексе, где он лежит. Межтиповых «похожих» не существует, и
      *       обещать их в UI нельзя.</li>
-     *   <li><b>{@code $similarity} возвращает 1.0 у всех строк</b> — ровно как
-     *       CLASSIC-ловушка у обычного поиска. Ранжировать по нему нельзя,
-     *       поэтому мы его и не отдаём: константа, выданная за меру близости,
-     *       хуже её отсутствия. Порядок — тот, что вернул движок.</li>
+     *   <li><b>{@code $similarity}</b> на 26.7.2 возвращал 1.0 у всех строк. GC-05 (19.11.2026): с
+     *       {@code minTermFreq:1, minDocFreq:1} мера различает строки (проба на копии прода и
+     *       {@code SearchSimilarEngineTest} на встроенном движке) — выдача упорядочена по ней
+     *       ({@code ranked:true}), значение отдаётся полем {@code similarity}.</li>
      * </ul>
      *
      * <p>Исходная запись из выдачи исключается: «похоже на само себя» — не ответ.
      */
+    /**
+     * SQL «похожих» по одному rid внутри своего FT-индекса.
+     *
+     * <p>GC-05 (проба 19.11.2026): у {@code SEARCH_INDEX_MORE} по умолчанию {@code minTermFreq:2} — термин
+     * берётся в запрос, только если встретился в исходном документе дважды. В коротком названии каждое
+     * слово встречается один раз, и запрос «похожих» вырождался в пустой. Отсюда {@code minTermFreq:1,
+     * minDocFreq:1}. Без {@code ORDER BY $similarity DESC} строки шли в порядке хранения.
+     */
+    static String similarSql(String vertexClass, String idField, String titleField,
+                             String indexName, String rid, int limit) {
+        return "SELECT " + idField + " AS ref_id, " + titleField + " AS title, $similarity AS similarity FROM "
+            + vertexClass + " WHERE SEARCH_INDEX_MORE('" + indexName + "', [" + rid + "], "
+            + "{\"minTermFreq\": 1, \"minDocFreq\": 1}) = true "
+            + "ORDER BY $similarity DESC LIMIT " + limit;
+    }
+
     @GET
     @Path("search/similar")
     @Produces(MediaType.APPLICATION_JSON)
@@ -279,9 +306,8 @@ public class LoreSearchResource extends LoreResourceBase {
                 // предыдущим запросом и снаружи не приходит — подстановка
                 // безопасна по происхождению, а не по вере в неё.
                 rows = ingestService.queryPublic(
-                    "SELECT " + b.idField() + " AS ref_id, " + b.titleField() + " AS title FROM "
-                    + b.vertexClass() + " WHERE SEARCH_INDEX_MORE('" + b.indexName() + "', [" + rid + "]) = true "
-                    + "LIMIT " + (limit + 1), Map.of());
+                    similarSql(b.vertexClass(), b.idField(), b.titleField(), b.indexName(), rid, limit + 1),
+                    Map.of());
             } catch (Exception e) {
                 LOG.warnf("[LORE SIMILAR] %s: %s", ref, e.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -295,6 +321,7 @@ public class LoreSearchResource extends LoreResourceBase {
                 hit.put("type", b.type());
                 hit.put("ref_id", r.get("ref_id"));
                 hit.put("title", r.get("title"));
+                if (r.get("similarity") instanceof Number s) hit.put("similarity", s.doubleValue());
                 hits.add(hit);
                 if (hits.size() >= limit) break;
             }
@@ -304,9 +331,9 @@ public class LoreSearchResource extends LoreResourceBase {
             out.put("type", b.type());
             out.put("hits", hits);
             // Явно в ответе, а не примечанием в документации: потребитель должен
-            // знать, что «похожие» ограничены типом и что порядок не ранжирован.
+            // знать, что «похожие» ограничены типом; порядок — по убыванию $similarity (GC-05).
             out.put("same_type_only", true);
-            out.put("ranked", false);
+            out.put("ranked", true);
             out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
             return noStore(Response.ok(out));
         }
@@ -614,7 +641,7 @@ public class LoreSearchResource extends LoreResourceBase {
             // [0] только у скалярных проекций (ref_id/title — родитель один);
             // компоненты/проекты — СПИСКИ, [0] оставил бы один случайный.
             String hsql = "SELECT in('HAS_STATE')." + b.idField() + "[0] AS ref_id, "
-                + "in('HAS_STATE')." + b.titleField() + "[0] AS title, "
+                + histTitle(b.titleField()) + " AS title, "
                 + (histByIndex ? "$score AS score, " : "1.0 AS score, ")
                 + histText + ", "
                 // Ветка без компонента (релиз) — здесь ПРОСТО null, а не

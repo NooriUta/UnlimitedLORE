@@ -166,6 +166,14 @@ public class LoreSchemaMigrationRunner {
         int codeVersion = LoreSchemaMigrations.codeVersion();
         int codeCompatMajor = LoreSchemaMigrations.codeCompatMajor();
 
+        if (dbVersion == 0 && schemaSource(0, readModelMarkers()) == SchemaSource.MODEL) {
+            // MIG-03: схема собрана установщиком из модели (MIG-01) — журнала шагов V у такой базы нет по построению.
+            LOG.infof("[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется");
+            ModelSchemaAdapter.enable(true);
+            LOG.infof("[LORE MIGRATE] переходник чтения новой схемы включён (status_raw → status)");
+            markPlanBoard();
+            return;
+        }
         if (dbVersion == 0) {
             throw new IllegalStateException("[LORE MIGRATE] Отказ старта: схема НЕ накатана "
                 + "(в " + db + " нет ни одной строки LoreSchemaVersion), а накатка выключена "
@@ -226,6 +234,100 @@ public class LoreSchemaMigrationRunner {
      * тексту ответа: сообщать «БД недоступна» там, где она доступна и пуста,
      * значит отправить читающего чинить не то.
      */
+    /**
+     * MIG-03 · Откуда схема базы. LEDGER — журнал шагов V (старая схема, сверка шагов как прежде); MODEL — журнала
+     * нет, но есть отметка LoreModelSchema с хэшем модели (схему собрал установщик из модели, MIG-01); EMPTY — ни того,
+     * ни другого. Отметка без хэша модели — не отметка: по ней нельзя сказать, из какой модели схема.
+     * Строки журнала «будто применены» на такой базе не пишутся — это была бы неправда о базе.
+     */
+    enum SchemaSource { LEDGER, MODEL, EMPTY }
+
+    /**
+     * База собрана из модели: журнала шагов нет, отметка LoreModelSchema есть. Сбой чтения (база ещё не поднялась)
+     * — не «из модели»: дальше идёт прежний путь со своими повторами и громкими отказами.
+     */
+    private boolean builtFromModel() {
+        try {
+            Map<Integer, String> ledger = new HashMap<>();
+            readLedgerTolerantly(ledger, new HashMap<>());
+            int max = ledger.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+            return schemaSource(max, max > 0 ? List.of() : readModelMarkers()) == SchemaSource.MODEL;
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] не удалось определить, собрана ли схема из модели: %s — прежний путь старта", e.getMessage());
+            return false;
+        }
+    }
+
+    /** Есть ли в базе из модели старая доска плана (настройка установщика MIG_PLAN_BOARD). Не узнали — считаем, что есть. */
+    private void markPlanBoard() {
+        try {
+            // Все типы схемы — для общего механизма «тип вне модели 1.18» (срез такого типа отвечает 410 с причиной).
+            java.util.Set<String> types = new java.util.HashSet<>();
+            for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:types", Map.of()))
+                if (r.get("name") != null) types.add(String.valueOf(r.get("name")));
+            if (!types.isEmpty()) ModelSchemaAdapter.schemaTypes(types);
+            boolean present = types.contains("PlanConfig");
+            ModelSchemaAdapter.planBoard(present);
+            if (!present) LOG.info("[LORE MIGRATE] старой доски плана в базе нет — её срезы отвечают «раздел снят»");
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] не удалось узнать, есть ли доска плана: %s — срезы доски как раньше", e.getMessage());
+        }
+        // D-2026-MIG-PROJECTS-REGROUP: синонимы влитых проектов → опора группы (фильтр ?project= по старому имени)
+        try {
+            Map<String, String> aliases = new HashMap<>();
+            for (Map<String, Object> r : ingest.queryPublic("SELECT slug, aliases FROM KnowGitProject WHERE aliases IS NOT NULL", Map.of())) {
+                Object slug = r.get("slug");
+                if (slug == null || !(r.get("aliases") instanceof List<?> list)) continue;
+                for (Object a : list) if (a != null && !a.equals(slug)) aliases.put(String.valueOf(a), String.valueOf(slug));
+            }
+            ModelSchemaAdapter.projectAliases(aliases);
+            if (!aliases.isEmpty()) LOG.infof("[LORE MIGRATE] синонимов проектов: %d — фильтр по старому имени ведёт в группу", aliases.size());
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] синонимы проектов не прочитаны: %s — фильтр по старому имени не переводится", e.getMessage());
+        }
+    }
+
+    /**
+     * MIG-01 · что делать на базе, собранной из модели (1.18). Шаг CD «Migrate schema» (lore.migrate=true +
+     * lore.migrate.only=true) на ней ничего не пишет: шаги V пропускаются, процесс выходит с 0 строкой
+     * {@link #MODEL_SKIP_LINE} — иначе CD краснел бы на каждой выкатке на новую базу. Сервер с lore.migrate=true
+     * (без only) по-прежнему отказывает: он остался бы работать на базе, куда хотел накатывать старую схему.
+     */
+    enum ModelStart { REFUSE, SKIP_V_STEPS, READ_ADAPTER }
+
+    static ModelStart onModelSchema(boolean migrate, boolean migrateOnly) {
+        if (migrate && migrateOnly) return ModelStart.SKIP_V_STEPS;
+        if (migrate) return ModelStart.REFUSE;
+        return ModelStart.READ_ADAPTER;
+    }
+
+    /** Строка шага накатки CD на базе из модели; .github/scripts/migrate-schema.sh ищет «шаги V пропущены». */
+    static final String MODEL_SKIP_LINE = "[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), "
+        + "шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)";
+
+    /** Отказ старта: lore.migrate=true на базе, собранной из модели. */
+    static String modelMigrateRefusal() {
+        return "[LORE MIGRATE] Отказ старта: схема базы собрана из модели (LoreModelSchema), а lore.migrate=true — "
+            + "шаги V записали бы старую схему поверх новой. Запускайте с lore.migrate=false.";
+    }
+
+    static SchemaSource schemaSource(int ledgerMaxVersion, List<Map<String, Object>> markers) {
+        if (ledgerMaxVersion > 0) return SchemaSource.LEDGER;
+        boolean marked = markers.stream().anyMatch(m -> m.get("model_hash") != null && !String.valueOf(m.get("model_hash")).isBlank());
+        return marked ? SchemaSource.MODEL : SchemaSource.EMPTY;
+    }
+
+    /** Отметки LoreModelSchema; типа нет — список пуст (база не из модели), а не ошибка. */
+    private List<Map<String, Object>> readModelMarkers() {
+        try {
+            return ingest.queryPublic("SELECT model_hash, source, built_at FROM LoreModelSchema", Map.of());
+        } catch (RuntimeException e) {
+            String d = String.valueOf(LoreUpstream.detail(e));
+            if (d.contains("LoreModelSchema") && (d.contains("not found") || d.contains("does not exist") || d.contains("was not found"))) return List.of();
+            throw new IllegalStateException("[LORE MIGRATE] не удалось прочитать отметку схемы из модели: " + d, e);
+        }
+    }
+
     private void readLedgerTolerantly(Map<Integer, String> applied, Map<Integer, Integer> appliedCompat) {
         List<Map<String, Object>> rows;
         try {
@@ -261,6 +363,9 @@ public class LoreSchemaMigrationRunner {
         return null;
     }
 
+    /** База из модели и шаг накатки CD: шаги V пропущены (см. {@link #onModelSchema}). */
+    private boolean modelSkipped;
+
     @PostConstruct
     void run() {
         if (enabled) {
@@ -270,6 +375,11 @@ public class LoreSchemaMigrationRunner {
             if (problem != null) throw new IllegalStateException("[LORE MIGRATE] Отказ старта: " + problem);
         }
         runSchema();
+        if (enabled && migrateOnly && modelSkipped) {
+            LOG.info(MODEL_SKIP_LINE);
+            io.quarkus.runtime.Quarkus.asyncExit(0);
+            return;
+        }
         if (enabled && migrateOnly) {
             LOG.info("[LORE MIGRATE] lore.migrate.only=true — схема накатана, процесс завершается (шаг накатки CD)");
             io.quarkus.runtime.Quarkus.asyncExit(0);
@@ -279,6 +389,19 @@ public class LoreSchemaMigrationRunner {
     private void runSchema() {
         if (!enabled) {
             LOG.info("[LORE MIGRATE] skipped (lore.enabled=false)");
+            return;
+        }
+        // MIG-03: база собрана из модели — переходник чтения включается на ЛЮБОМ пути старта (и при выключенной
+        // сверке), а накатка шагов V на неё запрещена: шаги пишут старую схему поверх новой.
+        if (builtFromModel()) {
+            switch (onModelSchema(migrate, migrateOnly)) {
+                case REFUSE -> throw new IllegalStateException(modelMigrateRefusal());
+                case SKIP_V_STEPS -> { modelSkipped = true; return; }
+                case READ_ADAPTER -> { /* ниже */ }
+            }
+            ModelSchemaAdapter.enable(true);
+            LOG.info("[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)");
+            markPlanBoard();
             return;
         }
         if (!migrate) {

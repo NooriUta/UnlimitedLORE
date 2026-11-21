@@ -1,0 +1,47 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 · легаси-поля, которые перенос 1.18 не переносит. Значение не теряется молча: непустое уходит в остаток MigLeftover (kind legacy_field), отчёт переноса сверяет «было = ушло в остаток» (report.legacy_drop), расхождение останавливает перенос. Список — слой «снять» декларации модели (tools/decl/build.cjs), сверенный с кодом develop e24e1530 и снимком migration_src_2026_11_18 (20.11.2026): сюда вошли только поля без писателя и читателя в коде и без отдельного решения владелицы «оставить» или «перевести». Значение у поля — куда переехал смысл поля.",
+  "task": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08",
+  "basis": "owner",
+  "approved": "2026-11-20",
+  "words": "«mdl08 мы же утвердили уже, все поля»",
+  "fields": {
+    "ClRoutineMetric.note": "никуда: заметка к метрике, QG-писатель (LoreQgRunWriter) поле не ставит",
+    "ClRoutineMetric.skip_reason": "предшественник not_measured_reason; в него не переводилось — значение остаётся в остатке",
+    "ClRoutineRun.source": "никуда: QG пишет source_url, не source",
+    "KnowADRHist.adr_id": "ключ ADR — на записи; версия связана с записью ребром HAS_STATE",
+    "KnowADRHist.file_path": "путь md-файла ведёт KnowADR.file_path (ингест пишет туда)",
+    "KnowADRHist.sprint_id": "связь ADR → спринт — ребро IMPLEMENTED_IN",
+    "KnowGitProject.full_name": "название проекта — name",
+    "KnowGitProject.repo_url": "адрес репозитория — hosts[] (primary-хост)",
+    "KnowMilestoneHist.planned_date": "никуда: в проде пусто; срок вехи — date_display и week",
+    "KnowPR.body_md": "никуда: синхронизация Forgejo пишет title, url, merged_at, head_ref, base_ref",
+    "KnowPR.pr_id": "ключ PR — pr_uid",
+    "KnowPR.pr_state": "никуда: состояние PR не ведётся",
+    "KnowPR.release_id": "релиз PR — ребро SHIPPED_IN",
+    "KnowPR.repo": "проект PR — git_project",
+    "KnowSprint.branch_ref": "никуда: ветка спринта у ранних спринтов, код не пишет и не читает",
+    "KnowSprint.version": "никуда: версия спринта у двух записей, код не пишет и не читает",
+    "KnowUseCase.actor": "актор сценария — ребро HAS_ACTOR с ролью"
+  },
+  "more": [
+    {
+      "task": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 (часть 2)",
+      "basis": "owner",
+      "approved": "2026-11-20",
+      "words": "«тоже с релизами»; «HTML выведи отдельной вкладкой в паспорт и посмотри рендеринг»",
+      "fields": {
+        "KnowDoc.content_md": "тело дока — content_md_ru / content_md_en (HTML — content_html); писателя нет, в проде 0 из 460; запасное чтение снято (LoreDocResource, поиск, ftKnowDoc)",
+        "KnowRelease.version": "дубль git_tag и release_id: на снимке 18.11 совпали 92 из 92; срезы релизов отдают version = git_tag"
+      }
+    },
+    {
+      "task": "SPRINT_LORE_MODEL_DOCS_TIDY/MDL-08 (часть 3)",
+      "basis": "owner",
+      "approved": "2026-11-20",
+      "words": "«а) снять base_version при переносе 1.18»",
+      "fields": {
+        "KnowUserDraft.base_version": "заменено base_record_version (строка record.version, заполнено у 3 из 3); прежнее целое — 0 из 3 на переписи 18.11; запись null и запасное чтение сняты (LoreMeResource, LoreMeDrafts.out)"
+      }
+    }
+  ]
+}

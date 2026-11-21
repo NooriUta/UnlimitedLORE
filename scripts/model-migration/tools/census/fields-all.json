@@ -1,0 +1,3287 @@
+{
+ "BragiAsset": {
+  "total": 11,
+  "seen": 11,
+  "fields": [
+   {
+    "name": "alt",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "asset_id",
+    "declared": "STRING",
+    "filled": 11
+   },
+   {
+    "name": "asset_type",
+    "declared": "STRING",
+    "filled": 11
+   },
+   {
+    "name": "file_url",
+    "declared": "STRING",
+    "filled": 11
+   },
+   {
+    "name": "size_bytes",
+    "declared": "LONG",
+    "filled": 4
+   }
+  ]
+ },
+ "BragiCampaign": {
+  "total": 1,
+  "seen": 1,
+  "fields": [
+   {
+    "name": "campaign_id",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "period",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "target_url",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "utm_campaign",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "utm_medium",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "utm_source",
+    "declared": "STRING",
+    "filled": 1
+   }
+  ]
+ },
+ "BragiChannel": {
+  "total": 5,
+  "seen": 5,
+  "fields": [
+   {
+    "name": "channel_id",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "channel_type",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "funnel_role",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "rules_md",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "url_handle",
+    "declared": "STRING",
+    "filled": 5
+   }
+  ]
+ },
+ "BragiCompetitor": {
+  "total": 5,
+  "seen": 5,
+  "fields": [
+   {
+    "name": "competitor_id",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 5
+   }
+  ]
+ },
+ "BragiInsight": {
+  "total": 30,
+  "seen": 30,
+  "fields": [
+   {
+    "name": "evidence_ref",
+    "declared": "STRING",
+    "filled": 22
+   },
+   {
+    "name": "insight_date",
+    "declared": "STRING",
+    "filled": 30
+   },
+   {
+    "name": "insight_id",
+    "declared": "STRING",
+    "filled": 30
+   },
+   {
+    "name": "statement_md",
+    "declared": "STRING",
+    "filled": 30
+   }
+  ]
+ },
+ "BragiIntegration": {
+  "total": 7,
+  "seen": 7,
+  "fields": [
+   {
+    "name": "endpoint",
+    "declared": "STRING",
+    "filled": 2
+   },
+   {
+    "name": "integration_id",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "last_called_at",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "purpose",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "scope",
+    "declared": "STRING",
+    "filled": 4
+   },
+   {
+    "name": "secret_ref",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "service",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 7
+   }
+  ]
+ },
+ "BragiKeyword": {
+  "total": 8,
+  "seen": 8,
+  "fields": [
+   {
+    "name": "cluster",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "freq_broad",
+    "declared": "INTEGER",
+    "filled": 3
+   },
+   {
+    "name": "freq_exact",
+    "declared": "INTEGER",
+    "filled": 7
+   },
+   {
+    "name": "intent",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "keyword_id",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "measured_at",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "phrase",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "region_engine",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "source",
+    "declared": "STRING",
+    "filled": 8
+   }
+  ]
+ },
+ "BragiPage": {
+  "total": 6,
+  "seen": 6,
+  "fields": [
+   {
+    "name": "deployed_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "description",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "page_id",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "page_type",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "url",
+    "declared": "STRING",
+    "filled": 6
+   }
+  ]
+ },
+ "BragiPublication": {
+  "total": 8,
+  "seen": 8,
+  "fields": [
+   {
+    "name": "annotation_md",
+    "declared": null,
+    "filled": 1
+   },
+   {
+    "name": "main_text_md",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "publication_id",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "source_file_path",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "status_general",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "todo_md",
+    "declared": null,
+    "filled": 1
+   },
+   {
+    "name": "topic",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "type",
+    "declared": "STRING",
+    "filled": 8
+   }
+  ]
+ },
+ "BragiRubric": {
+  "total": 9,
+  "seen": 9,
+  "fields": [
+   {
+    "name": "description",
+    "declared": "STRING",
+    "filled": 9
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 9
+   },
+   {
+    "name": "order_index",
+    "declared": "INTEGER",
+    "filled": 9
+   },
+   {
+    "name": "rubric_id",
+    "declared": "STRING",
+    "filled": 9
+   }
+  ]
+ },
+ "BragiVariant": {
+  "total": 14,
+  "seen": 14,
+  "fields": [
+   {
+    "name": "annotation_md",
+    "declared": null,
+    "filled": 6
+   },
+   {
+    "name": "published_at",
+    "declared": "STRING",
+    "filled": 9
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "text_md",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "todo_md",
+    "declared": null,
+    "filled": 7
+   },
+   {
+    "name": "url",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "variant_id",
+    "declared": "STRING",
+    "filled": 14
+   }
+  ]
+ },
+ "ClRoutineMetric": {
+  "total": 1605,
+  "seen": 1605,
+  "fields": [
+   {
+    "name": "metric_id",
+    "declared": "STRING",
+    "filled": 1076
+   },
+   {
+    "name": "metric_key",
+    "declared": "STRING",
+    "filled": 1605
+   },
+   {
+    "name": "model",
+    "declared": "STRING",
+    "filled": 195
+   },
+   {
+    "name": "not_measured_reason",
+    "declared": "STRING",
+    "filled": 65
+   },
+   {
+    "name": "note",
+    "declared": null,
+    "filled": 6
+   },
+   {
+    "name": "routine_name",
+    "declared": "STRING",
+    "filled": 1605
+   },
+   {
+    "name": "run_date",
+    "declared": "DATE",
+    "filled": 1549
+   },
+   {
+    "name": "run_id",
+    "declared": "STRING",
+    "filled": 1076
+   },
+   {
+    "name": "skip_reason",
+    "declared": null,
+    "filled": 15
+   },
+   {
+    "name": "source",
+    "declared": "STRING",
+    "filled": 1271
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 1605
+   },
+   {
+    "name": "target",
+    "declared": "FLOAT",
+    "filled": 1596
+   },
+   {
+    "name": "unit",
+    "declared": "STRING",
+    "filled": 1605
+   },
+   {
+    "name": "value",
+    "declared": "FLOAT",
+    "filled": 1518
+   }
+  ]
+ },
+ "ClRoutineOutput": {
+  "total": 18,
+  "seen": 18,
+  "fields": [
+   {
+    "name": "content_md",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "output_type",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "routine_name",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "run_date",
+    "declared": "DATE",
+    "filled": 18
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 18
+   }
+  ]
+ },
+ "ClRoutineRun": {
+  "total": 860,
+  "seen": 860,
+  "fields": [
+   {
+    "name": "channel",
+    "declared": "STRING",
+    "filled": 709
+   },
+   {
+    "name": "commit_sha",
+    "declared": "STRING",
+    "filled": 642
+   },
+   {
+    "name": "detail_md",
+    "declared": "STRING",
+    "filled": 37
+   },
+   {
+    "name": "finished_at",
+    "declared": "STRING",
+    "filled": 754
+   },
+   {
+    "name": "flags",
+    "declared": "STRING",
+    "filled": 156
+   },
+   {
+    "name": "gates_failed_ids",
+    "declared": "STRING",
+    "filled": 36
+   },
+   {
+    "name": "model",
+    "declared": "STRING",
+    "filled": 15
+   },
+   {
+    "name": "pr_number",
+    "declared": "INTEGER",
+    "filled": 419
+   },
+   {
+    "name": "routine_name",
+    "declared": "STRING",
+    "filled": 860
+   },
+   {
+    "name": "run_date",
+    "declared": "DATE",
+    "filled": 855
+   },
+   {
+    "name": "run_id",
+    "declared": "STRING",
+    "filled": 756
+   },
+   {
+    "name": "run_ts",
+    "declared": "DATETIME",
+    "filled": 50
+   },
+   {
+    "name": "source",
+    "declared": null,
+    "filled": 1
+   },
+   {
+    "name": "source_url",
+    "declared": "STRING",
+    "filled": 642
+   },
+   {
+    "name": "started_at",
+    "declared": "STRING",
+    "filled": 752
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 860
+   }
+  ]
+ },
+ "ClRoutineSprintFlag": {
+  "total": 1503,
+  "seen": 1503,
+  "fields": [
+   {
+    "name": "flag",
+    "declared": "STRING",
+    "filled": 1503
+   },
+   {
+    "name": "git_status",
+    "declared": "STRING",
+    "filled": 1503
+   },
+   {
+    "name": "lore_status",
+    "declared": "STRING",
+    "filled": 1503
+   },
+   {
+    "name": "routine_name",
+    "declared": "STRING",
+    "filled": 673
+   },
+   {
+    "name": "run_date",
+    "declared": "DATE",
+    "filled": 1503
+   },
+   {
+    "name": "sprint_id",
+    "declared": "STRING",
+    "filled": 1503
+   }
+  ]
+ },
+ "KnowADR": {
+  "total": 265,
+  "seen": 265,
+  "fields": [
+   {
+    "name": "adr_id",
+    "declared": "STRING",
+    "filled": 265
+   },
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 3
+   },
+   {
+    "name": "consequences_md",
+    "declared": null,
+    "filled": 42
+   },
+   {
+    "name": "context_md",
+    "declared": null,
+    "filled": 50
+   },
+   {
+    "name": "created_at",
+    "declared": "STRING",
+    "filled": 20
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 265
+   },
+   {
+    "name": "decision_md",
+    "declared": null,
+    "filled": 50
+   },
+   {
+    "name": "file_path",
+    "declared": null,
+    "filled": 68
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 253
+   },
+   {
+    "name": "status",
+    "declared": null,
+    "filled": 265
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 197
+   }
+  ]
+ },
+ "KnowADRHist": {
+  "total": 443,
+  "seen": 443,
+  "fields": [
+   {
+    "name": "adr_id",
+    "declared": null,
+    "filled": 1
+   },
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "consequences_md",
+    "declared": "STRING",
+    "filled": 419
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 443
+   },
+   {
+    "name": "context_md",
+    "declared": "STRING",
+    "filled": 438
+   },
+   {
+    "name": "decision_md",
+    "declared": "STRING",
+    "filled": 438
+   },
+   {
+    "name": "file_path",
+    "declared": null,
+    "filled": 1
+   },
+   {
+    "name": "source_commit",
+    "declared": "STRING",
+    "filled": 112
+   },
+   {
+    "name": "sprint_id",
+    "declared": null,
+    "filled": 94
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 443
+   },
+   {
+    "name": "status_backfilled",
+    "declared": "BOOLEAN",
+    "filled": 243
+   },
+   {
+    "name": "status_category",
+    "declared": "STRING",
+    "filled": 289
+   },
+   {
+    "name": "status_known_from",
+    "declared": "STRING",
+    "filled": 289
+   },
+   {
+    "name": "status_raw",
+    "declared": "STRING",
+    "filled": 291
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 443
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 178
+   }
+  ]
+ },
+ "KnowActor": {
+  "total": 18,
+  "seen": 18,
+  "fields": [
+   {
+    "name": "activity_window_h",
+    "declared": "INTEGER",
+    "filled": 0
+   },
+   {
+    "name": "activity_window_harness",
+    "declared": "MAP",
+    "filled": 0
+   },
+   {
+    "name": "actor_id",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "agent_role",
+    "declared": "STRING",
+    "filled": 17
+   },
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "client_id",
+    "declared": "STRING",
+    "filled": 17
+   },
+   {
+    "name": "harness",
+    "declared": "STRING",
+    "filled": 11
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "machine_id",
+    "declared": "STRING",
+    "filled": 10
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "session_id",
+    "declared": "STRING",
+    "filled": 2
+   }
+  ]
+ },
+ "KnowAgentSession": {
+  "total": 123,
+  "seen": 123,
+  "fields": [
+   {
+    "name": "dialogue_name",
+    "declared": "STRING",
+    "filled": 4
+   },
+   {
+    "name": "entrypoint",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "last_activity_at",
+    "declared": "STRING",
+    "filled": 123
+   },
+   {
+    "name": "machine_id",
+    "declared": "STRING",
+    "filled": 123
+   },
+   {
+    "name": "project",
+    "declared": "STRING",
+    "filled": 122
+   },
+   {
+    "name": "session_id",
+    "declared": "STRING",
+    "filled": 123
+   },
+   {
+    "name": "started_at",
+    "declared": "STRING",
+    "filled": 123
+   }
+  ]
+ },
+ "KnowAsset": {
+  "total": 3,
+  "seen": 3,
+  "fields": [
+   {
+    "name": "alt",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "asset_key",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "created_at",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "entity_id",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "entity_type",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "mime",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "size_bytes",
+    "declared": "LONG",
+    "filled": 3
+   }
+  ]
+ },
+ "KnowCanvas": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "canvas_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "created_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "project",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "row_version",
+    "declared": "INTEGER",
+    "filled": 0
+   },
+   {
+    "name": "template",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowCanvasItem": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "canvas_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "color",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "h",
+    "declared": "DOUBLE",
+    "filled": 0
+   },
+   {
+    "name": "item_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "ref_id",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "ref_type",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "slot",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "text",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "w",
+    "declared": "DOUBLE",
+    "filled": 0
+   },
+   {
+    "name": "x",
+    "declared": "DOUBLE",
+    "filled": 0
+   },
+   {
+    "name": "y",
+    "declared": "DOUBLE",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowCanvasLink": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "canvas_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "edge",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "from_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "link_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "to_uid",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowDecision": {
+  "total": 1192,
+  "seen": 1192,
+  "fields": [
+   {
+    "name": "adr_refs",
+    "declared": null,
+    "filled": 33
+   },
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 1077
+   },
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 475
+   },
+   {
+    "name": "created_at",
+    "declared": "STRING",
+    "filled": 111
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 1190
+   },
+   {
+    "name": "decision_id",
+    "declared": "STRING",
+    "filled": 1192
+   },
+   {
+    "name": "pr_refs",
+    "declared": null,
+    "filled": 4
+   },
+   {
+    "name": "refs_raw",
+    "declared": "STRING",
+    "filled": 599
+   },
+   {
+    "name": "release_refs",
+    "declared": null,
+    "filled": 2
+   },
+   {
+    "name": "sprint_refs",
+    "declared": null,
+    "filled": 18
+   },
+   {
+    "name": "status_raw",
+    "declared": "STRING",
+    "filled": 1145
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 1192
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 633
+   }
+  ]
+ },
+ "KnowDecisionHist": {
+  "total": 1146,
+  "seen": 1146,
+  "fields": [
+   {
+    "name": "body_md",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 112
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 1139
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 7
+   },
+   {
+    "name": "source_commit",
+    "declared": null,
+    "filled": 7
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 1139
+   },
+   {
+    "name": "status_backfilled",
+    "declared": "BOOLEAN",
+    "filled": 1034
+   },
+   {
+    "name": "status_category",
+    "declared": "STRING",
+    "filled": 1146
+   },
+   {
+    "name": "status_known_from",
+    "declared": "STRING",
+    "filled": 1146
+   },
+   {
+    "name": "status_raw",
+    "declared": "STRING",
+    "filled": 1146
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 1146
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 1
+   }
+  ]
+ },
+ "KnowDictEntry": {
+  "total": 176,
+  "seen": 176,
+  "fields": [
+   {
+    "name": "code",
+    "declared": "STRING",
+    "filled": 176
+   },
+   {
+    "name": "color",
+    "declared": "STRING",
+    "filled": 144
+   },
+   {
+    "name": "dict_type",
+    "declared": "STRING",
+    "filled": 176
+   },
+   {
+    "name": "icon",
+    "declared": "STRING",
+    "filled": 101
+   },
+   {
+    "name": "is_active",
+    "declared": "BOOLEAN",
+    "filled": 175
+   },
+   {
+    "name": "is_extensible",
+    "declared": "BOOLEAN",
+    "filled": 169
+   },
+   {
+    "name": "label_en",
+    "declared": "STRING",
+    "filled": 135
+   },
+   {
+    "name": "label_ru",
+    "declared": "STRING",
+    "filled": 176
+   },
+   {
+    "name": "sort_order",
+    "declared": "INTEGER",
+    "filled": 171
+   }
+  ]
+ },
+ "KnowDictEntryHist": {
+  "total": 43,
+  "seen": 43,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 30
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 30
+   },
+   {
+    "name": "code",
+    "declared": "STRING",
+    "filled": 43
+   },
+   {
+    "name": "color",
+    "declared": "STRING",
+    "filled": 22
+   },
+   {
+    "name": "dict_type",
+    "declared": "STRING",
+    "filled": 43
+   },
+   {
+    "name": "icon",
+    "declared": "STRING",
+    "filled": 17
+   },
+   {
+    "name": "is_active",
+    "declared": "BOOLEAN",
+    "filled": 43
+   },
+   {
+    "name": "is_extensible",
+    "declared": "BOOLEAN",
+    "filled": 43
+   },
+   {
+    "name": "kind",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "label_en",
+    "declared": "STRING",
+    "filled": 28
+   },
+   {
+    "name": "label_ru",
+    "declared": "STRING",
+    "filled": 43
+   },
+   {
+    "name": "sort_order",
+    "declared": "INTEGER",
+    "filled": 40
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 43
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 43
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 1
+   }
+  ]
+ },
+ "KnowDoc": {
+  "total": 460,
+  "seen": 460,
+  "fields": [
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 122
+   },
+   {
+    "name": "content_html",
+    "declared": null,
+    "filled": 4
+   },
+   {
+    "name": "content_html_bytes",
+    "declared": null,
+    "filled": 4
+   },
+   {
+    "name": "content_html_sha256",
+    "declared": null,
+    "filled": 4
+   },
+   {
+    "name": "content_md",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "content_md_en",
+    "declared": "STRING",
+    "filled": 96
+   },
+   {
+    "name": "content_md_en_bytes",
+    "declared": null,
+    "filled": 96
+   },
+   {
+    "name": "content_md_en_sha256",
+    "declared": null,
+    "filled": 96
+   },
+   {
+    "name": "content_md_ru",
+    "declared": "STRING",
+    "filled": 420
+   },
+   {
+    "name": "content_md_ru_bytes",
+    "declared": null,
+    "filled": 420
+   },
+   {
+    "name": "content_md_ru_sha256",
+    "declared": null,
+    "filled": 420
+   },
+   {
+    "name": "doc_id",
+    "declared": "STRING",
+    "filled": 460
+   },
+   {
+    "name": "file_path",
+    "declared": "STRING",
+    "filled": 210
+   },
+   {
+    "name": "has_ext_deps",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 459
+   },
+   {
+    "name": "sort_order",
+    "declared": "INTEGER",
+    "filled": 205
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 460
+   }
+  ]
+ },
+ "KnowDocHist": {
+  "total": 362,
+  "seen": 362,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 362
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 362
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 362
+   },
+   {
+    "name": "content_md",
+    "declared": "STRING",
+    "filled": 362
+   },
+   {
+    "name": "doc_id",
+    "declared": "STRING",
+    "filled": 362
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 362
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 362
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 77
+   }
+  ]
+ },
+ "KnowFile": {
+  "total": 71,
+  "seen": 71,
+  "fields": [
+   {
+    "name": "file_path",
+    "declared": "STRING",
+    "filled": 71
+   },
+   {
+    "name": "project",
+    "declared": "STRING",
+    "filled": 71
+   },
+   {
+    "name": "summary_md",
+    "declared": "STRING",
+    "filled": 67
+   }
+  ]
+ },
+ "KnowFinding": {
+  "total": 31,
+  "seen": 31,
+  "fields": [
+   {
+    "name": "external_ref",
+    "declared": null,
+    "filled": 24
+   },
+   {
+    "name": "finding_id",
+    "declared": "STRING",
+    "filled": 31
+   },
+   {
+    "name": "source_sprint",
+    "declared": null,
+    "filled": 25
+   },
+   {
+    "name": "summary",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "summary_md",
+    "declared": null,
+    "filled": 7
+   },
+   {
+    "name": "type",
+    "declared": null,
+    "filled": 31
+   },
+   {
+    "name": "verified",
+    "declared": null,
+    "filled": 7
+   }
+  ]
+ },
+ "KnowFindingHist": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 0
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowGain": {
+  "total": 25,
+  "seen": 25,
+  "fields": [
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 23
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 25
+   },
+   {
+    "name": "gain_id",
+    "declared": "STRING",
+    "filled": 25
+   },
+   {
+    "name": "metric_md",
+    "declared": "STRING",
+    "filled": 25
+   },
+   {
+    "name": "rank",
+    "declared": "STRING",
+    "filled": 25
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 25
+   }
+  ]
+ },
+ "KnowGitProject": {
+  "total": 28,
+  "seen": 28,
+  "fields": [
+   {
+    "name": "default_branch",
+    "declared": "STRING",
+    "filled": 23
+   },
+   {
+    "name": "description",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "full_name",
+    "declared": null,
+    "filled": 2
+   },
+   {
+    "name": "hosts",
+    "declared": "STRING",
+    "filled": 24
+   },
+   {
+    "name": "is_private",
+    "declared": "BOOLEAN",
+    "filled": 5
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 28
+   },
+   {
+    "name": "repo_url",
+    "declared": null,
+    "filled": 2
+   },
+   {
+    "name": "slug",
+    "declared": "STRING",
+    "filled": 28
+   }
+  ]
+ },
+ "KnowJob": {
+  "total": 14,
+  "seen": 14,
+  "fields": [
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "importance",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "job_id",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 14
+   }
+  ]
+ },
+ "KnowMachine": {
+  "total": 1,
+  "seen": 1,
+  "fields": [
+   {
+    "name": "first_seen_at",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "last_seen_at",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "machine_id",
+    "declared": "STRING",
+    "filled": 1
+   }
+  ]
+ },
+ "KnowMilestone": {
+  "total": 46,
+  "seen": 46,
+  "fields": [
+   {
+    "name": "date_display",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "label",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "milestone_id",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "priority",
+    "declared": "STRING",
+    "filled": 39
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "week",
+    "declared": null,
+    "filled": 8
+   }
+  ]
+ },
+ "KnowMilestoneHist": {
+  "total": 46,
+  "seen": 46,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 6
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "goal_md",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "planned_date",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "source_commit",
+    "declared": null,
+    "filled": 8
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 46
+   },
+   {
+    "name": "status_raw",
+    "declared": "STRING",
+    "filled": 8
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 46
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowModelConfig": {
+  "total": 1,
+  "seen": 1,
+  "fields": [
+   {
+    "name": "config_id",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "format",
+    "declared": "STRING",
+    "filled": 1
+   }
+  ]
+ },
+ "KnowModelConfigHist": {
+  "total": 5,
+  "seen": 5,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "content",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "reason",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 5
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 4
+   }
+  ]
+ },
+ "KnowPR": {
+  "total": 2108,
+  "seen": 2108,
+  "fields": [
+   {
+    "name": "base_ref",
+    "declared": null,
+    "filled": 564
+   },
+   {
+    "name": "body_md",
+    "declared": null,
+    "filled": 4
+   },
+   {
+    "name": "git_project",
+    "declared": "STRING",
+    "filled": 2108
+   },
+   {
+    "name": "head_ref",
+    "declared": null,
+    "filled": 564
+   },
+   {
+    "name": "merged_at",
+    "declared": null,
+    "filled": 857
+   },
+   {
+    "name": "pr_id",
+    "declared": "STRING",
+    "filled": 320
+   },
+   {
+    "name": "pr_number",
+    "declared": "INTEGER",
+    "filled": 2108
+   },
+   {
+    "name": "pr_state",
+    "declared": null,
+    "filled": 4
+   },
+   {
+    "name": "pr_uid",
+    "declared": "STRING",
+    "filled": 2108
+   },
+   {
+    "name": "release_id",
+    "declared": null,
+    "filled": 319
+   },
+   {
+    "name": "repo",
+    "declared": null,
+    "filled": 32
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 1036
+   },
+   {
+    "name": "url",
+    "declared": null,
+    "filled": 976
+   }
+  ]
+ },
+ "KnowPain": {
+  "total": 38,
+  "seen": 38,
+  "fields": [
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 38
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 38
+   },
+   {
+    "name": "pain_id",
+    "declared": "STRING",
+    "filled": 38
+   },
+   {
+    "name": "severity",
+    "declared": "STRING",
+    "filled": 38
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 38
+   }
+  ]
+ },
+ "KnowProjectActor": {
+  "total": 15,
+  "seen": 15,
+  "fields": [
+   {
+    "name": "actor_id",
+    "declared": "STRING",
+    "filled": 15
+   },
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 15
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 15
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 15
+   }
+  ]
+ },
+ "KnowProjectRoleEvent": {
+  "total": 87,
+  "seen": 87,
+  "fields": [
+   {
+    "name": "action",
+    "declared": "STRING",
+    "filled": 87
+   },
+   {
+    "name": "at",
+    "declared": "STRING",
+    "filled": 87
+   },
+   {
+    "name": "batch_id",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "by_role",
+    "declared": "STRING",
+    "filled": 87
+   },
+   {
+    "name": "event_uid",
+    "declared": "STRING",
+    "filled": 87
+   },
+   {
+    "name": "kc_sub",
+    "declared": "STRING",
+    "filled": 87
+   },
+   {
+    "name": "project",
+    "declared": "STRING",
+    "filled": 87
+   },
+   {
+    "name": "role",
+    "declared": "STRING",
+    "filled": 84
+   },
+   {
+    "name": "role_before",
+    "declared": "STRING",
+    "filled": 1
+   }
+  ]
+ },
+ "KnowQuestion": {
+  "total": 470,
+  "seen": 470,
+  "fields": [
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 470
+   },
+   {
+    "name": "closed_date",
+    "declared": "STRING",
+    "filled": 255
+   },
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 215
+   },
+   {
+    "name": "due_date",
+    "declared": "STRING",
+    "filled": 11
+   },
+   {
+    "name": "opened_date",
+    "declared": "STRING",
+    "filled": 470
+   },
+   {
+    "name": "owner",
+    "declared": null,
+    "filled": 349
+   },
+   {
+    "name": "priority",
+    "declared": "STRING",
+    "filled": 425
+   },
+   {
+    "name": "question_id",
+    "declared": "STRING",
+    "filled": 470
+   },
+   {
+    "name": "raised_by",
+    "declared": null,
+    "filled": 413
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 470
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 470
+   },
+   {
+    "name": "trigger",
+    "declared": "STRING",
+    "filled": 25
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 290
+   }
+  ]
+ },
+ "KnowRelease": {
+  "total": 597,
+  "seen": 597,
+  "fields": [
+   {
+    "name": "description_md",
+    "declared": "STRING",
+    "filled": 593
+   },
+   {
+    "name": "git_project",
+    "declared": "STRING",
+    "filled": 597
+   },
+   {
+    "name": "git_tag",
+    "declared": null,
+    "filled": 569
+   },
+   {
+    "name": "is_current",
+    "declared": null,
+    "filled": 597
+   },
+   {
+    "name": "release_date",
+    "declared": null,
+    "filled": 591
+   },
+   {
+    "name": "release_id",
+    "declared": "STRING",
+    "filled": 597
+   },
+   {
+    "name": "release_name",
+    "declared": "STRING",
+    "filled": 66
+   },
+   {
+    "name": "release_uid",
+    "declared": "STRING",
+    "filled": 597
+   },
+   {
+    "name": "released_at",
+    "declared": "STRING",
+    "filled": 72
+   },
+   {
+    "name": "title",
+    "declared": null,
+    "filled": 2
+   },
+   {
+    "name": "type",
+    "declared": null,
+    "filled": 528
+   },
+   {
+    "name": "updated_at",
+    "declared": null,
+    "filled": 392
+   },
+   {
+    "name": "version",
+    "declared": null,
+    "filled": 92
+   },
+   {
+    "name": "week",
+    "declared": null,
+    "filled": 544
+   }
+  ]
+ },
+ "KnowReleaseHist": {
+  "total": 1018,
+  "seen": 1018,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 487
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 487
+   },
+   {
+    "name": "content_hash",
+    "declared": null,
+    "filled": 74
+   },
+   {
+    "name": "description_md",
+    "declared": "STRING",
+    "filled": 480
+   },
+   {
+    "name": "is_current",
+    "declared": null,
+    "filled": 74
+   },
+   {
+    "name": "source_commit",
+    "declared": null,
+    "filled": 74
+   },
+   {
+    "name": "state_uid",
+    "declared": null,
+    "filled": 1018
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 1018
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 410
+   }
+  ]
+ },
+ "KnowRunbook": {
+  "total": 57,
+  "seen": 57,
+  "fields": [
+   {
+    "name": "area",
+    "declared": "STRING",
+    "filled": 57
+   },
+   {
+    "name": "content_md",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 57
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 57
+   },
+   {
+    "name": "runbook_id",
+    "declared": "STRING",
+    "filled": 57
+   }
+  ]
+ },
+ "KnowRunbookHist": {
+  "total": 57,
+  "seen": 57,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 57
+   },
+   {
+    "name": "content_md",
+    "declared": "STRING",
+    "filled": 57
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 57
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 57
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowSavedView": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "created_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "is_personal_default",
+    "declared": "BOOLEAN",
+    "filled": 0
+   },
+   {
+    "name": "is_team_default",
+    "declared": "BOOLEAN",
+    "filled": 0
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "query",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "roles",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "row_version",
+    "declared": "INTEGER",
+    "filled": 0
+   },
+   {
+    "name": "section",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "view_uid",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "visibility",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowSpec": {
+  "total": 494,
+  "seen": 494,
+  "fields": [
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 97
+   },
+   {
+    "name": "content_md",
+    "declared": null,
+    "filled": 448
+   },
+   {
+    "name": "file_path",
+    "declared": "STRING",
+    "filled": 215
+   },
+   {
+    "name": "spec_id",
+    "declared": "STRING",
+    "filled": 494
+   },
+   {
+    "name": "status",
+    "declared": null,
+    "filled": 27
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 488
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 288
+   },
+   {
+    "name": "version",
+    "declared": null,
+    "filled": 346
+   }
+  ]
+ },
+ "KnowSpecHist": {
+  "total": 734,
+  "seen": 734,
+  "fields": [
+   {
+    "name": "changed_by",
+    "declared": "STRING",
+    "filled": 60
+   },
+   {
+    "name": "changed_by_kind",
+    "declared": "STRING",
+    "filled": 60
+   },
+   {
+    "name": "content_hash",
+    "declared": "STRING",
+    "filled": 734
+   },
+   {
+    "name": "content_md",
+    "declared": "STRING",
+    "filled": 732
+   },
+   {
+    "name": "source_commit",
+    "declared": null,
+    "filled": 164
+   },
+   {
+    "name": "spec_id",
+    "declared": "STRING",
+    "filled": 672
+   },
+   {
+    "name": "state_uid",
+    "declared": "STRING",
+    "filled": 734
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 127
+   },
+   {
+    "name": "status_backfilled",
+    "declared": "BOOLEAN",
+    "filled": 52
+   },
+   {
+    "name": "status_category",
+    "declared": "STRING",
+    "filled": 102
+   },
+   {
+    "name": "status_known_from",
+    "declared": "STRING",
+    "filled": 102
+   },
+   {
+    "name": "status_raw",
+    "declared": "STRING",
+    "filled": 102
+   },
+   {
+    "name": "summary",
+    "declared": "STRING",
+    "filled": 554
+   },
+   {
+    "name": "valid_from",
+    "declared": "DATETIME",
+    "filled": 734
+   },
+   {
+    "name": "valid_to",
+    "declared": "DATETIME",
+    "filled": 246
+   },
+   {
+    "name": "version",
+    "declared": "STRING",
+    "filled": 625
+   }
+  ]
+ },
+ "KnowTag": {
+  "total": 1077,
+  "seen": 1077,
+  "fields": [
+   {
+    "name": "tag_id",
+    "declared": "STRING",
+    "filled": 1077
+   }
+  ]
+ },
+ "KnowUseCase": {
+  "total": 88,
+  "seen": 88,
+  "fields": [
+   {
+    "name": "acceptance_md",
+    "declared": "STRING",
+    "filled": 76
+   },
+   {
+    "name": "actor",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 17
+   },
+   {
+    "name": "context_md",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "date_created",
+    "declared": "STRING",
+    "filled": 88
+   },
+   {
+    "name": "feature_id",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "goal_level",
+    "declared": "STRING",
+    "filled": 88
+   },
+   {
+    "name": "parent_uc_id",
+    "declared": "STRING",
+    "filled": 55
+   },
+   {
+    "name": "priority",
+    "declared": "STRING",
+    "filled": 68
+   },
+   {
+    "name": "rigor",
+    "declared": "STRING",
+    "filled": 79
+   },
+   {
+    "name": "scenario_md",
+    "declared": "STRING",
+    "filled": 79
+   },
+   {
+    "name": "shipped_at",
+    "declared": "STRING",
+    "filled": 41
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 85
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 88
+   },
+   {
+    "name": "uc_id",
+    "declared": "STRING",
+    "filled": 88
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 19
+   }
+  ]
+ },
+ "KnowUser": {
+  "total": 9,
+  "seen": 9,
+  "fields": [
+   {
+    "name": "avatar_ref",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "display_name",
+    "declared": "STRING",
+    "filled": 9
+   },
+   {
+    "name": "kc_sub",
+    "declared": "STRING",
+    "filled": 9
+   },
+   {
+    "name": "login",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowUserDraft": {
+  "total": 3,
+  "seen": 3,
+  "fields": [
+   {
+    "name": "base_record_version",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "base_version",
+    "declared": "INTEGER",
+    "filled": 0
+   },
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "field",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "ref_id",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "ref_type",
+    "declared": "STRING",
+    "filled": 3
+   },
+   {
+    "name": "saved_at",
+    "declared": "STRING",
+    "filled": 3
+   }
+  ]
+ },
+ "KnowUserFavorite": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "added_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "ref_id",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "ref_type",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowUserHabit": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "first_seen",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "habit_key",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "hits",
+    "declared": "INTEGER",
+    "filled": 0
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "label",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "last_seen",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "memory_id",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowUserMemoryPref": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "remembering",
+    "declared": "BOOLEAN",
+    "filled": 0
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowUserRecent": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "first_seen",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "ref_id",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "ref_type",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "visited_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "visits",
+    "declared": "INTEGER",
+    "filled": 0
+   }
+  ]
+ },
+ "KnowUserSettings": {
+  "total": 2,
+  "seen": 2,
+  "fields": [
+   {
+    "name": "owner_sub",
+    "declared": "STRING",
+    "filled": 2
+   },
+   {
+    "name": "row_version",
+    "declared": "INTEGER",
+    "filled": 2
+   },
+   {
+    "name": "settings_json",
+    "declared": "STRING",
+    "filled": 2
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 2
+   }
+  ]
+ },
+ "LoreComponent": {
+  "total": 110,
+  "seen": 110,
+  "fields": [
+   {
+    "name": "area",
+    "declared": "STRING",
+    "filled": 104
+   },
+   {
+    "name": "children",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "component_id",
+    "declared": "STRING",
+    "filled": 110
+   },
+   {
+    "name": "full_name",
+    "declared": "STRING",
+    "filled": 106
+   },
+   {
+    "name": "game_icon",
+    "declared": "STRING",
+    "filled": 107
+   },
+   {
+    "name": "owner",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "parent_id",
+    "declared": "STRING",
+    "filled": 93
+   },
+   {
+    "name": "project",
+    "declared": null,
+    "filled": 39
+   },
+   {
+    "name": "team",
+    "declared": "STRING",
+    "filled": 24
+   },
+   {
+    "name": "tech",
+    "declared": null,
+    "filled": 0
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 10
+   }
+  ]
+ },
+ "LoreNewsReadMark": {
+  "total": 1,
+  "seen": 1,
+  "fields": [
+   {
+    "name": "mark_at",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "mark_id",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "updated_at",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "updated_by",
+    "declared": "STRING",
+    "filled": 1
+   }
+  ]
+ },
+ "LoreRefDismissal": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "created_at",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "created_by",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "dismissal_key",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "kind",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "record_id",
+    "declared": "STRING",
+    "filled": 0
+   },
+   {
+    "name": "record_type",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "LoreSchemaVersion": {
+  "total": 93,
+  "seen": 93,
+  "fields": [
+   {
+    "name": "applied_at",
+    "declared": "STRING",
+    "filled": 93
+   },
+   {
+    "name": "checksum",
+    "declared": "STRING",
+    "filled": 93
+   },
+   {
+    "name": "compat_major",
+    "declared": "INTEGER",
+    "filled": 83
+   },
+   {
+    "name": "name",
+    "declared": "STRING",
+    "filled": 93
+   },
+   {
+    "name": "version",
+    "declared": "INTEGER",
+    "filled": 93
+   }
+  ]
+ },
+ "LoreTechnology": {
+  "total": 13,
+  "seen": 13,
+  "fields": [
+   {
+    "name": "category",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "name",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "tech_id",
+    "declared": "STRING",
+    "filled": 13
+   }
+  ]
+ },
+ "PlanCheckpoint": {
+  "total": 17,
+  "seen": 17,
+  "fields": [
+   {
+    "name": "checkpoint_id",
+    "declared": "STRING",
+    "filled": 17
+   },
+   {
+    "name": "desc_md",
+    "declared": null,
+    "filled": 17
+   },
+   {
+    "name": "label",
+    "declared": null,
+    "filled": 17
+   }
+  ]
+ },
+ "PlanConfig": {
+  "total": 1,
+  "seen": 1,
+  "fields": [
+   {
+    "name": "config_id",
+    "declared": "STRING",
+    "filled": 1
+   },
+   {
+    "name": "note",
+    "declared": null,
+    "filled": 1
+   },
+   {
+    "name": "w0_date",
+    "declared": null,
+    "filled": 1
+   }
+  ]
+ },
+ "PlanSection": {
+  "total": 5,
+  "seen": 5,
+  "fields": [
+   {
+    "name": "color",
+    "declared": null,
+    "filled": 5
+   },
+   {
+    "name": "end_week",
+    "declared": null,
+    "filled": 5
+   },
+   {
+    "name": "label",
+    "declared": null,
+    "filled": 5
+   },
+   {
+    "name": "section_id",
+    "declared": "STRING",
+    "filled": 5
+   },
+   {
+    "name": "start_week",
+    "declared": null,
+    "filled": 5
+   }
+  ]
+ },
+ "PlanTrack": {
+  "total": 18,
+  "seen": 18,
+  "fields": [
+   {
+    "name": "area",
+    "declared": "STRING",
+    "filled": 18
+   },
+   {
+    "name": "label",
+    "declared": null,
+    "filled": 18
+   },
+   {
+    "name": "track_id",
+    "declared": "STRING",
+    "filled": 18
+   }
+  ]
+ },
+ "PlanVersion": {
+  "total": 167,
+  "seen": 167,
+  "fields": [
+   {
+    "name": "changelog_md",
+    "declared": null,
+    "filled": 167
+   },
+   {
+    "name": "version_date",
+    "declared": null,
+    "filled": 167
+   },
+   {
+    "name": "version_id",
+    "declared": "STRING",
+    "filled": 167
+   }
+  ]
+ },
+ "QGJobTask": {
+  "total": 85,
+  "seen": 85,
+  "fields": [
+   {
+    "name": "inv_id",
+    "declared": "STRING",
+    "filled": 64
+   },
+   {
+    "name": "job_id",
+    "declared": "STRING",
+    "filled": 85
+   },
+   {
+    "name": "note_md",
+    "declared": "STRING",
+    "filled": 85
+   },
+   {
+    "name": "qg_id",
+    "declared": "STRING",
+    "filled": 85
+   },
+   {
+    "name": "run_date",
+    "declared": null,
+    "filled": 85
+   },
+   {
+    "name": "severity",
+    "declared": "STRING",
+    "filled": 85
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 85
+   }
+  ]
+ },
+ "QGMetric": {
+  "total": 0,
+  "seen": 0,
+  "fields": [
+   {
+    "name": "metric_id",
+    "declared": "STRING",
+    "filled": 0
+   }
+  ]
+ },
+ "QGRecommendation": {
+  "total": 14,
+  "seen": 14,
+  "fields": [
+   {
+    "name": "body_md",
+    "declared": "STRING",
+    "filled": 13
+   },
+   {
+    "name": "effort_days",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "fix_cmd",
+    "declared": null,
+    "filled": 11
+   },
+   {
+    "name": "how_to_verify",
+    "declared": null,
+    "filled": 11
+   },
+   {
+    "name": "inv_id",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "job_id",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "priority",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "qg_id",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "rec_id",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "severity",
+    "declared": null,
+    "filled": 13
+   },
+   {
+    "name": "status",
+    "declared": "STRING",
+    "filled": 14
+   },
+   {
+    "name": "tags",
+    "declared": null,
+    "filled": 12
+   },
+   {
+    "name": "title",
+    "declared": "STRING",
+    "filled": 14
+   }
+  ]
+ },
+ "QualityGate": {
+  "total": 25,
+  "seen": 25,
+  "fields": [
+   {
+    "name": "component_id",
+    "declared": null,
+    "filled": 20
+   },
+   {
+    "name": "content_md",
+    "declared": null,
+    "filled": 24
+   },
+   {
+    "name": "description",
+    "declared": null,
+    "filled": 9
+   },
+   {
+    "name": "last_run_status",
+    "declared": null,
+    "filled": 15
+   },
+   {
+    "name": "name",
+    "declared": null,
+    "filled": 25
+   },
+   {
+    "name": "qg_id",
+    "declared": "STRING",
+    "filled": 25
+   },
+   {
+    "name": "routine_name",
+    "declared": null,
+    "filled": 15
+   },
+   {
+    "name": "sprint_id",
+    "declared": null,
+    "filled": 5
+   },
+   {
+    "name": "status",
+    "declared": null,
+    "filled": 25
+   }
+  ]
+ }
+}

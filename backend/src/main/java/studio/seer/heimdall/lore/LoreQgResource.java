@@ -26,7 +26,7 @@ public class LoreQgResource extends LoreResourceBase {
     /** ADR-LORE-053-D7: project — slug проекта-владельца (ребро BELONGS_TO_PROJECT); retired_reason — причина отмены. */
     public record QGUpsertRequest(String qg_id, String name, String description,
         String component_id, String status, String content_md, String sprint_id,
-        String project, String retired_reason, String qg_type) {}
+        String project, String retired_reason, String qg_type, String scope) {}
 
     @POST
     @Path("quality-gate")
@@ -42,15 +42,27 @@ public class LoreQgResource extends LoreResourceBase {
             return badParams("qg_id contains illegal characters");
         try {
             // ADR-LORE-053-D7: жизненный цикл гейта — словарь qg_status, владелец для active, причина для retired.
-            boolean exists = !ingestService.queryPublic(
-                "SELECT qg_id FROM QualityGate WHERE qg_id = :id", Map.of("id", req.qg_id())).isEmpty();
+            List<Map<String, Object>> prev = ingestService.queryPublic(
+                "SELECT qg_id, scope, out('BELONGS_TO_PROJECT').slug AS projects FROM QualityGate WHERE qg_id = :id",
+                Map.of("id", req.qg_id()));
+            boolean exists = !prev.isEmpty();
             String status = exists ? req.status() : QgGateLifecycle.initialStatus(req.status());
             String project = req.project() == null || req.project().isBlank() ? null : req.project().trim();
             if (project != null && !registeredSlugs().contains(project))
                 return noStore(Response.status(422).entity(new LoreError("QG_LIFECYCLE",
                     "проект «" + project + "» не зарегистрирован (KnowGitProject.slug)")));
-            boolean hasOwner = project != null || anyEdgeFrom("BELONGS_TO_PROJECT", "qg_id", req.qg_id());
-            String lifecycleError = QgGateLifecycle.check(status, hasOwner, req.retired_reason());
+            // QG-01 (решение владелицы 19.11.2026 «2а»): scope = global | project. Общий гейт без проекта —
+            // его связи с проектами снимаются; проектный — ровно один проект после записи.
+            String scope = req.scope() != null ? req.scope()
+                : exists && prev.get(0).get("scope") != null ? String.valueOf(prev.get(0).get("scope")) : null;
+            java.util.Set<String> owners = new java.util.LinkedHashSet<>();
+            if (exists && !"global".equals(req.scope()) && prev.get(0).get("projects") instanceof java.util.Collection<?> c)
+                for (Object s : c) if (s != null) owners.add(String.valueOf(s));
+            if (project != null) owners.add(project);
+            String lifecycleError = req.scope() != null || project != null
+                ? QgGateLifecycle.checkScope(scope, project != null, owners.size()) : null;
+            boolean hasOwner = QgGateLifecycle.hasOwner(scope, owners.size());
+            if (lifecycleError == null) lifecycleError = QgGateLifecycle.check(status, hasOwner, req.retired_reason());
             if (lifecycleError == null && req.qg_type() != null) {
                 java.util.List<String> types = ingestService.queryPublic(
                     "SELECT code FROM KnowDictEntry WHERE dict_type = 'qg_type' AND is_active = true", Map.of())
@@ -76,6 +88,7 @@ public class LoreQgResource extends LoreResourceBase {
             if (req.content_md() != null)   { qsql.append(", content_md=:cnt");   p.put("cnt", req.content_md()); }
             if (req.sprint_id() != null)    { qsql.append(", sprint_id=:sid");    p.put("sid", req.sprint_id()); }
             if (req.qg_type() != null)      { qsql.append(", qg_type=:qt");       p.put("qt",  req.qg_type()); }
+            if (req.scope() != null)        { qsql.append(", scope=:sc");         p.put("sc",  req.scope()); }
             qsql.append(" UPSERT WHERE qg_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 qsql.toString(), p)).await().indefinitely();
@@ -86,6 +99,10 @@ public class LoreQgResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("qg_id", req.qg_id());
             linkComponentEdge("QualityGate", "qg_id", req.qg_id(), req.component_id(), out);
+            if ("global".equals(req.scope())) {
+                out.put("projects_unlinked", deleteEdges("BELONGS_TO_PROJECT", "@out.qg_id = :id", Map.of("id", req.qg_id())));
+            }
+            if (scope != null) out.put("scope", scope);
             if (project != null) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM QualityGate WHERE qg_id=:id) "
@@ -94,6 +111,7 @@ public class LoreQgResource extends LoreResourceBase {
                 out.put("project", project);
             }
             if (status != null) out.put("status", status);
+            if (!exists) CreateDefaultStatus.report(out, CreateDefaultStatus.pick("quality_gate", req.status())); // правило 19.11
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());

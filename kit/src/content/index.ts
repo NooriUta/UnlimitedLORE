@@ -22,6 +22,9 @@ export { MathInline, MathBlock, MathSafeText, escapeMathDollars, installMathMark
 export * from './refTrigger';
 // MD-WINDOW · мини-окно ссылки: две карточки, честные состояния, обязательные поля.
 export * from './RefPicker';
+// SUPERTAGS-SPIKE · окно тегов «#тег»: поля тега на ребре, в тексте токен [[ЗАПИСЬ#тег]].
+export * from './TagPicker';
+export { parseTagToken } from './TagChip';
 // Общий список выбора записи: окно ссылки и ref-редактор поля (S4-FIELD-EDITORS).
 export * from './RefSearchList';
 export { useRefPeek } from './RefPeekLayer';

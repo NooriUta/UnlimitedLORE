@@ -47,6 +47,7 @@ class LoreModelLiveReplaceTest {
     void readByEdgeIsDerivedFromTheModel() {
         assertEquals(Set.of("refsOut", "refsIn"), LoreRecordValues.readByEdge("spec"));
         assertTrue(LoreRecordValues.readByEdge("task").containsAll(Set.of("qgRecs", "insights", "publications")));
-        assertTrue(LoreRecordValues.readByEdge("milestone").isEmpty(), "у вехи всё читается строкой — по ребру нечего");
+        // MDL-13: у вехи по ребру — только зависимости (с видом и причиной); прочее читается строкой и срезами.
+        assertEquals(Set.of("dependsOn", "blocks"), LoreRecordValues.readByEdge("milestone"));
     }
 }

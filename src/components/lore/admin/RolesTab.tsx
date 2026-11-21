@@ -38,9 +38,12 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   // AO-02: след прочитанного — пишет MCP за любым агентным профилем после создания записи.
   { what: 'След источников', api: '/lore/sources', humanOnly: false, agents: ['full', 'architect', 'developer', 'pm', 'marketer', 'analyst', 'product-analyst', 'tester'] },
   { what: 'ADR', api: '/lore/adr*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  // SUPERTAGS-SPIKE: тег со свободными полями на ребре ADR/решения
+  { what: 'Теги с полями', api: '/lore/tag/apply', humanOnly: false, agents: ['full', 'architect', 'developer'] },
   { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
   { what: 'Спринты и вехи', api: '/lore/sprint*, milestone*', humanOnly: false, agents: ['full', 'pm'] },
+  { what: 'Зависимости (задача, фаза, спринт, веха)', api: '/lore/dep', humanOnly: false, agents: ['full', 'pm'] },
   { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst', 'architect', 'product-analyst'] },
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },

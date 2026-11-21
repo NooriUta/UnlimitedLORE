@@ -1,0 +1,10 @@
+{
+ "_about": "Справочники статусов остальных типов для правил переноса (MIG-01, все объекты; слово владелицы 17.11.2026 «перенеси по собственным рекомендациям и нашим правилам все объекты»). Коды и ru/en — из LORE (KnowDictEntry, прод 17.11); коды заглавными (её правило 16.11 «статусная модель uppercase»); pl и недостающие en — перевод исполнителя (делегировано).",
+ "adr_status": [["DRAFT","Черновик","Draft","Szkic"],["PROPOSED","Предложен","Proposed","Zaproponowany"],["ACCEPTED","Принят","Accepted","Przyjęty"],["DEFERRED","Отложен","Deferred","Odłożony"],["DEPRECATED","Устарел","Deprecated","Przestarzały"],["SUPERSEDED","Заменён","Superseded","Zastąpiony"]],
+ "decision_status": [["PROPOSED","Предложено","Proposed","Zaproponowane"],["ACCEPTED","Принято","Accepted","Przyjęte"],["DEFERRED","Отложено","Deferred","Odłożone"],["SUPERSEDED","Вытеснено","Superseded","Zastąpione"],["FIXED","Fixed (легаси сида)","Fixed (legacy seed)","Fixed (stary seed)"],["DONE","Done (легаси сида)","Done (legacy seed)","Done (stary seed)"]],
+ "spec_status": [["PROPOSED","Предложение","Proposed","Propozycja"],["ACCEPTED","Принята","Accepted","Przyjęta"],["DEPRECATED","Устарела","Deprecated","Przestarzała"],["SUPERSEDED","Вытеснена","Superseded","Zastąpiona"]],
+ "milestone_status": [["UPCOMING","Предстоит","Upcoming","Nadchodzący"],["ACTIVE","Активна","Active","Aktywny"],["REACHED","Достигнута","Reached","Osiągnięty"],["MISSED","Пропущена","Missed","Nieosiągnięty"]],
+ "question_status": [["OPEN","Открыт","Open","Otwarte"],["CLOSED","Закрыт","Closed","Zamknięte"],["DEFERRED","Отложен","Deferred","Odłożone"],["DROPPED","Снят","Dropped","Wycofane"]],
+ "qg_status": [["DRAFT","Задуман","Draft","Szkic"],["ACTIVE","Работает","Active","Aktywna"],["STALE","Молчит","Stale","Nieaktywna"],["RETIRED","Выведен","Retired","Wycofana"]],
+ "feature_status": [["PROPOSED","Предложена","Proposed","Zaproponowana"],["ACTIVE","В работе","In progress","W toku"],["SHIPPED","Поставлена","Shipped","Dostarczona"],["IN_REWORK","В переработке","In rework","W przeróbce"],["DROPPED","Снята","Dropped","Wycofana"]]
+}

@@ -31,6 +31,35 @@ services:
     # Порт наружу не публикуется: бэкенд ходит по сети compose, инсталлятор —
     # одноразовым curl-контейнером в той же сети.
 
+  # Сторож входов в ArcadeDB (SPRINT_LORE_PRODUCT_BACKLOG/DBR-07, deploy/db-guard/README.md).
+  # Прокси перед arcadedb:2480: из Authorization берёт только имя, пишет первый вход пары
+  # «пользователь × источник» за минуту в ряд AuditDbLogin своим токеном (не root), root вне
+  # GUARD_ROOT_SOURCES — тревога (канал пока не подключён — только журнал).
+  # ЭТАП 6 (D-2026-SETUP-BEFORE-ENFORCE, с разрешения владелицы): пустить бэкенд через сторожа
+  # (LORE_DB_ENDPOINT=lore-db-guard) и закрыть прямой :2480. До этого клиенты ходят мимо — ряд неполон.
+  # Включается профилем: COMPOSE_PROFILES=guard (образ собирается из исходников; в ghcr его нет).
+  lore-db-guard:
+    profiles: ["guard"]
+    image: ${LORE_DB_GUARD_IMAGE:-lore-install-db-guard:${LORE_VERSION:-local}}
+    build:
+      context: ${LORE_SRC:-../..}/deploy/db-guard
+    restart: unless-stopped
+    depends_on:
+      - arcadedb
+    environment:
+      - GUARD_UPSTREAM=http://arcadedb:2480
+      - GUARD_DB=${LORE_DB:-system_aida_lore}
+      # Токен ArcadeDB группы db-guard (только createRecord на AuditDbLogin). Пусто — сторож видит
+      # входы и тревожит, но ряд не пишет (громко в журнале). Под root сторож не стартует.
+      - GUARD_DB_AUTH=${LORE_DB_GUARD_AUTH:-}
+      - GUARD_ROOT_SOURCES=${LORE_DB_GUARD_ROOT_SOURCES:-lore-backend}
+      - GUARD_TOKEN_NAMES=${LORE_DB_GUARD_TOKEN_NAMES:-}
+      # Имя контейнера по адресу — через docker API. Сокет по умолчанию не подключён: доступ к нему —
+      # это доступ ко всему docker; подключать осознанно (volumes ниже) и задать путь здесь.
+      - GUARD_DOCKER_SOCKET=${LORE_DB_GUARD_DOCKER_SOCKET:-}
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock:ro
+
   minio:
     image: minio/minio:${MINIO_VERSION:-latest}
     command: server /data --console-address ":9001"
@@ -61,7 +90,8 @@ services:
       - arcadedb
       - minio
     environment:
-      - MART_ARCADE_URL=http://arcadedb:2480
+      # DBR-07: lore-db-guard вместо arcadedb — Этап 6, с разрешения владелицы; по умолчанию напрямую.
+      - MART_ARCADE_URL=http://${LORE_DB_ENDPOINT:-arcadedb}:2480
       - ARCADEDB_USER=root
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD}
       - LORE_DB=${LORE_DB:-system_aida_lore}
@@ -84,6 +114,20 @@ services:
       - S3_ACCESS_KEY=${MINIO_USER:-lore}
       - S3_SECRET_KEY=${MINIO_PASSWORD}
       - S3_REGION=us-east-1
+      # Мост Forgejo (ADR-LORE-024) — по выбору (MIG-04): токен вписывает владелец в .env, пусто — /lore/forgejo/*
+      # отвечает 503, как без Forgejo. Адрес репозитория — из регистрации проекта (KnowGitProject.hosts[]); для
+      # localhost-адреса бэкенд ходит на base-override (своя установка — http://forgejo:3000).
+      - FORGEJO_API_TOKEN=${FORGEJO_API_TOKEN:-}
+      - lore.forgejo.base-override=${FORGEJO_BASE_OVERRIDE:-}
+      # Локальная LLM для гейтов качества (QG-15) — по выбору (MIG-04, README «Локальная LLM»). Пустая модель —
+      # провайдер честно отвечает «не настроен». Адрес без /v1: клиент дописывает /v1/chat/completions сам; умолчание
+      # то же, что в application.properties. Ключ нужен, только если раннер его требует.
+      - LORE_LLM_LOCAL_URL=${LORE_LLM_LOCAL_URL:-http://localhost:11434}
+      - LORE_LLM_LOCAL_MODEL=${LORE_LLM_LOCAL_MODEL:-}
+      - LORE_LLM_LOCAL_API_KEY=${LORE_LLM_LOCAL_API_KEY:-}
+    # Сервер модели на той же машине, что и LORE: из контейнера он виден как host.docker.internal.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:9100/q/health/live"]
       interval: 15s
@@ -117,7 +161,55 @@ services:
       lore-backend:
         condition: service_healthy
 
+  # Forgejo — по выбору (MIG-04, владелица 20.11.2026: «установка Forgejo если нет нашей версии»). Профиль forgejo:
+  # без него сервис не стартует. Версия — та же, что на нашем стенде. База — sqlite в томе forgejo-data; SSH выключен
+  # (клон по http). Администратора владелец заводит в первом окне Forgejo — установщик паролей Forgejo не знает.
+  forgejo:
+    profiles: ["forgejo"]
+    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-15.0.5}
+    restart: unless-stopped
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__database__DB_TYPE=sqlite3
+      - FORGEJO__server__HTTP_PORT=3000
+      - FORGEJO__server__ROOT_URL=${FORGEJO_ROOT_URL:-http://127.0.0.1:3000/}
+      - FORGEJO__server__DISABLE_SSH=true
+    volumes:
+      - forgejo-data:/data
+    ports:
+      - "${LORE_BIND:-127.0.0.1}:${FORGEJO_HTTP_PORT:-3000}:3000"
+
+  # forgejo-mcp — MCP-сервер Forgejo для агентов (репозиторий AIDA/forgejo-mcp, форк @ric_/forgejo-mcp 0.1.7 с
+  # инструментами Actions/CI). Профиль forgejo-mcp: и при своей установке Forgejo, и при своём Forgejo владельца.
+  # Образ: свой реестр (FORGEJO_MCP_IMAGE) или сборка из исходников, прибитых к коммиту (FORGEJO_MCP_SRC).
+  # FORGEJO_TOKEN обязателен — без него сервер не стартует; install.sh тогда его не поднимает и говорит, что вписать.
+  forgejo-mcp:
+    profiles: ["forgejo-mcp"]
+    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:bbe9f59c}
+    build:
+      context: ${FORGEJO_MCP_SRC:-https://git.seidrstudio.pro/AIDA/forgejo-mcp.git#bbe9f59c2167655c3c87fb51b102db29a275d13a}
+    restart: unless-stopped
+    environment:
+      - FORGEJO_URL=${FORGEJO_URL:-http://forgejo:3000}
+      - FORGEJO_TOKEN=${FORGEJO_MCP_TOKEN:-}
+      # Ключ входа агентов (Authorization: Bearer); install.sh генерирует его при включённом профиле.
+      - FORGEJO_MCP_API_KEY=${FORGEJO_MCP_API_KEY:-}
+      - PORT=3000
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # get_job_log читает логи Actions прямо с тома Forgejo (REST для них нет). При своём Forgejo владельца том пуст —
+      # инструмент отвечает «лог не найден», остальные работают.
+      - forgejo-data:/forgejo-data:ro
+    ports:
+      - "${LORE_BIND:-127.0.0.1}:${FORGEJO_MCP_PORT:-4430}:3000"
+
 volumes:
   lore-db:
   lore-db-backups:
   lore-minio-data:
+  forgejo-data:

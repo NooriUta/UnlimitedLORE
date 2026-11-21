@@ -30,10 +30,15 @@ import type { Editor, NodeViewProps } from '@tiptap/react';
 import { sanitizeMd } from './sanitizeHtml';
 import { detectRefTrigger, refsInMd, type BareRefForm, type MdRef, type RefTrigger, type RefTriggerKind } from './refTrigger';
 import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { pasteRefNodes, refCheckStates, refIdOfRaw, type RefCheckState } from './refPasteCheck';
 import { RefCreateCard, RefPicker, type RefPickerHandle, type RefPickerProps } from './RefPicker';
+import { TagPicker, type TipTapTagSource } from './TagPicker';
+import { tagToken } from './refTrigger';
+import { parseTagToken, tagChipExtension, TagChipEditor, TagChipStore } from './TagChip';
+
+export type { TipTapTagSource } from './TagPicker';
 import type { RefItem, RefSearch } from './RefSearchList';
 import { kitT, type KitKey } from '../i18n';
 import { useKitLang } from '../i18n/lang';
@@ -214,6 +219,11 @@ export interface TipTapRefSource {
    * проверить» (не красим). Отказ (throw) — тоже «не смогли».
    */
   exists?: (refs: MdRef[]) => Promise<Record<string, boolean | null>>;
+  /**
+   * SUPERTAGS-SPIKE: теги со свободными полями. Есть — «#слово», которое не тип записи, открывает окно тегов
+   * (TagPicker): поля пишет приложение на ребро, в текст ложится токен [[ЗАПИСЬ#тег]]. Нет — «тип не знаем».
+   */
+  tags?: TipTapTagSource;
 }
 
 /** Отметки ссылок «есть / нет / не проверено» — декорацией (DOM редактора перерисовывается). */
@@ -343,6 +353,7 @@ export function TipTapField({
   const refOpenRef = useRef<RefOpen | null>(null);
   refOpenRef.current = refOpen;
   const pickerRef = useRef<RefPickerHandle>(null);
+  const tagPickerRef = useRef<RefPickerHandle>(null);
   // Закрытое Esc/щелчком вне не открывается снова, пока вызов на том же месте.
   const refDismissed = useRef<number | null>(null);
   const [refSearch, setRefSearch] = useState<RefSearch>({ state: 'loading' });
@@ -388,6 +399,21 @@ export function TipTapField({
   const langRef = useRef(lang);
   langRef.current = lang;
   const promptTex = (tex: string) => window.prompt(kitT(langRef.current, 'kit.md.mathPrompt'), tex);
+  // SUPERTAGS шаг «г»: чипы тегов (поля рёбер — в общем хранилище) и поповер правки по щелчку на чипе.
+  const tagStoreRef = useRef<TagChipStore | null>(null);
+  if (!tagStoreRef.current) tagStoreRef.current = new TagChipStore(() => refsRef.current?.tags);
+  const tagStore = tagStoreRef.current;
+  const [tagEdit, setTagEdit] = useState<{ tag: string; rect: { left: number; top: number } } | null>(null);
+  const [, setTagTick] = useState(0);
+  useEffect(() => tagStore.subscribe(() => setTagTick(n => n + 1)), [tagStore]);
+  const openTagEdit = (tag: string, el: HTMLElement) => {
+    let rect = { left: 0, top: 0 };
+    try { const r = el.getBoundingClientRect(); rect = { left: r.left, top: r.bottom }; } catch { /* нет раскладки */ }
+    setRefOpen(null);
+    setTagEdit({ tag, rect });
+  };
+  const openTagEditRef = useRef(openTagEdit);
+  openTagEditRef.current = openTagEdit;
 
   const editorRef = useRef<Editor | null>(null);
   const editor = useEditor({
@@ -402,6 +428,12 @@ export function TipTapField({
         { promptTex },
       ),
       RefStateMarks,
+      tagChipExtension({
+        store: tagStore,
+        host: () => refsRef.current?.tags?.host ?? null,
+        lang: () => langRef.current,
+        onOpen: (tag, el) => openTagEditRef.current(tag, el),
+      }),
     ],
     content: value,
     editable,
@@ -423,9 +455,21 @@ export function TipTapField({
         return true;
       },
       // Окно ссылки открыто — стрелки, Enter, Tab и Esc идут ему (фокус остаётся в тексте).
-      handleKeyDown: (_view, event) => {
-        if (!refOpenRef.current || !pickerRef.current) return false;
-        if (!pickerRef.current.handleKey(event.key)) return false;
+      handleKeyDown: (view, event) => {
+        // Enter на выделенном чипе своего тега — правка полей (клавиатурный путь к поповеру).
+        const sel = view.state.selection;
+        if (event.key === 'Enter' && sel instanceof NodeSelection && sel.node.type.name === 'mdRaw') {
+          const tok = parseTagToken(String(sel.node.attrs.raw));
+          const el = view.nodeDOM(sel.from);
+          if (tok && tok.host === refsRef.current?.tags?.host && el instanceof HTMLElement) {
+            event.preventDefault();
+            openTagEditRef.current(tok.tag, el);
+            return true;
+          }
+        }
+        const picker = tagPickerRef.current ?? pickerRef.current;
+        if (!refOpenRef.current || !picker) return false;
+        if (!picker.handleKey(event.key)) return false;
         event.preventDefault();
         return true;
       },
@@ -512,6 +556,35 @@ export function TipTapField({
     ]).run();
     refDismissed.current = null;
     setRefOpen(null);
+  };
+  // SUPERTAGS: тег поставлен (поля уже на ребре) — набранное «#слово» заменяется токеном [[ЗАПИСЬ#тег]].
+  const pickTag = (tag: string) => {
+    const open = refOpenRef.current;
+    const host = refsRef.current?.tags?.host;
+    if (!editor || editor.isDestroyed || !open || !host) return;
+    editor.chain().focus().deleteRange({ from: open.from, to: open.to }).insertContent([
+      { type: 'mdRaw', attrs: { raw: tagToken(host, tag), kind: 'wikilink' } },
+      { type: 'text', text: ' ' },
+    ]).run();
+    // Поля только что записаны на ребро — чип перечитывает их, а не показывает прежнее.
+    tagStore.load(tag);
+    refDismissed.current = null;
+    setRefOpen(null);
+  };
+  // Тег снят на сервере — его токены уходят из текста (поля уже удалены вместе с ребром).
+  const dropTagTokens = (tag: string) => {
+    const host = refsRef.current?.tags?.host;
+    if (!editor || editor.isDestroyed || !host) return;
+    const spots: { from: number; to: number }[] = [];
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name !== 'mdRaw') return;
+      const tok = parseTagToken(String(node.attrs.raw));
+      if (tok && tok.host === host && tok.tag === tag) spots.push({ from: pos, to: pos + node.nodeSize });
+    });
+    if (!spots.length) return;
+    let tr = editor.state.tr;
+    for (const s of spots.reverse()) tr = tr.delete(s.from, s.to);
+    editor.view.dispatch(tr);
   };
   const closeRefPicker = () => {
     refDismissed.current = refOpenRef.current?.from ?? null;
@@ -842,6 +915,9 @@ export function TipTapField({
           {refOpen && refs && (
             // Якорь у каретки (координаты окна); поповер встаёт под ним и прижимается к краю экрана.
             <div className="sk-md__refanchor" style={{ left: refOpen.rect.left, top: refOpen.rect.top }}>
+              {refOpen.trigger.trigger === 'hash' && refOpen.trigger.unknownType && refs.tags ? (
+                <TagPicker ref={tagPickerRef} word={refOpen.trigger.unknownType} source={refs.tags} onDone={pickTag} onClose={closeRefPicker} />
+              ) : (
               <RefPicker
                 ref={pickerRef}
                 trigger={refOpen.trigger}
@@ -852,6 +928,27 @@ export function TipTapField({
                 onRetry={() => setRefRetry(n => n + 1)}
                 createSpec={refs.createSpec}
                 onCreate={refs.onCreate}
+              />
+              )}
+            </div>
+          )}
+          {tagEdit && refs?.tags?.host && (
+            <div className="sk-md__refanchor" style={{ left: tagEdit.rect.left, top: tagEdit.rect.top }}>
+              <TagChipEditor
+                key={`${tagEdit.tag}:${tagStore.get(tagEdit.tag)?.state ?? 'loading'}`}
+                tag={tagEdit.tag}
+                host={refs.tags.host}
+                state={tagStore.get(tagEdit.tag) ?? { state: 'loading' }}
+                source={refs.tags}
+                onSaved={fields => {
+                  const prev = tagStore.get(tagEdit.tag);
+                  const edge = prev?.state === 'ok' && prev.edge ? prev.edge : {};
+                  tagStore.set(tagEdit.tag, { state: 'ok', edge: { ...edge, fields } });
+                  setTagEdit(null);
+                }}
+                onRemoved={() => { dropTagTokens(tagEdit.tag); setTagEdit(null); }}
+                onRetry={() => tagStore.load(tagEdit.tag)}
+                onClose={() => setTagEdit(null)}
               />
             </div>
           )}

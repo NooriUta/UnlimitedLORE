@@ -24,7 +24,10 @@ final class LoreRecordRelationRoutes {
 
     /** Существующий обработчик привязки, в который уходит запрос. */
     enum Handler {
-        SPRINT_DEP, SPRINT_PROJECT, SPRINT_COMPONENT, SPRINT_MILESTONE, ADR_SPRINT,
+        // MDL-13: одна связь «зависит от» задачи, фазы, спринта и вехи — путь dep (LoreDependency).
+        DEPENDS_ON, SPRINT_PROJECT, SPRINT_COMPONENT, SPRINT_MILESTONE, ADR_SPRINT,
+        // MDL-13 «треки б»: трек спринта — ребро ON_TRACK через sprint/plan.
+        SPRINT_TRACK,
         TASK_COMPONENT, TASK_ADR, TASK_PHASE, TASK_PR,
         QUESTION_RAISED_IN, QUESTION_GATES,
         ADR_DEPENDS_ON, ADR_SUPERSEDES, ADR_COMPONENT, ADR_PROJECT, ADR_TAG,
@@ -32,7 +35,9 @@ final class LoreRecordRelationRoutes {
         // S5-DOC-PASSPORT: компонент и проекты документа — штатные doc/component, doc/project.
         DOC_COMPONENT, DOC_PROJECT,
         // AP-PROJECT-LINK-UI: проекты решения, вопроса и ранбука — штатные decision/project, question/project, runbook/project.
-        DECISION_PROJECT, QUESTION_PROJECT, RUNBOOK_PROJECT
+        DECISION_PROJECT, QUESTION_PROJECT, RUNBOOK_PROJECT,
+        // Решение владелицы 19.11.2026: связи организации — один путь organization/link (super-admin).
+        ORG_LINK
     }
 
     record Route(String type, String rel, String dir, Handler handler, boolean reversed) {}
@@ -43,11 +48,12 @@ final class LoreRecordRelationRoutes {
 
     static final List<Route> ROUTES = List.of(
         // спринт
-        r("sprint", "DEPENDS_ON", "out", Handler.SPRINT_DEP, false),
-        r("sprint", "DEPENDS_ON", "in", Handler.SPRINT_DEP, true),
+        r("sprint", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("sprint", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
         r("sprint", "BELONGS_TO_PROJECT", "out", Handler.SPRINT_PROJECT, false),
         r("sprint", "BELONGS_TO", "out", Handler.SPRINT_COMPONENT, false),
         r("sprint", "TARGETS_MILESTONE", "out", Handler.SPRINT_MILESTONE, false),
+        r("sprint", "ON_TRACK", "out", Handler.SPRINT_TRACK, false),
         r("sprint", "IMPLEMENTED_IN", "in", Handler.ADR_SPRINT, true),
         r("sprint", "RAISED_IN", "in", Handler.QUESTION_RAISED_IN, true),
         // задача
@@ -57,6 +63,9 @@ final class LoreRecordRelationRoutes {
         r("task", "CLOSED_BY", "out", Handler.TASK_PR, false),
         r("task", "RAISED_IN", "in", Handler.QUESTION_RAISED_IN, true),
         r("task", "GATES", "in", Handler.QUESTION_GATES, true),
+        r("task", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("task", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
+        // веха (MDL-13) — тип только для чтения: её зависимости ставятся через MCP / POST /lore/dep, не из паспорта
         // ADR
         r("adr", "DEPENDS_ON", "out", Handler.ADR_DEPENDS_ON, false),
         r("adr", "DEPENDS_ON", "in", Handler.ADR_DEPENDS_ON, true),
@@ -77,7 +86,11 @@ final class LoreRecordRelationRoutes {
         // решение, вопрос, ранбук (AP-PROJECT-LINK-UI) — добавить и снять по одному проекту, набор не заменяется
         r("decision", "BELONGS_TO_PROJECT", "out", Handler.DECISION_PROJECT, false),
         r("question", "BELONGS_TO_PROJECT", "out", Handler.QUESTION_PROJECT, false),
-        r("runbook", "BELONGS_TO_PROJECT", "out", Handler.RUNBOOK_PROJECT, false)
+        r("runbook", "BELONGS_TO_PROJECT", "out", Handler.RUNBOOK_PROJECT, false),
+        // организация (D-2026-MIG-REPOSITORY-ORGANIZATION) — проекты, продукты, люди
+        r("organization", "ORG_HAS_PROJECT", "out", Handler.ORG_LINK, false),
+        r("organization", "ORG_HAS_PRODUCT", "out", Handler.ORG_LINK, false),
+        r("organization", "ORG_MEMBER", "out", Handler.ORG_LINK, false)
     );
 
     /** Маршрут или {@code null}: ребра у типа нет либо путь привязки для него не заведён. */

@@ -76,6 +76,8 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   TARGETS_MILESTONE: { ru: 'к вехе', en: 'targets milestone', color: '--acc' },
   TARGETS_PRODUCT: { ru: 'для продукта', en: 'targets product', color: '--acc' },
   ON_MILESTONE: { ru: 'на вехе', en: 'on milestone', color: '--acc' },
+  // MDL-13 «треки б»: трек спринта — историчное ребро спринт → трек.
+  ON_TRACK: { ru: 'на треке', en: 'on track', color: '--acc' },
   SHIPPED_IN: { ru: 'вошло в релиз', en: 'shipped in', color: '--suc' },
   RELEASED_IN: { ru: 'выпущено в', en: 'released in', color: '--suc' },
   CLOSED_BY: { ru: 'закрыто PR', en: 'closed by', color: '--suc' },
@@ -93,6 +95,8 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   OWNED_BY: { ru: 'владелец', en: 'owned by', color: '--t2' },
   HAS_PROJECT_ROLE: { ru: 'роль в проекте', en: 'has project role', color: '--t2' },
   ROLE_HELD_BY: { ru: 'роль у', en: 'role held by', color: '--t2' },
+  // MT-MCP-TRUTH A6: ответственный вопроса — ребро к человеку или агенту реестра.
+  ANSWERABLE_BY: { ru: 'ответственный', en: 'answerable by', color: '--t2' },
   FILLS_ROLE: { ru: 'исполняет роль', en: 'fills role', color: '--t2' },
   LOGGED_BY: { ru: 'записано агентом', en: 'logged by', color: '--t2' },
   USES_MACHINE: { ru: 'работает на машине', en: 'uses machine', color: '--t2' },
@@ -110,6 +114,14 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   // Структурные: принадлежность и иерархия
   HAS_STATE: { ru: 'версия записи', en: 'has state', color: '--t3', layer: S },
   BELONGS_TO_PROJECT: { ru: 'в проекте', en: 'in project', color: '--t3', layer: S },
+  // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации (решение владелицы 19.11.2026)
+  HAS_REPOSITORY: { ru: 'основной репозиторий', en: 'primary repository', color: '--inf' },
+  COMPONENT_REPOSITORY: { ru: 'репозиторий компонента', en: 'component repository', color: '--inf' },
+  MIRRORED_TO: { ru: 'зеркало', en: 'mirrored to', color: '--t2' },
+  USES_REPOSITORY: { ru: 'использует', en: 'uses', color: '--t2' },
+  ORG_HAS_PROJECT: { ru: 'проект организации', en: 'organization project', color: '--t2' },
+  ORG_HAS_PRODUCT: { ru: 'продукт организации', en: 'organization product', color: '--t2' },
+  ORG_MEMBER: { ru: 'в организации', en: 'organization member', color: '--t2' },
   BELONGS_TO: { ru: 'принадлежит', en: 'belongs to', color: '--t3', layer: S },
   PART_OF: { ru: 'входит в', en: 'part of', color: '--t3', layer: S },
   IN_PHASE: { ru: 'в фазе', en: 'in phase', color: '--t3', layer: S },

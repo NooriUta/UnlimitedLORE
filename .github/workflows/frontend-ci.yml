@@ -302,6 +302,11 @@ jobs:
       - name: Живые фикстуры (shared/fixtures) — тесты скрипта снятия
         run: node --test shared/fixtures/*.test.mjs
 
+      # SPRINT_LORE_PRODUCT_BACKLOG/DBR-07: сторож входов в ArcadeDB — разбор заголовка, агрегация,
+      # тревога, «секрета нет»; без сети наружу и без зависимостей.
+      - name: Сторож входов в ArcadeDB (deploy/db-guard) — тесты
+        run: node --test deploy/db-guard/*.test.mjs
+
       - name: LORE v2 (web-next) — install + typecheck
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next

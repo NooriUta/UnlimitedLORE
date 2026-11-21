@@ -83,7 +83,8 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // закрыто. Агенты привязывают через свои *_link (MCP) — там матрица по семейству цели.
     // model — правка модели LORE (MC-05, SPEC-LORE-MODEL-CONFIG-STORE §4): меняет поверхности всем, правит человек.
     // AP-07: users — профиль автора (имя, аватар). Свой меняет человек, чужой — админ; агенту правка лица не дана.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model");
+    // organization — решение владелицы 19.11.2026: организации заводит и связывает человек в админке (super-admin).
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model", "organization");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
@@ -99,12 +100,17 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // разделимы, и они у developer'а изъяты — см. SUBPATH_AGENTS ниже.
         Map.entry("adr",       Set.of("full", "architect", "developer")),
         Map.entry("decision",  Set.of("full", "architect")),
+        // SUPERTAGS-SPIKE (20.11.2026): тег с полями на ребре ADR/решения — POST /lore/tag/apply; те же,
+        // кто ставит тег ADR (/lore/adr/tag): full, architect, developer.
+        Map.entry("tag",       Set.of("full", "architect", "developer")),
         Map.entry("spec",      Set.of("full", "architect", "developer", "marketer")),
         Map.entry("runbook",   Set.of("full", "architect", "developer", "marketer")),
         Map.entry("doc",       Set.of("full", "architect", "developer", "marketer")),
         Map.entry("sprint",    Set.of("full", "pm")),
         Map.entry("milestone", Set.of("full", "pm")),
         Map.entry("phase",     Set.of("full", "pm")),
+        // MDL-13: зависимость задачи, фазы, спринта и вехи (POST /lore/dep) — те же профили, что у прежнего sprint/dep.
+        Map.entry("dep",       Set.of("full", "pm")),
         // architect добавлен по решению владельца 2026-07-20. Причина не в
         // удобстве: по ADR-LORE-014 §4 архитектор фигурирует АВТОРОМ и
         // РЕВЬЮЕРОМ задач — а завести задачу или перевести её в done не мог.
@@ -199,6 +205,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // мочь любой, кто эту запись заводит, — иначе линтер учит дисциплине
         // только полный профиль, а остальные о своих пробелах не знают.
         Map.entry("quality",   Set.of("full", "architect", "developer", "pm", "marketer",
+                                      "analyst", "product-analyst", "tester")),
+        // find (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05) — POST по форме, но НИЧЕГО не пишет:
+        // структурный запрос «тип + поля + связь» (дерево И/ИЛИ/НЕ не влезает в строку).
+        // Чтение графа открыто всем профилям, как срезы и /lore/graph.
+        Map.entry("find",      Set.of("full", "architect", "developer", "pm", "marketer",
                                       "analyst", "product-analyst", "tester")),
         // me (SPRINT_UXR_S2_GRAPH_MEMORY/S2-04, D-2026-UXR-VIEWS-SERVER) — личный слой:
         // виды, избранное, недавние, настройки. «Видимость — сам пользователь и его

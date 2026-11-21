@@ -938,7 +938,7 @@ public class AidaLoreResource extends LoreResourceBase {
      * говорится числом ({@code scope.hidden}). sprint_deps — ребро между двумя
      * спринтами: без числа «зависимостей нет» неотличимо от «они ведут в чужие проекты».
      */
-    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps");
+    static final java.util.Set<String> HIDDEN_COUNTED = java.util.Set.of("sprint_deps", "deps", "deps_of");
 
     /** «Скрыто N» в метке скоупа: total — без скоупа, shown — под скоупом. */
     static void putHidden(Map<String, Object> marker, int total, int shown) {
@@ -983,7 +983,7 @@ public class AidaLoreResource extends LoreResourceBase {
     static final String MACHINE_ACL = "machine_acl";
     /** Проекты владельцев машин — по ролям {@code HAS_PROJECT_ROLE} (S7B-ACL-3). */
     static final String MACHINE_ACL_OWNER_ROLES_SQL =
-        "SELECT kc_sub, out('HAS_PROJECT_ROLE').slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
+        "SELECT kc_sub, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser WHERE kc_sub IN :subs";
     /** Агенты и их машины — для harness машины (S7B-ACL-3; те же поля, что agent_owners). */
     static final String MACHINE_ACL_AGENTS_SQL =
         "SELECT actor_id, client_id, machine_id, harness, out('USES_MACHINE').machine_id AS machines "
@@ -1045,6 +1045,17 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("UNKNOWN_SLICE", id))));
         }
+        // D-2026-MIG-PLAN-BOARD-INSTALLER-OPTION: доску плана при установке не перенесли — раздел снят, словами.
+        // Общий случай: срез читает тип вне модели 1.18, которого в базе из модели нет, — 410 с причиной, а не 502.
+        String notMigrated = ModelSchemaAdapter.sliceUnavailable(id);
+        if (notMigrated != null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
+                .entity(new LoreError("TYPE_NOT_MIGRATED", notMigrated))));
+        }
+        if (ModelSchemaAdapter.planSectionRemoved(id)) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.GONE)
+                .entity(new LoreError("SECTION_REMOVED", "срез " + id + " — старая доска плана: при установке её не перенесли (MIG_PLAN_BOARD=drop)"))));
+        }
         // AP-08: админские журналы — только admin/superadmin, отказ словами, а не «0» в выдаче.
         if (LoreSlices.adminOnlyDenied(id, role)) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
@@ -1055,6 +1066,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
 
         LoreSlices.Composed composed;
         final SlicePage page;
@@ -1341,6 +1353,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
         LoreSlices.Composed composed;
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
@@ -1422,6 +1435,7 @@ public class AidaLoreResource extends LoreResourceBase {
         uriInfo.getQueryParameters().forEach((k, v) -> {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
+        ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
         final List<String> axes;
         final String groupBy;
         final Map<String, String> filters;

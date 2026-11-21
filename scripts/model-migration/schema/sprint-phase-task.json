@@ -1,0 +1,1042 @@
+{
+  "_about": "SPRINT_LORE_MODEL_DOCS_TIDY/MIG-01. ПРЕДЛОЖЕНИЕ новой схемы первого объекта (спринт, фаза, задача) — владелицей не утверждено. Выведено из карты переноса и сухого прогона по снимку прода: в схему попали только поля, которые перенос реально дал. Запись в базу-приёмник по этой схеме начинается после её слова.",
+  "_source": "migration_src_2026_11_18",
+  "_assumed": [
+    "Имена типов остаются прежними (KnowSprint, KnowTask, KnowPhase): ответы срезов по решению владелицы не меняются, а новые имена типов потянули бы все срезы.",
+    "Версия остаётся отдельным типом с окончанием Hist и связью «имеет состояние»: так записано решение «тип версии выводится из типа записи». Ключи записи в версии не хранятся.",
+    "Удержанные значения (поля без решения) в новую схему не входят; при пробной записи они складываются в отдельный служебный тип отчёта, чтобы не потеряться.",
+    "Связи первого объекта в это предложение не входят — их карта ещё не составлена.",
+    "Служебные моменты версий (valid_from, valid_to, status_known_from) — DATETIME: перенос приводит их к моменту UTC, неразбираемое уходит в остаток MigLeftover (MDL-06, «даты переводи», 19.11.2026)."
+  ],
+  "types": {
+    "KnowSprint": {
+      "records": 543,
+      "version_of": null,
+      "fields": {
+        "sprint_id": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "sprint_id"
+          ],
+          "filled": 543,
+          "of": 543,
+          "name": "Код спринта"
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name"
+          ],
+          "filled": 543,
+          "of": 543,
+          "name": "Название"
+        },
+        "created_at": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "created_date",
+            "date_created"
+          ],
+          "filled": 369,
+          "of": 543,
+          "name": "Создан"
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 201,
+          "of": 543,
+          "name": "Момент правки на месте",
+          "service": true
+        },
+        "effort_days": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "effort_days"
+          ],
+          "filled": 47,
+          "of": 543,
+          "name": "Фактические трудозатраты спринта, дней"
+        },
+        "no_release_required": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "no_release_required"
+          ],
+          "filled": 4,
+          "of": 543,
+          "name": "Не требует релиза"
+        },
+        "goal": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "goal"
+          ],
+          "filled": 1,
+          "of": 543
+        },
+        "unplanned_intentional": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "unplanned_intentional"
+          ],
+          "filled": 1,
+          "of": 543,
+          "name": "Без вехи — так задумано"
+        }
+      },
+      "from_record_to_current_version": [
+        "priority",
+        "context_md",
+        "priority_note",
+        "outcome_md"
+      ],
+      "held": {
+        "pr_refs": 3
+      },
+      "rejects": {}
+    },
+    "KnowSprintHist": {
+      "records": 2157,
+      "version_of": "KnowSprint",
+      "fields": {
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 2157,
+          "of": 2157,
+          "name": "Хеш содержания версии",
+          "service": true
+        },
+        "state_uid": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 2157,
+          "of": 2157,
+          "name": "Ключ версии",
+          "service": true
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 2156,
+          "of": 2157,
+          "name": "Начало действия версии",
+          "service": true
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 2140,
+          "of": 2157,
+          "name": "Статус"
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 1614,
+          "of": 2157,
+          "name": "Конец действия версии",
+          "service": true
+        },
+        "planned_start_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "planned_start_date"
+          ],
+          "filled": 773,
+          "of": 2157,
+          "name": "Начало по плану"
+        },
+        "planned_end_date": {
+          "kind": "date",
+          "db_type": "DATE",
+          "from": [
+            "planned_end_date"
+          ],
+          "filled": 767,
+          "of": 2157,
+          "name": "Конец по плану"
+        },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 487,
+          "of": 2157,
+          "name": "Приоритет"
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 340,
+          "of": 2157,
+          "name": "Коммит-источник версии",
+          "service": true
+        },
+        "outcome_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "outcome_md"
+          ],
+          "filled": 285,
+          "of": 2157,
+          "name": "Итог"
+        },
+        "context_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "context_md"
+          ],
+          "filled": 218,
+          "of": 2157,
+          "name": "Контекст"
+        },
+        "status_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 192,
+          "of": 2157,
+          "name": "Статус"
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 94,
+          "of": 2157,
+          "name": "Кто изменил",
+          "service": true
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 94,
+          "of": 2157,
+          "name": "Вид автора правки",
+          "service": true
+        },
+        "status_known_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "status_known_from"
+          ],
+          "filled": 64,
+          "of": 2157,
+          "name": "В текущем статусе с",
+          "service": true
+        },
+        "src": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "src"
+          ],
+          "filled": 12,
+          "of": 2157,
+          "name": "Происхождение записи"
+        },
+        "note_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "note_md"
+          ],
+          "filled": 11,
+          "of": 2157,
+          "name": "Заметка (Markdown)"
+        },
+        "block_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "block_reason"
+          ],
+          "filled": 1,
+          "of": 2157,
+          "name": "Причина блокировки"
+        },
+        "version_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "version_kind"
+          ],
+          "filled": 1,
+          "of": 2157
+        },
+        "priority_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "KnowSprint.priority"
+          ],
+          "filled": 12,
+          "of": 2157,
+          "note": "приходит с записи в текущую версию"
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 2157,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 2157,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 2157,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 2157,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 2157,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "from_record_to_current_version": [],
+      "held": {
+        "pr_refs": 405
+      },
+      "rejects": {
+        "status_raw · статус вне справочника": 12
+      }
+    },
+    "KnowPhase": {
+      "records": 254,
+      "version_of": null,
+      "fields": {
+        "order_index": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "order_index"
+          ],
+          "filled": 254,
+          "of": 254,
+          "name": "Порядок в списке"
+        },
+        "phase_id": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "phase_id"
+          ],
+          "filled": 254,
+          "of": 254,
+          "name": "Метка фазы"
+        },
+        "phase_uid": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "phase_uid"
+          ],
+          "filled": 254,
+          "of": 254,
+          "name": "Код фазы"
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "name",
+            "title"
+          ],
+          "filled": 253,
+          "of": 254,
+          "name": "Название"
+        },
+        "src": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "src"
+          ],
+          "filled": 229,
+          "of": 254,
+          "name": "Происхождение записи"
+        }
+      },
+      "from_record_to_current_version": [],
+      "held": {},
+      "rejects": {}
+    },
+    "KnowPhaseHist": {
+      "records": 356,
+      "version_of": "KnowPhase",
+      "fields": {
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 356,
+          "of": 356,
+          "name": "Статус"
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 356,
+          "of": 356,
+          "name": "Начало действия версии",
+          "service": true
+        },
+        "state_uid": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 301,
+          "of": 356,
+          "name": "Ключ версии",
+          "service": true
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 99,
+          "of": 356,
+          "name": "Конец действия версии",
+          "service": true
+        },
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 55,
+          "of": 356,
+          "name": "Хеш содержания версии",
+          "service": true
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 55,
+          "of": 356,
+          "name": "Коммит-источник версии",
+          "service": true
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 19,
+          "of": 356,
+          "name": "Кто изменил",
+          "service": true
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 19,
+          "of": 356,
+          "name": "Вид автора правки",
+          "service": true
+        },
+        "status_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 10,
+          "of": 356,
+          "name": "Статус"
+        },
+        "note_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "note_md"
+          ],
+          "filled": 3,
+          "of": 356,
+          "name": "Заметка (Markdown)"
+        },
+        "status_known_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "status_known_from"
+          ],
+          "filled": 3,
+          "of": 356,
+          "name": "В текущем статусе с",
+          "service": true
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сессия правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Harness правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Сверка harness",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Машина правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 356,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "from_record_to_current_version": [],
+      "held": {},
+      "rejects": {
+        "status_raw · статус вне справочника": 1
+      }
+    },
+    "KnowTask": {
+      "records": 6687,
+      "version_of": null,
+      "fields": {
+        "task_uid": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "task_uid"
+          ],
+          "filled": 6687,
+          "of": 6687,
+          "name": "Полный код задачи"
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 6687,
+          "of": 6687,
+          "name": "Название"
+        },
+        "task_type": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "task_type"
+          ],
+          "filled": 6686,
+          "of": 6687,
+          "name": "Тип задачи"
+        },
+        "task_id": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "task_id"
+          ],
+          "filled": 6684,
+          "of": 6687,
+          "name": "Код задачи в спринте"
+        },
+        "order_index": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "order_index"
+          ],
+          "filled": 6671,
+          "of": 6687,
+          "name": "Порядок в списке"
+        },
+        "src": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "src"
+          ],
+          "filled": 6370,
+          "of": 6687,
+          "name": "Происхождение записи"
+        },
+        "work_class": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "work_class"
+          ],
+          "filled": 3437,
+          "of": 6687,
+          "name": "Класс работы"
+        },
+        "updated_at": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "updated_at"
+          ],
+          "filled": 3118,
+          "of": 6687,
+          "name": "Момент правки на месте",
+          "service": true
+        },
+        "bookkeeping": {
+          "kind": "bool",
+          "db_type": "BOOLEAN",
+          "from": [
+            "bookkeeping"
+          ],
+          "filled": 951,
+          "of": 6687,
+          "name": "Учётная запись о сделанной работе"
+        },
+        "actual_days": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "actual_days"
+          ],
+          "filled": 45,
+          "of": 6687,
+          "name": "Факт, чел.-дн"
+        },
+        "priority": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 1,
+          "of": 6687,
+          "name": "Приоритет"
+        },
+        "priority_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "priority"
+          ],
+          "filled": 1,
+          "of": 6687,
+          "name": "Приоритет"
+        },
+        "summary_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "summary_md"
+          ],
+          "filled": 1,
+          "of": 6687,
+          "name": "Краткое содержание"
+        }
+      },
+      "from_record_to_current_version": [
+        "effort_days",
+        "note_md"
+      ],
+      "held": {},
+      "rejects": {}
+    },
+    "KnowTaskHist": {
+      "records": 17217,
+      "version_of": "KnowTask",
+      "fields": {
+        "state_uid": {
+          "kind": "code",
+          "db_type": "STRING",
+          "from": [
+            "state_uid"
+          ],
+          "filled": 17217,
+          "of": 17217,
+          "name": "Ключ версии",
+          "service": true
+        },
+        "valid_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_from"
+          ],
+          "filled": 17217,
+          "of": 17217,
+          "name": "Начало действия версии",
+          "service": true
+        },
+        "status": {
+          "kind": "enum",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 17109,
+          "of": 17217,
+          "name": "Статус",
+          "notnull": true
+        },
+        "content_hash": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "content_hash"
+          ],
+          "filled": 16560,
+          "of": 17217,
+          "name": "Хеш содержания версии",
+          "service": true
+        },
+        "note_md": {
+          "kind": "md",
+          "db_type": "STRING",
+          "from": [
+            "note_md"
+          ],
+          "filled": 14984,
+          "of": 17217,
+          "name": "Заметка"
+        },
+        "effort_days": {
+          "kind": "number",
+          "db_type": "DOUBLE",
+          "from": [
+            "effort_days"
+          ],
+          "filled": 10631,
+          "of": 17217,
+          "name": "Оценка, чел.-дн"
+        },
+        "valid_to": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "valid_to"
+          ],
+          "filled": 10554,
+          "of": 17217,
+          "name": "Конец действия версии",
+          "service": true
+        },
+        "changed_by": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by"
+          ],
+          "filled": 3630,
+          "of": 17217,
+          "name": "Кто изменил",
+          "service": true
+        },
+        "changed_by_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_kind"
+          ],
+          "filled": 3630,
+          "of": 17217,
+          "name": "Вид автора правки",
+          "service": true
+        },
+        "status_known_from": {
+          "kind": "datetime",
+          "db_type": "DATETIME",
+          "from": [
+            "status_known_from"
+          ],
+          "filled": 2957,
+          "of": 17217,
+          "name": "В текущем статусе с",
+          "service": true
+        },
+        "evidence_ref": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "evidence_ref"
+          ],
+          "filled": 782,
+          "of": 17217,
+          "name": "Ссылка на доказательство"
+        },
+        "evidence_type": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "evidence_type"
+          ],
+          "filled": 767,
+          "of": 17217,
+          "name": "Вид доказательства"
+        },
+        "version_kind": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "version_kind"
+          ],
+          "filled": 554,
+          "of": 17217
+        },
+        "source_commit": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "source_commit"
+          ],
+          "filled": 470,
+          "of": 17217,
+          "name": "Коммит-источник версии",
+          "service": true
+        },
+        "status_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_reason"
+          ],
+          "filled": 373,
+          "of": 17217,
+          "name": "Причина смены статуса"
+        },
+        "stage": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "stage"
+          ],
+          "filled": 346,
+          "of": 17217,
+          "name": "Стадия внутри статуса"
+        },
+        "src": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "src"
+          ],
+          "filled": 329,
+          "of": 17217
+        },
+        "waiting_for": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "waiting_for"
+          ],
+          "filled": 206,
+          "of": 17217,
+          "name": "Кого или чего ждём"
+        },
+        "changed_by_harness_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_harness_note"
+          ],
+          "filled": 72,
+          "of": 17217,
+          "name": "Сверка harness",
+          "service": true
+        },
+        "changed_by_machine": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_machine"
+          ],
+          "filled": 59,
+          "of": 17217,
+          "name": "Машина правки",
+          "service": true
+        },
+        "changed_by_session": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_session"
+          ],
+          "filled": 52,
+          "of": 17217,
+          "name": "Сессия правки",
+          "service": true
+        },
+        "status_note": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "status_raw"
+          ],
+          "filled": 21,
+          "of": 17217,
+          "name": "Статус"
+        },
+        "valid_from_source": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "valid_from_source"
+          ],
+          "filled": 14,
+          "of": 17217
+        },
+        "changed_by_harness": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "changed_by_harness"
+          ],
+          "filled": 6,
+          "of": 17217,
+          "name": "Harness правки",
+          "service": true
+        },
+        "title": {
+          "kind": "text",
+          "db_type": "STRING",
+          "from": [
+            "title"
+          ],
+          "filled": 1,
+          "of": 17217
+        },
+        "change_reason": {
+          "kind": "text",
+          "db_type": "STRING",
+          "name": "Причина правки",
+          "from": [],
+          "filled": 0,
+          "of": 17217,
+          "service": true,
+          "note": "объявлено общим перечнем служебных полей"
+        }
+      },
+      "from_record_to_current_version": [],
+      "held": {},
+      "rejects": {
+        "status_raw · статус вне справочника": 4
+      }
+    }
+  }
+}

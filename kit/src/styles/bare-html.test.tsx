@@ -427,6 +427,9 @@ function Samples() {
         <h2 className="bare__h2">MD / HTML</h2>
         <TipTapField value={MD} onChange={noop} ariaLabel="Правка MD" minHeight={140} />
         <MartProse text={MD} />
+        {/* SUPERTAGS-SPIKE: токен тега [[ЗАПИСЬ#тег]] — атомом в правке и чипом тега в чтении. */}
+        <TipTapField value="Разбор: [[ADR-LORE-050#security-review]]" onChange={noop} ariaLabel="Правка MD с тегом" minHeight={60} />
+        <MartProse text="Разбор: [[ADR-LORE-050#security-review]]" />
         <SandboxedHtmlFrame html="<p>HTML — только в песочнице</p>" title="Песочница" />
       </section>
       {/* S5-08: спор при сохранении — дифф только спорных блоков, выбор «моё / их». */}

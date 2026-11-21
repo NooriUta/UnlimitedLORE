@@ -34,7 +34,9 @@ const ruleOf = (sel: string) => {
 const r = (id: string, kind: string, title: string): KitRecord => ({ id, kind, title, status: 'planned', fields: {} });
 const host = r('H-1', 'host', 'Запись');
 const records = [host, r('K-1', 'kid', 'Дочка')];
-const edges = [{ from: 'H-1', to: 'K-1', type: 'HAS_PART' }];
+// У каждой связи есть ребро: пустые вкладки связей уходят под «Ещё» (K5-EMPTY-LINK-TABS), а эти
+// тесты проверяют потолок и порядок ряда — им нужны непустые разделы.
+const edges = ['HAS_PART', 'HAS_NOTE', 'HAS_FILE', 'X0', 'X1', 'X2', 'X3'].map(type => ({ from: 'H-1', to: 'K-1', type }));
 
 const config: KitConfig = {
   modules: [], menu: { groups: [] },
@@ -154,7 +156,7 @@ describe('B13 · 2) «под Ещё» решает ряд, а порядок —
     fireEvent.click(screen.getByRole('tab', { name: /Ещё/ }));
     const menu = screen.getByRole('menu', { name: 'Ещё' });
     const item = within(menu).getByRole('menuitem', { name: /Вложения/ });
-    expect(item.querySelector('.sk-tab__count')?.textContent).toBe('0');
+    expect(item.querySelector('.sk-tab__count')?.textContent).toBe('1');
   });
 
   it('открытая вкладка остаётся в ряду, даже будучи за потолком: прятать читаемое нельзя', () => {

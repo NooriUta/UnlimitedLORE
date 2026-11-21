@@ -8,6 +8,7 @@
 // query: там бывают state/code), иначе «таймаут 45 с» не объясняет, где встало
 // (прогон 7846: шесть одинаковых таймаутов без следа).
 import type { Browser, Page } from '@playwright/test';
+import { sameLogin, sessionLogin } from '../../src/standSmoke/loginIdentity.ts';
 
 export interface LoginResult { login: string; ok: boolean; reason: string | null }
 
@@ -16,7 +17,10 @@ const where = (page: Page): string => {
 };
 
 export async function standLogin(browser: Browser, baseURL: string, login: string, password: string, file: string, timeoutMs = 45_000): Promise<LoginResult> {
-  const ctx = await browser.newContext({ baseURL });
+  // AP-02 (20.11.2026): только чистый контекст. Внутри раннера browser.newContext() подставляет
+  // use.storageState (stand.json = test-sa): KC отдавал код без формы, и в файл test-admin/test-viewer
+  // ложилась сессия test-sa — whoami «superadmin» (прогон 9441). Тот же урок, что broker.stand.ts (7861).
+  const ctx = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
   let step = 'открыть стенд';
   try {
@@ -52,6 +56,11 @@ export async function standLogin(browser: Browser, baseURL: string, login: strin
       }
     }
     if (!(onStand() && await signedIn())) throw new Error(`за ${timeoutMs / 1000} с сессия oidc.user:* на стенде не появилась`);
+    // Чья сессия: вход сохраняется только под той учёткой, что входила — иначе громкий отказ.
+    step = 'сверить учётку сессии';
+    const raw = await page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.includes('oidc.user:')); return k ? localStorage.getItem(k) : null; });
+    const who = sessionLogin(raw);
+    if (!sameLogin(login, who)) return { login, ok: false, reason: `вошла не та учётка: сессия ${who ?? 'без имени'} вместо ${login} — вход не сохранён` };
     await ctx.storageState({ path: file });
     return { login, ok: true, reason: null };
   } catch (e) {

@@ -216,8 +216,10 @@ class LorePassportSurfaceTest {
     @Test
     void task() {
         assertEquals(List.of("content", "ADR[adrs+qgRecs+insights]", "Реализация[prs+useCases]", "questions",
-            "Ссылки[refsOut+refsIn]", "publications"), tabs("task"),
-            "задача: Заметка · ADR (с QG и инсайтами) · Реализация (PR + сценарии, 42а) · Вопросы · Ссылки · Публикации");
+            "Ссылки[refsOut+refsIn]", "publications",
+            // MDL-13: одна связь «зависит от» — вкладка «Зависимости» после решённых разделов
+            "Зависимости[dependsOn+blocks]"), tabs("task"),
+            "задача: Заметка · ADR (с QG и инсайтами) · Реализация (PR + сценарии, 42а) · Вопросы · Ссылки · Публикации · Зависимости");
         assertEquals(List.of("gates"), keysIn(sections("task"), "content"),
             "блокирующие вопросы — 42 ребра на 4896 задач — в конце заметки");
     }
@@ -251,7 +253,7 @@ class LorePassportSurfaceTest {
 
     @Test
     void milestone() {
-        assertEquals(List.of("sprints", "features", "content"), tabs("milestone"),
+        assertEquals(List.of("sprints", "features", "content", "Зависимости[dependsOn+blocks]"), tabs("milestone"),
             "веха — контейнер: спринты первыми (45а); решения вехи — поле тела, читаются в конце текста");
     }
 
@@ -262,7 +264,7 @@ class LorePassportSurfaceTest {
 
     @Test
     void component() {
-        assertEquals(List.of("specs", "adrs", "tech", "children", "decisions", "questions", "features", "docs", "qgs",
+        assertEquals(List.of("specs", "adrs", "tech", "repositories", "children", "decisions", "questions", "features", "docs", "qgs",
                 "tasks", "sprints", "Ссылки[refsOut+refsIn]"), tabs("component"),
             "компонент: Спеки · ADR · Технологии · Подкомпоненты (46а/52а) · решения, вопросы, сценарии, знания, гейты "
                 + "(11.11, как v1) · Задачи · Спринты (срезы с пагинацией, S4-29)");
@@ -270,16 +272,16 @@ class LorePassportSurfaceTest {
 
     @Test
     void project() {
-        assertEquals(List.of("sprints", "components", "adrs", "releases", "Люди и агенты[people+agents]",
+        assertEquals(List.of("sprints", "components", "repositories", "adrs", "releases", "Люди и агенты[people+agents]",
                 // Слово владелицы 11.11: «у проекта всё показывать, что связано напрямую» — после 53а.
                 "specs", "decisions", "questions", "features", "docs", "runbooks", "actors", "boundAgents",
-                "files", "prs"), tabs("project"),
+                "files", "prs", "organizations"), tabs("project"),
             "проект (53а): Спринты · Компоненты · ADR · Релизы · Люди и агенты; затем прямые связи (11.11)");
     }
 
     @Test
     void product() {
-        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones"), tabs("product"),
+        assertEquals(List.of("components", "features", "pains", "gains", "jobs", "actors", "children", "serves", "servedBy", "milestones", "organizations"), tabs("product"),
             "продукт (S4-PRODUCTS-NODE): Компоненты · Фичи и сценарии · Боли · Выгоды · Работы · Роли · Подпродукты · Обслуживает · Обслуживается · Вехи");
     }
 

@@ -82,7 +82,7 @@ public class LoreMeResource extends LoreResourceBase {
         Set<String> roles = new HashSet<>();
         if (headerRole != null) roles.add(headerRole);
         for (Map<String, Object> r : ingestService.queryPublic(
-                "SELECT role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub", Map.of("sub", me))) {
+                "SELECT role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :sub", Map.of("sub", me))) {
             if (r.get("role") != null) roles.add(String.valueOf(r.get("role")));
         }
         return roles;
@@ -570,7 +570,7 @@ public class LoreMeResource extends LoreResourceBase {
         if (me == null) return noIdentity();
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :me ORDER BY slug",
+                "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @out.kc_sub = :me ORDER BY slug",
                 Map.of("me", me));
             List<Map<String, Object>> projects = new ArrayList<>();
             for (Map<String, Object> r : rows) {
@@ -644,7 +644,7 @@ public class LoreMeResource extends LoreResourceBase {
         if (err != null) return badParams(err);
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT ref_type, ref_id, field, body_md, base_version, base_record_version, saved_at FROM KnowUserDraft "
+                "SELECT ref_type, ref_id, field, body_md, base_record_version, saved_at FROM KnowUserDraft "
                 + "WHERE owner_sub = :me AND ref_type = :t AND ref_id = :i ORDER BY saved_at DESC",
                 Map.of("me", me, "t", refType, "i", refId));
             Map<String, Object> body = new LinkedHashMap<>();
@@ -682,7 +682,7 @@ public class LoreMeResource extends LoreResourceBase {
                 "SELECT @rid FROM KnowUserDraft WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f",
                 Map.of("me", me, "t", req.ref_type(), "i", req.ref_id(), "f", req.field())).isEmpty();
             exec("UPDATE KnowUserDraft SET owner_sub=:me, ref_type=:t, ref_id=:i, field=:f, body_md=:b, "
-                + "base_version=null, base_record_version=:v, saved_at=:at UPSERT WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f", p);
+                + "base_record_version=:v, saved_at=:at UPSERT WHERE owner_sub=:me AND ref_type=:t AND ref_id=:i AND field=:f", p);
             return noStore(Response.ok(Map.of("ok", true, "saved_at", p.get("at"),
                 "outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED)));
         } catch (Exception e) {

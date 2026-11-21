@@ -25,8 +25,10 @@
    в узкой колонке он рвался на две строки и читался как две подписи. */
 .adm-missing { color: var(--wrn); font-size: var(--fs-xs); white-space: nowrap; }
 .adm-err { display: block; color: var(--dng); font-size: var(--fs-xs); }
+/* Высота поля и выпадающего списка — общая цель касания (--hit kit на сенсоре): раньше .adm-select перебивал
+   её своим min-height 24, и в фильтрах «Журнала» поля ввода были 44, а списки 24 (телефон 390, 1.18). */
 .adm-select {
-  min-height: max(var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
+  min-height: max(var(--hit, 0px), var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
   background: var(--bg1); color: var(--t1); font: 600 var(--fs-xs) var(--mono);
 }
 .adm-select[data-none] { color: var(--wrn); border-style: dashed; }
@@ -56,7 +58,7 @@
 .adm-field__l { color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; }
 .adm-field--btns { flex-direction: row; gap: 6px; align-items: center; }
 .adm-input {
-  min-height: max(var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
+  min-height: max(var(--hit, 0px), var(--tap, 24px), 24px); padding: 0 6px; border: 1px solid var(--bd); border-radius: 6px;
   background: var(--bg2); color: var(--t1); font: 600 var(--fs-xs) var(--font); min-width: 0; width: 14ch;
 }
 .adm-btn {
@@ -98,6 +100,8 @@
 .adm-flag { font: 700 var(--fs-xs) var(--mono); }
 .adm-flag[data-on='true'] { color: var(--suc); }
 .adm-flag[data-on='false'] { color: var(--t3); }
+/* WK-01: вид продукта — набор пилюль (показ) и переключателей (правка); переносится на узком экране. */
+.adm-kinds { display: inline-flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .adm-table tr[data-overridden] th, .adm-table tr[data-overridden] td { background: var(--bg2); }
 .adm-plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
 /* Роли человека (S7B-03/05/09): карточка, группы, панель, опасное действие. Только токены. */
@@ -183,3 +187,99 @@
 }
 .adm-tidy-applybar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
 .adm-btn[data-tone='acc'] { border-color: var(--acc); color: var(--acc); }
+
+/* Обёртка раздела (подписи клеток для карточек) — не влияет на раскладку. */
+.adm-root { display: contents; }
+
+/* Телефон (админка 1.18, снимки с ryzenai 19.11: на 390 таблицы шире экрана, колонки обрезаны) — общий порог kit
+   NARROW_QUERY. Любая .adm-table — карточками: строка — карточка, клетка — блок с подписью колонки (data-label,
+   tableCards.ts). Фильтры — по полю в строку, поля одной высоты и во всю ширину: подсказки не режутся. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .adm-tablewrap { overflow-x: visible; }
+  .adm-table, .adm-table tbody, .adm-table tr, .adm-table td, .adm-table tbody th { display: block; width: 100%; box-sizing: border-box; }
+  .adm-table thead { display: none; }
+  .adm-table tbody tr { border: 1px solid var(--bd); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; background: var(--bg1); }
+  .adm-table td, .adm-table tbody th { border: 0; padding: 2px 0; overflow-wrap: anywhere; min-width: 0; }
+  .adm-table td[data-label]::before, .adm-table tbody th[data-label]::before {
+    content: attr(data-label); display: inline-block; margin-right: 6px; color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase;
+  }
+  .adm-table .adm-missing { white-space: normal; }
+  .adm-table .adm-select, .adm-table .adm-input { max-width: 100%; }
+  .adm-filters { flex-direction: column; align-items: stretch; }
+  .adm-filters .adm-field { width: 100%; }
+  .adm-filters .adm-field--btns { flex-wrap: wrap; }
+  .adm-filters .adm-input, .adm-filters .adm-select {
+    width: 100%; box-sizing: border-box;
+  }
+}
+
+/* MC-06 «Модель»: полоса версии и действий, список типов слева, дифф справа (прототип mc-06-model-screen). */
+.adm-model-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--bd); border-radius: 6px; background: var(--bg1); }
+.adm-model-bar__grow { flex: 1; }
+.adm-model-body { display: flex; gap: 12px; min-width: 0; }
+.adm-model-main { flex: 1; min-width: 0; }
+.adm-model-diff { flex: 0 0 min(360px, 100%); display: flex; flex-direction: column; gap: 6px; min-width: 0; border-left: 1px solid var(--bd); padding-left: 12px; }
+.adm-model-types { display: flex; gap: 12px; min-width: 0; }
+.adm-model-side { flex: 0 0 200px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adm-model-side .adm-field__l { margin: 8px 4px 2px; }
+.adm-model-side .adm-input { width: 100%; box-sizing: border-box; }
+.adm-model-side__a { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border: 0; border-radius: 6px; background: none; color: var(--t2); font: var(--fs-sm) var(--font); text-align: left; cursor: pointer; min-height: max(var(--tap, 24px), 24px); }
+.adm-model-side__a[aria-pressed='true'] { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--t1); }
+.adm-model-typebody { flex: 1; min-width: 0; }
+.adm-model-h1 { margin: 2px 0 6px; font: 800 var(--fs-xl)/1.25 var(--display, var(--font)); color: var(--t1); }
+.adm-model-order { white-space: nowrap; }
+.adm-model-order .adm-btn + .adm-btn { margin-left: 4px; }
+.adm-table tr[data-changed] th, .adm-table tr[data-changed] td { background: color-mix(in srgb, var(--wrn) 8%, transparent); }
+.adm-table tr[data-changed] th:first-child { box-shadow: inset 2px 0 0 var(--wrn); }
+.adm-model-h2 { margin: 12px 0 6px; font: 800 var(--fs-md)/1.3 var(--display, var(--font)); color: var(--t1); }
+.adm-model-sect { margin-top: 8px; min-width: 0; }
+.adm-model-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; align-items: end; }
+.adm-model-grid .adm-input, .adm-model-grid .adm-select { width: 100%; box-sizing: border-box; }
+.adm-model-icon { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.adm-check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--t2); min-height: max(var(--tap, 24px), 24px); }
+.adm-model-rolist { display: grid; gap: 2px; margin-top: 6px; }
+.adm-model-ro { display: grid; grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 2px 0; border-bottom: 1px solid var(--bd); }
+.adm-model-ro__v { color: var(--t2); overflow-wrap: anywhere; }
+.adm-model-fields { min-width: 0; }
+/* Строка поля в две линии: ключ · подпись · группа · «Изменить…»; под ними — вид и свойство схемы (только чтение). */
+.adm-model-field { display: grid; grid-template-columns: minmax(70px, 110px) minmax(120px, 1fr) 90px auto; gap: 2px 6px; align-items: center; min-width: 0; }
+.adm-model-field__key { grid-column: 1; grid-row: 1; }
+.adm-model-field__label { grid-column: 2; grid-row: 1; }
+.adm-model-field__group { grid-column: 3; grid-row: 1; }
+.adm-model-field__edit { grid-column: 4; grid-row: 1; }
+.adm-model-field__kind { grid-column: 1; grid-row: 2; font-size: var(--fs-xs); }
+.adm-model-field__prop { grid-column: 2 / -1; grid-row: 2; }
+.adm-model-field .adm-input, .adm-model-field .adm-select { width: 100%; box-sizing: border-box; min-width: 0; }
+.adm-model-field__key, .adm-model-field__prop { overflow-wrap: anywhere; }
+.adm-model-fe .adm-field { min-width: 0; }
+.adm-model-fe .adm-input, .adm-model-fe .adm-select { width: 100%; box-sizing: border-box; }
+.adm-model-fe .adm-model-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+.adm-model-fe .adm-model-rolist { display: grid; gap: 2px; }
+@media (max-width: 900px) {
+  .adm-model-body, .adm-model-types { flex-direction: column; }
+  .adm-model-diff { flex-basis: auto; border-left: 0; padding-left: 0; border-top: 1px solid var(--bd); padding-top: 8px; }
+  .adm-model-side { flex-basis: auto; }
+  .adm-model-side__list { display: flex; flex-wrap: wrap; gap: 2px 8px; max-height: 40vh; overflow-y: auto; }
+}
+/* Телефон (владелица 19.11: «HTML админки не адаптирован под телефон») — общий порог kit NARROW_QUERY:
+   полоса действий переносится, строка поля — карточкой (подпись во всю ширину), таблицы — карточками. */
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .adm-model-bar { gap: 4px; padding: 4px 6px; }
+  .adm-model-bar__grow { display: none; }
+  .adm-model-bar__ver { flex-basis: 100%; overflow-wrap: anywhere; }
+  .adm-model-h1 { overflow-wrap: anywhere; }
+  .adm-model-field { grid-template-columns: minmax(0, 1fr) auto; }
+  .adm-model-field__key { grid-column: 1; grid-row: 1; }
+  .adm-model-field__edit { grid-column: 2; grid-row: 1; }
+  .adm-model-field__label { grid-column: 1 / -1; grid-row: 2; }
+  .adm-model-field__kind { grid-column: 1; grid-row: 3; }
+  .adm-model-field__group { grid-column: 2; grid-row: 3; }
+  .adm-model-field__prop { grid-column: 1 / -1; grid-row: 4; }
+  .adm-model-grid, .adm-model-fe .adm-model-grid { grid-template-columns: minmax(0, 1fr); }
+  .adm-model-ro { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .adm-model-cards, .adm-model-cards thead, .adm-model-cards tbody, .adm-model-cards tr, .adm-model-cards td, .adm-model-cards th { display: block; width: 100%; box-sizing: border-box; }
+  .adm-model-cards thead { display: none; }
+  .adm-model-cards tr { border: 1px solid var(--bd); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; }
+  .adm-model-cards td { border: 0; padding: 2px 0; }
+  .adm-model-order { white-space: normal; }
+}

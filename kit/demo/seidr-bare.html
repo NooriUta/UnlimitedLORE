@@ -1334,10 +1334,10 @@
 <g>
 <rect data-bar="" x="170" width="26" y="10" height="166" fill="var(--acc)">
 </rect>
-<text x="184" y="194" text-anchor="middle" class="sk-chart__tick">Хабр</text>
+<text data-cat="" x="184" y="194" text-anchor="middle" class="sk-chart__tick">Хабр</text>
 </g>
 <g>
-<text x="480" y="194" text-anchor="middle" class="sk-chart__tick">LinkedIn</text>
+<text data-cat="" x="480" y="194" text-anchor="middle" class="sk-chart__tick">LinkedIn</text>
 </g>
 </svg>
 </div>
@@ -2091,6 +2091,63 @@
 </div>
 </div>
 </div>
+<div class="sk-md">
+<div class="sk-md__toolbar" role="toolbar" aria-label="Форматирование">
+<button type="button" class="sk-md__btn" title="отменить (Ctrl+Z)" aria-label="отменить (Ctrl+Z)">↺</button>
+<button type="button" class="sk-md__btn" title="повторить (Ctrl+Y)" aria-label="повторить (Ctrl+Y)">↻</button>
+<span class="sk-md__sep" aria-hidden="true">
+</span>
+<button type="button" class="sk-md__btn" title="жирный (Ctrl+B)" aria-label="жирный (Ctrl+B)" aria-pressed="false">
+<b>B</b>
+</button>
+<button type="button" class="sk-md__btn" title="курсив (Ctrl+I)" aria-label="курсив (Ctrl+I)" aria-pressed="false">
+<i>i</i>
+</button>
+<button type="button" class="sk-md__btn" title="зачёркнутый" aria-label="зачёркнутый" aria-pressed="false">
+<s>S</s>
+</button>
+<button type="button" class="sk-md__btn" title="код" aria-label="код" aria-pressed="false">&lt;/&gt;</button>
+<button type="button" class="sk-md__btn" title="ссылка" aria-label="ссылка" aria-pressed="false">🔗</button>
+<span class="sk-md__sep" aria-hidden="true">
+</span>
+<button type="button" class="sk-md__btn" title="заголовок 1 уровня" aria-label="заголовок 1 уровня" aria-pressed="false">H1</button>
+<button type="button" class="sk-md__btn" title="заголовок 2 уровня" aria-label="заголовок 2 уровня" aria-pressed="false">H2</button>
+<button type="button" class="sk-md__btn" title="заголовок 3 уровня" aria-label="заголовок 3 уровня" aria-pressed="false">H3</button>
+<span class="sk-md__sep" aria-hidden="true">
+</span>
+<button type="button" class="sk-md__btn" title="маркированный список" aria-label="маркированный список" aria-pressed="false">•</button>
+<button type="button" class="sk-md__btn" title="нумерованный список" aria-label="нумерованный список" aria-pressed="false">1.</button>
+<button type="button" class="sk-md__btn" title="чек-лист" aria-label="чек-лист" aria-pressed="false">☑</button>
+<button type="button" class="sk-md__btn" title="цитата" aria-label="цитата" aria-pressed="false">❝</button>
+<button type="button" class="sk-md__btn" title="разделитель" aria-label="разделитель">—</button>
+<button type="button" class="sk-md__btn" title="формула LaTeX (KaTeX)" aria-label="формула LaTeX (KaTeX)">∑</button>
+<span class="sk-md__sep" aria-hidden="true">
+</span>
+<button type="button" class="sk-md__btn" title="вставить таблицу" aria-label="вставить таблицу">⊞</button>
+<span class="sk-md__sep" aria-hidden="true">
+</span>
+<button type="button" class="sk-md__btn" title="режим markdown-источника" aria-label="режим markdown-источника" aria-pressed="false">&lt;/&gt; md</button>
+</div>
+<div class="sk-md__box">
+<div>
+<div contenteditable="true" role="textbox" aria-label="Правка MD с тегом" aria-multiline="true" translate="no" class="tiptap ProseMirror sk-md__doc" style="min-height: 60px; max-height: 260px;" tabindex="0">
+<p>Разбор: <span class="sk-md__raw sk-md__raw--wikilink sk-md__tagchip" data-md-raw="wikilink" data-raw="[[ADR-LORE-050#security-review]]" data-tag="security-review" contenteditable="false" data-tag-state="view" title="ADR-LORE-050 · #security-review" data-ref-state="unknown">
+<span class="sk-md__tagchip-name">#security-review</span>
+<span class="sk-md__tagchip-vals">
+</span>
+</span>
+<br class="ProseMirror-trailingBreak">
+</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sk-prose">
+<div>
+<p>Разбор: <span class="sk-wref sk-wref--tag" data-ref="ADR-LORE-050" data-tag="security-review" title="ADR-LORE-050 · #security-review">#security-review</span>
+</p>
+</div>
+</div>
 <iframe class="sk-frame" srcdoc="<!DOCTYPE html>
 <html>
 <head>
@@ -2106,6 +2163,7 @@
   function post(){window.parent.postMessage({_skResize:document.documentElement.scrollHeight},'*');}
   post();
   new MutationObserver(post).observe(document.body,{childList:true,subtree:true,attributes:true});
+  if(window.ResizeObserver)new ResizeObserver(post).observe(document.body);
   window.addEventListener('load',post);
 })();
 </script>

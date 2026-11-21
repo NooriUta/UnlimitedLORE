@@ -39,7 +39,8 @@ describe('меню: группа «Продукт»', () => {
     const ids = system.items.map(i => i.id);
     expect(ids).not.toContain('feature');
     expect(ids).not.toContain('product');
-    expect(ids).toEqual(['project', 'component', 'tech']);
+    // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — тоже «Устройство».
+    expect(ids).toEqual(['project', 'component', 'tech', 'repository', 'organization']);
     expect(groupOf('feature')).toBe('product');
   });
 
@@ -91,6 +92,15 @@ describe('мапперы строк продуктового слоя', () => {
     expect(r).toMatchObject({ id: 'LORE', kind: 'product', title: 'Лор', status: '' });
     expect(r.fields).toMatchObject({ parent: ['AIDA'], children: ['LORE-M'], components: ['HND', 'SEIDRKIT'], project: ['AIDA/UnlimitedLORE'] });
     expect(productRecord({ code: 'X' }).title, 'без подписи — код').toBe('X');
+  });
+
+  it('WK-01: вид продукта в списке — набор (строка прежней записи — набор из одного), колонка «Вид»', () => {
+    expect(productRecord({ code: 'HARPA', kind: ['tech', 'service'] }).fields.product_kind).toEqual(['tech', 'service']);
+    expect(productRecord({ code: 'FREYJA', kind: 'service' }).fields.product_kind).toEqual(['service']);
+    expect(productRecord({ code: 'X' }).fields.product_kind).toEqual([]);
+    const cfg = LIST_SCREENS.products.config('ru');
+    expect(cfg.list?.columns).toContain('product_kind');
+    expect(cfg.kinds.product.fields?.find(f => f.key === 'product_kind')?.title).toBe('Вид продукта');
   });
 
   it('боль, выгода, работа: акторы и «заявлено / снимает»', () => {

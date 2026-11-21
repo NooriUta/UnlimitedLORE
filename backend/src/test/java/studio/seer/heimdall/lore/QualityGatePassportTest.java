@@ -54,6 +54,43 @@ class QualityGatePassportTest {
             "компонент — связью, списком: " + sql);
     }
 
+    /**
+     * 20.11.2026 («доделать функции, чтобы все поля работали»): метрики гейта — частью паспорта со всеми
+     * полями спеки LORE_SCHEMA_V12_NEW_TYPES. Раньше паспорт v2 метрик не показывал вовсе, а срез qg_metrics
+     * отдавал три поля из пяти.
+     */
+    @Test
+    void metricsArePartWithAllSpecFields() {
+        LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(T);
+        LoreRecordRegistry.Part p = d.parts().stream().filter(x -> x.key().equals("metrics")).findFirst().orElse(null);
+        assertNotNull(p, "у паспорта гейта нет части «Метрики»");
+        assertEquals("qg_metrics", p.slice());
+        assertEquals("qg_metric", p.type());
+        assertEquals("qg_id", LoreRecordResource.paramOf(p.slice()));
+        assertEquals(List.of("status", "code", "title", "threshold", "unit", "direction", "current_value"), p.columns());
+        LoreRecordRegistry.TypeDef child = LoreRecordRegistry.childDef("qg_metric");
+        assertNotNull(child, "колонки части описаны типом ребёнка");
+        for (String c : p.columns()) assertNotNull(child.field(c), "колонка " + c + " описана в модели");
+        assertTrue(d.relations().stream().anyMatch(r -> r.key().equals("metrics") && "part".equals(r.place())));
+
+        Map<String, Object> row = new java.util.HashMap<>(Map.of("metric_id", "QG-1:P-1:0", "name", "Доля", "threshold", "≥ 98%",
+            "unit", "%", "direction", "gte", "current_value", 97.5, "status", "fail"));
+        Map<String, Object> item = LoreRecordValues.partItem("qg_metric", row);
+        assertEquals("QG-1:P-1:0", item.get("id"));
+        assertEquals("Доля", item.get("title"));
+        assertEquals("fail", item.get("status"));
+        @SuppressWarnings("unchecked") Map<String, Object> v = (Map<String, Object>) item.get("values");
+        assertEquals(Map.of("status", "fail", "code", "P-1", "title", "Доля", "threshold", "≥ 98%", "unit", "%",
+            "direction", "gte", "current_value", 97.5), v);
+
+        // нет измерения — значение null (ключ есть), итог unknown; не ноль
+        row.put("current_value", null);
+        row.put("status", "unknown");
+        @SuppressWarnings("unchecked") Map<String, Object> v2 = (Map<String, Object>) LoreRecordValues.partItem("qg_metric", row).get("values");
+        assertTrue(v2.containsKey("current_value"));
+        assertNull(v2.get("current_value"));
+    }
+
     @Test
     void graphKnowsTheVertexAndKey() {
         LoreModelTypes.Graph g = LoreModelTypes.GRAPH.get(T);
@@ -74,6 +111,37 @@ class QualityGatePassportTest {
             assertEquals("ref", fields.get(key).get("kind"), key + " — связью, не строкой");
         assertEquals("BELONGS_TO_PROJECT", ((Map<String, Object>) fields.get("projects").get("ref")).get("rel"));
         assertEquals("BELONGS_TO", ((Map<String, Object>) fields.get("components").get("ref")).get("rel"));
+    }
+
+    /**
+     * SPRINT_QG_REBUILD/QG-01, решение владелицы 19.11.2026 «2а»: признак scope = global | project.
+     * Его пишет путь записи гейта — значит, он объявлен в модели (правило двух слоёв) и доходит до
+     * паспорта и списка.
+     */
+    @Test
+    void modelAndSlicesCarryScope() {
+        Map<String, Map<String, Object>> fields = fieldsOf(T);
+        assertNotNull(fields.get("scope"), "признака общий/проектный нет в модели гейта");
+        assertEquals("enum", fields.get("scope").get("kind"));
+        for (String slice : List.of("quality_gates", "quality_gate_by_id"))
+            assertTrue(LoreSlices.get(slice).baseSql().contains(" scope"), slice + " не отдаёт scope");
+    }
+
+    /**
+     * Повод решения: проектный скоуп прятал общий гейт от участника другого проекта. Под скоупом
+     * гейт виден, если он общий ИЛИ хотя бы один его проект разрешён.
+     */
+    @Test
+    void globalGateIsVisibleUnderAnyProjectScope() {
+        for (String slice : List.of("quality_gates", "quality_gate_by_id")) {
+            assertTrue(LoreSlices.PROJECT_SCOPED.containsKey(slice), slice + " не под проектным скоупом");
+            assertFalse(LoreSlices.SCOPE_PENDING.containsKey(slice), slice + " всё ещё в списке «скоуп не решён»");
+            java.util.Map<String, String> given = new java.util.HashMap<>();
+            for (String r : LoreSlices.get(slice).required()) given.put(r, "x");
+            String sql = LoreSlices.compose(slice, given, java.util.Set.of("org/a")).sql();
+            assertTrue(sql.contains("scope = 'global'"), "общий гейт отрезан скоупом: " + sql);
+            assertTrue(sql.contains("out('BELONGS_TO_PROJECT').slug CONTAINS :__scope0"), sql);
+        }
     }
 
     /** Гейт — в общем меню, в группе «Работа», после релизов. */

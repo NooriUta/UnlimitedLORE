@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "93578c595b072417",
+  "version" : "e36f334033b8dd9b",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -586,7 +586,7 @@
         "history" : "scd2",
         "created" : [ {
           "source" : "created_date",
-          "precision" : "datetime",
+          "precision" : "date",
           "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
         } ],
         "changed" : [ {
@@ -598,7 +598,7 @@
           "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
         }, {
           "source" : "created_date",
-          "precision" : "datetime"
+          "precision" : "date"
         } ]
       },
       "fields" : [ {
@@ -839,7 +839,7 @@
         },
         "property" : "created_date",
         "property_type" : "STRING",
-        "precision" : "datetime",
+        "precision" : "date",
         "source" : "CONFIRMS"
       }, {
         "key" : "milestones",
@@ -1014,16 +1014,17 @@
         "key" : "track",
         "label" : "Трек",
         "label_key" : "pp.field.track",
-        "kind" : "enum",
+        "kind" : "ref",
         "group" : "props",
         "section" : "Планирование",
         "required" : false,
         "editable" : true,
-        "options" : {
-          "slice" : "track_options",
-          "value" : "code",
-          "label" : "title"
+        "ref" : {
+          "type" : "track",
+          "rel" : "ON_TRACK",
+          "dir" : "out"
         },
+        "relation" : "attribute",
         "label_en" : "Track",
         "short_label_en" : null,
         "definition_en" : null,
@@ -1033,20 +1034,20 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-        "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+        "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+        "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
         "layer" : "stable",
-        "historic" : true,
+        "historic" : false,
         "write" : {
-          "endpoint" : "/lore/sprint/plan",
-          "field" : "track_id"
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "ON_TRACK"
         },
         "required_level" : null,
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
           "priority" : 2,
-          "width" : "s",
+          "width" : "m",
           "overflow" : "ellipsis"
         },
         "property" : "track_id",
@@ -1183,7 +1184,8 @@
         "dir" : "in",
         "target_type" : "task",
         "place" : "part",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : "Спринт"
       }, {
         "key" : "phases",
         "label" : "Фазы",
@@ -1192,25 +1194,48 @@
         "dir" : "in",
         "target_type" : "phase",
         "place" : "part",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : "Спринт"
       }, {
         "key" : "dependsOn",
         "label" : "Зависит от",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "out",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "target_type" : "sprint",
+        "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -1219,7 +1244,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -1228,7 +1254,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "releases",
         "label" : "Релизы",
@@ -1237,7 +1264,8 @@
         "dir" : "out",
         "target_type" : "release",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "milestones",
         "label" : "Вехи",
@@ -1246,7 +1274,18 @@
         "dir" : "out",
         "target_type" : "milestone",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "track",
+        "label" : "Трек",
+        "relation" : "attribute",
+        "rel" : "ON_TRACK",
+        "dir" : "out",
+        "target_type" : "track",
+        "place" : "prop",
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "Реализует ADR",
@@ -1255,7 +1294,8 @@
         "dir" : "in",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Спринты"
       }, {
         "key" : "questions",
         "label" : "Вопросы",
@@ -1264,7 +1304,8 @@
         "dir" : "in",
         "target_type" : "question",
         "place" : "part",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "docs",
         "label" : "Знания",
@@ -1273,7 +1314,8 @@
         "dir" : "in",
         "target_type" : "doc",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : "Спринты"
       }, {
         "key" : "publications",
         "label" : "Публикации",
@@ -1282,7 +1324,8 @@
         "dir" : "in",
         "target_type" : "publication",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -1291,7 +1334,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -1300,7 +1344,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -1309,7 +1354,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "assets",
         "label" : "Вложения",
@@ -1318,7 +1364,8 @@
         "dir" : "out",
         "target_type" : "asset",
         "place" : "body",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -2258,7 +2305,8 @@
         "dir" : "out",
         "target_type" : "sprint",
         "place" : "head",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : "Задачи"
       }, {
         "key" : "phase",
         "label" : "Фаза",
@@ -2267,7 +2315,8 @@
         "dir" : "out",
         "target_type" : "phase",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -2276,7 +2325,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "roles",
         "label" : "Роли",
@@ -2285,7 +2335,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "files",
         "label" : "Файлы",
@@ -2294,7 +2345,8 @@
         "dir" : "in",
         "target_type" : "file",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "prs",
         "label" : "PR",
@@ -2303,7 +2355,8 @@
         "dir" : "out",
         "target_type" : "pr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Закрывает задачи"
       }, {
         "key" : "useCases",
         "label" : "Сценарии",
@@ -2312,7 +2365,8 @@
         "dir" : "out",
         "target_type" : "use_case",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "Обоснована ADR",
@@ -2321,7 +2375,8 @@
         "dir" : "out",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "qgRecs",
         "label" : "Рекомендации QG",
@@ -2330,7 +2385,8 @@
         "dir" : "in",
         "target_type" : "qg_recommendation",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "insights",
         "label" : "Инсайты BRAGI",
@@ -2339,7 +2395,8 @@
         "dir" : "in",
         "target_type" : "insight",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "gates",
         "label" : "Блокирующие вопросы",
@@ -2348,7 +2405,48 @@
         "dir" : "in",
         "target_type" : "question",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Блокирует задачи"
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "reason_required" : true,
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -2357,7 +2455,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -2366,7 +2465,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "publications",
         "label" : "Публикации",
@@ -2375,7 +2475,8 @@
         "dir" : "in",
         "target_type" : "publication",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "questions",
         "label" : "Вопросы",
@@ -2384,7 +2485,8 @@
         "dir" : "in",
         "target_type" : "question",
         "place" : "part",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -2393,7 +2495,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "assets",
         "label" : "Вложения",
@@ -2402,7 +2505,8 @@
         "dir" : "out",
         "target_type" : "asset",
         "place" : "body",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -2635,7 +2739,7 @@
         },
         "property" : null,
         "property_type" : null,
-        "precision" : "date",
+        "precision" : "datetime",
         "source" : "SUPPLIES"
       }, {
         "key" : "components",
@@ -2983,7 +3087,8 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "part",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "questions",
         "label" : "Вопросы",
@@ -2992,7 +3097,8 @@
         "dir" : "in",
         "target_type" : "question",
         "place" : "part",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "dependsOn",
         "label" : "Зависит от",
@@ -3001,16 +3107,18 @@
         "dir" : "out",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Блокирует"
       }, {
         "key" : "blocks",
-        "label" : "Блокирует",
+        "label" : "От неё зависят",
         "relation" : "association",
         "rel" : "DEPENDS_ON",
         "dir" : "in",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Зависит от"
       }, {
         "key" : "supersedes",
         "label" : "Заменяет",
@@ -3019,7 +3127,8 @@
         "dir" : "out",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "supersededBy",
         "label" : "Заменён",
@@ -3028,7 +3137,8 @@
         "dir" : "in",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "runbooks",
         "label" : "Ранбуки",
@@ -3037,7 +3147,8 @@
         "dir" : "in",
         "target_type" : "runbook",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -3046,7 +3157,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -3055,7 +3167,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -3064,7 +3177,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -3073,7 +3187,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "tags",
         "label" : "Теги",
@@ -3082,7 +3197,8 @@
         "dir" : "out",
         "target_type" : "tag",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "sprints",
         "label" : "Спринты",
@@ -3091,7 +3207,8 @@
         "dir" : "out",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : "Реализует ADR"
       }, {
         "key" : "releases",
         "label" : "Релизы",
@@ -3100,7 +3217,8 @@
         "dir" : "out",
         "target_type" : "release",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "justifies",
         "label" : "Обосновывает задачи",
@@ -3109,7 +3227,8 @@
         "dir" : "in",
         "target_type" : "task",
         "place" : "link_tab",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "useCases",
         "label" : "Сценарии",
@@ -3118,7 +3237,8 @@
         "dir" : "in",
         "target_type" : "use_case",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "insights",
         "label" : "Инсайты BRAGI",
@@ -3127,7 +3247,8 @@
         "dir" : "in",
         "target_type" : "insight",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -3136,7 +3257,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "assets",
         "label" : "Вложения",
@@ -3145,7 +3267,8 @@
         "dir" : "out",
         "target_type" : "asset",
         "place" : "body",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -3648,7 +3771,8 @@
         "dir" : "in",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компонент",
@@ -3657,7 +3781,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -3666,7 +3791,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -3675,7 +3801,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -3684,7 +3811,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -3693,7 +3821,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "assets",
         "label" : "Вложения",
@@ -3702,7 +3831,8 @@
         "dir" : "out",
         "target_type" : "asset",
         "place" : "body",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -4042,6 +4172,39 @@
         "property_type" : null,
         "source" : "SUPPLIES"
       }, {
+        "key" : "has_ext_deps",
+        "label" : "Внешние зависимости",
+        "label_key" : "pp.field.hasExtDeps",
+        "kind" : "bool",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "External dependencies",
+        "short_label_en" : null,
+        "definition_en" : "The document references external resources (CDN): without internet access it may not render fully.",
+        "description_en" : null,
+        "label_pl" : "Zależności zewnętrzne",
+        "short_label_pl" : null,
+        "definition_pl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości.",
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
         "key" : "content_md_ru",
         "label" : "Текст",
         "label_key" : "pp.field.body",
@@ -4122,7 +4285,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -4131,7 +4295,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "parentDoc",
         "label" : "Родительский документ",
@@ -4140,7 +4305,8 @@
         "dir" : "out",
         "target_type" : "doc",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "sprints",
         "label" : "Спринты",
@@ -4149,7 +4315,8 @@
         "dir" : "out",
         "target_type" : "sprint",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : "Знания"
       }, {
         "key" : "children",
         "label" : "Вложенные документы",
@@ -4158,7 +4325,8 @@
         "dir" : "in",
         "target_type" : "doc",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -4167,7 +4335,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -4176,7 +4345,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "assets",
         "label" : "Вложения",
@@ -4185,7 +4355,8 @@
         "dir" : "out",
         "target_type" : "asset",
         "place" : "body",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -4368,7 +4539,7 @@
         },
         "property" : null,
         "property_type" : null,
-        "precision" : "date",
+        "precision" : "datetime",
         "source" : "SUPPLIES"
       }, {
         "key" : "adr",
@@ -4631,7 +4802,8 @@
         "dir" : "out",
         "target_type" : "adr",
         "place" : "head",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "supersedes",
         "label" : "Заменяет",
@@ -4640,7 +4812,8 @@
         "dir" : "out",
         "target_type" : "decision",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "answers",
         "label" : "Отвечает на вопросы",
@@ -4649,7 +4822,8 @@
         "dir" : "out",
         "target_type" : "question",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -4658,7 +4832,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -4667,7 +4842,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "tags",
         "label" : "Теги",
@@ -4676,7 +4852,8 @@
         "dir" : "out",
         "target_type" : "tag",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "supersededBy",
         "label" : "Заменено",
@@ -4685,7 +4862,8 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "useCases",
         "label" : "Сценарии",
@@ -4694,7 +4872,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -4703,7 +4882,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -4712,7 +4892,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -4721,7 +4902,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -5004,8 +5186,8 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Владелец записи: кто за неё отвечает.",
-        "description" : null,
+        "definition" : "Кто отвечает за то, чтобы вопрос получил ответ: человек или агент реестра LORE (связь ANSWERABLE_BY).",
+        "description" : "Ответственный — связь с записью реестра людей или агентов, не свободный текст. Когда вопрос закрывают решением (связь «отвечает»), ответственным становится автор решения. У вопросов, где связи нет, показывается прежний текст поля — только для чтения.",
         "layer" : null,
         "historic" : false,
         "write" : null,
@@ -5025,7 +5207,8 @@
         },
         "property" : null,
         "property_type" : null,
-        "source" : "SUPPLIES"
+        "source" : "EDGE",
+        "edge" : "ANSWERABLE_BY"
       }, {
         "key" : "raised_by",
         "label" : "Поднял",
@@ -5252,7 +5435,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "head",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "gates",
         "label" : "Блокирует задачи",
@@ -5261,7 +5445,8 @@
         "dir" : "out",
         "target_type" : "task",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : "Блокирующие вопросы"
       }, {
         "key" : "answeredBy",
         "label" : "Ответ — решения",
@@ -5270,7 +5455,18 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "responsible",
+        "label" : "Ответственный",
+        "relation" : "attribute",
+        "rel" : "ANSWERABLE_BY",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -5279,7 +5475,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -5288,7 +5485,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -5297,7 +5495,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -5306,7 +5505,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -5740,7 +5940,8 @@
         "dir" : "in",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "features",
         "label" : "Фичи",
@@ -5749,7 +5950,46 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "dependsOn",
+        "label" : "Зависит от",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : "От неё зависят",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
+      }, {
+        "key" : "blocks",
+        "label" : "От неё зависят",
+        "relation" : "association",
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "target_type" : "any",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : "Зависит от",
+        "props" : [ {
+          "key" : "kind",
+          "label" : "Вид",
+          "dict" : "dependency_kind"
+        }, {
+          "key" : "reason",
+          "label" : "Причина"
+        } ],
+        "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
         "label" : "Продукты",
@@ -5758,7 +5998,8 @@
         "dir" : "out",
         "target_type" : "product",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -5767,7 +6008,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -5816,6 +6058,139 @@
       } ],
       "unclassified" : [ ],
       "internal" : [ "valid_from" ]
+    },
+    "track" : {
+      "type" : "track",
+      "label" : "Трек",
+      "label_key" : "pp.kind.track",
+      "label_en" : "Track",
+      "label_pl" : "Ścieżka",
+      "icon" : "path-distance",
+      "color" : null,
+      "key" : "track_id",
+      "vertex" : "KnowTrack",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "s",
+          "overflow" : "none"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "area",
+        "label" : "Вид",
+        "label_key" : "pp.field.trackArea",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Kind",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Rodzaj",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "sprints",
+        "label" : "Спринты на треке",
+        "relation" : "aggregation",
+        "rel" : "ON_TRACK",
+        "dir" : "in",
+        "target_type" : "sprint",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
     },
     "release" : {
       "type" : "release",
@@ -6192,7 +6567,8 @@
         "dir" : "in",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "prs",
         "label" : "PR",
@@ -6201,7 +6577,8 @@
         "dir" : "in",
         "target_type" : "pr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -6210,7 +6587,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "ADR",
@@ -6219,7 +6597,8 @@
         "dir" : "in",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "publications",
         "label" : "Публикации",
@@ -6228,7 +6607,8 @@
         "dir" : "in",
         "target_type" : "publication",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -6237,7 +6617,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -6246,7 +6627,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -6255,7 +6637,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -6853,7 +7236,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "products",
         "label" : "Продукты",
@@ -6862,7 +7246,8 @@
         "dir" : "out",
         "target_type" : "product",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "children",
         "label" : "Подкомпоненты",
@@ -6871,7 +7256,8 @@
         "dir" : "in",
         "target_type" : "component",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "stack",
         "label" : "Стек",
@@ -6880,7 +7266,8 @@
         "dir" : "out",
         "target_type" : "tech_ref",
         "place" : "links",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "tech",
         "label" : "Технологии",
@@ -6889,7 +7276,18 @@
         "dir" : "out",
         "target_type" : "tech",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "COMPONENT_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "ADR",
@@ -6898,7 +7296,8 @@
         "dir" : "in",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "specs",
         "label" : "Спеки",
@@ -6907,7 +7306,8 @@
         "dir" : "out",
         "target_type" : "spec",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "decisions",
         "label" : "Решения",
@@ -6916,7 +7316,8 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "questions",
         "label" : "Вопросы",
@@ -6925,7 +7326,8 @@
         "dir" : "in",
         "target_type" : "question",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "features",
         "label" : "Сценарии",
@@ -6934,7 +7336,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "docs",
         "label" : "Знания",
@@ -6943,7 +7346,8 @@
         "dir" : "in",
         "target_type" : "doc",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "qgs",
         "label" : "Гейты качества",
@@ -6952,7 +7356,8 @@
         "dir" : "in",
         "target_type" : "qg",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "tasks",
         "label" : "Задачи",
@@ -6961,7 +7366,8 @@
         "dir" : "in",
         "target_type" : "task",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "sprints",
         "label" : "Спринты",
@@ -6970,7 +7376,8 @@
         "dir" : "in",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "area",
         "label" : "Область",
@@ -6979,7 +7386,8 @@
         "dir" : "out",
         "target_type" : "area",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -6988,7 +7396,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -6997,7 +7406,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ {
         "level" : "warn",
@@ -7265,7 +7675,8 @@
         "dir" : "in",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "component",
         "label" : "Компонент",
@@ -7274,7 +7685,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -7283,7 +7695,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -7292,7 +7705,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -7938,7 +8352,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "head",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "children",
         "label" : "Сценарии",
@@ -7947,7 +8362,8 @@
         "dir" : "out",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -7956,7 +8372,8 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -7965,7 +8382,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "tasks",
         "label" : "Задачи",
@@ -7974,7 +8392,8 @@
         "dir" : "in",
         "target_type" : "task",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "actors",
         "label" : "Акторы",
@@ -7983,7 +8402,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "pains",
         "label" : "Боли",
@@ -7992,7 +8412,8 @@
         "dir" : "out",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "gains",
         "label" : "Выгоды",
@@ -8001,7 +8422,8 @@
         "dir" : "out",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "jobs",
         "label" : "Работы",
@@ -8010,7 +8432,8 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "relieves",
         "label" : "Снимает боли",
@@ -8019,7 +8442,8 @@
         "dir" : "out",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "delivers",
         "label" : "Создаёт выгоды",
@@ -8028,7 +8452,8 @@
         "dir" : "out",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "performs",
         "label" : "Выполняет работы",
@@ -8037,7 +8462,8 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "ADR",
@@ -8046,7 +8472,8 @@
         "dir" : "out",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "decisions",
         "label" : "Решения",
@@ -8055,7 +8482,8 @@
         "dir" : "out",
         "target_type" : "decision",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "milestones",
         "label" : "Вехи",
@@ -8064,7 +8492,8 @@
         "dir" : "out",
         "target_type" : "milestone",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "buildsOn",
         "label" : "Опирается на",
@@ -8073,7 +8502,8 @@
         "dir" : "out",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "builtOnBy",
         "label" : "На неё опираются",
@@ -8082,7 +8512,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "includes",
         "label" : "Включает",
@@ -8091,7 +8522,8 @@
         "dir" : "out",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "includedBy",
         "label" : "Включена в",
@@ -8100,7 +8532,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "extends",
         "label" : "Расширяет",
@@ -8109,7 +8542,8 @@
         "dir" : "out",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "extendedBy",
         "label" : "Расширена",
@@ -8118,7 +8552,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -8127,7 +8562,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -8136,7 +8572,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -8366,10 +8803,11 @@
         "key" : "kind",
         "label" : "Вид",
         "label_key" : "pp.field.kind",
-        "kind" : "text",
+        "kind" : "enum",
         "group" : "props",
         "required" : false,
         "editable" : false,
+        "multi" : true,
         "label_en" : "Kind",
         "short_label_en" : null,
         "definition_en" : null,
@@ -8379,7 +8817,7 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : null,
+        "definition" : "Вид продукта — набор: tech (ИТ, технологический), service (не ИТ, сервисно-организационный) или оба; пустым не бывает (ADR-LORE-044).",
         "description" : null,
         "layer" : null,
         "historic" : false,
@@ -8388,8 +8826,8 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
+          "priority" : 2,
+          "width" : "s",
           "overflow" : "ellipsis"
         },
         "property" : null,
@@ -8556,7 +8994,8 @@
         "dir" : "out",
         "target_type" : "product",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -8565,7 +9004,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -8574,7 +9014,8 @@
         "dir" : "in",
         "target_type" : "component",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "features",
         "label" : "Фичи и сценарии",
@@ -8583,7 +9024,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "pains",
         "label" : "Боли",
@@ -8592,7 +9034,8 @@
         "dir" : "out",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "gains",
         "label" : "Выгоды",
@@ -8601,7 +9044,8 @@
         "dir" : "out",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "jobs",
         "label" : "Работы",
@@ -8610,7 +9054,8 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "actors",
         "label" : "Роли",
@@ -8619,7 +9064,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "children",
         "label" : "Подпродукты",
@@ -8628,7 +9074,8 @@
         "dir" : "in",
         "target_type" : "product",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "serves",
         "label" : "Обслуживает",
@@ -8637,7 +9084,8 @@
         "dir" : "out",
         "target_type" : "product",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "servedBy",
         "label" : "Обслуживается",
@@ -8646,7 +9094,8 @@
         "dir" : "in",
         "target_type" : "product",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "milestones",
         "label" : "Вехи",
@@ -8655,7 +9104,18 @@
         "dir" : "in",
         "target_type" : "milestone",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PRODUCT",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -8827,7 +9287,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "tasks",
         "label" : "Задачи",
@@ -8836,7 +9297,8 @@
         "dir" : "in",
         "target_type" : "task",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "agents",
         "label" : "Агенты",
@@ -8845,7 +9307,18 @@
         "dir" : "in",
         "target_type" : "agent",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_MEMBER",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -9089,7 +9562,8 @@
         "dir" : "out",
         "target_type" : "user",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "projects",
         "label" : "Проекты",
@@ -9098,7 +9572,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "tasks",
         "label" : "Задачи",
@@ -9107,7 +9582,8 @@
         "dir" : "in",
         "target_type" : "task",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "machines",
         "label" : "Машины",
@@ -9116,7 +9592,8 @@
         "dir" : "out",
         "target_type" : "machine",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "roles",
         "label" : "Роли продукта",
@@ -9125,7 +9602,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -9297,7 +9775,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "features",
         "label" : "Сценарии",
@@ -9306,7 +9785,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "pains",
         "label" : "Боли",
@@ -9315,7 +9795,8 @@
         "dir" : "in",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "gains",
         "label" : "Выгоды",
@@ -9324,7 +9805,8 @@
         "dir" : "in",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "jobs",
         "label" : "Работы",
@@ -9333,7 +9815,8 @@
         "dir" : "in",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "agents",
         "label" : "Агенты",
@@ -9342,7 +9825,8 @@
         "dir" : "in",
         "target_type" : "agent",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -9351,7 +9835,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -9360,7 +9845,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -9532,7 +10018,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "relievedBy",
         "label" : "Снимают сценарии",
@@ -9541,7 +10028,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "actors",
         "label" : "Роли",
@@ -9550,7 +10038,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "jobs",
         "label" : "Мешает работам",
@@ -9559,7 +10048,8 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -9568,7 +10058,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -9577,7 +10068,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -9782,7 +10274,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "deliveredBy",
         "label" : "Дают сценарии",
@@ -9791,7 +10284,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "actors",
         "label" : "Роли",
@@ -9800,7 +10294,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "jobs",
         "label" : "Успех в работах",
@@ -9809,7 +10304,8 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -9818,7 +10314,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -9827,7 +10324,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -10032,7 +10530,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "performedBy",
         "label" : "Выполняют сценарии",
@@ -10041,7 +10540,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "actors",
         "label" : "Роли",
@@ -10050,7 +10550,8 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "pains",
         "label" : "Мешают боли",
@@ -10059,7 +10560,8 @@
         "dir" : "in",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "gains",
         "label" : "Успех — выгоды",
@@ -10068,7 +10570,8 @@
         "dir" : "in",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -10077,7 +10580,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На неё ссылаются",
@@ -10086,7 +10590,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -10305,7 +10810,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : true
+        "manageable" : true,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "ADR",
@@ -10314,7 +10820,8 @@
         "dir" : "out",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -10323,7 +10830,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -10332,7 +10840,8 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "history",
         "label" : "История",
@@ -10341,7 +10850,8 @@
         "dir" : "out",
         "target_type" : "hist",
         "place" : "history",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -10424,6 +10934,39 @@
         "description_pl" : null,
         "short_label" : null,
         "definition" : null,
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 2,
+          "width" : "s",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "scope",
+        "label" : "Охват",
+        "label_key" : "pp.field.qgScope",
+        "kind" : "enum",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Scope",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Zakres",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
         "description" : null,
         "layer" : null,
         "historic" : false,
@@ -10794,7 +11337,8 @@
         "dir" : "out",
         "target_type" : "project",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -10803,7 +11347,18 @@
         "dir" : "out",
         "target_type" : "component",
         "place" : "prop",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "metrics",
+        "label" : "Метрики",
+        "relation" : "composition",
+        "rel" : "MEASURED_BY",
+        "dir" : "out",
+        "target_type" : "qg_metric",
+        "place" : "part",
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsOut",
         "label" : "Ссылается",
@@ -10812,7 +11367,8 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "refsIn",
         "label" : "На него ссылаются",
@@ -10821,7 +11377,410 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
+    },
+    "repository" : {
+      "type" : "repository",
+      "label" : "Репозиторий",
+      "label_key" : "pp.kind.repository",
+      "label_en" : "Repository",
+      "label_pl" : "Repozytorium",
+      "icon" : "chest",
+      "color" : null,
+      "key" : "url",
+      "vertex" : "KnowRepository",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "full_path",
+        "label" : "Полный путь",
+        "label_key" : "pp.field.fullPath",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Full path",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Pełna ścieżka",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "host",
+        "label" : "Хост",
+        "label_key" : "pp.field.host",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Host",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Host",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "owner",
+        "label" : "Владелец на хосте",
+        "label_key" : "pp.field.hostOwner",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Owner on host",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Właściciel na hoście",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Пространство на хосте (AIDA, NooriUta) — вместе с хостом и именем даёт полный путь. Это не организация.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "default_branch",
+        "label" : "Ветка по умолчанию",
+        "label_key" : "pp.field.defaultBranch",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Default branch",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Gałąź domyślna",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "url",
+        "label" : "Адрес",
+        "label_key" : "pp.field.url",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Address",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Adres",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Ключ репозитория — адрес уникален.",
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 4,
+          "width" : "m",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Основной у проекта",
+        "relation" : "association",
+        "rel" : "HAS_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "project",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "components",
+        "label" : "Репозиторий компонента",
+        "relation" : "association",
+        "rel" : "COMPONENT_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "component",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "mirrors",
+        "label" : "Зеркала",
+        "relation" : "association",
+        "rel" : "MIRRORED_TO",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "mirrorOf",
+        "label" : "Зеркало репозитория",
+        "relation" : "association",
+        "rel" : "MIRRORED_TO",
+        "dir" : "in",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "uses",
+        "label" : "Использует",
+        "relation" : "association",
+        "rel" : "USES_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "usedBy",
+        "label" : "Используется в",
+        "relation" : "association",
+        "rel" : "USES_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
+      } ],
+      "requirements" : [ ],
+      "requirements_block" : "schema",
+      "computed" : [ ],
+      "unclassified" : [ ],
+      "internal" : [ ]
+    },
+    "organization" : {
+      "type" : "organization",
+      "label" : "Организация",
+      "label_key" : "pp.kind.organization",
+      "label_en" : "Organization",
+      "label_pl" : "Organizacja",
+      "icon" : "castle",
+      "color" : null,
+      "key" : "org_id",
+      "vertex" : "KnowOrganization",
+      "hist" : null,
+      "time" : {
+        "history" : "none",
+        "created" : [ ],
+        "changed" : [ ]
+      },
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "label_key" : "pp.field.title",
+        "kind" : "text",
+        "group" : "head",
+        "required" : true,
+        "editable" : false,
+        "label_en" : "Title",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Nazwa",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "fill",
+          "overflow" : "ellipsis"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      }, {
+        "key" : "code",
+        "label" : "Код",
+        "label_key" : "pp.field.code",
+        "kind" : "text",
+        "group" : "head",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Code",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Kod",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : null,
+        "description" : null,
+        "layer" : "stable",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 1,
+          "width" : "s",
+          "overflow" : "none"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
+      } ],
+      "relations" : [ {
+        "key" : "projects",
+        "label" : "Проекты",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PROJECT",
+        "dir" : "out",
+        "target_type" : "project",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "products",
+        "label" : "Продукты",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PRODUCT",
+        "dir" : "out",
+        "target_type" : "product",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "members",
+        "label" : "Люди",
+        "relation" : "association",
+        "rel" : "ORG_MEMBER",
+        "dir" : "out",
+        "target_type" : "user",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -10986,7 +11945,8 @@
         "dir" : "in",
         "target_type" : "sprint",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "components",
         "label" : "Компоненты",
@@ -10995,7 +11955,18 @@
         "dir" : "in",
         "target_type" : "component",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "HAS_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "adrs",
         "label" : "ADR",
@@ -11004,7 +11975,8 @@
         "dir" : "in",
         "target_type" : "adr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "releases",
         "label" : "Релизы",
@@ -11013,7 +11985,8 @@
         "dir" : "in",
         "target_type" : "release",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "people",
         "label" : "Люди",
@@ -11022,7 +11995,8 @@
         "dir" : "in",
         "target_type" : "user",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "agents",
         "label" : "Агенты",
@@ -11031,7 +12005,8 @@
         "dir" : "in",
         "target_type" : "agent",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "specs",
         "label" : "Спеки",
@@ -11040,7 +12015,8 @@
         "dir" : "in",
         "target_type" : "spec",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "decisions",
         "label" : "Решения",
@@ -11049,7 +12025,8 @@
         "dir" : "in",
         "target_type" : "decision",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "questions",
         "label" : "Вопросы",
@@ -11058,7 +12035,8 @@
         "dir" : "in",
         "target_type" : "question",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "features",
         "label" : "Фичи",
@@ -11067,7 +12045,8 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "docs",
         "label" : "Знания",
@@ -11076,7 +12055,8 @@
         "dir" : "in",
         "target_type" : "doc",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "runbooks",
         "label" : "Ранбуки",
@@ -11085,7 +12065,8 @@
         "dir" : "in",
         "target_type" : "runbook",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "actors",
         "label" : "Роли продукта",
@@ -11094,7 +12075,8 @@
         "dir" : "in",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "boundAgents",
         "label" : "Агенты проекта",
@@ -11103,7 +12085,8 @@
         "dir" : "in",
         "target_type" : "agent",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "files",
         "label" : "Файлы",
@@ -11112,7 +12095,8 @@
         "dir" : "in",
         "target_type" : "file",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
       }, {
         "key" : "prs",
         "label" : "PR",
@@ -11121,7 +12105,18 @@
         "dir" : "in",
         "target_type" : "pr",
         "place" : "link_tab",
-        "manageable" : false
+        "manageable" : false,
+        "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_PROJECT",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -11326,6 +12321,26 @@
           "order" : 11,
           "slot" : "own",
           "group" : null
+        }, {
+          "key" : "dependsOn",
+          "source" : "relation",
+          "ref" : "dependsOn",
+          "order" : 12,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
+        }, {
+          "key" : "blocks",
+          "source" : "relation",
+          "ref" : "blocks",
+          "order" : 13,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
         } ]
       },
       "adr" : {
@@ -11657,6 +12672,37 @@
           "order" : 3,
           "slot" : "own",
           "group" : null
+        }, {
+          "key" : "dependsOn",
+          "source" : "relation",
+          "ref" : "dependsOn",
+          "order" : 4,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
+        }, {
+          "key" : "blocks",
+          "source" : "relation",
+          "ref" : "blocks",
+          "order" : 5,
+          "slot" : "own",
+          "group" : {
+            "key" : "deps",
+            "label" : "Зависимости"
+          }
+        } ]
+      },
+      "track" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "sprints",
+          "source" : "relation",
+          "ref" : "sprints",
+          "order" : 1,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "release" : {
@@ -11742,66 +12788,73 @@
           "slot" : "own",
           "group" : null
         }, {
+          "key" : "repositories",
+          "source" : "relation",
+          "ref" : "repositories",
+          "order" : 4,
+          "slot" : "own",
+          "group" : null
+        }, {
           "key" : "children",
           "source" : "relation",
           "ref" : "children",
-          "order" : 4,
+          "order" : 5,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "decisions",
           "source" : "relation",
           "ref" : "decisions",
-          "order" : 5,
+          "order" : 6,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "questions",
           "source" : "relation",
           "ref" : "questions",
-          "order" : 6,
+          "order" : 7,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "features",
           "source" : "relation",
           "ref" : "features",
-          "order" : 7,
+          "order" : 8,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "docs",
           "source" : "relation",
           "ref" : "docs",
-          "order" : 8,
+          "order" : 9,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "qgs",
           "source" : "relation",
           "ref" : "qgs",
-          "order" : 9,
+          "order" : 10,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "tasks",
           "source" : "relation",
           "ref" : "tasks",
-          "order" : 10,
+          "order" : 11,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "sprints",
           "source" : "relation",
           "ref" : "sprints",
-          "order" : 11,
+          "order" : 12,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "refsOut",
           "source" : "relation",
           "ref" : "refsOut",
-          "order" : 12,
+          "order" : 13,
           "slot" : "own",
           "group" : {
             "key" : "refs",
@@ -11811,7 +12864,7 @@
           "key" : "refsIn",
           "source" : "relation",
           "ref" : "refsIn",
-          "order" : 13,
+          "order" : 14,
           "slot" : "own",
           "group" : {
             "key" : "refs",
@@ -12124,6 +13177,13 @@
           "order" : 10,
           "slot" : "own",
           "group" : null
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 11,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "user" : {
@@ -12148,6 +13208,13 @@
             "key" : "agents",
             "label" : "Агенты"
           }
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 3,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "agent" : {
@@ -12549,6 +13616,111 @@
             "key" : "refs",
             "label" : "Ссылки"
           }
+        }, {
+          "key" : "metrics",
+          "source" : "part",
+          "ref" : "metrics",
+          "order" : 4,
+          "slot" : "own",
+          "group" : null
+        } ]
+      },
+      "repository" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "projects",
+          "source" : "relation",
+          "ref" : "projects",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "components",
+          "source" : "relation",
+          "ref" : "components",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "mirrors",
+          "source" : "relation",
+          "ref" : "mirrors",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "mirrorOf",
+          "source" : "relation",
+          "ref" : "mirrorOf",
+          "order" : 4,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "uses",
+          "source" : "relation",
+          "ref" : "uses",
+          "order" : 5,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "usedBy",
+          "source" : "relation",
+          "ref" : "usedBy",
+          "order" : 6,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        } ]
+      },
+      "organization" : {
+        "decided" : true,
+        "sections" : [ {
+          "key" : "projects",
+          "source" : "relation",
+          "ref" : "projects",
+          "order" : 1,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "products",
+          "source" : "relation",
+          "ref" : "products",
+          "order" : 2,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "members",
+          "source" : "relation",
+          "ref" : "members",
+          "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
         } ]
       },
       "project" : {
@@ -12568,24 +13740,31 @@
           "slot" : "own",
           "group" : null
         }, {
+          "key" : "repositories",
+          "source" : "relation",
+          "ref" : "repositories",
+          "order" : 3,
+          "slot" : "own",
+          "group" : null
+        }, {
           "key" : "adrs",
           "source" : "relation",
           "ref" : "adrs",
-          "order" : 3,
+          "order" : 4,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "releases",
           "source" : "relation",
           "ref" : "releases",
-          "order" : 4,
+          "order" : 5,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "people",
           "source" : "relation",
           "ref" : "people",
-          "order" : 5,
+          "order" : 6,
           "slot" : "own",
           "group" : {
             "key" : "people",
@@ -12595,7 +13774,7 @@
           "key" : "agents",
           "source" : "relation",
           "ref" : "agents",
-          "order" : 6,
+          "order" : 7,
           "slot" : "own",
           "group" : {
             "key" : "people",
@@ -12605,70 +13784,77 @@
           "key" : "specs",
           "source" : "relation",
           "ref" : "specs",
-          "order" : 7,
+          "order" : 8,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "decisions",
           "source" : "relation",
           "ref" : "decisions",
-          "order" : 8,
+          "order" : 9,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "questions",
           "source" : "relation",
           "ref" : "questions",
-          "order" : 9,
+          "order" : 10,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "features",
           "source" : "relation",
           "ref" : "features",
-          "order" : 10,
+          "order" : 11,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "docs",
           "source" : "relation",
           "ref" : "docs",
-          "order" : 11,
+          "order" : 12,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "runbooks",
           "source" : "relation",
           "ref" : "runbooks",
-          "order" : 12,
+          "order" : 13,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "actors",
           "source" : "relation",
           "ref" : "actors",
-          "order" : 13,
+          "order" : 14,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "boundAgents",
           "source" : "relation",
           "ref" : "boundAgents",
-          "order" : 14,
+          "order" : 15,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "files",
           "source" : "relation",
           "ref" : "files",
-          "order" : 15,
+          "order" : 16,
           "slot" : "own",
           "group" : null
         }, {
           "key" : "prs",
           "source" : "relation",
           "ref" : "prs",
-          "order" : 16,
+          "order" : 17,
+          "slot" : "own",
+          "group" : null
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 18,
           "slot" : "own",
           "group" : null
         } ]
@@ -12727,6 +13913,9 @@
       }, {
         "section" : "question",
         "icon" : "help"
+      }, {
+        "section" : "tags",
+        "icon" : "price-tag"
       } ]
     }, {
       "id" : "product",
@@ -12766,6 +13955,12 @@
       }, {
         "section" : "tech",
         "icon" : "gears"
+      }, {
+        "section" : "repository",
+        "icon" : "chest"
+      }, {
+        "section" : "organization",
+        "icon" : "castle"
       } ]
     }, {
       "id" : "personal",
@@ -12792,6 +13987,7 @@
     "machine" : "admin",
     "milestone" : "everywhere",
     "news" : "everywhere",
+    "organization" : "everywhere",
     "pain" : "everywhere",
     "people" : "admin",
     "product" : "everywhere",
@@ -12799,10 +13995,12 @@
     "quality_gate" : "everywhere",
     "question" : "everywhere",
     "release" : "everywhere",
+    "repository" : "everywhere",
     "runbook" : "everywhere",
     "settings" : "everywhere",
     "spec" : "everywhere",
     "sprint" : "everywhere",
+    "tags" : "everywhere",
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"
@@ -12840,6 +14038,22 @@
       } ],
       "require_one_of" : [ "projects", "adr" ],
       "absent_check" : "/lore/record/decision/{id}",
+      "audience" : "everywhere"
+    },
+    "organization" : {
+      "endpoint" : "/lore/organization",
+      "id_field" : "org_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "name",
+        "after_write" : null,
+        "required" : true
+      } ],
+      "require_one_of" : [ ],
+      "absent_check" : "/lore/record/organization/{id}",
       "audience" : "everywhere"
     },
     "spec" : {
@@ -13477,11 +14691,35 @@
     } ]
   },
   "field_texts" : {
-    "fields" : 198,
-    "without_definition" : 5,
+    "fields" : 211,
+    "without_definition" : 9,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 198
+    "without_definition_en" : 210
+  },
+  "edge_history" : {
+    "fields" : [ "valid_from", "valid_to" ],
+    "edges" : {
+      "ANSWERABLE_BY" : "Ответственный за вопрос (человек или агент реестра): при закрытии вопроса решением ответственным становится автор решения; по связи видно, кто отвечал раньше и с какого времени (MT-MCP-TRUTH A6, владелица 19.11.2026).",
+      "DEPENDS_ON" : "Зависимость задачи, фазы, спринта и вехи (одна связь «зависит от» с видом и причиной, MDL-13; у ADR — та же связь между ADR): снятая зависимость и смена вида закрывают ребро, а не стирают — видно, что от чего зависело и когда.",
+      "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
+      "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
+      "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
+      "ON_TRACK" : "Трек спринта (MDL-13, владелица 20.11.2026 «треки б»): спринт переводят с трека на трек; по связи видно, когда спринт пришёл на трек и когда ушёл — история в самой связи, как у вехи.",
+      "ROLE_HELD_BY" : "Роль на задаче (автор, исполнитель, ревьюер): сколько раз роль передавали и кто вёл задачу раньше (ADR-LORE-042 §4); ведёт историю с TR-05.",
+      "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
+    }
+  },
+  "edge_free_fields" : {
+    "TAGGED_WITH" : {
+      "target_type" : "tag",
+      "vertex" : "KnowTag",
+      "key" : "tag_id",
+      "property" : "fields",
+      "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
+      "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег.",
+      "owners" : [ "adr", "decision" ]
+    }
   },
   "warnings" : [ "adr_status: код справочника «DRAFT» сопоставлен статусу цикла «draft» без учёта регистра — свести к одному написанию", "adr_status: код справочника «PROPOSED» сопоставлен статусу цикла «proposed» без учёта регистра — свести к одному написанию", "adr_status: код справочника «ACCEPTED» сопоставлен статусу цикла «accepted» без учёта регистра — свести к одному написанию", "adr_status: код справочника «DEFERRED» сопоставлен статусу цикла «deferred» без учёта регистра — свести к одному написанию", "adr_status: код справочника «SUPERSEDED» сопоставлен статусу цикла «superseded» без учёта регистра — свести к одному написанию", "adr_status: статус «DEPRECATED» есть в справочнике, но не входит в жизненный цикл adr — перейти в него нельзя", "palette: палитра «amber-forest» без статьи в справочнике — подпись = код", "palette: палитра «lichen» без статьи в справочнике — подпись = код", "palette: палитра «slate» без статьи в справочнике — подпись = код", "palette: палитра «juniper» без статьи в справочнике — подпись = код", "palette: палитра «warm-dark» без статьи в справочнике — подпись = код" ]
 }

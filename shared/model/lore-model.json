@@ -40,7 +40,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "backlog"
     }, {
       "key" : "priority",
       "label" : "Приоритет",
@@ -178,22 +179,20 @@
       "key" : "track",
       "label" : "Трек",
       "labelKey" : "pp.field.track",
-      "kind" : "enum",
+      "kind" : "ref",
       "group" : "props",
       "editable" : true,
       "write" : {
-        "endpoint" : "/lore/sprint/plan",
-        "field" : "track_id"
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "ON_TRACK"
       },
-      "options" : {
-        "slice" : "track_options",
-        "value" : "code",
-        "label" : "title"
-      },
-      "definition" : "Трек плана, к которому отнесён спринт (линия работ на план-доске).",
-      "description" : "Линия работ на плане, к которой относится спринт. Выбирается из списка треков. Нужен, чтобы на плане спринты одной темы стояли в одной полосе.",
+      "refType" : "track",
+      "rel" : "ON_TRACK",
+      "dir" : "out",
+      "relation" : "attribute",
+      "definition" : "Трек, на котором стоит спринт: связь ON_TRACK спринт → трек (MDL-13, владелица 20.11.2026 «треки б»). Смена трека закрывает прежнюю связь, история — в самой связи.",
+      "description" : "Линия работ, к которой относится спринт. Выбирается из списка треков; трек открывается своим паспортом. Нужен, чтобы спринты одной темы стояли в одной полосе (дорожки списка). Смена трека не стирает прежний: в паспорте трека видно, когда спринт пришёл и когда ушёл.",
       "layer" : "stable",
-      "historic" : true,
       "labelEn" : "Track",
       "labelPl" : "Ścieżka"
     }, {
@@ -305,7 +304,7 @@
       }, {
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "label" : "блокирует",
+        "label" : "от неё зависят",
         "relation" : "association",
         "edgeProps" : [ "kind", "reason" ]
       } ]
@@ -349,7 +348,8 @@
       "dir" : "in",
       "targetType" : "task",
       "relation" : "composition",
-      "place" : "part"
+      "place" : "part",
+      "inverseLabel" : "Спринт"
     }, {
       "key" : "phases",
       "label" : "Фазы",
@@ -357,25 +357,48 @@
       "dir" : "in",
       "targetType" : "phase",
       "relation" : "composition",
-      "place" : "part"
+      "place" : "part",
+      "inverseLabel" : "Спринт"
     }, {
       "key" : "dependsOn",
       "label" : "Зависит от",
       "rel" : "DEPENDS_ON",
       "dir" : "out",
-      "targetType" : "sprint",
+      "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "props" : [ {
+        "key" : "kind",
+        "label" : "Вид",
+        "dict" : "dependency_kind"
+      }, {
+        "key" : "reason",
+        "label" : "Причина"
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
+      "inverseLabel" : "От неё зависят"
     }, {
       "key" : "blocks",
-      "label" : "Блокирует",
+      "label" : "От неё зависят",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
-      "targetType" : "sprint",
+      "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "props" : [ {
+        "key" : "kind",
+        "label" : "Вид",
+        "dict" : "dependency_kind"
+      }, {
+        "key" : "reason",
+        "label" : "Причина"
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
+      "inverseLabel" : "Зависит от"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -412,6 +435,15 @@
       "place" : "prop",
       "manageable" : true
     }, {
+      "key" : "track",
+      "label" : "Трек",
+      "rel" : "ON_TRACK",
+      "dir" : "out",
+      "targetType" : "track",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
+    }, {
       "key" : "adrs",
       "label" : "Реализует ADR",
       "rel" : "IMPLEMENTED_IN",
@@ -419,7 +451,8 @@
       "targetType" : "adr",
       "relation" : "realization",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Спринты"
     }, {
       "key" : "questions",
       "label" : "Вопросы",
@@ -436,7 +469,8 @@
       "dir" : "in",
       "targetType" : "doc",
       "relation" : "realization",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "inverseLabel" : "Спринты"
     }, {
       "key" : "publications",
       "label" : "Публикации",
@@ -519,7 +553,9 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "notnull" : true,
+      "initial" : "backlog"
     }, {
       "key" : "waiting_for",
       "label" : "Ждём",
@@ -839,6 +875,22 @@
       "slice" : "questions_of_task"
     } ],
     "linkTabs" : [ {
+      "key" : "deps",
+      "label" : "Зависимости",
+      "rels" : [ {
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "label" : "зависит от",
+        "relation" : "association",
+        "edgeProps" : [ "kind", "reason" ]
+      }, {
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "label" : "от неё зависят",
+        "relation" : "association",
+        "edgeProps" : [ "kind", "reason" ]
+      } ]
+    }, {
       "key" : "justification",
       "label" : "ADR",
       "rels" : [ {
@@ -893,7 +945,8 @@
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "composition",
-      "place" : "head"
+      "place" : "head",
+      "inverseLabel" : "Задачи"
     }, {
       "key" : "phase",
       "label" : "Фаза",
@@ -936,7 +989,8 @@
       "targetType" : "pr",
       "relation" : "realization",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Закрывает задачи"
     }, {
       "key" : "useCases",
       "label" : "Сценарии",
@@ -978,7 +1032,48 @@
       "targetType" : "question",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Блокирует задачи"
+    }, {
+      "key" : "dependsOn",
+      "label" : "Зависит от",
+      "rel" : "DEPENDS_ON",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true,
+      "props" : [ {
+        "key" : "kind",
+        "label" : "Вид",
+        "dict" : "dependency_kind"
+      }, {
+        "key" : "reason",
+        "label" : "Причина"
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
+      "inverseLabel" : "От неё зависят"
+    }, {
+      "key" : "blocks",
+      "label" : "От неё зависят",
+      "rel" : "DEPENDS_ON",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true,
+      "props" : [ {
+        "key" : "kind",
+        "label" : "Вид",
+        "dict" : "dependency_kind"
+      }, {
+        "key" : "reason",
+        "label" : "Причина"
+      } ],
+      "reasonRequired" : true,
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
+      "inverseLabel" : "Зависит от"
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -1066,7 +1161,8 @@
       },
       "definition" : "Состояние решения: предложено, принято, отложено или заменено другим.",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "DRAFT"
     }, {
       "key" : "date",
       "label" : "Дата",
@@ -1236,7 +1332,7 @@
       }, {
         "rel" : "DEPENDS_ON",
         "dir" : "in",
-        "label" : "блокирует",
+        "label" : "от неё зависят",
         "relation" : "association"
       }, {
         "rel" : "SUPERSEDES",
@@ -1294,16 +1390,18 @@
       "targetType" : "adr",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Блокирует"
     }, {
       "key" : "blocks",
-      "label" : "Блокирует",
+      "label" : "От неё зависят",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "adr",
       "relation" : "association",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Зависит от"
     }, {
       "key" : "supersedes",
       "label" : "Заменяет",
@@ -1381,7 +1479,8 @@
       "targetType" : "sprint",
       "relation" : "realization",
       "place" : "link_tab",
-      "manageable" : true
+      "manageable" : true,
+      "inverseLabel" : "Реализует ADR"
     }, {
       "key" : "releases",
       "label" : "Релизы",
@@ -1471,7 +1570,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "version",
       "label" : "Версия",
@@ -1771,6 +1871,18 @@
       "layer" : "stable",
       "labelEn" : "File",
       "labelPl" : "Plik"
+    }, {
+      "key" : "has_ext_deps",
+      "label" : "Внешние зависимости",
+      "labelKey" : "pp.field.hasExtDeps",
+      "kind" : "bool",
+      "group" : "props",
+      "definition" : "В документе есть ссылки на внешние ресурсы (CDN): без интернета он может отрисоваться не полностью.",
+      "layer" : "optional",
+      "labelEn" : "External dependencies",
+      "definitionEn" : "The document references external resources (CDN): without internet access it may not render fully.",
+      "labelPl" : "Zależności zewnętrzne",
+      "definitionPl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości."
     } ],
     "body" : [ {
       "key" : "content_md_ru",
@@ -1800,7 +1912,7 @@
       "labelPl" : "Tekst (EN)"
     } ],
     "props" : [ {
-      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path" ]
+      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
     } ],
     "linkTabs" : [ {
       "key" : "children",
@@ -1859,7 +1971,8 @@
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "attribute",
-      "place" : "prop"
+      "place" : "prop",
+      "inverseLabel" : "Знания"
     }, {
       "key" : "children",
       "label" : "Вложенные документы",
@@ -1922,7 +2035,8 @@
       "layer" : "stable",
       "historic" : true,
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -2155,7 +2269,8 @@
       "definition" : "Статус вопроса: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "open"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -2193,7 +2308,8 @@
       "labelKey" : "pp.field.responsible",
       "kind" : "text",
       "group" : "props",
-      "definition" : "Владелец записи: кто за неё отвечает.",
+      "definition" : "Кто отвечает за то, чтобы вопрос получил ответ: человек или агент реестра LORE (связь ANSWERABLE_BY).",
+      "description" : "Ответственный — связь с записью реестра людей или агентов, не свободный текст. Когда вопрос закрывают решением (связь «отвечает»), ответственным становится автор решения. У вопросов, где связи нет, показывается прежний текст поля — только для чтения.",
       "labelEn" : "Responsible",
       "labelPl" : "Odpowiedzialny"
     }, {
@@ -2301,7 +2417,8 @@
       "dir" : "out",
       "targetType" : "task",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "inverseLabel" : "Блокирующие вопросы"
     }, {
       "key" : "answeredBy",
       "label" : "Ответ — решения",
@@ -2310,6 +2427,14 @@
       "targetType" : "decision",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "responsible",
+      "label" : "Ответственный",
+      "rel" : "ANSWERABLE_BY",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "attribute",
+      "place" : "prop"
     }, {
       "key" : "components",
       "label" : "Компоненты",
@@ -2454,6 +2579,23 @@
     "props" : [ {
       "fields" : [ "week", "date", "priority", "products", "projects", "components" ]
     } ],
+    "linkTabs" : [ {
+      "key" : "deps",
+      "label" : "Зависимости",
+      "rels" : [ {
+        "rel" : "DEPENDS_ON",
+        "dir" : "out",
+        "label" : "зависит от",
+        "relation" : "association",
+        "edgeProps" : [ "kind", "reason" ]
+      }, {
+        "rel" : "DEPENDS_ON",
+        "dir" : "in",
+        "label" : "от неё зависят",
+        "relation" : "association",
+        "edgeProps" : [ "kind", "reason" ]
+      } ]
+    } ],
     "relations" : [ {
       "key" : "sprints",
       "label" : "Спринты",
@@ -2470,6 +2612,42 @@
       "targetType" : "feature",
       "relation" : "aggregation",
       "place" : "link_tab"
+    }, {
+      "key" : "dependsOn",
+      "label" : "Зависит от",
+      "rel" : "DEPENDS_ON",
+      "dir" : "out",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab",
+      "props" : [ {
+        "key" : "kind",
+        "label" : "Вид",
+        "dict" : "dependency_kind"
+      }, {
+        "key" : "reason",
+        "label" : "Причина"
+      } ],
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
+      "inverseLabel" : "От неё зависят"
+    }, {
+      "key" : "blocks",
+      "label" : "От неё зависят",
+      "rel" : "DEPENDS_ON",
+      "dir" : "in",
+      "targetType" : "any",
+      "relation" : "association",
+      "place" : "link_tab",
+      "props" : [ {
+        "key" : "kind",
+        "label" : "Вид",
+        "dict" : "dependency_kind"
+      }, {
+        "key" : "reason",
+        "label" : "Причина"
+      } ],
+      "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
+      "inverseLabel" : "Зависит от"
     }, {
       "key" : "products",
       "label" : "Продукты",
@@ -2489,6 +2667,57 @@
     } ],
     "labelEn" : "Milestone",
     "labelPl" : "Kamień milowy"
+  }, {
+    "type" : "track",
+    "label" : "Трек",
+    "labelKey" : "pp.kind.track",
+    "icon" : "path-distance",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Подпись трека — линия работ, по которой спринты стоят в одной полосе («Hound / Parser», «Dali Core»).",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код трека (track_id старой доски плана): по нему спринт ссылался на трек до 1.18.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "area",
+      "label" : "Вид",
+      "labelKey" : "pp.field.trackArea",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Вид трека: engine, service, infra, frontend (поле area с V89).",
+      "layer" : "stable",
+      "labelEn" : "Kind",
+      "labelPl" : "Rodzaj"
+    } ],
+    "props" : [ {
+      "fields" : [ "area" ]
+    } ],
+    "relations" : [ {
+      "key" : "sprints",
+      "label" : "Спринты на треке",
+      "rel" : "ON_TRACK",
+      "dir" : "in",
+      "targetType" : "sprint",
+      "relation" : "aggregation",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "Track",
+    "labelPl" : "Ścieżka"
   }, {
     "type" : "release",
     "label" : "Релиз",
@@ -2890,6 +3119,14 @@
       "relation" : "attribute",
       "place" : "link_tab"
     }, {
+      "key" : "repositories",
+      "label" : "Репозитории",
+      "rel" : "COMPONENT_REPOSITORY",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
       "key" : "adrs",
       "label" : "ADR",
       "rel" : "BELONGS_TO",
@@ -3137,7 +3374,8 @@
       "definition" : "Статус фичи: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "layer" : "stable",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -3668,8 +3906,10 @@
       "key" : "kind",
       "label" : "Вид",
       "labelKey" : "pp.field.kind",
-      "kind" : "text",
+      "kind" : "enum",
       "group" : "props",
+      "multi" : true,
+      "definition" : "Вид продукта — набор: tech (ИТ, технологический), service (не ИТ, сервисно-организационный) или оба; пустым не бывает (ADR-LORE-044).",
       "labelEn" : "Kind",
       "labelPl" : "Rodzaj"
     }, {
@@ -3824,6 +4064,14 @@
       "targetType" : "milestone",
       "relation" : "attribute",
       "place" : "link_tab"
+    }, {
+      "key" : "organizations",
+      "label" : "Организации",
+      "rel" : "ORG_HAS_PRODUCT",
+      "dir" : "in",
+      "targetType" : "organization",
+      "relation" : "association",
+      "place" : "link_tab"
     } ],
     "labelEn" : "Product",
     "labelPl" : "Produkt"
@@ -3923,6 +4171,14 @@
       "dir" : "in",
       "targetType" : "agent",
       "relation" : "aggregation",
+      "place" : "link_tab"
+    }, {
+      "key" : "organizations",
+      "label" : "Организации",
+      "rel" : "ORG_MEMBER",
+      "dir" : "in",
+      "targetType" : "organization",
+      "relation" : "association",
       "place" : "link_tab"
     } ],
     "labelEn" : "Person",
@@ -4831,7 +5087,8 @@
       "dict" : "qg_status",
       "definition" : "Статус гейта качества: на каком этапе жизни он сейчас. Значение из справочника статусов.",
       "labelEn" : "State",
-      "labelPl" : "Stan"
+      "labelPl" : "Stan",
+      "initial" : "draft"
     }, {
       "key" : "qg_type",
       "label" : "Тип",
@@ -4841,6 +5098,15 @@
       "dict" : "qg_type",
       "labelEn" : "Type",
       "labelPl" : "Typ"
+    }, {
+      "key" : "scope",
+      "label" : "Охват",
+      "labelKey" : "pp.field.qgScope",
+      "kind" : "enum",
+      "group" : "props",
+      "definition" : "Общий гейт (global) проверяет все проекты и виден всем, проекта у него нет; проектный (project) привязан ровно к одному проекту.",
+      "labelEn" : "Scope",
+      "labelPl" : "Zakres"
     }, {
       "key" : "title",
       "label" : "Название",
@@ -4941,9 +5207,21 @@
       "labelPl" : "Tekst"
     } ],
     "props" : [ {
-      "fields" : [ "projects", "components", "sprint", "date" ]
+      "fields" : [ "scope", "projects", "components", "sprint", "date" ]
     }, {
       "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
+    } ],
+    "parts" : [ {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "type" : "qg_metric",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "owned" : "strict",
+      "relation" : "composition",
+      "columns" : [ "status", "code", "title", "threshold", "unit", "direction", "current_value" ],
+      "orderBy" : "metric_id",
+      "slice" : "qg_metrics"
     } ],
     "linkTabs" : [ {
       "key" : "refs",
@@ -4977,6 +5255,14 @@
       "relation" : "attribute",
       "place" : "prop"
     }, {
+      "key" : "metrics",
+      "label" : "Метрики",
+      "rel" : "MEASURED_BY",
+      "dir" : "out",
+      "targetType" : "qg_metric",
+      "relation" : "composition",
+      "place" : "part"
+    }, {
       "key" : "refsOut",
       "label" : "Ссылается",
       "rel" : "REFERENCES",
@@ -4995,6 +5281,234 @@
     } ],
     "labelEn" : "Quality gate",
     "labelPl" : "Bramka jakości"
+  }, {
+    "type" : "repository",
+    "label" : "Репозиторий",
+    "labelKey" : "pp.kind.repository",
+    "icon" : "chest",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "full_path",
+      "label" : "Полный путь",
+      "labelKey" : "pp.field.fullPath",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+      "layer" : "stable",
+      "labelEn" : "Full path",
+      "labelPl" : "Pełna ścieżka"
+    }, {
+      "key" : "host",
+      "label" : "Хост",
+      "labelKey" : "pp.field.host",
+      "kind" : "text",
+      "group" : "props",
+      "layer" : "stable",
+      "labelEn" : "Host",
+      "labelPl" : "Host"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец на хосте",
+      "labelKey" : "pp.field.hostOwner",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Пространство на хосте (AIDA, NooriUta) — вместе с хостом и именем даёт полный путь. Это не организация.",
+      "layer" : "stable",
+      "labelEn" : "Owner on host",
+      "labelPl" : "Właściciel na hoście"
+    }, {
+      "key" : "default_branch",
+      "label" : "Ветка по умолчанию",
+      "labelKey" : "pp.field.defaultBranch",
+      "kind" : "text",
+      "group" : "props",
+      "layer" : "stable",
+      "labelEn" : "Default branch",
+      "labelPl" : "Gałąź domyślna"
+    }, {
+      "key" : "url",
+      "label" : "Адрес",
+      "labelKey" : "pp.field.url",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Ключ репозитория — адрес уникален.",
+      "layer" : "stable",
+      "labelEn" : "Address",
+      "labelPl" : "Adres"
+    } ],
+    "props" : [ {
+      "fields" : [ "full_path", "host", "owner", "default_branch", "url" ]
+    } ],
+    "linkTabs" : [ {
+      "key" : "links",
+      "label" : "Связи",
+      "rels" : [ {
+        "rel" : "HAS_REPOSITORY",
+        "dir" : "in",
+        "label" : "основной у проекта",
+        "relation" : "association"
+      }, {
+        "rel" : "COMPONENT_REPOSITORY",
+        "dir" : "in",
+        "label" : "репозиторий компонента",
+        "relation" : "association"
+      }, {
+        "rel" : "MIRRORED_TO",
+        "dir" : "out",
+        "label" : "зеркала",
+        "relation" : "association"
+      }, {
+        "rel" : "MIRRORED_TO",
+        "dir" : "in",
+        "label" : "зеркало репозитория",
+        "relation" : "association"
+      }, {
+        "rel" : "USES_REPOSITORY",
+        "dir" : "out",
+        "label" : "использует",
+        "relation" : "association"
+      }, {
+        "rel" : "USES_REPOSITORY",
+        "dir" : "in",
+        "label" : "используется в",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Основной у проекта",
+      "rel" : "HAS_REPOSITORY",
+      "dir" : "in",
+      "targetType" : "project",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "components",
+      "label" : "Репозиторий компонента",
+      "rel" : "COMPONENT_REPOSITORY",
+      "dir" : "in",
+      "targetType" : "component",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "mirrors",
+      "label" : "Зеркала",
+      "rel" : "MIRRORED_TO",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "mirrorOf",
+      "label" : "Зеркало репозитория",
+      "rel" : "MIRRORED_TO",
+      "dir" : "in",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "uses",
+      "label" : "Использует",
+      "rel" : "USES_REPOSITORY",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "usedBy",
+      "label" : "Используется в",
+      "rel" : "USES_REPOSITORY",
+      "dir" : "in",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "Repository",
+    "labelPl" : "Repozytorium"
+  }, {
+    "type" : "organization",
+    "label" : "Организация",
+    "labelKey" : "pp.kind.organization",
+    "icon" : "castle",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    } ],
+    "linkTabs" : [ {
+      "key" : "links",
+      "label" : "Связи",
+      "rels" : [ {
+        "rel" : "ORG_HAS_PROJECT",
+        "dir" : "out",
+        "label" : "проекты",
+        "relation" : "association"
+      }, {
+        "rel" : "ORG_HAS_PRODUCT",
+        "dir" : "out",
+        "label" : "продукты",
+        "relation" : "association"
+      }, {
+        "rel" : "ORG_MEMBER",
+        "dir" : "out",
+        "label" : "люди",
+        "relation" : "association"
+      } ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "ORG_HAS_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "products",
+      "label" : "Продукты",
+      "rel" : "ORG_HAS_PRODUCT",
+      "dir" : "out",
+      "targetType" : "product",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    }, {
+      "key" : "members",
+      "label" : "Люди",
+      "rel" : "ORG_MEMBER",
+      "dir" : "out",
+      "targetType" : "user",
+      "relation" : "association",
+      "place" : "link_tab",
+      "manageable" : true
+    } ],
+    "labelEn" : "Organization",
+    "labelPl" : "Organizacja"
   }, {
     "type" : "project",
     "label" : "Проект",
@@ -5071,6 +5585,14 @@
       "dir" : "in",
       "targetType" : "component",
       "relation" : "attribute",
+      "place" : "link_tab"
+    }, {
+      "key" : "repositories",
+      "label" : "Репозитории",
+      "rel" : "HAS_REPOSITORY",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
       "place" : "link_tab"
     }, {
       "key" : "adrs",
@@ -5184,6 +5706,14 @@
       "targetType" : "pr",
       "relation" : "attribute",
       "place" : "link_tab"
+    }, {
+      "key" : "organizations",
+      "label" : "Организации",
+      "rel" : "ORG_HAS_PROJECT",
+      "dir" : "in",
+      "targetType" : "organization",
+      "relation" : "association",
+      "place" : "link_tab"
     } ],
     "labelEn" : "Project",
     "labelPl" : "Projekt"
@@ -5199,7 +5729,8 @@
       "group" : "head",
       "dict" : "task_status",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "backlog"
     }, {
       "key" : "title",
       "label" : "Название",
@@ -5240,7 +5771,8 @@
       "kind" : "enum",
       "group" : "head",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "open"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -5289,7 +5821,8 @@
       "group" : "head",
       "dict" : "decision_status",
       "labelEn" : "Status",
-      "labelPl" : "Status"
+      "labelPl" : "Status",
+      "initial" : "proposed"
     }, {
       "key" : "code",
       "label" : "Код",
@@ -5318,8 +5851,78 @@
     } ],
     "labelEn" : "Decision",
     "labelPl" : "Decyzja"
+  }, {
+    "type" : "qg_metric",
+    "label" : "Метрика гейта",
+    "fields" : [ {
+      "key" : "status",
+      "label" : "Итог",
+      "labelKey" : "pp.field.qgMetricStatus",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Итог метрики по порогу и направлению на последнем прогоне гейта: pass — порог выполнен, fail — нет, unknown — измерения нет или порог не числовой.",
+      "labelEn" : "Result",
+      "labelPl" : "Wynik"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код строки таблицы метрик гейта (P-1, INV-03).",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Что измеряет метрика — текст строки таблицы гейта.",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "threshold",
+      "label" : "Порог",
+      "labelKey" : "pp.field.threshold",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Пороговое значение так, как оно записано в гейте (≥ 98%, ≤ 200 ms).",
+      "labelEn" : "Threshold",
+      "labelPl" : "Próg"
+    }, {
+      "key" : "unit",
+      "label" : "Единица",
+      "labelKey" : "pp.field.unit",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Единица измерения: % · s · MB/s · count; из порога, иначе из прогона.",
+      "labelEn" : "Unit",
+      "labelPl" : "Jednostka"
+    }, {
+      "key" : "direction",
+      "label" : "Направление",
+      "labelKey" : "pp.field.direction",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Как сравнивать с порогом: gte — не меньше, lte — не больше, eq — равно.",
+      "labelEn" : "Direction",
+      "labelPl" : "Kierunek"
+    }, {
+      "key" : "current_value",
+      "label" : "Последнее измерение",
+      "labelKey" : "pp.field.currentValue",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Значение метрики на последнем прогоне гейта; пусто — измерения нет.",
+      "labelEn" : "Last measurement",
+      "labelPl" : "Ostatni pomiar"
+    } ],
+    "labelEn" : "Gate metric",
+    "labelPl" : "Metryka bramki"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "pain", "product", "project", "quality_gate", "question", "release", "runbook", "tech", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -5364,6 +5967,10 @@
       "hist" : "KnowMilestoneHist",
       "key" : "milestone_id"
     },
+    "organization" : {
+      "vertex" : "KnowOrganization",
+      "key" : "org_id"
+    },
     "pain" : {
       "vertex" : "KnowPain",
       "key" : "pain_id"
@@ -5390,6 +5997,10 @@
       "hist" : "KnowReleaseHist",
       "key" : "release_uid"
     },
+    "repository" : {
+      "vertex" : "KnowRepository",
+      "key" : "url"
+    },
     "runbook" : {
       "vertex" : "KnowRunbook",
       "hist" : "KnowRunbookHist",
@@ -5414,6 +6025,10 @@
       "vertex" : "KnowSpec",
       "hist" : "KnowSpecHist",
       "key" : "spec_id"
+    },
+    "track" : {
+      "vertex" : "KnowTrack",
+      "key" : "track_id"
     },
     "user" : {
       "vertex" : "KnowUser",
@@ -5461,6 +6076,10 @@
       "date" : "date_display",
       "title" : "label"
     },
+    "organization" : {
+      "code" : "org_id",
+      "title" : "name"
+    },
     "pain" : {
       "date" : "date_created"
     },
@@ -5485,6 +6104,9 @@
       "code" : "release_id",
       "date" : "release_date",
       "description_md" : "description_md"
+    },
+    "repository" : {
+      "title" : "name"
     },
     "runbook" : {
       "date" : "date_created",
@@ -5511,6 +6133,10 @@
     "tech" : {
       "code" : "spec_id"
     },
+    "track" : {
+      "code" : "track_id",
+      "title" : "label"
+    },
     "user" : {
       "avatar" : "avatar_ref",
       "title" : "display_name"
@@ -5530,10 +6156,10 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "product", "project", "quality_gate", "question", "runbook", "spec", "task", "user" ],
+  "no_type_color" : [ "agent", "doc", "organization", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
   "precision" : {
-    "adr.date" : "date",
-    "decision.date" : "date",
+    "adr.date" : "datetime",
+    "decision.date" : "datetime",
     "feature.date" : "date",
     "feature.shipped_at" : "date",
     "gain.date" : "date",
@@ -5546,7 +6172,7 @@
     "question.opened" : "date",
     "release.date" : "date",
     "runbook.date" : "date",
-    "sprint.created" : "datetime",
+    "sprint.created" : "date",
     "sprint.planned_end_date" : "date",
     "sprint.planned_start" : "date",
     "tech.checked_at" : "datetime"
@@ -5680,6 +6306,11 @@
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       } ]
     },
+    "organization" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
     "pain" : {
       "history" : "none",
       "created" : [ {
@@ -5759,6 +6390,11 @@
         "precision" : "date"
       } ]
     },
+    "repository" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
     "runbook" : {
       "history" : "scd2",
       "created" : [ {
@@ -5793,7 +6429,7 @@
       "history" : "scd2",
       "created" : [ {
         "source" : "created_date",
-        "precision" : "datetime",
+        "precision" : "date",
         "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
       } ],
       "changed" : [ {
@@ -5805,7 +6441,7 @@
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       }, {
         "source" : "created_date",
-        "precision" : "datetime"
+        "precision" : "date"
       } ]
     },
     "task" : {
@@ -5837,6 +6473,11 @@
         "precision" : "datetime",
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       } ]
+    },
+    "track" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "user" : {
       "history" : "none",
@@ -5954,9 +6595,33 @@
     } ]
   },
   "edge_fields" : {
+    "question.owner" : "ANSWERABLE_BY",
     "task.author" : "ROLE_HELD_BY",
     "task.executor" : "ROLE_HELD_BY",
     "task.reviewer" : "ROLE_HELD_BY"
+  },
+  "edge_history" : {
+    "fields" : [ "valid_from", "valid_to" ],
+    "edges" : {
+      "ANSWERABLE_BY" : "Ответственный за вопрос (человек или агент реестра): при закрытии вопроса решением ответственным становится автор решения; по связи видно, кто отвечал раньше и с какого времени (MT-MCP-TRUTH A6, владелица 19.11.2026).",
+      "DEPENDS_ON" : "Зависимость задачи, фазы, спринта и вехи (одна связь «зависит от» с видом и причиной, MDL-13; у ADR — та же связь между ADR): снятая зависимость и смена вида закрывают ребро, а не стирают — видно, что от чего зависело и когда.",
+      "FILLS_ROLE" : "Роль продукта, которую исполняет агент: действующая одна, при смене видно, кто исполнял её раньше и с какого времени.",
+      "HAS_PROJECT_ROLE" : "Роль человека в проекте — это права доступа: кто, какую роль и с какого по какое время имел; снятая роль закрывается, а не стирается.",
+      "IN_PHASE" : "Фаза задачи: задачу переносят между фазами спринта; по связи видно, когда задача вошла в фазу и когда ушла (решение владелицы: история в самой связи).",
+      "ON_TRACK" : "Трек спринта (MDL-13, владелица 20.11.2026 «треки б»): спринт переводят с трека на трек; по связи видно, когда спринт пришёл на трек и когда ушёл — история в самой связи, как у вехи.",
+      "ROLE_HELD_BY" : "Роль на задаче (автор, исполнитель, ревьюер): сколько раз роль передавали и кто вёл задачу раньше (ADR-LORE-042 §4); ведёт историю с TR-05.",
+      "TARGETS_MILESTONE" : "Веха спринта и сценария: план переносят с вехи на веху; по связи видно, когда спринт сменил цель (решение владелицы: история в самой связи)."
+    }
+  },
+  "edge_free_fields" : {
+    "TAGGED_WITH" : {
+      "target_type" : "tag",
+      "vertex" : "KnowTag",
+      "key" : "tag_id",
+      "property" : "fields",
+      "stamp" : [ "tagged_at", "tagged_by", "changed_at", "changed_by" ],
+      "why" : "Supertags (SPRINT_LORE_PRODUCT_BACKLOG/SUPERTAGS-SPIKE, прототип одобрен владелицей 20.11.2026): тег несёт свободные поля — нужны не всем записям типа и без истории; значения живут на ребре запись → тег в словаре fields, правка перезаписывает значение. Набор полей не объявляется — он собирается из рёбер («метапроектирование без релизов»). Поле, нужное всем записям типа и с историей, — костяк типа, а не тег."
+    }
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
   "passport" : {
@@ -6049,6 +6714,9 @@
       "slot" : "own"
     }, {
       "key" : "tech",
+      "slot" : "own"
+    }, {
+      "key" : "repositories",
       "slot" : "own"
     }, {
       "key" : "children",
@@ -6237,6 +6905,16 @@
       "key" : "content",
       "slot" : "own"
     } ],
+    "organization" : [ {
+      "key" : "projects",
+      "slot" : "own"
+    }, {
+      "key" : "products",
+      "slot" : "own"
+    }, {
+      "key" : "members",
+      "slot" : "own"
+    } ],
     "pain" : [ {
       "key" : "content",
       "slot" : "own"
@@ -6289,12 +6967,18 @@
     }, {
       "key" : "milestones",
       "slot" : "own"
+    }, {
+      "key" : "organizations",
+      "slot" : "own"
     } ],
     "project" : [ {
       "key" : "sprints",
       "slot" : "own"
     }, {
       "key" : "components",
+      "slot" : "own"
+    }, {
+      "key" : "repositories",
       "slot" : "own"
     }, {
       "key" : "adrs",
@@ -6337,6 +7021,9 @@
       "slot" : "own"
     }, {
       "key" : "prs",
+      "slot" : "own"
+    }, {
+      "key" : "organizations",
       "slot" : "own"
     } ],
     "quality_gate" : [ {
@@ -6385,6 +7072,25 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "repository" : [ {
+      "key" : "projects",
+      "slot" : "own"
+    }, {
+      "key" : "components",
+      "slot" : "own"
+    }, {
+      "key" : "mirrors",
+      "slot" : "own"
+    }, {
+      "key" : "mirrorOf",
+      "slot" : "own"
+    }, {
+      "key" : "uses",
+      "slot" : "own"
+    }, {
+      "key" : "usedBy",
       "slot" : "own"
     } ],
     "runbook" : [ {
@@ -6488,11 +7194,18 @@
       "key" : "refsIn",
       "slot" : "own"
     } ],
+    "track" : [ {
+      "key" : "sprints",
+      "slot" : "own"
+    } ],
     "user" : [ {
       "key" : "tasks",
       "slot" : "own"
     }, {
       "key" : "agents",
+      "slot" : "own"
+    }, {
+      "key" : "organizations",
       "slot" : "own"
     } ]
   },
@@ -6547,6 +7260,9 @@
     }, {
       "section" : "question",
       "icon" : "help"
+    }, {
+      "section" : "tags",
+      "icon" : "price-tag"
     } ]
   }, {
     "id" : "product",
@@ -6584,6 +7300,12 @@
     }, {
       "section" : "tech",
       "icon" : "gears"
+    }, {
+      "section" : "repository",
+      "icon" : "chest"
+    }, {
+      "section" : "organization",
+      "icon" : "castle"
     } ]
   }, {
     "id" : "personal",
@@ -6608,6 +7330,7 @@
     "machine" : "admin",
     "milestone" : "everywhere",
     "news" : "everywhere",
+    "organization" : "everywhere",
     "pain" : "everywhere",
     "people" : "admin",
     "product" : "everywhere",
@@ -6615,10 +7338,12 @@
     "quality_gate" : "everywhere",
     "question" : "everywhere",
     "release" : "everywhere",
+    "repository" : "everywhere",
     "runbook" : "everywhere",
     "settings" : "everywhere",
     "spec" : "everywhere",
     "sprint" : "everywhere",
+    "tags" : "everywhere",
     "task" : "everywhere",
     "tech" : "everywhere",
     "user" : "admin"
@@ -6638,6 +7363,14 @@
         "body" : "adr_id"
       } ],
       "require_one_of" : [ "projects", "adr" ]
+    },
+    "organization" : {
+      "endpoint" : "/lore/organization",
+      "id_field" : "org_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "name"
+      } ]
     },
     "spec" : {
       "endpoint" : "/lore/spec",
@@ -6769,6 +7502,55 @@
         } ],
         "failed" : "не прошло испытания"
       }
+    }
+  },
+  "series" : {
+    "AgentActionLog" : {
+      "about" : "AO-01, D-2026-LORE-AGENT-MACHINE-EVERYWHERE п.4: журнал действий — точка на каждый мутирующий вызов LORE с исходом (value — HTTP-статус). Теги: семейство (object_type), сущность или путь (object_id), вызывающий (source), ось agent/human/unauth (segment), client_id токена агента (client) и машина X-Lore-Machine (machine); «(unknown)» — агент без значения, «(n/a)» — не агент. Читают срезы agent_actions, admin_actions, mcp_failures, раздел админки «Журнал действий», история сущности и квоты агентов. До 1.18 заводился шагом V86.",
+      "timestamp" : "ts",
+      "tags" : {
+        "object_type" : "STRING",
+        "object_id" : "STRING",
+        "source" : "STRING",
+        "segment" : "STRING",
+        "client" : "STRING",
+        "machine" : "STRING"
+      },
+      "fields" : {
+        "value" : "DOUBLE"
+      },
+      "writer" : "server: LoreRequestStatsFilter → LoreRequestStats.journalAction"
+    },
+    "AuditDbLogin" : {
+      "about" : "DBR-07: входы в ArcadeDB через сторожа (deploy/db-guard) — первый вход пары «пользователь × источник» за минуту. Секрета нет: из Authorization берётся только имя (Basic → пользователь, Bearer → apitoken:<имя>). Пишет сторож своим токеном с правом только на этот ряд, не root. Ряд полон, только когда прямой :2480 закрыт (Этап 6, D-2026-SETUP-BEFORE-ENFORCE).",
+      "timestamp" : "ts",
+      "tags" : {
+        "user" : "STRING",
+        "src_ip" : "STRING",
+        "src_container" : "STRING",
+        "database" : "STRING",
+        "method" : "STRING",
+        "path" : "STRING"
+      },
+      "fields" : {
+        "status" : "INTEGER"
+      },
+      "writer" : "db-guard"
+    },
+    "MetricSnapshot" : {
+      "about" : "ARC-02: метрики — счётчики запросов и сессий по вызывающим (metric lore.requests/lore.session, окно LoreRequestStats), входы через Keycloak (LoreKcLoginPoller), метрики и архив публикаций BRAGI (MCP-03), прежние точки журнала lore.action (до V86, только чтение). Читают срезы метрик и аналитика BRAGI. До 1.18 заводился схемой старой базы (LoreSchemaInitializer).",
+      "timestamp" : "ts",
+      "tags" : {
+        "object_type" : "STRING",
+        "object_id" : "STRING",
+        "metric" : "STRING",
+        "source" : "STRING",
+        "segment" : "STRING"
+      },
+      "fields" : {
+        "value" : "DOUBLE"
+      },
+      "writer" : "server: LoreRequestStats.flush, LoreKcLoginPoller, LoreBragiResource"
     }
   }
 }

@@ -159,7 +159,8 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
   it('dry_run: ввод есть, и ничего меняющего в dry-run не выполняется', () => {
     expect(read(CD)).toMatch(/^ {6}dry_run:$/m);
     const mutating = [
-      /compose-build-retry\.sh/, /docker compose up\b/, /docker compose run\b/,
+      // MIG-01: `docker compose run` накатки схемы живёт в migrate-schema.sh — шаг, который его зовёт, тоже только live
+      /compose-build-retry\.sh/, /docker compose up\b/, /migrate-schema\.sh/,
       /v1-freeze\.sh (pin|repin)\b/, /db-heal\.sh/, /preprod-pin-sha\.sh/, /api\.telegram\.org/,
     ];
     for (const re of mutating) {
@@ -204,10 +205,10 @@ describe('PL-04: оверлей docker-compose.preprod.yml', () => {
   });
 
   it('образы именуются как на проде, тег :sha8, метка revision', () => {
-    for (const svc of ['lore-backend', 'lore-app', 'lore-app-next']) {
+    for (const svc of ['lore-backend', 'lore-app', 'lore-app-next', 'lore-mcp']) {
       expect(ov()).toMatch(new RegExp(`image: unlimitedlore-${svc}:\\$\\{LORE_IMAGE_TAG:\\?`));
     }
-    expect((ov().match(/org\.opencontainers\.image\.revision: \$\{LORE_BUILD_COMMIT/g) ?? []).length).toBe(3);
+    expect((ov().match(/org\.opencontainers\.image\.revision: \$\{LORE_BUILD_COMMIT/g) ?? []).length).toBe(4);
   });
 
   it('базовый compose не тронут: v1 по-прежнему "4400:80"', () => {
@@ -627,6 +628,51 @@ describe('PL-04: бэкенд препрода — basic (root), а не ток�
   });
 });
 
+// SPRINT_LORE_PRODUCT_BACKLOG/DBR-01, шаг 4.2 (вариант А владелицы): рантайм прода ходит в ArcadeDB
+// собственным API-токеном без updateSchema, root-пароль остаётся только у накатки схемы и бэкапа.
+// Раньше compose отдавал ARCADEDB_ROOT_PASSWORD рантайму, и бэкап/снимок прода брали его через
+// `docker exec` в работающий бэкенд — убрать пароль из рантайма, не переведя их, значило сломать
+// бэкап перед накаткой. Поэтому root живёт в отдельном сервисе lore-migrate (профиль migrate).
+describe('DBR-01: root-пароль прода — только у накатки и бэкапа (lore-migrate), рантайм на токене', () => {
+  const HOST = 'docker/lore-host/docker-compose.yml';
+  /** Блок сервиса `name:` (отступ 2) до следующего сервиса. */
+  const svc = (name: string) => job(HOST, name);
+  const env = (block: string) => code(block).split('\n').filter((l) => /^ {6}- /.test(l)).join('\n');
+
+  it('рантайм lore-backend: без ARCADEDB_ROOT_PASSWORD, способ входа жёстко token', () => {
+    const be = env(svc('lore-backend'));
+    expect(be).not.toMatch(/ARCADEDB_ROOT_PASSWORD/);
+    expect(be).toMatch(/^ {6}- lore\.mart\.auth=token$/m);
+    expect(be).not.toMatch(/LORE_MART_AUTH/);
+  });
+
+  it('lore-migrate: наследует lore-backend, профиль migrate, root и basic, накатка-и-выход', () => {
+    const m = code(svc('lore-migrate'));
+    expect(m, 'сервиса lore-migrate нет').not.toBe('');
+    expect(m).toMatch(/^ {4}extends:\n {6}service: lore-backend$/m);
+    expect(m).toMatch(/^ {4}profiles: \[migrate\]$/m);
+    expect(m).toMatch(/^ {6}- ARCADEDB_ROOT_PASSWORD=\$\{ARCADEDB_ROOT_PASSWORD:-unset\}$/m);
+    expect(m).toMatch(/^ {6}- lore\.mart\.auth=basic$/m);
+    expect(m).toMatch(/^ {6}- lore\.migrate=true$/m);
+    expect(m).toMatch(/^ {6}- lore\.migrate\.only=true$/m);
+  });
+
+  it('накатка и бэкап прода в lore-host-deploy.sh идут через lore-migrate, не через рантайм', () => {
+    const s = code(read('.github/scripts/lore-host-deploy.sh'));
+    expect(s).toMatch(/docker compose run --rm --no-deps -T lore-migrate/);
+    expect(s).toMatch(/docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c/);
+    expect(s).not.toMatch(/docker compose run --rm --no-deps -T lore-backend/);
+    expect(s).not.toMatch(/docker exec "\$cid"/);
+  });
+
+  it.each(['scripts/migrate-live-check.sh', 'scripts/migration-snapshot.sh', 'scripts/preprod-db-refresh.sh'])(
+    '%s: снимок прода — кредом lore-migrate, а не docker exec в рантайм', (f) => {
+      const s = code(read(f));
+      expect(s).not.toMatch(/docker exec \$bcid/);
+      expect(s).toMatch(/docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c/);
+    });
+});
+
 // Метка версии в углу (владелица 09.11): тег релиза доезжает до /lore/version только
 // если выкатка прода передаёт его в контейнер, а compose принимает. Снять любую из
 // двух строк — release молча станет null, и метка покажет коммит вместо версии.
@@ -699,5 +745,60 @@ describe.skipIf(!bashBin)('S8-01: проба прода /lore/version — чер
 
   it('/lore/version через nginx v1 красный — по-прежнему красная проба', () => {
     expect(probeRun('https://lore.odal.seidrstudio.pro').code).toBe(1);
+  });
+});
+
+// 1.18 (20.11.2026): база прода после переноса собрана из модели — бэкенд пишет «схема собрана из модели
+// (LoreModelSchema)», а не «схема сверена: БД vN». Выкатка прода (state/db/probe) ждала только «схема сверена»:
+// state считал схему неизвестной, db делал бэкап и накатку (а та на такой базе честно «шаги V пропущены» →
+// провал), probe краснел. Правило: база из модели — признанное состояние, а не «неизвестно».
+describe.skipIf(!bashBin)('1.18: выкатка прода на базу, собранную из модели', { timeout: SPAWN_TIMEOUT }, () => {
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+  const MODEL_LINE = '[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется';
+
+  function stepRun(step: string, stateLines: string[], logLine: string) {
+    const d = mkdtempSync(join(tmpdir(), 'lore-pl-model-'));
+    writeFileSync(join(d, 'lore-host-deploy.sh'), read('.github/scripts/lore-host-deploy.sh'));
+    writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'r.sh'), [
+      '#!/usr/bin/env bash',
+      'echo "$*" >> "$R_LOG"',
+      'case "$*" in',
+      '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
+      '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
+      '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
+      'esac', '',
+    ].join('\n'));
+    chmodSync(join(d, 'r.sh'), 0o755);
+    const st = join(d, 'state.env');
+    writeFileSync(st, [...stateLines, ''].join('\n'));
+    const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
+    const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
+      DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.0',
+    });
+    const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
+    rmSync(d, { recursive: true, force: true });
+    return { ...r, state, calls };
+  }
+
+  it('db: схема прода «из модели» — ни бэкапа, ни накатки, шаг зелёный', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/собрана из модели/);
+    expect(r.calls).not.toMatch(/remote-backup|lore-migrate/);
+  });
+
+  it('probe: в логе нового бэкенда «схема собрана из модели» — проба зелёная', () => {
+    const r = stepRun('probe', ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+      'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z'], MODEL_LINE);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+  });
+
+  it('probe: ни «схема сверена», ни «из модели» — по-прежнему красная', () => {
+    const r = stepRun('probe', ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+      'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z'], 'что-то другое');
+    expect(r.code).toBe(1);
   });
 });
