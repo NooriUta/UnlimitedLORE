@@ -23,6 +23,11 @@ on:
         default: 'true'
         type: choice
         options: ['true', 'false']
+      local_source:
+        description: 'Пусто — снимок прода. Имя migration_dst* — эта база (собрана переносом 1.18) встаёт под имя препрода, прежняя → _bak_<время>'
+        required: false
+        default: ''
+        type: string
 
 concurrency:
   group: lore-cd-preprod   # тот же замок, что у LORE CD: не заливать базу посреди выкатки препрода
@@ -41,6 +46,9 @@ jobs:
       LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
       ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
       DRY_RUN: ${{ inputs.dry_run }}
+      # 1.18 (владелица 21.11): новая база встаёт под прежнее имя, а не меняется LORE_DB — тот же
+      # алгоритм потом и на проде. Логика и защита имён — в scripts/preprod-db-refresh.sh.
+      LOCAL_SOURCE: ${{ inputs.local_source }}
     steps:
       - uses: actions/checkout@v7
 
@@ -54,6 +62,7 @@ jobs:
           echo "подтверждено: $TARGET_DB, dry_run=$DRY_RUN"
 
       - name: SSH-ключ CD и закреплённый ключ хоста
+        if: inputs.local_source == ''
         env:
           LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
         run: bash .github/scripts/lore-host-deploy.sh ssh

@@ -336,6 +336,19 @@ describe('PL-04: снимок прода → база препрода (толь
     // остаток прерванной заливки (каталог без открытой базы) считается «есть» → в _bak
     expect(s).toMatch(/docker exec "\$LOCAL_YGG" test -d "\$DB_DIR\/\$TARGET_DB"/);
   });
+
+  // 1.18 (владелица 21.11): «просто старую базу бэкап, а новую под неё … а то нам и на проде придётся
+  // новые имена делать». Имя базы препрода в CD не меняется; база переноса встаёт под него.
+  it('режим local_source: база переноса под прежнее имя, прежняя в _bak, LORE_DB в CD не меняется', () => {
+    expect(w()).toMatch(/local_source:[\s\S]*?default: ''/);
+    expect(w()).toMatch(/LOCAL_SOURCE: \$\{\{ inputs\.local_source \}\}/);
+    expect(w()).toMatch(/if: inputs\.local_source == ''/); // ssh до прода в этом режиме не нужен
+    const s = code(read('scripts/preprod-db-refresh.sh'));
+    expect(s).toMatch(/migration_dst\*\) ;;/);
+    expect(s).toMatch(/mv "\$DB_DIR\/\$LOCAL_SOURCE" "\$DB_DIR\/\$TARGET_DB"/);
+    expect(s).toMatch(/FROM LoreModelSchema/);
+    expect(cd()).toMatch(/^ {6}LORE_DB: system_aida_lore_preprod$/m);
+  });
 });
 
 // D-2026-KC-PREPROD-REALM-DUPLICATES (14.11.2026): препрод входит через свои realm'ы-дубли
@@ -560,6 +573,11 @@ describe.skipIf(!bashBin)('preprod-db-refresh.sh: в прод и в заморо
     const r = run(S, [], { TARGET_DB: db, ARCADEDB_ROOT_PASSWORD: 'x', R: 'false' });
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/::error::TARGET_DB=/);
+  });
+  it.each(['system_aida_lore', 'migration_src_2026_11_20', 'some_db'])('LOCAL_SOURCE=%s — не база переноса: отказ', (src) => {
+    const r = run(S, [], { TARGET_DB: 'system_aida_lore_preprod', LOCAL_SOURCE: src, ARCADEDB_ROOT_PASSWORD: 'x', R: 'false' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::LOCAL_SOURCE=/);
   });
 });
 
