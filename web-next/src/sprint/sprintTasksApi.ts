@@ -11,6 +11,7 @@
 // «нет прав» (403) от сбоя, а errorDetail показывает «HTTP 409 · текст».
 import type { KitDictItem, TaskPatch, TaskPhase, TaskRowData, TaskStatus, SliceCompletenessMeta } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { authEnabledNow } from '../auth/runtimeAuthConfig';
 import { taskStatusCode } from '../tasks/taskRecord';
 
 const LORE = '/lore';
@@ -34,8 +35,10 @@ export class LoreHttpError extends Error {
  * и запись честно получает 401, а не «молча ничего». Экран входа подставит
  * Bearer через setLoreAuthHeaders.
  */
-const devHeaders = (): Record<string, string> =>
-  import.meta.env?.VITE_LORE_AUTH_ENABLED === 'false' ? { 'X-Seer-Role': 'admin' } : {};
+const devHeaders = (): Record<string, string> => {
+  // Вход выключен настройкой запуска (/config.json, SELF-PROVISION-STANDALONE); до загрузки — флаг dev/тестов.
+  return authEnabledNow() ? {} : { 'X-Seer-Role': 'admin' };
+};
 let authHeaders: () => Record<string, string> = devHeaders;
 
 export function setLoreAuthHeaders(fn: () => Record<string, string>): void {

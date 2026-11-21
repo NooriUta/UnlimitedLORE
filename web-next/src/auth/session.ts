@@ -1,30 +1,30 @@
 // Вход LORE v2 (SPRINT_UXR_S3_V2_INFRA/S3-18): одна сессия на приложение,
-// механика — общий модуль kit (`@seidr/kit/auth`). Конфиг — build-args образа
-// (web-next/Dockerfile), как у v1 и бэкенда:
-//   VITE_LORE_AUTH_ENABLED=true  — вход включён (пусто/false — прежний dev-режим);
-//   VITE_OIDC_ISSUER             — https://…/kc/realms/omilore;
-//   VITE_OIDC_CLIENT_ID          — клиент Keycloak, по умолчанию lore-app.
-// redirect_uri — корень origin («/»): он разрешён в клиенте lore-app для
-// new.lore; возврат из Keycloak распознаётся по ?code&state на корне.
-import { createAuthSession, createOidcManager, type AuthSession } from '@seidr/kit/auth';
+// механика — общий модуль kit (`@seidr/kit/auth`).
+//
+// Настройки входа — настройка ЗАПУСКА, а не сборки (SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE):
+// env контейнера веба LORE_AUTH_ENABLED / LORE_OIDC_ISSUER / LORE_OIDC_CLIENT_ID → /config.json при старте
+// (docker/40-lore-runtime-config.sh), затем бэкенд своей среды; VITE_* — только dev. Порядок — runtimeAuthConfig.ts.
+// redirect_uri — корень origin («/»): возврат из Keycloak распознаётся по ?code&state на корне.
+import { AuthNotConfiguredError, createAuthSession, createOidcManager, type AuthSession } from '@seidr/kit/auth';
 import { OIDC_PREFIX, oidcStore } from '../storage/oidcSession';
-import { resolveOidc, runtimeAuthConfig } from './runtimeAuthConfig';
+import { authEnabledNow, runtimeAuth, type ResolvedAuth } from './runtimeAuthConfig';
 
-export const AUTH_ENABLED = import.meta.env.VITE_LORE_AUTH_ENABLED === 'true';
 const REDIRECT_PATH = '/';
 
+/** Адрес входа или честное «вход не настроен» (AuthGate рисует его без кнопки «Войти»). */
+export function oidcTarget(r: ResolvedAuth | null): { issuer: string; clientId: string } {
+  if (!r?.issuer) throw new AuthNotConfiguredError('LORE_OIDC_ISSUER не задан: ни /config.json, ни бэкенд своей среды не сообщили адрес входа');
+  return { issuer: r.issuer, clientId: r.clientId };
+}
+
 export const v2Auth: AuthSession = createAuthSession({
-  enabled: AUTH_ENABLED,
+  // Фиксируется в init() — после загрузки /config.json (main.tsx).
+  enabled: authEnabledNow,
   redirectPath: REDIRECT_PATH,
   // Вход выключен — dev-роль, как шлёт v1 (K-14: заголовок — предметность LORE, не kit).
   devHeaders: { 'X-Seer-Role': 'admin' },
   manager: () => {
-    // Realm — настройка среды: адрес входа от бэкенда своей среды (/lore/auth/config), сборка — запасной путь.
-    const { issuer, clientId } = resolveOidc({
-      issuer: import.meta.env.VITE_OIDC_ISSUER as string | undefined,
-      clientId: import.meta.env.VITE_OIDC_CLIENT_ID as string | undefined,
-    }, runtimeAuthConfig());
-    if (!issuer) throw new Error('VITE_LORE_AUTH_ENABLED=true, но адрес входа не пришёл ни от бэкенда (/lore/auth/config), ни из сборки');
+    const { issuer, clientId } = oidcTarget(runtimeAuth());
     const origin = globalThis.location.origin;
     return createOidcManager({
       issuer,

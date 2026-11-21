@@ -30,8 +30,13 @@ export interface KnownSetting {
 export const KNOWN_SETTINGS: readonly KnownSetting[] = [
   // Адрес Völva для ссылок «решение ↔ документ» (DS-LINK-1, DS-LINK-2).
   {
-    key: 'volva.url', kind: 'url', placeholder: 'https://volva.odal.seidrstudio.pro',
+    key: 'volva.url', kind: 'url', placeholder: 'https://volva.example.org',
     type: 'admin.set.type.url', def: 'admin.set.def.volvaUrl', descr: 'admin.set.descr.volvaUrl', hint: 'admin.set.hint.volvaUrl',
+  },
+  // Адрес git-хоста установки (SELF-PROVISION-STANDALONE): читает gitHost.ts (мастера, подсказки «руками»).
+  {
+    key: 'forgejo.url', kind: 'url', placeholder: 'https://git.example.org',
+    type: 'admin.set.type.url', def: 'admin.set.def.forgejoUrl', descr: 'admin.set.descr.forgejoUrl', hint: 'admin.set.hint.forgejoUrl',
   },
   // Слой графиков: свои графики на ECharts или встроенные графики Völva.
   {
