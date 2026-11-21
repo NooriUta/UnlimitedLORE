@@ -71,7 +71,9 @@ final class LoreModelFile {
         // паспорт не идут — ни полем, ни блоком «Не описано в модели» (решение владелицы: служебные поля — без вопросов).
         Map<String, String> serviceFields,
         // OH-MCP-HOSTED-SWITCH: роли учёток MCP с порядком и главная роль harness (LoreModelAgentProfiles).
-        LoreModelAgentProfiles.AgentProfiles agentProfiles) {}
+        LoreModelAgentProfiles.AgentProfiles agentProfiles,
+        // Патч 1.18.1 (владелица: «версию модели после миграции начни с 1»): номер модели; 0 — в файле его нет.
+        int modelVersion) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -174,7 +176,8 @@ final class LoreModelFile {
             LoreEdgeHistory.parse(doc.get("edge_history")), LoreEdgeFreeFields.parse(doc.get("edge_free_fields")),
             ro(LoreModelList.parse(doc.get("surfaces"))),
             doc.get("service_fields") == null ? Map.of() : strMap(doc.get("service_fields"), "service_fields"),
-            LoreModelAgentProfiles.parse(doc.get("agent_profiles")));
+            LoreModelAgentProfiles.parse(doc.get("agent_profiles")),
+            doc.get("model_version") instanceof Number n ? n.intValue() : 0);
         check(c);
         return c;
     }
@@ -265,6 +268,8 @@ final class LoreModelFile {
     static String render(Content c) {
         Map<String, Object> d = new LinkedHashMap<>();
         d.put("format", FORMAT);
+        // Патч 1.18.1: номер модели — рядом с форматом
+        if (c.modelVersion() > 0) d.put("model_version", c.modelVersion());
         d.put("about", "Модель LORE — типы паспорта, их поля, связи и поверхности (ADR-LORE-048, D-2026-LORE-MODEL-AS-CONFIG). "
             + "Канон; копия для образа бэкенда — backend/src/main/resources/lore-model/lore-model.json (LoreModelFileParityTest). "
             + "Правка меняет контракт /lore/model и /lore/record — эталон MC-01 (LoreModelGoldenTest) покажет дифф.");

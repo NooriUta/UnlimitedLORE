@@ -814,15 +814,17 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
   const fwd = (p: string) => p.replace(/\\/g, '/');
   const MODEL_LINE = '[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется';
 
-  function stepRun(step: string, stateLines: string[], logLine: string) {
+  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '') {
     const d = mkdtempSync(join(tmpdir(), 'lore-pl-model-'));
     writeFileSync(join(d, 'lore-host-deploy.sh'), read('.github/scripts/lore-host-deploy.sh'));
     writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
     writeFileSync(join(d, 'version-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version.json'), versionJson);
     writeFileSync(join(d, 'r.sh'), [
       '#!/usr/bin/env bash',
       'echo "$*" >> "$R_LOG"',
       'case "$*" in',
+      `  *"/lore/version"*) cat "${fwd(join(d, 'version.json'))}" ;;`,
       '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
       '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
       '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
@@ -853,6 +855,31 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
       'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z'], MODEL_LINE);
     expect(r.out).not.toMatch(/::error::/);
     expect(r.code).toBe(0);
+  });
+
+  // Патч 1.18.1: выкатка 1.18 (задача 39647) была ложно красной — на базе из модели строки «схема сверена: БД v93»
+  // нет и быть не может. Сверка — /lore/version: schema_source=model и schema_version=model:<N> модели тега.
+  const PROBE_STATE = ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js', 'EXPECT_COMMIT=0123456789abcdef',
+    'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z', 'PROD_SCHEMA=model'];
+
+  it('probe на базе из модели: /lore/version = model:<N> модели тега — зелёная без строки «схема сверена»', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], 'что-то другое',
+      '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","model_hash":"d7e16a827891d5e0"}');
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/schema_version=model:1/);
+  });
+
+  it('probe на базе из модели: версия по хэшу, а не номер модели тега — красная', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], 'схема собрана из модели (LoreModelSchema)',
+      '{"schema_version":"model:d7e16a827891d5e0","schema_source":"model"}');
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/ждали schema_source=model и schema_version=model:1/);
+  });
+
+  it('probe на базе из модели: номер модели тега не прочитан — красная, а не тихо зелёная', () => {
+    const r = stepRun('probe', PROBE_STATE, 'что-то другое', '{"schema_version":"model:1","schema_source":"model"}');
+    expect(r.code).toBe(1);
   });
 
   it('probe: ни «схема сверена», ни «из модели» — по-прежнему красная', () => {

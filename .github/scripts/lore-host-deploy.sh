@@ -238,6 +238,12 @@ resolve() {
   n="$(git show "${rev}:${MIGR_JAVA}" 2>/dev/null | grep -oE 'new Step\([0-9]+,' | tail -1 | grep -oE '[0-9]+')"
   [ -n "$n" ] || { err "версия схемы кода не прочитана: коммит сборки $rev не найден в истории или в нём нет $MIGR_JAVA"; return 1; }
   put CODE_SCHEMA "$n"
+  # Патч 1.18.1 (владелица: «версию модели после миграции начни с 1»): номер модели тега — model_version из
+  # shared/model/lore-model.json коммита сборки; база из модели сверяется по нему (/lore/version = model:<N>).
+  local mv
+  mv="$(git show "${rev}:shared/model/lore-model.json" 2>/dev/null | grep -oE '"model_version"[[:space:]]*:[[:space:]]*[0-9]+' | head -1 | grep -oE '[0-9]+$')"
+  sed -i '/^MODEL_VERSION=/d' "$STATE" 2>/dev/null || true
+  put MODEL_VERSION "${mv:-}"
   local b1 b2
   b1="$(docker run --rm --entrypoint cat "$(img_of lore-app "$c8")" /usr/share/nginx/html/index.html 2>/dev/null | grep -oE "$BUNDLE_RE" | head -1)"
   b2="$(docker run --rm --entrypoint cat "$(img_of lore-app-next "$c8")" /usr/share/nginx/html/index.html 2>/dev/null | grep -oE "$BUNDLE_RE" | head -1)"
@@ -507,15 +513,36 @@ probe() {
   # S8-02: /mcp через оба публичных имени — вход MCP (401/405), а не 502 (нет lore-mcp) / 404.
   mcp_probe "$HOST_V1" || rc=1
   mcp_probe "$HOST_V2" || rc=1
-  line="$(r "cd $DIR_BE && docker compose logs --no-color --since $UP_AT lore-backend 2>&1 | grep -oE 'схема сверена: БД v[0-9]+ = код v[0-9]+|схема собрана из модели \(LoreModelSchema\)' | tail -1" || true)"
-  case "$line" in
-    *"собрана из модели"*) echo "ok: $line (1.18: база из модели, шагов V нет)" ;;
-    *"БД v$CODE_SCHEMA = код v$CODE_SCHEMA") echo "ok: $line" ;;
-    *"= код v$CODE_SCHEMA") echo "::warning::$line — БД и код расходятся (откат на старый тег?)" ;;
-    *) err "в логе нового бэкенда нет «схема сверена: БД v$CODE_SCHEMA = код v$CODE_SCHEMA» (есть: ${line:-ничего})"; rc=1 ;;
-  esac
+  local schema_note
+  if [ "${PROD_SCHEMA:-}" = model ]; then
+    # Патч 1.18.1 (выкатка 1.18, задача 39647, была ложно красной): на базе из модели строки «схема сверена: БД vN»
+    # нет и быть не может — шагов V нет. Сверка — по /lore/version: schema_source=model и schema_version=model:<N>,
+    # N — номер модели тега (model_version в lore-model.json коммита сборки).
+    local ver src sv
+    ver="$(r "curl -s -m 10 -H 'Host: $HOST_V2' http://127.0.0.1:4402/lore/version" || true)"
+    src="$(printf '%s' "$ver" | grep -oE '"schema_source"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*"([^"]*)"$/\1/')"
+    sv="$(printf '%s' "$ver" | grep -oE '"schema_version"[[:space:]]*:[[:space:]]*"?[^",}]*' | head -1 | sed -E 's/^"schema_version"[[:space:]]*:[[:space:]]*"?//')"
+    if [ -z "${MODEL_VERSION:-}" ]; then
+      err "номер модели тега не прочитан (resolve: model_version в shared/model/lore-model.json) — сверять /lore/version не с чем"; rc=1
+    elif [ "$src" = model ] && [ "$sv" = "model:$MODEL_VERSION" ]; then
+      echo "ok: /lore/version — schema_source=model, schema_version=$sv (модель тега v$MODEL_VERSION)"
+    else
+      err "/lore/version: ждали schema_source=model и schema_version=model:$MODEL_VERSION, есть schema_source=${src:-?}, schema_version=${sv:-?}"; rc=1
+    fi
+    schema_note="модель v${MODEL_VERSION:-?}"
+  else
+    # База шагов V: строка сверки в логе нового бэкенда — только для неё.
+    line="$(r "cd $DIR_BE && docker compose logs --no-color --since $UP_AT lore-backend 2>&1 | grep -oE 'схема сверена: БД v[0-9]+ = код v[0-9]+|схема собрана из модели \(LoreModelSchema\)' | tail -1" || true)"
+    case "$line" in
+      *"собрана из модели"*) echo "ok: $line (1.18: база из модели, шагов V нет)" ;;
+      *"БД v$CODE_SCHEMA = код v$CODE_SCHEMA") echo "ok: $line" ;;
+      *"= код v$CODE_SCHEMA") echo "::warning::$line — БД и код расходятся (откат на старый тег?)" ;;
+      *) err "в логе нового бэкенда нет «схема сверена: БД v$CODE_SCHEMA = код v$CODE_SCHEMA» (есть: ${line:-ничего})"; rc=1 ;;
+    esac
+    schema_note="БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
+  fi
   if [ "$rc" -ne 0 ]; then rollback_hint; return 1; fi
-  summary "- пробы: бандлы v1/v2, /mcp (v1 и v2) = вход, /lore/version (v1 и v2) = ${EXPECT_COMMIT:0:8}, БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
+  summary "- пробы: бандлы v1/v2, /mcp (v1 и v2) = вход, /lore/version (v1 и v2) = ${EXPECT_COMMIT:0:8}, $schema_note"
 }
 
 case "${1:-}" in

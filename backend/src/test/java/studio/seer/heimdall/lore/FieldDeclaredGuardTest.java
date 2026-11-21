@@ -301,6 +301,9 @@ class FieldDeclaredGuardTest {
             try (Stream<Path> schema = Files.list(Path.of("..", "scripts", "model-migration", "schema"))) {
                 for (Path f : (Iterable<Path>) schema.filter(p -> p.toString().endsWith(".json"))::iterator) {
                     JsonObject types = new JsonObject(Files.readString(f, StandardCharsets.UTF_8)).getJsonObject("types");
+                    // В каталоге схем лежат не только описания типов: model-version.json (номер модели, 1.18.1)
+                    // типов не несёт. Файл без "types" — не описание типов, а не «схема без полей».
+                    if (types == null) continue;
                     types.forEach(e -> {
                         JsonObject fields = ((JsonObject) e.getValue()).getJsonObject("fields");
                         Set<String> set = out.computeIfAbsent(e.getKey(), x -> new TreeSet<>());

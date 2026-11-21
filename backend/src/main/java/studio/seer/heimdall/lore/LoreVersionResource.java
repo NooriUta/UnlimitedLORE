@@ -46,7 +46,7 @@ public class LoreVersionResource extends LoreResourceBase {
         // номер шага, как раньше (база шагов или ещё не поднялась).
         java.util.List<Map<String, Object>> markers;
         try {
-            markers = ingestService.queryPublic("SELECT model_hash, source, built_at FROM LoreModelSchema", Map.of());
+            markers = ingestService.queryPublic("SELECT model_hash, model_version, source, built_at FROM LoreModelSchema", Map.of());
         } catch (RuntimeException e) {
             markers = java.util.List.of();
         }
@@ -74,10 +74,15 @@ public class LoreVersionResource extends LoreResourceBase {
     /** Версия схемы базы: из модели — {@code model:<хэш модели>}, иначе — номер последнего шага V кода. */
     static Map<String, Object> schemaOf(int codeVersion, java.util.List<Map<String, Object>> markers) {
         Map<String, Object> m = new LinkedHashMap<>();
-        String hash = markers.stream().map(x -> x.get("model_hash")).filter(h -> h != null && !String.valueOf(h).isBlank())
-            .map(String::valueOf).findFirst().orElse(null);
+        Map<String, Object> marker = markers.stream().filter(x -> x.get("model_hash") != null && !String.valueOf(x.get("model_hash")).isBlank())
+            .findFirst().orElse(null);
+        String hash = marker == null ? null : String.valueOf(marker.get("model_hash"));
         if (hash != null) {
-            m.put("schema_version", "model:" + hash);
+            // Патч 1.18.1 (владелица: «версию модели после миграции начни с 1»): model:<номер>, хэш — отдельным полем.
+            // Отметка без номера (до шага 1.18.1) — по-прежнему model:<хэш>.
+            Object n = marker.get("model_version");
+            m.put("schema_version", n instanceof Number num && num.intValue() > 0 ? "model:" + num.intValue() : "model:" + hash);
+            m.put("model_hash", hash);
             m.put("schema_source", "model");
         } else {
             m.put("schema_version", codeVersion);

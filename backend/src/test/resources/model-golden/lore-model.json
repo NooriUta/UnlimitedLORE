@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "5e7ca74ed53ddfcb",
+  "version" : "517198510ad5b3b5",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -6777,7 +6777,7 @@
         "key" : "is_current",
         "label" : "Текущий",
         "label_key" : "pp.field.isCurrent",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,
@@ -6799,9 +6799,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : null,
         "property_type" : null,
@@ -13221,7 +13221,7 @@
         "key" : "is_private",
         "label" : "Приватный",
         "label_key" : "pp.field.isPrivate",
-        "kind" : "text",
+        "kind" : "bool",
         "group" : "props",
         "required" : false,
         "editable" : false,
@@ -13243,9 +13243,9 @@
         "required_rules" : [ ],
         "visibility" : "visible",
         "display" : {
-          "priority" : 4,
-          "width" : "m",
-          "overflow" : "ellipsis"
+          "priority" : 3,
+          "width" : "xs",
+          "overflow" : "none"
         },
         "property" : null,
         "property_type" : null,
