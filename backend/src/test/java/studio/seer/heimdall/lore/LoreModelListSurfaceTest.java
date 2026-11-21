@@ -140,6 +140,23 @@ class LoreModelListSurfaceTest {
             assertEquals("<=1.17", ((Map<String, Object>) list.get(t)).get("since"), t);
     }
 
+    /**
+     * 1.18 (#1699, раздел #1714): тип pr в меню под «Релизами» — список всех PR срезом prs (скоуп проекта), паспорт
+     * /lore/record/pr/{id}. Среза prs в v1.17 не было — since 1.18.0.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void prПеречисляетсяСрезомPrs() {
+        Map<String, Object> pr = (Map<String, Object>) servedList().get("pr");
+        assertNotNull(pr, "нет surfaces.list.pr — раздел «PR» есть в меню, а телефону его не перечислить");
+        assertEquals("prs", pr.get("slice"));
+        assertEquals("pr_uid", pr.get("id_key"));
+        assertEquals("title", pr.get("title_key"));
+        assertEquals("state", pr.get("status_key"));
+        assertEquals(Boolean.TRUE, pr.get("project_scoped"));
+        assertEquals("1.18.0", pr.get("since"));
+    }
+
     /** Версия сервера рядом с моделью: без неё since не с чем сравнить. Тот же источник, что /lore/version. */
     @Test
     void моделиОтдаётсяВерсияСервера() throws Exception {

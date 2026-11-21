@@ -71,9 +71,24 @@ public class LoreRecordResource extends LoreResourceBase {
     /** Ключ записи допустим у типа: релиз — release_uid «проект#тег», репозиторий — адрес, остальные — общий шаблон. */
     static boolean idAllowed(String type, String id) {
         if (id == null) return false;
-        if ("release".equals(type)) return RELEASE_UID.matcher(id).matches();
+        // 8877957a: голый тег (старые ссылки) — общим шаблоном; запись найдёт разбор тега в record()
+        if ("release".equals(type)) return RELEASE_UID.matcher(id).matches() || SAFE_READ_ID.matcher(id).matches();
         if ("repository".equals(type)) return REPO_URL.matcher(id).matches();
+        // MD-05: ключ PR — pr_uid «проект#номер», та же форма, что у релиза; легаси-ключи без «#» — общим шаблоном.
+        if ("pr".equals(type)) return RELEASE_UID.matcher(id).matches() || SAFE_READ_ID.matcher(id).matches();
         return SAFE_READ_ID.matcher(id).matches();
+    }
+
+    /** Разбор голого тега релиза: один релиз — его ключ; несколько — кандидаты; ни одного — пусто. */
+    record TagMatch(String uid, List<String> candidates) {}
+
+    static TagMatch releaseByTag(List<Map<String, Object>> rows) {
+        List<String> uids = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Object u = r.get("release_uid");
+            if (u != null && !uids.contains(String.valueOf(u))) uids.add(String.valueOf(u));
+        }
+        return uids.size() == 1 ? new TagMatch(uids.get(0), List.of()) : new TagMatch(null, List.copyOf(uids));
     }
 
     static Source sourceOf(String type) {
@@ -114,6 +129,8 @@ public class LoreRecordResource extends LoreResourceBase {
             // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес url) и организация (org_id).
             case "repository" -> new Source("repo_by_id", "id", false);
             case "organization" -> new Source("org_by_id", "id", false);
+            // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — строка KnowPR по pr_uid «проект#номер».
+            case "pr" -> new Source("pr_by_id", "id", false);
             default -> null;
         };
     }
@@ -147,6 +164,25 @@ public class LoreRecordResource extends LoreResourceBase {
         }
         boolean identified = role != null && !role.isBlank();
         if (NEW_ID.equals(id)) return newRecord(type, role, identified);
+        // 8877957a: старые ссылки и закладки на релиз — голым тегом (v1.17.25). Ключ записи — «проект#тег»:
+        // однозначный тег открывает запись своего проекта, неоднозначный — список кандидатов, а не «не найдена».
+        if ("release".equals(type) && id.indexOf('#') < 0) {
+            TagMatch m;
+            try {
+                m = releaseByTag(ingestService.queryPublic(
+                    "SELECT release_uid FROM KnowRelease WHERE release_id = :t OR git_tag = :t ORDER BY release_uid", Map.of("t", id)));
+            } catch (RuntimeException e) {
+                return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+            }
+            if (m.uid() != null) id = m.uid();
+            else if (!m.candidates().isEmpty()) {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("error", "AMBIGUOUS_RELEASE_TAG");
+                body.put("detail", "тег " + id + " есть у нескольких проектов — откройте релиз по ключу «проект#тег»");
+                body.put("candidates", m.candidates());
+                return noStore(Response.status(Response.Status.CONFLICT).entity(body));
+            }
+        }
         Response found = existing(type, id, role, identified, scope);
         // LINKS-VIEW-HOLDER: «сессия у записи» — только по просьбе (?with=holders) и только у найденной записи:
         // скоуп уже проверен выше, а лишний поход к серверу miniLORE не ложится на каждое открытие паспорта.
@@ -313,7 +349,11 @@ public class LoreRecordResource extends LoreResourceBase {
         if (LoreRecordUnmodeled.reads(type)) try {
             List<Map<String, Object>> v = ingestService.queryPublic(LoreRecordUnmodeled.sql(type), Map.of("id", id));
             if (v.isEmpty()) facts.put("unmodeled_state", "not_read");
-            else unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+            else {
+                unmodeled = LoreRecordUnmodeled.of(type, v.get(0));
+                // описанное полем модели, но без колонки в главном срезе — значение из вершины, а не пустое поле
+                LoreRecordUnmodeled.fillModeled(type, values, v.get(0));
+            }
         } catch (RuntimeException e) {
             facts.put("unmodeled_error", e.getMessage());
         }
@@ -404,7 +444,7 @@ public class LoreRecordResource extends LoreResourceBase {
             state.add(LoreRecordDataState.entry("chips:inherited", null, new Read(List.of(), "error",
                 "унаследованные проекты/компоненты не прочитаны: " + e.getMessage(), e)));
         }
-        Map<String, String> pLabels = labels("SELECT slug AS k, name AS v FROM KnowGitProject WHERE slug IN :ids",
+        Map<String, String> pLabels = labels("SELECT slug AS k, coalesce(short_title, name) AS v FROM KnowGitProject WHERE slug IN :ids",
             ids(ownP, inhP), "chips:project_labels", state);
         Map<String, String> cLabels = labels("SELECT component_id AS k, full_name AS v FROM LoreComponent WHERE component_id IN :ids",
             ids(ownC, inhC), "chips:component_labels", state);

@@ -41,7 +41,17 @@ public class LoreVersionResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response version() {
         if (!enabled) return disabled();
-        return noStore(Response.ok(info(System.getenv("LORE_RELEASE_TAG"))));
+        Map<String, Object> out = info(System.getenv("LORE_RELEASE_TAG"));
+        // MIG-01: база из модели (отметка LoreModelSchema) — версия модели, а не номер шага V кода. Отметки не прочитали —
+        // номер шага, как раньше (база шагов или ещё не поднялась).
+        java.util.List<Map<String, Object>> markers;
+        try {
+            markers = ingestService.queryPublic("SELECT model_hash, source, built_at FROM LoreModelSchema", Map.of());
+        } catch (RuntimeException e) {
+            markers = java.util.List.of();
+        }
+        out.putAll(schemaOf(LoreSchemaMigrations.codeVersion(), markers));
+        return noStore(Response.ok(out));
     }
 
     /**
@@ -59,6 +69,21 @@ public class LoreVersionResource extends LoreResourceBase {
         // передаёт выкатка прода (LORE_RELEASE_TAG). Нет — null, а не выдуманная версия.
         out.put("release", releaseTag(releaseEnv));
         return out;
+    }
+
+    /** Версия схемы базы: из модели — {@code model:<хэш модели>}, иначе — номер последнего шага V кода. */
+    static Map<String, Object> schemaOf(int codeVersion, java.util.List<Map<String, Object>> markers) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        String hash = markers.stream().map(x -> x.get("model_hash")).filter(h -> h != null && !String.valueOf(h).isBlank())
+            .map(String::valueOf).findFirst().orElse(null);
+        if (hash != null) {
+            m.put("schema_version", "model:" + hash);
+            m.put("schema_source", "model");
+        } else {
+            m.put("schema_version", codeVersion);
+            m.put("schema_source", "steps");
+        }
+        return m;
     }
 
     private static final java.util.regex.Pattern TAG = java.util.regex.Pattern.compile("^v[0-9]+[.][0-9]+[.][0-9]+$");

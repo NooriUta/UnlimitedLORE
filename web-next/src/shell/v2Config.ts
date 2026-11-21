@@ -34,6 +34,8 @@ export const V2_SECTIONS = [
   'component', 'tech', 'feature', 'project',
   // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — раздел «Система» с паспортом (только чтение).
   'repository', 'organization',
+  // 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): раздел PR — список и паспорт (только чтение).
+  'pr',
   // S9-05 A: люди и агенты — паспорта «шапка + таблица детей».
   'user', 'agent',
   // S4-PRODUCTS-NODE (владелица 11.11): нода «Продукт» — продукты и профиль клиента.
@@ -173,7 +175,7 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
         // «Работа» — что делаем и когда: спринты, задачи, вехи, релизы.
         {
           id: 'work', title: t('shell.grp.work'), tone: 'var(--acc)',
-          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book'), item('quality_gate', 'checkered-flag')],
+          items: [item('sprint', 'sprint'), item('task', ICON_CANON.sectionTask), item('milestone', 'crossed-axes'), item('release', 'open-book'), item('pr', 'branch-arrow'), item('quality_gate', 'checkered-flag')],
         },
         // «Знание» — почему так: ADR, решения, спеки, вопросы.
         {

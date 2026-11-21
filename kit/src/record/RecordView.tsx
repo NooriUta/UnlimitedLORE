@@ -270,8 +270,16 @@ export function FieldValue({ type, value, ctx, edit, fieldKey, title, refKind, k
     const b = boolOf(value);
     return b === null ? <span className="sk-rec-fields__none">—</span> : <span>{kitT(lang, b ? 'kit.field.yes' : 'kit.field.no')}</span>;
   }
-  return <span>{valueText(value)}</span>;
+  // MD-05: текстовое значение — целиком адрес http(s) (PR, репозиторий у хоста git) — ссылка в новой вкладке.
+  const text = valueText(value);
+  if (type === 'text' && WEB_URL.test(text)) {
+    return <a className="sk-rec-fields__url" href={text} target="_blank" rel="noopener noreferrer">{text}</a>;
+  }
+  return <span>{text}</span>;
 }
+
+/** Адрес целиком, только http(s), без пробелов: иная схема (javascript:, data:) и текст с адресом внутри — текстом. */
+const WEB_URL = /^https?:\/\/[^\s"'<>]+$/i;
 
 /** Виды, которые правятся на месте FieldEditor'ом. ref и md идут своими путями (связи, MD-редактор). */
 const INLINE_KINDS = new Set(['text', 'number', 'date', 'enum', 'bool']);

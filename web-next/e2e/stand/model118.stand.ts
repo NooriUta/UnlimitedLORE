@@ -3,13 +3,15 @@
 // Владелица 19.11.2026: «проверки для 18 пиши … на всех местах работы — mcp, бэка, интеграций и ui».
 //
 // M1–M4 только читают. M5 ПИШЕТ (заводит организацию TEST-… и привязывает проект) — и потому сам
-// проверяет, что адрес — копия: не стенд, не прод, вход выключен (writeGuard.ts). Иначе «не выполнен».
+// проверяет допуск (writeGuard.ts): копия с выключенным входом либо препрод с меткой @writes и только
+// TEST-org-smoke / TEST-proj-a (владелица 21.11.2026). Иначе «не выполнен».
 //
 // Ожидания по данным берутся из среза repositories того же сервера; число «у MIDGARD 4» — данные
 // репетиции на ryzenai (перенос 19.11.2026), на другой базе сценарий скажет, сколько увидел.
 import { expect, test, type Page } from '@playwright/test';
 import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
-import { writeCopyRefusal, type WhoamiAuth } from './writeGuard.ts';
+import { preprodTestWriteRefusal, writeCopyRefusal, WRITES_TAG, type WhoamiAuth } from './writeGuard.ts';
+import { call, ensureTestProject, TEST_ORG, TEST_PROJECT_A } from './testData.ts';
 
 test.beforeEach(() => requireStand());
 // Вход не истекает посреди прогона (E2E-STAND, прогон 9033): до создания страницы сценария.
@@ -146,28 +148,52 @@ test('M4 Раздел «Организации»: строки или честн
   await expect(page.locator('[data-testid="list-new"]'), '«+ Новая» только в админке').toHaveCount(0);
 });
 
-test('M5 Админка «Организации» под super-admin: завести TEST-организацию, привязать проект, связь в паспорте', async ({ page }) => {
+test('M5 Админка «Организации» под super-admin: завести TEST-организацию, привязать проект, связь в паспорте', { tag: WRITES_TAG }, async ({ page }) => {
   const base = process.env.LORE_STAND_URL?.trim();
-  const who = await page.request.get('/lore/whoami').then(r => r.ok() ? r.json() as Promise<WhoamiAuth> : null).catch(() => null);
-  const refusal = writeCopyRefusal(base, who);
-  test.skip(refusal !== null, `запись не выполняется: ${refusal}`);
-  // Вход выключен (проверено выше): роль берётся из заголовка. Приложение шлёт admin — сценарию нужен super-admin.
-  await page.route('**/lore/**', r => r.continue({ headers: { ...r.request().headers(), 'x-seer-role': 'superadmin' } }));
+  // Два допуска записи (writeGuard.ts): копия с заглушкой входа — своя одноразовая организация и проект MIDGARD;
+  // препрод (владелица 21.11.2026: «пусть заводят тестовые проекты») — только TEST-org-smoke и TEST-proj-a.
+  if (!/^https?:/.test(page.url())) await page.goto('/news');
+  const preprodRefusal = preprodTestWriteRefusal(base, { writer: test.info().tags.includes(WRITES_TAG), ids: [TEST_ORG, TEST_PROJECT_A] });
+  const preprod = preprodRefusal === null;
+  const who = preprod ? null : await page.request.get('/lore/whoami').then(r => r.ok() ? r.json() as Promise<WhoamiAuth> : null).catch(() => null);
+  const copyRefusal = preprod ? null : writeCopyRefusal(base, who);
+  test.skip(!preprod && copyRefusal !== null, `запись не выполняется: копия — ${copyRefusal}; препрод — ${preprodRefusal}`);
+  const allowed = (origin: string) => (preprod
+    ? preprodTestWriteRefusal(origin, { writer: true, ids: [TEST_ORG, TEST_PROJECT_A] })
+    : writeCopyRefusal(origin, who));
+  // Копия: вход выключен, роль из заголовка — приложение шлёт admin, сценарию нужен super-admin.
+  // Препрод: роль — у сохранённого входа test-sa (super-admin), заголовок сервер не слушает.
+  if (!preprod) await page.route('**/lore/**', r => r.continue({ headers: { ...r.request().headers(), 'x-seer-role': 'superadmin' } }));
   const bad = recordFailures(page);
 
-  const code = `TEST-M5-${Date.now().toString(36).toUpperCase()}`;
+  const code = preprod ? TEST_ORG : `TEST-M5-${Date.now().toString(36).toUpperCase()}`;
+  const project = preprod ? TEST_PROJECT_A : MIDGARD;
   const title = `Тестовая организация ${code}`;
   const newBtn = page.locator('[data-testid="list-new"]');
   await openStand(page, '/?mod=admin&sec=adm-orgs', newBtn);
   // Адрес после переходов — тот же, что проверен: редирект на стенд или прод не пропускаем.
-  expect(writeCopyRefusal(new URL(page.url()).origin, who), 'страница осталась на копии').toBeNull();
+  expect(allowed(new URL(page.url()).origin), 'страница осталась там, где запись разрешена').toBeNull();
   await expect(newBtn, '«+ Новая» у super-admin в админке').toBeVisible({ timeout: 30_000 });
-  await newBtn.click();
-  const form = page.locator('form').filter({ has: page.locator('[data-field="id"]') });
-  await expect(form, 'форма новой организации').toBeVisible({ timeout: 15_000 });
-  await form.locator('[data-field="id"] input').fill(code);
-  await form.locator('[data-field="title"] input').fill(title);
-  await form.locator('button[type="submit"]').click();
+  // Препрод: удаления организации в API нет — TEST-org-smoke постоянная; есть — переиспользуем, связь пересоздаём.
+  const existed = preprod && (await call(page, 'GET', `/lore/record/organization/${encodeURIComponent(code)}`)).status === 200;
+  if (preprod) {
+    await ensureTestProject(page, project);
+    if (existed) {
+      const un = await call(page, 'POST', '/lore/organization/link', { org_id: code, rel: 'ORG_HAS_PROJECT', target: project, action: 'remove' });
+      expect([200, 404], `снять прежнюю связь ${code} → ${project}: ${un.text}`).toContain(un.status);
+      test.info().annotations.push({ type: 'note', description: `${code} уже была — переиспользована (удаления организации в API нет)` });
+    }
+  }
+  if (existed) {
+    await openStand(page, `/?mod=admin&sec=adm-orgs&open=${encodeURIComponent(code)}&tab=projects`, page.locator('[data-testid="kit-rec-loaded"]'));
+  } else {
+    await newBtn.click();
+    const form = page.locator('form').filter({ has: page.locator('[data-field="id"]') });
+    await expect(form, 'форма новой организации').toBeVisible({ timeout: 15_000 });
+    await form.locator('[data-field="id"] input').fill(code);
+    await form.locator('[data-field="title"] input').fill(title);
+    await form.locator('button[type="submit"]').click();
+  }
 
   // После сохранения — полная запись. Вкладка «Проекты» (ORG_HAS_PROJECT) — выбор с поиском.
   await passportLoaded(page, `организация ${code}`);
@@ -180,23 +206,23 @@ test('M5 Админка «Организации» под super-admin: заве�
   await projTab.click();
   const search = page.getByRole('searchbox', { name: /Привязать: Проекты/ });
   await expect(search, 'поиск проекта для привязки').toBeVisible({ timeout: 15_000 });
-  await search.fill('MIDGARD');
-  const pick = page.getByRole('button', { name: `Привязать ${MIDGARD}` });
-  await expect(pick, `${MIDGARD} среди вариантов`).toBeVisible({ timeout: 15_000 });
+  await search.fill(preprod ? project : 'MIDGARD');
+  const pick = page.getByRole('button', { name: `Привязать ${project}` });
+  await expect(pick, `${project} среди вариантов`).toBeVisible({ timeout: 15_000 });
   await pick.click();
   const failed = page.locator('.sk-rel__failed');
   const panel = page.locator('[role="tabpanel"]').first();
   await expect(panel.locator('[data-testid="kit-relation-list"]').or(failed).first(), 'привязка ответила').toBeVisible({ timeout: 15_000 });
   const failedText = await textOf(failed);
   expect(await failed.count(), `привязка отказана: ${failedText}`).toBe(0);
-  await expect(panel, `${MIDGARD} в связях организации`).toContainText(MIDGARD, { timeout: 15_000 });
+  await expect(panel, `${project} в связях организации`).toContainText(project, { timeout: 15_000 });
 
   // Связь — с сервера, а не из памяти страницы: паспорт заново, и обратная сторона — у проекта.
   await openStand(page, `/?mod=admin&sec=adm-orgs&open=${encodeURIComponent(code)}&tab=projects`, page.locator('[data-testid="kit-rec-loaded"]'));
   await passportLoaded(page, `организация ${code} заново`);
-  await expect(panel, `после перезагрузки ${MIDGARD} в связях`).toContainText(MIDGARD, { timeout: 15_000 });
-  await openStand(page, `/?sec=project&open=${encodeURIComponent(MIDGARD)}&tab=organizations`, tabOf(page, 'organizations'));
-  await passportLoaded(page, `проект ${MIDGARD}`);
-  await expect(panel, `у проекта ${MIDGARD} во вкладке «Организации» — ${code}`).toContainText(code, { timeout: 15_000 });
+  await expect(panel, `после перезагрузки ${project} в связях`).toContainText(project, { timeout: 15_000 });
+  await openStand(page, `/?sec=project&open=${encodeURIComponent(project)}&tab=organizations`, tabOf(page, 'organizations'));
+  await passportLoaded(page, `проект ${project}`);
+  await expect(panel, `у проекта ${project} во вкладке «Организации» — ${code}`).toContainText(code, { timeout: 15_000 });
   expect(bad, 'запросы паспортов без ошибок').toEqual([]);
 });

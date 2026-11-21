@@ -58,7 +58,10 @@ d="$(mktemp -d)"; trap 'rm -rf "$d"' EXIT
   {
     echo "MIG_DB_URL=${MIG_DB_URL:-http://172.17.0.1:2480}"
     echo "MIG_SRC_DB=$MIG_SRC_DB"; echo "MIG_SRC_USER=$MIG_DB_USER"; echo "MIG_SRC_PASSWORD=$MIG_DB_PASSWORD"
-    echo "MIG_DST_DB=$MIG_DST_DB"; echo "MIG_DST_USER=$MIG_DB_USER"; echo "MIG_DST_PASSWORD=$MIG_DB_PASSWORD"
+    # MIG-04 (труба установщика): приёмник — на другом сервере (ArcadeDB свежей установки), своя учётка.
+    # Не задано — как прежде: тот же сервер и та же учётка.
+    [ -n "${MIG_DST_URL:-}" ] && echo "MIG_DST_URL=$MIG_DST_URL"
+    echo "MIG_DST_DB=$MIG_DST_DB"; echo "MIG_DST_USER=${MIG_DST_USER:-$MIG_DB_USER}"; echo "MIG_DST_PASSWORD=${MIG_DST_PASSWORD:-$MIG_DB_PASSWORD}"
   } > "$d/migration.env" )
 
 # mig <команда> [ключи] — конвейер через единую точку входа (тот же путь, что установщик и ryzen-full-all.sh).

@@ -65,7 +65,10 @@ final class LoreRecordRelationRoutes {
         r("task", "GATES", "in", Handler.QUESTION_GATES, true),
         r("task", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
         r("task", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
-        // веха (MDL-13) — тип только для чтения: её зависимости ставятся через MCP / POST /lore/dep, не из паспорта
+        // веха (MDL-13, смоук 21.11.2026: «Готово, когда» — ставить и снимать зависимость и у вехи): статус и создание
+        // только чтение, а «зависит от» — тот же путь dep (LoreDependency принимает веху концом), что у задачи и спринта
+        r("milestone", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("milestone", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
         // ADR
         r("adr", "DEPENDS_ON", "out", Handler.ADR_DEPENDS_ON, false),
         r("adr", "DEPENDS_ON", "in", Handler.ADR_DEPENDS_ON, true),

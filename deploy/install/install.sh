@@ -5,6 +5,7 @@
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
 #     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
 #   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
+#     … [--files none|s3] — хранилище файлов: без файлов (по умолчанию) или своё S3 (S3_* в окружении или .env)
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -24,7 +25,7 @@
 # Схема на пустой базе: флаг LORE_BOOTSTRAP не нужен — ядро поднимается само
 # (D-2026-LORE-AUTO-BOOTSTRAP-CORE), шаги миграций добирают остальное.
 #
-# Окружение (необязательно): ARCADEDB_ROOT_PASSWORD, MINIO_PASSWORD — задать свои
+# Окружение (необязательно): ARCADEDB_ROOT_PASSWORD — задать свой; S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY — своё S3 (--files s3)
 # пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE — готовые
 # образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE; GHCR_OWNER.
 #
@@ -52,6 +53,13 @@ CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
 # Forgejo (MIG-04, владелица 20.11.2026). Пусто — выбор в .env не трогается (по умолчанию без Forgejo, как раньше).
 FORGEJO=""
 FORGEJO_URL_ARG=""
+# Хранилище файлов (решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов»):
+# none — без файлов (по умолчанию), s3 — своё S3. Своего хранилища пакет не ставит.
+FILES=""
+# MIG-01: свежая установка — база из модели (lore-migrate init-empty), шаги V не катятся. FRESH=1 — .env ещё не было.
+FRESH=0
+FRESH_DB="${LORE_FRESH_DB:-lore}"
+MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
 FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
 # forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
@@ -88,12 +96,13 @@ run() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url)
+      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files)
         [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "у $1 нет значения" 2
         case "$1" in
           --dir) DIR="$2" ;; --version) VERSION="$2" ;; --src) SRC="$2" ;;
           --port) PORT="$2" ;; --bind) BIND="$2" ;;
           --forgejo) FORGEJO="$2" ;; --forgejo-url) FORGEJO_URL_ARG="$2" ;;
+          --files) FILES="$2" ;;
         esac
         shift 2 ;;
       --uninstall) MODE="uninstall"; shift ;;
@@ -130,6 +139,16 @@ parse_args() {
     *) die "--forgejo: install (поставить Forgejo $FORGEJO_VERSION_DEFAULT), own (свой Forgejo) или none" 2 ;;
   esac
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
+  case "$FILES" in
+    ""|none) ;;
+    s3)
+      local k miss=""
+      for k in S3_ENDPOINT S3_BUCKET S3_ACCESS_KEY S3_SECRET_KEY; do
+        [ -n "${!k:-$(env_get "$k" "$DIR/.env" 2>/dev/null)}" ] || miss="$miss $k"
+      done
+      [ -z "$miss" ] || die "--files s3: не заданы$miss — впишите их в окружение или в $DIR/.env (адрес, бакет и ключи своего S3)" 2 ;;
+    *) die "--files: none (без файлов) или s3 (своё S3)" 2 ;;
+  esac
   return 0
 }
 
@@ -252,7 +271,8 @@ write_env() {
   local env="$DIR/.env"
   if [ "$DRY" = 1 ]; then
     if [ -f "$env" ]; then say "[dry-run] .env есть — пароли сохраняются, обновятся версия/исходники"
-    else say "[dry-run] .env из .env.example; пароли ARCADEDB_ROOT_PASSWORD, MINIO_PASSWORD — сгенерировать"; fi
+    else say "[dry-run] .env из .env.example; пароль ARCADEDB_ROOT_PASSWORD — сгенерировать"; fi
+    files_say
     printf '[dry-run] cp %s %s\n' "$SCRIPT_DIR/docker-compose.install.yml" "$DIR/docker-compose.yml"
     if [ -n "$FORGEJO" ]; then
       say "[dry-run] Forgejo: $FORGEJO — в .env:"
@@ -272,9 +292,15 @@ write_env() {
   if [ ! -f "$env" ]; then
     (umask 077; cp "$SCRIPT_DIR/.env.example" "$env")
     say "создан $env"
+    FRESH=1
+  fi
+  # Свежая установка: база из модели 1.18 под своим именем (не system_aida_lore — сторож переноса), шаги V выключены.
+  if [ "$FRESH" = 1 ]; then
+    env_set LORE_DB "$FRESH_DB" "$env"
+    env_set LORE_MIGRATE false "$env"
   fi
   local k cur
-  for k in ARCADEDB_ROOT_PASSWORD MINIO_PASSWORD; do
+  for k in ARCADEDB_ROOT_PASSWORD; do
     cur="$(env_get "$k" "$env")"
     if [ -z "$cur" ] || [ "$cur" = "CHANGE_ME" ]; then
       env_set "$k" "${!k:-$(gen_secret)}" "$env"
@@ -283,8 +309,21 @@ write_env() {
   done
   env_set LORE_VERSION "$VERSION" "$env"
   env_set LORE_SRC "$LORE_SRC_RESOLVED" "$env"
+  # Коммит исходников — в сборку образов (LORE_BUILD_COMMIT → /lore/version): в архиве пакета .git нет, коммит лежит
+  # в backend/BUILD_COMMIT (git archive export-subst). Не подставлен (рабочий чекаут) — не трогаем: Gradle спросит git.
+  local bc=""
+  [ -n "$LORE_SRC_RESOLVED" ] && [ -f "$LORE_SRC_RESOLVED/backend/BUILD_COMMIT" ] && bc="$(tr -d '[:space:]' < "$LORE_SRC_RESOLVED/backend/BUILD_COMMIT")"
+  case "$bc" in [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) env_set LORE_BUILD_COMMIT "$bc" "$env" ;; esac
   [ -z "${LORE_BACKEND_IMAGE:-}" ] || env_set LORE_BACKEND_IMAGE "$LORE_BACKEND_IMAGE" "$env"
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
+  # Хранилище файлов: s3 — адрес, регион, бакет и ключи из окружения в .env (ключи на экран не выводятся);
+  # none — S3 пуст. Без --files выбор в .env не трогается.
+  if [ "$FILES" = s3 ]; then
+    for k in S3_ENDPOINT S3_REGION S3_BUCKET S3_ACCESS_KEY S3_SECRET_KEY; do [ -z "${!k:-}" ] || env_set "$k" "${!k}" "$env"; done
+  elif [ "$FILES" = none ]; then
+    for k in S3_ENDPOINT S3_ACCESS_KEY S3_SECRET_KEY; do env_set "$k" "" "$env"; done
+  fi
+  files_say
   [ -z "$PORT" ] || env_set LORE_HTTP_PORT "$PORT" "$env"
   [ -z "$BIND" ] || env_set LORE_BIND "$BIND" "$env"
   [ -z "${FORGEJO_MCP_IMAGE:-}" ] || env_set FORGEJO_MCP_IMAGE "$FORGEJO_MCP_IMAGE" "$env"
@@ -316,15 +355,29 @@ start_stack() {
   fi
 }
 
+# Базовые образы есть на машине? Нет — отказ с именем образа (молча упасть на `up` хуже).
+need_images() {
+  [ "$DRY" = 1 ] && return 0
+  local s img
+  for s in "$@"; do
+    img="$(compose config --images "$s" 2>/dev/null | head -1)"
+    [ -n "$img" ] || continue
+    docker image inspect "$img" >/dev/null 2>&1 || die "образа $img нет на машине, и реестр его не отдал — загрузите образ (docker load) или задайте свой в .env"
+  done
+}
+
 images() {
   if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "загрузка образов"
-    run compose pull arcadedb minio lore-backend lore-app-next
+    run compose pull lore-backend lore-app-next
   else
     say "сборка образов из $LORE_SRC_RESOLVED (первый раз — 10–20 минут)"
     run compose build lore-backend lore-app-next
-    run compose pull arcadedb minio
   fi
+  # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (ryzenai 21.11.2026:
+  # Docker Hub перестал отдавать образ хранилища — потому его в пакете и нет); образа нет нигде — need_images называет его.
+  run compose pull --ignore-pull-failures arcadedb
+  need_images arcadedb
   if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
   if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
 }
@@ -386,6 +439,12 @@ wait_db() {
   if dcurl "http://arcadedb:2480/api/v1/databases" | grep -q "\"$db\""; then
     say "база $db уже есть"
   else
+    # MIG-01: базы установки ещё нет — свежая установка: база из модели под своим именем (не system_aida_lore), шаги V
+    # не катятся. Признак — сама база, а не .env (его могли положить заранее, ryzenai 21.11.2026).
+    if [ "$db" = system_aida_lore ]; then db="$FRESH_DB"; env_set LORE_DB "$db" "$DIR/.env"; fi
+    env_set LORE_MIGRATE false "$DIR/.env"
+    FRESH=1
+    say "свежая установка: база $db, LORE_MIGRATE=false (шаги V не катятся)"
     say "создание базы $db"
     dcurl -X POST -H 'Content-Type: application/json' -d "{\"command\":\"create database $db\"}" \
       "http://arcadedb:2480/api/v1/server" | grep -q '"ok"' || die "база $db не создана"
@@ -443,6 +502,69 @@ verify() {
   say "установка проверена"
 }
 
+# Хранилище файлов одной строкой — в план и на экран; ключи не печатаются.
+files_val() { local v="${!1:-}"; [ -n "$v" ] || v="$(env_get "$1" "$DIR/.env" 2>/dev/null)"; printf '%s' "$v"; }
+files_say() {
+  local ep; ep="$(files_val S3_ENDPOINT)"
+  if [ "$FILES" = none ] || { [ "$FILES" != s3 ] && [ -z "$ep" ]; }; then
+    say "файлы: без файлов — загрузка и показ файлов ответят «хранилище файлов не подключено»"
+  else say "файлы: своё S3 $ep, бакет $(files_val S3_BUCKET)"; fi
+}
+
+# Своё S3: проверка связи до запуска — положить и прочитать пробный объект (подпись SigV4 силами curl).
+s3_probe() {
+  [ "$FILES" = s3 ] || return 0
+  say "проверка S3: положить и прочитать пробный объект"
+  [ "$DRY" = 1 ] && return 0
+  local ep bk rg ak sk key body got
+  ep="$(files_val S3_ENDPOINT)"; ep="${ep%/}"; bk="$(files_val S3_BUCKET)"; rg="$(files_val S3_REGION)"; rg="${rg:-us-east-1}"
+  ak="$(files_val S3_ACCESS_KEY)"; sk="$(files_val S3_SECRET_KEY)"
+  key="lore-install-probe-$(date +%s).txt"; body="lore install probe $key"
+  printf 'user = "%s:%s"\n' "$ak" "$sk" | docker run -i --rm "$CURL_IMAGE" -K - -sS -m 30 -f --aws-sigv4 "aws:amz:$rg:s3" \
+    -X PUT --data-binary "$body" "$ep/$bk/$key" >/dev/null || die "S3: пробный объект не записан в $ep/$bk — проверьте адрес, бакет, регион и ключи"
+  got="$(printf 'user = "%s:%s"\n' "$ak" "$sk" | docker run -i --rm "$CURL_IMAGE" -K - -sS -m 30 -f --aws-sigv4 "aws:amz:$rg:s3" "$ep/$bk/$key")" \
+    || die "S3: пробный объект записан, но не читается из $ep/$bk"
+  [ "$got" = "$body" ] || die "S3: прочитано не то, что записано ($ep/$bk/$key)"
+  printf 'user = "%s:%s"\n' "$ak" "$sk" | docker run -i --rm "$CURL_IMAGE" -K - -sS -m 30 --aws-sigv4 "aws:amz:$rg:s3" -X DELETE "$ep/$bk/$key" >/dev/null 2>&1 || true
+  say "S3: пробный объект записан и прочитан — хранилище файлов подключено"
+}
+
+# Исполняемый файл установщика (lore-migrate) — для базы из модели. LORE_MIGRATE_BIN, иначе путь, который оставила
+# команда `lore-migrate install-bundle` рядом с install.sh (.lore-migrate-path).
+migrate_bin() {
+  local b="${LORE_MIGRATE_BIN-}"
+  if [ -z "${LORE_MIGRATE_BIN+x}" ] && [ -f "$SCRIPT_DIR/.lore-migrate-path" ]; then b="$(head -1 "$SCRIPT_DIR/.lore-migrate-path")"; fi
+  printf '%s' "$b"
+}
+migrate_bin_say() {
+  local b; b="$(migrate_bin)"
+  if [ -n "$b" ]; then printf '%s' "$b"; else printf 'исполняемый файл установщика не найден — задайте LORE_MIGRATE_BIN (lore-migrate-<версия>-linux-x64 из пакета)'; fi
+}
+
+# MIG-01: «схема и база собираются заново из нормализованной модели». Пустая база из модели — тем же кодом, что перенос,
+# без источника: lore-migrate init-empty в одноразовом контейнере в сети стека (порт базы наружу не публикуется).
+init_model_db() {
+  local bin db pw envf
+  bin="$(migrate_bin)"
+  [ -n "$bin" ] && [ -f "$bin" ] || die "$(migrate_bin_say): без него свежая база из модели не собирается"
+  db="$(env_get LORE_DB "$DIR/.env")"; pw="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")"
+  say "пустая база из модели: lore-migrate init-empty → $db"
+  # файл доступа с паролем root базы — удаляется сразу после запуска, в том числе при отказе (без trap: он пережил бы функцию)
+  envf="$(mktemp)"
+  ( umask 077; {
+    echo "MIG_DB_URL=http://arcadedb:2480"
+    # источника у свежей установки нет — init-empty его не читает; ключи нужны разбору файла доступа
+    echo "MIG_SRC_DB=fresh_install_no_source"; echo "MIG_SRC_USER=none"; echo "MIG_SRC_PASSWORD=none"
+    echo "MIG_DST_DB=$db"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$pw"
+  } > "$envf" )
+  local rc=0
+  docker run --rm --network "$(project)_default" -v "$bin:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
+    "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || rc=$?
+  rm -f "$envf"
+  [ "$rc" = 0 ] || die "пустая база из модели не собрана (lore-migrate init-empty) — схема и справочники не записаны"
+  say "база $db собрана из модели: шаги V не катятся (LORE_MIGRATE=false)"
+}
+
 do_install() {
   [ "$FROM_SOURCE" = 0 ] || src_archive
   check_prereq
@@ -450,15 +572,21 @@ do_install() {
   prepare_src
   write_env
   images
-  say "запуск ArcadeDB и MinIO"
-  run compose up -d arcadedb minio
+  s3_probe
+  say "запуск ArcadeDB"
+  run compose up -d arcadedb
   if [ "$DRY" = 1 ]; then
     printf '[dry-run] ждать ArcadeDB, создать базу, если её нет\n'
+    if [ ! -f "$DIR/.env" ]; then
+      say "свежая установка: база $FRESH_DB, LORE_MIGRATE=false (шаги V не катятся)"
+      say "пустая база из модели: lore-migrate init-empty — $(migrate_bin_say)"
+    fi
     run compose up -d
     printf '[dry-run] ждать здоровья бэкенда, проверить dictionary и слайсы: %s use_cases_of_feature search\n' "$SLICES"
     return 0
   fi
   wait_db
+  [ "$FRESH" = 1 ] && init_model_db
   say "запуск бэкенда и фронта"
   start_stack
   wait_backend
@@ -475,7 +603,7 @@ do_uninstall() {
     run compose down -v --remove-orphans
     run rm -rf "$DIR"
   else
-    say "остановка стека; данные (тома lore-db, lore-minio-data) и $DIR сохраняются"
+    say "остановка стека; данные (тома lore-db, lore-db-backups) и $DIR сохраняются"
     run compose down --remove-orphans
   fi
 }
@@ -511,7 +639,45 @@ selftest() {
   printf '%s' "$out" | grep -q 'compose build' && fail "мажор без --build собирает образы"; ok
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "в плане нет сборки: $out"; ok
-  printf '%s' "$out" | grep -q 'compose up -d arcadedb minio' || fail "в плане нет подъёма базы"; ok
+  printf '%s' "$out" | grep -q 'compose up -d arcadedb' || fail "в плане нет подъёма базы"; ok
+  # MIG-04, решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов». MinIO пакет больше
+  # не ставит (Docker Hub перестал отдавать образ): ни сервиса, ни тома, ни образа; файлы — своё S3 или без файлов.
+  printf '%s' "$out" | grep -qi 'minio' && fail "план всё ещё ставит MinIO: $out"; ok
+  printf '%s' "$out" | grep -q 'файлы: без файлов' || fail "по умолчанию — «без файлов», план должен сказать это: $out"; ok
+  grep -qiE '^\s*minio:|minio/minio|lore-minio-data' "$SCRIPT_DIR/docker-compose.install.yml" && fail "compose установки ставит MinIO"; ok
+  local k
+  for k in S3_ENDPOINT S3_REGION S3_BUCKET S3_ACCESS_KEY S3_SECRET_KEY; do
+    grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
+    grep -qF "$k=\${$k:-}" "$SCRIPT_DIR/docker-compose.install.yml" || fail "бэкенд: $k не из .env"; ok
+  done
+  grep -qE '^MINIO_' "$SCRIPT_DIR/.env.example" && fail ".env.example: остались переменные MinIO"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --files maybe
+  S3_ENDPOINT= expect_rc 2 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
+  printf '%s' "$out" | grep -q 'S3_ENDPOINT' || fail "--files s3 без адреса: причина не названа: $out"; ok
+  S3_ENDPOINT=https://s3.example S3_BUCKET=b S3_ACCESS_KEY=a S3_SECRET_KEY=sekret-s3 expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
+  printf '%s' "$out" | grep -q 'проверка S3: положить и прочитать пробный объект' || fail "--files s3: нет проверки связи в плане: $out"; ok
+  printf '%s' "$out" | grep -q 'sekret-s3' && fail "dry-run напечатал ключ S3"; ok
+  # MIG-04, эмуляция на ryzenai 21.11.2026: сборка из архива исходников (.git там нет) давала /lore/version
+  # «commit: unknown» — установка не говорила, из какого пакета она. Коммит едет в архиве (git archive export-subst,
+  # backend/BUILD_COMMIT), install.sh передаёт его в сборку образов (LORE_BUILD_COMMIT в .env).
+  grep -q 'BUILD_COMMIT export-subst' "$SCRIPT_DIR/../../.gitattributes" 2>/dev/null || [ ! -f "$SCRIPT_DIR/../../.gitattributes" ] \
+    || fail ".gitattributes: backend/BUILD_COMMIT без export-subst — коммит не доедет до архива"; ok
+  grep -q 'env_set LORE_BUILD_COMMIT' "$0" || fail "install.sh не передаёт коммит исходников в сборку (LORE_BUILD_COMMIT)"; ok
+  # MIG-01: «схема и база собираются заново из нормализованной модели» — свежая установка строит пустую базу из модели
+  # (lore-migrate init-empty) и запускает бэкенд без шагов V; база установки — lore, не system_aida_lore.
+  LORE_MIGRATE_BIN=/opt/x/lore-migrate expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
+  printf '%s' "$out" | grep -q 'пустая база из модели: lore-migrate init-empty' || fail "свежая установка: нет шага «пустая база из модели»: $out"; ok
+  printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
+  printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
+  # trap … RETURN остаётся после выхода из функции и срабатывает в чужом return, где её local уже нет (set -u) —
+  # установка на ryzenai 21.11 прошла, а код выхода был 1 («envf: unbound variable»).
+  grep -qE "trap '[^']*' RETURN" "$0" && fail "trap … RETURN в install.sh — срабатывает после функции (set -u роняет установку)"; ok
+  # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, ryzenai 21.11.2026)
+  sed -n '/^wait_db()/,/^}/p' "$0" | grep -q 'FRESH=1' || fail "свежая установка определяется не по базе (wait_db не ставит FRESH)"; ok
+  LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
+  printf '%s' "$out" | grep -q 'исполняемый файл установщика не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
+  # дальше проверки читают план сборки — вернуть его в $out
+  ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok
   printf '%s' "$out" | grep -q 'dictionary' || fail "в плане нет проверки слайсов"; ok
   printf '%s' "$out" | grep -q 'sekret' && fail "dry-run напечатал пароль"; ok
@@ -533,7 +699,9 @@ selftest() {
   printf '%s' "$s1" | grep -qE '^[0-9a-f]{48}$' || fail "gen_secret: $s1"; ok
   [ "$s1" != "$s2" ] || fail "gen_secret повторился"; ok
   # 6. профиль установки не требует LORE_BOOTSTRAP и катит схему
-  grep -q 'lore.migrate=true' "$SCRIPT_DIR/docker-compose.install.yml" || fail "в профиле нет lore.migrate=true"; ok
+  # Свежая установка катит шаги V (по умолчанию true); база, перенесённая в модель 1.18, требует false — иначе бэкенд
+  # честно отказывает старт «схема собрана из модели, а lore.migrate=true» (эмуляция на ryzenai 21.11.2026).
+  grep -qF 'lore.migrate=${LORE_MIGRATE:-true}' "$SCRIPT_DIR/docker-compose.install.yml" || fail "в профиле нет lore.migrate=\${LORE_MIGRATE:-true}"; ok
   grep -qE '^\s*- (lore\.bootstrap|LORE_BOOTSTRAP)' "$SCRIPT_DIR/docker-compose.install.yml" && fail "профиль снова зависит от LORE_BOOTSTRAP"; ok
   grep -qE '^[A-Z_]*PASSWORD=(CHANGE_ME)?$' "$SCRIPT_DIR/.env.example" || fail ".env.example: пароли — только заглушки"; ok
   grep -E 'PASSWORD=' "$SCRIPT_DIR/.env.example" | grep -vqE 'PASSWORD=(CHANGE_ME)?$' && fail ".env.example содержит пароль"; ok
@@ -547,6 +715,10 @@ selftest() {
   grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
   grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
   grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
+  # 7a. базовые образы (arcadedb): недоступный реестр не роняет установку, если образ уже есть на машине;
+  #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — ryzenai 21.11.2026).
+  grep -q 'pull --ignore-pull-failures arcadedb' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
+  grep -q 'need_images arcadedb' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
     grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
   done

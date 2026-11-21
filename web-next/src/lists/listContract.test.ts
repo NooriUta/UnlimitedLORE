@@ -1,11 +1,18 @@
 // MC-09: экран-список из контракта модели (`surfaces.list`). Тип, о котором приложение не знает,
 // получает экран из одной модели; свой экран берёт срез из модели, а умолчание — только когда её нет.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { LIST_SCREENS, listScreenFor, withListContract } from './screens';
 import { listContractOf, statusFilterOf } from './listContract';
 
+// Настоящая модель (shared/model/lore-model.json — её отдаёт /lore/model): контракт своих экранов сверяется с ней,
+// а не с рукописным ответом сервера (CT-KIT-FIXTURES, api/handShapeGuard.test.ts).
+const realModel = JSON.parse(readFileSync(resolve(__dirname, '..', '..', '..', 'shared', 'model', 'lore-model.json'), 'utf8')) as unknown;
+
+// Фрагмент раздела surfaces.list, а не ответ сервера: тип, которого в модели нет, и подменённые срезы своих экранов —
+// вход разбора контракта.
 const model = {
-  format: 'model/0', version: 'v1',
   surfaces: {
     list: {
       // Тип, которого нет ни в одном экране web-next: приходит только моделью.
@@ -45,6 +52,18 @@ describe('контракт списка из модели (MC-09)', () => {
 
   it('модель подтвердила умолчание — тот же объект (экран не перезагружает строки)', () => {
     expect(withListContract(LIST_SCREENS.tasks, listContractOf(model, 'task'))).toBe(LIST_SCREENS.tasks);
+  });
+
+  it('настоящая модель: контракт каждого типа разбирается; PR (раздел 1.18) — срезом prs', () => {
+    const list = (realModel as { surfaces: { list: Record<string, unknown> } }).surfaces.list;
+    const broken = Object.keys(list).filter(t => listContractOf(realModel, t) === null);
+    expect(broken, 'неполный контракт в модели').toEqual([]);
+    const pr = listContractOf(realModel, 'pr');
+    expect(pr, 'нет surfaces.list.pr — раздел «PR» есть, а списку его не перечислить').not.toBeNull();
+    expect(pr!.slice).toBe('prs');
+    expect(statusFilterOf(pr!)).toBe('client');
+    expect(listScreenFor('pr', realModel)!.slice).toBe('prs');
+    expect(listScreenFor('task', realModel)!.slice).toBe('open_tasks');
   });
 
   it('модели нет — умолчание приложения; типа нет нигде — null', () => {

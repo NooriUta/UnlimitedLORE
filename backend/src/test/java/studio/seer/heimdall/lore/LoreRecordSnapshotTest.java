@@ -44,7 +44,9 @@ class LoreRecordSnapshotTest {
         // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий и организация — после рефакторинга.
         "repository", "organization",
         // MDL-13: паспорт трека — после рефакторинга.
-        "track");
+        "track",
+        // MD-05: паспорт PR — после рефакторинга.
+        "pr");
 
     /**
      * Значения, которые общий сборщик отдаёт СВЕРХ снимка — поля, заведённые после рефакторинга
@@ -87,7 +89,7 @@ class LoreRecordSnapshotTest {
     static {
         ROWS.put("sprint",m("sprint_id", "SPRINT_SNAP", "name", "Спринт снимка", "status_raw", "✅ DONE — закрыт",
             "context_md", "ctx", "outcome_md", "итог", "priority", "P1", "git_projects", List.of("AIDA/UnlimitedLORE", "x/y"),
-            "components", List.of("CMP-A"), "release_ids", List.of("v1.0.0"), "milestone_ids", List.of("M-1"),
+            "components", List.of("CMP-A"), "release_ids", List.of("v1.0.0"), "release_uids", List.of("AIDA/UnlimitedLORE#v1.0.0"), "milestone_ids", List.of("M-1"),
             "planned_start_date", "2026-11-01", "planned_end_date", "2026-11-20", "created_date", "2026-10-30T10:11:12Z",
             "no_release_required", true, "track_id", "TRK", "depends_on", List.of("SPRINT_A"), "blocks", List.of("SPRINT_B"),
             "adr_ids", List.of("ADR-1")));
@@ -99,7 +101,7 @@ class LoreRecordSnapshotTest {
             "decision_md", "р\n", "consequences_md", " с", "date_created", "2026-11-01", "components", List.of("CMP-A"),
             "git_projects", List.of("AIDA/UnlimitedLORE"), "tags", List.of("t1", "t2"), "depends_on_ids", List.of("ADR-D"),
             "supersedes_ids", List.of("ADR-OLD"), "file_path", "docs/adr.md", "blocks_ids", List.of("ADR-B"),
-            "superseded_by_ids", List.of("ADR-NEW"), "implemented_in_ids", List.of("SPRINT_SNAP"), "release_ids", List.of("v1"),
+            "superseded_by_ids", List.of("ADR-NEW"), "implemented_in_ids", List.of("SPRINT_SNAP"), "release_ids", List.of("v1"), "release_uids", List.of("AIDA/UnlimitedLORE#v1"),
             "justified_task_uids", List.of("SPRINT_SNAP/T-1"), "traced_by_ucs", List.of("UC-2")));
         ROWS.put("spec", m("spec_id", "SPEC-SNAP", "title", "Спека", "status", "Draft (v0)", "content_md", "тело",
             "version", "0.1.0", "summary", "кратко", "projects", List.of("AIDA/UnlimitedLORE"), "component_id", "CMP-A",
@@ -355,7 +357,10 @@ class LoreRecordSnapshotTest {
             v.put("priority", str(r.get("priority")));
             v.put("projects", arr(r.get("git_projects")));
             v.put("components", arr(r.get("components")));
-            v.put("releases", arr(r.get("release_ids")));
+            // 8877957a: релизы спринта — чипами по ключу «проект#тег», подпись — тег (был голый тег release_id)
+            List<Map<String, Object>> rel = new ArrayList<>();
+            for (String u : arr(r.get("release_uids"))) { Map<String, Object> c = new LinkedHashMap<>(); c.put("id", u); c.put("label", u.substring(u.lastIndexOf('#') + 1)); c.put("inherited_from", null); rel.add(c); }
+            v.put("releases", rel);
             v.put("milestones", arr(r.get("milestone_ids")));
             v.put("planned_start", str(r.get("planned_start_date")));
             v.put("planned_end_date", str(r.get("planned_end_date")));
@@ -627,7 +632,8 @@ class LoreRecordSnapshotTest {
                     l.addAll(links("SUPERSEDES", "out", "adr", arr(row.get("supersedes_ids"))));
                     l.addAll(links("SUPERSEDES", "in", "adr", arr(row.get("superseded_by_ids"))));
                     l.addAll(links("IMPLEMENTED_IN", "out", "sprint", arr(row.get("implemented_in_ids"))));
-                    l.addAll(links("IMPLEMENTED_IN_RELEASE", "out", "release", arr(row.get("release_ids"))));
+                    // 8877957a: ссылка на релиз — ключ «проект#тег», подпись — тег
+                    for (String u : arr(row.get("release_uids"))) l.add(link("IMPLEMENTED_IN_RELEASE", "out", u, "release", u.substring(u.lastIndexOf('#') + 1), null));
                     l.addAll(links("JUSTIFIED_BY", "in", "task", arr(row.get("justified_task_uids"))));
                     l.addAll(links("TRACED_TO", "in", "use_case", arr(row.get("traced_by_ucs"))));
                 }

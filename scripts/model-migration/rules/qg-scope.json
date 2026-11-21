@@ -1,0 +1,13 @@
+{
+ "_about": "SPRINT_QG_REBUILD/QG-01 · охват гейта при переносе 1.18. Решение владелицы 19.11.2026 «2а 3а» (D-2026-MIG-118-OWNER-ANSWERS-1119): явный признак scope = global | project; гигиена данных LORE проверяет все проекты — общие гейты без проекта; старый смоук T13 — снять. Остальные гейты с проектом — project.",
+ "decision": "D-2026-MIG-118-OWNER-ANSWERS-1119",
+ "global": [
+  "QG-LORE-BLOCKED-REASON",
+  "QG-LORE-PROJECT-BINDING",
+  "QG-LORE-PROJECT-ROLES",
+  "qg-lore-storage"
+ ],
+ "retire": {
+  "QG-T13-SMOKE": "снят решением владелицы 19.11.2026 «3а» (D-2026-MIG-118-OWNER-ANSWERS-1119): старый смоук T13"
+ }
+}

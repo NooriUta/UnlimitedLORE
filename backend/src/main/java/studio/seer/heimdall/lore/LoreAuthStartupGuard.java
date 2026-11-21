@@ -47,8 +47,9 @@ public class LoreAuthStartupGuard {
      */
     static final String DEFAULT_ISSUER = "http://localhost:18180/kc/realms/omilore";
 
-    @ConfigProperty(name = "quarkus.oidc.auth-server-url", defaultValue = "")
-    String issuer;
+    // MIG-04: пустой LORE_OIDC_ISSUER при выключенном входе — «адреса нет», а не отказ старта (ConfigEmptyDefaultDeclaredTest).
+    @ConfigProperty(name = "quarkus.oidc.auth-server-url")
+    java.util.Optional<String> issuer;
 
     static boolean issuerLeftAtDefault(boolean oidcEnabled, String issuer) {
         return oidcEnabled && DEFAULT_ISSUER.equals(issuer);
@@ -56,7 +57,7 @@ public class LoreAuthStartupGuard {
 
     @PostConstruct
     void check() {
-        if (issuerLeftAtDefault(oidcEnabled, issuer)) {
+        if (issuerLeftAtDefault(oidcEnabled, issuer.orElse(null))) {
             LOG.error("[LORE AUTH GUARD] auth включён, а issuer остался умолчанием " + DEFAULT_ISSUER
                 + " — задайте LORE_OIDC_ISSUER адресом своего Keycloak, иначе токены проверяются против localhost");
         }

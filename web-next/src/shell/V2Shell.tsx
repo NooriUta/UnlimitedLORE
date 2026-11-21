@@ -72,6 +72,8 @@ const SCREENS: Partial<Record<V2Section, ComponentType>> = {
   // щелчок по строке говорит это словами, а не открывает пустой паспорт.
   milestone: () => <ListScreen screen="milestones" titleId={SECTION_TITLE_ID} />,
   release: () => <ListScreen screen="releases" titleId={SECTION_TITLE_ID} />,
+  // 1.18: раздел PR под «Релизами».
+  pr: () => <ListScreen screen="prs" titleId={SECTION_TITLE_ID} />,
   decision: () => <ListScreen screen="decisions" titleId={SECTION_TITLE_ID} />,
   spec: () => <ListScreen screen="specs" titleId={SECTION_TITLE_ID} />,
   doc: () => <ListScreen screen="docs" titleId={SECTION_TITLE_ID} />,

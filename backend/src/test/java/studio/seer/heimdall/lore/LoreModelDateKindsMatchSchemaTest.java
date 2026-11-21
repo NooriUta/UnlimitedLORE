@@ -38,7 +38,10 @@ class LoreModelDateKindsMatchSchemaTest {
     static final Map<String, String> ABSENT = Map.of(
         "tech.checked_at", "у KnowSpec поля проверки технологии нет: в снимке прода нет данных, перенос его не заводит",
         "quality_gate.date", "QualityGate без даты заведения: тип QG ведёт своя сессия (исключение из заморозки схемы, ADR-LORE-053)",
-        "quality_gate.retired_at", "QualityGate без даты снятия: то же исключение QG");
+        "quality_gate.retired_at", "QualityGate без даты снятия: то же исключение QG",
+        // MD-05: тип pr заведён в graph после снятия снимка (19.11): KnowPR в снимке нет. В схеме установщика
+        // KnowPR.merged_at — DATETIME (scripts/model-migration/schema/all-objects.json), модель — precision datetime.
+        "pr.merged_at", "KnowPR нет в снимке схемы (тип pr в graph с MD-05); у установщика merged_at — DATETIME");
 
     /**
      * Поля, у которых вид в модели и тип в схеме переноса расходятся сознательно, — с причиной.

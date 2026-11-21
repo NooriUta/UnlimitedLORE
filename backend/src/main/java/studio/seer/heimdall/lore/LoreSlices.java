@@ -575,6 +575,7 @@ public final class LoreSlices {
             "outE('DEPENDS_ON')[valid_to IS NULL].inV().adr_id AS depends_on_ids, " +
             "out('IMPLEMENTED_IN').sprint_id      AS implemented_in_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
             "out('TAGGED_WITH').tag_id            AS tags, " +
             "out('BELONGS_TO_PROJECT').slug       AS git_projects, " + // ADRPROJ-01
@@ -984,6 +985,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             DONE_DATE_SQL + " AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
@@ -1020,6 +1022,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].priority[0], out('HAS_STATE')[priority IS NOT NULL].priority[0])     AS priority, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestone_ids, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_start_date[0], out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0])     AS planned_start_date, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_end_date[0], out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0])         AS planned_end_date, " +
@@ -2137,7 +2140,7 @@ public final class LoreSlices {
 
         // Git projects — for the T43 multi-project picker (question/decision forms).
         slice("git_projects",
-            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -2217,7 +2220,7 @@ public final class LoreSlices {
             "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components, " +
-            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " + CHILD_SPRINT_COLS + " " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, in('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('BELONGS_TO').component_id CONTAINS :cid",
             // pattern — принимается и НИЧЕГО не фильтрует: v1 (src/, выкатывается вручную) ещё
             // шлёт его, и отказ «unknown param» уронил бы вкладку спринтов в v1.
@@ -2238,7 +2241,8 @@ public final class LoreSlices {
         // первую порцию и сверх неё data_state truncated с total. ORDER BY — в хвосте: скоуп
         // вставляется перед ним. Параметр у всех один — project (slug), как у прочих срезов.
         slice("project_by_id",
-            "SELECT slug, name, default_branch, is_private FROM KnowGitProject WHERE slug = :project",
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, title_en, title_pl, " +
+            "description, description_en, description_pl, default_branch, is_private, hosts, aliases FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
         slice("project_sprints",
             "SELECT sprint_id, coalesce(title, name) AS name, " +
@@ -2269,7 +2273,8 @@ public final class LoreSlices {
         // valid_to: сменённый исполнитель в детях не числится). Человека задача знает по
         // display_name, но ключ паспорта — kc_sub (имя меняется, sub нет; так ведёт и проект).
         slice("user_by_id",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
             "FROM KnowUser WHERE kc_sub = :kc_sub",
             List.of("kc_sub"), Map.of(), "");
         slice("agent_by_id",
@@ -2281,7 +2286,8 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // Списки разделов «Люди» и «Агенты» v2: строка — человек (агент) и его проекты.
         slice("users",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
             List.of(), Map.of(), " ORDER BY display_name");
         slice("agents",
             "SELECT actor_id, name, client_id, agent_role, harness, " +
@@ -2958,6 +2964,28 @@ public final class LoreSlices {
             "FROM KnowPR WHERE out('SHIPPED_IN').release_uid CONTAINS :ruid ORDER BY pr_number",
             List.of("ruid"), Map.of(), "");
 
+        // 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): список всех PR — раздел «PR».
+        // Проект — поле git_project и ребро BELONGS_TO_PROJECT (скоуп PROJECT_SCOPED — по любому из двух);
+        // релизы — по ключу release_uid «проект#тег»; свежие сверху по моменту мержа (changed_at = merged_at).
+        slice("prs",
+            "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, merged_at AS changed_at, head_ref, base_ref, " +
+            "out('SHIPPED_IN').release_uid AS release_uids, " +
+            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects, " +
+            // #1708: подпись проекта — краткое название (по связи с проектом; без связи — ключ из поля)
+            "out('BELONGS_TO_PROJECT').slug AS project_slugs, out('BELONGS_TO_PROJECT').short_title AS project_titles " +
+            "FROM KnowPR",
+            List.of(), Map.of(), " ORDER BY merged_at DESC, pr_uid");
+
+        // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — одна строка KnowPR по pr_uid «проект#номер».
+        // Задачи — по ребру CLOSED_BY (задача → PR), релизы — по SHIPPED_IN (PR → релиз): те же рёбра,
+        // что пишут мерж (forgejo_pr_merge), task_link rel=pr и release_link rel=pr.
+        slice("pr_by_id",
+            "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
+            "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
+            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
+            "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задачи релиза — через PR, который
         // их закрыл (CLOSED_BY), и релиз этого PR (SHIPPED_IN). Не разбор note_md.
         slice("release_tasks_by_tag",
@@ -3289,6 +3317,7 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
@@ -3327,6 +3356,7 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
@@ -3520,6 +3550,8 @@ public final class LoreSlices {
         Map.entry("project_runbooks", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_files", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_prs", "out('BELONGS_TO_PROJECT').slug"),
+        // 1.18: раздел «PR» — проект по ребру или по полю git_project (ребро у старых PR не стоит).
+        Map.entry("prs", "out('BELONGS_TO_PROJECT').slug|=git_project"),
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3704,6 +3736,7 @@ public final class LoreSlices {
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
+        Map.entry("pr_by_id", "паспорт PR (MD-05): KnowPR — путь через релиз или задачу, как release_prs"),
         Map.entry("pr_ship_lag", "KnowPR — путь через релиз (графики 19.11, №9)"),
         Map.entry("findings", "находки — решение владелицы"),
         Map.entry("finding_by_id", "находки — решение владелицы"),

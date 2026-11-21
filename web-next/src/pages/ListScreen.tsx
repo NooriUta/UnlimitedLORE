@@ -49,7 +49,8 @@ import { loreListPeek } from '../record/lorePeek';
 import { useChartLayer, VolvaChart, VOLVA_VIEW_ICON, useVolvaSprintsLabels } from '../sprints/volvaChart';
 import { browserZone } from '../time/browserZone';
 import { newsRefHrefV2 } from '../news/newsLinks';
-import { ReleasesCharts } from '../charts/Batch2Charts';
+import { SECTION_CHARTS } from '../charts/sectionCharts';
+import type { ListAppView } from '@seidr/kit';
 import './ListScreen.css';
 
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
@@ -78,7 +79,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   agents: 'agent',
   // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
   // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
-  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',
+  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release', prs: 'pr',
   // Появились 10.11 (серверный PR #1090), тоже только на чтение. Технология
   // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
   // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.
@@ -393,12 +394,26 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // меняется. Проект — из скоупа шапки; подпись — бэкенд LORE.
   const volvaLayer = useChartLayer(fetchImpl, !!def.volvaChart, def.volvaChart);
   const volvaLabels = useVolvaSprintsLabels();
-  const appViews = useMemo(() => (def.volvaChart && volvaLayer === 'volva' ? [{
-    id: 'volva',
-    label: volvaLabels.view,
-    icon: VOLVA_VIEW_ICON,
-    render: () => <VolvaChart chart={def.volvaChart!} title={volvaLabels.title} projects={scope} fetchImpl={fetchImpl} />,
-  }] : undefined), [def.volvaChart, volvaLayer, volvaLabels.view, volvaLabels.title, scope, fetchImpl]);
+  // Графики раздела — видом «Аналитика» (lav=analytics), а не над списком (владелица 21.11.2026: «что опять делает
+  // тут график? у нас же должна быть вкладка аналитика или völva»). Нет графиков у раздела — нет и вида.
+  const sectionCharts = SECTION_CHARTS[screen];
+  const analyticsLabel = t('lists.view.analytics');
+  const appViews = useMemo(() => {
+    const out: ListAppView[] = [];
+    if (sectionCharts) out.push({
+      id: 'analytics',
+      label: analyticsLabel,
+      icon: ICON_CANON.recAnalytics,
+      render: () => <div className="sk-rec-charts">{sectionCharts(fetchImpl ? { fetchImpl } : {})}</div>,
+    });
+    if (def.volvaChart && volvaLayer === 'volva') out.push({
+      id: 'volva',
+      label: volvaLabels.view,
+      icon: VOLVA_VIEW_ICON,
+      render: () => <VolvaChart chart={def.volvaChart!} title={volvaLabels.title} projects={scope} fetchImpl={fetchImpl} />,
+    });
+    return out.length ? out : undefined;
+  }, [sectionCharts, analyticsLabel, def.volvaChart, volvaLayer, volvaLabels.view, volvaLabels.title, scope, fetchImpl]);
   // Фильтр «Изменены» (K2-DATE-RANGE): только у разделов, где у записи есть
   // время (у кого есть лента — FEEDS); у прочих он недоступен с причиной.
   const hasTime = !!def.feed;
@@ -802,8 +817,6 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         <ViewsBar store={viewStore} section={viewSection} user="me" state={listState} onApply={applyView}
           win={urlWin} applyStartView={!urlHasList} canTeamDefault={canTeamDefault} />
       )}
-      {/* №8 (графики 19.11.2026, пачка 2): ритм релизов над лентой релизов, свёрнуто строкой. */}
-      {screen === 'releases' && !open.id && <ReleasesCharts {...(fetchImpl ? { fetchImpl } : {})} />}
       {content}
     </section>
   );

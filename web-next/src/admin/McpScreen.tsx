@@ -18,6 +18,7 @@ import {
 import { mcpFailureTotal } from './home';
 import { MachineCell } from './machineMark';
 import { McpFailureCodesChart } from '../charts/AgentCharts';
+import { AdminViewSwitch, useAdminView } from './AdminViewSwitch';
 import './Admin.css';
 
 export interface McpScreenProps {
@@ -32,6 +33,7 @@ const HEALTH_LABEL: Record<McpHealth, AppKey> = {
 
 export function McpScreen({ fetchImpl, now }: McpScreenProps) {
   const t = useAppT();
+  const [view, setView] = useAdminView();
   const res = useLoadState<McpData>(
     signal => fetchMcp(now ?? Date.now(), signal, fetchImpl),
     [fetchImpl, now],
@@ -128,10 +130,11 @@ export function McpScreen({ fetchImpl, now }: McpScreenProps) {
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-profiles-note">{t('admin.mcp.profilesNote')}</p>
       {/* S7B-07: «последний вызов» здесь — счётчик запросов профиля; «Агенты» показывают ещё и отметку сессий. */}
       <p className="adm-note" data-tone="inf" role="note" data-testid="adm-mcp-source-note">{t('admin.mcp.sourceNote')}</p>
-      {body}
-      {/* №14 (графики 19.11.2026): отказы по кодам во времени — над отказами построчно. */}
-      <McpFailureCodesChart {...(fetchImpl ? { fetchImpl } : {})} {...(now !== undefined ? { now } : {})} />
-      {data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
+      {/* №14 (графики 19.11.2026): отказы по кодам во времени — видом «Аналитика», не над отказами (21.11.2026). */}
+      <AdminViewSwitch view={view} onChange={setView} />
+      {view === 'analytics' && <div className="sk-rec-charts"><McpFailureCodesChart {...(fetchImpl ? { fetchImpl } : {})} {...(now !== undefined ? { now } : {})} /></div>}
+      {view === 'list' && body}
+      {view === 'list' && data && <FailureRows fetchImpl={fetchImpl} total={mcpFailureTotal(data).n} />}
       {/* S7B-31 п.5а: быстрые команды подключения — из старой вкладки v1. */}
       <QuickCommands />
     </section>

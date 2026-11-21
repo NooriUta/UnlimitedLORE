@@ -161,6 +161,12 @@ export type KitPartColumns = KitPartColumn[] | { columns: KitPartColumn[]; base:
 /** Ключ блока «не описано в модели» в полях записи. */
 export const UNMODELED_KEY = '_unmodeled';
 
+/** MDL-12: поля шапки строкой рядом со статусом (служебный ключ record.fields). */
+export const STATUS_NOTES_KEY = '_status_notes';
+export interface StatusNote { key: string; label: string; value: string }
+/** Поля шапки, у которых своё место (заголовок, статус, надзаголовок с кодом, цвет, вид гейта). */
+const HEAD_OWN = new Set(['title', 'status', 'code', 'short_code', 'color', 'qg_type']);
+
 /**
  * `body_md` — самостоятельный раздел тела, а не копия другого: схема называет его полем группы
  * body, он непуст и не совпадает ни с одним другим полем той же группы.
@@ -225,6 +231,12 @@ export function passportFromDoc(c: KitRecordDoc, opts: PassportFromDocOptions): 
   // Вне модели — последним полем свойств, только чтение (ключ служебный, с полями модели не совпадёт).
   const unmodeled = c.unmodeled && Object.keys(c.unmodeled).length ? c.unmodeled : null;
   if (unmodeled) record.fields[UNMODELED_KEY] = unmodeled;
+  // MDL-12: прочие поля шапки («Ждём», «Причина статуса») — строкой рядом со статусом. Значения нет — заметки нет.
+  const statusNotes: StatusNote[] = c.schema.fields
+    .filter(f => f.group === 'head' && !HEAD_OWN.has(f.key))
+    .map(f => ({ key: f.key, label: f.label, value: c.values[f.key] }))
+    .filter((n): n is StatusNote => typeof n.value === 'string' && n.value.trim() !== '');
+  if (statusNotes.length) record.fields[STATUS_NOTES_KEY] = statusNotes;
   // Связь-свойство без поля в схеме — поле-ссылка: иначе значение не показалось бы вовсе,
   // а в блоке связей стояло бы «Проекты 0».
   const propRels = c.schema.relations.filter(r => docPlaceOf(r) === 'prop' && !props.some(f => f.key === r.key));
