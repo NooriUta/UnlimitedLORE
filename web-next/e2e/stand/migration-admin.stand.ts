@@ -8,7 +8,10 @@
 // Роль: на копии вход выключен, и роль берётся из заголовка X-Seer-Role — сценарий подставляет нужную.
 // На адресе со входом роль задаёт сохранённая учётка; сценарий, которому нужна другая роль, «не выполнен».
 import { expect, test, type Page } from '@playwright/test';
-import { openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
+import { asAccount, openStand, requireStand, shot, keepLoginFresh, textOf } from './stand.ts';
+import { authFileFor, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';
+
+const AUTH_DIR = process.env.LORE_STAND_AUTH_DIR?.trim() || 'e2e/stand/.auth';
 import { writeCopyRefusal, type WhoamiAuth } from './writeGuard.ts';
 
 test.beforeEach(() => requireStand());
@@ -33,10 +36,23 @@ async function asRole(page: Page, role: 'superadmin' | 'admin'): Promise<WhoamiA
   return who;
 }
 
-/** Ответ сервера под super-admin — для ожиданий, а не для подмены экрана. */
+/**
+ * Ответ сервера под super-admin — для ожиданий, а не для подмены экрана. Токеном сохранённого входа (как сам LORE)
+ * и заголовком роли для копии без входа. Прогон 39448: прежний page.request ходил без Authorization — стенд
+ * отвечал 401, и MA3 писал «состояние не прочитано», хотя отчёт был: «не прочитали» путалось с «расхождений нет».
+ */
 async function report(page: Page): Promise<Record<string, unknown> | null> {
-  const r = await page.request.get('/lore/admin/migration', { headers: { 'X-Seer-Role': 'superadmin' } }).catch(() => null);
-  return r && r.ok() ? ((await r.json()) as Record<string, unknown>) : null;
+  if (!/^https?:/.test(page.url())) await page.goto('/news');
+  const r = await page.evaluate(async () => {
+    const key = Object.keys(localStorage).find(k => k.includes('oidc.user:'));
+    const token = key ? (JSON.parse(localStorage.getItem(key) ?? '{}') as { access_token?: string }).access_token : undefined;
+    try {
+      const res = await fetch('/lore/admin/migration', { headers: { 'X-Seer-Role': 'superadmin', ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+      return { status: res.status, body: res.ok ? (await res.json()) as Record<string, unknown> : null };
+    } catch { return { status: 0, body: null }; }
+  });
+  expect(r.status, '/lore/admin/migration прочитан (не 401/сбой — иначе «не прочитано» выдало бы себя за «пусто»)').toBe(200);
+  return r.body;
 }
 
 const section = (page: Page) => page.locator('[data-testid="adm-migration"]');
@@ -55,8 +71,11 @@ test('MA1 Раздел открывается под super-admin: полоса �
   if (await stage(page).count()) await expect(stage(page), 'этапов пять: чтение, расчёт, сведение, запись, сверка').toHaveCount(5);
 });
 
-test('MA2 Под admin (не super-admin) — экран запрета kit, а не ошибка', async ({ page }) => {
-  await asRole(page, 'admin');
+test('MA2 Под admin (не super-admin) — экран запрета kit, а не ошибка', async ({ page: pageSa, browser }) => {
+  // Адрес со входом: роль задаёт учётка — входим test-admin (как RB/AD), а не подменой заголовка (координатор 21.11).
+  const who = await whoami(pageSa);
+  const page = who?.auth_enabled === false ? pageSa : await asAccount(browser, authFileFor(AUTH_DIR, RBAC_ACCOUNTS.admin), RBAC_ACCOUNTS.admin);
+  if (page === pageSa) await asRole(page, 'admin');
   const forbidden = section(page).locator('[data-state="forbidden"]');
   await openStand(page, SECTION, forbidden);
   await expect(forbidden, 'kit Forbidden (data-state="forbidden")').toBeVisible({ timeout: 30_000 });
@@ -68,7 +87,15 @@ test('MA3 Группы чипами, выбор группы в адресе (mi
   await asRole(page, 'superadmin');
   const body = await report(page);
   const groups = Array.isArray(body?.groups) ? (body!.groups as { kind: string; rows: { refs?: unknown[] }[] }[]) : [];
-  test.skip(!groups.length, `отчёта с расхождениями нет (состояние «${String(body?.state ?? 'не прочитано')}») — сценарий не выполнен`);
+  // «Прогона не было» и «расхождений 0» — разные состояния (координатор 21.11): первое — не выполнен с причиной,
+  // второе — проверяем, что экран так и говорит («расхождений нет»), а не рисует ошибку или пустоту.
+  test.skip(body?.state === 'no_run', `прогона переноса на стенде не было (${String(body?.reason ?? '')}) — группы проверить не на чем`);
+  if (!groups.length) {
+    await openStand(page, SECTION, page.locator('[data-testid="adm-mig-clean"]'));
+    await expect(page.locator('[data-testid="adm-mig-clean"]'), `отчёт есть (${String(body?.state)}), расхождений 0 — экран «расхождений нет»`).toBeVisible({ timeout: 30_000 });
+    expect(await page.locator('[data-testid^="adm-mig-group-"]').count(), 'групп-чипов нет').toBe(0);
+    return;
+  }
   const chips = page.locator('[data-testid^="adm-mig-group-"]');
   await openStand(page, SECTION, chips);
   await expect(chips, 'по чипу на группу').toHaveCount(groups.length, { timeout: 30_000 });

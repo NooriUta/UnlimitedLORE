@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { kitT, type KitLang } from '../i18n';
 import { StatusSlot } from './StatusSlot';
+import { StatusNotes } from './StatusNotes';
 import { dueTone, recordFacts, tasksTone, type DueFact, type FactTone, type RecordFactsSpec, type TasksFact } from './facts';
 
 export interface RecordFactsProps {
@@ -46,6 +47,7 @@ export function RecordFacts({ record, ctx, spec, lang, onTasks, tail }: RecordFa
         <Fact name="status" tone="t2">
           {/* PU-29 (владелица 14.11.2026): статус в шапке паспорта — значком, как в списке; название в подсказке. */}
           <StatusSlot record={record} ctx={ctx} unknownTitle={kitT(lang, 'kit.record.status.unknown')} compact />
+          <StatusNotes record={record} />
         </Fact>
         {t && (
           <Fact name="tasks" tone={tasksTone(t)}>
