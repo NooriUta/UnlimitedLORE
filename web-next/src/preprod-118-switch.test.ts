@@ -213,6 +213,11 @@ describe.skipIf(!bashBin)('MIG-01: перенос на ci-server — полны�
     expect(input('decisions')).toMatch(new RegExp(`default: '${DEC.replace(/\./g, '\\.')}'`));
     expect(input('stage')).toMatch(/'full'/);
     expect(code(w)).not.toMatch(/migration\/model-v2/);
+    // Владелица 20.11: «секрет от базы по миграции такой же как и у root обычного не надо плодить» —
+    // конвейер берёт root и существующий ARCADEDB_ROOT_PASSWORD, отдельных MIG_DB_* в репо нет.
+    expect(code(w)).toMatch(/MIG_DB_USER: root/);
+    expect(code(w)).toMatch(/MIG_DB_PASSWORD: \$\{\{ secrets\.ARCADEDB_ROOT_PASSWORD \}\}/);
+    expect(code(w)).not.toMatch(/secrets\.MIG_DB_/);
     expect(code(w)).toMatch(/bash \.github\/scripts\/model-migration-run\.sh/);
     expect(existsSync(resolve(repo, DEC))).toBe(true);
   });
