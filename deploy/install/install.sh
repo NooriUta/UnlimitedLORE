@@ -26,7 +26,7 @@
 # (D-2026-LORE-AUTO-BOOTSTRAP-CORE), шаги миграций добирают остальное.
 #
 # Окружение (необязательно): ARCADEDB_ROOT_PASSWORD — задать свой; S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY — своё S3 (--files s3)
-# пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE — готовые
+# пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE, LORE_MCP_IMAGE — готовые
 # образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE; GHCR_OWNER.
 #
 # Версии — ТОЛЬКО мажорные vX.Y.0 (решение владелицы 14.11.2026; то же правило, что у
@@ -70,6 +70,8 @@ FORGEJO_MCP_BUILD=0
 # Сборка из архива исходников пакета (MIG-04, владелица 20.11.2026: «архивом наш проект для собственной сборки если
 # что»): src/lore-<версия>.tar.gz и .sha256 рядом с install.sh (или LORE_SRC_ARCHIVE). Без флага — как раньше.
 FROM_SOURCE=0
+# MCP (1.18.2): причина, по которой lore-mcp не поднимается (нет образа); пусто — поднимается вместе со стеком.
+MCP_OFF=""
 SRC_ARCHIVE=""
 SRC_TAG=""
 
@@ -86,7 +88,9 @@ default_images() {
   [ -n "$VERSION" ] && [ "$BUILD" = 0 ] || return 0
   : "${LORE_BACKEND_IMAGE:=ghcr.io/$GHCR_OWNER/lore-backend:$VERSION}"
   : "${LORE_WEB_IMAGE:=ghcr.io/$GHCR_OWNER/lore-web:$VERSION}"
-  export LORE_BACKEND_IMAGE LORE_WEB_IMAGE
+  # MCP (1.18.2) — тот же мажор в ghcr; в выпусках до 1.18.2 его там нет — тогда images() говорит это громко.
+  : "${LORE_MCP_IMAGE:=ghcr.io/$GHCR_OWNER/lore-mcp:$VERSION}"
+  export LORE_BACKEND_IMAGE LORE_WEB_IMAGE LORE_MCP_IMAGE
 }
 
 # Команда, меняющая систему: в --dry-run только печатается.
@@ -317,6 +321,7 @@ write_env() {
   case "$bc" in [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) env_set LORE_BUILD_COMMIT "$bc" "$env" ;; esac
   [ -z "${LORE_BACKEND_IMAGE:-}" ] || env_set LORE_BACKEND_IMAGE "$LORE_BACKEND_IMAGE" "$env"
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
+  [ -z "${LORE_MCP_IMAGE:-}" ]     || env_set LORE_MCP_IMAGE "$LORE_MCP_IMAGE" "$env"
   # Хранилище файлов: s3 — адрес, регион, бакет и ключи из окружения в .env (ключи на экран не выводятся);
   # none — S3 пуст. Без --files выбор в .env не трогается.
   if [ "$FILES" = s3 ]; then
@@ -347,10 +352,16 @@ write_env() {
 # Сервисы для `compose up`: forgejo-mcp без своего токена падает на старте (FORGEJO_TOKEN обязателен), поэтому
 # без FORGEJO_MCP_TOKEN он не поднимается, а установщик громко говорит, что сделать.
 start_stack() {
+  local skip=()
   if has_profile forgejo-mcp && [ -z "$(env_get FORGEJO_MCP_TOKEN "$DIR/.env")" ]; then
     warn "forgejo-mcp не запущен: нет FORGEJO_MCP_TOKEN. Создайте токен в Forgejo (Настройки → Приложения), впишите в $DIR/.env и повторите install.sh — это обновление"
+    skip+=(-e forgejo-mcp)
+  fi
+  # lore-mcp без образа (images() уже сказал почему) не поднимается — иначе `up` упал бы на всём стеке.
+  [ -z "$MCP_OFF" ] || skip+=(-e lore-mcp)
+  if [ "${#skip[@]}" -gt 0 ]; then
     # shellcheck disable=SC2046
-    compose up -d $(compose config --services | grep -vx forgejo-mcp)
+    compose up -d $(compose config --services | grep -vxF "${skip[@]}")
   else
     compose up -d
   fi
@@ -370,10 +381,15 @@ need_images() {
 images() {
   if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "загрузка образов"
-    run compose pull lore-backend lore-app-next
+    if ! run compose pull lore-backend lore-app-next lore-mcp; then
+      # Выпуски до 1.18.2 публиковали в ghcr только бэкенд и веб: без образа MCP установка не падает, а говорит громко.
+      run compose pull lore-backend lore-app-next
+      MCP_OFF="образ ${LORE_MCP_IMAGE:-lore-mcp} не загружен"
+      warn "MCP не будет запущен: $MCP_OFF. Агенты не подключатся к /mcp. Задайте свой LORE_MCP_IMAGE или поставьте с --build (сборка из исходников тега)"
+    fi
   else
     say "сборка образов из $LORE_SRC_RESOLVED (первый раз — 10–20 минут)"
-    run compose build lore-backend lore-app-next
+    run compose build lore-backend lore-app-next lore-mcp
   fi
   # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (эмуляция 21.11.2026:
   # Docker Hub перестал отдавать образ хранилища — потому его в пакете и нет); образа нет нигде — need_images называет его.
@@ -515,6 +531,26 @@ wait_backend() {
   done
 }
 
+# MCP (1.18.2) — через тот же nginx веба v2, что увидит агент: /mcp/health — 200 с отметкой сборки, POST /mcp без входа —
+# 401 (или 405). 502 — nginx не достал lore-mcp, 404 — /mcp не проксируется: установка выглядит целой, а агенту
+# некуда подключиться. Сервис не поднят — строка «НЕТ» с причиной, а не тишина.
+probe_mcp() {
+  local c
+  if [ -z "$(compose ps -q lore-mcp 2>/dev/null)" ]; then
+    printf '  НЕТ   %-24s %s\n' "lore-mcp" "не запущен${MCP_OFF:+: $MCP_OFF} — /mcp ответит 502, агенты не подключатся"
+    warn "MCP не запущен — агенты не подключатся к /mcp (README, раздел «Подключить агента к MCP»)"
+    return 0
+  fi
+  base="http://lore-app-next"; probe "mcp /mcp/health" "/mcp/health" '"status":"ok"'
+  c="$(acurl -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' --data '{}' "http://lore-app-next/mcp" 2>/dev/null || true)"
+  case "$c" in
+    401|405) printf '  OK    %-24s %s\n' "mcp /mcp без входа" "$c" ;;
+    *) printf '  FAIL  %-24s %s\n' "mcp /mcp без входа" "${c:-нет ответа} (ждали 401/405; 502 — nginx не достал lore-mcp, 404 — /mcp не проксируется)"
+       fails=$((fails + 1)) ;;
+  esac
+}
+
 # Проверки результата — через фронт (заодно проверяется его прокси /lore/ к
 # бэкенду). Аутентификация в профиле установки выключена, токен не нужен.
 SLICES="features pains gains jobs actors asset_orphans"
@@ -541,6 +577,7 @@ verify() {
   else
     printf '  OK    %-24s\n' "backend /q/health/ready"
   fi
+  probe_mcp
   if has_profile forgejo; then base="http://forgejo:3000"; probe "forgejo /api/v1/version" "/api/v1/version" '"version"'; fi
   if has_profile forgejo-mcp && [ -n "$(env_get FORGEJO_MCP_TOKEN "$DIR/.env")" ]; then
     base="http://forgejo-mcp:3000"; probe "forgejo-mcp /health" "/health"
@@ -629,7 +666,7 @@ do_install() {
       say "пустая база из модели: lore-migrate init-empty — $(migrate_bin_say)"
     fi
     run compose up -d
-    printf '[dry-run] ждать здоровья бэкенда, проверить dictionary и слайсы: %s use_cases_of_feature search\n' "$SLICES"
+    printf '[dry-run] ждать здоровья бэкенда, проверить dictionary и слайсы: %s use_cases_of_feature search; MCP: /mcp/health 200, POST /mcp без входа 401/405\n' "$SLICES"
     return 0
   fi
   wait_db
@@ -687,6 +724,16 @@ selftest() {
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "в плане нет сборки: $out"; ok
   printf '%s' "$out" | grep -q 'compose up -d arcadedb' || fail "в плане нет подъёма базы"; ok
+  # 1.18.2: MCP едет в пакете — собирается с бэкендом и вебом, проверяется через nginx веба (/mcp 401/405, не 502/404).
+  printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next lore-mcp' || fail "--build: lore-mcp не собирается: $out"; ok
+  printf '%s' "$out" | grep -q 'POST /mcp без входа 401/405' || fail "в плане нет пробы /mcp: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'compose pull lore-backend lore-app-next lore-mcp' || fail "мажор без --build: lore-mcp не тянется: $out"; ok
+  local mc; mc="$(sed -n '/^  lore-mcp:$/,/^  [a-z][a-z0-9-]*:$/p' "$SCRIPT_DIR/docker-compose.install.yml")"
+  [ -n "$mc" ] || fail "compose установки: нет сервиса lore-mcp"; ok
+  printf '%s' "$mc" | grep -q 'LORE_BACKEND_URL=http://lore-backend:9100' || fail "lore-mcp: бэкенд не по имени в сети compose"; ok
+  printf '%s' "$mc" | grep -qE '^\s+ports:' && fail "lore-mcp: порт опубликован — MCP мимо TLS nginx"; ok
+  printf '%s' "$mc" | grep -q 'LORE_MCP_CLIENT_SECRET' && fail "lore-mcp: секрет клиента в compose"; ok
   # MIG-04, решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов». MinIO пакет больше
   # не ставит (Docker Hub перестал отдавать образ): ни сервиса, ни тома, ни образа; файлы — своё S3 или без файлов.
   printf '%s' "$out" | grep -qi 'minio' && fail "план всё ещё ставит MinIO: $out"; ok
