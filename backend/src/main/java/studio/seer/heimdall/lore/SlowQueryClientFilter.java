@@ -37,6 +37,29 @@ public class SlowQueryClientFilter implements ClientRequestFilter, ClientRespons
     static final long DEFAULT_THRESHOLD_MS = 300;
 
     private volatile Long thresholdMs;
+    private volatile Long topIntervalMs;
+
+    /** Сводка по шаблонам — одна на процесс (фильтр создаётся на каждый клиент). */
+    static final SlowQueryStats STATS = new SlowQueryStats(500);
+    static final int TOP_N = 10;
+    static final long DEFAULT_TOP_INTERVAL_MIN = 15;
+
+    /** Интервал строки [LORE SLOW-QUERY TOP] — {@code lore.slow-query.top-interval-min}, по умолчанию 15 минут. */
+    long topIntervalMs() {
+        Long t = topIntervalMs;
+        if (t == null) {
+            long min;
+            try {
+                min = ConfigProvider.getConfig().getOptionalValue("lore.slow-query.top-interval-min", Long.class)
+                    .orElse(DEFAULT_TOP_INTERVAL_MIN);
+            } catch (Exception e) {
+                min = DEFAULT_TOP_INTERVAL_MIN;
+            }
+            t = Math.max(1, min) * 60_000;
+            topIntervalMs = t;
+        }
+        return t;
+    }
 
     long thresholdMs() {
         Long t = thresholdMs;
@@ -74,12 +97,16 @@ public class SlowQueryClientFilter implements ClientRequestFilter, ClientRespons
             String endpoint = path.contains("/command/") ? "command" : path.contains("/query/") ? "query" : "other";
             String kind = SqlTemplate.kind(language, command);
             Metrics.counter("lore_arcadedb_calls", "endpoint", endpoint, "kind", kind).increment();
+            Object src = req.getProperty(SRC);
+            String source = src == null ? QuerySource.NONE : String.valueOf(src);
+            String template = SqlTemplate.normalize(command);
             if (ms >= thresholdMs()) {
-                Object src = req.getProperty(SRC);
                 LOG.warnf("[LORE SLOW-QUERY] %d ms · source=%s · %s/%s · status=%d · %s",
-                    ms, src == null ? QuerySource.NONE : src, endpoint, kind, res.getStatus(),
-                    SqlTemplate.normalize(command));
+                    ms, source, endpoint, kind, res.getStatus(), template);
             }
+            // «Готово, когда лог даёт топ шаблонов по суммарному времени»: сводка по всем вызовам, раз в интервал
+            STATS.record(template, source, kind, ms);
+            if (STATS.dueAt(System.currentTimeMillis(), topIntervalMs())) LOG.info(STATS.report(TOP_N));
         } catch (RuntimeException ex) {
             // Журнал — наблюдение, а не часть запроса: его сбой не должен ронять вызов базы.
             LOG.debugf("[LORE SLOW-QUERY] замер пропущен: %s", ex.getMessage());
