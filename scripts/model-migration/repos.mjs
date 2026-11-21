@@ -63,8 +63,8 @@ export function planRepos(srcProjects, anchorOf = {}, componentIds = [], overrid
  * компонента — role unassigned, чтобы не потерять), COMPONENT_REPOSITORY компонент → репозиторий, MIRRORED_TO
  * репозиторий → зеркало, пустые USES_REPOSITORY и KnowOrganization. Сверка: всё = план; у проекта ≤ 1 основного.
  */
-/** Связи организации (владелица 19.11.2026: «с проектами, продуктами и людьми»): организация → проект/продукт/человек. */
-export const ORG_EDGES = ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER'];
+/** Связи организации (владелица 19.11.2026: «с проектами, продуктами и людьми»; 21.11: «и срез репозиториев к ней»): организация → проект/продукт/человек/репозиторий. */
+export const ORG_EDGES = ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER', 'ORG_HAS_REPOSITORY'];
 /** Все типы, которые пересоздаёт этот шаг: свои для приёмника (повторный перенос с --reset их не считает чужими). */
 export const REPO_TYPES = ['HAS_REPOSITORY', 'COMPONENT_REPOSITORY', 'MIRRORED_TO', 'USES_REPOSITORY', 'DEPENDS_ON_REPOSITORY', ...ORG_EDGES, 'KnowRepository', 'KnowOrganization'];
 

@@ -20679,6 +20679,16 @@
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "unknown"
@@ -20947,6 +20957,16 @@
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema"
@@ -20954,7 +20974,9 @@
     "parts" : [ ],
     "slice_links" : [ ],
     "unread" : [ ],
-    "edge_links" : { },
+    "edge_links" : {
+      "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_HAS_REPOSITORY')) FROM KnowRepository WHERE url = :id) LIMIT 201"
+    },
     "defaults" : {
       "title" : ""
     },
@@ -21042,6 +21064,12 @@
             "label" : "люди",
             "relation" : "association",
             "edge_props" : [ ]
+          }, {
+            "rel" : "ORG_HAS_REPOSITORY",
+            "dir" : "out",
+            "label" : "репозитории",
+            "relation" : "association",
+            "edge_props" : [ ]
           } ]
         } ],
         "tree" : {
@@ -21075,6 +21103,16 @@
         "rel" : "ORG_MEMBER",
         "dir" : "out",
         "target_type" : "user",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "link_tab",
         "manageable" : true,
         "inverse_label" : null
@@ -21163,6 +21201,12 @@
             "label" : "люди",
             "relation" : "association",
             "edge_props" : [ ]
+          }, {
+            "rel" : "ORG_HAS_REPOSITORY",
+            "dir" : "out",
+            "label" : "репозитории",
+            "relation" : "association",
+            "edge_props" : [ ]
           } ]
         } ],
         "tree" : {
@@ -21199,6 +21243,16 @@
         "place" : "link_tab",
         "manageable" : true,
         "inverse_label" : null
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema"
@@ -21209,7 +21263,8 @@
     "edge_links" : {
       "projects" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_PROJECT')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
       "products" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_PRODUCT')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
-      "members" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_MEMBER')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201"
+      "members" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_MEMBER')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201",
+      "repositories" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(out('ORG_HAS_REPOSITORY')) FROM KnowOrganization WHERE org_id = :id) LIMIT 201"
     },
     "defaults" : {
       "title" : ""

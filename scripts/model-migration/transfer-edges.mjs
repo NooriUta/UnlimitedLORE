@@ -13,6 +13,7 @@ import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
+import { applyOrgs } from './orgs.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
 import { applyOrphanSprints } from './orphan-sprints.mjs';
 import { carriesFreeFields, edgeFreeFieldsDdl, stampFreeFields, freeFieldsLoss } from './edge-free-fields.mjs';
@@ -158,6 +159,9 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   // основной, влитый проект → репозиторий его компонента, зеркала — связью репозиторий → репозиторий
   report.repositories = await applyRepos(db, regroupInput.projects, anchorOf, { log, overrides: repoOverrides(decisions) });
   if (!report.repositories.ok) ok = false;
+  // организации (владелица 21.11.2026): только по решению человека — раздел organizations файла решений
+  report.organizations = await applyOrgs(db, decisions, { log });
+  if (!report.organizations.ok) ok = false;
   // вид продукта (шаг В установщика, владелица 19.11.2026): решение человека из файла решений — в запись продукта
   // приёмника; сверка — у всех продуктов вид задан
   report.product_kind = await applyProductKinds(db, (await readProductKindInput(db)).products, decisions, { log });

@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "3f21aa7fdfe828a8",
+  "version" : "331936b34f334ee1",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -11661,6 +11661,16 @@
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -11778,6 +11788,16 @@
         "rel" : "ORG_MEMBER",
         "dir" : "out",
         "target_type" : "user",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "link_tab",
         "manageable" : true,
         "inverse_label" : null
@@ -13687,6 +13707,13 @@
             "key" : "links",
             "label" : "Связи"
           }
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 7,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "organization" : {
@@ -13716,6 +13743,16 @@
           "source" : "relation",
           "ref" : "members",
           "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "repositories",
+          "source" : "relation",
+          "ref" : "repositories",
+          "order" : 4,
           "slot" : "own",
           "group" : {
             "key" : "links",
