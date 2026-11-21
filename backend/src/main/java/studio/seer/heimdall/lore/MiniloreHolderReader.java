@@ -44,9 +44,10 @@ public class MiniloreHolderReader {
 
     @ConfigProperty(name = "lore.minilore.url")
     Optional<String> url;
-    @ConfigProperty(name = "lore.minilore.token-url",
-        defaultValue = "https://odal.seidrstudio.pro/kc/realms/omilore/protocol/openid-connect/token")
-    String tokenUrl;
+    // SELF-PROVISION-STANDALONE: умолчания на наш Keycloak нет — чужая установка не должна стучаться к нам.
+    // Не задан — состояние not_configured при чтении, старт не падает (Optional, как у lore.minilore.url).
+    @ConfigProperty(name = "lore.minilore.token-url")
+    Optional<String> tokenUrl;
     @Inject
     SecretProvider secrets;
 
@@ -111,6 +112,8 @@ public class MiniloreHolderReader {
     /** Сессии у записи. Не бросает: любой исход — состояние. */
     Result read(String refId) {
         if (url == null || url.isEmpty() || url.get().isBlank()) return Result.notConfigured("не задан адрес сервера miniLORE (lore.minilore.url)");
+        if (tokenUrl == null || tokenUrl.isEmpty() || tokenUrl.get().isBlank())
+            return Result.notConfigured("не задан адрес выдачи токена Keycloak (lore.minilore.token-url)");
         Optional<String> id = secrets.get(CLIENT_ID_KEY), secret = secrets.get(CLIENT_SECRET_KEY);
         if (id.isEmpty() || secret.isEmpty()) return Result.notConfigured("нет учётки читателя miniLORE в хранилище секретов");
         try {
@@ -141,7 +144,7 @@ public class MiniloreHolderReader {
         if (!fresh && token != null && now < tokenUntilMs) return token;
         String body = "grant_type=client_credentials&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
             + "&client_secret=" + URLEncoder.encode(secret, StandardCharsets.UTF_8);
-        HttpRequest req = HttpRequest.newBuilder(URI.create(tokenUrl)).timeout(TIMEOUT)
+        HttpRequest req = HttpRequest.newBuilder(URI.create(tokenUrl.get())).timeout(TIMEOUT)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
         HttpResponse<String> r = HTTP.get().send(req, HttpResponse.BodyHandlers.ofString());

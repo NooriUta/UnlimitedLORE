@@ -123,6 +123,8 @@ jobs:
       LORE_VOLVA_EMBED_SITE_URL: https://volva.odal.seidrstudio.pro
       # LINKS-VIEW-HOLDER: сервер miniLORE препрода по общей сети headscale-net (проба 16.11: /q/health 200).
       LORE_MINILORE_URL: http://minilore-srv-preprod:8080
+      # Токен читателя miniLORE — тот же адрес, что был умолчанием в коде до SELF-PROVISION-STANDALONE.
+      LORE_MINILORE_TOKEN_URL: https://odal.seidrstudio.pro/kc/realms/omilore/protocol/openid-connect/token
       LORE_SECRETS_URL: http://infisical:18080
       LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
       LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}

@@ -180,6 +180,9 @@ services:
       # LINKS-VIEW-HOLDER: адрес сервера miniLORE для читателя «держателей» записи. Пусто → not_configured.
       # Препрод: http://minilore-srv-preprod:8080 (общая сеть headscale-net; задаётся в lore-cd.yml).
       - lore.minilore.url=${LORE_MINILORE_URL:-}
+      # Адрес выдачи токена Keycloak для читателя miniLORE — умолчания в коде нет (SELF-PROVISION-STANDALONE).
+      # Пусто → not_configured. Препрод задаёт его в lore-cd.yml.
+      - lore.minilore.token-url=${LORE_MINILORE_TOKEN_URL:-}
       - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
       # НЕ ${KC_ADMIN_URL}: в .env он localhost (для host-скриптов), а внутри
       # контейнера localhost = сам контейнер. Ходим через kc:host-gateway.
