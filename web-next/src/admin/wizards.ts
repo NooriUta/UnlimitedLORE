@@ -8,7 +8,8 @@
 //     (без пароля: LORE паролей не хранит, пароль — «осталось руками»);
 //   • проекты «как у похожего» — срез role_matrix; применение — пачка
 //     POST /lore/user/role/batch тем же DangerBatch, что у «Ролей»;
-//   • учётка агента — POST /lore/kc/agent-client {profile, machine}: клиент
+//   • учётка агента — POST /lore/kc/agent-client {profile, machine, harness?}: с harness — клиент
+//     KC lore-mcp-<роль>[_<harness>] (1.18.1, роль не выше главной harness), без него — прежний
 //     KC lore-mcp-<профиль>_<машина> по шаблону профиля, секрет — один раз;
 //   • агент в графе — POST /lore/actor (kind agent) и POST /lore/actor/owner
 //     (владелец, профиль, машина): без владельца агенту не от кого наследовать
@@ -211,7 +212,11 @@ export interface IssueRequest { profile: string; machine: string; ownerSub: stri
  * выданным секретом, а не теряет его.
  */
 export async function issueAgent(req: IssueRequest, fetchImpl: typeof fetch = loreFetch): Promise<{ agent: IssuedAgent; linkError: string | null }> {
-  const agent = parseIssued(await postJson('/lore/kc/agent-client', { profile: req.profile, machine: req.machine }, fetchImpl));
+  // OH-MCP-HOSTED-SWITCH (1.18.1): с harness имя учётки — по harness (lore-mcp-<роль>[_<harness>]), роль не выше главной
+  // harness — правило сервера, отказ 409 его словами. Без harness — прежний путь по машине.
+  const kcReq: Record<string, unknown> = { profile: req.profile, machine: req.machine };
+  if (req.harness) kcReq.harness = req.harness;
+  const agent = parseIssued(await postJson('/lore/kc/agent-client', kcReq, fetchImpl));
   try {
     await postJson('/lore/actor', { actor_id: agent.clientId, name: agent.clientId, kind: 'agent' }, fetchImpl);
     const owner: Record<string, unknown> = {

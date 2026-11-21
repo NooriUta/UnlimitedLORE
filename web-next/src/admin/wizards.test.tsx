@@ -294,6 +294,34 @@ describe('экран · UC-2 дать человеку агента', () => {
   });
 });
 
+describe('экран · учётка по harness (OH-MCP-HOSTED-SWITCH, 1.18.1)', () => {
+  const pick = async (f: ReturnType<typeof mockFetch>) => {
+    renderScreen(f as unknown as typeof fetch, 'agent');
+    fireEvent.change(await screen.findByTestId('adm-wiz-owner'), { target: { value: 'u-volva' } });
+    next();
+    fireEvent.click(await screen.findByTestId('adm-wiz-profile-developer'));
+    fireEvent.change(screen.getByTestId('adm-wiz-machine'), { target: { value: 'nb' } });
+    await waitFor(() => expect(screen.getByTestId('adm-wiz-harness').querySelector('option[value="claude-code"]')).toBeTruthy());
+    fireEvent.change(screen.getByTestId('adm-wiz-harness'), { target: { value: 'claude-code' } });
+    next();
+    fireEvent.click(await screen.findByTestId('adm-wiz-issue'));
+  };
+
+  it('выбран harness — сервер получает его: имя учётки по harness, а не по машине', async () => {
+    const f = mockFetch();
+    await pick(f);
+    await waitFor(() => expect(calls(f, '/lore/kc/agent-client')).toEqual([{ profile: 'developer', machine: 'nb', harness: 'claude-code' }]));
+  });
+
+  it('роль выше главной harness (409) — слова сервера на экране, привязки нет', async () => {
+    const f = mockFetch({ agentClient: { status: 409, body: { error: 'ROLE_ABOVE_HARNESS_MAIN',
+      detail: 'главная учётка harness «claude-code» — роль «pm», а «developer» выше неё или ей не подчинена' } } });
+    await pick(f);
+    expect((await screen.findByTestId('adm-wiz-issue-error')).textContent).toContain('выше неё');
+    expect(calls(f, '/lore/actor/owner')).toHaveLength(0);
+  });
+});
+
 describe('экран · UC-7 новый ноутбук', () => {
   it('имя, занятое чужой машиной, — вперёд нельзя, и сказано чья', async () => {
     const f = mockFetch();
