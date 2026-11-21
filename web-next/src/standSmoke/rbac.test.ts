@@ -1,7 +1,7 @@
 // Помощники RBAC-прогона на стенде (SPEC-LORE-RBAC-ADMIN-TESTCASES): вход на учётку,
 // разбор токена без подписи, срок токена.
 import { describe, expect, it } from 'vitest';
-import { authFileFor, isExpired, jwtPayload, RBAC_ACCOUNTS } from './rbac';
+import { authFileFor, expiredCopy, isExpired, jwtPayload, RBAC_ACCOUNTS } from './rbac';
 
 const b64url = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const jwt = (payload: unknown) => `${b64url({ alg: 'RS256' })}.${b64url(payload)}.sig`;
@@ -37,5 +37,21 @@ describe('authFileFor', () => {
   });
   it('все учётки прогона — тестовые', () => {
     for (const a of Object.values(RBAC_ACCOUNTS)) expect(a.toLowerCase().startsWith('test')).toBe(true);
+  });
+});
+
+describe('expiredCopy — поддельный просроченный токен для RB-08', () => {
+  it('exp в прошлом, прочие claim-ы и заголовок те же, подпись прежняя (значит, недействительна)', () => {
+    const live = jwt({ sub: 'u1', exp: 2_000_000_000, iat: 1_900_000_000 });
+    const old = expiredCopy(live, 1_800_000_000_000);
+    expect(old).not.toBeNull();
+    const p = jwtPayload(old!)!;
+    expect(p.sub).toBe('u1');
+    expect(isExpired(p, 1_800_000_000_000)).toBe(true);
+    expect(old!.split('.')[0]).toBe(live.split('.')[0]);
+    expect(old!.split('.')[2]).toBe('sig');
+  });
+  it('не JWT — null', () => {
+    expect(expiredCopy('не токен', Date.now())).toBeNull();
   });
 });
