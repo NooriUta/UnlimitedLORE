@@ -184,10 +184,13 @@ test('AD-01 Админка viewer-у: честный отказ, а не пус�
   test.skip(Date.now() < STAND_BACK_ON, 'выключен владелицей 18.11 до 21.11.2026 — вернётся сам');
   const page = await login(RBAC_ACCOUNTS.viewer);
   await page.goto('/?mod=admin&sec=adm-home');
-  const card = page.locator('[data-testid="adm-home-403"]');
-  await expect(card, 'карточка Главной админки показана').toBeVisible({ timeout: 30_000 });
-  await expect(card, 'карточка дочиталась').not.toHaveAttribute('data-state', 'loading', { timeout: 30_000 });
-  await expect(card, 'журнал отказов viewer-у закрыт — «нет прав», не «0»').toHaveAttribute('data-state', 'forbidden');
+  // AP-08 (SPRINT_LORE_ADMIN_POLISH/AP-08): админка закрыта viewer-у ЦЕЛИКОМ — экран «только для администраторов»
+  // с его ролью (WhoamiBar.AdminForbidden), а не Главная с карточкой «нет прав». Смоук 39054 (21.11) показал ровно
+  // это (скрин AD-01): прежняя проверка ждала карточку adm-home-403, которой при закрытой админке нет по замыслу.
+  const denied = page.getByText('Админка — только для администраторов');
+  await expect(denied, 'честный отказ: экран «только для администраторов»').toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Ваша роль — viewer/), 'в отказе названа роль вызывающего').toBeVisible();
+  await expect(page.locator('[data-testid="adm-home-403"]'), 'карточек Главной с нулями viewer не видит').toHaveCount(0);
 });
 
 for (const [id, account, role] of [['AD-02', RBAC_ACCOUNTS.admin, 'admin'], ['AD-02v', RBAC_ACCOUNTS.viewer, 'viewer']] as const) {
