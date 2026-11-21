@@ -14,8 +14,9 @@ const RETIRED_TYPES = ['StatusAdr', 'StatusDecision', 'StatusMilestone', 'Status
 const RETIRED_EDGES = ['HAS_STATUS', 'OF_TYPE'];
 // План-доска снята (D-2026-LORE-PLAN-BOARD-REMOVED).
 const PLAN_TYPES = ['PlanCheckpoint', 'PlanConfig', 'PlanSection', 'PlanTrack', 'PlanVersion'];
-// Владелица: HAS_PR не переносится; ON_MILESTONE — от плана-доски.
-const DROPPED_EDGES = ['HAS_PR', 'ON_MILESTONE'];
+// ON_MILESTONE — от плана-доски. HAS_PR своим типом не переносится, но с MD-05 (release.Q37) переводится по типу
+// начала в CLOSED_BY / SHIPPED_IN — это проверяет edge-plan.test.mjs.
+const DROPPED_EDGES = ['ON_MILESTONE'];
 // Мёртвые связи — переводятся в живую IMPLEMENTED_IN_RELEASE, под своим именем не переносятся.
 const CONVERTED_EDGES = ['INCLUDES', 'RELEASED_IN'];
 // «что нужно в QG то и оставляй» (18.11) и «матрица технологий переносится» (18.11) — переносятся.

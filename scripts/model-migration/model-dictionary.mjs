@@ -69,7 +69,9 @@ function edgePurpose(name, model, edgesMap) {
 
 function transferOf(rule) {
   if (!rule) return 'нет правила в карте';
-  const head = rule.rule + (rule.to ? ` → ${rule.to}${rule.reverse ? ' (разворот)' : ''}` : '');
+  // MD-05: перевод по типу начала — «convert: KnowTask → CLOSED_BY; KnowRelease → SHIPPED_IN (разворот)»
+  const byFrom = rule.by_from ? ': ' + Object.entries(rule.by_from).map(([f, r]) => `${f} → ${r.to}${r.reverse ? ' (разворот)' : ''}`).join('; ') : '';
+  const head = rule.rule + (rule.to ? ` → ${rule.to}${rule.reverse ? ' (разворот)' : ''}` : '') + byFrom;
   // поручение владелицы 17.11 «перенеси … все объекты» стоит у большинства связей — пишется коротко, текст в легенде
   const note = rule.note && /^владелица 17.11.2026: «перенеси/.test(rule.note) ? 'поручение 17.11' : rule.note;
   return `${head} · ${rule.basis || '—'}${note ? ' · ' + note : ''}`;

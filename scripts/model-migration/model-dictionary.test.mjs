@@ -51,7 +51,8 @@ test('каждый вид связи карты переноса и модели
   assert.deepEqual(po.writers, ['A.java']);
   assert.deepEqual(po.readers, ['LoreSlices.java']);
   assert.match(po.transfer, /keep/);
-  assert.equal(d.edges.find(e => e.name === 'HAS_PR').transfer.startsWith('drop'), true);
+  // MD-05 · release.Q37: HAS_PR переводится по типу начала — словарь называет обе цели
+  assert.match(d.edges.find(e => e.name === 'HAS_PR').transfer, /^convert: KnowTask → CLOSED_BY; KnowRelease → SHIPPED_IN \(разворот\)/);
 });
 
 test('типы вне паспорта (служебные, QG, BRAGI) — тоже в словаре, с судьбой при переносе', () => {
