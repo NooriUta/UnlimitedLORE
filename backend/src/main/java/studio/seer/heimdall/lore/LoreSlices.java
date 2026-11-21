@@ -2270,7 +2270,8 @@ public final class LoreSlices {
         // valid_to: сменённый исполнитель в детях не числится). Человека задача знает по
         // display_name, но ключ паспорта — kc_sub (имя меняется, sub нет; так ведёт и проект).
         slice("user_by_id",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
             "FROM KnowUser WHERE kc_sub = :kc_sub",
             List.of("kc_sub"), Map.of(), "");
         slice("agent_by_id",
@@ -2282,7 +2283,8 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // Списки разделов «Люди» и «Агенты» v2: строка — человек (агент) и его проекты.
         slice("users",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
             List.of(), Map.of(), " ORDER BY display_name");
         slice("agents",
             "SELECT actor_id, name, client_id, agent_role, harness, " +

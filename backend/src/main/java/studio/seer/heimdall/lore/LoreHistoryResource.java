@@ -111,6 +111,23 @@ public class LoreHistoryResource extends LoreResourceBase {
                 LOG.warnf("[LORE HISTORY] имена людей %s/%s: %s", type, id, e.getMessage());
             }
         }
+        // AO-AGENT-HUMAN-NAME: автор-агент — «имя · профиль · машина», учётка подсказкой. Реестр не прочитался —
+        // подпись из учётки (профиль), причина в лог.
+        java.util.Set<String> clients = LoreEntityHistory.agentClients(pageRows);
+        if (!clients.isEmpty()) {
+            Map<String, WhoLabel.Agent> agents = new java.util.HashMap<>();
+            try {
+                for (Map<String, Object> a : ingestService.queryPublic(
+                        "SELECT client_id, name, harness FROM KnowActor WHERE client_id IN :c", Map.of("c", List.copyOf(clients))))
+                    if (a.get("client_id") != null)
+                        agents.put(a.get("client_id").toString(), new WhoLabel.Agent(
+                            a.get("name") == null ? null : a.get("name").toString(), a.get("harness") == null ? null : a.get("harness").toString()));
+            } catch (RuntimeException e) {
+                LOG.warnf("[LORE HISTORY] имена агентов %s/%s: %s", type, id, e.getMessage());
+            }
+            pageRows = LoreEntityHistory.withAgentNames(pageRows, agents);
+            paged.put("rows", pageRows);
+        }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", type);

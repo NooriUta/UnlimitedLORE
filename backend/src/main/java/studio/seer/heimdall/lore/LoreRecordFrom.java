@@ -378,7 +378,10 @@ final class LoreRecordFrom {
         // S9-05 A: человек и агент — шапка из строки, дети (задачи по открытым ролям) — срезом.
         Map.entry("user", List.of(
             v("title", Transform.FIRST_OF, "display_name", "kc_sub"),
-            list("projects", "projects"))),
+            list("projects", "projects"),
+            // Пакет 1.18: имя из KC — логин подсказкой и источник имени видны в паспорте.
+            s("login", "login"),
+            s("name_source", "name_source"))),
         Map.entry("agent", List.of(
             v("title", Transform.FIRST_OF, "name", "actor_id"),
             s("client_id", "client_id"),

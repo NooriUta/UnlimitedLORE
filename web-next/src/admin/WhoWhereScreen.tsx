@@ -27,6 +27,7 @@ import { ProfileEditor } from '../settings/ProfileEditor';
 import { usePerson } from '../people/avatars';
 import { PersonTestDelete } from './TestAccountDelete';
 import { WhyNotSee } from './WhyNotSee';
+import { KcNamesBar } from './KcNamesBar';
 import { AgentChip } from './HarnessMark';
 import './Admin.css';
 
@@ -154,7 +155,7 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
               action={<button type="button" className="sk-btn" onClick={() => setQuery(null, { replace: true })}>{t('admin.who.qReset')}</button>} />
           </div>
         ) : view === 'people' ? (
-          <PeoplePanel data={data} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} />
+          <PeoplePanel data={data} meSub={meSub} fetchImpl={fetchImpl} allSlugs={allSlugs} onReload={res.reload} />
         ) : body}
       </>
     );
@@ -195,8 +196,8 @@ export function WhoWhereScreen({ view = 'people', fetchImpl, meSub = null }: Who
 // экран, который собран сейчас, должен стать паспортом». Паспорт — всё, что
 // было в раскрытой строке: проекты и роли, агенты, «Все мои», агенты машины,
 // эффективный доступ. Открытый человек — в адресе (?adm-open=kc_sub).
-function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
-  data: Participation; meSub: string | null; fetchImpl?: typeof fetch; allSlugs: string[];
+function PeoplePanel({ data, meSub, fetchImpl, allSlugs, onReload }: {
+  data: Participation; meSub: string | null; fetchImpl?: typeof fetch; allSlugs: string[]; onReload?: () => void;
 }) {
   const t = useAppT();
   const lang = useKitLang();
@@ -214,6 +215,8 @@ function PeoplePanel({ data, meSub, fetchImpl, allSlugs }: {
     <>
       <div className="adm-people__bar">
         <button type="button" className="sk-btn" onClick={() => setAdding(true)}>{t('admin.people.add')}</button>
+        {/* Пакет 1.18: имена из KC — при открытии раз в сутки и кнопкой; итог и отказ словами. */}
+        <KcNamesBar fetchImpl={fetchImpl} onChanged={() => onReload?.()} />
       </div>
       {/* Старые ссылки ?adm-q=… (S7B-25) открывают ту же выборку — текстом поиска списка. */}
       <ListView config={config} data={kitData} onOpen={id => setOpen(id)} openOnRowClick initial={q ? { text: q } : undefined}
