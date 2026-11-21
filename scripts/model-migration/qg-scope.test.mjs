@@ -1,0 +1,71 @@
+// SPRINT_QG_REBUILD/QG-01 · охват гейта при переносе 1.18 (решение владелицы 19.11.2026 «2а 3а»,
+// D-2026-MIG-118-OWNER-ANSWERS-1119). Смоук RFD2 21.11.2026: на базе переноса scope пуст у всех гейтов, четыре гейта
+// гигиены LORE привязаны к проекту, QG-T13-SMOKE в draft. Правило — в переносе, чтобы повторялось на проде.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { planQgScope, applyQgScope } from './qg-scope.mjs';
+import rule from './rules/qg-scope.json' with { type: 'json' };
+
+const gates = [
+  { qg_id: 'QG-LORE-BLOCKED-REASON', status: 'draft', projects: ['NooriUta/UnlimitedLORE'] },
+  { qg_id: 'QG-LORE-PROJECT-BINDING', status: 'draft', projects: ['NooriUta/UnlimitedLORE'] },
+  { qg_id: 'QG-LORE-PROJECT-ROLES', status: 'draft', projects: ['NooriUta/UnlimitedLORE'] },
+  { qg_id: 'qg-lore-storage', status: 'draft', projects: ['NooriUta/UnlimitedLORE'] },
+  { qg_id: 'QG-AIDA-ARCH', status: 'draft', projects: ['NooriUta/AIDA'] },
+  { qg_id: 'QG-SITE-V2-COVERAGE', status: 'draft', projects: ['NooriUta/seidr-site'] },
+  { qg_id: 'QG-T13-SMOKE', status: 'draft', projects: [] },
+];
+
+test('правило — решение владелицы: четыре общих гейта и снятый смоук T13', () => {
+  assert.equal(rule.decision, 'D-2026-MIG-118-OWNER-ANSWERS-1119');
+  assert.deepEqual(rule.global, ['QG-LORE-BLOCKED-REASON', 'QG-LORE-PROJECT-BINDING', 'QG-LORE-PROJECT-ROLES', 'qg-lore-storage']);
+  assert.deepEqual(Object.keys(rule.retire), ['QG-T13-SMOKE']);
+  assert.ok(rule.retire['QG-T13-SMOKE'].length > 0, 'снятие требует причины (ADR-LORE-053-D7)');
+});
+
+test('план: общие — global и без проекта, остальные с проектом — project, T13 — retired с причиной', () => {
+  const p = planQgScope(gates, rule);
+  assert.deepEqual(p.scope, {
+    'QG-LORE-BLOCKED-REASON': 'global', 'QG-LORE-PROJECT-BINDING': 'global', 'QG-LORE-PROJECT-ROLES': 'global', 'qg-lore-storage': 'global',
+    'QG-AIDA-ARCH': 'project', 'QG-SITE-V2-COVERAGE': 'project',
+  });
+  assert.deepEqual(p.dropProjectLinks, ['QG-LORE-BLOCKED-REASON', 'QG-LORE-PROJECT-BINDING', 'QG-LORE-PROJECT-ROLES', 'qg-lore-storage']);
+  assert.deepEqual(p.retire, [{ qg_id: 'QG-T13-SMOKE', reason: rule.retire['QG-T13-SMOKE'] }]);
+  assert.deepEqual(p.problems, []);
+  assert.deepEqual(p.counts, { global: 4, project: 2, retired: 1, project_links_dropped: 4 });
+});
+
+test('отклонения называются, а не теряются: гейт правила не найден, проектный без проекта, проектный с двумя проектами', () => {
+  const p = planQgScope([
+    { qg_id: 'QG-X', status: 'draft', projects: [] },
+    { qg_id: 'QG-Y', status: 'active', projects: ['A/a', 'B/b'] },
+  ], { global: ['QG-GONE'], retire: { 'QG-T13-SMOKE': 'r' } });
+  assert.deepEqual(p.problems.map(x => x.qg_id + ':' + x.kind),
+    ['QG-GONE:rule_gate_missing', 'QG-T13-SMOKE:rule_gate_missing', 'QG-X:no_project', 'QG-Y:many_projects']);
+});
+
+test('применение в приёмник: признак, снятие проектных связей общих, снятие T13 — и сверка «после»', async () => {
+  const cmds = [];
+  const state = new Map(gates.map(g => [g.qg_id, { ...g, scope: null }]));
+  const db = {
+    dstCommand: async (sql, p = {}) => {
+      cmds.push(sql);
+      if (sql.startsWith('UPDATE QualityGate SET scope')) state.get(p.id).scope = p.s;
+      if (sql.startsWith('UPDATE QualityGate SET status')) Object.assign(state.get(p.id), { status: 'retired', retired_reason: p.r });
+      if (sql.startsWith('DELETE FROM #')) for (const g of state.values()) if (g.edgeRids && g.edgeRids.includes(sql.slice(12))) g.projects = [];
+      return [];
+    },
+    dstQuery: async (sql, p = {}) => {
+      if (sql.includes('FROM BELONGS_TO_PROJECT')) return p.ids.flatMap(id => state.get(id).projects.map((s, i) => {
+        const r = `#9:${id.length}${i}`; (state.get(id).edgeRids ||= []).push(r); return { r };
+      }));
+      return [...state.values()].map(g => ({ qg_id: g.qg_id, status: g.status, scope: g.scope, retired_reason: g.retired_reason || null, projects: g.projects }));
+    },
+  };
+  const r = await applyQgScope(db, gates, rule, { log: () => {} });
+  assert.ok(cmds.includes('CREATE PROPERTY QualityGate.scope IF NOT EXISTS STRING'));
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(r.after, { global: 4, project: 2, retired: 1, global_with_project: 0, unscoped: 0 });
+  assert.equal(r.project_links_dropped, 4);
+  assert.equal(state.get('QG-T13-SMOKE').status, 'retired');
+});
