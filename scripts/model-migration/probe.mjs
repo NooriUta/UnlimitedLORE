@@ -4,6 +4,7 @@
 //   2) приёмник есть; с ключом --create-dst — создаётся, если его нет.
 // Учётки берутся из файла доступа (MIG_ENV_FILE); значения секретов не печатаются.
 import { loadEnv, summary, dstUrl } from './env.mjs';
+import { connectVerdict } from './probe-verdict.mjs';
 
 const env = loadEnv();
 const auth = (u, p) => 'Basic ' + Buffer.from(`${u}:${p}`).toString('base64');
@@ -44,3 +45,6 @@ if (!have && process.argv.includes('--create-dst') && Array.isArray(dstList)) {
 }
 if (out.dst.exists) { const r = await call('POST', `/api/v1/query/${env.MIG_DST_DB}`, DST, { language: 'sql', command: 'SELECT count(*) AS n FROM schema:types' }, D); out.dst.types = r.ok ? r.json.result[0].n : { отказ: r.status, text: r.text }; }
 console.log(JSON.stringify(out, null, 2));
+// MIG-04: просили создать приёмник, а его нет — отказ с причиной, а не код 0 (probe-verdict.mjs).
+const verdict = connectVerdict(out, { createDst: process.argv.includes('--create-dst') });
+if (!verdict.ok) { console.error(verdict.reason); process.exitCode = 1; }

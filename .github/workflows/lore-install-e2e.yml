@@ -1,0 +1,117 @@
+name: LORE installer e2e (установка с нуля и перенос)
+
+# SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04 · труба установщика. Владелица 21.11.2026: «давай сделаем трубу, которая будет
+# тестировать установку с нуля и миграцию»; «отдельную у инсталлера на основе наших наработок».
+#
+# Спека — SPEC-LORE-INSTALLER-PIPELINE. Свой здесь только каркас: одноразовая площадка → пакет → установка → перенос →
+# сверка → проба → уборка. Логика — .github/scripts/lore-install-e2e.sh. Шаг → откуда:
+#   пакет                 lore-installer-publish.yml (kkRepo, каталог версии; SHA256SUMS сверяются заново)
+#   пакет установки       lore-migrate install-bundle — вшитый deploy/install (командный режим окна «План установки»)
+#   самопроверка          deploy/install/install.sh --selftest
+#   установка с нуля (А)  deploy/install/install.sh --build-from-source из src/ пакета, вход выключен
+#   снимок прода          lore-migration-snapshot.yml action=snapshot → migration_src_* на ci-server (вход source)
+#   перенос (Б)           .github/scripts/model-migration-run.sh STAGE=full: connect, два прогона transfer → edges →
+#                         dst-fingerprint и сверка отпечатков (тот же, что lore-migration-snapshot.yml action=migrate)
+#   сверка «до и после»   сверки transfer/edges конвейера (отчёты run1/run2 — артефакт)
+#   проба живой LORE      /lore/version, /lore/model, срезы open_tasks, organizations, repositories — скриптом:
+#                         смоук стенда (web-next/e2e/stand) входит через Keycloak, на установке без входа не годится
+#   уборка                lore-install-e2e.sh down (compose down -v) + .github/scripts/ci-teardown.sh
+#
+# Где: раннер ci-server (ubuntu-latest — контейнер с docker хоста, как migrate live check). Установка — отдельным
+# проектом compose lore-e2e-<run_id> со своей ArcadeDB и MinIO; порты наружу не публикуются, джоба подключается к
+# сети установки (E2E_REACH=network). Секрет — только существующий ARCADEDB_ROOT_PASSWORD (root ArcadeDB ci-server,
+# чтение снимка-источника). Своих секретов труба не заводит.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия пакета в kkRepo (1.18.0-rc.<sha8>)'
+        required: true
+      source:
+        description: 'Снимок прода migration_src_* на ci-server (источник переноса)'
+        required: true
+        default: 'migration_src_2026_11_20'
+      # SPEC-LORE-INSTALLER-PIPELINE «Готово, когда»: намеренно сломанный пакет обязан дать красную трубу с причиной.
+      sabotage:
+        description: 'none — обычный прогон; sha256 — испортить бинарь после скачивания (труба обязана покраснеть на сверке)'
+        required: true
+        default: 'none'
+        type: choice
+        options: ['none', 'sha256']
+  push:
+    tags:
+      - 'v*-rc*'
+
+concurrency:
+  group: lore-install-e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      COMPOSE_PROJECT_NAME: lore-e2e-${{ github.run_id }}
+      E2E_REACH: network
+      E2E_WORK: ${{ github.workspace }}/install-e2e
+      MIG_DB_URL: http://172.17.0.1:2480
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Уборка брошенного отменёнными прогонами (старше 6 ч)
+        continue-on-error: true
+        run: bash .github/scripts/ci-teardown.sh --stale 6
+
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
+      # Версия: из входа, а по тегу vX.Y.Z-rcN — пакет того же коммита, 1.18.0-rc.<sha8>.
+      - name: Версия пакета
+        run: |
+          v="${{ inputs.version }}"
+          [ -n "$v" ] || v="$(echo "${GITHUB_REF_NAME#v}" | sed -E 's/-rc.*$//')-rc.$(echo "$GITHUB_SHA" | cut -c1-8)"
+          echo "E2E_VERSION=$v" >> "$GITHUB_ENV"
+          echo "MIG_SRC_DB=${{ inputs.source || 'migration_src_2026_11_20' }}" >> "$GITHUB_ENV"
+
+      - name: План
+        run: bash .github/scripts/lore-install-e2e.sh plan
+
+      - name: А · пакет из kkRepo и сверка SHA256SUMS
+        env:
+          E2E_SABOTAGE: ${{ inputs.sabotage || 'none' }}
+        run: bash .github/scripts/lore-install-e2e.sh fetch
+
+      - name: А · установка с нуля
+        run: bash .github/scripts/lore-install-e2e.sh install
+
+      - name: А · проба свежей установки
+        run: bash .github/scripts/lore-install-e2e.sh probe-fresh
+
+      - name: Б · перенос со снимка, два прогона и отпечатки
+        env:
+          MIG_DB_USER: root
+          MIG_DB_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+        run: bash .github/scripts/lore-install-e2e.sh migrate
+
+      - name: Б · LORE на перенесённой базе
+        run: |
+          bash .github/scripts/lore-install-e2e.sh switch
+          bash .github/scripts/lore-install-e2e.sh probe
+
+      - name: Отчёт переноса — артефактом
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v3
+        with:
+          name: install-e2e-report
+          path: install-e2e/report
+
+      - name: Уборка установки
+        if: always()
+        run: |
+          bash .github/scripts/lore-install-e2e.sh down || true
+          bash .github/scripts/ci-teardown.sh "${{ github.run_id }}"

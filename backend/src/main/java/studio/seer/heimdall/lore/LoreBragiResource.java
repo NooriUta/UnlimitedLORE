@@ -244,6 +244,8 @@ public class LoreBragiResource extends LoreResourceBase {
         requireAdmin(role);
         if (form == null || form.file == null || form.file.fileName() == null)
             return badParams("file required");
+        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
+        if (!bragiS3.configured()) return BragiS3Service.notConfigured();
         String original = form.file.fileName();
         String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
         if (ext.length() > 10) ext = ""; // reject implausible/garbage extensions rather than fail
@@ -265,6 +267,8 @@ public class LoreBragiResource extends LoreResourceBase {
     public Response serveBragiAssetFile(@PathParam("name") String name) {
         if (!enabled) return disabled();
         if (!SAFE_UPLOAD_NAME.matcher(name).matches()) return badParams("invalid file name");
+        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
+        if (!bragiS3.configured()) return BragiS3Service.notConfigured();
         try {
             byte[] data = bragiS3.get("bragi/" + name);
             String contentType = bragiS3.contentType("bragi/" + name);

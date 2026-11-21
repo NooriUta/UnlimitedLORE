@@ -97,6 +97,8 @@ public class LoreAssetResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(id).matches())
             return badParams("entity_id contains illegal characters");
 
+        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
+        if (!s3.configured()) return BragiS3Service.notConfigured();
         if (!settingBool("md_images_enabled", true))
             return noStore(Response.status(Response.Status.CONFLICT)
                 .entity(new LoreError("MD_IMAGES_DISABLED",
@@ -183,6 +185,8 @@ public class LoreAssetResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(str(type)).matches() || !SAFE_ID.matcher(str(id)).matches()
             || !SAFE_ID.matcher(str(name)).matches())
             return badParams("illegal path");
+        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
+        if (!s3.configured()) return BragiS3Service.notConfigured();
         try {
             String key = type + "/" + id + "/" + name;
             byte[] data = s3.get(key);

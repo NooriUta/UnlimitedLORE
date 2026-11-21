@@ -104,8 +104,13 @@ const arg = k => process.argv.includes(k);
 const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
 
 /** Перенос записей с версиями в новую базу и сверка. log — куда писать ход; reset — разрешить непустой приёмник. */
-export async function transfer(db, DECISIONS, { reset = false, log = console.log } = {}) {
-  if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*: перенос пишет только в отдельную пробную базу');
+export async function transfer(db, DECISIONS, { reset = false, log = console.log, freshInstall = false } = {}) {
+  // MIG-01: свежая установка (init-empty) пишет пустую базу из модели в базу самой установки — имя любое, кроме
+  // рабочей базы стенда, и только в пустой приёмник (сторож ниже: непустой без --reset — отказ, а reset здесь не дают).
+  if (freshInstall) {
+    if (/^system_aida_lore/i.test(db.env.MIG_DST_DB)) throw new Error('свежая установка не пишет в system_aida_lore*: новой базе нужно своё имя (LORE_DB)');
+    if (reset) throw new Error('свежая установка пишет только в пустую базу — --reset здесь не применяется');
+  } else if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*: перенос пишет только в отдельную пробную базу');
   const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, stages: {} };
   const pool = async (items, n, fn) => { let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; await fn(items[k], k); } })); };
   const given = v => v !== undefined && v !== null && v !== '';

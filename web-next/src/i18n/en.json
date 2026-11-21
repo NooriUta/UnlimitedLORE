@@ -2432,5 +2432,14 @@
   "pp.field.prUrl": "Link",
   "pp.field.mergedAt": "Merged at",
   "pp.field.headRef": "Source branch",
-  "pp.field.baseRef": "Target branch"
+  "pp.field.baseRef": "Target branch",
+  "pp.no": "no",
+  "lists.prs.title": "PRs",
+  "lists.field.merged_at": "Merged",
+  "lists.field.branches": "Branches",
+  "lists.field.releases": "Releases",
+  "lists.field.no_title": "No title",
+  "lists.field.no_release": "No release",
+  "lists.quick.prNoTitle": "No title",
+  "lists.quick.prNoRelease": "No release"
 }

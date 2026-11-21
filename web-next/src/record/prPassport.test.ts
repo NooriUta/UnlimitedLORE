@@ -12,19 +12,16 @@ const params = (href: string) => new URLSearchParams(href.slice(href.indexOf('?'
 const UID = 'NooriUta/UnlimitedLORE#1641';
 
 describe('паспорт PR (MD-05)', () => {
-  it('паспорт есть, своего раздела нет: ссылка ведёт в «Релизы» с видом pr, ключ с «#» доходит целиком', () => {
+  // 21.11.2026 («в меню под релизы вход в PR сделай»): у PR свой раздел «PR» — prSection.test.ts.
+  it('паспорт есть, раздел — «PR»: ключ с «#» доходит целиком', () => {
     expect(PASSPORT_TYPES as readonly string[]).toContain('pr');
     expect(PASSPORT_TYPES[PASSPORT_TYPES.length - 1]).toBe('project');
-    expect(sectionOfType('pr'), 'раздела-списка у PR нет').toBeNull();
-    const h = recordHref('pr', UID);
-    expect(h).not.toBeNull();
-    const p = params(h!);
-    expect(p.get('sec')).toBe('release');
+    expect(sectionOfType('pr')).toBe('pr');
+    const p = params(recordHref('pr', UID)!);
+    expect(p.get('sec')).toBe('pr');
     expect(p.get('open')).toBe(UID);
-    expect(p.get('okind')).toBe('pr');
-    expect(readRoute(p).record).toEqual({ kind: 'release', id: UID });
-    expect(passportTypeFor('releases', 'pr'), 'в «Релизах» открывается паспорт PR').toBe('pr');
-    expect(passportTypeFor('adrs', 'pr'), 'в чужом разделе PR не открывается').toBe('adr');
+    expect(readRoute(p).record).toEqual({ kind: 'pr', id: UID });
+    expect(passportTypeFor('prs', null)).toBe('pr');
   });
 
   it('вид PR назван и в оболочке, и в графе — на обоих языках', () => {
