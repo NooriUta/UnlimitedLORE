@@ -7033,6 +7033,8 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
    Отдельные классы, а не общий: места разные (панель вкладки и хвост текста), и
    первый же отступ разошёлся бы. */
 .sk-rec-group { display: flex; flex-direction: column; gap: 20px; }
+/* Вкладка «Графики» в «Аналитике» (владелица 21.11: графики не над шапкой, а вкладкой): блоки графиков столбиком. */
+.sk-rec-charts { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .sk-rec-group__sec { min-width: 0; }
 .sk-rec-group__head {
   display: flex;
