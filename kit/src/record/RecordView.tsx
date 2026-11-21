@@ -52,9 +52,9 @@ import { OWN_TAB, RELATION_MARK, RecordRelations, RelationLines, SHARED_TAB, rel
 import type { MdDraftSlot } from '../content/MdInlineEdit';
 import type { KitRelationDef } from '../core/contract';
 
-export const RECORD_TABS = { overview: 'overview', props: 'props', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
+export const RECORD_TABS = { overview: 'overview', props: 'props', charts: 'charts', links: 'links', graph: 'graph', journal: 'journal', history: 'history' } as const;
 /** Служебные вкладки конструктора — не разделы записи (порядок: applySections). */
-const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
+const SERVICE_TABS: ReadonlySet<string> = new Set([RECORD_TABS.charts, RECORD_TABS.links, RECORD_TABS.graph, RECORD_TABS.journal, RECORD_TABS.history]);
 
 /**
  * Слот правки markdown на месте (S5-06): MdInlineEdit из `@seidr/kit/content`
@@ -162,6 +162,12 @@ export interface RecordViewProps {
    * владелицы 08.11), в адрес не идёт и приложению про него знать нечего.
    */
   widthStore?: WidthStore;
+  /**
+   * Графики записи (сгорание, поток, время цикла…) — вкладкой «Графики» первой в режиме «Аналитика»
+   * (владелица 21.11.2026: «перенеси блок графиков в паспорте во вкладку аналитика», а не над шапкой).
+   * Нет — вкладки нет.
+   */
+  charts?: ReactNode;
   /**
    * Узкий экран (S4-MOBILE-COMPARE). Не задан — по общему порогу kit
    * (`useNarrow`, NARROW_QUERY); задан — без matchMedia (тесты, встройка).
@@ -419,7 +425,7 @@ export function RecordView(props: RecordViewProps) {
     : <RecordViewBody {...props} />;
 }
 
-function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp }: RecordViewProps) {
+function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, mdDrafts, history, loadedAt, onReload, now: nowProp, placement, aroundAs = 'tabs', propsOpen: propsOpenControlled, defaultPropsOpen, onPropsOpenChange, sections, widthStore, narrow: narrowProp, charts }: RecordViewProps) {
   const lang = useKitLang();
   const narrow = useNarrow(narrowProp);
   const clock = useMinuteClock(loadedAt !== undefined && nowProp === undefined);
@@ -582,6 +588,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
   // Счётчики служебного — тем же правилом: блок не прочитался, значит число
   // неизвестно («?»), а не ноль. Имена блоков рёбер и журнала у kit свои.
   const aroundItems: TabItem[] = [
+    ...(charts ? [{ id: RECORD_TABS.charts, label: kitT(lang, 'kit.record.tab.charts') }] : []),
     { id: RECORD_TABS.links, label: kitT(lang, 'kit.record.tab.links'), count: failed.has('edges') ? null : recordLinks(record.id, ctx.data.edges).length },
     { id: RECORD_TABS.graph, label: kitT(lang, 'kit.record.tab.graph') },
     { id: RECORD_TABS.journal, label: kitT(lang, 'kit.record.tab.journal'), count: failed.has('journal') ? null : recordJournal(record.id, ctx.data.journal).length },
@@ -751,6 +758,12 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
     panel = (
       <BlockBoundary block="fields" label={kitT(lang, 'kit.record.fields')} lang={lang} resetKey={reset}>
         <Fields record={record} kind={kind} ctx={ctx} lang={lang} edit={edit} fieldSave={fieldSave} />
+      </BlockBoundary>
+    );
+  } else if (current === RECORD_TABS.charts && charts) {
+    panel = (
+      <BlockBoundary block="charts" label={kitT(lang, 'kit.record.tab.charts')} lang={lang} resetKey={reset}>
+        <div className="sk-rec-charts">{charts}</div>
       </BlockBoundary>
     );
   } else if (current === RECORD_TABS.history && history) {
@@ -952,7 +965,7 @@ function RecordViewBody({ record, ctx, tab, onTab, className, facts, mdEditor, m
           <section key={i.id} className="sk-rec__around-block" data-block={i.id}>
             <h2 className="sk-rec__around-head">{i.label}<TabCount count={i.count} lang={lang} /></h2>
             <BlockBoundary block={i.id} label={i.label} lang={lang} resetKey={record.id}>
-              {Body ? <Body record={record} ctx={ctx} lang={lang} /> : history ? <RecordHistory record={record} source={history} lang={lang} /> : null}
+              {i.id === RECORD_TABS.charts ? <div className="sk-rec-charts">{charts}</div> : Body ? <Body record={record} ctx={ctx} lang={lang} /> : history ? <RecordHistory record={record} source={history} lang={lang} /> : null}
             </BlockBoundary>
           </section>
         );

@@ -139,7 +139,10 @@ describe('паспорт v2 — управление связями', () => {
     // общая — это RecordLinks, там управления нет и быть не должно.
     // K5-EMPTY-LINK-TABS: связей ноль — вкладка не в ряду, а под «Ещё»; форма привязки там же.
     // Адрес jsdom общий на файл: вкладка могла остаться выбранной прошлым тестом — тогда она в ряду.
-    const tab = await screen.findByRole('tab', { name: /Реализация|Ещё/ }, { timeout: 8000 });
+    // Ряд может нести и саму вкладку, и «Ещё» сразу (у типа с графиками — лишняя вкладка «Графики», 21.11):
+    // своя вкладка в ряду главнее «Ещё».
+    const tabs = await screen.findAllByRole('tab', { name: /Реализация|Ещё/ }, { timeout: 8000 });
+    const tab = tabs.find(t => /Реализация/.test(t.textContent ?? '')) ?? tabs[0];
     fireEvent.click(tab);
     if (/Ещё/.test(tab.textContent ?? '')) fireEvent.click(await screen.findByRole('menuitem', { name: /Реализация/ }));
   };

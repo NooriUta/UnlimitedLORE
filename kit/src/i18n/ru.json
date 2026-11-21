@@ -251,6 +251,7 @@
   "kit.record.tab.links": "Связи",
   "kit.record.tab.graph": "Граф",
   "kit.record.tab.journal": "Журнал",
+  "kit.record.tab.charts": "Графики",
   "kit.record.updated": "обновлено {at}",
   "kit.record.loaded.now": "получено только что",
   "kit.record.loaded.min": "получено {n} мин назад",
