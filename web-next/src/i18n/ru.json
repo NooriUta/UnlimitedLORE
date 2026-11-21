@@ -2406,5 +2406,13 @@
   "lists.field.track": "Трек",
   "shell.sec.track": "Треки",
   "pp.kind.track": "Трек",
-  "pp.field.trackArea": "Вид"
+  "pp.field.trackArea": "Вид",
+  "scope.product.label": "Продукты",
+  "scope.product.all": "Все продукты",
+  "scope.product.many": "Продуктов: {n}",
+  "scope.product.search": "Найти продукт",
+  "scope.product.noProject": "без проекта",
+  "status.productsN": "продуктов: {n}",
+  "status.productsAll": "продукты: все",
+  "shell.grp.org": "Организация"
 }

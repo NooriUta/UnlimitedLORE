@@ -21,7 +21,9 @@ import { PASSPORT_TYPES } from '../record/passportAdapters';
 import { TYPE_SECTION, recordHref } from '../nav/loreRoutes';
 import { passportHref } from '../record/passportHref';
 
-const PRODUCT_ITEMS = ['product', 'feature', 'actor', 'pain', 'gain', 'job'];
+// Владелица 21.11.2026: продукт — логическая группа проектов, его место в группе «Организация»;
+// в «Продукте» остались фичи, роли, боли, выгоды, работы.
+const PRODUCT_ITEMS = ['feature', 'actor', 'pain', 'gain', 'job'];
 
 describe('меню: группа «Продукт»', () => {
   const groups = v2Config('ru').menu.groups;
@@ -39,8 +41,10 @@ describe('меню: группа «Продукт»', () => {
     const ids = system.items.map(i => i.id);
     expect(ids).not.toContain('feature');
     expect(ids).not.toContain('product');
-    // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации — тоже «Устройство».
-    expect(ids).toEqual(['project', 'component', 'tech', 'repository', 'organization']);
+    // Владелица 21.11.2026: «в Устройстве оставила бы технологии, репозитории, компоненты»; организации, продукты,
+    // проекты и люди — группа «Организация».
+    expect(ids).toEqual(['tech', 'repository', 'component']);
+    expect(groups.find(x => x.id === 'org')!.items.map(i => i.id)).toEqual(['organization', 'product', 'project', 'user']);
     expect(groupOf('feature')).toBe('product');
   });
 
