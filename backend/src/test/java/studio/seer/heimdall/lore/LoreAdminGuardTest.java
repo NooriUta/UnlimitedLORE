@@ -17,6 +17,19 @@ import static org.hamcrest.Matchers.equalTo;
 @QuarkusTest
 class LoreAdminGuardTest {
 
+    // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: дотяжка данных PR — только super-admin; admin получает 403.
+    @Test
+    void prBackfillRejectsPlainAdmin() {
+        given()
+            .header("X-Seer-Role", "admin")
+            .contentType("application/json")
+        .when()
+            .post("/lore/admin/pr-backfill")
+        .then()
+            .statusCode(403)
+            .body("error", equalTo("FORBIDDEN"));
+    }
+
     @Test
     void sprintCreateRejectsNonAdminRole() {
         given()
