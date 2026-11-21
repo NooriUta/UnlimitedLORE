@@ -277,7 +277,7 @@ class LoreRecordSnapshotTest {
         // MDL-08 ч.2: подпись релиза — тег (version снят как дубль release_id/git_tag)
         assertEquals("v1.17.4", r.get("title"));
         assertEquals("v1.17.4", r.get("code"));
-        assertEquals("true", r.get("is_current"));
+        assertEquals(Boolean.TRUE, r.get("is_current"));
         Map<String, Object> f = Legacy.values("feature", ROWS.get("feature"));
         assertEquals("UC-P1", f.get("parent"));
         Map<String, Object> f2 = new LinkedHashMap<>(ROWS.get("feature"));
@@ -503,7 +503,8 @@ class LoreRecordSnapshotTest {
             v.put("code", tag);
             v.put("type", str(r.get("type")));
             v.put("date", str(r.get("release_date")));
-            v.put("is_current", r.get("is_current") == null ? null : String.valueOf(r.get("is_current")));
+            // патч 1.18.1: is_current — флаг (вид bool), значение — Boolean, а не строка «true»
+            v.put("is_current", r.get("is_current") instanceof Boolean b ? b : "true".equals(r.get("is_current")) ? Boolean.TRUE : "false".equals(r.get("is_current")) ? Boolean.FALSE : null);
             v.put("week", str(r.get("week")));
             v.put("projects", arr(r.get("projects")));
             v.put("description_md", str(r.get("description_md")));

@@ -94,7 +94,7 @@ class ProjectPassportTest {
         assertEquals("UnlimitedLORE", v.get("title"));
         assertEquals("NooriUta/UnlimitedLORE", v.get("code"));
         assertEquals("develop", v.get("default_branch"));
-        assertEquals("Да", v.get("is_private"));
+        assertEquals(Boolean.TRUE, v.get("is_private"), "патч 1.18.1: флаг — Boolean (вид bool), а не слово «Да»");
         row.remove("name");
         assertEquals("NooriUta/UnlimitedLORE", LoreRecordValues.values("project", row).get("title"), "без имени — slug");
     }
