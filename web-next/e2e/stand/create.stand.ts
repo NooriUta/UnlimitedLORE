@@ -49,8 +49,15 @@ async function permOf(page: Page, type: string): Promise<Perm> {
 }
 
 /** Раздел типа открыт; видна ли «+ Новая» (право спрашивается после списка — ждём до `waitMs`). */
+/**
+ * Типы, которые заводятся в админке, а не в общем списке (D-2026-MIG-REPOSITORY-ORGANIZATION; владелица 21.11:
+ * «в админке кроме организации…»). Смоук 39054: CR-organization искал «+ Новая» на ?sec=organization — там
+ * её нет по замыслу, кнопка на экране админки «Организации» (тот же адрес, что у M5).
+ */
+const ADMIN_CREATE_SECTION: Record<string, string> = { organization: 'adm-orgs' };
+
 async function newButtonVisible(page: Page, type: string, waitMs: number): Promise<boolean> {
-  await page.goto(`/?sec=${encodeURIComponent(type)}`);
+  await page.goto(ADMIN_CREATE_SECTION[type] ? `/?mod=admin&sec=${ADMIN_CREATE_SECTION[type]}` : `/?sec=${encodeURIComponent(type)}`);
   const btn = page.locator('[data-testid="list-new"]');
   try { await btn.first().waitFor({ state: 'visible', timeout: waitMs }); return true; } catch { return false; }
 }
