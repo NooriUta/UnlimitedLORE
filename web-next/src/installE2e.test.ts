@@ -95,6 +95,9 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(r.out).toMatch(/probe .*версия пакета.*seed_drift/);
     // Владелица 21.11: «ок и шагом» · «в инсталляции» — дотяжка данных PR из git-хоста, шаг после переноса (код после 1.18).
     expect(r.out).toMatch(/pr-data .*после 1\.18/);
+    // Решение владелицы 21.11: «пока ставь указать s3 хранилище или без опции файлов» — сценарий А идёт без файлов.
+    expect(r.out).toMatch(/install .*--files none/);
+    expect(r.out).toMatch(/probe .*хранилище файлов не подключено/);
   });
 
   // Эмуляция на ryzenai 21.11: имя проекта переменной окружения расходилось с .env — compose поднимал lore-e2e,
@@ -111,6 +114,8 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(s).toMatch(/MIG_CLI=/);
     expect(s).not.toMatch(/dst-fingerprint/); // сверку отпечатков делает переиспользуемый скрипт
     expect(s).toMatch(/install-bundle --out/);
+    expect(s).toMatch(/--files none/);
+    expect(s).toMatch(/FILES_NOT_CONFIGURED/);
     // ryzenai 21.11: ArcadeDB, пересозданная с портом, ещё не отвечала — connect получил ECONNRESET.
     expect(s).toMatch(/\/api\/v1\/ready/);
     expect(s).toMatch(/install\.sh" --selftest/);

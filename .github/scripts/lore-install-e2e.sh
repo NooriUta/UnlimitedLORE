@@ -61,8 +61,8 @@ web() { if [ "$REACH" = network ]; then echo "http://lore-app-next:80"; else ech
 plan() {
   echo "план трубы установщика, версия $V:"
   echo "  fetch    $BASE/$REPO/$V/ — пакет из lore-installer-publish.yml, сверка SHA256SUMS"
-  echo "  install  lore-migrate install-bundle (пакет установки из бинаря, командный режим) → install.sh --selftest → install.sh --build-from-source из src/lore-$V.tar.gz, вход выключен, порт $BIND:$PORT"
-  echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows [])"
+  echo "  install  lore-migrate install-bundle (пакет установки из бинаря, командный режим) → install.sh --selftest → install.sh --build-from-source --files none из src/lore-$V.tar.gz, вход выключен, без файлов, порт $BIND:$PORT"
+  echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows []); загрузка ассета — 503 «хранилище файлов не подключено»"
   echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
   echo "  pr-data  «Дотянуть данные PR» из git-хоста (Forgejo; GitHub/GitLab потом): план «без заголовка N, дотянется M» → подтверждение → отчёт поимённо — шаг предусмотрен, код после 1.18 (SPEC-LORE-INSTALLER-PIPELINE)"
   echo "  switch   LORE_DB=$DST, перезапуск lore-backend"
@@ -114,7 +114,7 @@ install_() {
   fi
   say "установка с нуля: install.sh --build-from-source (вход выключен, без KC, Infisical и Forgejo), проект $(project)"
   LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" env -u COMPOSE_PROJECT_NAME bash "$b/install.sh" \
-    --dir "$DIR" --port "$PORT" --bind "$BIND" --forgejo none --build-from-source || die "install.sh упал"
+    --dir "$DIR" --port "$PORT" --bind "$BIND" --forgejo none --files none --build-from-source || die "install.sh упал"
   note "установка с нуля: install.sh прошёл (selftest — зелёный)"
   # Джоба в контейнере раннера: порты установки на 127.0.0.1 хоста ей не видны — подключаемся к сети compose и ходим
   # по именам сервисов (arcadedb, lore-app-next). Сеть — <проект>_default; проект — COMPOSE_PROJECT_NAME (по умолчанию lore).
@@ -150,7 +150,14 @@ probe_fresh() {
     b="$(get "/lore/slice/$s?limit=1")" || die "свежая установка: срез $s не отвечает (ошибка, а не пусто)"
     printf '%s' "$b" | grep -q '"rows":\[' || die "свежая установка: срез $s ответил не списком: ${b:0:200}"
   done
-  note "свежая установка: /lore/version — коммит пакета, /lore/model — seed_drift=false, списки отвечают (пусто — честно)"
+  # Установка «без файлов» (решение владелицы 21.11.2026): загрузка ассета — 503 со словами, а не 500 и не тишина.
+  local f code body; f="$(mktemp)"; printf '\x89PNG\r\n\x1a\nprobe' > "$f"
+  code="$(curl -sS -m 30 -o "$f.out" -w '%{http_code}' -X POST -H 'X-Seer-Role: admin' \
+    -F "file=@$f;type=image/png" -F entity_type=task -F entity_id=E2E-PROBE "$(web)/lore/asset/upload")" || true
+  body="$(cat "$f.out" 2>/dev/null)"; rm -f "$f" "$f.out"
+  [ "$code" = 503 ] && printf '%s' "$body" | grep -q 'FILES_NOT_CONFIGURED' && printf '%s' "$body" | grep -q 'хранилище файлов не подключено' \
+    || die "без файлов: загрузка ассета ответила $code, а не 503 «хранилище файлов не подключено»: ${body:0:200}"
+  note "свежая установка: /lore/version — коммит пакета, /lore/model — seed_drift=false, списки отвечают (пусто — честно), без файлов — 503 словами"
 }
 
 migrate() {

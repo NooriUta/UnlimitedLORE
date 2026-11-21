@@ -12,8 +12,8 @@ const README = fs.readFileSync(new URL('../../deploy/install/README.md', import.
 const LLM = /^Локальная LLM/;
 
 test('шаги справки окна — Старт, Keycloak, Völva, Forgejo, LLM, Секреты, Проверка', () => {
-  assert.deepEqual(HELP_STEPS.map(s => s.id), ['start', 'keycloak', 'volva', 'forgejo', 'llm', 'secrets', 'check']);
-  assert.deepEqual(HELP_STEPS.map(s => s.title), ['Старт', 'Keycloak', 'Völva', 'Forgejo', 'LLM', 'Секреты', 'Проверка']);
+  assert.deepEqual(HELP_STEPS.map(s => s.id), ['start', 'keycloak', 'volva', 'forgejo', 'llm', 'files', 'secrets', 'check']);
+  assert.deepEqual(HELP_STEPS.map(s => s.title), ['Старт', 'Keycloak', 'Völva', 'Forgejo', 'LLM', 'Файлы', 'Секреты', 'Проверка']);
 });
 
 test('разделы README по заголовкам ##: «## » внутри блока кода — не заголовок', () => {
@@ -61,7 +61,7 @@ test('Секреты: таблица «Секреты рантайма» на ш
   const h = helpHtml(README);
   const block = h.slice(h.indexOf('id="help-secrets"'), h.indexOf('</details>', h.indexOf('id="help-secrets"')));
   assert.match(block, /<table/);
-  for (const k of ['ARCADEDB_ROOT_PASSWORD', 'MINIO_PASSWORD', 'FORGEJO_MCP_API_KEY', 'LORE_VOLVA_EMBED_ES256_PRIVATE_KEY']) assert.match(block, new RegExp(k));
+  for (const k of ['ARCADEDB_ROOT_PASSWORD', 'S3_SECRET_KEY', 'FORGEJO_MCP_API_KEY', 'LORE_VOLVA_EMBED_ES256_PRIVATE_KEY']) assert.match(block, new RegExp(k));
   assert.match(block, /как сменить/);
   assert.doesNotMatch(block, /<input|<textarea|<form/, 'справка не принимает значения секретов');
 });

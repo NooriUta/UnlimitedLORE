@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -104,6 +105,49 @@ class ConfigEmptyDefaultDeclaredTest {
             + "(`${ENV_VAR:}` без переменной или пустая строка), а поле — обязательный "
             + "String. Приложение упадёт с «Failed to load config value», как только бин "
             + "будет создан. Смените тип поля на Optional<String>. Ключи: " + emptyAfterAll);
+    }
+
+    /**
+     * MIG-04, эмуляция установщика на ryzenai 21.11.2026: ключ объявлен с НЕПУСТЫМ запасным значением
+     * ({@code quarkus.oidc.auth-server-url=${LORE_OIDC_ISSUER:http://localhost…}}), но compose передаёт переменную
+     * пустой ({@code LORE_OIDC_ISSUER=${LORE_OIDC_ISSUER:-}} — при выключенном входе адреса нет). Запасное значение
+     * не срабатывает: переменная ЕСТЬ, только пустая, — и обязательный String с {@code defaultValue = ""} валит старт
+     * «Failed to load config value … auth-server-url». Правило: если переменную, на которой стоит ключ, хоть один
+     * compose передаёт как {@code ${VAR:-}}, поле — {@code Optional<String>}.
+     */
+    @Test
+    void emptyDefaultOverAnEnvVarThatComposeMayPassEmptyIsOptional() throws IOException {
+        Path main = Path.of("src/main/java");
+        String declared = Files.readString(Path.of("src/main/resources/application.properties"), StandardCharsets.UTF_8);
+        StringBuilder compose = new StringBuilder();
+        for (Path c : List.of(Path.of("../docker-compose.yml"), Path.of("../deploy/install/docker-compose.install.yml")))
+            if (Files.isRegularFile(c)) compose.append(Files.readString(c, StandardCharsets.UTF_8)).append('\n');
+        assertTrue(compose.length() > 0, "compose-файлы не найдены — проверять нечего (положительный контроль)");
+        List<String> risky = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(main)) {
+            for (Path f : files.filter(p -> p.toString().endsWith(".java")).toList()) {
+                String src = Files.readString(f, StandardCharsets.UTF_8);
+                Matcher m = EMPTY_DEFAULT.matcher(src);
+                while (m.find()) {
+                    String attrs = m.group(1);
+                    if (!EMPTY_DEFAULT_ATTR.matcher(attrs).find()) continue;
+                    Matcher n = NAME_ATTR.matcher(attrs);
+                    if (!n.find()) continue;
+                    int semi = src.indexOf(';', m.end());
+                    if ((semi < 0 ? "" : src.substring(m.end(), semi)).contains("Optional<")) continue;
+                    String key = n.group(1);
+                    Matcher decl = Pattern.compile("(?m)^\\s*" + Pattern.quote(key) + "\\s*=\\s*\\$\\{([A-Za-z0-9_]+):").matcher(declared);
+                    if (!decl.find()) continue;
+                    String env = decl.group(1);
+                    if (Pattern.compile("\\b" + env + "\\s*[=:]\\s*\\$\\{" + env + ":-\\}").matcher(compose).find())
+                        risky.add(key + " ← " + env + "  (" + main.relativize(f) + ")");
+                }
+            }
+        }
+        assertEquals(List.of(), risky,
+            "Ключ стоит на переменной, которую compose может передать ПУСТОЙ (${VAR:-}); запасное значение тогда не "
+            + "срабатывает, и обязательный String с defaultValue = \"\" валит старт «Failed to load config value». "
+            + "Смените тип поля на Optional<String>.");
     }
 
     /** Значение, которое при отсутствии переменной окружения даёт пустоту. */

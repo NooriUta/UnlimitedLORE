@@ -5,6 +5,7 @@
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
 #     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
 #   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
+#     … [--files none|s3] — хранилище файлов: без файлов (по умолчанию) или своё S3 (S3_* в окружении или .env)
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -24,7 +25,7 @@
 # Схема на пустой базе: флаг LORE_BOOTSTRAP не нужен — ядро поднимается само
 # (D-2026-LORE-AUTO-BOOTSTRAP-CORE), шаги миграций добирают остальное.
 #
-# Окружение (необязательно): ARCADEDB_ROOT_PASSWORD, MINIO_PASSWORD — задать свои
+# Окружение (необязательно): ARCADEDB_ROOT_PASSWORD — задать свой; S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY — своё S3 (--files s3)
 # пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE — готовые
 # образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE; GHCR_OWNER.
 #
@@ -52,6 +53,9 @@ CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
 # Forgejo (MIG-04, владелица 20.11.2026). Пусто — выбор в .env не трогается (по умолчанию без Forgejo, как раньше).
 FORGEJO=""
 FORGEJO_URL_ARG=""
+# Хранилище файлов (решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов»):
+# none — без файлов (по умолчанию), s3 — своё S3. Своего хранилища пакет не ставит.
+FILES=""
 FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
 # forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
@@ -88,12 +92,13 @@ run() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url)
+      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files)
         [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "у $1 нет значения" 2
         case "$1" in
           --dir) DIR="$2" ;; --version) VERSION="$2" ;; --src) SRC="$2" ;;
           --port) PORT="$2" ;; --bind) BIND="$2" ;;
           --forgejo) FORGEJO="$2" ;; --forgejo-url) FORGEJO_URL_ARG="$2" ;;
+          --files) FILES="$2" ;;
         esac
         shift 2 ;;
       --uninstall) MODE="uninstall"; shift ;;
@@ -130,6 +135,16 @@ parse_args() {
     *) die "--forgejo: install (поставить Forgejo $FORGEJO_VERSION_DEFAULT), own (свой Forgejo) или none" 2 ;;
   esac
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
+  case "$FILES" in
+    ""|none) ;;
+    s3)
+      local k miss=""
+      for k in S3_ENDPOINT S3_BUCKET S3_ACCESS_KEY S3_SECRET_KEY; do
+        [ -n "${!k:-$(env_get "$k" "$DIR/.env" 2>/dev/null)}" ] || miss="$miss $k"
+      done
+      [ -z "$miss" ] || die "--files s3: не заданы$miss — впишите их в окружение или в $DIR/.env (адрес, бакет и ключи своего S3)" 2 ;;
+    *) die "--files: none (без файлов) или s3 (своё S3)" 2 ;;
+  esac
   return 0
 }
 
@@ -252,7 +267,8 @@ write_env() {
   local env="$DIR/.env"
   if [ "$DRY" = 1 ]; then
     if [ -f "$env" ]; then say "[dry-run] .env есть — пароли сохраняются, обновятся версия/исходники"
-    else say "[dry-run] .env из .env.example; пароли ARCADEDB_ROOT_PASSWORD, MINIO_PASSWORD — сгенерировать"; fi
+    else say "[dry-run] .env из .env.example; пароль ARCADEDB_ROOT_PASSWORD — сгенерировать"; fi
+    files_say
     printf '[dry-run] cp %s %s\n' "$SCRIPT_DIR/docker-compose.install.yml" "$DIR/docker-compose.yml"
     if [ -n "$FORGEJO" ]; then
       say "[dry-run] Forgejo: $FORGEJO — в .env:"
@@ -274,7 +290,7 @@ write_env() {
     say "создан $env"
   fi
   local k cur
-  for k in ARCADEDB_ROOT_PASSWORD MINIO_PASSWORD; do
+  for k in ARCADEDB_ROOT_PASSWORD; do
     cur="$(env_get "$k" "$env")"
     if [ -z "$cur" ] || [ "$cur" = "CHANGE_ME" ]; then
       env_set "$k" "${!k:-$(gen_secret)}" "$env"
@@ -285,6 +301,14 @@ write_env() {
   env_set LORE_SRC "$LORE_SRC_RESOLVED" "$env"
   [ -z "${LORE_BACKEND_IMAGE:-}" ] || env_set LORE_BACKEND_IMAGE "$LORE_BACKEND_IMAGE" "$env"
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
+  # Хранилище файлов: s3 — адрес, регион, бакет и ключи из окружения в .env (ключи на экран не выводятся);
+  # none — S3 пуст. Без --files выбор в .env не трогается.
+  if [ "$FILES" = s3 ]; then
+    for k in S3_ENDPOINT S3_REGION S3_BUCKET S3_ACCESS_KEY S3_SECRET_KEY; do [ -z "${!k:-}" ] || env_set "$k" "${!k}" "$env"; done
+  elif [ "$FILES" = none ]; then
+    for k in S3_ENDPOINT S3_ACCESS_KEY S3_SECRET_KEY; do env_set "$k" "" "$env"; done
+  fi
+  files_say
   [ -z "$PORT" ] || env_set LORE_HTTP_PORT "$PORT" "$env"
   [ -z "$BIND" ] || env_set LORE_BIND "$BIND" "$env"
   [ -z "${FORGEJO_MCP_IMAGE:-}" ] || env_set FORGEJO_MCP_IMAGE "$FORGEJO_MCP_IMAGE" "$env"
@@ -323,7 +347,7 @@ need_images() {
   for s in "$@"; do
     img="$(compose config --images "$s" 2>/dev/null | head -1)"
     [ -n "$img" ] || continue
-    docker image inspect "$img" >/dev/null 2>&1 || die "образа $img нет на машине, и реестр его не отдал. Если это minio/minio — Docker Hub перестал его раздавать: загрузите образ (docker load) или задайте MINIO_VERSION/свой образ в .env"
+    docker image inspect "$img" >/dev/null 2>&1 || die "образа $img нет на машине, и реестр его не отдал — загрузите образ (docker load) или задайте свой в .env"
   done
 }
 
@@ -336,9 +360,9 @@ images() {
     run compose build lore-backend lore-app-next
   fi
   # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (ryzenai 21.11.2026:
-  # Docker Hub отказал в minio/minio); образа нет нигде — need_images называет его.
-  run compose pull --ignore-pull-failures arcadedb minio
-  need_images arcadedb minio
+  # Docker Hub перестал отдавать образ хранилища — потому его в пакете и нет); образа нет нигде — need_images называет его.
+  run compose pull --ignore-pull-failures arcadedb
+  need_images arcadedb
   if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
   if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
 }
@@ -457,6 +481,33 @@ verify() {
   say "установка проверена"
 }
 
+# Хранилище файлов одной строкой — в план и на экран; ключи не печатаются.
+files_val() { local v="${!1:-}"; [ -n "$v" ] || v="$(env_get "$1" "$DIR/.env" 2>/dev/null)"; printf '%s' "$v"; }
+files_say() {
+  local ep; ep="$(files_val S3_ENDPOINT)"
+  if [ "$FILES" = none ] || { [ "$FILES" != s3 ] && [ -z "$ep" ]; }; then
+    say "файлы: без файлов — загрузка и показ файлов ответят «хранилище файлов не подключено»"
+  else say "файлы: своё S3 $ep, бакет $(files_val S3_BUCKET)"; fi
+}
+
+# Своё S3: проверка связи до запуска — положить и прочитать пробный объект (подпись SigV4 силами curl).
+s3_probe() {
+  [ "$FILES" = s3 ] || return 0
+  say "проверка S3: положить и прочитать пробный объект"
+  [ "$DRY" = 1 ] && return 0
+  local ep bk rg ak sk key body got
+  ep="$(files_val S3_ENDPOINT)"; ep="${ep%/}"; bk="$(files_val S3_BUCKET)"; rg="$(files_val S3_REGION)"; rg="${rg:-us-east-1}"
+  ak="$(files_val S3_ACCESS_KEY)"; sk="$(files_val S3_SECRET_KEY)"
+  key="lore-install-probe-$(date +%s).txt"; body="lore install probe $key"
+  printf 'user = "%s:%s"\n' "$ak" "$sk" | docker run -i --rm "$CURL_IMAGE" -K - -sS -m 30 -f --aws-sigv4 "aws:amz:$rg:s3" \
+    -X PUT --data-binary "$body" "$ep/$bk/$key" >/dev/null || die "S3: пробный объект не записан в $ep/$bk — проверьте адрес, бакет, регион и ключи"
+  got="$(printf 'user = "%s:%s"\n' "$ak" "$sk" | docker run -i --rm "$CURL_IMAGE" -K - -sS -m 30 -f --aws-sigv4 "aws:amz:$rg:s3" "$ep/$bk/$key")" \
+    || die "S3: пробный объект записан, но не читается из $ep/$bk"
+  [ "$got" = "$body" ] || die "S3: прочитано не то, что записано ($ep/$bk/$key)"
+  printf 'user = "%s:%s"\n' "$ak" "$sk" | docker run -i --rm "$CURL_IMAGE" -K - -sS -m 30 --aws-sigv4 "aws:amz:$rg:s3" -X DELETE "$ep/$bk/$key" >/dev/null 2>&1 || true
+  say "S3: пробный объект записан и прочитан — хранилище файлов подключено"
+}
+
 do_install() {
   [ "$FROM_SOURCE" = 0 ] || src_archive
   check_prereq
@@ -464,8 +515,9 @@ do_install() {
   prepare_src
   write_env
   images
-  say "запуск ArcadeDB и MinIO"
-  run compose up -d arcadedb minio
+  s3_probe
+  say "запуск ArcadeDB"
+  run compose up -d arcadedb
   if [ "$DRY" = 1 ]; then
     printf '[dry-run] ждать ArcadeDB, создать базу, если её нет\n'
     run compose up -d
@@ -489,7 +541,7 @@ do_uninstall() {
     run compose down -v --remove-orphans
     run rm -rf "$DIR"
   else
-    say "остановка стека; данные (тома lore-db, lore-minio-data) и $DIR сохраняются"
+    say "остановка стека; данные (тома lore-db, lore-db-backups) и $DIR сохраняются"
     run compose down --remove-orphans
   fi
 }
@@ -525,7 +577,26 @@ selftest() {
   printf '%s' "$out" | grep -q 'compose build' && fail "мажор без --build собирает образы"; ok
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "в плане нет сборки: $out"; ok
-  printf '%s' "$out" | grep -q 'compose up -d arcadedb minio' || fail "в плане нет подъёма базы"; ok
+  printf '%s' "$out" | grep -q 'compose up -d arcadedb' || fail "в плане нет подъёма базы"; ok
+  # MIG-04, решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов». MinIO пакет больше
+  # не ставит (Docker Hub перестал отдавать образ): ни сервиса, ни тома, ни образа; файлы — своё S3 или без файлов.
+  printf '%s' "$out" | grep -qi 'minio' && fail "план всё ещё ставит MinIO: $out"; ok
+  printf '%s' "$out" | grep -q 'файлы: без файлов' || fail "по умолчанию — «без файлов», план должен сказать это: $out"; ok
+  grep -qiE '^\s*minio:|minio/minio|lore-minio-data' "$SCRIPT_DIR/docker-compose.install.yml" && fail "compose установки ставит MinIO"; ok
+  local k
+  for k in S3_ENDPOINT S3_REGION S3_BUCKET S3_ACCESS_KEY S3_SECRET_KEY; do
+    grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
+    grep -qF "$k=\${$k:-}" "$SCRIPT_DIR/docker-compose.install.yml" || fail "бэкенд: $k не из .env"; ok
+  done
+  grep -qE '^MINIO_' "$SCRIPT_DIR/.env.example" && fail ".env.example: остались переменные MinIO"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --files maybe
+  S3_ENDPOINT= expect_rc 2 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
+  printf '%s' "$out" | grep -q 'S3_ENDPOINT' || fail "--files s3 без адреса: причина не названа: $out"; ok
+  S3_ENDPOINT=https://s3.example S3_BUCKET=b S3_ACCESS_KEY=a S3_SECRET_KEY=sekret-s3 expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
+  printf '%s' "$out" | grep -q 'проверка S3: положить и прочитать пробный объект' || fail "--files s3: нет проверки связи в плане: $out"; ok
+  printf '%s' "$out" | grep -q 'sekret-s3' && fail "dry-run напечатал ключ S3"; ok
+  # дальше проверки читают план сборки — вернуть его в $out
+  ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok
   printf '%s' "$out" | grep -q 'dictionary' || fail "в плане нет проверки слайсов"; ok
   printf '%s' "$out" | grep -q 'sekret' && fail "dry-run напечатал пароль"; ok
@@ -561,10 +632,10 @@ selftest() {
   grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
   grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
   grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
-  # 7a. базовые образы (arcadedb, minio): недоступный реестр не роняет установку, если образ уже есть на машине;
+  # 7a. базовые образы (arcadedb): недоступный реестр не роняет установку, если образ уже есть на машине;
   #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — ryzenai 21.11.2026).
-  grep -q 'pull --ignore-pull-failures arcadedb minio' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
-  grep -q 'need_images arcadedb minio' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
+  grep -q 'pull --ignore-pull-failures arcadedb' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
+  grep -q 'need_images arcadedb' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
     grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
   done
