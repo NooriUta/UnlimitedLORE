@@ -2406,5 +2406,13 @@
   "lists.field.track": "Track",
   "shell.sec.track": "Tracks",
   "pp.kind.track": "Track",
-  "pp.field.trackArea": "Kind"
+  "pp.field.trackArea": "Kind",
+  "scope.product.label": "Products",
+  "scope.product.all": "All products",
+  "scope.product.many": "Products: {n}",
+  "scope.product.search": "Find a product",
+  "scope.product.noProject": "no project",
+  "status.productsN": "products: {n}",
+  "status.productsAll": "products: all",
+  "shell.grp.org": "Organization"
 }

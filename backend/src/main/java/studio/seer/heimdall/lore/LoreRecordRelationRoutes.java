@@ -87,10 +87,11 @@ final class LoreRecordRelationRoutes {
         r("decision", "BELONGS_TO_PROJECT", "out", Handler.DECISION_PROJECT, false),
         r("question", "BELONGS_TO_PROJECT", "out", Handler.QUESTION_PROJECT, false),
         r("runbook", "BELONGS_TO_PROJECT", "out", Handler.RUNBOOK_PROJECT, false),
-        // организация (D-2026-MIG-REPOSITORY-ORGANIZATION) — проекты, продукты, люди
+        // организация (D-2026-MIG-REPOSITORY-ORGANIZATION) — проекты, продукты, люди, репозитории (21.11)
         r("organization", "ORG_HAS_PROJECT", "out", Handler.ORG_LINK, false),
         r("organization", "ORG_HAS_PRODUCT", "out", Handler.ORG_LINK, false),
-        r("organization", "ORG_MEMBER", "out", Handler.ORG_LINK, false)
+        r("organization", "ORG_MEMBER", "out", Handler.ORG_LINK, false),
+        r("organization", "ORG_HAS_REPOSITORY", "out", Handler.ORG_LINK, false)
     );
 
     /** Маршрут или {@code null}: ребра у типа нет либо путь привязки для него не заведён. */

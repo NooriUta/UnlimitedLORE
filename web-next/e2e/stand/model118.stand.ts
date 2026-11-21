@@ -22,11 +22,23 @@ const MIDGARD_REPOS_IN_REHEARSAL = 4;
 
 interface RepoRow { url: string; full_path: string; projects?: string[]; component_projects?: string[]; mirror_projects?: string[]; components?: string[] }
 
-/** GET под сохранённым входом; при выключенном входе — dev-роль, как шлёт само приложение. */
+/**
+ * GET токеном вошедшей учётки — так же, как сам LORE (Bearer из хранилища OIDC страницы), и dev-роль для копии с
+ * выключенным входом. 21.11.2026: прежний page.request ходил без Authorization — стенд отвечал 401, и M1/M3/M4
+ * краснели «ответ сервера» на исправных срезах (на базе 1.18 срезы отвечают, M2 через интерфейс зелёный).
+ */
 async function api<T>(page: Page, path: string): Promise<T> {
-  const res = await page.request.get(path, { headers: { 'X-Seer-Role': 'admin' } });
-  expect(res.status(), `${path}: ответ сервера`).toBe(200);
-  return (await res.json()) as T;
+  if (!/^https?:/.test(page.url())) await page.goto('/');
+  const r = await page.evaluate(async path => {
+    const key = Object.keys(localStorage).find(k => k.includes('oidc.user:'));
+    const token = key ? (JSON.parse(localStorage.getItem(key) ?? '{}') as { access_token?: string }).access_token : undefined;
+    const res = await fetch(path, { headers: { 'X-Seer-Role': 'admin', ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* не JSON */ }
+    return { status: res.status, body };
+  }, path);
+  expect(r.status, `${path}: ответ сервера — ${JSON.stringify(r.body).slice(0, 200)}`).toBe(200);
+  return r.body as T;
 }
 
 /** Репозитории проекта так же, как их собирает список (repositoryRecord): основной, компонентов, зеркала. */

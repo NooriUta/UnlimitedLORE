@@ -57,12 +57,15 @@ class PersonAgentPassportTest {
 
     /** MC-07: человек и агент — уровень admin; в общее меню не попадают, паспорт открывается по чипу. */
     @Test
-    void peopleAndAgentsAreAdminAudienceNotInTheSharedMenu() {
+    void peopleInOrganizationMenuAgentsAdminOnly() {
+        // Владелица 21.11.2026: «Организация — организации, продукты, проекты, люди» — люди в общем меню (срез users —
+        // имя и проекты, без прав и ролей); агент — по-прежнему админка (MC-07, решение 13.11).
         java.util.Map<String, String> audience = LoreModelFile.content().audience();
-        assertEquals("admin", audience.get("user"), "человек — админка (MC-07, решение 13.11)");
+        assertEquals("everywhere", audience.get("user"), "человек — в общем меню (группа «Организация»)");
         assertEquals("admin", audience.get("agent"), "агент — админка (MC-07, решение 13.11)");
         List<String> nav = LoreModelNavTest.navSections(LoreModelGoldenTest.modelDoc());
         assertTrue(nav.contains("sprint"), "положительный контроль: меню не пустое");
-        assertFalse(nav.contains("user") || nav.contains("agent"), "людей и агентов нет в общем меню: " + nav);
+        assertTrue(nav.contains("user"), "люди в общем меню: " + nav);
+        assertFalse(nav.contains("agent"), "агентов нет в общем меню: " + nav);
     }
 }

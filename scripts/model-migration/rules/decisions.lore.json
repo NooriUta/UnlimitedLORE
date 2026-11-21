@@ -1111,6 +1111,17 @@
     "by": "владелица",
     "at": "2026-11-19T20:30:00Z"
   },
+  "organizations": {
+    "_about": "Организации (D-2026-MIG-REPOSITORY-ORGANIZATION). Владелица 21.11.2026: «можешь предложить завести организации и связать их с проектами, но если будет отказ (NooriUta не организация) — оставляем слеш в репозиториях» · «DOCS — архивный, привяжи к AIDA». AIDA — пространство студии на нашем Forgejo; NooriUta, ivanovalex32, ciadmin — не организации; ODIN — пока без организации.",
+    "list": [
+      {
+        "org_id": "AIDA",
+        "name": "AIDA",
+        "repo_owner": "AIDA",
+        "projects": ["NooriUta/AIDA", "AIDA/miniLORE", "AIDA/udwe-mig-gen", "AIDA/MIDGARD", "AIDA/Datawanderers-ServerandLore", "AIDA/core-services", "NooriUta/UnlimitedLORE", "NooriUta/volva", "NooriUta/aida-documentation"]
+      }
+    ]
+  },
   "projects": {
     "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at).",
     "map": {

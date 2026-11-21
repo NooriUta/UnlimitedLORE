@@ -55,6 +55,13 @@ case "$TARGET_DB" in
   *_preprod) ;;
   *) die "TARGET_DB=$TARGET_DB — имя базы препрода обязано оканчиваться на _preprod" ;;
 esac
+# LOCAL_SOURCE (1.18): источник замены — только база переноса migration_dst*, проверка до сети.
+LOCAL_SOURCE="${LOCAL_SOURCE:-}"
+case "$LOCAL_SOURCE" in
+  ""|migration_dst*) ;;
+  *) die "LOCAL_SOURCE=$LOCAL_SOURCE — источником замены может быть только база переноса migration_dst*" ;;
+esac
+[ "$LOCAL_SOURCE" != "$TARGET_DB" ] || die "LOCAL_SOURCE совпадает с TARGET_DB"
 [ -n "${ARCADEDB_ROOT_PASSWORD:-}" ] || die "ARCADEDB_ROOT_PASSWORD (root LORE-ygg 131) не задан"
 
 # Адрес ArcadeDB 131 из контейнера джоба — шлюз по умолчанию (как в lore-cd.yml).
@@ -89,6 +96,46 @@ if [ "${CREATE_ONLY:-false}" = true ] && [ "$had_target" = yes ]; then
   echo "база $TARGET_DB уже есть — в режиме CREATE_ONLY не трогаю"
   exit 0
 fi
+
+# ── LOCAL_SOURCE: новая база из переноса встаёт под прежнее имя (1.18, MIG-01) ──
+# Владелица 21.11: «просто старую базу бэкап, а новую под неё … а то нам и на проде придётся новые
+# имена делать». Снимка прода нет: база-источник уже на 131 (собрана переносом, migration_dst_*).
+# Прежняя <target> → <target>_bak_<время> (не удаление), источник → <target>, сверка — отметка модели
+# LoreModelSchema в новой базе. Откат — обратное переименование.
+if [ -n "$LOCAL_SOURCE" ]; then
+  case "$dbs" in *"\"$LOCAL_SOURCE\""*) ;; *) die "базы $LOCAL_SOURCE на 131 нет — сначала перенос (lore-migration-snapshot.yml, action=migrate)" ;; esac
+  model_n() { acurl -X POST -d '{"language":"sql","command":"SELECT count(*) AS n FROM LoreModelSchema"}' "$API/command/$1" | tr -d '\n ' | sed -nE 's/.*"n":([0-9]+).*/\1/p'; }
+  src_n="$(model_n "$LOCAL_SOURCE")"
+  [ -n "$src_n" ] && [ "$src_n" -gt 0 ] || die "в $LOCAL_SOURCE нет отметки LoreModelSchema — это не база, собранная из модели; не ставлю"
+  echo "источник $LOCAL_SOURCE: отметка модели есть ($src_n)"
+  pcid="$(docker ps -q --filter "label=com.docker.compose.project=$PREPROD_PROJECT" --filter "label=com.docker.compose.service=lore-backend" | head -1)"
+  echo "бэкенд препрода: ${pcid:-не запущен}"
+  if [ "$DRY" = true ]; then
+    echo "::notice::DRY-RUN: дальше было бы: $TARGET_DB → ${TARGET_DB}_bak_$TS, $LOCAL_SOURCE → $TARGET_DB. Ничего не менялось."
+    exit 0
+  fi
+  restart_preprod() { [ -n "$pcid" ] && docker start "$pcid" >/dev/null && echo "бэкенд препрода запущен обратно"; return 0; }
+  if [ -n "$pcid" ]; then say "131: стоп бэкенда препрода"; docker stop "$pcid" >/dev/null || die "бэкенд препрода не остановился"; fi
+  if [ "$had_target" = yes ]; then
+    say "131: прежняя $TARGET_DB → ${TARGET_DB}_bak_$TS"
+    server_cmd "close database $TARGET_DB" >/dev/null || true
+    docker exec "$LOCAL_YGG" mv "$DB_DIR/$TARGET_DB" "$DB_DIR/${TARGET_DB}_bak_$TS" \
+      || { restart_preprod; die "прежняя база не переименована — замену не делаю"; }
+  fi
+  say "131: $LOCAL_SOURCE → $TARGET_DB"
+  server_cmd "close database $LOCAL_SOURCE" >/dev/null || true
+  if ! docker exec "$LOCAL_YGG" mv "$DB_DIR/$LOCAL_SOURCE" "$DB_DIR/$TARGET_DB"; then
+    [ "$had_target" = yes ] && docker exec "$LOCAL_YGG" mv "$DB_DIR/${TARGET_DB}_bak_$TS" "$DB_DIR/$TARGET_DB" && server_cmd "open database $TARGET_DB" >/dev/null
+    restart_preprod; die "источник не переименован — прежняя база возвращена на место"
+  fi
+  echo "open database: $(server_cmd "open database $TARGET_DB" | head -c 200)"
+  dst_n="$(model_n "$TARGET_DB")"
+  [ -n "$dst_n" ] && [ "$dst_n" -gt 0 ] || die "в $TARGET_DB после замены нет отметки LoreModelSchema — препрод НЕ запускаю; прежняя база — ${TARGET_DB}_bak_$TS"
+  restart_preprod
+  echo "готово: $TARGET_DB = база переноса $LOCAL_SOURCE (отметка модели есть); прежняя база — ${TARGET_DB}_bak_$TS"
+  exit 0
+fi
+
 docker exec "$LOCAL_YGG" sh -c "command -v unzip >/dev/null && df -h $DB_DIR | tail -1" || die "в $LOCAL_YGG нет unzip или каталога $DB_DIR"
 
 say "lore-host: база $SOURCE_DB"

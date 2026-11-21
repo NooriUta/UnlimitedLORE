@@ -1077,7 +1077,9 @@ public class AidaLoreResource extends LoreResourceBase {
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
             callerScope = allowedProjectsOrNull(role);
+            Map<String, Object> fromProducts1 = expandProductScope(given);
             narrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            if (fromProducts1 != null && narrowing.meta() != null) narrowing.meta().put("from_products", fromProducts1);
             rowScope = narrowing.scope();
             composed = LoreSlices.compose(id, given, rowScope);
         } catch (IllegalArgumentException e) {
@@ -1365,7 +1367,9 @@ public class AidaLoreResource extends LoreResourceBase {
             countPage = SlicePage.extract(new LinkedHashMap<>(given));
             callerScope = allowedProjectsOrNull(role);
             // Выбор проектов в шапке сужает и счётчик — иначе число в разделе не сойдётся со списком.
+            Map<String, Object> fromProducts2 = expandProductScope(given);
             countNarrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            if (fromProducts2 != null && countNarrowing.meta() != null) countNarrowing.meta().put("from_products", fromProducts2);
             rowScope = countNarrowing.scope();
             filters = LoreSectionCount.filtersOf(given);
             composed = LoreSlices.compose(id, new LinkedHashMap<>(filters), rowScope);
@@ -1450,7 +1454,9 @@ public class AidaLoreResource extends LoreResourceBase {
             axes = LoreListFacets.axes(id, given.get(LoreListFacets.AXES_PARAM));
             groupBy = LoreListFacets.groupBy(id, given.get(LoreListFacets.GROUP_PARAM));
             callerScope = allowedProjectsOrNull(role);
+            Map<String, Object> fromProducts3 = expandProductScope(given);
             narrowing = SliceProjectNarrowing.apply(id, given, callerScope);
+            if (fromProducts3 != null && narrowing.meta() != null) narrowing.meta().put("from_products", fromProducts3);
             rowScope = narrowing.scope();
             filters = LoreListFacets.filtersOf(given);
             sets.add(filters);
@@ -1695,6 +1701,30 @@ public class AidaLoreResource extends LoreResourceBase {
         result.put("releases",     report.releases());
         result.put("errors",       report.errors());
         return noStore(Response.ok(result));
+    }
+
+
+    /**
+     * PS-PRODUCT-FILTER (владелица 21.11.2026): {@code ?scope_products=} — продукт как логическая группа проектов;
+     * раскрывается в проекты продуктов и сужает выдачу тем же путём, что выбор проектов ({@link SliceProjectNarrowing}).
+     */
+    private Map<String, Object> expandProductScope(Map<String, String> given) {
+        if (!given.containsKey(SliceProjectNarrowing.PRODUCTS_PARAM)) return null;
+        return SliceProjectNarrowing.expandProducts(given, productProjects());
+    }
+
+    /** Продукт → его проекты (BELONGS_TO_PROJECT): один запрос на вызов с выбором продукта. */
+    private Map<String, List<String>> productProjects() {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        for (Map<String, Object> r : ingestService.queryPublic(
+                "SELECT code, out('BELONGS_TO_PROJECT').slug AS projects FROM KnowDictEntry WHERE dict_type = 'product'", Map.of())) {
+            Object code = r.get("code");
+            if (code == null) continue;
+            List<String> ps = new ArrayList<>();
+            if (r.get("projects") instanceof List<?> l) for (Object x : l) if (x != null) ps.add(String.valueOf(x));
+            out.put(String.valueOf(code), ps);
+        }
+        return out;
     }
 
 }

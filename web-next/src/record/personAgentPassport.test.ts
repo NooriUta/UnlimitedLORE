@@ -33,10 +33,12 @@ describe('человек и агент: раздел, маршрут, паспо
     });
   });
 
-  it('MC-07: людей и агентов нет в общем меню и без модели (уровень admin)', () => {
+  // Владелица 21.11.2026: «Организация — организации, продукты, проекты, люди» — люди в общем меню (список без прав и
+  // ролей); агенты по-прежнему только в админке (MC-07).
+  it('люди — в общем меню (группа «Организация»), агентов нет (уровень admin)', () => {
     const ids = v2Config('ru').menu.groups.flatMap(g => g.items.map(i => i.id));
     expect(ids).toContain('sprint');
-    expect(ids).not.toContain('user');
+    expect(ids).toContain('user');
     expect(ids).not.toContain('agent');
   });
 });

@@ -35,13 +35,14 @@ describe('меню и приложения', () => {
 });
 
 describe('шапка', () => {
-  it('охват проектов — сразу за приложениями; поиск и «Команды» подписаны', () => {
+  // PS-PRODUCT-FILTER (владелица 21.11.2026): верхний фильтр — по продукту, а не по проекту.
+  it('охват продуктов — сразу за приложениями; поиск и «Команды» подписаны', () => {
     const { container } = render(<App path="/" win={fakeWin()} storage={mem()} narrow={false} />);
     const top = container.querySelector('.sk-shell__top')!;
     const start = top.querySelector('.sk-shell__top-start');
     expect(start).not.toBeNull();
     expect(start!.previousElementSibling?.classList.contains('sk-shell__mods')).toBe(true);
-    expect(within(start as HTMLElement).getByRole('button', { name: /Проекты/ })).toBeTruthy();
+    expect(within(start as HTMLElement).getByRole('button', { name: /Продукты/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Поиск по LORE/ }).textContent).toContain('/');
     expect(within(screen.getByRole('button', { name: /Команды/ })).getByText('Команды')).toBeTruthy();
   });

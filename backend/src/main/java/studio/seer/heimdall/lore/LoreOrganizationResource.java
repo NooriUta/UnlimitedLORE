@@ -43,6 +43,8 @@ public class LoreOrganizationResource extends LoreResourceBase {
         m.put("ORG_HAS_PROJECT", List.of("KnowGitProject", "slug"));
         m.put("ORG_HAS_PRODUCT", List.of("KnowDictEntry", "code"));
         m.put("ORG_MEMBER", List.of("KnowUser", "kc_sub"));
+        // владелица 21.11.2026: «в админке кроме организации должен быть и срез репозиториев к ней»
+        m.put("ORG_HAS_REPOSITORY", List.of("KnowRepository", "url"));
         TARGETS = java.util.Collections.unmodifiableMap(m);
     }
 

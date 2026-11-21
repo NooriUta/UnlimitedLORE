@@ -15,7 +15,7 @@ name: LORE migration snapshot (prod → preprod) and model-migration run
 #                     (по умолчанию scripts/model-migration/rules/decisions.lore.json). Приёмник
 #                     препрода — migration_dst_preprod: проходит и ворота препрода (*_preprod), и
 #                     сторож переноса (migration_dst*).
-#                     Доступ — секреты MIG_DB_USER / MIG_DB_PASSWORD (учётка препрод-ArcadeDB,
+#                     Доступ — root препродного ArcadeDB и секрет ARCADEDB_ROOT_PASSWORD (владелица 20.11; прежде MIG_DB_*,
 #                     вносит владелица или CICDGitHub); секретов нет — шаг отвечает BLOCKED и
 #                     называет, что завести. Файл доступа собирается во временный каталог и удаляется.
 #                     Приёмник не может быть system_aida_lore* и не может совпасть с источником.
@@ -127,12 +127,14 @@ jobs:
           GUARD_ONLY: "true"
         run: bash .github/scripts/model-migration-run.sh
 
-      # Секретов MIG_DB_USER / MIG_DB_PASSWORD нет — BLOCKED (код 2) с именами, что завести;
-      # конвейер не запускается. Этап full — два прогона transfer → edges → dst-fingerprint и сверка.
+      # Учётка — root препродного ArcadeDB и существующий секрет ARCADEDB_ROOT_PASSWORD (владелица 20.11:
+      # «секрет от базы по миграции такой же как и у root обычного не надо плодить»); базу приёмника
+      # создаёт сам конвейер, а это право только root. Секрета нет — BLOCKED (код 2), конвейер не
+      # запускается. Этап full — два прогона transfer → edges → dst-fingerprint и сверка.
       - name: Конвейер model-migration
         env:
-          MIG_DB_USER: ${{ secrets.MIG_DB_USER }}
-          MIG_DB_PASSWORD: ${{ secrets.MIG_DB_PASSWORD }}
+          MIG_DB_USER: root
+          MIG_DB_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
           MIG_DECISIONS: ${{ inputs.decisions }}
         run: bash .github/scripts/model-migration-run.sh
 

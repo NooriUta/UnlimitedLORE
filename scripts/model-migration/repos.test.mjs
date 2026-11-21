@@ -79,6 +79,6 @@ test('перенос заводит организацию целиком: ун�
   };
   await applyRepos(db, [], {}, { log: () => {} });
   assert.ok(cmds.includes('CREATE INDEX ON KnowOrganization (org_id) UNIQUE'), 'уникальный org_id');
-  for (const e of ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER']) assert.ok(cmds.includes(`CREATE EDGE TYPE ${e}`), e);
+  for (const e of ['ORG_HAS_PROJECT', 'ORG_HAS_PRODUCT', 'ORG_MEMBER', 'ORG_HAS_REPOSITORY']) assert.ok(cmds.includes(`CREATE EDGE TYPE ${e}`), e);
   assert.ok(cmds.includes('DROP TYPE ORG_MEMBER UNSAFE'), 'повторный прогон переносa не падает на уже заведённом типе');
 });

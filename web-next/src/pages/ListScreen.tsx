@@ -40,6 +40,7 @@ import { paintRecords, productIndex, productValueIcon, withProductColumn, type P
 import { appliedCollapseNavOnRead, appliedPassportPlace } from '../settings/applied';
 import { NEW_RECORD_ID, fetchCanCreate, isCreateType } from '../record/recordCreate';
 import { useProjectScope } from '../scope/ProjectScope';
+import { useProductScope } from '../scope/ProductScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
 import { setPaletteTarget } from '../palette/paletteTarget';
 import type { PassportType } from '../record/passportAdapters';
@@ -377,10 +378,14 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Причина была не в фильтре: `useProjectScope()` не вызывал НИ ОДИН экран —
   // выбор доезжал до адреса `?proj=` и дальше никуда.
   const scope = useProjectScope();
-  const scopeParam = useMemo(
-    () => (scope.length ? { scope_projects: scope.join(',') } : undefined),
-    [scope],
-  );
+  // PS-PRODUCT-FILTER (владелица 21.11.2026): верхний фильтр — по продукту; продукт раскрывает в проекты бэкенд.
+  const products = useProductScope();
+  const scopeParam = useMemo(() => {
+    const p: Record<string, string> = {};
+    if (scope.length) p.scope_projects = scope.join(',');
+    if (products.length) p.scope_products = products.join(',');
+    return Object.keys(p).length ? p : undefined;
+  }, [scope, products]);
   // Встроенный график Völva (SPRINT_VIZ_EMBED/EMB-L2, D-2026-LORE-VIZ-EMBED-PLACES):
   // вид РЯДОМ с видами раздела, только при charts.layer=volva; иначе ничего не
   // меняется. Проект — из скоупа шапки; подпись — бэкенд LORE.

@@ -268,6 +268,15 @@ describe('PL-05: lore-release.yml катит прод на lore-host', () => {
     expect(dep()).toMatch(/^ {4}if: .*github\.event_name == 'push'/m);
   });
 
+  // 1.18 (владелица 21.11: «старую базу бэкап, а новую под неё … а то нам и на проде придётся новые имена делать»).
+  it('замена базы прода базой переноса — после compose, до db; источник из поля или переменной', () => {
+    const sw = idx(/lore-host-deploy\.sh dbswap/);
+    expect(sw).toBeGreaterThan(idx(/lore-host-deploy\.sh compose/));
+    expect(sw).toBeLessThan(idx(/lore-host-deploy\.sh db$/m));
+    expect(depSteps()[sw].body).toMatch(/SWAP_FROM: \$\{\{ inputs\.swap_from \|\| vars\.LORE_PROD_SWAP_FROM \}\}/);
+    expect(read(REL)).toMatch(/^ {6}swap_from:$/m);
+  });
+
   it('ключ CD из секрета и отпечаток хоста закреплён', () => {
     expect(rel()).toMatch(/LORE_HOST_SSH_KEY: \$\{\{ secrets\.LORE_HOST_SSH_KEY \}\}/);
     expect(rel()).toMatch(/LORE_HOST_FP: SHA256:dp7oLAGQkIQ\+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA/);
@@ -335,6 +344,19 @@ describe('PL-04: снимок прода → база препрода (толь
     expect(s).not.toMatch(/die "распаковка не удалась — прежняя база лежит как/);
     // остаток прерванной заливки (каталог без открытой базы) считается «есть» → в _bak
     expect(s).toMatch(/docker exec "\$LOCAL_YGG" test -d "\$DB_DIR\/\$TARGET_DB"/);
+  });
+
+  // 1.18 (владелица 21.11): «просто старую базу бэкап, а новую под неё … а то нам и на проде придётся
+  // новые имена делать». Имя базы препрода в CD не меняется; база переноса встаёт под него.
+  it('режим local_source: база переноса под прежнее имя, прежняя в _bak, LORE_DB в CD не меняется', () => {
+    expect(w()).toMatch(/local_source:[\s\S]*?default: ''/);
+    expect(w()).toMatch(/LOCAL_SOURCE: \$\{\{ inputs\.local_source \}\}/);
+    expect(w()).toMatch(/if: inputs\.local_source == ''/); // ssh до прода в этом режиме не нужен
+    const s = code(read('scripts/preprod-db-refresh.sh'));
+    expect(s).toMatch(/migration_dst\*\) ;;/);
+    expect(s).toMatch(/mv "\$DB_DIR\/\$LOCAL_SOURCE" "\$DB_DIR\/\$TARGET_DB"/);
+    expect(s).toMatch(/FROM LoreModelSchema/);
+    expect(cd()).toMatch(/^ {6}LORE_DB: system_aida_lore_preprod$/m);
   });
 });
 
@@ -517,6 +539,20 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', { timeout: SPAWN_TIMEOU
   });
 });
 
+describe.skipIf(!bashBin)('lore-host-deploy.sh remote-swap: источник — только база переноса', { timeout: SPAWN_TIMEOUT }, () => {
+  const S = '.github/scripts/lore-host-deploy.sh';
+  it.each(['system_aida_lore', 'migration_src_2026_11_20', 'some_db'])('источник %s — отказ до обращения к docker', (src) => {
+    const r = run(S, ['remote-swap', '/nonexistent', src, 'system_aida_lore'], {});
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/источник замены — только база переноса migration_dst\*/);
+  });
+  it('источник совпадает с базой — отказ', () => {
+    const r = run(S, ['remote-swap', '/nonexistent', 'migration_dst_x', 'migration_dst_x'], {});
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/совпадает/);
+  });
+});
+
 describe.skipIf(!bashBin)('lore-host-deploy.sh: замена тегов в compose', { timeout: SPAWN_TIMEOUT }, () => {
   const S = '.github/scripts/lore-host-deploy.sh';
   const compose = [
@@ -560,6 +596,11 @@ describe.skipIf(!bashBin)('preprod-db-refresh.sh: в прод и в заморо
     const r = run(S, [], { TARGET_DB: db, ARCADEDB_ROOT_PASSWORD: 'x', R: 'false' });
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/::error::TARGET_DB=/);
+  });
+  it.each(['system_aida_lore', 'migration_src_2026_11_20', 'some_db'])('LOCAL_SOURCE=%s — не база переноса: отказ', (src) => {
+    const r = run(S, [], { TARGET_DB: 'system_aida_lore_preprod', LOCAL_SOURCE: src, ARCADEDB_ROOT_PASSWORD: 'x', R: 'false' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::LOCAL_SOURCE=/);
   });
 });
 

@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "e36f334033b8dd9b",
+  "version" : "331936b34f334ee1",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -11661,6 +11661,16 @@
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null
+      }, {
+        "key" : "organizations",
+        "label" : "Организации",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "in",
+        "target_type" : "organization",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -11778,6 +11788,16 @@
         "rel" : "ORG_MEMBER",
         "dir" : "out",
         "target_type" : "user",
+        "place" : "link_tab",
+        "manageable" : true,
+        "inverse_label" : null
+      }, {
+        "key" : "repositories",
+        "label" : "Репозитории",
+        "relation" : "association",
+        "rel" : "ORG_HAS_REPOSITORY",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "link_tab",
         "manageable" : true,
         "inverse_label" : null
@@ -13687,6 +13707,13 @@
             "key" : "links",
             "label" : "Связи"
           }
+        }, {
+          "key" : "organizations",
+          "source" : "relation",
+          "ref" : "organizations",
+          "order" : 7,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "organization" : {
@@ -13716,6 +13743,16 @@
           "source" : "relation",
           "ref" : "members",
           "order" : 3,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "repositories",
+          "source" : "relation",
+          "ref" : "repositories",
+          "order" : 4,
           "slot" : "own",
           "group" : {
             "key" : "links",
@@ -13918,14 +13955,29 @@
         "icon" : "price-tag"
       } ]
     }, {
+      "id" : "org",
+      "label_key" : "shell.grp.org",
+      "tone" : "var(--inf)",
+      "pin_top" : false,
+      "items" : [ {
+        "section" : "organization",
+        "icon" : "castle"
+      }, {
+        "section" : "product",
+        "icon" : "bullseye"
+      }, {
+        "section" : "project",
+        "icon" : "open-folder"
+      }, {
+        "section" : "user",
+        "icon" : "person"
+      } ]
+    }, {
       "id" : "product",
       "label_key" : "shell.grp.product",
       "tone" : "var(--wrn)",
       "pin_top" : false,
       "items" : [ {
-        "section" : "product",
-        "icon" : "bullseye"
-      }, {
         "section" : "feature",
         "icon" : "gift-of-knowledge"
       }, {
@@ -13947,20 +13999,14 @@
       "tone" : "var(--inf)",
       "pin_top" : false,
       "items" : [ {
-        "section" : "project",
-        "icon" : "open-folder"
-      }, {
-        "section" : "component",
-        "icon" : "cog"
-      }, {
         "section" : "tech",
         "icon" : "gears"
       }, {
         "section" : "repository",
         "icon" : "chest"
       }, {
-        "section" : "organization",
-        "icon" : "castle"
+        "section" : "component",
+        "icon" : "cog"
       } ]
     }, {
       "id" : "personal",
@@ -14003,7 +14049,7 @@
     "tags" : "everywhere",
     "task" : "everywhere",
     "tech" : "everywhere",
-    "user" : "admin"
+    "user" : "everywhere"
   },
   "create" : {
     "decision" : {
