@@ -1,7 +1,7 @@
 // Адрес git-хоста — из настройки или записей репозиториев, не литерал нашего Forgejo
 // (SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE).
 import { describe, expect, it, vi } from 'vitest';
-import { fetchGitHost, originOf, resolveGitHost } from './gitHost';
+import { fetchGitHost, originOf, resolveGitHost, teaLoginHint } from './gitHost';
 import { primaryHostOf } from './projectLike';
 
 const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -30,6 +30,11 @@ describe('SELF-PROVISION · адрес git-хоста', () => {
   it('хост primary из hosts[] записи репозитория', () => {
     expect(primaryHostOf(hosts('https://git.acme.io/AIDA/x'))).toBe('https://git.acme.io');
     expect(primaryHostOf(null)).toBeNull();
+  });
+
+  it('подсказка tea login — адрес из настройки; нет адреса — честная заглушка, а не наш домен', () => {
+    expect(teaLoginHint('https://git.acme.io', 'адрес git-хоста не задан')).toBe('tea login add --name forgejo --url https://git.acme.io');
+    expect(teaLoginHint(null, 'адрес git-хоста не задан')).toBe('tea login add --name forgejo --url <адрес git-хоста не задан>');
   });
 
   it('fetchGitHost: параметр приложения из справочника app_setting', async () => {

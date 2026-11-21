@@ -22,6 +22,7 @@ import { KitPassportDemo } from './KitPassportDemo';
 import KitVerdictSummaryDemo from './KitVerdictSummaryDemo';
 import { loreKinds } from '../shell/loreKinds';
 import { loreRefLook } from '../record/loreMdRefs';
+import { useGitHost } from '../admin/gitHost';
 
 const SECTIONS = ['tokens', 'elements', 'badges', 'states', 'charts', 'shell', 'flow', 'fields', 'palette', 'content'] as const;
 type SectionId = (typeof SECTIONS)[number];
@@ -101,6 +102,8 @@ function writeTab(tab: TabId): void {
 
 export default function KitPage() {
   const t = useAppT();
+  // Ссылка демо-шага «руками» — на git-хост этой установки (SELF-PROVISION-STANDALONE); нет адреса — без ссылки.
+  const gitHost = useGitHost();
   const [mode, setMode] = useState<Mode>('dark');
   const [density, setDensity] = useState<Density>('roomy');
   const [filterOn, setFilterOn] = useState(true);
@@ -342,7 +345,7 @@ export default function KitPage() {
               title: t('kitPage.flow.manualTitle'),
               items: [
                 { text: t('kitPage.flow.manual1'), hint: t('kitPage.flow.manualHint') },
-                { text: t('kitPage.flow.manual2'), href: 'https://git.seidrstudio.pro' },
+                { text: t('kitPage.flow.manual2'), href: gitHost.data ?? undefined },
               ],
             }}
             steps={[

@@ -24,6 +24,7 @@ import { fetchRoleMatrix, type RolesData } from './roles';
 import { fetchOwnerDelegation, type DelegationRow } from './access';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
 import { PROJECT_WIZ_PARAMS } from './projectLike';
+import { teaLoginHint, useGitHost } from './gitHost';
 import {
   agentClientIdOf, backendOf, createKcUser, fetchFirstCall, fetchKcClients, fetchKcUsers, findKcUser,
   issueAgent, likeChanges, loginOf, machineProblem, machineTakenBy, mcpAddCommand, mcpJsonText, reasonOf,
@@ -184,6 +185,7 @@ export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; o
   const [likeSub, setLike] = useUrlParam('adm-like');
   const [users, retryUsers] = useLoad(() => fetchKcUsers(fetchImpl), [fetchImpl]);
   const [matrix, retryMatrix] = useLoad(() => fetchRoleMatrix(undefined, fetchImpl), [fetchImpl]);
+  const gitHost = useGitHost(fetchImpl);
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(new Set());
   const [override, setOverride] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
@@ -343,7 +345,8 @@ export function PersonWizard({ fetchImpl, onDone }: { fetchImpl: typeof fetch; o
   ];
   const manual: StepsManualItem[] = [
     { text: t('admin.wiz.manual.password'), hint: t('admin.wiz.manual.passwordHint') },
-    { text: t('admin.wiz.manual.forgejo'), href: 'https://git.seidrstudio.pro', hint: t('admin.wiz.manual.forgejoHint') },
+    // Адрес git-хоста — настройка установки (SELF-PROVISION-STANDALONE); нет — пункт без ссылки.
+    { text: t('admin.wiz.manual.forgejo'), href: gitHost.data ?? undefined, hint: t('admin.wiz.manual.forgejoHint') },
   ];
   return <Steps steps={steps} urlKey={STEP_KEY} lang={lang} flow="adm-person" onDone={onDone} manual={{ title: t('admin.wiz.manual.title'), items: manual }} />;
 }
@@ -483,6 +486,7 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
   const [matrix, retryMatrix] = useLoad(() => (mode === 'agent' ? fetchRoleMatrix(undefined, fetchImpl) : Promise.resolve(null)), [fetchImpl, mode]);
   const [clients, retryClients] = useLoad(() => fetchKcClients(fetchImpl), [fetchImpl]);
   const [agents, retryAgents] = useLoad<AgentsData>(() => fetchAgents(undefined, fetchImpl, lang), [fetchImpl, lang]);
+  const gitHost = useGitHost(fetchImpl);
   const [issuing, setIssuing] = useState(false);
   const [issueError, setIssueError] = useState<string | null>(null);
   const [issued, setIssued] = useState<{ agent: IssuedAgent; linkError: string | null; since: number } | null>(null);
@@ -674,7 +678,7 @@ function AgentWizard({ mode, fetchImpl, meSub, env, onDone }: AgentWizardProps) 
     ]
     : [
       { text: t('admin.wiz.manual.mcpBuild'), hint: t('admin.wiz.manual.mcpBuildHint') },
-      { text: t('admin.wiz.manual.tea'), hint: 'tea login add --name seidr --url https://git.seidrstudio.pro' },
+      { text: t('admin.wiz.manual.tea'), hint: teaLoginHint(gitHost.data ?? null, t('admin.wiz.gitHost.missing')) },
       { text: t('admin.wiz.manual.minilore'), hint: t('admin.wiz.manual.miniloreHint', { machine: machine || '…' }) },
       { text: t('admin.wiz.manual.infisical'), hint: t('admin.wiz.manual.infisicalHint') },
     ];

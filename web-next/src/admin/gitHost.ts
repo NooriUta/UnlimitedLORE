@@ -34,6 +34,11 @@ export function resolveGitHost(setting: string | null | undefined, projects: rea
   return best;
 }
 
+/** Подсказка «tea login» для шага «руками»: адрес установки или явная заглушка «адрес не задан». */
+export function teaLoginHint(gitHost: string | null, missingLabel: string): string {
+  return `tea login add --name forgejo --url ${gitHost ?? `<${missingLabel}>`}`;
+}
+
 export async function fetchGitHost(fetchImpl?: typeof fetch): Promise<string | null> {
   const [settings, projects] = await Promise.all([fetchAppSettings(undefined, fetchImpl), fetchGitProjects(fetchImpl)]);
   const row = settings.find(r => r.dict_type === 'app_setting' && r.is_active && r.code === GIT_HOST_SETTING);
