@@ -175,15 +175,17 @@ services:
     ports:
       - "${LORE_BIND:-127.0.0.1}:${FORGEJO_HTTP_PORT:-3000}:3000"
 
-  # forgejo-mcp — MCP-сервер Forgejo для агентов (репозиторий AIDA/forgejo-mcp, форк @ric_/forgejo-mcp 0.1.7 с
-  # инструментами Actions/CI). Профиль forgejo-mcp: и при своей установке Forgejo, и при своём Forgejo владельца.
-  # Образ: свой реестр (FORGEJO_MCP_IMAGE) или сборка из исходников, прибитых к коммиту (FORGEJO_MCP_SRC).
+  # forgejo-mcp — MCP-сервер Forgejo для агентов (форк @ric_/forgejo-mcp 0.1.7 с инструментами Actions/CI, лицензия MIT).
+  # Профиль forgejo-mcp: и при своей установке Forgejo, и при своём Forgejo владельца.
+  # Образ: свой реестр (FORGEJO_MCP_IMAGE), архив образа из пакета или сборка. Сборка по умолчанию — из исходника,
+  # который едет в пакете (src/forgejo-mcp-<коммит>.tar.gz) и распаковывается install.sh в ./forgejo-mcp-src;
+  # FORGEJO_MCP_SRC — своя замена (каталог или git-адрес#коммит). Сетевого умолчания нет.
   # FORGEJO_TOKEN обязателен — без него сервер не стартует; install.sh тогда его не поднимает и говорит, что вписать.
   forgejo-mcp:
     profiles: ["forgejo-mcp"]
     image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:bbe9f59c}
     build:
-      context: ${FORGEJO_MCP_SRC:-https://git.seidrstudio.pro/AIDA/forgejo-mcp.git#bbe9f59c2167655c3c87fb51b102db29a275d13a}
+      context: ${FORGEJO_MCP_SRC:-./forgejo-mcp-src}
     restart: unless-stopped
     environment:
       - FORGEJO_URL=${FORGEJO_URL:-http://forgejo:3000}

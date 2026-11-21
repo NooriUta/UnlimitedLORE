@@ -24,11 +24,33 @@ const ALLOWED: { path: string; match?: RegExp; why: string }[] = [
     path: 'backend/src/main/resources/lore-model/lore-model.json', match: /"definition"/,
     why: 'пример в тексте определения поля full_path (модель приходит из LORE), а не адрес вызова',
   },
+];
+
+// ── Пакет установки (решение владелицы 21.11.2026: «в пакете установки не должно быть наших настроек») ──────────
+// Не только домены: наши realm, машины и хосты, адреса LAN, наши org/repo. Комментарии тоже считаются — пакет
+// уезжает к чужим людям целиком, и README показывает окно установщика. Умолчания-примеры — только нейтральные.
+const INSTALL_OURS = /seidrstudio\.pro|\bodal\.|omilore|\blore-host\b|\bci-server\b|lorcetus|ryzenai|192\.168\.|\bAIDA\/|NooriUta|UnlimitedLORE/i;
+const INSTALL_ALLOWED: { file: RegExp; match: RegExp; why: string }[] = [
   {
-    path: 'deploy/install/docker-compose.install.yml', match: /FORGEJO_MCP_SRC/,
-    why: 'источник СБОРКИ forgejo-mcp по умолчанию (переопределяется FORGEJO_MCP_SRC/FORGEJO_MCP_IMAGE), не адрес, куда ходит установка',
+    file: /(^|\/)README\.md$/, match: /seidrstudio\.pro|\bAIDA\/|NooriUta|UnlimitedLORE/i,
+    why: 'справочная ссылка в документации на исходники проекта (владелица 21.11: «ссылку на наш git оставь для информации в доках») — не настройка',
+  },
+  {
+    file: /(^|\/)install\.sh$/, match: /GHCR_OWNER="\$\{GHCR_OWNER:-nooriuta\}"/,
+    why: 'реестр выпусков образов LORE (ghcr) по умолчанию для мажорной версии без --build; вынесено владелице на решение',
   },
 ];
+
+/** Нарушения в тексте файла пакета установки (имя — для разрешённого списка). */
+function installOffenders(name: string, text: string): string[] {
+  const hits: string[] = [];
+  text.split('\n').forEach((line, i) => {
+    if (!INSTALL_OURS.test(line)) return;
+    if (INSTALL_ALLOWED.some(a => a.file.test(name) && a.match.test(line))) return;
+    hits.push(`${name}:${i + 1}: ${line.trim().slice(0, 160)}`);
+  });
+  return hits;
+}
 
 const SKIP_FILE = /\.(test|spec)\.[cm]?[jt]sx?$|[\\/](e2e|__tests__|test-utils)[\\/]|\.d\.ts$/;
 const TEXT = /\.([cm]?[jt]sx?|json|properties|ya?ml|html|css|sh|java|conf|template|env|example)$|Dockerfile/;
@@ -91,5 +113,30 @@ describe('SELF-PROVISION · в образе и бандле нет наших и
 
   it('у каждого исключения названа причина', () => {
     for (const a of ALLOWED) expect(a.why.length, a.path).toBeGreaterThan(20);
+    for (const a of INSTALL_ALLOWED) expect(a.why.length, String(a.file)).toBeGreaterThan(20);
+  });
+});
+
+describe('SELF-PROVISION · в пакете установки нет наших настроек', () => {
+  it('deploy/install/** — все файлы, включая .env.example, README и комментарии', () => {
+    const files = walk(resolve(repo, 'deploy/install'));
+    expect(files.some(f => f.endsWith('.env.example'))).toBe(true);
+    const hits = files.flatMap(f => installOffenders(relative(repo, f).replace(/\\/g, '/'), readFileSync(f, 'utf8')));
+    expect(hits).toEqual([]);
+  });
+
+  it('вшитая копия пакета (install-bundle.json — то, что кладёт install-bundle-sync.mjs)', () => {
+    const b = JSON.parse(readFileSync(resolve(repo, 'scripts/model-migration/rules/install-bundle.json'), 'utf8')) as { files: Record<string, string> };
+    expect(Object.keys(b.files).length).toBeGreaterThanOrEqual(4);
+    const hits = Object.entries(b.files).flatMap(([name, text]) => installOffenders('install-bundle.json/' + name, text));
+    expect(hits).toEqual([]);
+  });
+
+  it('сторож пакета ловит наши realm, машины, LAN и org (положительный контроль)', () => {
+    for (const bad of ['LORE_OIDC_ISSUER=https://kc/realms/omilore', '# эмуляция на ryzenai', 'ssh ci-server', 'http://192.168.3.131:4400', 'NooriUta/UnlimitedLORE', 'context: https://git.seidrstudio.pro/AIDA/forgejo-mcp.git'])
+      expect(installOffenders('docker-compose.install.yml', bad), bad).toHaveLength(1);
+    expect(installOffenders('README.md', 'исходники: https://git.seidrstudio.pro/AIDA/UnlimitedLORE')).toEqual([]);
+    expect(installOffenders('README.md', 'realm omilore')).toHaveLength(1);
+    expect(installOffenders('.env.example', 'LORE_OIDC_ISSUER=https://lore.example.org/realms/lore')).toEqual([]);
   });
 });
