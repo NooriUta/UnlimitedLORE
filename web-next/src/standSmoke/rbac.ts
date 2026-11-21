@@ -44,3 +44,17 @@ export function jwtPayload(token: string): Record<string, unknown> | null {
 export function isExpired(payload: Record<string, unknown>, nowMs: number): boolean {
   return typeof payload.exp === 'number' && payload.exp * 1000 < nowMs;
 }
+
+/**
+ * Копия токена с exp на час раньше `nowMs` (RB-08: сервер обязан отвергнуть просроченный токен). Заголовок и
+ * прочие claim-ы — как были, подпись прежняя, то есть к новому телу она не подходит: сервер должен ответить 401
+ * и по сроку, и по подписи. Не JWT — null.
+ */
+export function expiredCopy(token: string, nowMs: number): string | null {
+  const parts = token.split('.');
+  const payload = jwtPayload(token);
+  if (parts.length !== 3 || !payload) return null;
+  const body = { ...payload, exp: Math.floor(nowMs / 1000) - 3600 };
+  const b64 = Buffer.from(JSON.stringify(body)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${parts[0]}.${b64}.${parts[2]}`;
+}

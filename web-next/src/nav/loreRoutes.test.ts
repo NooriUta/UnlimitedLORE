@@ -34,7 +34,8 @@ describe('B-02 · тип записи → раздел v2; релиз — в р�
     expect(recordHref('martian', 'X-1')).toBeNull();
     // S5-DOC-PASSPORT: doc получил раздел; MD-04 — runbook и actor тоже: в примерах «без раздела» их больше нет.
     // MD-04, второй заход по QG: у гейта качества раздел появился — в примерах его больше нет.
-    for (const t of ['use_case', 'finding', 'pr']) expect(recordHref(t, 'X-1'), t).toBeNull();
+    // MD-05: у PR появился паспорт (в «Релизах», ?okind=pr — prPassport.test.ts): в примерах его больше нет.
+    for (const t of ['use_case', 'finding']) expect(recordHref(t, 'X-1'), t).toBeNull();
     expect(sectionOfType('toString')).toBeNull();
   });
 

@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import { connect } from './db.mjs';
 import { EDGES, SCHEMA, DECISION_MILESTONES, RULES } from './resources.mjs';
-import { edgePlan, edgeWrites, schemaOnlyEdgeDdl } from './edge-plan.mjs';
+import { edgePlan, edgeWrites, schemaOnlyEdgeDdl, srcEdgeSql, srcEdgeRow } from './edge-plan.mjs';
 import { planSessionModel } from './session-model.mjs';
 import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
@@ -24,6 +24,8 @@ import { applyDependsOn } from './depends-on.mjs';
 import { applyWaitingLinks } from './waiting-links.mjs';
 import { readDecisionRefsInput, planDecisionRefs, applyDecisionRefs } from './decision-refs.mjs';
 import { readTrackInput, planTracks, applyTracks } from './tracks.mjs';
+import { readQgScopeInput, applyQgScope } from './qg-scope.mjs';
+import QG_SCOPE from './rules/qg-scope.json' with { type: 'json' };
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
 const NOT_MACHINES = ['legion'];
@@ -66,11 +68,8 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   for (const [e, p] of Object.entries(plan)) {
     if (p.rule === 'drop' || e === VERSION_EDGE) continue;
     const list = (src[e] = []);
-    await pages(q => db.src(q), last => `SELECT FROM ${e} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, row => {
-      const props = {};
-      for (const [k, v] of Object.entries(row)) if (!k.startsWith('@') && k !== 'out' && k !== 'in' && v !== null && v !== undefined && v !== '') props[k] = v;
-      list.push({ r: row['@rid'], o: row['@out'], i: row['@in'], props });
-    }, '@rid');
+    // MD-05: у перевода по типу начала (HAS_PR) читается и тип начала — по нему выбирается цель
+    await pages(q => db.src(q), last => srcEdgeSql(e, p, last), row => list.push(srcEdgeRow(row)), p.by_from ? 'r' : '@rid');
   }
   // MDL-02: у историчной связи (edge_history модели) читаются ещё моменты записи-начала, из которых выводится valid_from
   const outMoments = new Map();
@@ -79,9 +78,12 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
     await pages(q => db.src(q), last => outMomentsQuery(e, last), x => outMoments.set(x.r, x));
   }
   const planNoVersions = Object.fromEntries(Object.entries(plan).filter(([e]) => e !== VERSION_EDGE));
-  const { writes, missingEnds, duplicates } = edgeWrites(src, dstRid, planNoVersions);
+  const { writes, missingEnds, duplicates, converted, skippedFrom } = edgeWrites(src, dstRid, planNoVersions);
 
-  const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, plan: Object.fromEntries(Object.entries(plan).map(([e, p]) => [e, { rule: p.rule, to: p.to, reverse: p.reverse || undefined, dropped_ends: p.dropped_ends.length ? p.dropped_ends : undefined }])), transfer_at: at, moved: {}, missing_ends: missingEnds, duplicates };
+  // converted — сколько связей старого вида легло в каждую живую цель (HAS_PR → CLOSED_BY / SHIPPED_IN): сверка «до и
+  // после» видит прирост цели как keep + converted (moved[цель].expected), а убыль старого вида — как converted + duplicates
+  // + skipped_from (тип начала без перевода) + missing_ends
+  const report = { source: db.env.MIG_SRC_DB, target: db.env.MIG_DST_DB, plan: Object.fromEntries(Object.entries(plan).map(([e, p]) => [e, { rule: p.rule, to: p.to, reverse: p.reverse || undefined, by_from: p.by_from, dropped_ends: p.dropped_ends.length ? p.dropped_ends : undefined }])), transfer_at: at, moved: {}, missing_ends: missingEnds, duplicates, converted, skipped_from: skippedFrom };
   let ok = true;
   const dstTypes = new Set((await db.dstQuery('SELECT name FROM schema:types')).map(x => x.name));
   for (const [T, list] of Object.entries(writes)) {
@@ -186,6 +188,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   // ребро ON_TRACK, каждое значение track_id — в остаток с причиной; сверка «спринтов с треком = рёбер»
   report.tracks = await applyTracks(db, planTracks({ ...(await readTrackInput(db)), at }), { log });
   if (!report.tracks.ok) ok = false;
+  // охват гейта (QG-01, владелица 19.11.2026 «2а 3а», D-2026-MIG-118-OWNER-ANSWERS-1119): scope = global у четырёх гейтов
+  // гигиены LORE (их связи с проектом снимаются), project у остальных с проектом, QG-T13-SMOKE — retired с причиной
+  report.qg_scope = await applyQgScope(db, await readQgScopeInput(db), QG_SCOPE, { log });
+  if (!report.qg_scope.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));

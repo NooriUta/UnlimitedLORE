@@ -33,7 +33,7 @@ final class LoreRecordEdgeLinks {
     // порядка конец-гейт назывался бы кодом своего спринта (MD-04, второй заход по QG).
     static final List<String> ID_FIELDS = List.of("qg_id", "task_uid", "phase_uid", "adr_id", "spec_id", "sprint_id", "decision_id",
         "question_id", "milestone_id", "release_uid", "component_id", "uc_id", "runbook_id", "doc_id",
-        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "org_id", "slug");
+        "publication_id", "insight_id", "rec_id", "pain_id", "gain_id", "job_id", "actor_id", "machine_id", "kc_sub", "org_id", "pr_uid", "slug");
 
     static final List<String> TITLE_FIELDS = List.of("title", "name", "label", "full_name", "display_name", "statement_md");
 
@@ -51,7 +51,9 @@ final class LoreRecordEdgeLinks {
         // S9-05 A: концы вкладок человека и агента.
         Map.entry("KnowUser", "user"), Map.entry("KnowActor", "agent"), Map.entry("KnowMachine", "machine"),
         // D-2026-MIG-REPOSITORY-ORGANIZATION: организация — конец связей проекта, продукта и человека.
-        Map.entry("KnowOrganization", "organization"));
+        Map.entry("KnowOrganization", "organization"),
+        // MD-05: PR — конец связей задачи (CLOSED_BY) и релиза (SHIPPED_IN), у него теперь свой паспорт.
+        Map.entry("KnowPR", "pr"));
 
     /** Имя источника в meta.data_state: видно, что вкладка прочитана по ребру, а не срезом. */
     static String source(LoreRecordRegistry.Relation r) {

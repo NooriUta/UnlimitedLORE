@@ -30,7 +30,7 @@ class LoreModelTypesLiveDbTest {
         JsonPath m = new JsonPath(body);
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "track", "release",
             "component", "tech", "feature", "product", "user", "agent",
-            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "project"), List.copyOf(m.getMap("types").keySet()));
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr", "project"), List.copyOf(m.getMap("types").keySet()));
         assertEquals("task_uid", m.getString("types.task.key"));
         assertFalse(m.getList("missing").contains("types"), "раздел есть — в missing его нет: " + m.getList("missing"));
         // MDL-02: раздел edge_history называет поля версии ребра (valid_from, valid_to) как описание модели —

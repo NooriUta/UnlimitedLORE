@@ -138,6 +138,22 @@ jobs:
           MIG_DECISIONS: ${{ inputs.decisions }}
         run: bash .github/scripts/model-migration-run.sh
 
+      # MIG-02: раздел админки препрода читает отчёт из lore.migration.dir (том lore-preprod-migration,
+      # docker-compose.preprod.yml). Этап full сухого прогона не делает — делаем его здесь, затем кладём
+      # dry-run.json и transfer.json (второй прогон) в том. Решения людей (decisions.json) не трогаются.
+      - name: Сухой прогон — для админки препрода
+        if: success() && inputs.stage == 'full' && inputs.dest == 'migration_dst_preprod'
+        env:
+          STAGE: dry-run
+          MIG_DB_USER: root
+          MIG_DB_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+          MIG_DECISIONS: ${{ inputs.decisions }}
+        run: bash .github/scripts/model-migration-run.sh
+
+      - name: Отчёт — в каталог админки препрода
+        if: success() && inputs.stage == 'full' && inputs.dest == 'migration_dst_preprod'
+        run: bash .github/scripts/migration-report-publish.sh
+
       - name: Отчёт — артефактом
         if: always()
         continue-on-error: true

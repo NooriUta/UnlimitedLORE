@@ -4466,6 +4466,10 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
    край панели свойств 320 px — это и видно как наложение подписей (находка P0
    аудита 08.11.2026). */
 .sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); min-width: 0; max-width: 100%; }
+/* MD-05: адрес у хоста git (PR, репозиторий) — ссылка; длинный адрес переносится, а не раздвигает панель. */
+.sk-rec-fields__url { color: var(--acc); overflow-wrap: anywhere; text-decoration: none; }
+.sk-rec-fields__url:hover { text-decoration: underline; }
+.sk-rec-fields__url:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
 .sk-rec-ref {
   display: inline-flex; align-items: center; gap: 4px;
@@ -5873,6 +5877,21 @@ a.sk-tasks__id:focus-visible { outline: 2px solid var(--acc); outline-offset: 2p
 .sk-scope__row { display: flex; align-items: center; gap: 4px; border-radius: var(--r-md); }
 .sk-scope__row:hover { background: var(--bg2); }
 .sk-scope__row--missing .sk-scope__title { color: var(--t2); font-style: italic; }
+/* PS-PRODUCT-FILTER: дерево — потомок отступом под родителем, кнопка раскрытия у составной записи; выбор она не меняет. */
+.sk-scope__row[data-depth="1"] { padding-inline-start: calc(var(--gap) * 3); }
+.sk-scope__row[data-depth="2"] { padding-inline-start: calc(var(--gap) * 6); }
+.sk-scope__exp {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--t2); cursor: pointer;
+}
+.sk-scope__exp:hover { color: var(--acc); background: var(--bg3); }
+.sk-scope__exp:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.sk-scope__exp .sk-icon { transition: transform .15s; }
+.sk-scope__exp[aria-expanded="true"] .sk-icon { transform: rotate(90deg); }
+.sk-scope__exp--leaf { cursor: default; }
+/* На телефоне кнопка раскрытия — не меньше 32px: палец, а не курсор. */
+.sk-scope__sheet .sk-scope__exp { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
 .sk-scope__check {
   display: flex;
   flex: 1;
