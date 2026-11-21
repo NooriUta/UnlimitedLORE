@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип — строка ленты по столбцам (K4-NEWS-ROW-COLUMNS)</title>
+<style>
+  :root { --bg:#f7f5f0; --bg1:#fff; --bd:#e3ddd0; --t1:#1f1b14; --t2:#5c5446; --t3:#8a8273; --acc:#b7791f; --suc:#2f855a; --inf:#2b6cb0; --new:#b7791f; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.4 Manrope, system-ui, sans-serif; background:var(--bg); color:var(--t1); }
+  .wrap { max-width:1280px; margin:0 auto; padding:16px; }
+  h1 { font:800 18px Unbounded, sans-serif; margin:0 0 4px; }
+  h2 { font:800 14px Unbounded, sans-serif; margin:22px 0 8px; }
+  .lead { color:var(--t2); margin:0 0 6px; }
+  .box { background:var(--bg1); border:1px solid var(--bd); border-radius:12px; overflow-x:auto; }
+  .mono { font-family:"IBM Plex Mono", monospace; }
+  .muted { color:var(--t3); }
+  .pill { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--bd); border-radius:999px; padding:1px 8px; font-size:11px; white-space:nowrap; }
+  .code { border:1px solid var(--bd); border-radius:999px; padding:1px 8px; font:11px "IBM Plex Mono", monospace; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ico { width:22px; height:22px; display:inline-grid; place-items:center; border:1px solid var(--bd); border-radius:6px; font-size:12px; }
+  .st { width:22px; height:22px; display:inline-grid; place-items:center; border:1px solid var(--bd); border-radius:999px; font-size:11px; }
+
+  /* СЕЙЧАС: строка-флекс, всё плывёт */
+  .now .row { display:flex; align-items:center; gap:10px; padding:7px 12px; border-bottom:1px solid #f0ece3; white-space:nowrap; }
+  .now .title { font-size:14px; overflow:hidden; text-overflow:ellipsis; }
+  .now .new { color:var(--new); font:700 11px "IBM Plex Mono", monospace; margin-left:auto; }
+  .now .copy { color:var(--t3); }
+
+  /* ПРЕДЛАГАЮ: одна сетка на всю ленту — столбцы совпадают у всех строк */
+  .grid { display:grid; grid-template-columns: 30px 28px minmax(220px,1fr) 250px 62px 120px 150px 84px 40px; }
+  .grid > div { padding:7px 6px; border-bottom:1px solid #f0ece3; display:flex; align-items:center; min-width:0; }
+  .grid .head { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--t3); border-bottom:1px solid var(--bd); background:#fbfaf7; }
+  .grid .t { font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+  .grid .first { cursor:copy; }
+  .grid .first:hover .ico { border-color:var(--acc); }
+  .unread .t { font-weight:700; }
+  .r.unread > div:first-child { box-shadow: inset 3px 0 0 var(--new); }
+  .unread > div:first-child { box-shadow: inset 3px 0 0 var(--new); }
+  .readline { grid-column:1/-1; padding:4px 12px !important; font-size:11px; color:var(--t3); border-top:2px solid var(--acc) !important; background:#fffaf0; }
+  .trans { gap:4px; justify-content:center; }
+  .times { justify-content:flex-end; color:var(--t2); font:12px "IBM Plex Mono", monospace; }
+  .read { color:var(--t2); }
+
+  .who { display:inline-flex; gap:4px; align-items:center; border:1px solid var(--bd); border-radius:999px; padding:1px 8px; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .notes { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin-top:12px; }
+  .note { background:var(--bg1); border:1px solid var(--bd); border-radius:10px; padding:10px 12px; font-size:12px; color:var(--t2); }
+  .note b { color:var(--t1); }
+  .grid > .r { display:contents; }
+  .grid > .r > div { padding:7px 6px; border-bottom:1px solid #f0ece3; display:flex; align-items:center; min-width:0; }
+  /* Телефон: запись — карточка: 1-я линия тип · что · запись · время; 2-я — место · код; 3-я — было → стало · раз. */
+  @media (max-width:720px) {
+    .grid { display:block; }
+    .grid .head { display:none; }
+    .grid > .r { display:grid; grid-template-columns: 26px 24px 1fr 84px; grid-template-areas: "ico kind title time" ". . where x" ". . code trans"; column-gap:4px; padding:8px 6px; border-bottom:1px solid #f0ece3; }
+    .grid > .r > div { border:0; padding:2px; }
+    .r .first { grid-area:ico; } .r .c-kind { grid-area:kind; } .r .c-title { grid-area:title; } .r .times { grid-area:time; align-self:start; justify-content:flex-end; }
+    .r .c-where { grid-area:where; font-size:11px; color:var(--t3); } .r .c-code { grid-area:code; justify-content:flex-start; min-width:0; }
+    .grid > .r > .c-who { display:none; } .r .c-trans { grid-area:trans; justify-content:flex-end; } .r .c-x { grid-area:x; justify-content:flex-end; }
+    .r .t { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    .code { max-width:100%; }
+    .readline { display:block; }
+    .now .row { flex-wrap:wrap; white-space:normal; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Строка ленты по столбцам</h1>
+  <p class="lead">[[task:SPRINT_UXR_S13_KIT4/K4-NEWS-ROW-COLUMNS]] · записи — с твоего скрина (группа miniLORE). Сверху как сейчас, снизу — предложение.</p>
+
+  <h2>Сейчас</h2>
+  <div class="box now">
+    <div class="row"><span class="ico">📖</span><span class="pill">🛰 релиз</span><span class="title">f1.12.81.16</span><span class="new">НОВОЕ</span><span class="code">AIDA/miniLORE#f1.12.81.16</span><span class="copy">⧉</span><span class="muted">без времени</span><span>miniLORE</span></div>
+    <div class="row"><span class="ico">🛠</span><span class="pill">✎ изменено</span><span class="title">PL-MOBILE-LETTER-UNIFY-1911</span><span class="new">НОВОЕ</span><span class="code">SPRINT_MINILORE_POLISH/PL-MOBILE-LETTER-UNIFY-1911</span><span class="copy">⧉</span><span class="mono">18:24</span><span class="muted mono">17:24 UTC</span><span>miniLORE SPRINT_MINILORE_POLISH</span><span class="mono">lore-mcp-full</span><span class="st">◎</span>→<span class="st">◎</span><span>×5</span></div>
+    <div class="row"><span class="ico">🛠</span><span class="pill">🌱 появилось</span><span class="title">Приложение: адрес сервера в настройках, остальное — с сервера</span><span class="new">НОВОЕ</span><span class="code">SPRINT_MINILORE_POLISH/CFG-FROM-SERVER-APP</span><span class="copy">⧉</span><span class="mono">17:51</span><span class="muted mono">16:51 UTC</span><span>miniLORE SPRINT_MINILORE_POLISH</span><span class="mono">lore-mcp-full</span><span class="st">∅</span>→<span class="st">⚒</span></div>
+    <div class="row"><span class="ico">🛠</span><span class="pill">✎ изменено</span><span class="title">PL-MOBILE-TG55-PARITY</span><span class="new">НОВОЕ</span><span class="code">SPRINT_MINILORE_POLISH/PL-MOBILE-TG55-PARITY</span><span class="copy">⧉</span><span class="mono">16:44</span><span class="muted mono">15:44 UTC</span><span>miniLORE SPRINT_MINILORE_POLISH</span><span class="mono">lore-mcp-full</span><span class="st">🔎</span>→<span class="st">📶</span><span>×12</span></div>
+    <div class="row"><span class="ico">🛠</span><span class="pill">✎ статус</span><span class="title">PUSH-DIGEST</span><span class="new">НОВОЕ</span><span class="code">SPRINT_MINILORE_POLISH/PUSH-DIGEST</span><span class="copy">⧉</span><span class="mono">15:41</span><span class="muted mono">14:41 UTC</span><span>miniLORE SPRINT_MINILORE_POLISH</span><span class="mono">lore-mcp-full</span><span class="st">📶</span>→<span class="st">📶</span><span>×2</span></div>
+  </div>
+
+  <h2>Предлагаю</h2>
+  <div class="box">
+    <div class="grid">
+      <div class="head">тип</div><div class="head">что</div><div class="head">запись</div><div class="head c-code">код</div><div class="head">время</div><div class="head c-where">проект · спринт</div><div class="head c-who">кто</div><div class="head c-trans">статус</div><div class="head c-x">раз</div>
+
+      <div class="r unread"><div class="first" title="скопировать код AIDA/miniLORE#f1.12.81.16"><span class="ico">📖</span></div><div class="c-kind" title="релиз"><span class="st">🛰</span></div><div class="c-title"><span class="t">f1.12.81.16</span></div><div class="c-code"><span class="code" title="AIDA/miniLORE#f1.12.81.16">AIDA/miniLORE#f1.12.81.16</span></div><div class="times">—</div><div class="c-where">miniLORE</div><div class="c-who mono">—</div><div class="c-trans trans"><span class="muted">—</span></div><div class="c-x mono"></div></div>
+      <div class="r unread"><div class="first" title="скопировать код MINILORE_POLISH/PL-MOBILE-LETTER-UNIFY-1911"><span class="ico">🛠</span></div><div class="c-kind" title="изменено"><span class="st">✎</span></div><div class="c-title"><span class="t">PL-MOBILE-LETTER-UNIFY-1911</span></div><div class="c-code"><span class="code" title="MINILORE_POLISH/PL-MOBILE-LETTER-UNIFY-1911">MINILORE_POLISH/PL-MOBILE-LETTER-UNIFY-1911</span></div><div class="times" title="17:24 UTC">18:24</div><div class="c-where">miniLORE · POLISH</div><div class="c-who" title="учётка: lore-mcp-full · Claude Code, профиль full"><span class="who">🤖 Claude Code · full</span></div><div class="c-trans trans"><span class="st">◎</span>→<span class="st">◎</span></div><div class="c-x mono">×5</div></div>
+      <div class="r unread"><div class="first" title="скопировать код MINILORE_POLISH/CFG-FROM-SERVER-APP"><span class="ico">🛠</span></div><div class="c-kind" title="появилось"><span class="st">🌱</span></div><div class="c-title"><span class="t">Приложение: адрес сервера в настройках, остальное — с сервера</span></div><div class="c-code"><span class="code" title="MINILORE_POLISH/CFG-FROM-SERVER-APP">MINILORE_POLISH/CFG-FROM-SERVER-APP</span></div><div class="times" title="16:51 UTC">17:51</div><div class="c-where">miniLORE · POLISH</div><div class="c-who" title="учётка: lore-mcp-full · Claude Code, профиль full"><span class="who">🤖 Claude Code · full</span></div><div class="c-trans trans"><span class="st">∅</span>→<span class="st">⚒</span></div><div class="c-x mono"></div></div>
+      <div class="r unread"><div class="first" title="скопировать код MINILORE_POLISH/PL-MOBILE-TG55-PARITY"><span class="ico">🛠</span></div><div class="c-kind" title="изменено"><span class="st">✎</span></div><div class="c-title"><span class="t">PL-MOBILE-TG55-PARITY</span></div><div class="c-code"><span class="code" title="MINILORE_POLISH/PL-MOBILE-TG55-PARITY">MINILORE_POLISH/PL-MOBILE-TG55-PARITY</span></div><div class="times" title="15:44 UTC">16:44</div><div class="c-where">miniLORE · POLISH</div><div class="c-who" title="учётка: lore-mcp-full · Claude Code, профиль full"><span class="who">🤖 Claude Code · full</span></div><div class="c-trans trans"><span class="st">🔎</span>→<span class="st">📶</span></div><div class="c-x mono">×12</div></div>
+      <div class="readline">дальше — прочитанное</div>
+      <div class="r read"><div class="first" title="скопировать код MINILORE_POLISH/PUSH-DIGEST"><span class="ico">🛠</span></div><div class="c-kind" title="статус"><span class="st">✎</span></div><div class="c-title"><span class="t">PUSH-DIGEST</span></div><div class="c-code"><span class="code" title="MINILORE_POLISH/PUSH-DIGEST">MINILORE_POLISH/PUSH-DIGEST</span></div><div class="times" title="14:41 UTC">15:41</div><div class="c-where">miniLORE · POLISH</div><div class="c-who" title="учётка: lore-mcp-full · Claude Code, профиль full"><span class="who">🤖 Claude Code · full</span></div><div class="c-trans trans"><span class="st">📶</span>→<span class="st">📶</span></div><div class="c-x mono">×2</div></div>
+      <div class="r read"><div class="first" title="скопировать код MINILORE_TG_LOOK/TG-60"><span class="ico">🛠</span></div><div class="c-kind" title="изменено"><span class="st">✎</span></div><div class="c-title"><span class="t">TG-60</span></div><div class="c-code"><span class="code" title="MINILORE_TG_LOOK/TG-60">MINILORE_TG_LOOK/TG-60</span></div><div class="times" title="15:39 UTC">16:39</div><div class="c-where">miniLORE · TG_LOOK</div><div class="c-who" title="учётка: lore-mcp-full · Claude Code, профиль full"><span class="who">🤖 Claude Code · full</span></div><div class="c-trans trans"><span class="st">📶</span>→<span class="st">📶</span></div><div class="c-x mono">×4</div></div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><b>Столбцы.</b> Одна сетка на всю ленту — у всех строк тип, заголовок, код, время, место, автор, статус и «раз» стоят на одних вертикалях. Длинное режется многоточием, полностью — в подсказке.</div>
+    <div class="note"><b>Копия.</b> Кнопки ⧉ нет. Щелчок по первой иконке копирует код записи, подсказка «скопировать код …».</div>
+    <div class="note"><b>Вид события.</b> Только значок (релиз · изменено · появилось · статус); слово — в подсказке.</div>
+    <div class="note"><b>Новое.</b> «НОВОЕ» не пишется на строке. Непрочитанное — сверху, жирным и с отметкой слева; затем одна линия «дальше — прочитанное».</div>
+    <div class="note"><b>Статус.</b> Переход «было → стало» — свой столбец, стрелки на одной вертикали; «×N» — отдельный узкий столбец, у строки без повторов он пустой.</div>
+    <div class="note"><b>Кто.</b> Агент — по-человечески: значок и имя агента с профилем («Claude Code · full», «Kimi · full»), учётка (lore-mcp-full) — в подсказке; человек — имя и аватар.</div>
+    <div class="note"><b>Время.</b> Местное время; UTC — в подсказке, а не отдельным столбцом. «Без времени» — прочерк.</div>
+    <div class="note"><b>Код.</b> Без префикса SPRINT_ (место уже есть в столбце «проект · спринт») — полностью в подсказке.</div>
+    <div class="note"><b>Телефон.</b> Запись — карточка: сверху тип, что, заголовок (до двух строк) и время; ниже место и «раз»; затем код и «было → стало». Правый столбец одной ширины у всех карточек — время, «раз» и статус на одной вертикали. Автор — в карточке записи.</div>
+  </div>
+</div>
+</body>
+</html>

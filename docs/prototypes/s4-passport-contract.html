@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Паспорт записи LORE v2 — живой макет, функции, контракт объекта</title>
+<style>
+/* Токены — :root kit/src/styles/seidr.css (тёмная amber-forest). Цвета и шрифты — как в v1 (S4-25). */
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bd:#42382a;--bdh:#5a4c38;--t1:#ede5d0;--t2:#a6997f;--t3:#7a6f5c;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--dng:#cf6c5e;--inf:#88b8a8;
+--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px;
+--font:Manrope,system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--display:Unbounded,var(--font)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--font);font-size:var(--fs-base);line-height:1.45}
+main{max-width:1240px;margin:0 auto;padding:16px}
+h1.page{font-family:var(--display);font-weight:800;font-size:var(--fs-xl);margin:0 0 4px}
+h2{font-family:var(--display);font-weight:800;font-size:var(--fs-lg);margin:26px 0 8px}
+.lead{color:var(--t2);margin:0 0 12px}
+code,.mono{font-family:var(--mono)}
+/* ---------- макет паспорта ---------- */
+.pp{position:relative;border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);overflow:hidden}
+.n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:var(--r-pill);background:var(--acc);color:var(--bg0);font:700 var(--fs-2xs)/1 var(--mono);vertical-align:middle;margin-right:4px}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--bd)}
+.crumb{color:var(--acc);text-decoration:underline}.crumb .ctx{color:var(--t2);text-decoration:none}
+.sp{flex:1}
+.btn{display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:0 10px;border:1px solid var(--bd);border-radius:var(--r-pill);background:var(--bg2);color:var(--t1);font-size:var(--fs-sm)}
+.btn.pri{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,transparent);font-weight:700}
+.dirty{color:var(--wrn);font-size:var(--fs-sm)}
+.cols{display:grid;grid-template-columns:1fr 300px}
+.mainc{padding:14px 18px}
+.over{margin:0;color:var(--t2);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em}
+.title{margin:4px 0;font-family:var(--display);font-weight:800;font-size:var(--fs-xl)}
+.srow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;font-size:var(--fs-sm)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 9px;border:1px solid var(--c,var(--bd));border-radius:var(--r-pill);color:var(--c,var(--t2));font-size:var(--fs-xs);font-weight:700}
+.fact{color:var(--t2)}.fact.ok{color:var(--suc)}.fact.bad{color:var(--dng)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin:6px 0 10px;flex-wrap:wrap}
+.tabs span{padding:6px 12px;border-bottom:2px solid transparent;color:var(--t2);font-size:var(--fs-sm)}.tabs .on{border-bottom-color:var(--acc);color:var(--t1)}
+.tabs .cnt{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3);margin-left:4px}
+.body p{margin:0 0 8px;color:var(--t1)}.body .hint{color:var(--t3);font-size:var(--fs-xs)}
+.embed{border:1px dashed var(--bd);border-radius:var(--r-md);padding:8px;color:var(--t2);font-size:var(--fs-xs);margin:8px 0}
+.aside{border-left:1px solid var(--bd);padding:12px 14px;background:color-mix(in srgb,var(--bg0) 40%,var(--bg1))}
+.aside h3{margin:12px 0 6px;color:var(--t3);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between}
+.aside h3:first-child{margin-top:0}.aside h3 a{color:var(--acc);text-transform:none;letter-spacing:0}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:4px 8px;font-size:var(--fs-sm)}.kv dt{color:var(--t3)}.kv dd{margin:0}
+.ref{color:var(--acc)}
+.mini{height:90px;border:1px solid var(--bd);border-radius:var(--r-md);display:grid;place-items:center;color:var(--t3);font-size:var(--fs-xs)}
+.src{list-style:none;margin:0;padding:0;font-size:var(--fs-xs)}.src li{margin:2px 0}.src .ok{color:var(--suc)}.src .no{color:var(--dng)}.src .tr{color:var(--wrn)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:var(--r-pill);overflow:hidden;font-size:var(--fs-xs)}.seg span{padding:2px 8px}.seg .on{background:color-mix(in srgb,var(--acc) 18%,transparent)}
+/* ---------- описание ---------- */
+table.f{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+table.f th{text-align:left;color:var(--t3);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;padding:6px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg0)}
+table.f td{padding:7px 6px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top}
+table.f td:first-child{white-space:nowrap}
+.tag{display:inline-block;padding:0 6px;border:1px solid var(--bd);border-radius:var(--r-pill);font-size:var(--fs-2xs);color:var(--t2)}
+.tag.have{border-color:var(--suc);color:var(--suc)}.tag.new{border-color:var(--wrn);color:var(--wrn)}.tag.api{border-color:var(--inf);color:var(--inf)}
+pre{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r-md);padding:10px;overflow:auto;font:var(--fs-xs)/1.5 var(--mono);color:var(--t2)}
+.box{border:1px solid var(--bd);border-radius:var(--r-lg);padding:10px 14px;background:var(--bg1);margin:8px 0}
+ul{margin:4px 0;padding-left:18px}
+@media (max-width:900px){.cols{grid-template-columns:1fr}.aside{border-left:0;border-top:1px solid var(--bd)}}
+</style></head><body><main>
+<h1 class="page">Паспорт записи LORE v2 — анатомия, функции и контракт объекта</h1>
+<p class="lead">Черновик для согласования (08.11.2026, редакция 2 — живой макет с режимами; контракт отправлен на согласование сессии бэкенда; SPRINT_UXR_S4_UI_SHELL_LISTS/S4-24, S4-28…S4-30). Раскладка — по прототипу v4 (скрин паспорта спеки), формы и иконки — из v1. Где встраивать (справа / снизу / на всю страницу) — второй вопрос: паспорт один и тот же.
+Метки: <span class="tag have">есть в kit</span> <span class="tag new">сделать в kit</span> <span class="tag api">нужно от API</span>.</p>
+
+<h2>1в. Решение владелицы: раскладка зависит от того, где открыт паспорт</h2>
+<p class="lead">Правило (08.11): <b>большой блок</b> — вкладки с тем, без чего изменения не сохранить (текст, свойства, обязательные поля). <b>Узкая колонка слева</b> — только дополнительное, вычисляемое: связи, граф, журнал, история, Völva, состояние данных. Когда паспорт открыт <b>панелью справа</b> и места мало — левой колонки нет: всё уходит во вкладки основного блока.</p>
+<div class="ctlbar" role="group" aria-label="Где открыт паспорт">
+  <span class="ctl-l">Где открыт:</span>
+  <button data-place="right" aria-pressed="false">панелью справа</button>
+  <button data-place="bottom" aria-pressed="true">снизу</button>
+  <button data-place="full" aria-pressed="false">на весь экран</button>
+  <span class="ctl-l">Режим:</span>
+  <button data-vm="read" aria-pressed="true">чтение</button>
+  <button data-vm="create" aria-pressed="false">создание</button>
+</div>
+<div class="modeinfo" id="vinfo"></div>
+<div class="vstage" id="vstage"></div>
+<style>
+.vstage{position:relative;height:620px;border:1px solid var(--bd);border-radius:var(--r-lg);overflow:hidden;background:var(--bg0)}
+.vlist{padding:10px 14px;color:var(--t2)}
+.vlist .row{height:40px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);display:flex;align-items:center;gap:8px}
+.vp{position:absolute;display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--bd);box-shadow:0 10px 30px color-mix(in srgb,#000 45%,transparent)}
+.vp.right{top:0;right:0;bottom:0;width:440px;border-width:0 0 0 1px}
+.vp.bottom{left:0;right:0;bottom:0;height:64%;border-width:1px 0 0}
+.vp.full{inset:0;border:0}
+.vp .vtop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--bd)}
+.vp .vbody{flex:1;display:grid;grid-template-columns:240px 1fr;min-height:0}
+.vp.right .vbody{grid-template-columns:1fr}
+.vside{border-right:1px solid var(--bd);padding:10px 12px;overflow:auto;background:color-mix(in srgb,var(--bg0) 40%,var(--bg1))}
+.vp.right .vside{display:none}
+.vmain{padding:10px 16px;overflow:auto}
+.vmain .tabs{margin-top:8px}
+.vprops{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px;margin:6px 0;padding:8px 10px;border:1px solid var(--bd);border-radius:var(--r-md)}
+.vprops dt{color:var(--t3);font-size:var(--fs-xs)}.vprops dd{margin:0}
+.vprops .rq dt::after{content:' · обязательно';color:var(--dng)}
+.vprops .rq.empty dd{color:var(--t3);border-bottom:1px dashed var(--dng)}
+.sideh{margin:10px 0 4px;color:var(--t3);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em}.sideh:first-child{margin-top:0}
+.vt.an{color:var(--inf)}
+</style>
+<script>
+(function(){
+  const st = { place: 'bottom', mode: 'read' };
+  const INFO = {
+    right: '<b>Панелью справа</b> (узко, список виден слева). Левой колонки нет — места мало. Всё во вкладках основного блока: сначала то, что правится и без чего не сохранить (<b>Текст</b>, <b>Свойства</b>, у спринта <b>Задачи</b>), затем вычисляемое — <span class="vt an">Связи · Граф · Журнал · История · Völva</span> (цветом «аналитика», только чтение).',
+    bottom: '<b>Снизу</b> (широко). Большой блок справа — вкладки того, без чего изменения не сохранить: <b>Текст</b>, <b>Свойства</b>, <b>Задачи</b>. Узкая колонка слева — дополнительное вычисляемое: связи, мини-граф, Völva, состояние данных; вкладками основного блока они не дублируются.',
+    full: '<b>На весь экран</b> — как «снизу», только выше: большой блок справа с вкладками записи, слева колонка аналитики. Журнал и история — тоже в левой колонке (свёрнутыми списками) или по «открыть».',
+  };
+  const RECORD_TABS = ['Текст', 'Свойства', 'Задачи<span class="cnt">5</span>'];
+  const AN_TABS = ['Связи<span class="cnt">4</span>', 'Граф<span class="cnt">1</span>', 'Журнал<span class="cnt">7</span>', 'История<span class="cnt">3</span>', 'Völva'];
+  function draw() {
+    const create = st.mode === 'create';
+    const narrow = st.place === 'right';
+    const tabs = [...RECORD_TABS.map((t, i) => '<span class="' + (i === 0 ? 'on' : '') + '">' + t + '</span>'),
+      ...(narrow && !create ? AN_TABS.map(t => '<span class="vt an">' + t + '</span>') : [])].join('');
+    const props = create
+      ? '<dl class="vprops"><div class="rq empty"><dt>ID спеки</dt><dd>SPEC-…</dd></div><div class="rq empty"><dt>Проект</dt><dd>выберите…</dd></div><div><dt>Статус</dt><dd>предложено ▾</dd></div><div><dt>Компоненты</dt><dd>+ добавить</dd></div></dl>'
+      : '<dl class="vprops"><div class="rq"><dt>ID</dt><dd class="mono">SPEC-DW-HY3D-UNITS</dd></div><div class="rq"><dt>Проект</dt><dd class="ref">Datawanderers-Unity</dd></div><div><dt>Компоненты</dt><dd>—</dd></div><div><dt>Владелец</dt><dd>omiloreadmin</dd></div><div><dt>Версия</dt><dd class="mono">v8</dd></div></dl>';
+    const side = create
+      ? '<p class="sideh">Вокруг записи</p><p class="hint">Связи, граф и аналитика появятся после сохранения — новой записи ещё нет в графе.</p>'
+      : '<p class="sideh">Связи · 4</p><ul class="src" style="font-size:var(--fs-sm)"><li>→ реализует <span class="ref">UC-DW-UNITS</span></li><li>← упомянута в <span class="ref">ADR-DW-005</span></li><li>← задачи <span class="ref">T-01…T-05</span></li></ul>'
+        + '<p class="sideh">Граф · 1 прямых</p><div class="mini">мини-граф · открыть</div>'
+        + '<p class="sideh">Völva</p><div class="mini">0 строк — проверенный ноль</div>'
+        + '<p class="sideh">Журнал · 7 · История · 3</p><p class="hint">последнее: статус → предложено, 2 дн назад</p>'
+        + '<p class="sideh">Состояние данных</p><ul class="src"><li class="ok">✓ текст из прода</li><li class="no">⚠ PR: 403</li></ul>';
+    document.getElementById('vstage').innerHTML =
+      '<div class="vlist"><b style="color:var(--t1)">Спеки</b>' + ['SPEC-DW-HY3D-UNITS', 'SPEC-KC-001', 'SPEC-LORE-UXR-ICONS', 'SPEC-QG-ARCHITECTURE'].map(x => '<div class="row"><span class="mono">' + x + '</span></div>').join('') + '</div>'
+      + '<section class="vp ' + st.place + '"><div class="vtop"><span class="crumb">← Спеки</span><span class="mono" style="color:var(--t2)">/ ' + (create ? 'новая' : 'SPEC-DW-HY3D-UNITS') + '</span><span class="sp"></span>'
+      + (create ? '<span class="dirty">черновик</span><span class="btn pri dis">Сохранить</span>' : '<span class="btn">‹</span><span class="mono" style="color:var(--t2)">1 из 4</span><span class="btn">›</span>')
+      + '<span class="btn">' + (st.place === 'full' ? '⤡' : '⤢') + '</span><span class="btn">✕</span></div>'
+      + '<div class="vbody"><aside class="vside">' + side + '</aside><div class="vmain">'
+      + '<p class="over">Спека · ' + (create ? 'новая запись' : 'SPEC-DW-HY3D-UNITS') + '</p>'
+      + (create ? '<input class="titlein req" placeholder="Название — обязательно">' : '<div class="title" style="font-size:var(--fs-lg)">Конвейер 3D-юнитов учёных: картинка → Hunyuan3D → … → FBX</div>')
+      + '<div class="srow"><span class="chip" style="--c:var(--acc)">◇ предложено ▾</span>' + (create ? '<span class="reqmsg">Сохранить: нужны название, ID и проект</span>' : '<span class="fact ok">блокеров нет</span><span class="fact">· задачи 3/5 · получено 6 мин назад ↻</span>') + '</div>'
+      + props
+      + '<div class="tabs">' + tabs + '</div>'
+      + '<div class="body"><p>' + (create ? '<span class="hint">Текст спеки — что, зачем, как проверить…</span>' : 'Конвейер собирает юнит учёного из одной картинки…') + '</p></div>'
+      + '</div></div></section>';
+    document.getElementById('vinfo').innerHTML = INFO[st.place] + (create ? ' <b>Создание:</b> обязательные свойства — в основном блоке первыми, «Сохранить» неактивно с причиной; аналитики у новой записи ещё нет.' : '');
+    document.querySelectorAll('[data-place]').forEach(b => b.setAttribute('aria-pressed', b.dataset.place === st.place));
+    document.querySelectorAll('[data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === st.mode));
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.place) { st.place = b.dataset.place; draw(); }
+    if (b.dataset.vm) { st.mode = b.dataset.vm; draw(); }
+  });
+  draw();
+})();
+</script>
+
+<h2>1. Вариант А — живой макет (как в прототипе v4)</h2>
+<p class="lead">Переключайте режим — паспорт меняется так, как будет в v2. Щёлкните любой номер <span class="n">1</span> — справа от макета появится объяснение: что это, откуда данные, что уже есть в kit. Место паспорта (справа / снизу / на всю страницу) — второй вопрос, здесь паспорт на всю ширину.</p>
+<div class="ctlbar" role="group" aria-label="Режим паспорта">
+  <span class="ctl-l">Режим:</span>
+  <button data-mode="read" aria-pressed="true">Чтение</button>
+  <button data-mode="edit" aria-pressed="false">Правка на месте</button>
+  <button data-mode="create" aria-pressed="false">Создание («+ Создать»)</button>
+  <button data-mode="conflict" aria-pressed="false">Конфликт версий (409)</button>
+  <button data-mode="partial" aria-pressed="false">Часть данных не загрузилась</button>
+  <button data-mode="readonly" aria-pressed="false">Нет права править</button>
+  <span class="ctl-l">Колонка «Свойства»:</span>
+  <button data-aside="open" aria-pressed="true">открыта</button>
+  <button data-aside="closed" aria-pressed="false">свёрнута</button>
+</div>
+<div class="modeinfo" id="modeinfo"></div>
+<div class="ppwrap">
+<div class="pp" id="pp" data-mode="read" data-aside="open" aria-label="Макет паспорта">
+  <div class="top">
+    <button class="n" data-x="1">1</button><span class="crumb">← Спеки <span class="ctx">· Категория: wip</span></span><span class="mono" style="color:var(--t2)">/ <span class="m-id">SPEC-DW-HY3D-UNITS</span><span class="m-new">новая</span></span>
+    <span class="sp"></span>
+    <span class="m-dirty"><button class="n" data-x="2">2</button><span class="dirty">● не сохранено</span><span class="btn">Отменить</span><span class="btn pri">Сохранить</span></span>
+    <span class="m-createbar"><button class="n" data-x="2">2</button><span class="dirty">черновик</span><span class="btn">Отменить</span><span class="btn pri dis" title="Нужно: ID и название">Сохранить</span></span>
+    <span class="m-pager"><button class="n" data-x="3">3</button><span class="btn">‹</span><span class="mono" style="color:var(--t2)">1 из 2</span><span class="btn">›</span></span>
+    <button class="n" data-x="4">4</button><span class="btn">Aa</span><span class="btn tog-aside">Свойства</span><span class="btn">☰ меню</span><span class="btn">⤢</span>
+  </div>
+  <div class="conflict m-conflict"><button class="n" data-x="2">2</button><b>Запись уже изменили (v9, omiloreadmin, 3 мин назад).</b> Ваши правки не потеряны.
+    <span class="btn">Сравнить</span><span class="btn">Взять их версию</span><span class="btn pri">Сохранить слитое (станет v10)</span></div>
+  <div class="cols">
+    <div class="mainc">
+      <p class="over"><button class="n" data-x="5">5</button>Спека · <span class="m-id">SPEC-DW-HY3D-UNITS</span><span class="m-new">новая запись</span></p>
+      <div class="title m-view"><button class="n" data-x="6">6</button>Конвейер 3D-юнитов учёных: картинка → Hunyuan3D → X-Part → покраска → скелет → FBX</div>
+      <div class="m-editt"><button class="n" data-x="6">6</button><input class="titlein" value="Конвейер 3D-юнитов учёных: картинка → Hunyuan3D → X-Part → покраска → скелет → FBX" aria-label="Название"></div>
+      <div class="m-newt"><button class="n" data-x="6">6</button><input class="titlein req" placeholder="Название — обязательно" aria-label="Название"><span class="reqmsg">обязательно</span></div>
+      <div class="srow"><button class="n" data-x="7">7</button><span class="chip" style="--c:var(--acc)">◇ предложено ▾</span>
+        <span class="m-facts"><button class="n" data-x="8">8</button><span class="fact ok">блокеров и просрочек нет</span><span class="fact">· задачи 3/5</span><span class="fact">· срок через 4 дн</span><span class="fact">· правили 2 дн назад</span>
+        <button class="n" data-x="9">9</button><span class="fact">получено 6 мин назад</span><span class="btn">↻</span></span>
+        <span class="m-newfacts fact">факты появятся после сохранения</span></div>
+      <div class="tabs"><button class="n" data-x="10">10</button><span class="on">Контент</span><span>Задачи<span class="cnt">5</span></span><span>Связи<span class="cnt">4</span></span><span class="m-old">Граф<span class="cnt">1</span></span><span class="m-old">Журнал<span class="cnt">7</span></span><span class="m-old">История<span class="cnt">3</span></span><span class="m-old">Аналитика · Völva</span></div>
+      <div class="body"><button class="n" data-x="11">11</button>
+        <div class="m-view"><p>Конвейер собирает юнит учёного из одной картинки: генерация меша, разбиение на части, покраска, лёгкие части, скелет и анимации.</p>
+          <p class="hint m-canedit">Клик по абзацу или ✎ — правка на месте · у схем, таблиц и запросов — «код / превью / рядом» · «Режим исходника»</p>
+          <p class="hint m-ro">Только чтение: у вашей роли нет права править эту запись (reason от сервера). ✎ не показывается.</p></div>
+        <div class="m-editb"><div class="tb">B · I · • · ⧉ · mermaid · lore-query</div><div class="ed">Конвейер собирает юнит учёного из одной картинки: <u>генерация меша</u>, разбиение на части…|</div></div>
+        <div class="m-newb"><div class="tb">B · I · • · ⧉ · mermaid · lore-query</div><div class="ed ph">Текст спеки — что, зачем, как проверить…</div></div>
+        <div class="embed m-old"><button class="n" data-x="12">12</button>lore-query: <code>specs | where component = $this.component | group by status</code> → таблица прямо в тексте</div>
+      </div>
+    </div>
+    <aside class="aside"><button class="n" data-x="13">13</button>
+      <h3>Свойства <a class="tog-aside">» свернуть</a></h3>
+      <dl class="kv m-view"><dt>Статус</dt><dd><span class="chip" style="--c:var(--acc)">предложено</span></dd><dt>Проекты</dt><dd class="ref">Datawanderers-Unity</dd><dt>Компоненты</dt><dd>—</dd><dt>Владелец</dt><dd>omiloreadmin</dd><dt>Версия</dt><dd class="mono">v8</dd></dl>
+      <div class="m-editp">
+        <label class="pl">ID спеки <span class="req2">· обязательно</span></label><div class="in m-newonly">SPEC-…</div><div class="in m-oldonly mono">SPEC-DW-HY3D-UNITS <span class="lock">не меняется</span></div>
+        <label class="pl">Статус</label><div class="in">предложено ▾ <span class="lock">только разрешённые переходы</span></div>
+        <label class="pl">Проекты</label><div class="in">Datawanderers-Unity ✕ · + добавить (подсказки)</div>
+        <label class="pl">Компоненты</label><div class="in">+ добавить (подсказки)</div>
+      </div>
+      <h3 class="m-old"><span><button class="n" data-x="14">14</button>Граф · 1 прямых</span><a>открыть</a></h3><div class="mini m-old">мини-граф соседей</div>
+      <h3 class="m-old"><span><button class="n" data-x="15">15</button>Аналитика · Völva</span><a>открыть</a></h3><div class="mini m-old">вопрос Völva: 0 строк — проверенный ноль</div>
+      <h3 class="m-old"><span><button class="n" data-x="16">16</button>Состояние данных</span></h3>
+      <ul class="src m-old"><li class="ok">✓ текст из прода</li><li class="ok">✓ связи (4)</li><li class="no">⚠ PR: не смогли проверить (403)</li><li class="tr">◐ история: показаны 50 из 120</li><li class="no m-partialonly">⚠ задачи: сбой загрузки (502) — «задачи ?», а не 0</li></ul>
+      <h3><button class="n" data-x="17">17</button>Настройка</h3><div>Колонка по умолчанию: <span class="seg"><span class="on">открыта</span><span>свёрнута</span></span></div>
+    </aside>
+    <button class="ear tog-aside" aria-label="Свойства">Свойства ‹</button>
+  </div>
+</div>
+<aside class="explain" id="explain" aria-live="polite"><p class="hint">Щёлкните номер на макете.</p></aside>
+</div>
+
+<h2>1б. Вариант Б — две зоны: «Запись» и «Вокруг записи»</h2>
+<p class="lead">Проблема варианта А: во вкладках и в колонке смешаны две разные вещи. <b>Запись</b> — то, что человек пишет и правит: заголовок, статус, свойства, текст. <b>Вокруг записи</b> — то, что LORE вычисляет сам: связи, граф, журнал, история, аналитика; их здесь не правят. В варианте Б это две зоны с разным поведением.</p>
+<div class="pp" style="margin-bottom:10px">
+  <div class="top"><span class="crumb">← Спеки <span class="ctx">· Категория: wip</span></span><span class="mono" style="color:var(--t2)">/ SPEC-DW-HY3D-UNITS</span><span class="sp"></span><span class="btn">‹</span><span class="mono" style="color:var(--t2)">1 из 2</span><span class="btn">›</span><span class="btn">Aa</span><span class="btn">⤢</span></div>
+  <div class="cols" style="grid-template-columns:1fr 340px">
+    <div class="mainc">
+      <p class="zone">ЗАПИСЬ · правится здесь <span class="zhint">✎ — щелчок по любому месту; «● не сохранено · Сохранить» появится сверху</span></p>
+      <p class="over">Спека · SPEC-DW-HY3D-UNITS</p>
+      <div class="title">Конвейер 3D-юнитов учёных: картинка → Hunyuan3D → X-Part → покраска → скелет → FBX</div>
+      <div class="srow"><span class="chip" style="--c:var(--acc)">◇ предложено ▾</span><span class="fact ok">блокеров и просрочек нет</span><span class="fact">· задачи 3/5 · срок через 4 дн</span><span class="fact">· получено 6 мин назад ↻</span></div>
+      <dl class="props"><div><dt>Проекты</dt><dd class="ref">Datawanderers-Unity</dd></div><div><dt>Компоненты</dt><dd>—</dd></div><div><dt>Приоритет</dt><dd>—</dd></div><div><dt>Владелец</dt><dd>omiloreadmin</dd></div><div><dt>Версия</dt><dd class="mono">v8</dd></div></dl>
+      <div class="tabs"><span class="on">Текст</span><span>Задачи<span class="cnt">5</span></span></div>
+      <div class="body"><p>Конвейер собирает юнит учёного из одной картинки: генерация меша, разбиение на части, покраска, лёгкие части, скелет и анимации.</p></div>
+    </div>
+    <aside class="aside">
+      <p class="zone">ВОКРУГ ЗАПИСИ · вычисляет LORE <span class="zhint">только чтение</span></p>
+      <div class="tabs" style="margin-top:0"><span class="on">Связи<span class="cnt">4</span></span><span>Граф<span class="cnt">1</span></span><span>Журнал<span class="cnt">7</span></span><span>История<span class="cnt">3</span></span><span>Völva</span></div>
+      <ul class="src" style="font-size:var(--fs-sm)"><li>→ реализует <span class="ref">UC-DW-UNITS</span></li><li>→ в проекте <span class="ref">Datawanderers-Unity</span></li><li>← упомянута в <span class="ref">ADR-DW-005</span></li><li>← задачи <span class="ref">SPRINT_DW_3D/T-01…T-05</span></li></ul>
+      <div class="mini" style="margin-top:8px">мини-граф соседей · «открыть на всю ширину»</div>
+      <h3>Состояние данных</h3><ul class="src"><li class="ok">✓ текст из прода</li><li class="no">⚠ PR: не смогли проверить (403)</li><li class="tr">◐ история: 50 из 120</li></ul>
+    </aside>
+  </div>
+</div>
+<div class="box"><b>Чем Б отличается от А</b><ul>
+<li><b>Свойства переехали к записи</b> — сеткой под заголовком, рядом со статусом. Правятся там же, где текст. Колонки «Свойства» больше нет.</li>
+<li><b>Правая зона — только вычисляемое</b>: связи, граф, журнал, история, Völva, состояние данных. Подпись «только чтение» — сразу видно, что здесь ничего не правят.</li>
+<li><b>Вкладки слева — только части самой записи</b>: «Текст» и свои вкладки типа (у спринта «Задачи»).</li>
+<li>Связь <b>правится</b> не в зоне «Вокруг», а полем свойств («Проекты», «Зависит от») — зона «Вокруг» показывает результат.</li>
+<li><b>Обязательные свойства</b> (у задачи — спринт, у спринта и ADR — ID, у связи — цель) стоят в зоне «Запись» сразу под заголовком. При создании они идут ПЕРВЫМИ, подсвечены «обязательно», и «Сохранить» неактивно, пока они пусты — с причиной текстом. Зона «Вокруг» у новой записи пуста по смыслу (её ещё нет в графе) и свёрнута. Какие поля обязательны — решает сервер (<code>schema.fields[].required</code>), а не kit.</li>
+<li>На телефоне: «Запись» сверху, «Вокруг записи» — ниже свёрнутым блоком.</li>
+<li>Контракт не меняется: <code>schema.fields</code> с <code>group: props</code> рисуются под заголовком, <code>schema.tabs</code> делятся на <code>zone: record | around</code>.</li>
+</ul></div>
+
+<h2>2. Функции — подробно</h2>
+<table class="f"><thead><tr><th>№</th><th>Элемент</th><th>Что делает</th><th>Откуда данные</th><th>Статус</th></tr></thead><tbody>
+<tr><td>1</td><td>Крошки</td><td>«← Раздел · фильтр / ID». Ведёт обратно в список <b>с тем же фильтром</b> (из адреса, откуда пришли). Контекст фильтра — текстом; на телефоне только «← ID».</td><td>адрес списка (клиент)</td><td><span class="tag have">есть: RecordCrumbs, #886</span></td></tr>
+<tr><td>2</td><td>Несохранённое</td><td>Появляется, когда что-то правят: «● не сохранено · Отменить · Сохранить». Сохранение — с версией записи; если запись успели поменять — <b>409</b> и экран слияния «взять их / сохранить слитое (станет vN+1)». Черновик живёт на сервере: перезагрузка и другое устройство его не теряют.</td><td><code>version</code>, PATCH с <code>expected_version</code>, черновик</td><td><span class="tag new">kit</span> <span class="tag api">API</span></td></tr>
+<tr><td>3</td><td>Листалка</td><td>«‹ x из y ›» по <b>отфильтрованному</b> списку, из которого пришли; клавиши <code>J/K</code> и <code>[ ]</code>. Нет списка — «вне текущего списка».</td><td>id списка (клиент)</td><td><span class="tag have">есть: RecordPager</span></td></tr>
+<tr><td>4</td><td>Инструменты</td><td><b>Aa</b> — размер текста и «сворачивать меню при чтении»; <b>Свойства</b> — открыть/закрыть колонку 13 (то же, что ушко); <b>меню</b> — свернуть левое меню; <b>⤢</b> — на всю страницу.</td><td>личные настройки (S2)</td><td><span class="tag have">есть</span> (⤢ — <span class="tag new">kit</span>)</td></tr>
+<tr><td>5</td><td>Надзаголовок</td><td>«Тип · ID» текстом. ID копируется щелчком.</td><td><code>record.type</code>, <code>record.id</code>, подпись типа</td><td><span class="tag have">есть: S4-29</span></td></tr>
+<tr><td>6</td><td>Заголовок</td><td>H1. В режиме правки — поле на месте (то же место, без отдельной формы).</td><td><code>values.title</code>, <code>schema</code>: editable</td><td><span class="tag have">чтение</span> <span class="tag new">правка</span></td></tr>
+<tr><td>7</td><td>Статус</td><td>Пилюля с рамкой. Касание → меню статусов (2 касания), клавиша <code>S</code>. Показываются <b>только разрешённые переходы</b>; завершающие — третьим шагом с подтверждением; отказ — откат и причина.</td><td><code>record.status</code>, словарь статусов, <code>perms.status_next[]</code></td><td><span class="tag have">StatusChip</span> <span class="tag api">переходы</span></td></tr>
+<tr><td>8</td><td>Факты</td><td>Вердикт одной фразой («блокеров и просрочек нет» / «2 блокера») · задачи x/y (кнопка → вкладка «Задачи») · срок / просрочка · свежесть правки. Ошибка подсчёта — «не посчитано», а не 0.</td><td><code>facts</code></td><td><span class="tag have">RecordFacts</span> <span class="tag api">вердикт с сервера</span></td></tr>
+<tr><td>9</td><td>«Получено N мин ↻»</td><td>Когда экран получил данные (не дата правки!). ↻ перезапрашивает.</td><td><code>meta.loaded_at</code></td><td><span class="tag have">есть: S4-29</span></td></tr>
+<tr><td>10</td><td>Вкладки</td><td>Подчёркиванием, со счётчиками. Набор — по типу записи: Контент · свои вкладки типа (у спринта «Задачи») · Связи · Граф · Журнал · История · Аналитика·Völva. Вкладка — в адресе.</td><td><code>schema.tabs[]</code> + счётчики</td><td><span class="tag have">есть</span> <span class="tag api">набор и счётчики</span></td></tr>
+<tr><td>11</td><td>Контент</td><td>MD-тело (MartProse): mermaid, KaTeX, таблицы. Правка на месте — TipTap: щелчок по абзацу или ✎, «режим исходника». Пустое — «Текста нет» + ✎, а не тупик.</td><td><code>values.body_md</code></td><td><span class="tag have">есть: S5-06</span></td></tr>
+<tr><td>12</td><td>Встроенные блоки</td><td><code>lore-query</code> и <code>lore-graph</code> в тексте: живая таблица/граф по запросу, «код / превью / рядом».</td><td>Völva / слайсы</td><td><span class="tag new">SPEC-LORE-UXR-EMBED-BLOCKS</span></td></tr>
+<tr><td>13</td><td>Свойства</td><td>Поля записи <b>из схемы типа</b> — не зашиты в kit: подпись, тип (текст, MD, перечень, ссылка, дата, число), обязательность, можно ли править. Ссылки — кликабельные. В режиме правки — те же места становятся полями.</td><td><code>schema.fields[]</code> + <code>values</code></td><td><span class="tag have">поля из конфига</span> <span class="tag api">схема с сервера</span></td></tr>
+<tr><td>14</td><td>Мини-граф</td><td>«Граф · N прямых», соседи записи; «открыть» → вкладка «Граф».</td><td><code>links</code></td><td><span class="tag have">RecordGraph</span> <span class="tag new">мини</span></td></tr>
+<tr><td>15</td><td>Völva</td><td>Аналитический вопрос по записи; «проверенный ноль» ≠ «пусто».</td><td>Völva (SPRINT_VIZ_EMBED/VE-2)</td><td><span class="tag new">слот</span></td></tr>
+<tr><td>16</td><td>Состояние данных</td><td>По каждому источнику паспорта: проверено / не смогли проверить (с кодом и причиной) / обрезано (N из M). «Не смогли» ≠ «пусто».</td><td><code>meta.sources[]</code></td><td><span class="tag new">kit</span> <span class="tag api">API</span></td></tr>
+<tr><td>17</td><td>Настройка колонки</td><td>Колонка по умолчанию открыта / свёрнута — личная настройка; адрес сильнее настройки.</td><td>S2 settings: <code>right_column</code></td><td><span class="tag new">kit</span></td></tr>
+<tr><td>—</td><td>Создание</td><td>«+ Создать» = этот же паспорт, пустой, сразу в правке. Обязательные поля подсвечены на своих местах; «Сохранить» неактивно с причиной. Нет права создавать — нет кнопки. После сохранения — обычный паспорт новой записи.</td><td><code>GET …/_new</code>, <code>POST</code></td><td><span class="tag new">kit</span> <span class="tag api">API</span></td></tr>
+<tr><td>—</td><td>Клавиатура</td><td><code>J/K</code> листать, <code>S</code> статус, <code>E</code> правка, <code>Esc</code> выйти из правки (спросит «отбросить?»), <code>Ctrl K</code> — команды над записью.</td><td>—</td><td><span class="tag have">частично</span></td></tr>
+<tr><td>—</td><td>Честные состояния</td><td>Нет прав — Forbidden с причиной; нет записи — «не найдена, проверено» только при полной выдаче, иначе «не проверить»; сбой блока — ошибка внутри блока с «Повторить», остальной паспорт живёт.</td><td><code>meta</code>, коды ответа</td><td><span class="tag have">есть</span></td></tr>
+</tbody></table>
+
+<h2>3. Контракт объекта паспорта — черновик для согласования</h2>
+<div class="box">Принцип: <b>один объект на любой тип записи</b>. Поля, вкладки и права приходят от сервера, kit только рисует — новый тип или новое поле не требуют правки kit. Подписи — ключами локализации и текстом, с версией (решение 30.08.2026, SPEC-LORE-FIELD-LABELS). Всё — аддитивно, v1 не задевается.</div>
+<pre>GET /lore/record/{type}/{id}            — паспорт
+GET /lore/record/{type}/_new             — пустой паспорт для создания (значения по умолчанию)
+PATCH /lore/record/{type}/{id}           — правка: { expected_version, values: {…} }
+POST  /lore/record/{type}                — создание: { values: {…} } → 201 { id, record… }
+
+200 {
+  "contract": "lore.record/1",
+  "record":  { "type": "spec", "id": "SPEC-DW-HY3D-UNITS", "title": "…", "status": "proposed",
+               "version": 8, "updated_at": "2026-11-06T…", "updated_by": "omiloreadmin" },
+  "schema":  { "type": "spec", "label_key": "lore.kind.spec", "label": "Спека", "labels_version": "2026-11-08.1",
+               "fields": [
+                 { "key": "title",      "label_key": "…", "label": "Название",   "kind": "text", "required": true,  "editable": true,  "group": "head" },
+                 { "key": "body_md",    "label_key": "…", "label": "Текст",      "kind": "md",   "required": false, "editable": true,  "group": "body" },
+                 { "key": "projects",   "label_key": "…", "label": "Проекты",    "kind": "ref",  "multi": true, "ref": { "type": "project",   "rel": "BELONGS_TO_PROJECT" }, "group": "props" },
+                 { "key": "components", "label_key": "…", "label": "Компоненты", "kind": "ref",  "multi": true, "ref": { "type": "component", "rel": "DOCUMENTED_IN", "dir": "in" }, "group": "props" },
+                 { "key": "priority",   "label_key": "…", "label": "Приоритет",  "kind": "enum", "dict": "priority", "group": "props" }
+               ],
+               "tabs": [ { "key": "content" }, { "key": "links", "count": 4 }, { "key": "graph", "count": 1 },
+                         { "key": "journal", "count": 7 }, { "key": "history", "count": 3 } ] },
+  "values":  { "title": "…", "body_md": "…", "projects": ["Datawanderers-Unity"], "components": [], "priority": null },
+  "facts":   { "verdict": { "score": 5, "max": 5, "failed": [], "hints": [], "text": "блокеров и просрочек нет" },
+               "tasks": { "done": 3, "total": 5 } | { "error": "…" }, "due": "2026-11-12" },
+  "perms":   { "can_edit": true, "can_status": true, "status_next": ["accepted","rejected"], "can_create": true, "reason": null },
+  "meta":    { "loaded_at": "2026-11-08T11:54:00Z",
+               "sources": [ { "block": "text", "state": "ok" }, { "block": "links", "state": "ok", "count": 4 },
+                            { "block": "prs", "state": "forbidden", "code": 403, "reason": "…" },
+                            { "block": "history", "state": "truncated", "shown": 50, "total": 120 } ] }
+}
+409 { "error": "VERSION_CONFLICT", "current": { …тот же объект… } }
+400 { "error": "BAD_VALUES", "fields": { "title": "обязательно" } }
+403 { "error": "FORBIDDEN", "reason": "…" }</pre>
+<div class="box"><b>Вопросы к согласованию с бэкендом</b>
+<ul>
+<li>Схема полей — из какого источника: из описания параметров MCP-инструментов (<code>sprint_new</code>, <code>adr_new</code>, <code>spec_new</code>…), из модели вершин ArcadeDB или отдельный реестр? Подписи — по SPEC-LORE-FIELD-LABELS (ключ + текст + версия).</li>
+<li>Запись — один эндпоинт на все типы или поверх существующих слайсов и MCP-инструментов (тогда <code>/lore/record</code> — фасад)?</li>
+<li><code>version</code> и 409 — общий механизм SCD2 для всех типов (как у настроек S2-09)?</li>
+<li>Разрешённые переходы статусов (<code>status_next</code>) и права (<code>can_*</code>) — считает сервер по роли и проекту.</li>
+<li><code>meta.sources</code> — честные состояния по блокам (как полнота S1).</li>
+<li>Черновик на сервере — <code>/lore/me/drafts/{type}/{id}</code> (рядом с S2 «что LORE помнит»)?</li>
+</ul></div>
+
+<h2>4. Как kit рисует объект</h2>
+<ul>
+<li><code>schema.fields</code> → поля вида (сегодня <code>KindConfig.fields</code> пишет приложение — станет приходить с сервера); <code>group</code> решает, где поле: шапка, тело, «Свойства».</li>
+<li><code>values</code> → <code>record.fields</code>; <code>facts</code> → строка фактов (8); <code>perms</code> → есть ли ✎, «+ Создать», меню статусов; <code>meta.loaded_at</code> → (9); <code>meta.sources</code> → (16).</li>
+<li>Место паспорта (справа / снизу / на всю страницу) — обёртка вокруг того же RecordReader, решается отдельно.</li>
+</ul>
+<h2>5. Согласование с сессией бэкенда (08.11, ответ 698f34c4)</h2>
+<div class="box"><ul>
+<li><b>Поля (schema.fields)</b> — из одного реестра на бэкенде (Java): тип → поля, подписи по SPEC-LORE-FIELD-LABELS. Его читают и UI, и MCP. Описания параметров MCP — нет: они в TS-пакете, бэкенд их не видит, источников стало бы два.</li>
+<li><b>Фасад /lore/record/{type}</b> — ок для чтения (собирается из существующих слайсов). <b>Запись — только через те же Java-сервисы</b>, что вызывают MCP-инструменты; мимо них ломается SCD2 и слайсы.</li>
+<li><b>version + 409</b> — сейчас есть только у /lore/me/views. У записей SCD2 проверки версии нет нигде: версия = ревизия открытой Hist-строки, проверку надо добавить в каждый путь записи. <b>Это новая работа.</b></li>
+<li><b>status_next и can_*</b> — посчитать можно (граф ролей и скоуп есть). Но служебная учётка приложения не заведена в графе ролей: «нет прав» и «не опознан» сейчас неотличимы — в reason разделять явно.</li>
+<li><b>Черновики</b> — /lore/me/drafts/{type}/{id} рядом с views/memory, с тем же expected_version.</li>
+<li><b>Решение — за владелицей, тянет на ADR</b>: реестр полей на бэкенде + фасад чтения + проверка версии во всех путях записи.</li>
+</ul></div>
+</main><style>.zone{margin:0 0 8px;color:var(--acc);font:700 var(--fs-xs)/1.2 var(--mono);letter-spacing:.06em}.zhint{color:var(--t3);font-weight:400;letter-spacing:0;margin-left:6px}.props{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px;margin:6px 0 10px;padding:8px 10px;border:1px solid var(--bd);border-radius:var(--r-md)}.props dt{color:var(--t3);font-size:var(--fs-xs)}.props dd{margin:0}</style><style>
+.ctlbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+.ctlbar .ctl-l{color:var(--t3);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
+.ctlbar button{min-height:30px;padding:0 12px;border:1px solid var(--bd);border-radius:var(--r-pill);background:var(--bg2);color:var(--t1);font:inherit;cursor:pointer}
+.ctlbar button[aria-pressed=true]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,transparent);font-weight:700}
+.modeinfo{border-left:3px solid var(--acc);padding:6px 10px;margin:0 0 10px;color:var(--t2);background:var(--bg1)}
+.modeinfo b{color:var(--t1)}
+.ppwrap{display:grid;grid-template-columns:1fr 300px;gap:12px;align-items:start}
+.explain{position:sticky;top:8px;border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);padding:12px;font-size:var(--fs-sm)}
+.explain h4{margin:0 0 6px;font-family:var(--display);font-weight:800;font-size:var(--fs-md)}
+.explain dl{margin:6px 0 0;display:grid;grid-template-columns:70px 1fr;gap:4px 8px}.explain dt{color:var(--t3)}.explain dd{margin:0}
+button.n{border:0;cursor:pointer;font:700 var(--fs-2xs)/1 var(--mono)}
+button.n.sel{outline:2px solid var(--t1);outline-offset:1px}
+.btn.dis{opacity:.5}
+.conflict{display:none;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--wrn);background:color-mix(in srgb,var(--wrn) 12%,transparent);color:var(--t1)}
+.titlein{width:100%;margin:4px 0;padding:4px 0;border:0;border-bottom:1px dashed var(--acc);background:none;color:var(--t1);font-family:var(--display);font-weight:800;font-size:var(--fs-xl)}
+.titlein.req{border-bottom-color:var(--dng)}.reqmsg,.req2{color:var(--dng);font-size:var(--fs-xs)}
+.tb{color:var(--t3);font-size:var(--fs-xs);margin-bottom:3px}
+.ed{min-height:70px;padding:8px;border:1px solid var(--acc);border-radius:var(--r-md);background:var(--bg0)}.ed.ph{border-color:var(--bd);color:var(--t3)}
+.pl{display:block;color:var(--t3);font-size:var(--fs-xs);margin-top:6px}.in{padding:4px 8px;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg0);color:var(--t2)}
+.lock{color:var(--t3);font-size:var(--fs-2xs);margin-left:6px}
+.ear{display:none;align-self:start;margin:12px 0;writing-mode:vertical-rl;padding:10px 4px;border:1px solid var(--bd);border-radius:var(--r-md) 0 0 var(--r-md);background:var(--bg2);color:var(--t2);font:inherit;cursor:pointer}
+.tog-aside{cursor:pointer}
+/* видимость по режиму */
+.m-new,.m-newt,.m-newb,.m-newfacts,.m-createbar,.m-dirty,.m-editt,.m-editb,.m-editp,.m-ro,.m-newonly,.m-partialonly{display:none}
+.pp[data-mode=edit] .m-dirty,.pp[data-mode=conflict] .m-dirty{display:inline-flex;align-items:center;gap:6px}
+.pp[data-mode=edit] .m-view,.pp[data-mode=conflict] .m-view,.pp[data-mode=create] .m-view{display:none}
+.pp[data-mode=edit] .m-editt,.pp[data-mode=conflict] .m-editt{display:block}
+.pp[data-mode=edit] .m-editb,.pp[data-mode=conflict] .m-editb{display:block}
+.pp[data-mode=edit] .m-editp,.pp[data-mode=conflict] .m-editp,.pp[data-mode=create] .m-editp{display:block}
+.pp[data-mode=conflict] .conflict{display:flex}
+.pp[data-mode=create] .m-id,.pp[data-mode=create] .m-old,.pp[data-mode=create] .m-pager,.pp[data-mode=create] .m-facts,.pp[data-mode=create] .m-oldonly{display:none}
+.pp[data-mode=create] .m-new,.pp[data-mode=create] .m-newfacts,.pp[data-mode=create] .m-newonly{display:inline}
+.pp[data-mode=create] .m-newt,.pp[data-mode=create] .m-newb{display:block}
+.pp[data-mode=create] .m-createbar{display:inline-flex;align-items:center;gap:6px}
+.pp[data-mode=create] .m-newonly{display:block}
+.pp[data-mode=readonly] .m-canedit{display:none}.pp[data-mode=readonly] .m-ro{display:block}
+.pp[data-mode=partial] .m-partialonly{display:list-item}
+.pp[data-aside=closed] .cols{grid-template-columns:1fr auto}.pp[data-aside=closed] .aside{display:none}.pp[data-aside=closed] .ear{display:block}
+@media (max-width:1100px){.ppwrap{grid-template-columns:1fr}.explain{position:static}}
+</style>
+<script>
+const MODES = {
+  read: '<b>Чтение.</b> Так паспорт открывается из списка («Читать целиком» или щелчок по строке). Всё на одном экране: где я (крошки), что это (надзаголовок, H1), в каком оно состоянии (статус и факты), насколько свежие данные (получено N мин) и честно — что не загрузилось (Состояние данных).',
+  edit: '<b>Правка на месте</b> — как в прототипе v4: отдельной формы нет. ✎ или щелчок по абзацу превращает это же место в поле; заголовок — поле на месте; «Свойства» — поля в колонке. Наверху появляется «● не сохранено · Отменить · Сохранить». Esc спрашивает «отбросить?». Черновик хранится на сервере: перезагрузка не теряет правку.',
+  create: '<b>Создание.</b> «+ Создать» в шапке списка открывает ЭТОТ ЖЕ паспорт — пустым и сразу в правке (сервер отдаёт пустой объект с умолчаниями: GET …/_new). Обязательные поля подсвечены на своих местах, «Сохранить» неактивно, причина — в подсказке. Вкладок, которых у новой записи ещё нет (граф, журнал, история), не показываем. После сохранения — обычный паспорт новой записи.',
+  conflict: '<b>Конфликт версий.</b> Пока вы правили, запись изменил другой (сервер вернул 409 с текущей версией). Ваши правки не теряются: «Сравнить», «Взять их версию» или «Сохранить слитое» — станет следующей версией. Так же, как в прототипе v4.',
+  partial: '<b>Часть данных не загрузилась.</b> Паспорт живёт: упавший блок показывает ошибку у себя, а в «Состоянии данных» — что именно и почему. «Не смогли проверить» никогда не рисуется как «пусто» или «0».',
+  readonly: '<b>Нет права править.</b> Сервер присылает perms.can_edit=false и причину. ✎, правка на месте и «+ Создать» не показываются вовсе — а не ошибка 403 после того, как человек всё заполнил. Меню статуса — только если есть право менять статус.',
+};
+const X = {
+  1: ['Крошки', 'Назад в список — с тем же фильтром, с которого пришли. Контекст фильтра текстом; на телефоне только «← ID». При создании — «/ новая».', 'адрес списка (клиент)', 'есть: RecordCrumbs (#886)'],
+  2: ['Несохранённое и сохранение', 'Появляется при правке: «● не сохранено · Отменить · Сохранить». Сохраняется с номером версии; если запись успели изменить — 409 и слияние. При создании «Сохранить» неактивно, пока не заполнены обязательные поля.', 'record.version, PATCH {expected_version, values}, POST', 'сделать в kit + нужно API'],
+  3: ['Листалка', '«‹ x из y ›» по отфильтрованному списку, клавиши J/K и [ ]. При создании её нет.', 'id списка (клиент)', 'есть: RecordPager'],
+  4: ['Инструменты', 'Aa — размер текста; «Свойства» — открыть/закрыть колонку (то же, что ушко); «меню» — свернуть левое меню; ⤢ — на всю страницу.', 'личные настройки (S2)', 'есть, ⤢ — сделать'],
+  5: ['Надзаголовок', '«Тип · ID» текстом. Подпись типа — с сервера (schema.label).', 'record.type, record.id, schema.label', 'есть: S4-29'],
+  6: ['Заголовок', 'H1. В правке — поле на том же месте. При создании — пустое, с пометкой «обязательно».', 'values.title, schema.fields[title].required', 'чтение есть, правка — сделать'],
+  7: ['Статус', 'Пилюля с рамкой. Касание → меню статусов: только переходы, разрешённые сервером; завершающие — с подтверждением; отказ — откат и причина.', 'record.status, perms.status_next[]', 'есть: StatusChip; переходы — нужно API'],
+  8: ['Факты', 'Вердикт одной фразой · задачи x/y (кнопка → вкладка) · срок · свежесть правки. Не посчиталось — «не посчитано», а не 0.', 'facts {verdict, tasks, due}', 'есть: RecordFacts; вердикт — нужно API'],
+  9: ['Получено N мин ↻', 'Когда экран получил данные (не дата правки). ↻ перезапрашивает.', 'meta.loaded_at', 'есть: S4-29'],
+  10: ['Вкладки', 'Подчёркиванием, со счётчиками; набор зависит от типа записи и приходит с сервера. Вкладка — в адресе.', 'schema.tabs[] {key, count}', 'есть; набор и счётчики — нужно API'],
+  11: ['Контент', 'MD-тело: mermaid, KaTeX, таблицы. Правка на месте (TipTap): щелчок по абзацу или ✎, «режим исходника». Пустое — «Текста нет» + ✎.', 'values.body_md', 'есть: S5-06'],
+  12: ['Встроенные блоки', 'lore-query / lore-graph в тексте — живая таблица или граф по запросу.', 'Völva / слайсы', 'по SPEC-LORE-UXR-EMBED-BLOCKS'],
+  13: ['Свойства', 'Поля записи ИЗ СХЕМЫ ТИПА: подпись, тип (текст, MD, перечень, ссылка, дата, число), обязательность, можно ли править, где стоять. Kit полей не знает — рисует то, что пришло. В правке те же места становятся полями; ID после создания не меняется.', 'schema.fields[] + values', 'поля из конфига есть; схема с сервера — нужно API'],
+  14: ['Мини-граф', '«Граф · N прямых» — соседи записи; «открыть» → вкладка «Граф».', 'связи записи', 'есть RecordGraph; мини — сделать'],
+  15: ['Völva', 'Аналитический вопрос по записи; «проверенный ноль» ≠ «пусто».', 'Völva (SPRINT_VIZ_EMBED/VE-2)', 'слот'],
+  16: ['Состояние данных', 'По каждому источнику: проверено / не смогли проверить (код и причина) / обрезано (N из M).', 'meta.sources[]', 'сделать в kit + нужно API'],
+  17: ['Настройка колонки', 'Колонка по умолчанию открыта или свёрнута — личная настройка; адрес сильнее настройки.', 'S2 settings: right_column', 'сделать в kit'],
+};
+function setMode(m) {
+  document.getElementById('pp').dataset.mode = m;
+  document.querySelectorAll('[data-mode]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', b.dataset.mode === m); });
+  document.getElementById('modeinfo').innerHTML = MODES[m];
+}
+function setAside(a) {
+  document.getElementById('pp').dataset.aside = a;
+  document.querySelectorAll('[data-aside]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', b.dataset.aside === a); });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button, .tog-aside');
+  if (!b) return;
+  if (b.dataset && b.dataset.mode && b.closest('.ctlbar')) setMode(b.dataset.mode);
+  else if (b.dataset && b.dataset.aside && b.closest('.ctlbar')) setAside(b.dataset.aside);
+  else if (b.classList.contains('tog-aside')) setAside(document.getElementById('pp').dataset.aside === 'open' ? 'closed' : 'open');
+  else if (b.dataset && b.dataset.x) {
+    const [t, what, src, st] = X[b.dataset.x];
+    document.querySelectorAll('button.n.sel').forEach(x => x.classList.remove('sel'));
+    document.querySelectorAll('button.n[data-x="' + b.dataset.x + '"]').forEach(x => x.classList.add('sel'));
+    document.getElementById('explain').innerHTML = '<h4>' + b.dataset.x + '. ' + t + '</h4><p>' + what + '</p><dl><dt>Данные</dt><dd><code>' + src + '</code></dd><dt>Сейчас</dt><dd>' + st + '</dd></dl>';
+  }
+});
+setMode('read');
+</script>
+</body></html>
