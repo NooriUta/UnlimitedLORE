@@ -1,0 +1,76 @@
+{
+  "about": "Копия раздела agent_profiles модели (shared/model/lore-model.json) для MCP: образ собирается из mcp-server/, модель в него не попадает. Совпадение держит subagents.test.ts; лежит в mcp-server/model/ и копируется в образ рядом с dist.",
+  "profiles": [
+    {
+      "code": "full",
+      "rank": 10,
+      "parents": []
+    },
+    {
+      "code": "architect",
+      "rank": 20,
+      "parents": [
+        "full"
+      ]
+    },
+    {
+      "code": "pm",
+      "rank": 30,
+      "parents": [
+        "architect"
+      ]
+    },
+    {
+      "code": "product-analyst",
+      "rank": 40,
+      "parents": [
+        "pm"
+      ]
+    },
+    {
+      "code": "analyst",
+      "rank": 41,
+      "parents": [
+        "pm"
+      ]
+    },
+    {
+      "code": "developer",
+      "rank": 42,
+      "parents": [
+        "pm"
+      ]
+    },
+    {
+      "code": "marketer",
+      "rank": 43,
+      "parents": [
+        "pm"
+      ]
+    },
+    {
+      "code": "tester",
+      "rank": 50,
+      "parents": [
+        "product-analyst",
+        "analyst",
+        "developer",
+        "marketer"
+      ]
+    }
+  ],
+  "harness": {
+    "claude-code": {
+      "main": "full",
+      "suffix": ""
+    },
+    "codex": {
+      "main": "full",
+      "suffix": "codex"
+    },
+    "kimi-code": {
+      "main": "full",
+      "suffix": "kimi"
+    }
+  }
+}

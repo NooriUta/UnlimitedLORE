@@ -6,6 +6,7 @@ import { warnIfStale } from './tools/version.js';
 import { readBuildInfo } from './buildInfo.js';
 import { LEGACY_CRUD_TOOLS } from './tools/entity.js';
 import { createLoreServer, resolveSurface } from './server.js';
+import { readAgentOrder, subagentInstructions } from './subagents.js';
 import { startHttpServer, transportMode } from './http.js';
 
 // MCP server for AIDA LORE. Talks to the UnlimitedLORE backend (:9100),
@@ -29,13 +30,16 @@ const build = readBuildInfo();
 
 async function mainStdio(): Promise<void> {
   const envProfile = (process.env.LORE_MCP_PROFILE ?? '').trim();
+  const scope = await clientAgentScope();
   const { surface, profiles } = resolveSurface(
     envProfile ? { name: envProfile, source: 'env' } : null,
-    await clientAgentScope(),
+    scope,
   );
   const legacy = process.env.LORE_MCP_LEGACY === '1';
   const narrowed = profiles.some(p => p !== 'full');
-  const server = createLoreServer(surface, profiles, legacy);
+  // OH-MCP-HOSTED-SWITCH: роли подагентов — не выше главной роли учётки (agent_scope токена).
+  const server = createLoreServer(surface, profiles, legacy,
+    subagentInstructions(scope, (process.env.LORE_HARNESS ?? '').trim() || null, readAgentOrder()));
   if (!forgejoConfigured()) console.error('[aida-lore-mcp] forgejo bridge off (no LORE_FORGEJO/FORGEJO_* env) — forgejo_* tools not registered');
 
   const transport = new StdioServerTransport();
