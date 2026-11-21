@@ -71,6 +71,27 @@ final class LoreRecordUnmodeled {
         return out;
     }
 
+    /**
+     * Поле модели, которого нет в значениях главного среза (у среза нет такой колонки), берёт значение из вершины —
+     * по псевдониму или ключу поля. Описание поля в модели не должно прятать его значение: до описания его показывал
+     * блок «вне модели» (владелица 21.11.2026: «опиши»). Значение среза не перезаписывается; служебное и связи — нет.
+     */
+    static void fillModeled(String type, Map<String, Object> values, Map<String, Object> vertex) {
+        if (values == null || vertex == null || !reads(type)) return;
+        LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
+        if (d == null) return;
+        Map<String, String> aliases = LoreModelTypes.ALIASES.getOrDefault(type, Map.of());
+        Map<String, String> service = LoreModelFile.content().serviceFields();
+        for (LoreRecordRegistry.Field f : d.fields()) {
+            if (values.containsKey(f.key()) || "ref".equals(f.kind())) continue;
+            String p = aliases.getOrDefault(f.key(), f.key());
+            if (service.containsKey(p) || SERVICE.contains(p)) continue;
+            Object v = vertex.get(p);
+            if (v == null || (v instanceof String s && s.isBlank())) continue;
+            values.put(f.key(), v instanceof String s && s.length() > MAX_TEXT ? s.substring(0, MAX_TEXT) + "…" : v);
+        }
+    }
+
     /** Имена свойств, которыми заняты поля модели типа: псевдоним, поле пути записи, ключ поля. */
     private static Set<String> modeled(String type) {
         Set<String> names = new LinkedHashSet<>();

@@ -214,6 +214,39 @@
       "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
+    }, {
+      "key" : "effort_days",
+      "label" : "Оценка, дней",
+      "labelKey" : "pp.field.sprintEffort",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Оценка спринта в днях: пишет создание и правка спринта (LoreSprintTaskResource:50, запрос SprintRequest).",
+      "description" : "Заполнена у 47 спринтов из 543 (схема установщика); оценка задач — у задач (effort_days версии задачи).",
+      "layer" : "optional",
+      "labelEn" : "Estimate, days",
+      "labelPl" : "Szacunek, dni"
+    }, {
+      "key" : "goal",
+      "label" : "Цель (прежняя)",
+      "labelKey" : "pp.field.sprintGoal",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Не нашли назначения в коде: у спринта поле не пишет и не читает ни один путь сервера (goal_level — у фичи, цель вехи — goal_md).",
+      "description" : "В базе заполнено у одного спринта из 543 (схема установщика).",
+      "layer" : "optional",
+      "labelEn" : "Goal (legacy)",
+      "labelPl" : "Cel (dawny)"
+    }, {
+      "key" : "unplanned_intentional",
+      "label" : "Вне плана намеренно",
+      "labelKey" : "pp.field.unplannedIntentional",
+      "kind" : "bool",
+      "group" : "props",
+      "definition" : "Признак: спринт сознательно идёт вне плана вех — пишет правка спринта (LoreSprintTaskResource:1469), читает срез sprints (LoreSlices:980).",
+      "description" : "Без признака спринт без вехи считается непривязанным к плану.",
+      "layer" : "optional",
+      "labelEn" : "Unplanned on purpose",
+      "labelPl" : "Celowo poza planem"
     } ],
     "body" : [ {
       "key" : "context_md",
@@ -254,7 +287,7 @@
       "fields" : [ "created", "milestones", "planned_start", "planned_end_date", "no_release", "track" ]
     }, {
       "section" : "Модули",
-      "fields" : [ "components" ]
+      "fields" : [ "components", "effort_days", "goal", "unplanned_intentional" ]
     } ],
     "parts" : [ {
       "key" : "phases",
@@ -832,6 +865,61 @@
       "definition" : "Файлы репозитория, которые правились в рамках задачи (путь относительно репозитория).",
       "labelEn" : "Files",
       "labelPl" : "Pliki"
+    }, {
+      "key" : "task_id",
+      "label" : "Код в спринте",
+      "labelKey" : "pp.field.taskCode",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Короткий код задачи внутри спринта (MD-05): пишет создание задачи (LoreSprintTaskResource:359), читают срезы задач фазы и спринта (LoreSlices:1110, 1133).",
+      "description" : "Полный ключ задачи — пара «спринт/код» (task_uid); одинокий код принадлежит многим спринтам.",
+      "layer" : "optional",
+      "labelEn" : "Code in sprint",
+      "labelPl" : "Kod w sprincie"
+    }, {
+      "key" : "priority",
+      "label" : "Приоритет (прежний)",
+      "labelKey" : "pp.field.taskPriority",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Прежний приоритет задачи: читают срезы backlog_tasks и all_tasks (LoreSlices:2740, 2767); пути записи у задачи нет — приоритет ведёт спринт (LoreSprintTaskResource:44).",
+      "description" : "В базе заполнен у одной задачи из 6687 (схема установщика).",
+      "layer" : "optional",
+      "labelEn" : "Priority (legacy)",
+      "labelPl" : "Priorytet (dawny)"
+    }, {
+      "key" : "priority_note",
+      "label" : "Приписка к приоритету",
+      "labelKey" : "pp.field.priorityNote",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Приписка к приоритету вне шкалы: её ставит перенос 1.18, когда значение не легло на шкалу (scripts/model-migration/apply-map.mjs:142, propose-schema.mjs:29).",
+      "description" : "Код сервера её не пишет и не читает.",
+      "layer" : "optional",
+      "labelEn" : "Priority note",
+      "labelPl" : "Uwaga do priorytetu"
+    }, {
+      "key" : "order_index",
+      "label" : "Порядок",
+      "labelKey" : "pp.field.orderIndex",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Место задачи в списке спринта и фазы: пишет создание задачи (LoreSprintTaskResource:360), по нему сортируют срезы задач фазы и спринта (LoreSlices:1126).",
+      "description" : "Число; меньше — выше в списке.",
+      "layer" : "optional",
+      "labelEn" : "Order",
+      "labelPl" : "Kolejność"
+    }, {
+      "key" : "summary_md",
+      "label" : "Краткое изложение",
+      "labelKey" : "pp.field.taskSummary",
+      "kind" : "md",
+      "group" : "props",
+      "definition" : "Не нашли назначения в коде: у задачи поле не пишет и не читает ни один путь сервера (summary_md пишут фаза и файл, не задача).",
+      "description" : "В базе заполнено у одной задачи из 6687 (схема установщика).",
+      "layer" : "optional",
+      "labelEn" : "Summary",
+      "labelPl" : "Streszczenie"
     } ],
     "body" : [ {
       "key" : "note_md",
@@ -859,7 +947,7 @@
       "fields" : [ "effort", "actual" ]
     }, {
       "section" : "Классы",
-      "fields" : [ "task_type", "work_class", "realizes_uc" ]
+      "fields" : [ "task_type", "work_class", "realizes_uc", "task_id", "priority", "priority_note", "order_index", "summary_md" ]
     } ],
     "parts" : [ {
       "key" : "questions",
@@ -1883,6 +1971,28 @@
       "definitionEn" : "The document references external resources (CDN): without internet access it may not render fully.",
       "labelPl" : "Zależności zewnętrzne",
       "definitionPl" : "Dokument odwołuje się do zasobów zewnętrznych (CDN): bez dostępu do internetu może nie wyświetlić się w całości."
+    }, {
+      "key" : "content_html",
+      "label" : "HTML (прежний)",
+      "labelKey" : "pp.field.contentHtml",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Прежнее тело документа HTML-фрагментом: пишет правка документа (LoreDocResource:71); показывается только в песочнице (LoreDocResource:35, KnowDocParser).",
+      "description" : "Новые документы пишутся MD (content_md_ru, content_md_en); HTML — у 4 документов из 460.",
+      "layer" : "optional",
+      "labelEn" : "HTML (legacy)",
+      "labelPl" : "HTML (dawny)"
+    }, {
+      "key" : "sort_order",
+      "label" : "Порядок",
+      "labelKey" : "pp.field.docSortOrder",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Место документа среди соседей в дереве страниц (parent_doc_id): пишет правка документа (LoreDocResource:74, комментарий :38).",
+      "description" : "Число; меньше — выше.",
+      "layer" : "optional",
+      "labelEn" : "Order",
+      "labelPl" : "Kolejność"
     } ],
     "body" : [ {
       "key" : "content_md_ru",
@@ -1912,7 +2022,7 @@
       "labelPl" : "Tekst (EN)"
     } ],
     "props" : [ {
-      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps" ]
+      "fields" : [ "kind", "component", "projects", "parent", "sprints", "file_path", "has_ext_deps", "content_html", "sort_order" ]
     } ],
     "linkTabs" : [ {
       "key" : "children",
@@ -2117,6 +2227,17 @@
       "definition" : "Свободные метки для поиска и группировки.",
       "labelEn" : "Tags",
       "labelPl" : "Tagi"
+    }, {
+      "key" : "refs_raw",
+      "label" : "Ссылки строкой (прежние)",
+      "labelKey" : "pp.field.refsRaw",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Ссылки решения строкой: пишет правка решения (LoreDecisionResource:118), читают срез decision (LoreSlices:705) и гигиена вопросов (LoreSlices:822). Перенос 1.18 пересаживает их на связи REFERENCES (MDL-08).",
+      "description" : "После переноса ссылки живут связями; строка остаётся следом.",
+      "layer" : "optional",
+      "labelEn" : "References as text (legacy)",
+      "labelPl" : "Odnośniki tekstem (dawne)"
     } ],
     "body" : [ {
       "key" : "body_md",
@@ -2135,7 +2256,7 @@
       "labelPl" : "Uzasadnienie"
     } ],
     "props" : [ {
-      "fields" : [ "date", "adr", "components", "projects", "tags" ]
+      "fields" : [ "date", "adr", "components", "projects", "tags", "refs_raw" ]
     } ],
     "linkTabs" : [ {
       "key" : "refs",
@@ -2374,6 +2495,17 @@
       "definition" : "Проекты, к которым относится запись; по ним работает доступ (скоуп) и группировка по проекту.",
       "labelEn" : "Projects",
       "labelPl" : "Projekty"
+    }, {
+      "key" : "trigger",
+      "label" : "Условие возврата",
+      "labelKey" : "pp.field.questionTrigger",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Что должно случиться, чтобы отложенный вопрос вернулся в работу: пишет правка вопроса (LoreQuestionResource:120), для статуса deferred обязательно (LoreQuestionResource:89).",
+      "description" : "Без условия отложенный вопрос превращается в свалку (ADR-021).",
+      "layer" : "optional",
+      "labelEn" : "Trigger",
+      "labelPl" : "Warunek powrotu"
     } ],
     "body" : [ {
       "key" : "body_md",
@@ -2385,7 +2517,7 @@
       "labelPl" : "Istota"
     } ],
     "props" : [ {
-      "fields" : [ "priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects" ]
+      "fields" : [ "priority", "due_date", "owner", "raised_by", "opened", "closed", "components", "projects", "trigger" ]
     } ],
     "linkTabs" : [ {
       "key" : "refs",
@@ -2809,6 +2941,39 @@
       "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
+    }, {
+      "key" : "git_tag",
+      "label" : "Тег git",
+      "labelKey" : "pp.field.gitTag",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Тег git релиза (v1.17.4): пишут создание и правка релиза (LoreReleaseResource:232, 311), читают мерж Forgejo — проверка, выпущен ли релиз (LoreForgejoResource:505), качество релиза (LoreQualityFacts:128), граф (LoreGraphResource:107).",
+      "description" : "Номер версии релиза — его код (release_id); ключ — пара «проект#тег» (release_uid).",
+      "layer" : "optional",
+      "labelEn" : "Git tag",
+      "labelPl" : "Tag git"
+    }, {
+      "key" : "release_name",
+      "label" : "Имя релиза (прежнее)",
+      "labelKey" : "pp.field.releaseName",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Не нашли назначения в коде: свойство объявлено миграцией (LoreSchemaMigrations:567), но ни один путь сервера его не пишет и не читает.",
+      "description" : "В базе заполнено у 66 релизов из 619 (схема установщика).",
+      "layer" : "optional",
+      "labelEn" : "Release name (legacy)",
+      "labelPl" : "Nazwa wydania (dawna)"
+    }, {
+      "key" : "released_at",
+      "label" : "Момент выпуска",
+      "labelKey" : "pp.field.releasedAt",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Момент выпуска релиза (ISO-время UTC): пишет правка релиза рядом с датой (LoreReleaseResource:234), читают лента новостей (LoreNewsDynamicsCollector:73, 201) и график «от мержа до прода» (срез pr_ship_lag).",
+      "description" : "Дата релиза — поле «Дата» (release_date); момент есть у релизов, выпущенных после S2-10.",
+      "layer" : "optional",
+      "labelEn" : "Released at",
+      "labelPl" : "Moment wydania"
     } ],
     "body" : [ {
       "key" : "description_md",
@@ -2821,7 +2986,7 @@
       "labelPl" : "Opis"
     } ],
     "props" : [ {
-      "fields" : [ "type", "date", "is_current", "week", "projects", "components" ]
+      "fields" : [ "type", "date", "is_current", "week", "projects", "components", "git_tag", "release_name", "released_at" ]
     } ],
     "linkTabs" : [ {
       "key" : "refs",
@@ -3289,6 +3454,28 @@
       "definition" : "Компонент, в котором используется технология.",
       "labelEn" : "Component",
       "labelPl" : "Komponent"
+    }, {
+      "key" : "file_path",
+      "label" : "Файл",
+      "labelKey" : "pp.field.filePath",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Путь к файлу спеки технологии в репозитории: пишет правка спеки (LoreSpecResource:116), читает срез specs.",
+      "description" : "Технология — спека SPEC-TECH-…; путь — у 215 спек из 498.",
+      "layer" : "optional",
+      "labelEn" : "File",
+      "labelPl" : "Plik"
+    }, {
+      "key" : "vertex_status",
+      "label" : "Статус на вершине (прежний)",
+      "labelKey" : "pp.field.specVertexStatus",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Статус спеки пишется в версию (LoreSpecResource:185, 221); на самой вершине — прежняя копия: писателя на вершине не нашли.",
+      "description" : "Действующий статус — в версии спеки; на вершине — у 31 спеки из 498.",
+      "layer" : "optional",
+      "labelEn" : "Status on record (legacy)",
+      "labelPl" : "Status na rekordzie (dawny)"
     } ],
     "body" : [ {
       "key" : "content_md",
@@ -3301,7 +3488,7 @@
       "labelPl" : "Informacje"
     } ],
     "props" : [ {
-      "fields" : [ "version", "checked_at", "component" ]
+      "fields" : [ "version", "checked_at", "component", "file_path", "vertex_status" ]
     } ],
     "linkTabs" : [ {
       "key" : "refs",
@@ -5205,6 +5392,17 @@
       "definition" : "Почему гейт выведен из работы.",
       "labelEn" : "Retirement reason",
       "labelPl" : "Powód wycofania"
+    }, {
+      "key" : "routine_name",
+      "label" : "Рутина (прежняя)",
+      "labelKey" : "pp.field.routineName",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Не нашли назначения в коде: у гейта поле не пишет и не читает ни один путь сервера (прогоны рутин хранят своё routine_name в ClRoutineRun/ClRoutineMetric).",
+      "description" : "В базе заполнено у 15 гейтов из 25 (схема установщика).",
+      "layer" : "optional",
+      "labelEn" : "Routine (legacy)",
+      "labelPl" : "Rutyna (dawna)"
     } ],
     "body" : [ {
       "key" : "description",
@@ -5224,7 +5422,7 @@
     "props" : [ {
       "fields" : [ "scope", "projects", "components", "sprint", "date" ]
     }, {
-      "fields" : [ "last_run_status", "retired_at", "retired_reason" ]
+      "fields" : [ "last_run_status", "retired_at", "retired_reason", "routine_name" ]
     } ],
     "parts" : [ {
       "key" : "metrics",
@@ -5636,9 +5834,20 @@
       "layer" : "optional",
       "labelEn" : "Target branch",
       "labelPl" : "Gałąź docelowa"
+    }, {
+      "key" : "pr_number",
+      "label" : "Номер",
+      "labelKey" : "pp.field.prNumber",
+      "kind" : "number",
+      "group" : "props",
+      "definition" : "Номер PR у хоста git: пишут мерж и привязка к релизу (LoreForgejoResource:404, 526), читают качество релиза (LoreQualityFacts:130) и срезы PR релиза (сортировка).",
+      "description" : "Вместе с проектом даёт ключ PR «проект#номер».",
+      "layer" : "optional",
+      "labelEn" : "Number",
+      "labelPl" : "Numer"
     } ],
     "props" : [ {
-      "fields" : [ "url", "state", "merged_at", "projects", "head_ref", "base_ref" ]
+      "fields" : [ "url", "state", "merged_at", "projects", "head_ref", "base_ref", "pr_number" ]
     } ],
     "relations" : [ {
       "key" : "projects",
@@ -6417,7 +6626,8 @@
       "status" : "status_raw"
     },
     "tech" : {
-      "code" : "spec_id"
+      "code" : "spec_id",
+      "vertex_status" : "status"
     },
     "track" : {
       "code" : "track_id",
@@ -6458,6 +6668,7 @@
     "question.due_date" : "date",
     "question.opened" : "date",
     "release.date" : "date",
+    "release.released_at" : "datetime",
     "runbook.date" : "date",
     "sprint.created" : "date",
     "sprint.planned_end_date" : "date",
@@ -6917,9 +7128,17 @@
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
   "service_fields" : {
+    "content_html_bytes" : "Размер тела HTML в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54) для контроля целостности. Служебное хранения.",
+    "content_html_sha256" : "Хэш тела HTML: пишет сверка тела документа (LoreDocBodyDigest:51-54) для контроля целостности. Служебное хранения.",
+    "content_md_en_bytes" : "Размер тела MD (en) в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
+    "content_md_en_sha256" : "Хэш тела MD (en): пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
+    "content_md_ru_bytes" : "Размер тела MD (ru) в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
+    "content_md_ru_sha256" : "Хэш тела MD (ru): пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "dict_type" : "Вид справочника у статьи KnowDictEntry (у продукта — product): по нему статья относится к справочнику; служебное хранения, в паспорте не показывается.",
+    "feature_id" : "Прежний код фичи до слияния KnowFeature в KnowUseCase: код его не пишет и не читает (фича пишется по uc_id, LoreProductResource:154). Служебное переноса.",
     "mig_src_rid" : "Адрес записи в базе-источнике переноса 1.18: по нему перенос сверяет «до и после» и повторяется без дублей; служебное переноса, в паспорте не показывается.",
-    "regroup" : "Код группы перегруппировки проектов 1.18 (продукт верхнего уровня), в которую слит проект; служебное переноса, в паспорте не показывается."
+    "regroup" : "Код группы перегруппировки проектов 1.18 (продукт верхнего уровня), в которую слит проект; служебное переноса, в паспорте не показывается.",
+    "src" : "Откуда запись задачи (manual — создана путём записи, иначе — источник разбора): пишет создание задачи (LoreSprintTaskResource:360); читателя в коде нет. Служебное происхождения."
   },
   "passport" : {
     "actor" : [ {
