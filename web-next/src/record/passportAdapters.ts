@@ -47,6 +47,9 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   'quality_gate',
   // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес) и организация — только чтение.
   'repository', 'organization',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: PR — только чтение, раздела-списка нет: паспорт открывается из задачи
+  // и релиза (раздел «Релизы», ?okind=pr). Ключ — pr_uid «проект#номер».
+  'pr',
   // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий». Последним.
   'project'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
@@ -117,6 +120,9 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   if (type === 'organization') return (await slice<Row>('organizations', { fields: 'org_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.org_id), title: str(r.name) || str(r.org_id) }));
   // MDL-13: перечень треков — срез выбора трека {code, title} (вершины KnowTrack; на старой схеме PlanTrack).
   if (type === 'track') return (await slice<Row>('track_options')).rows.map(r => ({ id: str(r.code), title: str(r.title) || str(r.code) }));
+  // MD-05: перечень PR — выпущенные PR (pr_ship_lag — единственный срез PR без параметра; заголовка в нём нет —
+  // подпись ключом «проект#номер»). Остальные PR открываются из задачи, релиза и проекта.
+  if (type === 'pr') return (await slice<Row>('pr_ship_lag', { fields: 'pr_uid', limit: '1000' })).rows.map(r => ({ id: str(r.pr_uid), title: str(r.pr_uid) }));
   if (type === 'runbook') return (await slice<Row>('runbooks', { fields: 'runbook_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.runbook_id), title: str(r.name) || str(r.runbook_id) }));
   if (type === 'product') return (await slice<Row>('products', { fields: 'code,label_ru', limit: '1000' })).rows.map(r => ({ id: str(r.code), title: str(r.label_ru) || str(r.code) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));

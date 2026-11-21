@@ -2958,6 +2958,16 @@ public final class LoreSlices {
             "FROM KnowPR WHERE out('SHIPPED_IN').release_uid CONTAINS :ruid ORDER BY pr_number",
             List.of("ruid"), Map.of(), "");
 
+        // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — одна строка KnowPR по pr_uid «проект#номер».
+        // Задачи — по ребру CLOSED_BY (задача → PR), релизы — по SHIPPED_IN (PR → релиз): те же рёбра,
+        // что пишут мерж (forgejo_pr_merge), task_link rel=pr и release_link rel=pr.
+        slice("pr_by_id",
+            "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
+            "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
+            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
+            "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задачи релиза — через PR, который
         // их закрыл (CLOSED_BY), и релиз этого PR (SHIPPED_IN). Не разбор note_md.
         slice("release_tasks_by_tag",
@@ -3704,6 +3714,7 @@ public final class LoreSlices {
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
+        Map.entry("pr_by_id", "паспорт PR (MD-05): KnowPR — путь через релиз или задачу, как release_prs"),
         Map.entry("pr_ship_lag", "KnowPR — путь через релиз (графики 19.11, №9)"),
         Map.entry("findings", "находки — решение владелицы"),
         Map.entry("finding_by_id", "находки — решение владелицы"),

@@ -498,6 +498,18 @@ final class LoreRecordFrom {
         Map.entry("organization", List.of(
             v("title", Transform.FIRST_OF, "name", "org_id"),
             s("code", "org_id"))),
+        // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: PR — заголовок и ссылка у хоста git; ключ pr_uid «проект#номер».
+        // Заголовка у старых PR нет (до #1641 мерж его отбрасывал) — подпись ключом, а не пустая шапка.
+        Map.entry("pr", List.of(
+            v("title", Transform.FIRST_OF, "title", "pr_uid"),
+            s("code", "pr_uid"),
+            s("url", "url"),
+            s("state", "state"),
+            s("merged_at", "merged_at"),
+            // Проект — поле git_project и ребро BELONGS_TO_PROJECT одним списком (срез сводит их unionall); чипы без повтора.
+            list("projects", "git_projects"),
+            s("head_ref", "head_ref"),
+            s("base_ref", "base_ref"))),
         // S4-PRODUCTS-NODE: продукт — статья словаря (ключ code); подпись — label_ru, иначе код.
         // Цвет — колонка color статьи как есть: нет её — null, цвет не выдумывается.
         Map.entry("product", List.of(
@@ -629,6 +641,10 @@ final class LoreRecordFrom {
             lf("MIRRORED_TO", "in", "repository", "mirror_of"),
             lf("USES_REPOSITORY", "out", "repository", "uses"),
             lf("USES_REPOSITORY", "in", "repository", "used_by"))),
+        // MD-05: задачи, закрытые PR (CLOSED_BY задача → PR), и релизы PR (SHIPPED_IN) — из строки pr_by_id.
+        Map.entry("pr", List.of(
+            lf("CLOSED_BY", "in", "task", "task_uids"),
+            lf("SHIPPED_IN", "out", "release", "release_uids"))),
         // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
         Map.entry("product", List.of(
             lf("IN_PRODUCT", "in", "component", "components"),
@@ -669,8 +685,9 @@ final class LoreRecordFrom {
         "release", List.of(
             new SliceLink("sprints", "release_sprints", "ruid", "IMPLEMENTED_IN_RELEASE", "in", "sprint",
                 from(Transform.STR, "sprint_id"), from(Transform.STR, "name"), from(Transform.PLAN_TOKEN, "status_raw"), true),
+            // MD-05: PR без заголовка подписан ключом (как вкладка PR проекта), а не пустой строкой.
             new SliceLink("prs", "release_prs", "ruid", "SHIPPED_IN", "in", "pr",
-                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.STR, "title"), null, false)),
+                from(Transform.FIRST_OF, "pr_uid", "pr_number"), from(Transform.FIRST_OF, "title", "pr_uid"), null, false)),
         // S4-29: Задачи · Спринты компонента — по рёбрам, срезами с пагинацией.
         "component", List.of(
             new SliceLink("tasks", "component_tasks", "cid", "TAGGED_WITH", "in", "task",

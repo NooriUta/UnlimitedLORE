@@ -2414,5 +2414,11 @@
   "scope.product.noProject": "без проекта",
   "status.productsN": "продуктов: {n}",
   "status.productsAll": "продукты: все",
-  "shell.grp.org": "Организация"
+  "shell.grp.org": "Организация",
+  "shell.sec.pr": "PR",
+  "pp.kind.pr": "PR",
+  "pp.field.prUrl": "Ссылка",
+  "pp.field.mergedAt": "Влит",
+  "pp.field.headRef": "Ветка-источник",
+  "pp.field.baseRef": "Ветка-цель"
 }

@@ -5532,6 +5532,127 @@
     "labelEn" : "Organization",
     "labelPl" : "Organizacja"
   }, {
+    "type" : "pr",
+    "label" : "PR",
+    "labelKey" : "pp.kind.pr",
+    "icon" : "branch-arrow",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Заголовок PR у хоста git. У старых PR заголовка нет — подпись тогда ключом PR.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Ключ PR — «проект#номер» (NooriUta/UnlimitedLORE#1641).",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "url",
+      "label" : "Ссылка",
+      "labelKey" : "pp.field.prUrl",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Адрес PR у хоста git (html_url).",
+      "layer" : "stable",
+      "labelEn" : "Link",
+      "labelPl" : "Link"
+    }, {
+      "key" : "state",
+      "label" : "Состояние",
+      "labelKey" : "pp.field.state",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "open, closed или merged — по ответу хоста git на мерже (MD-05).",
+      "layer" : "optional",
+      "labelEn" : "State",
+      "labelPl" : "Stan"
+    }, {
+      "key" : "merged_at",
+      "label" : "Влит",
+      "labelKey" : "pp.field.mergedAt",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Момент мержа по хосту git; не влит — пусто.",
+      "layer" : "stable",
+      "labelEn" : "Merged at",
+      "labelPl" : "Scalono"
+    }, {
+      "key" : "projects",
+      "label" : "Проекты",
+      "labelKey" : "pp.field.projects",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "project",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "relation" : "attribute",
+      "definition" : "Проект, в котором открыт PR: поле git_project PR и ребро BELONGS_TO_PROJECT (его ставит перенос PR между проектами).",
+      "layer" : "stable",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty"
+    }, {
+      "key" : "head_ref",
+      "label" : "Ветка-источник",
+      "labelKey" : "pp.field.headRef",
+      "kind" : "text",
+      "group" : "props",
+      "layer" : "optional",
+      "labelEn" : "Source branch",
+      "labelPl" : "Gałąź źródłowa"
+    }, {
+      "key" : "base_ref",
+      "label" : "Ветка-цель",
+      "labelKey" : "pp.field.baseRef",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Куда вливается PR: develop — работа, preprod — промо, main — релиз.",
+      "layer" : "optional",
+      "labelEn" : "Target branch",
+      "labelPl" : "Gałąź docelowa"
+    } ],
+    "props" : [ {
+      "fields" : [ "url", "state", "merged_at", "projects", "head_ref", "base_ref" ]
+    } ],
+    "relations" : [ {
+      "key" : "projects",
+      "label" : "Проекты",
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "targetType" : "project",
+      "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "tasks",
+      "label" : "Закрывает задачи",
+      "rel" : "CLOSED_BY",
+      "dir" : "in",
+      "targetType" : "task",
+      "relation" : "realization",
+      "place" : "link_tab"
+    }, {
+      "key" : "releases",
+      "label" : "Вошёл в релизы",
+      "rel" : "SHIPPED_IN",
+      "dir" : "out",
+      "targetType" : "release",
+      "relation" : "realization",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "PR",
+    "labelPl" : "PR"
+  }, {
     "type" : "project",
     "label" : "Проект",
     "labelKey" : "pp.kind.project",
@@ -5944,7 +6065,7 @@
     "labelEn" : "Gate metric",
     "labelPl" : "Metryka bramki"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -5996,6 +6117,10 @@
     "pain" : {
       "vertex" : "KnowPain",
       "key" : "pain_id"
+    },
+    "pr" : {
+      "vertex" : "KnowPR",
+      "key" : "pr_uid"
     },
     "product" : {
       "vertex" : "KnowDictEntry",
@@ -6105,6 +6230,9 @@
     "pain" : {
       "date" : "date_created"
     },
+    "pr" : {
+      "code" : "pr_uid"
+    },
     "product" : {
       "title" : "label_ru"
     },
@@ -6178,7 +6306,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "organization", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
+  "no_type_color" : [ "agent", "doc", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
   "precision" : {
     "adr.date" : "datetime",
     "decision.date" : "datetime",
@@ -6187,6 +6315,7 @@
     "gain.date" : "date",
     "job.date" : "date",
     "pain.date" : "date",
+    "pr.merged_at" : "datetime",
     "quality_gate.date" : "date",
     "quality_gate.retired_at" : "date",
     "question.closed" : "date",
@@ -6343,6 +6472,11 @@
         "source" : "date_created",
         "precision" : "date"
       } ]
+    },
+    "pr" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "product" : {
       "history" : "scd2",
@@ -6957,6 +7091,13 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "pr" : [ {
+      "key" : "tasks",
+      "slot" : "own"
+    }, {
+      "key" : "releases",
       "slot" : "own"
     } ],
     "product" : [ {

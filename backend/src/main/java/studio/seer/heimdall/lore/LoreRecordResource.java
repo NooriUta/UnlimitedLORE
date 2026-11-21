@@ -73,6 +73,8 @@ public class LoreRecordResource extends LoreResourceBase {
         if (id == null) return false;
         if ("release".equals(type)) return RELEASE_UID.matcher(id).matches();
         if ("repository".equals(type)) return REPO_URL.matcher(id).matches();
+        // MD-05: ключ PR — pr_uid «проект#номер», та же форма, что у релиза; легаси-ключи без «#» — общим шаблоном.
+        if ("pr".equals(type)) return RELEASE_UID.matcher(id).matches() || SAFE_READ_ID.matcher(id).matches();
         return SAFE_READ_ID.matcher(id).matches();
     }
 
@@ -114,6 +116,8 @@ public class LoreRecordResource extends LoreResourceBase {
             // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес url) и организация (org_id).
             case "repository" -> new Source("repo_by_id", "id", false);
             case "organization" -> new Source("org_by_id", "id", false);
+            // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — строка KnowPR по pr_uid «проект#номер».
+            case "pr" -> new Source("pr_by_id", "id", false);
             default -> null;
         };
     }
