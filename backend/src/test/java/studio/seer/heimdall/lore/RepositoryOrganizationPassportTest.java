@@ -141,7 +141,7 @@ class RepositoryOrganizationPassportTest {
 
     /** Оба раздела — в группе «Система» (проекты, компоненты, технологии), видны всем. */
     @Test
-    void разделы_в_группе_система() {
+    void репозиторий_в_устройстве_организация_в_организации() {
         List<String> nav = LoreModelNavTest.navSections(LoreModelGoldenTest.modelDoc());
         for (String t : List.of("repository", "organization")) {
             assertTrue(nav.contains(t), "раздела " + t + " нет в меню: " + nav);
@@ -150,8 +150,11 @@ class RepositoryOrganizationPassportTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> groups = (List<Map<String, Object>>)
             ((Map<String, Object>) LoreModelGoldenTest.modelDoc().get("surfaces")).get("nav");
-        Map<String, Object> system = groups.stream().filter(g -> "system".equals(g.get("id"))).findFirst().orElseThrow();
-        String items = String.valueOf(system.get("items"));
-        assertTrue(items.contains("repository") && items.contains("organization"), items);
+        // Владелица 21.11.2026: «в Устройстве — технологии, репозитории, компоненты; Организация — организации, продукты,
+        // проекты, люди».
+        java.util.function.Function<String, String> items = id -> String.valueOf(groups.stream()
+            .filter(g -> id.equals(g.get("id"))).findFirst().orElseThrow().get("items"));
+        assertTrue(items.apply("system").contains("repository"), items.apply("system"));
+        assertTrue(items.apply("org").contains("organization"), items.apply("org"));
     }
 }
