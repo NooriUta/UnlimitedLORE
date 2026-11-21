@@ -81,11 +81,11 @@ jobs:
 
       # Образ forgejo-mcp — архивом docker save в build/images/ (слово владелицы 20.11.2026: «не публиковать, включить
       # в инсталятор»). Ни push, ни login: образ живёт только в архиве рядом с установщиком. Репозиторий приватный —
-      # токен чтения FORGEJO_MCP_CLONE_TOKEN; его нет — BLOCKED громко (scripts/model-migration/forgejo-mcp-image.mjs).
+      # токен чтения — секрет LORE_FJ_MCP_CLONE_TOKEN (приставки FORGEJO_/GITEA_/GITHUB_ у секретов Forgejo зарезервированы), в шаге — переменная FORGEJO_MCP_CLONE_TOKEN; его нет — BLOCKED громко (scripts/model-migration/forgejo-mcp-image.mjs).
       - name: Образ forgejo-mcp → архив images/
         if: inputs.forgejo_mcp == 'include'
         env:
-          FORGEJO_MCP_CLONE_TOKEN: ${{ secrets.FORGEJO_MCP_CLONE_TOKEN }}
+          FORGEJO_MCP_CLONE_TOKEN: ${{ secrets.LORE_FJ_MCP_CLONE_TOKEN }}
         run: node scripts/model-migration/forgejo-mcp-image.mjs --out build
 
       # Исходники LORE архивом в build/src/ (слово владелицы 20.11.2026: «так же там же архивом наш проект для собственной

@@ -48,3 +48,11 @@ test('выкладка установщика берёт архив образа
   assert.ok(urls.includes('http://h/repository/lore-installer/0.1.0/images/' + tar + '.sha256'));
   assert.throws(() => publishPlan({ base: 'http://h/repository', repo: 'lore-installer', version: '0.1.0', files: [{ name: 'forgejo-mcp-deadbeef.tar', bytes: Buffer.from('t') }] }), /неизвестный файл/);
 });
+
+// 21.11.2026 (CICDGitHub по слову владелицы): Forgejo 15 не даёт завести секрет с приставкой FORGEJO_/GITEA_/GITHUB_
+// (pattern ^(?!FORGEJO_|GITEA_|GITHUB_)…) — секрет называется LORE_FJ_MCP_CLONE_TOKEN, в шаге остаётся переменная.
+test('выкладка установщика берёт токен клона из секрета без зарезервированной приставки', () => {
+  const w = read('.github/workflows/lore-installer-publish.yml');
+  assert.match(w, /FORGEJO_MCP_CLONE_TOKEN: \$\{\{ secrets\.LORE_FJ_MCP_CLONE_TOKEN \}\}/);
+  for (const m of w.matchAll(/secrets\.([A-Za-z0-9_]+)/g)) assert.ok(!/^(FORGEJO_|GITEA_|GITHUB_)/.test(m[1]), `секрет ${m[1]} с зарезервированной приставкой`);
+});
