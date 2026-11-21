@@ -8,7 +8,7 @@
 import { useMemo, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from 'react';
 import { kitT, useKitLang } from '../i18n';
 
-export interface SchemeArea { id: string; label?: string; floor: number; ring: [number, number][]; muted?: boolean }
+export interface SchemeArea { id: string; label?: string; /** Вторая строка подписи (площадь, высота). */ sub?: string; floor: number; ring: [number, number][]; muted?: boolean }
 export interface SchemePoint { id: string; floor: number; at: [number, number] | null; layer: string; tone: 'ok' | 'warn' | 'bad' | 'muted' | 'info'; label: string }
 export interface SchemeLayer { id: string; label: string }
 
@@ -75,8 +75,9 @@ export function SchemeView({ areas, points, layers, floors, floor: floorProp, on
             const [cx, cy] = centroid(a.ring);
             return (
               <g key={a.id}>
-                <polygon className={a.muted ? 'sk-scheme__area is-muted' : 'sk-scheme__area'} points={a.ring.map((p) => p.join(',')).join(' ')} strokeWidth={unit * 0.4} />
-                {a.label && <text className="sk-scheme__label" x={cx} y={cy} fontSize={unit * 2.4} textAnchor="middle">{a.label}</text>}
+                <polygon className={a.muted ? 'sk-scheme__area is-muted' : 'sk-scheme__area'} points={a.ring.map((p) => p.join(',')).join(' ')} strokeWidth={unit * 0.7} />
+                {a.label && <text className="sk-scheme__label" x={cx} y={cy} fontSize={unit * 2.6} textAnchor="middle">{a.label}</text>}
+                {a.label && a.sub && <text className="sk-scheme__sub" x={cx} y={cy + unit * 3.2} fontSize={unit * 2} textAnchor="middle">{a.sub}</text>}
               </g>);
           })}
           {shown.map((p) => (

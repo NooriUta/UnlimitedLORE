@@ -7947,9 +7947,11 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-scheme__chip[aria-pressed="true"] { border-color: var(--acc); }
 .sk-scheme__zoom { margin-left: auto; display: inline-flex; gap: 4px; }
 .sk-scheme__svg { width: 100%; background: var(--bg0); border-radius: 10px; touch-action: none; cursor: grab; }
-.sk-scheme__area { fill: var(--bg2); stroke: var(--bd); }
+/* Светлые стены на тёмной земле, как план в GLADSHEIM /app (владелица 21.11: «дизайн светлый»). */
+.sk-scheme__area { fill: color-mix(in srgb, var(--t1) 5%, transparent); stroke: var(--t2); stroke-linejoin: round; }
 .sk-scheme__area.is-muted { fill: none; stroke-dasharray: 2 2; }
-.sk-scheme__label { fill: var(--t3); pointer-events: none; font-family: var(--font); }
+.sk-scheme__label { fill: var(--t1); pointer-events: none; font-family: var(--font); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.sk-scheme__sub { fill: var(--t3); pointer-events: none; font-family: var(--font); }
 .sk-scheme__point { stroke: var(--bg0); cursor: pointer; }
 .sk-scheme__point.is-ok { fill: var(--suc); }
 .sk-scheme__point.is-warn { fill: var(--wrn); }
