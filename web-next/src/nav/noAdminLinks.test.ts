@@ -9,17 +9,21 @@ const ROOT = join(process.cwd(), 'src');
 const ALLOWED = new Set(['App.tsx', join('shell', 'V2Shell.tsx'), join('shell', 'v2Config.ts')]);
 const files = (dir: string): string[] => readdirSync(dir).flatMap(n => {
   const p = join(dir, n);
-  return statSync(p).isDirectory() ? (n === 'admin' ? [] : files(p)) : /.(ts|tsx)$/.test(n) && !/.test./.test(n) ? [p] : [];
+  return statSync(p).isDirectory() ? (n === 'admin' ? [] : files(p)) : /\.(ts|tsx)$/.test(n) && !/\.test\./.test(n) ? [p] : [];
 });
-const LINK = /['`"]/admin[?/'`"]|mod=admin|[?&]adm=|'adm-open'/;
+const LINK = /['`"]\/admin[?/'`"]|mod=admin|[?&]adm=|'adm-open'/;
 
 describe('общие поверхности не ведут в админку', () => {
+  it('положительный контроль: правило ловит ссылку в админку', () => {
+    expect(LINK.test("return `/admin?${q}`")).toBe(true);
+    expect(LINK.test("href=\"/?mod=admin\"")).toBe(true);
+  });
+
   it('ни одной ссылки в админку вне src/admin (кроме входа и разбора старых адресов)', () => {
     const bad = files(ROOT)
       .filter(f => !ALLOWED.has(f.slice(ROOT.length + 1)))
-      .flatMap(f => readFileSync(f, 'utf8').split('
-').map((l, i) => ({ f, i, l })))
-      .filter(x => LINK.test(x.l) && !/^s*(//|*)/.test(x.l))
+      .flatMap(f => readFileSync(f, 'utf8').split('\n').map((l, i) => ({ f, i, l })))
+      .filter(x => LINK.test(x.l) && !/^\s*(\/\/|\*)/.test(x.l))
       .map(x => `${x.f.slice(ROOT.length + 1)}:${x.i + 1}: ${x.l.trim()}`);
     expect(bad).toEqual([]);
   });
