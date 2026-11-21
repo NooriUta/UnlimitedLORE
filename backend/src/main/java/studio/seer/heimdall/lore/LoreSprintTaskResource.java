@@ -306,6 +306,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         // MT-SPRINT-DONE-GUARD — до первой записи: «не создана» должно быть правдой.
         String closed = closedSprintRefusalFor(req.sprint_id());
         if (closed != null) return Uni.createFrom().item(badParams(closed));
+        String full = fullSprintRefusalFor(req.sprint_id());
+        if (full != null) return Uni.createFrom().item(badParams(full));
         if (req.effort_days() != null && (req.effort_days().isNaN() || req.effort_days() < 0)) {
             return Uni.createFrom().item(badParams("effort_days must be a non-negative number of person-days (or omitted)"));
         }
@@ -583,6 +585,36 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             + "правда продолжает этот спринт — сначала переоткройте его status_set, осознанно.";
     }
 
+    /**
+     * Владелица 21.11.2026: «внеси в ограничение добавки новых задач в спринт наличие в спринте 35 задач — у нас
+     * пухнут мега спринты». Предел задач спринта; отменённые не считаются (это не нагрузка спринта), задача без
+     * строки статуса — считается («не знаем статус» ≠ «её нет»). Касается только ДОБАВЛЕНИЯ (заведение и перенос
+     * в спринт); правка и смена статуса уже лежащих задач не запрещаются.
+     */
+    static final int SPRINT_TASK_LIMIT = 35;
+
+    /** @return текст отказа или null; statuses — status_raw открытых строк истории задач спринта. */
+    static String fullSprintRefusal(String sprintId, java.util.List<String> statuses) {
+        long n = statuses.stream()
+            .filter(st -> st == null || st.isBlank() || !"cancelled".equals(LoreStatusVocabulary.classify(st)))
+            .count();
+        if (n < SPRINT_TASK_LIMIT) return null;
+        return "в спринте " + sprintId + " уже " + n + " задач (предел " + SPRINT_TASK_LIMIT + ", отменённые не в счёт) — "
+            + "новые задачи в него не заводят и не переносят: спринт распух. Заведите новый спринт под эту работу "
+            + "(sprint_new / entity_upsert type=sprint) или закройте/отмените лишнее в этом.";
+    }
+
+    /** Подсчёт задач спринта по префиксу task_uid; отказ или null. Блокирующий — звать только с @Blocking/worker. */
+    private String fullSprintRefusalFor(String sprintId) {
+        String prefix = sprintId + "/";
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT out('HAS_STATE')[valid_to IS NULL].status_raw[0] AS st FROM KnowTask "
+            + "WHERE task_uid.substring(0, :plen) = :prefix", Map.of("plen", prefix.length(), "prefix", prefix));
+        java.util.List<String> st = new java.util.ArrayList<>(rows.size());
+        for (Map<String, Object> r : rows) st.add(r.get("st") == null ? null : String.valueOf(r.get("st")));
+        return fullSprintRefusal(sprintId, st);
+    }
+
     /** Статус ОТКРЫТОЙ строки истории спринта; отказ или null. Блокирующий — звать только с @Blocking/worker. */
     private String closedSprintRefusalFor(String sprintId) {
         List<Map<String, Object>> st = ingestService.queryPublic(
@@ -629,6 +661,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return badParams("target sprint not found: " + targetSid);
             String closedMv = closedSprintRefusalFor(targetSid);
             if (closedMv != null) return badParams(closedMv);
+            String fullMv = fullSprintRefusalFor(targetSid);
+            if (fullMv != null) return badParams(fullMv);
             Map<String, Object> s = src.get(0);
             String title    = (String) s.get("title");
             String note     = (String) s.get("note_md");
