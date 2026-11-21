@@ -31,7 +31,7 @@ import {
 import { axesForKeys } from '../api/loreFacets';
 import { useListFacets } from '../api/useListFacets';
 import { useAppT } from '../i18n';
-import { LIST_SCREENS, type ListScreenDef, type ListScreenId } from '../lists/screens';
+import { LIST_SCREENS, withListContract, type ListScreenDef, type ListScreenId } from '../lists/screens';
 import { createLoreClient, defaultLoreClient } from '../sprints/loreClient';
 import { storage as appStorage } from '../storage/safe';
 import { sliceToKitData, sliceWarnings } from '../lists/records';
@@ -271,7 +271,17 @@ function withModelStatuses(baseConfig: KitConfig, modelStatuses: TypeStatuses | 
 }
 
 export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId, manage = false }: ListScreenProps) {
-  const def: ListScreenDef = LIST_SCREENS[screen];
+  const baseDef: ListScreenDef = LIST_SCREENS[screen];
+  // Статусная ось раздела — ИЗ МОДЕЛИ (K-14 п. 4, S4-STATUS-AXIS-CONFIG).
+  //
+  // Перечень статусов в `lists/screens.ts` остаётся умолчанием: пока модель не
+  // прочитана (или в ней нет цикла для типа), экран показывает его И ГОВОРИТ
+  // об этом. Молчаливое умолчание — это ровно тот дефект, из-за которого в
+  // меню статуса задачи были чужие статусы и два «В работе»: клиент показывал
+  // свой список, уверенно и неправильно.
+  const modelStatuses = useModelStatuses(baseDef.modelType, fetchImpl);
+  // MC-09: срез раздела — из контракта модели (surfaces.list), свой — умолчание; тот же срез — тот же объект.
+  const def = useMemo(() => withListContract(baseDef, modelStatuses?.list), [baseDef, modelStatuses]);
   const managed = screenManaged(def, manage);
   const nested = def.nested;
   // Клиент вложенного (прогресс, раскрытие, смена статуса) — тот же fetch, что у списка.
@@ -319,14 +329,6 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // Убирается и возвращается меню — в kit (ListWithRecord, K5-LIST-WITH-RECORD).
   const collapseOnRead = appliedCollapseNavOnRead();
   const baseConfig = useMemo(() => def.config(lang), [def, lang]);
-  // Статусная ось раздела — ИЗ МОДЕЛИ (K-14 п. 4, S4-STATUS-AXIS-CONFIG).
-  //
-  // Перечень статусов в `lists/screens.ts` остаётся умолчанием: пока модель не
-  // прочитана (или в ней нет цикла для типа), экран показывает его И ГОВОРИТ
-  // об этом. Молчаливое умолчание — это ровно тот дефект, из-за которого в
-  // меню статуса задачи были чужие статусы и два «В работе»: клиент показывал
-  // свой список, уверенно и неправильно.
-  const modelStatuses = useModelStatuses(def.modelType, fetchImpl);
   const modelCodes = useMemo(() => (modelStatuses?.items ?? []).map(s => s.code), [modelStatuses]);
   // PU-23: экран дочернего типа (спринт → «Задачи») — его конфиг и статусы модели, как у его
   // собственного списка: вложенная таблица детей рисуется ими.

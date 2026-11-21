@@ -128,8 +128,10 @@ final class LoreModel {
         content.put("partial", true);
         List<String> missing = new ArrayList<>();
         if (schema == null) missing.add("types");
-        // surfaces отдаётся частично: пока только passport (порядок разделов, LorePassportSurface).
-        missing.add("surfaces:list");
+        // surfaces отдаётся частично: passport (порядок разделов, LorePassportSurface), nav и list (MC-09).
+        // MC-09: контракта списка нет (модель из LORE до MC-09) — раздел назван в missing, а не пустой молча.
+        Map<String, LoreModelList.Spec> listSurface = LoreModelFile.content().listSurface();
+        if (listSurface.isEmpty()) missing.add("surfaces:list");
         missing.add("statuses:*");
         content.put("missing", missing);
         content.put("statuses_known", List.copyOf(STATUS_DICTS.keySet()));
@@ -140,6 +142,8 @@ final class LoreModel {
         surfaces.put("passport", LorePassportSurface.build());
         // MC-07: общее меню из модели — только разделы с уровнем everywhere (LoreModelNav).
         surfaces.put("nav", LoreModelNav.surface(LoreModelFile.content()));
+        // MC-09: экран-список каждого типа — срез, ключи кода и заголовка, путь паспорта, доступ (LoreModelList).
+        if (!listSurface.isEmpty()) surfaces.put("list", LoreModelList.surface(listSurface));
         content.put("surfaces", surfaces);
         // MC-07 (D-2026-LORE-MODEL-AUDIENCE-VISIBILITY): уровень видимости каждого раздела — everywhere | detail | admin | hidden.
         content.put("audience", new TreeMap<>(LoreModelFile.content().audience()));
@@ -157,6 +161,8 @@ final class LoreModel {
         content.put("edge_history", LoreEdgeHistory.surface(LoreModelFile.content()));
         // SUPERTAGS-SPIKE: свободные поля на ребре — какие связи, в каком свойстве и кому положены (owners).
         content.put("edge_free_fields", LoreEdgeFreeFields.surface(LoreModelFile.content(), true));
+        // OH-MCP-HOSTED-SWITCH: роли учёток MCP с порядком и главная роль harness — админка и MCP читают отсюда.
+        content.put("agent_profiles", LoreModelAgentProfiles.render(LoreModelFile.content().agentProfiles()));
         content.put("warnings", warnings);
 
         Map<String, Object> doc = new LinkedHashMap<>();

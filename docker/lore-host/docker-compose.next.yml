@@ -1,0 +1,37 @@
+# LORE v2 (lore-app-next) на lore-host — эталон для /home/nooriuta/lore-app-next/docker-compose.yml.
+# SPRINT_UXR_S8_SWITCH/S8-02 (1.18.1). Файл на хосте ведёт CICDGitHub; здесь — эталон, с которым
+# его сверяют. Секретов нет — значения в .env рядом.
+#
+# Правило: v2 ходит в бэкенд НАПРЯМУЮ по docker-сети, никогда через публичное имя LORE.
+# 21.11 стоял LORE_BACKEND_URL=https://lore.odal.seidrstudio.pro: после переключения lore.odal на v2
+# nginx v2 проксировал сам в себя, /lore/version висел. Поэтому:
+#   * LORE_BACKEND_URL=http://lore-backend:9100, LORE_BACKEND_HOST=lore-backend;
+#   * контейнер подключён к сети бэкенда unlimitedlore_default (внешней для этого проекта) —
+#     по ней же nginx v2 находит lore-mcp:9200 (location /mcp).
+# Выкатка (.github/scripts/lore-host-deploy.sh, шаги state и up) сверяет это по `docker compose config`
+# и громко отказывает ДО up, если в LORE_BACKEND_URL/LORE_BACKEND_HOST стоит публичное имя LORE
+# или сети бэкенда нет.
+#
+# Тег образа при каждом релизе переписывает lore-host-deploy.sh (только строка image:, с бэкапом
+# docker-compose.yml.bak-<тег>).
+name: lore-app-next
+
+services:
+  lore-app-next:
+    image: unlimitedlore-lore-app-next:a2dc70bc
+    restart: unless-stopped
+    environment:
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-https://new.lore.odal.seidrstudio.pro}
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-https://odal.seidrstudio.pro}
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-https://volva.odal.seidrstudio.pro}
+      LORE_BACKEND_URL: http://lore-backend:9100
+      LORE_BACKEND_HOST: lore-backend
+      LORE_FRONT: v2
+    ports:
+      - "4402:80"
+    networks: [default, lore-be]
+
+networks:
+  lore-be:
+    name: unlimitedlore_default
+    external: true
