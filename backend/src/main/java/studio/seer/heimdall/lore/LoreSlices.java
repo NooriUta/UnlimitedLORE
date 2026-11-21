@@ -2137,7 +2137,7 @@ public final class LoreSlices {
 
         // Git projects — for the T43 multi-project picker (question/decision forms).
         slice("git_projects",
-            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -2238,7 +2238,8 @@ public final class LoreSlices {
         // первую порцию и сверх неё data_state truncated с total. ORDER BY — в хвосте: скоуп
         // вставляется перед ним. Параметр у всех один — project (slug), как у прочих срезов.
         slice("project_by_id",
-            "SELECT slug, name, default_branch, is_private FROM KnowGitProject WHERE slug = :project",
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, title_en, title_pl, " +
+            "description, description_en, description_pl, default_branch, is_private, hosts, aliases FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
         slice("project_sprints",
             "SELECT sprint_id, coalesce(title, name) AS name, " +
@@ -3301,6 +3302,7 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
@@ -3339,6 +3341,7 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +

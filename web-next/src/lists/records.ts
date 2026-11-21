@@ -6,6 +6,7 @@ import { appT } from '../i18n';
 import type { SliceBody } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
 import { agentLabel } from '../people/whoLabel';
+import { projectFullTitle, projectShortTitle } from '../project/projectTitle';
 import { DECISION_STATUSES, FEATURE_STATUSES, QG_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
 
 type Row = Record<string, unknown>;
@@ -545,14 +546,17 @@ export function componentRecord(row: Row): KitRecord {
  * проект справочная вершина; ключ — slug «владелец/репозиторий», им же
  * открывается паспорт (/lore/record/project/<slug>).
  */
-export function projectRecord(row: Row): KitRecord {
+export function projectRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.slug);
+  const lang = ctx?.lang ?? 'ru';
   return {
     id,
     kind: 'project',
-    title: str(row.name) || id,
+    // 1.18 (владелица 21.11.2026): строка подписана кратким названием на языке интерфейса; полное — полем
+    title: projectShortTitle(row, lang) || id,
     status: '',
     fields: {
+      full_title: projectFullTitle(row, lang),
       default_branch: str(row.default_branch),
     },
   };

@@ -12,7 +12,7 @@ interface Source { slice: string; id: string; title?: string; open?: (row: Recor
 const CLOSED = /DONE|CANCELLED/i;
 const SOURCES: Record<string, Source> = {
   component: { slice: 'components', id: 'component_id', title: 'full_name' },
-  project: { slice: 'git_projects', id: 'slug', title: 'name' },
+  project: { slice: 'git_projects', id: 'slug', title: 'short_title' },
   sprint: { slice: 'sprints', id: 'sprint_id', title: 'name', open: r => !CLOSED.test(String(r.status_raw ?? '')) },
   use_case: { slice: 'use_cases', id: 'uc_id', title: 'title' },
   tag: { slice: 'tags_usage', id: 'tag_id' },

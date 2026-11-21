@@ -648,12 +648,12 @@ const componentsSpec: SectionSpec = {
 /** Проекты (S4-29, 53а): СТАТУСА НЕТ — справочник git-проектов; щелчок — паспорт проекта. */
 const projectsSpec: SectionSpec = {
   kind: 'project', titleKey: 'lists.projects.title', icon: 'open-folder',
-  fields: [['default_branch', 'text']],
+  fields: [['full_title', 'text'], ['default_branch', 'text']],
   views: ['list', 'cards'],
   quick: [['no-branch', 'lists.quick.noBranch', { default_branch: '' }]],
   filters: [],
   groupings: [],
-  columns: ['id', 'title', 'default_branch'],
+  columns: ['id', 'title', 'full_title', 'default_branch'],
 };
 
 /**

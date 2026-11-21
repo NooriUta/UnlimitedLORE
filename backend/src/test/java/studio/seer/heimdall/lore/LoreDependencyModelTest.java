@@ -41,25 +41,34 @@ class LoreDependencyModelTest {
                 assertEquals("any", r.targetType(), type + "." + r.key() + ": другой конец — любой из четырёх типов");
                 assertEquals("link_tab", r.place());
                 assertEquals("association", r.relation());
-                // веха — тип только для чтения (паспорт правку не обещает, LoreRecordFacadeLiveDbTest): её зависимости
-                // ставятся через MCP и путь /relation, но форма в паспорте вехи не рисуется
-                assertEquals(!"milestone".equals(type), r.manageable(), type + "." + r.key() + ": управление из паспорта");
+                // MDL-13, смоук 21.11.2026: «Готово, когда» — ставить и снимать зависимость и у вехи; веха остаётся типом
+                // только для чтения (статус и создание), а связь «зависит от» управляется из паспорта, как у задачи и спринта
+                assertTrue(r.manageable(), type + "." + r.key() + ": управление из паспорта");
                 // привязка из паспорта требует причины — признак модели, kit спрашивает её ReasonDialog
                 assertEquals(r.manageable(), r.reasonRequired(), type + "." + r.key() + ": reason_required");
                 assertEquals(List.of("kind", "reason"), r.props().stream().map(LoreRecordRegistry.EdgeProp::key).toList());
                 assertEquals(LoreDependency.DICT, r.props().get(0).dict());
-                if ("milestone".equals(type)) {
-                    assertNull(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", r.dir()), "у вехи пути из паспорта нет — правку паспорт не обещает");
-                    continue;
-                }
                 assertNotNull(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", r.dir()), type + ": маршрут " + r.dir());
                 assertEquals(LoreRecordRelationRoutes.Handler.DEPENDS_ON, LoreRecordRelationRoutes.find(type, "DEPENDS_ON", r.dir()).handler());
             }
-            if (!"milestone".equals(type))
-                assertTrue(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", "in").reversed(), "«от неё зависят» — запись на другом конце");
+            assertTrue(LoreRecordRelationRoutes.find(type, "DEPENDS_ON", "in").reversed(), "«от неё зависят» — запись на другом конце");
         }
         assertEquals(LoreRecordRelationRoutes.Handler.ADR_DEPENDS_ON, LoreRecordRelationRoutes.find("adr", "DEPENDS_ON", "out").handler(),
             "ADR → ADR — свой путь, не зависимость планирования");
+    }
+
+    /**
+     * MDL-13, смоук 21.11.2026: путь записи зависимости вехи. Маршрут ведёт в общий путь dep (LoreDependency), а он
+     * принимает веху концом — отказа по типу нет. Паспорт обещает правку связей админу, статус и создание — нет.
+     */
+    @Test
+    void milestoneDependencyIsWritableFromPassport() {
+        assertNotNull(LoreDependency.end("milestone"), "веха — конец зависимости в пути dep");
+        assertFalse(LoreRecordRelationRoutes.find("milestone", "DEPENDS_ON", "out").reversed());
+        Map<String, Object> admin = LoreRecordPerms.of("milestone", "admin", true, null, 0);
+        assertEquals(true, admin.get("can_edit"), "связи вехи правятся из паспорта");
+        assertEquals(false, admin.get("can_status"), "статус вехи паспорт по-прежнему не меняет");
+        assertEquals(false, LoreRecordPerms.of("milestone", "viewer", true, null, 0).get("can_edit"), "зритель — без правки");
     }
 
     @Test

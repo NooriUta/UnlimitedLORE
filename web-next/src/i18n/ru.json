@@ -416,6 +416,7 @@
   "lists.field.prs": "PR",
   "lists.field.area": "Область",
   "lists.field.default_branch": "Основная ветка",
+  "lists.field.full_title": "Полное название",
   "lists.field.parent": "Родитель",
   "lists.field.team": "Команда",
   "lists.field.tech": "Технологии",
