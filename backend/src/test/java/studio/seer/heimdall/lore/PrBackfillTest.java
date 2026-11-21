@@ -24,6 +24,8 @@ class PrBackfillTest {
     static final class MemStore implements PrBackfill.Store {
         final TreeMap<String, Map<String, Object>> rows = new TreeMap<>();
         final List<String> writes = new ArrayList<>();
+        /** pr_uid, запись которых «не ляжет»: строку удалили между отбором и записью (WriteCount = 0). */
+        final java.util.Set<String> vanish = new java.util.HashSet<>();
 
         MemStore put(String uid, Object... kv) {
             Map<String, Object> r = new LinkedHashMap<>();
@@ -48,9 +50,11 @@ class PrBackfillTest {
             return r == null ? null : new LinkedHashMap<>(r);
         }
 
-        @Override public void write(String prUid, Map<String, Object> fields) {
+        @Override public long write(String prUid, Map<String, Object> fields) {
+            if (vanish.contains(prUid) || !rows.containsKey(prUid)) return 0;
             writes.add(prUid);
             rows.get(prUid).putAll(fields);
+            return 1;
         }
     }
 
@@ -263,5 +267,47 @@ class PrBackfillTest {
         assertEquals("t3", store.rows.get("P/R#3").get("title"));
         Map<String, Object> miss = PrBackfill.fillOne(store, new StubHost(), "P/R", 404);
         assertTrue(String.valueOf(miss.get("pr_details_missing")).contains("404"));
+    }
+
+    @Test
+    void промах_записи_не_дотянуто_а_пропуск_с_причиной() {
+        MemStore store = new MemStore()
+            .put("P/R#1", "pr_number", 1, "git_project", "P/R")
+            .put("P/R#2", "pr_number", 2, "git_project", "P/R");
+        store.vanish.add("P/R#1");
+        StubHost host = new StubHost();
+        host.byKey.put("P/R#1", PrBackfill.Fetch.ok(forgejoPr("t1", "https://h/P/R/pulls/1", "open", null)));
+        host.byKey.put("P/R#2", PrBackfill.Fetch.ok(forgejoPr("t2", "https://h/P/R/pulls/2", "open", null)));
+        Map<String, Object> r = PrBackfill.run(store, host, null, 10, false);
+        assertEquals(1, r.get("updated"), "дотянут только тот, чья запись легла");
+        assertEquals(1, r.get("missed"), "промах считается отдельно");
+        assertEquals(1, r.get("skipped"));
+        @SuppressWarnings("unchecked")
+        Map<String, Map<String, Object>> by = (Map<String, Map<String, Object>>) r.get("skipped_by_reason");
+        assertEquals(List.of("P/R#1"), by.get(PrBackfill.WRITE_MISSED).get("examples"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) r.get("items");
+        assertEquals(List.of("P/R#2"), items.stream().map(i -> i.get("pr_uid")).toList());
+    }
+
+    @Test
+    void промах_одиночной_дотяжки_не_pr_fields() {
+        MemStore store = new MemStore().put("P/R#3", "pr_number", 3, "git_project", "P/R");
+        store.vanish.add("P/R#3");
+        StubHost host = new StubHost();
+        host.byKey.put("P/R#3", PrBackfill.Fetch.ok(forgejoPr("t3", "https://h/P/R/pulls/3", "open", null)));
+        Map<String, Object> one = PrBackfill.fillOne(store, host, "P/R", 3);
+        assertNull(one.get("pr_fields"));
+        assertTrue(String.valueOf(one.get("pr_details_missing")).contains("не легла"));
+    }
+
+    @Test
+    void число_задетых_строк_из_ответа_движка() {
+        List<String> sql = new ArrayList<>();
+        long n = PrBackfill.writeChecked((q, p) -> { sql.add(q); return List.of(Map.of("count", 0)); },
+            "P/R#1", Map.of("title", "t"));
+        assertEquals(0, n);
+        assertEquals("UPDATE KnowPR SET title=:title WHERE pr_uid=:uid", sql.get(0));
+        assertEquals(1, PrBackfill.writeChecked((q, p) -> List.of(Map.of("count", 1)), "P/R#1", Map.of("url", "u")));
     }
 }

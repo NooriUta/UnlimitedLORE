@@ -64,10 +64,14 @@ class PrBackfillEmbeddedTest {
                 var rs = db.query("sql", PrBackfill.ROW_SQL, Map.of("uid", prUid));
                 return rs.hasNext() ? rs.next().toMap() : null;
             }
-            @Override public void write(String prUid, Map<String, Object> fields) {
-                Map<String, Object> p = new LinkedHashMap<>(fields);
-                p.put("uid", prUid);
-                db.transaction(() -> db.command("sql", PrBackfill.writeSql(fields.keySet()), p));
+            @Override public long write(String prUid, Map<String, Object> fields) {
+                long[] n = {0};
+                db.transaction(() -> n[0] = PrBackfill.writeChecked((q, p) -> {
+                    List<Map<String, Object>> res = new ArrayList<>();
+                    db.command("sql", q, p).stream().forEach(r -> res.add(r.toMap()));
+                    return res;
+                }, prUid, fields));
+                return n[0];
             }
         };
     }
@@ -101,5 +105,11 @@ class PrBackfillEmbeddedTest {
         assertEquals(0, r2.get("updated"), "повтор — 0 изменений");
         assertEquals(1, r2.get("skipped"), "чужой снова пропущен с той же причиной");
         assertEquals(LoreOutcome.UNCHANGED, r2.get("outcome"));
+    }
+
+    @Test
+    void движок_отдаёт_число_задетых_строк_промах_ноль() {
+        assertEquals(1, store().write("NooriUta/UnlimitedLORE#1681", Map.of("title", "t")));
+        assertEquals(0, store().write("NooriUta/UnlimitedLORE#999999", Map.of("title", "t")), "нет строки — 0, а не «записано»");
     }
 }

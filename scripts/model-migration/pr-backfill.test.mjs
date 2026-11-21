@@ -51,6 +51,15 @@ test('повтор: сервер говорит 0 изменений — шаг 
   assert.match(summary(r), /дотянуто 0/);
 });
 
+test('промах записи сервера (missed) — отдельно от «дотянуто», в сводке', async () => {
+  const { fetch } = fakeServer({ '': portion({ scanned: 2, updated: 1, skipped: 1, missed: 1, done: true,
+    skipped_by_reason: { write_missed: { count: 1, reason: 'запись не легла: UPDATE задел 0 строк', examples: ['P/R#1'] } } }) });
+  const r = await backfillPrs({ url: 'http://x', token: 't', fetch });
+  assert.equal(r.updated, 1);
+  assert.equal(r.missed, 1);
+  assert.match(summary(r), /запись не легла: 1/);
+});
+
 test('отказ сервера (503 мост не сконфигурирован) — красный с причиной, не «0 дотянуто»', async () => {
   const { fetch } = fakeServer({}, 503);
   const r = await backfillPrs({ url: 'http://x', token: 't', fetch });

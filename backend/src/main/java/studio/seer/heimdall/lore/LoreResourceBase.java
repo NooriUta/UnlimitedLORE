@@ -114,11 +114,9 @@ public abstract class LoreResourceBase {
                 List<Map<String, Object>> r = ingestService.queryPublic(PrBackfill.ROW_SQL, Map.of("uid", prUid));
                 return r.isEmpty() ? null : r.get(0);
             }
-            @Override public void write(String prUid, Map<String, Object> fields) {
-                Map<String, Object> p = new java.util.LinkedHashMap<>(fields);
-                p.put("uid", prUid);
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    PrBackfill.writeSql(fields.keySet()), p)).await().indefinitely();
+            @Override public long write(String prUid, Map<String, Object> fields) {
+                return PrBackfill.writeChecked((sql, p) -> writeClient.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql", sql, p)).await().indefinitely(), prUid, fields);
             }
         };
     }

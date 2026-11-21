@@ -21,7 +21,7 @@ const MAX_PORTIONS = 1000;
 /** Порции до done; ok:false — сервер отказал или ответ не похож на отчёт (с причиной). */
 export async function backfillPrs({ url, token = '', limit = 200, dryRun = false, fetch = globalThis.fetch }) {
   const base = String(url || '').replace(/\/+$/, '');
-  const r = { ok: true, dry_run: dryRun, portions: 0, scanned: 0, updated: 0, would_update: 0, unchanged: 0, skipped: 0, skipped_by_reason: {} };
+  const r = { ok: true, dry_run: dryRun, portions: 0, scanned: 0, updated: 0, would_update: 0, unchanged: 0, skipped: 0, missed: 0, skipped_by_reason: {} };
   let after = '';
   for (;;) {
     const q = new URLSearchParams({ limit: String(limit) });
@@ -48,6 +48,7 @@ export async function backfillPrs({ url, token = '', limit = 200, dryRun = false
     r.would_update += p.would_update || 0;
     r.unchanged += p.unchanged || 0;
     r.skipped += p.skipped || 0;
+    r.missed += p.missed || 0;
     for (const [code, g] of Object.entries(p.skipped_by_reason || {})) {
       const t = r.skipped_by_reason[code] || (r.skipped_by_reason[code] = { count: 0, reason: g.reason, examples: [] });
       t.count += g.count || 0;
@@ -64,7 +65,7 @@ export async function backfillPrs({ url, token = '', limit = 200, dryRun = false
 export function summary(r) {
   const head = r.dry_run
     ? `PR: просмотрено ${r.scanned}, дотянулось бы ${r.would_update}, без изменений ${r.unchanged}, пропущено ${r.skipped} (пробный прогон)`
-    : `PR: просмотрено ${r.scanned}, дотянуто ${r.updated}, без изменений ${r.unchanged}, пропущено ${r.skipped}`;
+    : `PR: просмотрено ${r.scanned}, дотянуто ${r.updated}, без изменений ${r.unchanged}, пропущено ${r.skipped} (из них запись не легла: ${r.missed})`;
   const why = Object.entries(r.skipped_by_reason).map(([c, g]) => `  ${c}: ${g.count} — ${g.reason} (напр. ${g.examples.join(', ')})`);
   return [head, ...why].join('\n');
 }

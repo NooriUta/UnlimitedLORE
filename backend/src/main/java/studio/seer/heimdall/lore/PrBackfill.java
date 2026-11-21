@@ -42,6 +42,8 @@ final class PrBackfill {
     static final String UPSTREAM_ERROR = "upstream_error";
     static final String EMPTY_ANSWER = "empty_answer";
     static final String NOTHING_NEW = "nothing_new";
+    /** Запись не легла: UPDATE задел 0 строк (строку удалили или сменили ключ между отбором и записью). */
+    static final String WRITE_MISSED = "write_missed";
 
     /** Публичные хостинги, куда токен своего Forgejo не отправляется: там PR не наш, и токен там чужой. */
     static final Set<String> FOREIGN_HOSTS = Set.of("github.com", "gitlab.com", "bitbucket.org", "codeberg.org");
@@ -60,7 +62,8 @@ final class PrBackfill {
     /** Хранилище KnowPR: кандидаты после курсора и запись недостающих полей. */
     interface Store {
         List<Map<String, Object>> candidates(String after, int limit);
-        void write(String prUid, Map<String, Object> fields);
+        /** Пишет поля; возвращает число задетых строк ({@link WriteCount}): 0 — промах, -1 — движок не сказал. */
+        long write(String prUid, Map<String, Object> fields);
         /** Строка KnowPR по ключу; null — нет такой. */
         Map<String, Object> row(String prUid);
     }
@@ -79,12 +82,25 @@ final class PrBackfill {
 
     static final String ROW_SQL = "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref FROM KnowPR WHERE pr_uid=:uid";
 
-    /** UPDATE по фиксированному набору ключей: имена полей — только из {@link #FIELDS}. */
-    static String writeSql(Set<String> keys) {
+    /** Исполнитель SQL: сырой ответ движка (для {@link WriteCount#of}). */
+    interface SqlExec {
+        Object run(String sql, Map<String, Object> params);
+    }
+
+    /**
+     * UPDATE недостающих полей PR по pr_uid; имена полей — только из {@link #FIELDS}. Возвращает число задетых
+     * строк по ответу движка ({@link WriteCount#of}): 0 — промах (записи с таким ключом уже нет), а не «записано».
+     */
+    static long writeChecked(SqlExec exec, String prUid, Map<String, Object> fields) {
         StringBuilder set = new StringBuilder();
-        for (String k : FIELDS) if (keys.contains(k)) set.append(set.length() == 0 ? "" : ", ").append(k).append("=:").append(k);
+        Map<String, Object> p = new LinkedHashMap<>();
+        for (String k : FIELDS) if (fields.containsKey(k)) {
+            set.append(set.length() == 0 ? "" : ", ").append(k).append("=:").append(k);
+            p.put(k, fields.get(k));
+        }
         if (set.length() == 0) throw new IllegalArgumentException("нечего писать");
-        return "UPDATE KnowPR SET " + set + " WHERE pr_uid=:uid";
+        p.put("uid", prUid);
+        return WriteCount.of(exec.run("UPDATE KnowPR SET " + set + " WHERE pr_uid=:uid", p));
     }
 
     static int clamp(int limit) { return limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT); }
@@ -172,7 +188,7 @@ final class PrBackfill {
         int updated = 0, unchanged = 0;
         List<Map<String, Object>> items = new ArrayList<>();
         Map<String, Map<String, Object>> skippedBy = new LinkedHashMap<>();
-        int skipped = 0;
+        int skipped = 0, missed = 0;
         String last = after;
         for (Map<String, Object> row : rows) {
             String uid = String.valueOf(row.get("pr_uid"));
@@ -197,7 +213,12 @@ final class PrBackfill {
                 unchanged++;
                 continue;
             }
-            if (!dryRun) store.write(uid, g);
+            if (!dryRun && store.write(uid, g) == 0) {
+                missed++;
+                skipped++;
+                addSkip(skippedBy, WRITE_MISSED, "запись не легла: UPDATE задел 0 строк — PR удалён или сменил ключ после отбора", uid);
+                continue;
+            }
             updated++;
             Map<String, Object> it = new LinkedHashMap<>();
             it.put("pr_uid", uid);
@@ -211,6 +232,7 @@ final class PrBackfill {
         if (dryRun) out.put("would_update", updated);
         out.put("unchanged", unchanged);
         out.put("skipped", skipped);
+        out.put("missed", missed);
         out.put("skipped_by_reason", skippedBy);
         out.put("items", items);
         out.put("next_after", last);
@@ -257,7 +279,10 @@ final class PrBackfill {
                 return out;
             }
             Map<String, Object> g = gaps(cur, f.fields());
-            if (!g.isEmpty()) store.write(uid, g);
+            if (!g.isEmpty() && store.write(uid, g) == 0) {
+                out.put("pr_details_missing", "запись данных PR не легла: UPDATE задел 0 строк");
+                return out;
+            }
             out.put("pr_fields", List.copyOf(g.keySet()));
         } catch (RuntimeException e) {
             out.put("pr_details_missing", "данные PR не записаны: " + e.getMessage());
