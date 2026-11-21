@@ -69,6 +69,8 @@ export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий (ключ — адрес) и организация — разделы и паспорта.
   repository: 'repository',
   organization: 'organization',
+  // 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): раздел и паспорт PR.
+  pr: 'pr',
 };
 
 /** Модуль оболочки по умолчанию: адрес записи без модуля открывал бы «Новости». */
@@ -134,8 +136,7 @@ export function recordIdOf(type: string, id: string, project?: string | null): s
  */
 export const PASSPORT_IN_SECTION: Readonly<Record<string, V2Section>> = {
   track: 'sprint',
-  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: PR — паспорт без раздела-списка, в «Релизах» (PR вливается и выходит релизом).
-  pr: 'release',
+  // PR с 21.11.2026 — свой раздел «PR» под «Релизами» (TYPE_SECTION); до того паспорт открывался в «Релизах».
 };
 
 export function recordHref(type: string, id: string, from?: URLSearchParams): string | null {

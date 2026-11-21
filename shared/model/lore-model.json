@@ -7770,6 +7770,9 @@
       "section" : "release",
       "icon" : "open-book"
     }, {
+      "section" : "pr",
+      "icon" : "branch-arrow"
+    }, {
       "section" : "quality_gate",
       "icon" : "checkered-flag"
     } ]
@@ -7876,6 +7879,7 @@
     "organization" : "everywhere",
     "pain" : "everywhere",
     "people" : "admin",
+    "pr" : "everywhere",
     "product" : "everywhere",
     "project" : "everywhere",
     "quality_gate" : "everywhere",
