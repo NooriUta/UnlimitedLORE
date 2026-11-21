@@ -95,7 +95,9 @@ test('MA4 Правило на копии: окно с подтверждение
   const base = process.env.LORE_STAND_URL?.trim();
   const who = await whoami(page);
   const refusal = writeCopyRefusal(base, who);
-  test.skip(refusal !== null, `запись не выполняется: ${refusal}`);
+  // Препроду разрешены только TEST-сущности (writeGuard.ts), а правило переноса пишется в файл решений самого
+  // стенда — это не TEST-данные. Решение координатора 21.11.2026: MA4 на стенде не гоняем.
+  test.skip(refusal !== null, `принято владелицей на ryzenai 16.11 (MIG-02); на стенде запись правила изменила бы файл решений стенда — не гоняем (${refusal})`);
   await asRole(page, 'superadmin');
   const body = await report(page);
   const login = typeof body?.login === 'string' ? body.login : null;
