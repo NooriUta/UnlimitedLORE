@@ -18,7 +18,7 @@
 //     график вырастал до 400 px).
 // Граница K-14: что считать сериями и откуда данные — приложение; kit только рисует.
 import { useLayoutEffect, useState, type ReactNode } from 'react';
-import { kitT, useKitLang, type KitLang } from '../i18n';
+import { kitLocale, kitT, useKitLang, type KitLang } from '../i18n';
 import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
 
 /** Палитра категорий kit — только токены. */
@@ -177,7 +177,7 @@ export interface LineChartProps extends ChartCommon { series: LineSeries[]; /** 
 export function LineChart(p: LineChartProps) {
   const [plot, W] = useChartWidth();
   const lang = useKitLang();
-  const fmt = p.xLabel ?? ((x: number) => new Date(x).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { day: '2-digit', month: '2-digit' }));
+  const fmt = p.xLabel ?? ((x: number) => new Date(x).toLocaleDateString(lang === 'en' ? 'en-GB' : kitLocale(lang), { day: '2-digit', month: '2-digit' }));
   const all = p.series.flatMap(s => s.points);
   const ys = all.map(q => q.y).filter((v): v is number => v !== null);
   const xs = all.map(q => q.x);

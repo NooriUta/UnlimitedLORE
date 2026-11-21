@@ -9,9 +9,10 @@
 // ввести (точка), а не так, как его читают (запятая). Иначе человек видит
 // «12,5», вводит «12,5» и получает отказ разбора.
 
-/** Язык интерфейса kit: «ru» или любой другой — английский. */
+import { kitLocale } from '../i18n';
+/** Локаль языка интерфейса kit: ru-RU, en-US, у подключённого языка — его (K6-I18N-PLUGGABLE). */
 function locale(lang: string): string {
-  return lang === 'ru' ? 'ru-RU' : 'en-US';
+  return kitLocale(lang);
 }
 
 /**
