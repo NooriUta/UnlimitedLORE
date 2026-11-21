@@ -21,7 +21,8 @@ function rule(src: string, selector: string): string {
 describe('паспорт в доке: отступы', () => {
   it('1–2) «×» не обтекается и на десктопе, бар держит ей место', () => {
     expect(rule(outsideMedia, ".sk-dock:not([data-placement='full']) .sk-dock__close")).toMatch(/margin-bottom:\s*calc\(-1/);
-    expect(rule(outsideMedia, ".sk-dock:not([data-placement='full']) .sk-rec-reader__bar")).toMatch(/padding-right:/);
+    // 21.11: место держится только при плавающем «×» в панели (селектор с has), иначе пустота после крестика.
+    expect(rule(outsideMedia, ".sk-dock:not([data-placement='full']) .sk-dock__panel:has(> .sk-dock__close) .sk-rec-reader__bar")).toMatch(/padding-right:/);
   });
   it('3) снизу и во весь экран колонка шапки во всю свою ширину, факты — в той же колонке', () => {
     expect(outsideMedia).toMatch(/\.sk-dock\[data-placement='bottom'\] \.sk-rec-facts/);
