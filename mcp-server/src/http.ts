@@ -35,6 +35,7 @@ import { CredsRejected, TokenEndpointUnavailable, createTokenBroker } from './cl
 import { readBuildInfo } from './buildInfo.js';
 import { knownProfiles, profileNameFromJwt } from './profile.js';
 import { createLoreServer, resolveSurface } from './server.js';
+import { readAgentOrder, subagentInstructions } from './subagents.js';
 
 export type TransportMode = 'stdio' | 'http';
 
@@ -211,8 +212,11 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
       jsonError(res, 400, `X-Lore-Mcp-Profile=${profile.slice(0, 64)}: неизвестный профиль; допустимо: ${known.join(', ')}`);
       return;
     }
-    const { surface, profiles } = resolveSurface({ name: profile, source: 'header' }, profileNameFromJwt(token), log);
-    const server = createLoreServer(surface, profiles, legacy);
+    const scope = profileNameFromJwt(token);
+    const { surface, profiles } = resolveSurface({ name: profile, source: 'header' }, scope, log);
+    // OH-MCP-HOSTED-SWITCH: роли подагентов — не выше главной роли учётки (agent_scope её токена).
+    const server = createLoreServer(surface, profiles, legacy,
+      subagentInstructions(scope, header(req, 'x-lore-harness') || null, readAgentOrder()));
     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {

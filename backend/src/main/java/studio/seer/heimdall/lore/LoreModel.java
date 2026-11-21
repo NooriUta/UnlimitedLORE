@@ -161,6 +161,8 @@ final class LoreModel {
         content.put("edge_history", LoreEdgeHistory.surface(LoreModelFile.content()));
         // SUPERTAGS-SPIKE: свободные поля на ребре — какие связи, в каком свойстве и кому положены (owners).
         content.put("edge_free_fields", LoreEdgeFreeFields.surface(LoreModelFile.content(), true));
+        // OH-MCP-HOSTED-SWITCH: роли учёток MCP с порядком и главная роль harness — админка и MCP читают отсюда.
+        content.put("agent_profiles", LoreModelAgentProfiles.render(LoreModelFile.content().agentProfiles()));
         content.put("warnings", warnings);
 
         Map<String, Object> doc = new LinkedHashMap<>();

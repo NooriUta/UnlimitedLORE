@@ -60,6 +60,8 @@ test('строка MCP: константы harness и машины, клиент
   assert.equal(e.env.LORE_MACHINE_ID, 'lorcetus');
   assert.equal(e.env.LORE_MCP_CLIENT_ID, 'lore-mcp-full');
   assert.equal(e.env.LORE_MCP_CLIENT_SECRET, undefined, 'секрет в строку не кладётся');
+  assert.equal(e.env.LORE_MCP_SECRET_VAR, 'LORE_MCP_CLIENT_SECRET_FULL', 'имя ключа секрета по роли и harness (OH-MCP-HOSTED-SWITCH)');
+  assert.equal(mcpEntry({ harness: 'kimi', machineId: 'm', backendUrl: 'b', issuer: 'i', serverPath: 's' }).env.LORE_MCP_SECRET_VAR, 'LORE_MCP_CLIENT_SECRET_FULL_KIMI');
   assert.throws(() => mcpEntry({ harness: '', machineId: 'x' }), /harness/);
   assert.throws(() => mcpEntry({ harness: 'claude-code', machineId: '' }), /машин/);
 });
