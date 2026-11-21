@@ -126,6 +126,39 @@ class ModelServerConsistencyGuardTest {
         assertEquals(List.of(), bad, "срез-список проектных записей без гарантированного projects (MINI-04)");
     }
 
+    /**
+     * SPRINT_LORE_MODEL_AS_CONFIG/MC-09: контракт списка ({@code surfaces.list}) не обещает того, чего срез не
+     * отдаёт. Срез есть; id_key, title_key и group_keys — колонки его внешнего SELECT (иначе клиент строит
+     * пустые строки молча); доступ назван честно — {@code requires_role} ровно тогда, когда срез под гейтом
+     * роли ({@link LoreSlices#ADMIN_ONLY}, иначе 403), {@code project_scoped} — ровно тогда, когда срез режется
+     * проектным скоупом ({@link LoreSlices#PROJECT_SCOPED}: без проектов — 403 SCOPE_EMPTY).
+     */
+    @Test
+    void listContractKeysAreColumnsOfItsSlice() {
+        Map<String, LoreModelList.Spec> list = LoreModelFile.content().listSurface();
+        assertFalse(list.isEmpty(), "положительный контроль: контракт списка заполнен");
+        List<String> bad = new ArrayList<>();
+        for (Map.Entry<String, LoreModelList.Spec> e : list.entrySet()) {
+            String t = e.getKey();
+            LoreModelList.Spec s = e.getValue();
+            LoreSlices.SliceDef def = LoreSlices.get(s.slice());
+            if (def == null) { bad.add(t + ": среза " + s.slice() + " нет"); continue; }
+            Set<String> cols = SliceOutputKeys.of(def.baseSql());
+            List<String> need = new ArrayList<>(List.of(s.id_key(), s.title_key()));
+            need.addAll(s.group_keys());
+            for (String k : need) if (!cols.contains(k)) bad.add(t + ": " + s.slice() + " не отдаёт колонку " + k + " (есть " + cols + ")");
+            if (!def.required().isEmpty()) bad.add(t + ": " + s.slice() + " требует параметры " + def.required() + " — список без них не построить");
+            String role = LoreSlices.ADMIN_ONLY.contains(s.slice()) ? "admin" : null;
+            if (!java.util.Objects.equals(role, s.requires_role())) bad.add(t + ": requires_role " + s.requires_role() + ", а гейт среза — " + role);
+            boolean scoped = LoreSlices.PROJECT_SCOPED.containsKey(s.slice());
+            if (scoped != s.project_scoped()) bad.add(t + ": project_scoped " + s.project_scoped() + ", а скоуп среза — " + scoped);
+        }
+        assertEquals(List.of(), bad, "контракт списка расходится со срезом (MC-09)");
+        // Положительный контроль: колонки, которой у среза нет, проверка не находит (title_key «name» у людей — была бы пустая строка).
+        assertFalse(SliceOutputKeys.of(LoreSlices.get("users").baseSql()).contains("name"));
+        assertTrue(SliceOutputKeys.of(LoreSlices.get("users").baseSql()).contains("display_name"));
+    }
+
     static JsonObject listFacets() throws IOException {
         Path p = Path.of("..", "shared", "model", "list-facets.json");
         return new JsonObject(Files.readString(p, StandardCharsets.UTF_8));
