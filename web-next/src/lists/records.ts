@@ -395,7 +395,13 @@ export function organizationRecord(row: Row): KitRecord {
 /** S9-05 A: строка среза users → запись kit. Статуса у человека нет — пустой, а не выдуманный. */
 export function userRecord(row: Row): KitRecord {
   const id = str(row.kc_sub);
-  return { id, kind: 'user', title: str(row.display_name) || id, status: '', fields: { project: list(row.projects) } };
+  // Пакет 1.18: заголовок — имя (из профиля или «Имя Фамилия» из KC), логин — рядом полем и в поиске.
+  const login = str(row.login);
+  return {
+    id, kind: 'user', title: str(row.display_name) || login || id, status: '',
+    fields: { project: list(row.projects), ...(login ? { login } : {}) },
+    ...(login ? { search: login } : {}),
+  };
 }
 
 /** S9-05 A: строка среза agents → запись kit. */

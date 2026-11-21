@@ -556,13 +556,14 @@ const runbooksSpec: SectionSpec = {
 /** S9-05 A: люди — статуса нет, разрез по проектам. */
 const usersSpec: SectionSpec = {
   kind: 'user', titleKey: 'lists.users.title', icon: 'person',
-  fields: [['project', 'ref']],
+  // Пакет 1.18: заголовок — имя (профиль или KC), логин — своей колонкой рядом.
+  fields: [['project', 'ref'], ['login', 'text']],
   statuses: [],
   views: ['list', 'cards'],
   quick: [['no-projects', 'lists.quick.noProjects', { project: '' }]],
   filters: [LORE_FILTER_FIELDS.project],
   groupings: [LORE_FILTER_FIELDS.project],
-  columns: ['title', 'project'],
+  columns: ['title', 'login', 'project'],
 };
 
 /** S9-05 A: агенты — профиль и владелец; статуса нет. */

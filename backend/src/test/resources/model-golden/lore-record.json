@@ -16122,12 +16122,36 @@
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
+      }, {
+        "key" : "name_source",
+        "label" : "Источник имени",
+        "label_key" : "pp.field.nameSource",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Name source",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Źródło imienia",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Откуда имя человека: manual — задано в профиле человеком или админом, сверка с Keycloak его не трогает; kc — «Имя Фамилия» из Keycloak, обновляется сверкой; пусто — подписан логином.",
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
       } ],
       "layout" : {
         "body" : [ ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "projects", "login", "avatar" ]
+          "fields" : [ "projects", "login", "avatar", "name_source" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {
@@ -16309,12 +16333,36 @@
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
+      }, {
+        "key" : "name_source",
+        "label" : "Источник имени",
+        "label_key" : "pp.field.nameSource",
+        "kind" : "text",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "label_en" : "Name source",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Źródło imienia",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Откуда имя человека: manual — задано в профиле человеком или админом, сверка с Keycloak его не трогает; kc — «Имя Фамилия» из Keycloak, обновляется сверкой; пусто — подписан логином.",
+        "description" : null,
+        "layer" : null,
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
       } ],
       "layout" : {
         "body" : [ ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "projects", "login", "avatar" ]
+          "fields" : [ "projects", "login", "avatar", "name_source" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ {

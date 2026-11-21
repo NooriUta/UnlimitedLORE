@@ -7,6 +7,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -225,6 +226,65 @@ public class LoreKcResource extends LoreResourceBase {
                 }
             }
             return noStore(Response.ok(Map.of("orphans", out.getList())));
+        } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
+        catch (Exception e) { return upstream(e); }
+    }
+
+    /** Последняя сверка имён (успешная): для «раз в сутки при открытии раздела». В памяти — после рестарта сверка повторится, это дёшево. */
+    private static volatile java.time.Instant namesSyncedAt;
+    private static volatile Map<String, Object> namesLastSummary;
+
+    /**
+     * Пакет 1.18 — имена людей из KC (владелица 21.11.2026: «у людей из KC то ФИО достань, а то только логины»).
+     * Читает учётки KC (только GET), сверяет с KnowUser и пишет «Имя Фамилия» в display_name с name_source = 'kc';
+     * имя, заданное человеком, не трогает (правила — {@link KcUserNames}). {@code dry_run} — только итог;
+     * {@code if_older_than_hours} — шаг при открытии раздела: свежая сверка не повторяется ({@code skipped:true}
+     * и итог прошлой). KC не настроен — 503 KC_NOT_CONFIGURED, KC не ответил — 502/403 словами: тихо оставить
+     * логины нельзя.
+     */
+    @POST
+    @Path("user-names/sync")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response syncUserNames(@QueryParam("dry_run") Boolean dryRun,
+                                  @QueryParam("if_older_than_hours") Integer olderThanHours,
+                                  @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        java.time.Instant now = java.time.Instant.now();
+        if (olderThanHours != null && !Boolean.TRUE.equals(dryRun)
+                && !KcUserNames.due(namesSyncedAt, now, java.time.Duration.ofHours(Math.max(1, olderThanHours)))) {
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("skipped", true);
+            out.put("synced_at", String.valueOf(namesSyncedAt));
+            out.put("last", namesLastSummary);
+            return noStore(Response.ok(out));
+        }
+        try {
+            String t = adminToken();
+            java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
+                "SELECT kc_sub, login, display_name, name_source FROM KnowUser", Map.of());
+            KcUserNames.Plan plan = KcUserNames.planFromKc(call(t), graphUsers);
+            boolean dry = Boolean.TRUE.equals(dryRun);
+            if (!dry)
+                for (KcUserNames.Update u : plan.updates())
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
+                        "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
+                        Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
+                        .await().indefinitely();
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("dry_run", dry);
+            out.put("skipped", false);
+            out.putAll(plan.summary());
+            if (!dry) {
+                namesSyncedAt = now;
+                namesLastSummary = plan.summary();
+                out.put("synced_at", now.toString());
+            }
+            return noStore(Response.ok(out));
         } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
         catch (Exception e) { return upstream(e); }
     }
