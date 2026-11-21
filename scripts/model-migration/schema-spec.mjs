@@ -20,11 +20,14 @@ export const AREAS = [
   { id: 'knowledge', nav: 'knowledge', title: 'Решения и знания' },
   { id: 'product', nav: 'product', title: 'Продукт' },
   { id: 'system', nav: 'system', title: 'Проекты и система' },
+  // #1694 (PS-PRODUCT-FILTER): группа меню «Организация» — организации, продукты, проекты, люди.
+  { id: 'org', nav: 'org', title: 'Организация' },
   { id: 'people', nav: null, title: 'Люди и агенты' },
 ];
 // Типы, которых нет в model.nav: часть паспорта и админские. Новый тип без места здесь и в nav валит тест.
 // qg_metric — часть паспорта гейта (20.11.2026), область гейта — «Работа».
-const EXTRA_AREA = { phase: 'work', qg_metric: 'work', track: 'work', user: 'people', agent: 'people' };
+// pr — паспорт без раздела-списка (MD-05), открывается в «Релизах»: область «Работа».
+const EXTRA_AREA = { phase: 'work', qg_metric: 'work', track: 'work', pr: 'work', user: 'people', agent: 'people' };
 
 /** Область типа модели: группа навигации либо EXTRA_AREA; null — места нет. */
 export function areaOf(type, model) {

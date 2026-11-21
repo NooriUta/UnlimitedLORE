@@ -188,7 +188,6 @@ class LorePassportLinksContractTest {
         Map.entry("qg_job", "прогон гейта — служебная запись QG"),
         Map.entry("qg_recommendation", "рекомендация QG — служебная запись прогона"),
         Map.entry("qg_metric", "метрика гейта — служебная запись QG"),
-        Map.entry("pr", "PR — внешняя запись Forgejo, без паспорта"),
         Map.entry("file", "файл репозитория — без паспорта"),
         Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
         Map.entry("tag", "тег — справочник"),
@@ -665,7 +664,9 @@ class LorePassportLinksContractTest {
         Map.entry("organization|components", "у организации компонентов нет: связи — проекты, продукты, люди (решение владелицы 19.11.2026)"),
         // MDL-13: трек — справочник студии без проекта и компонента (как веха без проекта); спринты на нём — вкладкой.
         Map.entry("track|projects", "трек — справочник студии, проекта нет (MDL-13)"),
-        Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"));
+        Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"),
+        // MD-05: у PR компонентов нет — ни ребра, ни наследования; работа PR видна через задачи (вкладка «Закрывает задачи»).
+        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"));
 
     @Test
     void chipValuesHaveADeclaredField() {

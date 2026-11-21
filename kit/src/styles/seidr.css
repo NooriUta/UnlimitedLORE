@@ -4466,6 +4466,10 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
    край панели свойств 320 px — это и видно как наложение подписей (находка P0
    аудита 08.11.2026). */
 .sk-rec-fields__refs { display: inline-flex; flex-wrap: wrap; gap: var(--gap); min-width: 0; max-width: 100%; }
+/* MD-05: адрес у хоста git (PR, репозиторий) — ссылка; длинный адрес переносится, а не раздвигает панель. */
+.sk-rec-fields__url { color: var(--acc); overflow-wrap: anywhere; text-decoration: none; }
+.sk-rec-fields__url:hover { text-decoration: underline; }
+.sk-rec-fields__url:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
 .sk-rec-ref {
   display: inline-flex; align-items: center; gap: 4px;

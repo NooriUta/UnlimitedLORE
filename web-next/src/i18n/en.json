@@ -2414,5 +2414,11 @@
   "scope.product.noProject": "no project",
   "status.productsN": "products: {n}",
   "status.productsAll": "products: all",
-  "shell.grp.org": "Organization"
+  "shell.grp.org": "Organization",
+  "shell.sec.pr": "PRs",
+  "pp.kind.pr": "PR",
+  "pp.field.prUrl": "Link",
+  "pp.field.mergedAt": "Merged at",
+  "pp.field.headRef": "Source branch",
+  "pp.field.baseRef": "Target branch"
 }

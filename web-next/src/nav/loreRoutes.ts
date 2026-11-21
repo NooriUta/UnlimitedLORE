@@ -32,8 +32,8 @@ export type SearchHitType = (typeof SEARCH_HIT_TYPES)[number];
  * Тип записи → раздел v2. Единственная такая карта в приложении.
  * Технологии — это спеки SPEC-TECH-*: поиск отдаёт их типом spec; тип tech — у связей
  * паспорта (вкладка «Технологии» компонента) и у ссылок [[tech:…]].
- * Типов без раздела в v2 (quality_gate, finding, pr…) здесь нет:
- * открыть их в v2 пока негде, и ссылка честно null.
+ * Типов без раздела в v2 (finding…) здесь нет: открыть их в v2 пока негде, и ссылка честно null.
+ * Паспорта без своего раздела (трек, PR) открываются в разделе-хозяине — PASSPORT_IN_SECTION.
  */
 export const TYPE_SECTION: Readonly<Record<string, V2Section>> = {
   sprint: 'sprint',
@@ -134,6 +134,8 @@ export function recordIdOf(type: string, id: string, project?: string | null): s
  */
 export const PASSPORT_IN_SECTION: Readonly<Record<string, V2Section>> = {
   track: 'sprint',
+  // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: PR — паспорт без раздела-списка, в «Релизах» (PR вливается и выходит релизом).
+  pr: 'release',
 };
 
 export function recordHref(type: string, id: string, from?: URLSearchParams): string | null {
