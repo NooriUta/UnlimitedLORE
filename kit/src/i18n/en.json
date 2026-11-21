@@ -469,6 +469,8 @@
   "kit.scope.except": "All except selected",
   "kit.scope.summary.except": "All except {n}",
   "kit.scope.countExcept": "Excluded: {n}",
+  "kit.scope.expand": "Expand: {title}",
+  "kit.scope.collapse": "Collapse: {title}",
   "kit.list.text": "Text in ID or title",
   "kit.list.textPlaceholder": "Find in list…",
   "kit.list.desc.text": "Text",

@@ -203,8 +203,12 @@ test('RFD2-MD03 Одна актуальная спека схемы (Mermaid ELK
 // ── SPRINT_LORE_MODEL_DOCS_TIDY/MD-05 ───────────────────────────────────────────────────────────────────
 test('RFD2-MD05 PR: паспорт с заголовком и ссылкой, пустых заголовков нет (SPRINT_LORE_MODEL_DOCS_TIDY/MD-05)', async ({ page }) => {
   await boot(page);
-  const prs = await slice(page, 'project_prs', { project: 'NooriUta/UnlimitedLORE' });
-  expect(prs.length, 'у LORE есть PR (project_prs)').toBeGreaterThan(0);
+  // Ключ проекта LORE — из среза git_projects (на базе 1.18 он может отличаться от NooriUta/UnlimitedLORE).
+  const slugs = (await slice(page, 'git_projects')).map(p => str(p.slug));
+  const lore = slugs.find(s => s === 'NooriUta/UnlimitedLORE') ?? slugs.find(s => /\/UnlimitedLORE$/i.test(s));
+  expect(lore, `проект LORE в git_projects (${slugs.join(', ').slice(0, 200)})`).toBeTruthy();
+  const prs = await slice(page, 'project_prs', { project: lore! });
+  expect(prs.length, `у LORE (${lore}) есть PR (project_prs)`).toBeGreaterThan(0);
   const empty = prs.filter(p => !str(p.title).trim());
   expect.soft(empty.length, `PR без заголовка: ${empty.length} из ${prs.length} (напр. ${empty.slice(0, 5).map(p => str(p.pr_uid)).join(', ')})`).toBe(0);
   const withTitle = prs.find(p => str(p.title).trim() && str(p.url).trim()) ?? prs[0];
@@ -334,7 +338,13 @@ test('RFD2-MDL12 Паспорт задачи: «Ждём» у ждущей за�
   const open = await slice(page, 'open_tasks');
   const waitingUids = open.filter(r => /WAIT/i.test(str(r.status_raw))).map(r => str(r.task_uid)).slice(0, 100);
   test.skip(!waitingUids.length, 'на стенде нет задач в «ждёт» — показ «Ждём» проверить не на чем');
-  const raw = await slice(page, 'tasks_by_uids', { task_uids: waitingUids.join(',') });
+  // Пачками по 20: 100 кодов в адресе — 414 URI Too Long (прогон 39235).
+  const byUids = async (uids: string[]): Promise<Row[]> => {
+    const out: Row[] = [];
+    for (let i = 0; i < uids.length; i += 20) out.push(...await slice(page, 'tasks_by_uids', { task_uids: uids.slice(i, i + 20).join(',') }));
+    return out;
+  };
+  const raw = await byUids(waitingUids);
   const w = raw.find(r => str(r.waiting_for).trim());
   expect(w, `у одной из ${waitingUids.length} ждущих задач адресат в базе (waiting_for)`).toBeTruthy();
   const uid = str(w!.task_uid);
@@ -343,7 +353,7 @@ test('RFD2-MDL12 Паспорт задачи: «Ждём» у ждущей за�
 
   // Отрицательная сторона: у не-ждущей задачи с остатком адресата в базе «Ждём» не отдаётся.
   const notWaiting = open.filter(r => !/WAIT/i.test(str(r.status_raw))).map(r => str(r.task_uid)).slice(0, 200);
-  const leftovers = notWaiting.length ? (await slice(page, 'tasks_by_uids', { task_uids: notWaiting.join(',') })).filter(r => str(r.waiting_for).trim()) : [];
+  const leftovers = (await byUids(notWaiting)).filter(r => str(r.waiting_for).trim());
   if (leftovers.length) {
     const lr = await record(page, 'task', str(leftovers[0].task_uid));
     expect((lr.body?.values as Row | undefined)?.waiting_for, `${str(leftovers[0].task_uid)} (${str(leftovers[0].status_raw)}): прежний адресат не показан`).toBeUndefined();

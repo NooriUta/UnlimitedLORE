@@ -15,6 +15,11 @@ export interface ScopeOption {
   hint?: string;
   /** У пользователя есть роль в проекте. */
   mine?: boolean;
+  /**
+   * PS-PRODUCT-FILTER: код родителя (подпродукт под продуктом). Родитель есть в списке — запись показывается в дереве
+   * под ним (раскрывашкой); родителя в списке нет — запись остаётся корнем.
+   */
+  parent?: string;
 }
 
 export type ScopeSummary =
@@ -44,6 +49,32 @@ export function orderScopeOptions(options: readonly ScopeOption[], mineKnown: bo
   const byTitle = (a: ScopeOption, b: ScopeOption) => scopeTitle(a).localeCompare(scopeTitle(b), 'ru', { sensitivity: 'base' });
   if (!mineKnown) return [...options].sort(byTitle);
   return [...options].sort((a, b) => Number(!!b.mine) - Number(!!a.mine) || byTitle(a, b));
+}
+
+/**
+ * PS-PRODUCT-FILTER: дерево по `parent` — корни (без родителя или с родителем вне списка) и потомки каждого родителя,
+ * в порядке списка.
+ */
+export function scopeTree(options: readonly ScopeOption[]): { roots: ScopeOption[]; children: Map<string, ScopeOption[]> } {
+  const ids = new Set(options.map(o => o.id));
+  const roots: ScopeOption[] = [];
+  const children = new Map<string, ScopeOption[]>();
+  for (const o of options) {
+    if (o.parent && o.parent !== o.id && ids.has(o.parent)) children.set(o.parent, [...(children.get(o.parent) ?? []), o]);
+    else roots.push(o);
+  }
+  return { roots, children };
+}
+
+/** Родители (по цепочке) выбранных записей — их раскрыть, чтобы выбранный потомок был виден. */
+export function scopeAncestors(value: readonly string[], options: readonly ScopeOption[]): Set<string> {
+  const byId = new Map(options.map(o => [o.id, o]));
+  const out = new Set<string>();
+  for (const id of value) {
+    let p = byId.get(id)?.parent;
+    while (p && byId.has(p) && !out.has(p)) { out.add(p); p = byId.get(p)?.parent; }
+  }
+  return out;
 }
 
 export function toggleScope(value: readonly string[], id: string): string[] {

@@ -9851,7 +9851,7 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : "От неё зависят",
         "props" : [ {
           "key" : "kind",
@@ -9861,6 +9861,7 @@
           "key" : "reason",
           "label" : "Причина"
         } ],
+        "reason_required" : true,
         "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
@@ -9870,7 +9871,7 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : "Зависит от",
         "props" : [ {
           "key" : "kind",
@@ -9880,6 +9881,7 @@
           "key" : "reason",
           "label" : "Причина"
         } ],
+        "reason_required" : true,
         "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
@@ -10282,7 +10284,7 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : "От неё зависят",
         "props" : [ {
           "key" : "kind",
@@ -10292,6 +10294,7 @@
           "key" : "reason",
           "label" : "Причина"
         } ],
+        "reason_required" : true,
         "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
@@ -10301,7 +10304,7 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : "Зависит от",
         "props" : [ {
           "key" : "kind",
@@ -10311,6 +10314,7 @@
           "key" : "reason",
           "label" : "Причина"
         } ],
+        "reason_required" : true,
         "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
