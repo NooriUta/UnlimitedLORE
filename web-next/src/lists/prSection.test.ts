@@ -36,9 +36,12 @@ describe('раздел «PR»', () => {
 
   it('строка: заголовок, нет — ключ; релизы — по ключу «проект#тег», подпись — тег; признаки «без заголовка», «без релиза»', () => {
     const r = prRecord({ pr_uid: UID, title: 'feat: паспорт PR', git_projects: ['NooriUta/UnlimitedLORE'], state: 'merged',
-      merged_at: '2026-11-20T18:02:11Z', head_ref: 'feat/md05', base_ref: 'develop', release_uids: ['NooriUta/UnlimitedLORE#v1.18.0'] });
+      merged_at: '2026-11-20T18:02:11Z', head_ref: 'feat/md05', base_ref: 'develop', release_uids: ['NooriUta/UnlimitedLORE#v1.18.0'],
+      project_slugs: ['NooriUta/UnlimitedLORE'], project_titles: ['LORE'] });
     expect(r).toMatchObject({ id: UID, kind: 'pr', title: 'feat: паспорт PR' });
-    expect(r.fields).toMatchObject({ project: ['NooriUta/UnlimitedLORE'], state: 'merged', merged_at: '2026-11-20T18:02:11Z',
+    expect(r.fields.project, 'проект — краткое название (#1708), ключ — в ссылке').toEqual([{ id: 'NooriUta/UnlimitedLORE', label: 'LORE' }]);
+    expect(prRecord({ pr_uid: 'X/y#1', git_projects: ['X/y'] }).fields.project, 'без связи с проектом — ключ из поля').toEqual([{ id: 'X/y', label: 'X/y' }]);
+    expect(r.fields).toMatchObject({ state: 'merged', merged_at: '2026-11-20T18:02:11Z',
       branches: 'feat/md05 → develop', no_title: '', no_release: '' });
     expect(r.fields.releases).toEqual([{ id: 'NooriUta/UnlimitedLORE#v1.18.0', label: 'v1.18.0' }]);
     const empty = prRecord({ pr_uid: 'AIDA/miniLORE#3' });

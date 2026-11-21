@@ -5,6 +5,8 @@ import type { KitData, KitLang, KitRecord } from '@seidr/kit';
 import { appT } from '../i18n';
 import type { SliceBody } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
+import { agentLabel } from '../people/whoLabel';
+import { projectFullTitle, projectShortTitle } from '../project/projectTitle';
 import { DECISION_STATUSES, FEATURE_STATUSES, QG_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
 
 type Row = Record<string, unknown>;
@@ -395,15 +397,23 @@ export function organizationRecord(row: Row): KitRecord {
 /** S9-05 A: строка среза users → запись kit. Статуса у человека нет — пустой, а не выдуманный. */
 export function userRecord(row: Row): KitRecord {
   const id = str(row.kc_sub);
-  return { id, kind: 'user', title: str(row.display_name) || id, status: '', fields: { project: list(row.projects) } };
+  // Пакет 1.18: заголовок — имя (из профиля или «Имя Фамилия» из KC), логин — рядом полем и в поиске.
+  const login = str(row.login);
+  return {
+    id, kind: 'user', title: str(row.display_name) || login || id, status: '',
+    fields: { project: list(row.projects), ...(login ? { login } : {}) },
+    ...(login ? { search: login } : {}),
+  };
 }
 
 /** S9-05 A: строка среза agents → запись kit. */
 export function agentRecord(row: Row): KitRecord {
   const id = str(row.actor_id);
   return {
-    id, kind: 'agent', title: str(row.name) || id, status: '',
+    // AO-AGENT-HUMAN-NAME: заголовок — «имя · профиль» (машины у среза нет), учётка — полем и в поиске.
+    id, kind: 'agent', title: agentLabel({ name: str(row.name), harness: str(row.harness), clientId: str(row.client_id) }) || id, status: '',
     fields: { clientId: str(row.client_id), agentRole: str(row.agent_role), harness: str(row.harness), owner: str(row.owner), project: list(row.projects) },
+    ...(str(row.client_id) ? { search: str(row.client_id) } : {}),
   };
 }
 
@@ -482,6 +492,16 @@ export function milestoneRecord(row: Row): KitRecord {
  * «проект#номер»; заголовка нет (старые PR) — подпись ключом. Релизы — по ключу «проект#тег», подпись — тег.
  * Время записи — момент мержа: свежие сверху по нему.
  */
+/** Проекты PR чипами {id: ключ, label: краткое название}; связи с проектом нет — ключ из поля git_project. */
+function prProjects(row: Row): { id: string; label: string }[] {
+  const slugs = Array.isArray(row.project_slugs) ? row.project_slugs.map(str) : [];
+  const titles = Array.isArray(row.project_titles) ? row.project_titles.map(str) : [];
+  const out = slugs.filter(Boolean).map((id, i) => ({ id, label: titles[i] || id }));
+  if (out.length) return out;
+  const own = Array.isArray(row.git_projects) ? row.git_projects.map(str) : [str(row.git_projects)];
+  return [...new Set(own.filter(Boolean))].map(id => ({ id, label: id }));
+}
+
 export function prRecord(row: Row): KitRecord {
   const id = str(row.pr_uid);
   // Признак — значком, а не словом: фильтр «Быстро» одинаков на любом языке; нет признака — пусто.
@@ -494,7 +514,8 @@ export function prRecord(row: Row): KitRecord {
     title: str(row.title) || id,
     status: '',
     fields: {
-      project: list(row.git_projects),
+      // #1708: проект — краткое название (связь BELONGS_TO_PROJECT), ключ — в ссылке; связи нет — ключ из поля git_project
+      project: prProjects(row),
       state: str(row.state),
       merged_at: str(row.merged_at),
       branches: head || base ? `${head || '?'} → ${base || '?'}` : '',
@@ -565,14 +586,17 @@ export function componentRecord(row: Row): KitRecord {
  * проект справочная вершина; ключ — slug «владелец/репозиторий», им же
  * открывается паспорт (/lore/record/project/<slug>).
  */
-export function projectRecord(row: Row): KitRecord {
+export function projectRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.slug);
+  const lang = ctx?.lang ?? 'ru';
   return {
     id,
     kind: 'project',
-    title: str(row.name) || id,
+    // 1.18 (владелица 21.11.2026): строка подписана кратким названием на языке интерфейса; полное — полем
+    title: projectShortTitle(row, lang) || id,
     status: '',
     fields: {
+      full_title: projectFullTitle(row, lang),
       default_branch: str(row.default_branch),
     },
   };

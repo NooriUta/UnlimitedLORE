@@ -2137,7 +2137,7 @@ public final class LoreSlices {
 
         // Git projects — for the T43 multi-project picker (question/decision forms).
         slice("git_projects",
-            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -2238,7 +2238,8 @@ public final class LoreSlices {
         // первую порцию и сверх неё data_state truncated с total. ORDER BY — в хвосте: скоуп
         // вставляется перед ним. Параметр у всех один — project (slug), как у прочих срезов.
         slice("project_by_id",
-            "SELECT slug, name, default_branch, is_private FROM KnowGitProject WHERE slug = :project",
+            "SELECT slug, name, short_code, short_title, short_title_en, short_title_pl, title_en, title_pl, " +
+            "description, description_en, description_pl, default_branch, is_private, hosts, aliases FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
         slice("project_sprints",
             "SELECT sprint_id, coalesce(title, name) AS name, " +
@@ -2269,7 +2270,8 @@ public final class LoreSlices {
         // valid_to: сменённый исполнитель в детях не числится). Человека задача знает по
         // display_name, но ключ паспорта — kc_sub (имя меняется, sub нет; так ведёт и проект).
         slice("user_by_id",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects " +
             "FROM KnowUser WHERE kc_sub = :kc_sub",
             List.of("kc_sub"), Map.of(), "");
         slice("agent_by_id",
@@ -2281,7 +2283,8 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // Списки разделов «Люди» и «Агенты» v2: строка — человек (агент) и его проекты.
         slice("users",
-            "SELECT kc_sub, display_name, outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
+            "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
+            "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
             List.of(), Map.of(), " ORDER BY display_name");
         slice("agents",
             "SELECT actor_id, name, client_id, agent_role, harness, " +
@@ -2964,7 +2967,9 @@ public final class LoreSlices {
         slice("prs",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, merged_at AS changed_at, head_ref, base_ref, " +
             "out('SHIPPED_IN').release_uid AS release_uids, " +
-            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
+            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects, " +
+            // #1708: подпись проекта — краткое название (по связи с проектом; без связи — ключ из поля)
+            "out('BELONGS_TO_PROJECT').slug AS project_slugs, out('BELONGS_TO_PROJECT').short_title AS project_titles " +
             "FROM KnowPR",
             List.of(), Map.of(), " ORDER BY merged_at DESC, pr_uid");
 
@@ -3309,6 +3314,7 @@ public final class LoreSlices {
         slice("products",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +
@@ -3347,6 +3353,7 @@ public final class LoreSlices {
         slice("product_by_id",
             "SELECT code, label_ru, label_en, color, icon, sort_order, " +
             "ifnull(is_active, true) AS is_active, " +
+            "is_extensible, " +
             // WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид продукта tech | service; пусто — не размечен.
             "kind, " +
             "in('IN_PRODUCT').component_id  AS components, " +

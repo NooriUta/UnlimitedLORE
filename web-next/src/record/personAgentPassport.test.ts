@@ -28,7 +28,8 @@ describe('человек и агент: раздел, маршрут, паспо
     });
     expect(userRecord({ kc_sub: 'kc-2' }).title).toBe('kc-2');
     expect(agentRecord({ actor_id: 'AGENT-FULL', name: 'Claude Code', client_id: 'lore-mcp-full', agent_role: 'full', owner: 'kc-1', projects: [] })).toMatchObject({
-      id: 'AGENT-FULL', kind: 'agent', title: 'Claude Code', status: '',
+      // AO-AGENT-HUMAN-NAME (владелица 21.11.2026): «Claude Code · full» вместо голого имени; учётка — полем clientId.
+      id: 'AGENT-FULL', kind: 'agent', title: 'Claude Code · full', status: '',
       fields: { clientId: 'lore-mcp-full', agentRole: 'full', owner: 'kc-1', project: [] },
     });
   });

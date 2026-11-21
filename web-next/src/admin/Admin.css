@@ -283,3 +283,6 @@
   .adm-model-cards td { border: 0; padding: 2px 0; }
   .adm-model-order { white-space: normal; }
 }
+
+/* Вид «Журнал · Аналитика» админских журналов (графики — не над журналом, 21.11.2026). */
+.adm-viewswitch { display: flex; margin: 4px 0 8px; }
