@@ -10,8 +10,9 @@
 #            бэкенда — из метки org.opencontainers.image.revision; по нему
 #            сверяется /lore/version и считается версия схемы кода.
 #   ssh      ключ CD (секрет LORE_HOST_SSH_KEY) + закреплённый отпечаток хоста.
-#   state    только чтение: каталоги, compose, контейнеры, версия схемы прода
-#            (строка «схема сверена: БД vN» в логе бэкенда).
+#   state    только чтение: каталоги, compose, контейнеры, вид схемы прода — у самого бэкенда
+#            (/lore/version: schema_source, schema_version), лог — запасной путь; не определили —
+#            сказано вслух (1.18.3, см. prod_schema_detect).
 #   plan     только чтение: что будет перевезено/заменено/накатано (dry-run).
 #   ship     docker save | ssh docker load, сверка Id; уже есть с тем же Id — пропуск.
 #   compose  бэкап docker-compose.yml.bak-<тег> в обоих каталогах, замена ТОЛЬКО
@@ -32,7 +33,8 @@
 #            сверка размера css внутри контейнера keycloak.
 #   probe    хэш бандла v1/v2 (на lore-host по Host и по публичному имени),
 #            /lore/version = коммит сборки через nginx v1 И v2, /mcp через оба имени = 401/405,
-#            в логе «БД vN = код vN».
+#            схема: у базы из модели — schema_source=model и schema_version=model:<номер модели тега>,
+#            у базы шагов V — «БД vN = код vN» в логе нового бэкенда; вид не определён — красная.
 #   swap-file <файл> <сервис> <тег>   — замена тега образа в одном compose-файле
 #            (её же выполняет compose на lore-host: скрипт уходит туда по stdin).
 #   remote-backup <каталог> <база>    — BACKUP DATABASE кредом сервиса lore-migrate
@@ -72,6 +74,65 @@ dir_of() { case "$1" in lore-app-next) echo "$DIR_NEXT" ;; *) echo "$DIR_BE" ;; 
 rollback_hint() {
   echo "ОТКАТ на lore-host: cd $DIR_BE && cp docker-compose.yml.bak-${TAG:-<тег>} docker-compose.yml && docker compose up -d lore-backend lore-mcp lore-app;"
   echo "                    cd $DIR_NEXT && cp docker-compose.yml.bak-${TAG:-<тег>} docker-compose.yml && docker compose up -d"
+}
+
+# ── вид схемы прода (1.18.3) ─────────────────────────────────────────────────
+# Что за схема у базы прода — спрашиваем сам бэкенд: /lore/version отдаёт schema_source
+# (model — схему собрал установщик из модели, steps — журнал шагов V) и schema_version
+# (model:<номер модели> | <номер шага V кода>). Лог — ТОЛЬКО запасной путь.
+#
+# Почему так: до 1.18.3 вид схемы брался лишь из лога, и строку искали такой, какой её никто
+# не пишет. На базе из модели рантайм (lore.migrate=false) пишет «схема собрана из модели —
+# шаги V не применяются, переходник чтения включён», а «(LoreModelSchema)» есть только у пути
+# сверки шагов V, до которого такая база не доходит (LoreSchemaMigrationRunner.runSchema →
+# builtFromModel). PROD_SCHEMA оставался пустым, проба шла веткой шагов V и требовала
+# «схема сверена: БД v93» — задача деплоя была красной два релиза подряд (1.18.0 — 39647,
+# 1.18.1 — 39867) при исправном проде.
+#
+# Значения PROD_SCHEMA: model | <номер шага V> | steps (вид ясен, номера нет) | пусто (не
+# определили). Пусто — громко вслух: молча идти веткой V значит требовать «БД vN» у базы,
+# где шагов V нет по построению.
+SCHEMA_LOG_RE='схема сверена: БД v[0-9]+ = код v[0-9]+|схема собрана из модели'
+
+# Поле JSON (строкой или числом); нет поля — пусто.
+json_field() {
+  printf '%s' "$2" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"?[^\",}]*" | head -1 \
+    | sed -E "s/^\"$1\"[[:space:]]*:[[:space:]]*\"?//"
+}
+
+# /lore/version прода через nginx: v2 (4402), затем v1 (4400). Ни один не ответил — пусто.
+prod_version_json() {
+  local s out
+  for s in "$HOST_V2 4402" "$HOST_V1 4400"; do
+    # shellcheck disable=SC2086 # пара «имя порт» намеренно разбивается на слова
+    set -- $s
+    out="$(r "curl -s -m 10 -H 'Host: $1' http://127.0.0.1:$2/lore/version" 2>/dev/null || true)"
+    case "$out" in *'"schema_source"'*) printf '%s' "$out"; return 0 ;; esac
+  done
+  return 0
+}
+
+# Строка схемы в логе бэкенда; $1 — «--since <время>» или пусто.
+schema_log_line() {
+  r "cd $DIR_BE && docker compose logs --no-color ${1:-} lore-backend 2>&1 | grep -oE '$SCHEMA_LOG_RE' | tail -1" 2>/dev/null || true
+}
+
+# Вид схемы прода на stdout, пояснения — в stderr (их видно в журнале шага).
+prod_schema_detect() {
+  local ver src sv line n
+  ver="$(prod_version_json)"
+  src="$(json_field schema_source "$ver")"
+  sv="$(json_field schema_version "$ver")"
+  if [ -n "$src" ]; then echo "/lore/version прода: schema_source=$src, schema_version=${sv:-?}" >&2
+  else echo "/lore/version прода не прочитан (schema_source нет) — смотрю лог бэкенда" >&2; fi
+  [ "$src" = model ] && { printf 'model'; return 0; }
+  line="$(schema_log_line)"
+  echo "строка схемы в логе бэкенда: ${line:-<нет>}" >&2
+  n="$(printf '%s' "$line" | sed -nE 's/.*БД v([0-9]+).*/\1/p')"
+  [ -n "$n" ] && { printf '%s' "$n"; return 0; }
+  [ "$src" = steps ] && { printf 'steps'; return 0; }
+  case "$line" in *"собрана из модели"*) printf 'model'; return 0 ;; esac
+  return 0
 }
 
 # ── сторож v2 → бэкенд (S8-02, 1.18.1) ───────────────────────────────────────
@@ -290,15 +351,15 @@ state() {
     || echo "::warning::в $DIR_BE/docker-compose.yml нет LORE_RELEASE_TAG — /lore/version отдаст release: null (метка в углу покажет коммит). Добавить в environment lore-backend: - LORE_RELEASE_TAG=\${LORE_RELEASE_TAG:-}"
   echo "── контейнеры"
   r "docker ps --format '{{.Names}}  {{.Image}}  {{.Status}}' | grep -E 'lore|keycloak' || true"
-  local line n
-  # 1.18: база из модели (перенос MIG-01) пишет «схема собрана из модели (LoreModelSchema)», а не «схема
-  # сверена: БД vN» — это признанное состояние PROD_SCHEMA=model, а не «неизвестно».
-  line="$(r "cd $DIR_BE && docker compose logs --no-color lore-backend 2>&1 | grep -oE 'схема сверена: БД v[0-9]+ = код v[0-9]+|схема собрана из модели \(LoreModelSchema\)' | tail -1" || true)"
-  case "$line" in
-    *"собрана из модели"*) n=model ;;
-    *) n="$(printf '%s' "$line" | sed -nE 's/.*БД v([0-9]+).*/\1/p')" ;;
+  local n
+  # 1.18.3: вид схемы — у самого бэкенда (/lore/version), лог — запасной путь (см. prod_schema_detect).
+  n="$(prod_schema_detect)"
+  case "$n" in
+    model) echo "схема прода: собрана из модели (LoreModelSchema) — шагов V нет по построению" ;;
+    steps) echo "::warning::схема прода: журнал шагов V, но номер версии не прочитан — db пойдёт безопасной стороной (бэкап и идемпотентная накатка)" ;;
+    "")    echo "::warning::вид схемы прода не определён: /lore/version не отдал schema_source, и в логе бэкенда нет ни «схема сверена: БД vN», ни «схема собрана из модели». db сделает бэкап и идемпотентную накатку, а probe потребует явного подтверждения — молча веткой шагов V выкатка не идёт" ;;
+    *)     echo "схема прода: шаги V, БД v$n" ;;
   esac
-  echo "схема прода по логу бэкенда: ${line:-<строки нет в логе>}"
   sed -i '/^PROD_SCHEMA=/d' "$STATE" 2>/dev/null || true
   put PROD_SCHEMA "${n:-}"
   [ "$bad" -eq 0 ] || return 1
@@ -320,8 +381,9 @@ plan() {
     if [ -n "$id" ] && [ "$rid" = "$id" ]; then echo "  $img: уже на lore-host ($id)"; else echo "  $img: будет перевезён (на 131: ${id:-?}, на lore-host: ${rid:-нет})"; fi
   done
   echo "  compose: бэкап docker-compose.yml.bak-$TAG в $DIR_BE и $DIR_NEXT, замена тегов на :${SRC8:-?}"
-  if [ -z "${CODE_SCHEMA:-}" ]; then echo "  база: прод v${PROD_SCHEMA:-?}, версия схемы кода не определена (resolve)"
-  elif [ -z "${PROD_SCHEMA:-}" ]; then echo "  база: версия прода неизвестна → бэкап $PROD_DB и накатка (безопасная сторона)"
+  if [ -z "${CODE_SCHEMA:-}" ]; then echo "  база: прод ${PROD_SCHEMA:+схема }${PROD_SCHEMA:-?}, версия схемы кода не определена (resolve)"
+  elif [ "${PROD_SCHEMA:-}" = model ]; then echo "  база: прода собрана из модели (1.18) — шагов V нет, ни бэкапа, ни накатки"
+  elif [ -z "${PROD_SCHEMA:-}" ] || [ "${PROD_SCHEMA:-}" = steps ]; then echo "  база: версия прода неизвестна → бэкап $PROD_DB и накатка (безопасная сторона)"
   elif [ "${CODE_SCHEMA:-0}" -gt "$PROD_SCHEMA" ]; then echo "  база: прод v$PROD_SCHEMA < код v$CODE_SCHEMA → бэкап $PROD_DB и накатка отдельным compose run"
   elif [ "${CODE_SCHEMA:-0}" -eq "$PROD_SCHEMA" ]; then echo "  база: прод v$PROD_SCHEMA = код v$CODE_SCHEMA → накатка не нужна"
   else echo "  база: прод v$PROD_SCHEMA НОВЕЕ кода v${CODE_SCHEMA:-?} (откат на старый тег) — накатки нет, форвард-совместимый режим"; fi
@@ -405,8 +467,10 @@ db() {
     summary "- база: собрана из модели (1.18) — накатка не нужна"
     return 0
   fi
-  if [ -z "${PROD_SCHEMA:-}" ]; then
-    echo "::warning::версия схемы прода неизвестна (строки «схема сверена» нет в логе) — бэкап и накатка на всякий случай: накатка идемпотентна"
+  if [ -z "${PROD_SCHEMA:-}" ] || [ "${PROD_SCHEMA:-}" = steps ]; then
+    # 1.18.3: «вида не определили» и «вид — шаги V, номера нет» ведут себя одинаково: бэкап и накатка.
+    # Накатка идемпотентна, а на базе из модели она честно скажет «шаги V пропущены» (ниже это успех).
+    echo "::warning::версия схемы прода не определена (/lore/version без номера или строки «схема сверена» нет в логе) — бэкап и накатка на всякий случай: накатка идемпотентна"
     need=yes
   elif [ "$CODE_SCHEMA" -gt "$PROD_SCHEMA" ]; then
     echo "тег несёт миграции: прод v$PROD_SCHEMA → код v$CODE_SCHEMA"; need=yes
@@ -513,33 +577,41 @@ probe() {
   # S8-02: /mcp через оба публичных имени — вход MCP (401/405), а не 502 (нет lore-mcp) / 404.
   mcp_probe "$HOST_V1" || rc=1
   mcp_probe "$HOST_V2" || rc=1
-  local schema_note
-  if [ "${PROD_SCHEMA:-}" = model ]; then
+  # Вид схемы — у НОВОГО бэкенда, который только что поднялся (он и есть истина о своей базе), а не
+  # по снимку PROD_SCHEMA из шага state: в 1.18.0 и 1.18.1 снимок был пуст, проба шла веткой шагов V и
+  # требовала «схема сверена: БД v93» у базы, где шагов V нет — красная задача на исправном проде.
+  local schema_note ver src sv
+  ver="$(prod_version_json)"
+  src="$(json_field schema_source "$ver")"
+  sv="$(json_field schema_version "$ver")"
+  if [ "$src" = model ]; then
     # Патч 1.18.1 (выкатка 1.18, задача 39647, была ложно красной): на базе из модели строки «схема сверена: БД vN»
     # нет и быть не может — шагов V нет. Сверка — по /lore/version: schema_source=model и schema_version=model:<N>,
     # N — номер модели тега (model_version в lore-model.json коммита сборки).
-    local ver src sv
-    ver="$(r "curl -s -m 10 -H 'Host: $HOST_V2' http://127.0.0.1:4402/lore/version" || true)"
-    src="$(printf '%s' "$ver" | grep -oE '"schema_source"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed -E 's/.*"([^"]*)"$/\1/')"
-    sv="$(printf '%s' "$ver" | grep -oE '"schema_version"[[:space:]]*:[[:space:]]*"?[^",}]*' | head -1 | sed -E 's/^"schema_version"[[:space:]]*:[[:space:]]*"?//')"
     if [ -z "${MODEL_VERSION:-}" ]; then
       err "номер модели тега не прочитан (resolve: model_version в shared/model/lore-model.json) — сверять /lore/version не с чем"; rc=1
-    elif [ "$src" = model ] && [ "$sv" = "model:$MODEL_VERSION" ]; then
+    elif [ "$sv" = "model:$MODEL_VERSION" ]; then
       echo "ok: /lore/version — schema_source=model, schema_version=$sv (модель тега v$MODEL_VERSION)"
     else
       err "/lore/version: ждали schema_source=model и schema_version=model:$MODEL_VERSION, есть schema_source=${src:-?}, schema_version=${sv:-?}"; rc=1
     fi
     schema_note="модель v${MODEL_VERSION:-?}"
   else
-    # База шагов V: строка сверки в логе нового бэкенда — только для неё.
-    line="$(r "cd $DIR_BE && docker compose logs --no-color --since $UP_AT lore-backend 2>&1 | grep -oE 'схема сверена: БД v[0-9]+ = код v[0-9]+|схема собрана из модели \(LoreModelSchema\)' | tail -1" || true)"
+    # База шагов V (schema_source=steps) или /lore/version не прочитан — строка сверки в логе НОВОГО бэкенда.
+    line="$(schema_log_line "--since $UP_AT")"
+    schema_note="БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
     case "$line" in
-      *"собрана из модели"*) echo "ok: $line (1.18: база из модели, шагов V нет)" ;;
+      *"собрана из модели"*)
+        if [ "$src" = steps ]; then
+          err "две правды о схеме прода: /lore/version говорит schema_source=steps, а лог нового бэкенда — «$line». Выкатка не подтверждена"; rc=1
+        else
+          echo "::warning::/lore/version прода не прочитан — вид схемы взят из лога: $line (база из модели, шагов V нет)"
+          schema_note="из модели (по логу бэкенда)"
+        fi ;;
       *"БД v$CODE_SCHEMA = код v$CODE_SCHEMA") echo "ok: $line" ;;
       *"= код v$CODE_SCHEMA") echo "::warning::$line — БД и код расходятся (откат на старый тег?)" ;;
-      *) err "в логе нового бэкенда нет «схема сверена: БД v$CODE_SCHEMA = код v$CODE_SCHEMA» (есть: ${line:-ничего})"; rc=1 ;;
+      *) err "вид схемы прода не определён: /lore/version не отдал schema_source${src:+ (отдал «$src»)}, и в логе нового бэкенда нет ни «схема сверена: БД v$CODE_SCHEMA = код v$CODE_SCHEMA», ни «схема собрана из модели» (есть: ${line:-ничего}) — выкатка не подтверждена"; rc=1 ;;
     esac
-    schema_note="БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
   fi
   if [ "$rc" -ne 0 ]; then rollback_hint; return 1; fi
   summary "- пробы: бандлы v1/v2, /mcp (v1 и v2) = вход, /lore/version (v1 и v2) = ${EXPECT_COMMIT:0:8}, $schema_note"
