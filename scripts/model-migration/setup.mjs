@@ -185,13 +185,19 @@ export function clientIdFor(harness) {
   return h === 'claude' ? 'lore-mcp-full' : 'lore-mcp-full_' + h;
 }
 
+/** OH-MCP-HOSTED-SWITCH: ключ секрета главной учётки harness — LORE_MCP_CLIENT_SECRET_FULL[_<harness>] (LORE_MCP_SECRET_VAR). */
+export function secretVarFor(harness) {
+  const id = clientIdFor(harness);
+  return 'LORE_MCP_CLIENT_SECRET_' + id.slice('lore-mcp-'.length).toUpperCase().replace(/-/g, '_');
+}
+
 /** Строка сервера MCP aida-lore. Секрет клиента в строку не кладётся: он остаётся в настройках или хранилище. */
 export function mcpEntry({ harness, machineId, backendUrl, issuer, serverPath, seerRole = 'full' }) {
   if (!harness) throw new Error('не выбран harness');
   if (!machineId) throw new Error('не задан код машины');
   return {
     type: 'stdio', command: 'node', args: [serverPath],
-    env: { LORE_BACKEND_URL: backendUrl, LORE_SEER_ROLE: seerRole, LORE_OIDC_ISSUER: issuer, LORE_MCP_CLIENT_ID: clientIdFor(harness), LORE_HARNESS: harness, LORE_MACHINE_ID: machineId },
+    env: { LORE_BACKEND_URL: backendUrl, LORE_SEER_ROLE: seerRole, LORE_OIDC_ISSUER: issuer, LORE_MCP_CLIENT_ID: clientIdFor(harness), LORE_MCP_SECRET_VAR: secretVarFor(harness), LORE_HARNESS: harness, LORE_MACHINE_ID: machineId },
   };
 }
 
