@@ -89,7 +89,7 @@ export function OpenAgeBlock(p: BlockProps & { project: string }) {
 /** №8 — лента релизов, паспорт проекта, «Аналитика» → «Релизы». */
 export function ReleaseRhythmBlock(p: BlockProps & { project?: string }) {
   const t = useAppT();
-  const { res, partial } = useSlice(p, 'releases', { fields: 'release_uid,git_tag,release_id,release_date,released_at,pr_count', ...(p.project ? { project: p.project } : {}) });
+  const { res, partial } = useSlice(p, 'releases', { fields: 'release_uid,git_tag,release_id,release_date,pr_count', ...(p.project ? { project: p.project } : {}) });
   const r = useMemo(() => (res.data ? releaseRhythm(rowsOfBody<ReleaseRow>(res.data)) : null), [res.data]);
   return (
     <>
