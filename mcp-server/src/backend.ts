@@ -19,9 +19,32 @@ export const ACTIVE_PROJECT = process.env.LORE_ACTIVE_PROJECT || undefined;
 // Режим авторизации — «всё или ничего», см. authMode() ниже.
 const OIDC_ISSUER    = process.env.LORE_OIDC_ISSUER;
 const MCP_CLIENT_ID  = process.env.LORE_MCP_CLIENT_ID;
-const MCP_CLIENT_SECRET = process.env.LORE_MCP_CLIENT_SECRET;
 
-const OIDC_KEYS = ['LORE_OIDC_ISSUER', 'LORE_MCP_CLIENT_ID', 'LORE_MCP_CLIENT_SECRET'] as const;
+/** Переменная секрета по умолчанию — прежний путь. */
+export const DEFAULT_SECRET_VAR = 'LORE_MCP_CLIENT_SECRET';
+const VAR_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * SPRINT_LORE_OWN_HOST/OH-MCP-HOSTED-SWITCH (1.18.2): ИМЯ переменной окружения, где лежит секрет
+ * учётки, — LORE_MCP_SECRET_VAR (по умолчанию LORE_MCP_CLIENT_SECRET). Так же, как у helper-скрипта
+ * заголовков: подагенту младшей роли дают LORE_MCP_SECRET_VAR = LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>],
+ * и один `infisical run` подаёт ключи всех ролей сразу.
+ */
+export function secretVarName(env: Record<string, string | undefined>): string {
+  const v = (env.LORE_MCP_SECRET_VAR ?? '').trim();
+  if (v === '') return DEFAULT_SECRET_VAR;
+  if (!VAR_NAME.test(v)) throw new Error('LORE_MCP_SECRET_VAR — не имя переменной окружения (латиница, цифры, «_»)');
+  return v;
+}
+
+/** Секрет учётки из переменной, названной LORE_MCP_SECRET_VAR; нет — undefined. */
+export function mcpClientSecret(env: Record<string, string | undefined>): string | undefined {
+  const v = env[secretVarName(env)];
+  return v && v.trim() !== '' ? v : undefined;
+}
+
+const oidcKeys = (env: Record<string, string | undefined>) =>
+  ['LORE_OIDC_ISSUER', 'LORE_MCP_CLIENT_ID', secretVarName(env)] as const;
 
 /**
  * SPRINT_LORE_AGENT_OBSERVABILITY/AO-07: частичная настройка OIDC ОТКАЗЫВАЕТ,
@@ -39,12 +62,15 @@ const OIDC_KEYS = ['LORE_OIDC_ISSUER', 'LORE_MCP_CLIENT_ID', 'LORE_MCP_CLIENT_SE
  * "${LORE_MCP_CLIENT_SECRET}" в .mcp.json при неподанной переменной.
  */
 export function authMode(env: Record<string, string | undefined>): 'oidc' | 'header' {
-  const present = OIDC_KEYS.filter((k) => (env[k] ?? '').trim() !== '');
+  const keys = oidcKeys(env);
+  const present = keys.filter((k) => (env[k] ?? '').trim() !== '');
   if (present.length === 0) return 'header';
-  if (present.length === OIDC_KEYS.length) return 'oidc';
-  const missing = OIDC_KEYS.filter((k) => !present.includes(k));
+  if (present.length === keys.length) return 'oidc';
+  const missing = keys.filter((k) => !present.includes(k));
+  const named = keys[2] !== DEFAULT_SECRET_VAR && missing.includes(keys[2])
+    ? ` (имя переменной секрета задано LORE_MCP_SECRET_VAR)` : '';
   throw new Error(
-    `Частичная настройка OIDC: заданы ${present.join(', ')}; нет ${missing.join(', ')}. ` +
+    `Частичная настройка OIDC: заданы ${present.join(', ')}; нет ${missing.join(', ')}${named}. ` +
     'Откат на заголовок X-Seer-Role не выполняется: он дал бы права из LORE_SEER_ROLE ' +
     '(обычно admin) вместо профиля клиента. Подайте недостающие переменные либо уберите все три.',
   );
@@ -201,7 +227,7 @@ async function serviceAccountToken(): Promise<string> {
     body: new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: MCP_CLIENT_ID as string,
-      client_secret: MCP_CLIENT_SECRET as string,
+      client_secret: mcpClientSecret(process.env) as string,
     }),
   });
   if (!res.ok) throw new Error(`OIDC token request → ${res.status} ${await detail(res)}`);
