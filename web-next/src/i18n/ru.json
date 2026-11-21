@@ -2420,5 +2420,14 @@
   "pp.field.prUrl": "Ссылка",
   "pp.field.mergedAt": "Влит",
   "pp.field.headRef": "Ветка-источник",
-  "pp.field.baseRef": "Ветка-цель"
+  "pp.field.baseRef": "Ветка-цель",
+  "pp.no": "нет",
+  "lists.prs.title": "PR",
+  "lists.field.merged_at": "Влит",
+  "lists.field.branches": "Ветки",
+  "lists.field.releases": "Релизы",
+  "lists.field.no_title": "Без заголовка",
+  "lists.field.no_release": "Без релиза",
+  "lists.quick.prNoTitle": "Без заголовка",
+  "lists.quick.prNoRelease": "Без релиза"
 }

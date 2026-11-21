@@ -76,7 +76,7 @@ const LIST_ROUTES: Record<string, ListScreenId> = { '/sprints': 'sprints', '/adr
 const LIST_SECTION: Record<ListScreenId, V2Section> = {
   sprints: 'sprint', adrs: 'adr', tasks: 'task',
   decisions: 'decision', specs: 'spec', docs: 'doc', runbooks: 'runbook', quality_gates: 'quality_gate', users: 'user', agents: 'agent', questions: 'question', milestones: 'milestone',
-  releases: 'release', components: 'component', tech: 'tech', features: 'feature',
+  releases: 'release', prs: 'pr', components: 'component', tech: 'tech', features: 'feature',
   projects: 'project', repositories: 'repository', organizations: 'organization',
   products: 'product', actors: 'actor', pains: 'pain', gains: 'gain', jobs: 'job',
 };

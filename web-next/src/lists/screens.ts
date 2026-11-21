@@ -21,7 +21,7 @@ import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
   actorRecord, adrRecord, componentRecord, decisionRecord, featureRecord, gainRecord, jobRecord, milestoneRecord,
   painRecord, productRecord, projectRecord, questionRecord, releaseRecord, specRecord, docRecord, runbookRecord, qualityGateRecord, userRecord, agentRecord, sprintRecord, taskListRecord,
-  techRecord, repositoryRecord, organizationRecord,
+  techRecord, repositoryRecord, organizationRecord, prRecord,
 } from './records';
 import type { RowMapCtx } from './records';
 import { staleByStatus, withCalendar, withLibrary, type CalendarDate, type LibrarySpec } from './library';
@@ -217,6 +217,8 @@ export const FEEDS = {
     becauseFields: { GATES: 'gates', RAISED_IN: 'adr' },
   },
   releases: { lead: ['description_md'], inRow: true },
+  // 1.18: лента PR — по моменту мержа, суть — заголовок.
+  prs: { lead: ['title'], inRow: true },
   tech: { lead: ['content_md'], titles: ['lists.feed.sec.info'], inRow: true },
   // PU-27: у вехи появилось время (changed_at) — значит и лента, как у прочих разделов со
   // временем. Цель и решения вехи срез уже везёт строкой (goal_md, decisions_md).
@@ -432,7 +434,7 @@ interface SectionSpec {
 const REF_KIND: Record<string, string> = {
   project: 'project', component: 'component', components: 'component', release: 'release', milestone: 'milestone',
   sprint: 'sprint', sprints: 'sprint', products: 'product', product: 'product', adr: 'adr', adrs: 'adr',
-  tech: 'tech', actors: 'actor', owner: 'person', gates: 'quality_gate',
+  tech: 'tech', actors: 'actor', owner: 'person', gates: 'quality_gate', releases: 'release',
 };
 function refKindOf(kind: string, key: string): string | undefined {
   return key === 'parent' || key === 'children' ? kind : REF_KIND[key];
@@ -471,6 +473,22 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
     },
   };
 }
+
+/**
+ * 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): PR — заголовок (нет — ключ), проект, состояние,
+ * момент мержа, ветки, релизы по ключу. Фильтры: проект, состояние, «без заголовка», «без релиза». Статуса плана нет.
+ */
+const prsSpec: SectionSpec = {
+  kind: 'pr', titleKey: 'lists.prs.title', icon: 'branch-arrow',
+  fields: [['project', 'ref'], ['state', 'text'], ['merged_at', 'date'], ['branches', 'text'], ['releases', 'ref'],
+    ['no_title', 'text'], ['no_release', 'text']],
+  statuses: [],
+  views: ['list', 'cards'],
+  quick: [['no-title', 'lists.quick.prNoTitle', { no_title: '✓' }], ['no-release', 'lists.quick.prNoRelease', { no_release: '✓' }]],
+  filters: [LORE_FILTER_FIELDS.project, 'fields.state', 'fields.no_title', 'fields.no_release'],
+  groupings: [LORE_FILTER_FIELDS.project, 'fields.state'],
+  columns: ['title', 'project', 'state', 'merged_at', 'branches', 'releases'],
+};
 
 /** Решения: статусов девять видов, у 46 строк из 778 статуса нет вовсе. */
 const decisionsSpec: SectionSpec = {
@@ -931,6 +949,12 @@ export const LIST_SCREENS = {
       // K4-CHARTS (19.11, «можно и на дорожную карту»): под сгоранием — графики спринтов вехи.
       render: id => createElement(MilestoneRowDetail, { milestoneId: id }),
     },
+  },
+  // 1.18: PR под «Релизами»; свежие сверху — по моменту мержа (updated_at записи = merged_at).
+  prs: {
+    slice: 'prs', titleKey: 'lists.prs.title', icon: 'branch-arrow',
+    defaultSort: FRESH_FIRST,
+    map: prRecord, config: lang => withFeed(lang, sectionConfig(lang, prsSpec), FEEDS.prs), feed: FEEDS.prs, quickIcons: {},
   },
   releases: {
     slice: 'releases', titleKey: 'lists.releases.title', icon: 'open-book',

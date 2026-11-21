@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "a9fddbe33143a5c4",
+  "version" : "3b65b7ba1856411b",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -14270,6 +14270,9 @@
         "section" : "release",
         "icon" : "open-book"
       }, {
+        "section" : "pr",
+        "icon" : "branch-arrow"
+      }, {
         "section" : "quality_gate",
         "icon" : "checkered-flag"
       } ]
@@ -14382,6 +14385,7 @@
     "organization" : "everywhere",
     "pain" : "everywhere",
     "people" : "admin",
+    "pr" : "everywhere",
     "product" : "everywhere",
     "project" : "everywhere",
     "quality_gate" : "everywhere",

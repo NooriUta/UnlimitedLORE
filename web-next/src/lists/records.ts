@@ -477,6 +477,35 @@ export function milestoneRecord(row: Row): KitRecord {
  * Код записи — release_uid (деловой ключ «проект-версия»), а не release_id и не
  * тег: тег у разных проектов повторяется.
  */
+/**
+ * 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): строка среза prs → запись kit. Ключ — pr_uid
+ * «проект#номер»; заголовка нет (старые PR) — подпись ключом. Релизы — по ключу «проект#тег», подпись — тег.
+ * Время записи — момент мержа: свежие сверху по нему.
+ */
+export function prRecord(row: Row): KitRecord {
+  const id = str(row.pr_uid);
+  // Признак — значком, а не словом: фильтр «Быстро» одинаков на любом языке; нет признака — пусто.
+  const yesNo = (b: boolean) => (b ? '✓' : '');
+  const uids = Array.isArray(row.release_uids) ? row.release_uids.filter((x): x is string => typeof x === 'string' && !!x) : [];
+  const head = str(row.head_ref), base = str(row.base_ref);
+  return {
+    id,
+    kind: 'pr',
+    title: str(row.title) || id,
+    status: '',
+    fields: {
+      project: list(row.git_projects),
+      state: str(row.state),
+      merged_at: str(row.merged_at),
+      branches: head || base ? `${head || '?'} → ${base || '?'}` : '',
+      releases: uids.map(u => ({ id: u, label: u.slice(u.lastIndexOf('#') + 1) })),
+      no_title: yesNo(!str(row.title)),
+      no_release: yesNo(uids.length === 0),
+    },
+    ...freshness(row, str(row.merged_at)),
+  };
+}
+
 export function releaseRecord(row: Row): KitRecord {
   const id = str(row.release_uid) || str(row.release_id);
   return {

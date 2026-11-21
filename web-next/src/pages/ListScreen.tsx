@@ -78,7 +78,7 @@ export const PASSPORT_OF: Partial<Record<ListScreenId, PassportType>> = {
   agents: 'agent',
   // Появились 09.11 вместе с типами фасада (#988, #991). Четыре — только на
   // чтение; «только чтение» приходит в `perms`, клиент это не предполагает.
-  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release',
+  decisions: 'decision', questions: 'question', milestones: 'milestone', releases: 'release', prs: 'pr',
   // Появились 10.11 (серверный PR #1090), тоже только на чтение. Технология
   // открывается по spec_id: путь /lore/record/tech/<SPEC-TECH-…>, обычная
   // спека по этому пути даёт 404 — то есть тип выбирает раздел, а не ключ.

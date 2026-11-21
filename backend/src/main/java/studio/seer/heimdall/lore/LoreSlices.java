@@ -2958,6 +2958,16 @@ public final class LoreSlices {
             "FROM KnowPR WHERE out('SHIPPED_IN').release_uid CONTAINS :ruid ORDER BY pr_number",
             List.of("ruid"), Map.of(), "");
 
+        // 1.18 (владелица 21.11.2026: «в меню под релизы вход в PR сделай»): список всех PR — раздел «PR».
+        // Проект — поле git_project и ребро BELONGS_TO_PROJECT (скоуп PROJECT_SCOPED — по любому из двух);
+        // релизы — по ключу release_uid «проект#тег»; свежие сверху по моменту мержа (changed_at = merged_at).
+        slice("prs",
+            "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, merged_at AS changed_at, head_ref, base_ref, " +
+            "out('SHIPPED_IN').release_uid AS release_uids, " +
+            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
+            "FROM KnowPR",
+            List.of(), Map.of(), " ORDER BY merged_at DESC, pr_uid");
+
         // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — одна строка KnowPR по pr_uid «проект#номер».
         // Задачи — по ребру CLOSED_BY (задача → PR), релизы — по SHIPPED_IN (PR → релиз): те же рёбра,
         // что пишут мерж (forgejo_pr_merge), task_link rel=pr и release_link rel=pr.
@@ -3530,6 +3540,8 @@ public final class LoreSlices {
         Map.entry("project_runbooks", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_files", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("project_prs", "out('BELONGS_TO_PROJECT').slug"),
+        // 1.18: раздел «PR» — проект по ребру или по полю git_project (ребро у старых PR не стоит).
+        Map.entry("prs", "out('BELONGS_TO_PROJECT').slug|=git_project"),
         // Задачи — проект через спринт.
         Map.entry("tasks_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_phase", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
