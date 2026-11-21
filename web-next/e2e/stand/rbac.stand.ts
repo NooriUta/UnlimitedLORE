@@ -13,7 +13,9 @@
 // к прогону не попадает. Они идут в CI с секретом из Infisical — отдельным шагом.
 import { readFileSync } from 'node:fs';
 import { expect, test as base, type Page } from '@playwright/test';
-import { authFileFor, expiredCopy, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';import { storedAccessToken } from './tokens.ts';
+import { authFileFor, expiredCopy, isExpired, jwtPayload, RBAC_ACCOUNTS } from '../../src/standSmoke/rbac.ts';
+import { preprodTestWriteRefusal, WRITES_TAG } from './writeGuard.ts';
+import { call, ensureTestProject, TEST_PROJECT_A, TEST_PROJECT_B } from './testData.ts';import { storedAccessToken } from './tokens.ts';
 import { asAccount, requireStandUrl, shot } from './stand.ts';
 import { roleClaimsOf } from '../../src/standSmoke/roleClaims.ts';
 
@@ -176,14 +178,38 @@ test('RB-11a super-admin проходит гейт создания проект
 
 // ── §5 Проектные роли ───────────────────────────────────────────────────────
 
-test('RB-40 Владелец видит свой проект: test-user-1 — owner в TEST-proj-a', async ({ login }) => {
-  const page = await login(RBAC_ACCOUNTS.user1);
-  const me = await whoami(page);
+// Владелица 21.11.2026: «у нас же есть тестовые пользователи, пусть заводят тестовые проекты». На препроде test-sa
+// заводит TEST-proj-a и TEST-proj-b (повтор — переиспользует) и даёт test-user-1 роль owner в TEST-proj-a. Удаления
+// проекта в API нет — проекты постоянные тестовые. Вне препрода (и без метки @writes) — только чтение, как прежде.
+test('RB-40 Владелец видит свой проект: test-user-1 — owner в TEST-proj-a', { tag: WRITES_TAG }, async ({ login }) => {
+  const writeRefusal = preprodTestWriteRefusal(process.env.LORE_STAND_URL?.trim(),
+    { writer: test.info().tags.includes(WRITES_TAG), ids: [TEST_PROJECT_A, TEST_PROJECT_B] });
+  const user = await login(RBAC_ACCOUNTS.user1);
+  if (writeRefusal === null) {
+    const sub = String((await whoami(user)).sub ?? '');
+    expect(sub, 'kc_sub test-user-1 из whoami').not.toBe('');
+    const sa = await login(RBAC_ACCOUNTS.superAdmin);
+    for (const slug of [TEST_PROJECT_A, TEST_PROJECT_B]) {
+      const outcome = await ensureTestProject(sa, slug);
+      info(`проект ${slug}: ${outcome}`);
+    }
+    const g = await call(sa, 'POST', '/lore/user/role', { kc_sub: sub, project: TEST_PROJECT_A, role: 'owner', display_name: RBAC_ACCOUNTS.user1 });
+    expect(g.status, `owner test-user-1 в ${TEST_PROJECT_A}: ${g.text}`).toBe(200);
+  } else info(`записи нет: ${writeRefusal}`);
+  const me = await whoami(user);
   const roles = (me.project_roles ?? []) as { project?: string; role?: string }[];
-  test.skip(roles.length === 0, 'у test-user-1 нет проектных ролей — тестовые проекты (TEST-proj-a) на стенде не заведены, кейс не выполнен');
-  expect(roles, 'роль owner в TEST-proj-a').toContainEqual(expect.objectContaining({ project: 'TEST-proj-a', role: 'owner' }));
+  test.skip(roles.length === 0, `у test-user-1 нет проектных ролей — тестовые проекты не заведены (${writeRefusal ?? 'запись прошла, а роли нет?'}), кейс не выполнен`);
+  expect(roles, 'роль owner в TEST-proj-a').toContainEqual(expect.objectContaining({ project: TEST_PROJECT_A, role: 'owner' }));
   for (const r of roles) expect(String(r.project), 'только тестовые проекты').toMatch(/^TEST-/);
+  // Видит свой проект: «мои проекты» и паспорт проекта.
+  const mine = await api(user, 'GET', '/lore/me/projects');
+  expect(mine.status, `/lore/me/projects: ${mine.text}`).toBe(200);
+  expect(mine.text, `${TEST_PROJECT_A} среди «моих проектов»`).toContain(TEST_PROJECT_A);
+  const rec = await api(user, 'GET', `/lore/record/project/${encodeURIComponent(TEST_PROJECT_A)}`);
+  expect(rec.status, `test-user-1 открывает паспорт ${TEST_PROJECT_A}: ${rec.text}`).toBe(200);
 });
+
+const info = (d: string) => test.info().annotations.push({ type: 'note', description: d });
 
 const STAND_BACK_ON = Date.parse('2026-11-21T00:00:00Z');
 
