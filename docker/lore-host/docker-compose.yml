@@ -85,6 +85,29 @@ services:
       - lore.migrate=true
       - lore.migrate.only=true
 
+  # SPRINT_UXR_S8_SWITCH/S8-02 (1.18.1): MCP-сервер прода. Наружу — ТОЛЬКО через location /mcp
+  # nginx v1 и v2 (https://lore.odal… /mcp, https://new.lore.odal… /mcp), своего порта нет.
+  # Сеть — default этого проекта (unlimitedlore_default): бэкенд по имени, v2 подключён к ней же.
+  # Образ — тот же :sha8, что прошёл препрод (preprod-pin-sha.sh метит и lore-mcp); тег при
+  # релизе переписывает lore-host-deploy.sh, как у остальных сервисов.
+  # Секретов в файле нет: учётка client_credentials MCP (если нужна) — только переменными из .env.
+  lore-mcp:
+    image: unlimitedlore-lore-mcp:a2dc70bc
+    restart: unless-stopped
+    environment:
+      - LORE_MCP_TRANSPORT=http
+      - LORE_MCP_PORT=9200
+      # Бэкенд — по имени в сети compose, мимо nginx и Traefik (никакого публичного имени LORE).
+      - LORE_BACKEND_URL=http://lore-backend:9100
+      - LORE_FORGEJO=${LORE_MCP_FORGEJO:-true}
+      # Пусто — вход по паре id/секрет отвечает 503, Bearer работает.
+      - LORE_OIDC_ISSUER=${LORE_OIDC_ISSUER:-}
+      - LORE_MCP_CLIENT_ID=${LORE_MCP_CLIENT_ID:-}
+      - LORE_MCP_CLIENT_SECRET=${LORE_MCP_CLIENT_SECRET:-}
+    depends_on:
+      lore-backend:
+        condition: service_healthy
+
   lore-app:
     image: unlimitedlore-lore-app:a2dc70bc
     restart: unless-stopped

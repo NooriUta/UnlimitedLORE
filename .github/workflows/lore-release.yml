@@ -664,7 +664,7 @@ jobs:
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/lore-host-deploy.sh db
 
-      - name: compose up -d по сервисам (бэкенд → v1 → v2)
+      - name: compose up -d по сервисам (бэкенд → lore-mcp → v1 → v2)
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/lore-host-deploy.sh up
 
