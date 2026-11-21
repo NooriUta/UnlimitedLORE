@@ -1366,5 +1366,10 @@
   "kit.view.dim": "dimming",
   "kit.view.badType": "a picture is needed (jpg, png, webp)",
   "kit.view.tooBig": "larger than {mb} MB — make it smaller",
-  "kit.view.readFail": "could not read the file"
+  "kit.view.readFail": "could not read the file",
+  "kit.scheme.label": "Scheme",
+  "kit.scheme.empty": "no plan",
+  "kit.scheme.unplaced": "unplaced: {n} — points without coordinates",
+  "kit.scheme.zoomIn": "Zoom in",
+  "kit.scheme.zoomOut": "Zoom out"
 }

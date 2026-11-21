@@ -87,6 +87,8 @@ export * from './nav';
 export * from './appearance';
 // Баннер-вердикт, сетка-дашборд, полоски «мин–макс» (SPRINT_UXR_S15_KIT6).
 export * from './dashboard';
+// «Схема» — смотрелка плана: контуры, точки со статусом, слои, этажи, масштаб (SPRINT_UXR_S15_KIT6).
+export * from './scheme';
 // Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
 // меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
 export * from './reading';

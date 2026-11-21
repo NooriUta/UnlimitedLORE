@@ -1366,5 +1366,10 @@
   "kit.view.dim": "затемнение",
   "kit.view.badType": "нужна картинка (jpg, png, webp)",
   "kit.view.tooBig": "больше {mb} МБ — уменьшите снимок",
-  "kit.view.readFail": "не удалось прочитать файл"
+  "kit.view.readFail": "не удалось прочитать файл",
+  "kit.scheme.label": "Схема",
+  "kit.scheme.empty": "плана нет",
+  "kit.scheme.unplaced": "без места: {n} — у точек нет координат",
+  "kit.scheme.zoomIn": "Крупнее",
+  "kit.scheme.zoomOut": "Мельче"
 }

@@ -7939,3 +7939,23 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-range__track { position: relative; height: 4px; border-radius: 999px; background: var(--bg2); }
 .sk-range__bar { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--inf), var(--acc)); }
 .sk-range__empty { font-size: var(--fs-xs); color: var(--t3); }
+/* ═══ SPRINT_UXR_S15_KIT6 — «Схема»: смотрелка плана ═══ */
+.sk-scheme { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-scheme__bar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.sk-scheme__chip { border-radius: 999px; padding: 0 10px; }
+.sk-scheme__chip[aria-pressed="false"] { opacity: 0.45; }
+.sk-scheme__chip[aria-pressed="true"] { border-color: var(--acc); }
+.sk-scheme__zoom { margin-left: auto; display: inline-flex; gap: 4px; }
+.sk-scheme__svg { width: 100%; background: var(--bg0); border-radius: 10px; touch-action: none; cursor: grab; }
+.sk-scheme__area { fill: var(--bg2); stroke: var(--bd); }
+.sk-scheme__area.is-muted { fill: none; stroke-dasharray: 2 2; }
+.sk-scheme__label { fill: var(--t3); pointer-events: none; font-family: var(--font); }
+.sk-scheme__point { stroke: var(--bg0); cursor: pointer; }
+.sk-scheme__point.is-ok { fill: var(--suc); }
+.sk-scheme__point.is-warn { fill: var(--wrn); }
+.sk-scheme__point.is-bad { fill: var(--dng); }
+.sk-scheme__point.is-info { fill: var(--inf); }
+.sk-scheme__point.is-muted { fill: var(--t3); }
+.sk-scheme__point.is-selected { stroke: var(--t1); }
+.sk-scheme__empty, .sk-scheme__note { font-size: var(--fs-xs); color: var(--t3); }
+.sk-scheme__empty { padding: 24px; text-align: center; border: 1px dashed var(--bd); border-radius: 10px; }
