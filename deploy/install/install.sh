@@ -3,7 +3,7 @@
 #
 #   install.sh [--dir DIR] --version vX.Y.0 [--build] [--port N] [--bind ADDR] [--dry-run]
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
-#     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
+#     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; forgejo-mcp — образ из images/ или исходник из src/ пакета
 #   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
 #     … [--files none|s3] — хранилище файлов: без файлов (по умолчанию) или своё S3 (S3_* в окружении или .env)
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
@@ -61,10 +61,11 @@ FRESH=0
 FRESH_DB="${LORE_FRESH_DB:-lore}"
 MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
 FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
-# forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
-# scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
+# forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
+# scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
 FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
+FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-bbe9f59c.tar.gz"
 FORGEJO_MCP_BUILD=0
 # Сборка из архива исходников пакета (MIG-04, владелица 20.11.2026: «архивом наш проект для собственной сборки если
 # что»): src/lore-<версия>.tar.gz и .sha256 рядом с install.sh (или LORE_SRC_ARCHIVE). Без флага — как раньше.
@@ -374,7 +375,7 @@ images() {
     say "сборка образов из $LORE_SRC_RESOLVED (первый раз — 10–20 минут)"
     run compose build lore-backend lore-app-next
   fi
-  # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (ryzenai 21.11.2026:
+  # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (эмуляция 21.11.2026:
   # Docker Hub перестал отдавать образ хранилища — потому его в пакете и нет); образа нет нигде — need_images называет его.
   run compose pull --ignore-pull-failures arcadedb
   need_images arcadedb
@@ -382,27 +383,73 @@ images() {
   if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
 }
 
-# Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»). Порядок:
+# Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»; 21.11.2026: «исходник кладём
+# прямо в пакет установки», «в пакете установки не должно быть наших настроек»). Сетевого умолчания нет. Порядок:
 #   1) FORGEJO_MCP_IMAGE — свой готовый образ, перекрывает всё;
-#   2) архив пакета images/forgejo-mcp-<коммит>.tar — docker load, только если sha256 сходится;
-#   3) --forgejo-mcp-build — сборка из git на том же коммите (запасной путь, только по явному флагу).
-# Нет ни одного — отказ с причиной, а не тихая сборка.
-forgejo_mcp_image() {
-  local img a want got
-  img="${FORGEJO_MCP_IMAGE:-$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")}"
-  if [ -n "$img" ]; then say "forgejo-mcp: готовый образ $img"; run compose pull forgejo-mcp; return 0; fi
-  if [ "$FORGEJO_MCP_BUILD" = 1 ]; then say "forgejo-mcp: сборка из git (--forgejo-mcp-build)"; run compose build forgejo-mcp; return 0; fi
-  a="${FORGEJO_MCP_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_ARCHIVE_REL}"
-  [ -f "$a" ] || die "нет архива образа forgejo-mcp: $a. Положите каталог images/ из пакета установщика рядом с install.sh; либо --forgejo-mcp-build (сборка из git), либо FORGEJO_MCP_IMAGE (свой образ)"
-  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенный образ не гружу"
+#   2) FORGEJO_MCP_SRC — свои исходники (каталог или git-адрес#коммит), сборка;
+#   3) архив образа пакета images/forgejo-mcp-<коммит>.tar — docker load при совпадении sha256 (--forgejo-mcp-build
+#      его пропускает);
+#   4) исходник пакета src/forgejo-mcp-<коммит>.tar.gz — при совпадении sha256 распаковка в $DIR/forgejo-mcp-src и сборка;
+#   5) ничего нет — в терминале спросить источник (git-адрес, образ или «без forgejo-mcp»), без терминала — отказ
+#      с подсказкой. Молча ничего не подставляется.
+# Сверка sha256 архива пакета: нет .sha256 или не сходится — отказ.
+pkg_sha_ok() { # архив подпись
+  local a="$1" want got
+  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенный $2 не беру"
   want="$(awk '{print $1; exit}' "$a.sha256")"
   got="$(sha256sum "$a" | awk '{print $1}')"
-  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не гружу"
-  say "sha256 архива forgejo-mcp сходится"
-  run docker load -i "$a"
-  if [ "$DRY" != 1 ]; then
-    docker image inspect "$FORGEJO_MCP_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $FORGEJO_MCP_IMAGE_DEFAULT"
+  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не беру"
+}
+forgejo_mcp_image() {
+  local img src a
+  img="${FORGEJO_MCP_IMAGE:-$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")}"
+  if [ -n "$img" ]; then say "forgejo-mcp: готовый образ $img"; run compose pull forgejo-mcp; return 0; fi
+  src="${FORGEJO_MCP_SRC:-$(env_get FORGEJO_MCP_SRC "$DIR/.env")}"
+  if [ -n "$src" ]; then
+    say "forgejo-mcp: сборка из своих исходников $src (FORGEJO_MCP_SRC)"
+    FORGEJO_MCP_SRC="$src" run compose build forgejo-mcp; return 0
   fi
+  a="${FORGEJO_MCP_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_ARCHIVE_REL}"
+  if [ "$FORGEJO_MCP_BUILD" != 1 ] && [ -f "$a" ]; then
+    pkg_sha_ok "$a" "образ"
+    say "sha256 архива forgejo-mcp сходится"
+    run docker load -i "$a"
+    if [ "$DRY" != 1 ]; then
+      docker image inspect "$FORGEJO_MCP_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $FORGEJO_MCP_IMAGE_DEFAULT"
+    fi
+    return 0
+  fi
+  a="${FORGEJO_MCP_SRC_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_SRC_ARCHIVE_REL}"
+  if [ -f "$a" ]; then
+    pkg_sha_ok "$a" "исходник"
+    say "sha256 исходника forgejo-mcp сходится — сборка из пакета, без сети к чужому git"
+    if [ "$DRY" = 1 ]; then printf '[dry-run] распаковать %s в %s\n' "$a" "$DIR/forgejo-mcp-src"
+    else rm -rf "$DIR/forgejo-mcp-src"; mkdir -p "$DIR/forgejo-mcp-src"; tar -xzf "$a" -C "$DIR/forgejo-mcp-src"; fi
+    run compose build forgejo-mcp
+    return 0
+  fi
+  forgejo_mcp_ask
+}
+
+# Источника нет ни в окружении, ни в пакете. Терминал — спросить; иначе — отказ с вариантами (без молчаливого фолбэка).
+forgejo_mcp_ask() {
+  local hint c v
+  hint="FORGEJO_MCP_IMAGE=<готовый образ>, или FORGEJO_MCP_SRC=<каталог или git-адрес#коммит исходников forgejo-mcp>, или положите каталоги src/ и images/ из пакета установщика рядом с install.sh, или --forgejo none (без Forgejo и forgejo-mcp)"
+  if [ "$DRY" = 1 ] || [ ! -t 0 ]; then
+    die "источник forgejo-mcp не задан и в пакете его нет. Задайте: $hint"
+  fi
+  say "источник forgejo-mcp не задан и в пакете его нет. Откуда взять?"
+  printf '  1) git-адрес исходников (https://…/forgejo-mcp.git#коммит)\n  2) готовый образ из своего реестра\n  3) без forgejo-mcp\n'
+  read -r -p "1/2/3: " c
+  case "$c" in
+    1) read -r -p "git-адрес исходников forgejo-mcp: " v; [ -n "$v" ] || die "адрес не введён. $hint"
+       env_set FORGEJO_MCP_SRC "$v" "$DIR/.env"; FORGEJO_MCP_SRC="$v" run compose build forgejo-mcp ;;
+    2) read -r -p "образ forgejo-mcp: " v; [ -n "$v" ] || die "образ не введён. $hint"
+       env_set FORGEJO_MCP_IMAGE "$v" "$DIR/.env"; FORGEJO_MCP_IMAGE="$v" run compose pull forgejo-mcp ;;
+    3) env_set COMPOSE_PROFILES "$(printf '%s' "$(env_get COMPOSE_PROFILES "$DIR/.env")" | tr ',' '\n' | grep -vx 'forgejo-mcp' | paste -sd, -)" "$DIR/.env"
+       say "forgejo-mcp не ставится (профиль снят в $DIR/.env)" ;;
+    *) die "нет такого варианта: «$c». $hint" ;;
+  esac
 }
 
 # Архив исходников пакета: LORE_SRC_ARCHIVE или единственный src/lore-<версия>.tar.gz рядом с install.sh.
@@ -440,7 +487,7 @@ wait_db() {
     say "база $db уже есть"
   else
     # MIG-01: базы установки ещё нет — свежая установка: база из модели под своим именем (не system_aida_lore), шаги V
-    # не катятся. Признак — сама база, а не .env (его могли положить заранее, ryzenai 21.11.2026).
+    # не катятся. Признак — сама база, а не .env (его могли положить заранее, эмуляция 21.11.2026).
     if [ "$db" = system_aida_lore ]; then db="$FRESH_DB"; env_set LORE_DB "$db" "$DIR/.env"; fi
     env_set LORE_MIGRATE false "$DIR/.env"
     FRESH=1
@@ -615,7 +662,7 @@ selftest() {
   fail() { echo "selftest FAIL: $*" >&2; exit 1; }
   expect_rc() { # код аргументы…
     local want="$1"; shift
-    rc=0; out="$(PATH="/usr/bin:/bin" bash "$self" "$@" 2>&1)" || rc=$?
+    rc=0; out="$(PATH="/usr/bin:/bin" bash "$self" "$@" 2>&1 </dev/null)" || rc=$?
     [ "$rc" = "$want" ] || fail "«$*» → код $rc, ждали $want: $out"; ok
   }
   # 1. разбор аргументов
@@ -635,7 +682,7 @@ selftest() {
   expect_rc 2 --dry-run --dir "$t/inst" --version v9.9.9
   printf '%s' "$out" | grep -q 'мажорных' || fail "не-мажорная версия: причина не названа: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
-  printf '%s' "$out" | grep -q 'ghcr.io/nooriuta/lore-backend:v9.0.0' || fail "мажор без --build: нет готового образа ghcr: $out"; ok
+  printf '%s' "$out" | grep -q "ghcr.io/$GHCR_OWNER/lore-backend:v9.0.0" || fail "мажор без --build: нет готового образа ghcr: $out"; ok
   printf '%s' "$out" | grep -q 'compose build' && fail "мажор без --build собирает образы"; ok
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "в плане нет сборки: $out"; ok
@@ -657,7 +704,7 @@ selftest() {
   S3_ENDPOINT=https://s3.example S3_BUCKET=b S3_ACCESS_KEY=a S3_SECRET_KEY=sekret-s3 expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
   printf '%s' "$out" | grep -q 'проверка S3: положить и прочитать пробный объект' || fail "--files s3: нет проверки связи в плане: $out"; ok
   printf '%s' "$out" | grep -q 'sekret-s3' && fail "dry-run напечатал ключ S3"; ok
-  # MIG-04, эмуляция на ryzenai 21.11.2026: сборка из архива исходников (.git там нет) давала /lore/version
+  # MIG-04, эмуляция 21.11.2026: сборка из архива исходников (.git там нет) давала /lore/version
   # «commit: unknown» — установка не говорила, из какого пакета она. Коммит едет в архиве (git archive export-subst,
   # backend/BUILD_COMMIT), install.sh передаёт его в сборку образов (LORE_BUILD_COMMIT в .env).
   grep -q 'BUILD_COMMIT export-subst' "$SCRIPT_DIR/../../.gitattributes" 2>/dev/null || [ ! -f "$SCRIPT_DIR/../../.gitattributes" ] \
@@ -670,9 +717,9 @@ selftest() {
   printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
   printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
   # trap … RETURN остаётся после выхода из функции и срабатывает в чужом return, где её local уже нет (set -u) —
-  # установка на ryzenai 21.11 прошла, а код выхода был 1 («envf: unbound variable»).
+  # пробная установка 21.11 прошла, а код выхода был 1 («envf: unbound variable»).
   grep -qE "trap '[^']*' RETURN" "$0" && fail "trap … RETURN в install.sh — срабатывает после функции (set -u роняет установку)"; ok
-  # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, ryzenai 21.11.2026)
+  # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, эмуляция 21.11.2026)
   sed -n '/^wait_db()/,/^}/p' "$0" | grep -q 'FRESH=1' || fail "свежая установка определяется не по базе (wait_db не ставит FRESH)"; ok
   LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
   printf '%s' "$out" | grep -q 'исполняемый файл установщика не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
@@ -700,23 +747,25 @@ selftest() {
   [ "$s1" != "$s2" ] || fail "gen_secret повторился"; ok
   # 6. профиль установки не требует LORE_BOOTSTRAP и катит схему
   # Свежая установка катит шаги V (по умолчанию true); база, перенесённая в модель 1.18, требует false — иначе бэкенд
-  # честно отказывает старт «схема собрана из модели, а lore.migrate=true» (эмуляция на ryzenai 21.11.2026).
+  # честно отказывает старт «схема собрана из модели, а lore.migrate=true» (эмуляция 21.11.2026).
   grep -qF 'lore.migrate=${LORE_MIGRATE:-true}' "$SCRIPT_DIR/docker-compose.install.yml" || fail "в профиле нет lore.migrate=\${LORE_MIGRATE:-true}"; ok
   grep -qE '^\s*- (lore\.bootstrap|LORE_BOOTSTRAP)' "$SCRIPT_DIR/docker-compose.install.yml" && fail "профиль снова зависит от LORE_BOOTSTRAP"; ok
   grep -qE '^[A-Z_]*PASSWORD=(CHANGE_ME)?$' "$SCRIPT_DIR/.env.example" || fail ".env.example: пароли — только заглушки"; ok
   grep -E 'PASSWORD=' "$SCRIPT_DIR/.env.example" | grep -vqE 'PASSWORD=(CHANGE_ME)?$' && fail ".env.example содержит пароль"; ok
   # 7. вход через Keycloak — по выбору (MIG-04, владелица 17.11.2026: «на новой установке ты заводишь kc»).
   #    По умолчанию входа нет, как раньше; включается LORE_AUTH_ENABLED=true в .env вместе с адресом области.
-  #    Флаг читается и на сборке (build-arg, OIDC впекается в образ), и в рантайме (фильтр ролей) — см. docker-compose.yml.
+  #    У бэкенда флаг читается и на сборке (build-arg OIDC Quarkus), и в рантайме (фильтр ролей). У веба вход — только
+  #    настройка запуска (SELF-PROVISION-STANDALONE): env контейнера → /config.json, в бандл ничего не впекается.
   local c="$SCRIPT_DIR/docker-compose.install.yml"
   grep -qE '^\s*- LORE_AUTH_ENABLED=false\s*$' "$c" && fail "вход прибит гвоздём: LORE_AUTH_ENABLED=false в профиле"; ok
   grep -q 'LORE_AUTH_ENABLED=${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет LORE_AUTH_ENABLED с умолчанием false в окружении"; ok
   grep -q 'LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет build-arg LORE_AUTH_ENABLED"; ok
-  grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
-  grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
+  grep -q 'VITE_LORE_AUTH_ENABLED\|VITE_OIDC_' "$c" && fail "веб: вход снова впекается в бандл (VITE_*) — должен быть env контейнера"; ok
+  grep -q 'LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}' "$c" || fail "веб: адрес входа не задаётся при запуске"; ok
+  grep -q 'LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
   grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
   # 7a. базовые образы (arcadedb): недоступный реестр не роняет установку, если образ уже есть на машине;
-  #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — ryzenai 21.11.2026).
+  #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — эмуляция 21.11.2026).
   grep -q 'pull --ignore-pull-failures arcadedb' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
   grep -q 'need_images arcadedb' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
@@ -724,6 +773,11 @@ selftest() {
   done
   # 8. Forgejo — по выбору (MIG-04, владелица 20.11.2026): install — поставить Forgejo нашей версии, own — свой Forgejo
   #    владельца, none — без Forgejo (по умолчанию, как раньше). В install и own едет forgejo-mcp.
+  #    Исходник forgejo-mcp — в пакете (владелица 21.11.2026): поддельный архив с .sha256 вместо src/ пакета.
+  mkdir -p "$t/pkg/src/fmcp"; printf 'FROM scratch\n' > "$t/pkg/src/fmcp/Dockerfile"
+  tar -czf "$t/pkg/src/fmcp.tar.gz" -C "$t/pkg/src/fmcp" .
+  ( cd "$t/pkg/src" && sha256sum fmcp.tar.gz > fmcp.tar.gz.sha256 )
+  export FORGEJO_MCP_SRC_ARCHIVE="$t/pkg/src/fmcp.tar.gz"
   expect_rc 2 --dry-run --dir "$t/inst" --forgejo maybe
   expect_rc 2 --dry-run --dir "$t/inst" --forgejo own
   printf '%s' "$out" | grep -q 'forgejo-url' || fail "own без адреса: причина не названа: $out"; ok
@@ -748,7 +802,7 @@ selftest() {
   grep -q '^FORGEJO_MCP_API_KEY=CHANGE_ME$' "$SCRIPT_DIR/.env.example" || fail ".env.example: ключ forgejo-mcp — заглушка CHANGE_ME"; ok
   grep -qE '^FORGEJO_(API|MCP)_TOKEN=$' "$SCRIPT_DIR/.env.example" || fail ".env.example: токены Forgejo — пустые"; ok
   # 9. образ forgejo-mcp — из архива пакета (владелица 20.11.2026: «не публиковать, включить в инсталятор»):
-  #    есть архив — docker load со сверкой sha256; нет — отказ; сборка из git — только --forgejo-mcp-build.
+  #    есть архив — docker load со сверкой sha256; нет — сборка из исходника пакета (src/), сети к git не нужно.
   mkdir -p "$t/pkg/images"; printf 'образ' > "$t/pkg/images/a.tar"
   ( cd "$t/pkg/images" && sha256sum a.tar > a.tar.sha256 )
   FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
@@ -761,10 +815,29 @@ selftest() {
   rm -f "$t/pkg/images/a.tar.sha256"; printf 'образ' > "$t/pkg/images/a.tar"
   FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
   printf '%s' "$out" | grep -q 'нет файла sha256' || fail "архив без sha256: принят молча: $out"; ok
-  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org
-  printf '%s' "$out" | grep -q 'forgejo-mcp-build' || fail "нет архива: отказ не называет запасной путь: $out"; ok
-  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
-  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "--forgejo-mcp-build: нет сборки из git: $out"; ok
+  # Нет образа — сборка из исходника пакета: без сети к чьему-либо git (владелица 21.11.2026).
+  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q "распаковать $t/pkg/src/fmcp.tar.gz" || fail "нет образа: исходник пакета не распакован: $out"; ok
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "исходник пакета: нет сборки: $out"; ok
+  printf '%s' "$out" | grep -qiE 'git clone|https?://[^ ]*forgejo-mcp' && fail "сборка forgejo-mcp ходит в сеть: $out"; ok
+  grep -qE 'context: \$\{FORGEJO_MCP_SRC:-\./forgejo-mcp-src\}$' "$SCRIPT_DIR/docker-compose.install.yml" || fail "compose: умолчание сборки forgejo-mcp — не исходник пакета"; ok
+  # --forgejo-mcp-build пропускает архив образа и собирает из исходника пакета.
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
+  printf '%s' "$out" | grep -q 'docker load' && fail "--forgejo-mcp-build: план всё равно грузит образ"; ok
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "--forgejo-mcp-build: нет сборки: $out"; ok
+  # Подменённый исходник пакета — отказ.
+  cp "$t/pkg/src/fmcp.tar.gz" "$t/pkg/src/bad.tar.gz"; printf 'x  bad.tar.gz\n' > "$t/pkg/src/bad.tar.gz.sha256"
+  FORGEJO_MCP_SRC_ARCHIVE="$t/pkg/src/bad.tar.gz" FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый исходник: принят: $out"; ok
+  # Своя замена: FORGEJO_MCP_SRC.
+  FORGEJO_MCP_SRC=/opt/my-fmcp FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'своих исходников /opt/my-fmcp' || fail "FORGEJO_MCP_SRC не взят: $out"; ok
+  # Ничего нет и терминала нет — честный отказ с вариантами, без молчаливого фолбэка.
+  FORGEJO_MCP_SRC_ARCHIVE="$t/none.tar.gz" FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org
+  printf '%s' "$out" | grep -q 'источник forgejo-mcp не задан' || fail "нет источника: причина не названа: $out"; ok
+  for k in FORGEJO_MCP_IMAGE FORGEJO_MCP_SRC 'forgejo none'; do
+    printf '%s' "$out" | grep -q -- "$k" || fail "нет источника: отказ не называет вариант $k: $out"; ok
+  done
   FORGEJO_MCP_IMAGE=reg.example/fmcp:1 FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
   printf '%s' "$out" | grep -q 'compose pull forgejo-mcp' || fail "FORGEJO_MCP_IMAGE не перекрыл архив: $out"; ok
   printf '%s' "$out" | grep -q 'docker load' && fail "FORGEJO_MCP_IMAGE задан, а план грузит архив"; ok

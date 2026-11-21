@@ -4,7 +4,7 @@
 // Bearer; 401 от API — состояние «сессия истекла»; выключенный вход — прежнее
 // поведение (dev-роль); callback-маршрут, тихое продление, выход.
 import { describe, expect, it, vi } from 'vitest';
-import { AuthRequiredError, createAuthSession, isCallbackUrl, type OidcUserLike, type UserManagerLike } from './session';
+import { AuthNotConfiguredError, AuthRequiredError, createAuthSession, isCallbackUrl, type OidcUserLike, type UserManagerLike } from './session';
 
 const NOW = 1_800_000_000_000;
 const user = (over: Partial<OidcUserLike> = {}): OidcUserLike => ({
@@ -274,5 +274,41 @@ describe('S4-34 · возврат из Keycloak: адрес до объявле�
     expect(order[0]).toBe('replace /kit/passport?type=sprint&place=full');
     expect(order).toContain('signed_in');
     expect(s.getState().status).toBe('signed_in');
+  });
+});
+
+// SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE — настройки входа задаются при ЗАПУСКЕ, а не при сборке:
+// включён ли вход, известно только после загрузки /config.json, поэтому `enabled` бывает функцией и
+// читается в init(). Адреса входа нет — честное «вход не настроен», а не исключение про VITE_*.
+describe('SELF-PROVISION · вход — настройка запуска', () => {
+  it('enabled-функция читается в init(): до init — загрузка, после — по ответу', async () => {
+    const make = vi.fn(() => fakeManager());
+    const s = createAuthSession({ enabled: () => false, manager: make, location: loc(), devHeaders: { 'X-Seer-Role': 'admin' } });
+    expect(s.getState().status).toBe('loading');
+    await s.init();
+    expect(s.getState().status).toBe('disabled');
+    expect(s.enabled).toBe(false);
+    expect(s.headers()).toEqual({ 'X-Seer-Role': 'admin' });
+    expect(make).not.toHaveBeenCalled();
+  });
+
+  it('enabled-функция → true: обычный вход', async () => {
+    const m = fakeManager({ stored: user() });
+    const s = createAuthSession({ enabled: () => true, manager: () => m, location: loc(), now: () => NOW });
+    await s.init();
+    expect(s.enabled).toBe(true);
+    expect(s.getState().status).toBe('signed_in');
+  });
+
+  it('адрес входа не задан — состояние unconfigured, запросы не уходят', async () => {
+    const s = createAuthSession({
+      enabled: true, location: loc(),
+      manager: () => { throw new AuthNotConfiguredError('адрес входа не задан'); },
+    });
+    await s.init();
+    expect(s.getState().status).toBe('unconfigured');
+    const f = okFetch();
+    await expect(s.wrapFetch(f)('/lore/slice/adrs')).rejects.toBeInstanceOf(AuthRequiredError);
+    expect(f).not.toHaveBeenCalled();
   });
 });

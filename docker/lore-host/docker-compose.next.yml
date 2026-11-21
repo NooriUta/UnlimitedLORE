@@ -26,6 +26,11 @@ services:
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-https://volva.odal.seidrstudio.pro}
       LORE_BACKEND_URL: http://lore-backend:9100
       LORE_BACKEND_HOST: lore-backend
+      # Вход — настройка ЗАПУСКА (SELF-PROVISION-STANDALONE): образ ничего не впекает, скрипт старта кладёт это в
+      # /config.json. Прод — realm omilore (образ собран на препроде и больше не везёт его realm).
+      LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-true}
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-https://odal.seidrstudio.pro/kc/realms/omilore}
+      LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
       LORE_FRONT: v2
     ports:
       - "4402:80"

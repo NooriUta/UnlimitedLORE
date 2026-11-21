@@ -22,8 +22,11 @@ import { useAdminNav } from './adminNav';
 import { DangerBatch } from './DangerBatch';
 import { fetchRoleMatrix, PROJECT_ROLES, type RolesData } from './roles';
 import { reasonOf } from './wizards';
+import { fetchAppSettings } from './appSettings';
+import type { DictRow } from './dicts';
+import { GIT_HOST_SETTING, resolveGitHost } from './gitHost';
 import {
-  batchVerdict, checkRepo, fetchGitProjects, FORGEJO_BASE, likeProjectBatches, projectPeople, registerProject,
+  batchVerdict, checkRepo, fetchGitProjects, likeProjectBatches, projectPeople, registerProject,
   repoProblem, slugProblem, type BatchOutcome, type GitProject, type Registered, type RepoCheck,
 } from './projectLike';
 
@@ -41,13 +44,18 @@ export function ProjectLikeWizard({ fetchImpl, onDone }: { fetchImpl: typeof fet
   const [src, setSrc] = useUrlParam('adm-psrc');
   const projects = useLoadState<GitProject[]>(() => fetchGitProjects(fetchImpl), [fetchImpl]);
   const matrix = useLoadState<RolesData>(signal => fetchRoleMatrix(signal, fetchImpl), [fetchImpl], { rows: d => d.people });
+  const settings = useLoadState<DictRow[]>(signal => fetchAppSettings(signal, fetchImpl), [fetchImpl]);
 
   const slug = (slugP ?? '').trim();
   const branch = (branchP ?? '').trim() || 'develop';
   // Репозиторий по умолчанию — сам slug, если он вида владелец/имя (так у большинства проектов).
   const existing = projects.data?.find(p => p.slug === slug) ?? null;
   const repo = existing ? (existing.repo ?? '') : (repoP ?? '').trim() || (repoProblem(slug) === null ? slug : '');
-  const repoUrl = repoProblem(repo) === null ? `${FORGEJO_BASE}/${repo}` : FORGEJO_BASE;
+  // Адрес git-хоста — настройка forgejo.url или хост записей репозиториев (SELF-PROVISION-STANDALONE); нет — null.
+  const gitHostSetting = settings.data?.find(r => r.is_active && r.code === GIT_HOST_SETTING)?.label_ru ?? null;
+  const gitHost = resolveGitHost(gitHostSetting, projects.data ?? []);
+  const gitHostMissing = !gitHost && projects.data !== undefined && settings.state !== 'loading';
+  const repoUrl = gitHost ? (repoProblem(repo) === null ? `${gitHost}/${repo}` : gitHost) : null;
 
   // ── 1. проект ──────────────────────────────────────────────────────────
   const [registering, setRegistering] = useState(false);
@@ -59,11 +67,11 @@ export function ProjectLikeWizard({ fetchImpl, onDone }: { fetchImpl: typeof fet
   const rp = repoProblem(repo);
 
   const register = async () => {
-    if (sp || rp || exists) return;
+    if (sp || rp || exists || !gitHost) return;
     setRegistering(true);
     setRegisterError(null);
     try {
-      const r = await registerProject({ slug, name: nameP ?? '', repo, branch }, fetchImpl);
+      const r = await registerProject({ slug, name: nameP ?? '', repo, branch, gitHost }, fetchImpl);
       setRegistered({ ...r, slug });
     } catch (e) {
       setRegisterError(reasonOf(e));
@@ -88,6 +96,11 @@ export function ProjectLikeWizard({ fetchImpl, onDone }: { fetchImpl: typeof fet
       </label>
       {projects.data === undefined && projects.state === 'loading' && <Skeleton lines={1} label={t('admin.wiz.loading')} />}
       {projects.data === undefined && projects.state !== 'loading' && <LoadError error={projects.error} onRetry={projects.reload} />}
+      {gitHostMissing && !exists && (
+        <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-wiz-githost-missing">
+          {t('admin.wiz.gitHost.missingHint', { key: GIT_HOST_SETTING })}
+        </p>
+      )}
       {exists && (
         <p className="adm-note" data-tone="inf" role="status" data-testid="adm-wiz-pexists">
           {t('admin.wiz.project.exists', { slug })}
@@ -109,12 +122,12 @@ export function ProjectLikeWizard({ fetchImpl, onDone }: { fetchImpl: typeof fet
             <span>{t('admin.wiz.project.repo')}</span>
             <input className="adm-input" data-testid="adm-wiz-prepo" value={repoP ?? ''} placeholder={repo || 'AIDA/new-service'}
               onChange={e => setRepo(e.target.value || null)} />
-            <span className="adm-hint">{rp === 'shape' ? t('admin.wiz.project.b.repoShape') : t('admin.wiz.project.repoHint', { url: repoUrl })}</span>
+            <span className="adm-hint">{rp === 'shape' ? t('admin.wiz.project.b.repoShape') : (repoUrl ? t('admin.wiz.project.repoHint', { url: repoUrl }) : t('admin.wiz.gitHost.missing'))}</span>
           </label>
           {registered?.slug !== slug && (
             <div className="adm-field--btns">
               <button type="button" className="adm-btn" data-testid="adm-wiz-register"
-                disabled={registering || !!sp || !!rp || projects.data === undefined} onClick={() => { void register(); }}>
+                disabled={registering || !!sp || !!rp || projects.data === undefined || !gitHost} onClick={() => { void register(); }}>
                 {t('admin.wiz.project.register', { slug: slug || '…' })}
               </button>
             </div>
@@ -177,7 +190,9 @@ export function ProjectLikeWizard({ fetchImpl, onDone }: { fetchImpl: typeof fet
         </p>
       )}
       <p className="adm-sub">
-        <a className="adm-link" href={repoUrl} target="_blank" rel="noreferrer" data-testid="adm-wiz-repo-link">{repoUrl}</a>
+        {repoUrl
+          ? <a className="adm-link" href={repoUrl} target="_blank" rel="noreferrer" data-testid="adm-wiz-repo-link">{repoUrl}</a>
+          : <span className="adm-missing" data-testid="adm-wiz-repo-nohost">{t('admin.wiz.gitHost.missing')}</span>}
         {' '}
         <button type="button" className="adm-btn" data-testid="adm-wiz-repo-recheck" disabled={!repoRes}
           onClick={() => setCheckTick(n => n + 1)}>{t('admin.wiz.project.recheck')}</button>
@@ -361,8 +376,8 @@ export function ProjectLikeWizard({ fetchImpl, onDone }: { fetchImpl: typeof fet
     { key: 'done', title: t('admin.wiz.project.s.done'), render: () => doneStep },
   ];
   const manual: StepsManualItem[] = [
-    { text: t('admin.wiz.project.manual.access'), href: repoProblem(repo) === null ? `${repoUrl}/settings/collaboration` : FORGEJO_BASE, hint: t('admin.wiz.project.manual.accessHint') },
-    ...(repoRes?.kind === 'found' ? [] : [{ text: t('admin.wiz.project.manual.create'), href: `${FORGEJO_BASE}/repo/create`, hint: t('admin.wiz.project.manual.createHint') }]),
+    { text: t('admin.wiz.project.manual.access'), href: repoUrl ? (repoProblem(repo) === null ? `${repoUrl}/settings/collaboration` : repoUrl) : undefined, hint: t('admin.wiz.project.manual.accessHint') },
+    ...(repoRes?.kind === 'found' ? [] : [{ text: t('admin.wiz.project.manual.create'), href: gitHost ? `${gitHost}/repo/create` : undefined, hint: t('admin.wiz.project.manual.createHint') }]),
   ];
   return <Steps steps={steps} urlKey={STEP_KEY} lang={lang} flow="adm-project" onDone={onDone} manual={{ title: t('admin.wiz.manual.title'), items: manual }} />;
 }
