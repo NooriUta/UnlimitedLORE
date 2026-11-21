@@ -299,6 +299,11 @@ write_env() {
   done
   env_set LORE_VERSION "$VERSION" "$env"
   env_set LORE_SRC "$LORE_SRC_RESOLVED" "$env"
+  # Коммит исходников — в сборку образов (LORE_BUILD_COMMIT → /lore/version): в архиве пакета .git нет, коммит лежит
+  # в backend/BUILD_COMMIT (git archive export-subst). Не подставлен (рабочий чекаут) — не трогаем: Gradle спросит git.
+  local bc=""
+  [ -n "$LORE_SRC_RESOLVED" ] && [ -f "$LORE_SRC_RESOLVED/backend/BUILD_COMMIT" ] && bc="$(tr -d '[:space:]' < "$LORE_SRC_RESOLVED/backend/BUILD_COMMIT")"
+  case "$bc" in [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) env_set LORE_BUILD_COMMIT "$bc" "$env" ;; esac
   [ -z "${LORE_BACKEND_IMAGE:-}" ] || env_set LORE_BACKEND_IMAGE "$LORE_BACKEND_IMAGE" "$env"
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
   # Хранилище файлов: s3 — адрес, регион, бакет и ключи из окружения в .env (ключи на экран не выводятся);
@@ -595,6 +600,12 @@ selftest() {
   S3_ENDPOINT=https://s3.example S3_BUCKET=b S3_ACCESS_KEY=a S3_SECRET_KEY=sekret-s3 expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
   printf '%s' "$out" | grep -q 'проверка S3: положить и прочитать пробный объект' || fail "--files s3: нет проверки связи в плане: $out"; ok
   printf '%s' "$out" | grep -q 'sekret-s3' && fail "dry-run напечатал ключ S3"; ok
+  # MIG-04, эмуляция на ryzenai 21.11.2026: сборка из архива исходников (.git там нет) давала /lore/version
+  # «commit: unknown» — установка не говорила, из какого пакета она. Коммит едет в архиве (git archive export-subst,
+  # backend/BUILD_COMMIT), install.sh передаёт его в сборку образов (LORE_BUILD_COMMIT в .env).
+  grep -q 'BUILD_COMMIT export-subst' "$SCRIPT_DIR/../../.gitattributes" 2>/dev/null || [ ! -f "$SCRIPT_DIR/../../.gitattributes" ] \
+    || fail ".gitattributes: backend/BUILD_COMMIT без export-subst — коммит не доедет до архива"; ok
+  grep -q 'env_set LORE_BUILD_COMMIT' "$0" || fail "install.sh не передаёт коммит исходников в сборку (LORE_BUILD_COMMIT)"; ok
   # дальше проверки читают план сборки — вернуть его в $out
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok
