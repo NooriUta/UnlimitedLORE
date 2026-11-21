@@ -80,7 +80,7 @@ const PARITY: Array<[id: string, how: How, selector: string]> = [
   ['п.19/20 события сервера', 'none', '[data-kind-tag="created"], [data-kind-tag="changed"], [data-kind-tag="version"]'],
   ['п.21 мультипринадлежность ×N', 'none', '[data-testid="news-groups-n"]'],
   ['п.21/22 фильтр по проекту', 'filters', '[data-testid="news-filter-project"] button'],
-  ['п.23 код записи', 'none', '.sk-news__meta'],
+  ['п.23 код записи', 'none', '[data-col="code"]'],
   ['п.27 время Местное/UTC', 'filters', '[data-testid="news-zone"] [role="radio"]'],
   ['S7A-02 фильтр: компонент', 'filters', '[data-testid="news-filter-component"]'],
   ['S7A-02 фильтр: спринт', 'filters', '[data-testid="news-filter-sprint"]'],
@@ -140,15 +140,17 @@ test('скрин', async ({ page }, info) => {
 });
 
 // Владелица 09.11 (планшет): «название выровняй — глаза разъезжаются».
-test('заголовки строк начинаются с одной линии, подпись вида целиком влезает в плашку', async ({ page }) => {
+// K4-NEWS-ROW-COLUMNS (21.11): строка — столбцы одной сетки; заголовки и стрелки статуса на одной вертикали.
+test('заголовки строк начинаются с одной линии, стрелки статусов — на одной вертикали', async ({ page }) => {
   await open(page);
   const r = await page.evaluate(() => {
-    const links = [...document.querySelectorAll<HTMLElement>('a.sk-news__link')].filter(a => a.offsetParent);
-    const xs = links.map(a => Math.round(a.querySelector('.sk-news__rtitle')!.getBoundingClientRect().left - a.getBoundingClientRect().left));
-    const clipped = links.map(a => a.querySelector<HTMLElement>('.sk-news__tagslot')!).filter(t => t.querySelector<HTMLElement>('.sk-news__tag')!.offsetWidth > t.clientWidth + 1).map(t => t.textContent);
-    return { xs: [...new Set(xs)], clipped, n: links.length };
+    const rows = [...document.querySelectorAll<HTMLElement>('li.sk-news__row')].filter(a => a.offsetParent);
+    const xs = rows.map(row => Math.round(row.querySelector('[data-col="title"]')!.getBoundingClientRect().left - row.getBoundingClientRect().left));
+    const arrows = rows.map(row => row.querySelector('.sk-news__arrow')).filter(Boolean)
+      .map(a => Math.round((a as HTMLElement).getBoundingClientRect().left));
+    return { xs: [...new Set(xs)], arrows: [...new Set(arrows)], n: rows.length };
   });
   expect(r.n).toBeGreaterThan(2);
   expect(r.xs, `отступы заголовков: ${r.xs.join(', ')}`).toHaveLength(1);
-  expect(r.clipped).toEqual([]);
+  expect(r.arrows.length ? Math.max(...r.arrows) - Math.min(...r.arrows) : 0, `вертикали стрелок статуса: ${r.arrows.join(', ')}`).toBeLessThanOrEqual(2);
 });
