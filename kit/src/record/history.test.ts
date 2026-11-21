@@ -49,6 +49,13 @@ describe('S5-11 · history: автор правки', () => {
     expect(historyAuthor(NEW.author)).toEqual({ kind: 'agent', name: 'claude-code', owner: 'u-1' });
     expect(historyAuthor({ kind: 'unknown' })).toEqual({ kind: 'unknown', name: null });
   });
+
+  it('AO-AGENT-HUMAN-NAME: агент с подписью — учётка (id) подсказкой; без подписи подсказки нет', () => {
+    expect(historyAuthor({ kind: 'agent', id: 'lore-mcp-full', name: 'Claude Code · full', owner: null }))
+      .toEqual({ kind: 'agent', name: 'Claude Code · full', owner: null, hint: 'lore-mcp-full' });
+    expect(historyAuthor({ kind: 'agent', id: 'lore-mcp-full', name: null, owner: null }))
+      .toEqual({ kind: 'agent', name: 'lore-mcp-full', owner: null });
+  });
 });
 
 describe('S5-11 · history: выбор версий для сравнения', () => {

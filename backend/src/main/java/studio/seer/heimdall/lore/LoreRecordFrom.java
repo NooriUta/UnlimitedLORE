@@ -405,7 +405,10 @@ final class LoreRecordFrom {
         // S9-05 A: человек и агент — шапка из строки, дети (задачи по открытым ролям) — срезом.
         Map.entry("user", List.of(
             v("title", Transform.FIRST_OF, "display_name", "kc_sub"),
-            list("projects", "projects"))),
+            list("projects", "projects"),
+            // Пакет 1.18: имя из KC — логин подсказкой и источник имени видны в паспорте.
+            s("login", "login"),
+            s("name_source", "name_source"))),
         Map.entry("agent", List.of(
             v("title", Transform.FIRST_OF, "name", "actor_id"),
             s("client_id", "client_id"),
@@ -510,8 +513,21 @@ final class LoreRecordFrom {
         Map.entry("project", List.of(
             v("title", Transform.FIRST_OF, "name", "slug"),
             s("code", "slug"),
+            // 1.18, слово владелицы 21.11.2026: «код, краткое название, полное название, описание» (+ ru/en/pl).
+            s("short_code", "short_code"),
+            v("short_title", Transform.FIRST_OF, "short_title", "name", "slug"),
+            s("short_title_en", "short_title_en"),
+            s("short_title_pl", "short_title_pl"),
+            s("title_en", "title_en"),
+            s("title_pl", "title_pl"),
+            s("description", "description"),
+            s("description_en", "description_en"),
+            s("description_pl", "description_pl"),
             s("default_branch", "default_branch"),
-            v("is_private", Transform.BOOL_YES, "is_private"))),
+            v("is_private", Transform.BOOL_YES, "is_private"),
+            // Адреса репозиториев — строкой JSON или списком {remote, role, base_url}: kit рисует таблицей (вид kv).
+            v("hosts", Transform.RAW, "hosts"),
+            list("aliases", "aliases"))),
         // D-2026-MIG-REPOSITORY-ORGANIZATION: репозиторий — хост, владелец на хосте, имя, полный путь; ключ — адрес.
         // Подпись — имя, иначе полный путь (прототип: «Репозиторий UnlimitedLORE», путь — полем).
         Map.entry("repository", List.of(
@@ -547,6 +563,7 @@ final class LoreRecordFrom {
             s("icon", "icon"),
             v("sort_order", Transform.RAW, "sort_order"),
             v("is_active", Transform.BOOL, "is_active"),
+            v("is_extensible", Transform.BOOL, "is_extensible"),
             // WK-01: вид продукта — набор tech | service (ADR-LORE-044); прежняя строка — список из одного.
             list("kind", "kind"),
             v("parent", Transform.HEAD_OR, "parent_code"),

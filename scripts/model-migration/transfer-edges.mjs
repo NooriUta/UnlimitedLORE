@@ -15,6 +15,7 @@ import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyR
 import { applyRepos } from './repos.mjs';
 import { applyOrgs } from './orgs.mjs';
 import { readProjectLinksInput, applyProjectLinks } from './project-links.mjs';
+import { projectNamesOf, readProjectNamesInput, applyProjectNames } from './project-names.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
 import { applyOrphanSprints } from './orphan-sprints.mjs';
 import { carriesFreeFields, edgeFreeFieldsDdl, stampFreeFields, freeFieldsLoss } from './edge-free-fields.mjs';
@@ -169,6 +170,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   report.project_links = await applyProjectLinks(db, await readProjectLinksInput(db), { log });
   if (!report.project_links.ok) ok = false;
   if (!report.organizations.ok) ok = false;
+  // названия проектов (владелица 21.11.2026: «код, краткое название, полное название, описание», ru/en/pl) — раздел
+  // project_names файла решений; после перегруппировки, проект — по ключу или прежним ключам
+  report.project_names = await applyProjectNames(db, projectNamesOf(decisions), await readProjectNamesInput(db), { log });
+  if (!report.project_names.ok) ok = false;
   // вид продукта (шаг В установщика, владелица 19.11.2026): решение человека из файла решений — в запись продукта
   // приёмника; сверка — у всех продуктов вид задан
   report.product_kind = await applyProductKinds(db, (await readProductKindInput(db)).products, decisions, { log });

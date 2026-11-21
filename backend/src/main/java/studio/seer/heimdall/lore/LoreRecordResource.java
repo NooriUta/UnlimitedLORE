@@ -440,7 +440,7 @@ public class LoreRecordResource extends LoreResourceBase {
             state.add(LoreRecordDataState.entry("chips:inherited", null, new Read(List.of(), "error",
                 "унаследованные проекты/компоненты не прочитаны: " + e.getMessage(), e)));
         }
-        Map<String, String> pLabels = labels("SELECT slug AS k, name AS v FROM KnowGitProject WHERE slug IN :ids",
+        Map<String, String> pLabels = labels("SELECT slug AS k, coalesce(short_title, name) AS v FROM KnowGitProject WHERE slug IN :ids",
             ids(ownP, inhP), "chips:project_labels", state);
         Map<String, String> cLabels = labels("SELECT component_id AS k, full_name AS v FROM LoreComponent WHERE component_id IN :ids",
             ids(ownC, inhC), "chips:component_labels", state);

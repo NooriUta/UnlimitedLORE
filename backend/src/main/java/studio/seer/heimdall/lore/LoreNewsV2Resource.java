@@ -289,6 +289,13 @@ public class LoreNewsV2Resource extends LoreResourceBase {
                             "SELECT kc_sub, display_name FROM KnowUser WHERE kc_sub IN :subs", Map.of("subs", List.copyOf(whos))))
                         if (u.get("kc_sub") != null && u.get("display_name") != null && !u.get("display_name").toString().isBlank())
                             names.put(u.get("kc_sub").toString(), u.get("display_name").toString());
+                    // AO-AGENT-HUMAN-NAME: агент — «имя · профиль» вместо учётки (машины у события ленты нет).
+                    try {
+                        names.putAll(WhoLabel.agentNames(whos, ingestService.queryPublic(
+                            "SELECT client_id, name, harness FROM KnowActor WHERE client_id IN :c", Map.of("c", List.copyOf(whos)))));
+                    } catch (RuntimeException e) {
+                        LOG.warnf("[LORE NEWS v2] имена агентов: %s", e.getMessage());
+                    }
                     NewsWhoNames.attach(out, names);
                 } catch (RuntimeException e) {
                     LOG.warnf("[LORE NEWS v2] имена людей: %s", e.getMessage());

@@ -7,11 +7,17 @@
 // ролей — mine:'unknown' с причиной, а не «у вас ничего нет». Сам список при
 // этом остаётся: сбой ролей не повод прятать проекты.
 import type { ScopeOption, SliceCompletenessMeta } from '@seidr/kit';
+import type { KitLang } from '@seidr/kit';
 import type { SliceBody } from '../api/loreSlice';
+import { projectShortTitle } from '../project/projectTitle';
 
 export interface GitProjectRow {
   slug: string;
   name?: string | null;
+  /** 1.18: краткое название (ru) и переводы — подпись проекта в шапке. */
+  short_title?: string | null;
+  short_title_en?: string | null;
+  short_title_pl?: string | null;
   default_branch?: string | null;
 }
 
@@ -52,9 +58,11 @@ export interface LoadProjectScopeInput {
    */
   me?: (signal?: AbortSignal) => Promise<readonly string[]>;
   signal?: AbortSignal;
+  /** Язык интерфейса: подпись проекта — краткое название на нём (откат — русское). */
+  lang?: KitLang;
 }
 
-export async function loadProjectScope({ fetch, sub, me, signal }: LoadProjectScopeInput): Promise<ProjectScopeData> {
+export async function loadProjectScope({ fetch, sub, me, signal, lang = 'ru' }: LoadProjectScopeInput): Promise<ProjectScopeData> {
   // Сервер знает мои проекты сам (S7B-14). Пустой список — «ролей нет», а не
   // «не опознан»: это разные ответы, и путать их нельзя.
   const meP: Promise<{ ids: Set<string> } | MineReason> | null = me
@@ -81,7 +89,9 @@ export async function loadProjectScope({ fetch, sub, me, signal }: LoadProjectSc
     .filter(r => r && typeof r.slug === 'string' && r.slug)
     .map(r => {
       const o: ScopeOption = { id: r.slug };
-      if (r.name) o.title = r.name;
+      // 1.18 (владелица 21.11.2026): краткое название на языке интерфейса, а не код со слешем
+      const title = projectShortTitle(r, lang);
+      if (title && title !== r.slug) o.title = title;
       if (r.default_branch) o.hint = r.default_branch;
       if (known) o.mine = roles.ids.has(r.slug);
       return o;

@@ -61,6 +61,8 @@ final class LoreRecordUnmodeled {
             if (p.startsWith("@") || p.equals(g.key()) || modeled.contains(p)) continue;
             if (SERVICE.contains(p) || LoreModelTypes.isSystem(p) || LoreModelTypes.isInternal(p, g.key())) continue;
             if ("task".equals(type) && LoreModelTypes.LEGACY_ROLE_STRINGS.contains(p)) continue;
+            // Служебные свойства, объявленные моделью (service_fields: перенос 1.18, хранение справочника) — не «вне модели».
+            if (LoreModelFile.content().serviceFields().containsKey(p)) continue;
             Object v = e.getValue();
             if (v == null || (v instanceof String s && s.isBlank()) || (v instanceof Collection<?> c && c.isEmpty())
                 || (v instanceof Map<?, ?> m && m.isEmpty())) continue;
