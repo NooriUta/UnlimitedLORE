@@ -2620,6 +2620,7 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab",
+      "manageable" : true,
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
@@ -2628,6 +2629,7 @@
         "key" : "reason",
         "label" : "Причина"
       } ],
+      "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
       "inverseLabel" : "От неё зависят"
     }, {
@@ -2638,6 +2640,7 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab",
+      "manageable" : true,
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
@@ -2646,6 +2649,7 @@
         "key" : "reason",
         "label" : "Причина"
       } ],
+      "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
       "inverseLabel" : "Зависит от"
     }, {

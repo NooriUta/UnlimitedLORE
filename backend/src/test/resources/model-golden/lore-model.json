@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "c27646aabb4daa80",
+  "version" : "a9fddbe33143a5c4",
   "partial" : true,
   "missing" : [ "surfaces:list", "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -5960,7 +5960,7 @@
         "dir" : "out",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : "От неё зависят",
         "props" : [ {
           "key" : "kind",
@@ -5970,6 +5970,7 @@
           "key" : "reason",
           "label" : "Причина"
         } ],
+        "reason_required" : true,
         "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "blocks",
@@ -5979,7 +5980,7 @@
         "dir" : "in",
         "target_type" : "any",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : "Зависит от",
         "props" : [ {
           "key" : "kind",
@@ -5989,6 +5990,7 @@
           "key" : "reason",
           "label" : "Причина"
         } ],
+        "reason_required" : true,
         "target_types" : [ "task", "phase", "sprint", "milestone" ]
       }, {
         "key" : "products",
