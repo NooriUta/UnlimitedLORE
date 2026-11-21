@@ -14,6 +14,7 @@ import { loadDecisions } from './decisions.mjs';
 import { proposeRegroup, readRegroupInput, regroupOverrides, regroupPlan, applyRegroup, repoOverrides } from './regroup.mjs';
 import { applyRepos } from './repos.mjs';
 import { applyOrgs } from './orgs.mjs';
+import { readProjectLinksInput, applyProjectLinks } from './project-links.mjs';
 import { projectNamesOf, readProjectNamesInput, applyProjectNames } from './project-names.mjs';
 import { readProductKindInput, applyProductKinds } from './product-kind.mjs';
 import { applyOrphanSprints } from './orphan-sprints.mjs';
@@ -164,6 +165,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   if (!report.repositories.ok) ok = false;
   // организации (владелица 21.11.2026): только по решению человека — раздел organizations файла решений
   report.organizations = await applyOrgs(db, decisions, { log });
+  // релизы и PR → проект (владелица 21.11.2026: «точно ли нормализация релизов и PR прошла»): ребро BELONGS_TO_PROJECT по
+  // префиксу ключа (ключ, прежние ключи, адреса, хвост @forgejo, имя репозитория), адрес PR по шаблону; остаток поимённо
+  report.project_links = await applyProjectLinks(db, await readProjectLinksInput(db), { log });
+  if (!report.project_links.ok) ok = false;
   if (!report.organizations.ok) ok = false;
   // названия проектов (владелица 21.11.2026: «код, краткое название, полное название, описание», ru/en/pl) — раздел
   // project_names файла решений; после перегруппировки, проект — по ключу или прежним ключам

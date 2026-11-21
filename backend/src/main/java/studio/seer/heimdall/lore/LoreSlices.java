@@ -575,6 +575,7 @@ public final class LoreSlices {
             "outE('DEPENDS_ON')[valid_to IS NULL].inV().adr_id AS depends_on_ids, " +
             "out('IMPLEMENTED_IN').sprint_id      AS implemented_in_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
             "out('TAGGED_WITH').tag_id            AS tags, " +
             "out('BELONGS_TO_PROJECT').slug       AS git_projects, " + // ADRPROJ-01
@@ -984,6 +985,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             DONE_DATE_SQL + " AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
@@ -1020,6 +1022,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].priority[0], out('HAS_STATE')[priority IS NOT NULL].priority[0])     AS priority, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
+            "out('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " +
             "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestone_ids, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_start_date[0], out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0])     AS planned_start_date, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].planned_end_date[0], out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0])         AS planned_end_date, " +
@@ -2217,7 +2220,7 @@ public final class LoreSlices {
             "SELECT sprint_id, coalesce(title, name) AS name, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('BELONGS_TO').component_id AS components, " +
-            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " + CHILD_SPRINT_COLS + " " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, in('IMPLEMENTED_IN_RELEASE').release_uid AS release_uids, " + CHILD_SPRINT_COLS + " " +
             "FROM KnowSprint WHERE out('BELONGS_TO').component_id CONTAINS :cid",
             // pattern — принимается и НИЧЕГО не фильтрует: v1 (src/, выкатывается вручную) ещё
             // шлёт его, и отказ «unknown param» уронил бы вкладку спринтов в v1.

@@ -97,7 +97,7 @@ class LoreRecordRowLinksTest {
             Map.entry("sprint", Map.of("depends_on", x, "blocks", x, "adr_ids", x, "doc_ids", x)),
             Map.entry("task", Map.of("closed_by_prs", x, "realizes_uc", x)),
             Map.entry("adr", Map.of("depends_on_ids", x, "blocks_ids", x, "supersedes_ids", x, "superseded_by_ids", x,
-                "implemented_in_ids", x, "release_ids", x, "justified_task_uids", x, "traced_by_ucs", x)),
+                "implemented_in_ids", x, "release_uids", x, "justified_task_uids", x, "traced_by_ucs", x)),
             Map.entry("spec", Map.of()), Map.entry("release", Map.of("adr_ids", x)), Map.entry("tech", Map.of()),
             // S5-DOC-PASSPORT: вложенные документы и «упоминает» читаются по ребру — из строки ничего.
             Map.entry("doc", Map.of()),
