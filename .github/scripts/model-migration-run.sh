@@ -39,7 +39,7 @@ missing=""
 [ -n "${MIG_DB_PASSWORD:-}" ] || missing="$missing MIG_DB_PASSWORD"
 if [ -n "$missing" ]; then
   echo "::error::BLOCKED: в репозитории AIDA/UnlimitedLORE не заведены секреты Actions:$missing."
-  echo "  Что завести: MIG_DB_USER / MIG_DB_PASSWORD — учётка ArcadeDB препрода на ci-server (читать $src, создавать и писать $dst)."
+  echo "  Что завести: секрет ARCADEDB_ROOT_PASSWORD — root препродного ArcadeDB на ci-server (сценарий передаёт его как MIG_DB_PASSWORD, MIG_DB_USER=root; читать $src, создавать и писать $dst)."
   echo "  Где: Forgejo → AIDA/UnlimitedLORE → Settings → Actions → Secrets. Заводит CICDGitHub или владелица."
   echo "  Перенос не запускался."
   exit 2
