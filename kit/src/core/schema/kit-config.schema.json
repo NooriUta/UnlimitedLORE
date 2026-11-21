@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lore.seidrstudio.pro/schemas/seidr-kit/kit-config.schema.json",
+  "$id": "urn:seidr-kit:schema:kit-config",
   "title": "Seiðr-kit · KitConfig",
   "description": "Конфиг приложения на Seiðr-kit (SPRINT_UXR_S10_SEIDR_KIT/K-01). Описывает сериализуемую часть KitConfig из kit/src/core/contract.ts. Поля-функции (verdict, overview, tabs[].render, palette.commands[].run, hooks.*) JSON не выражает: они помечены x-kit-type=function и проверяются валидатором validateKitConfig.",
   "type": "object",
