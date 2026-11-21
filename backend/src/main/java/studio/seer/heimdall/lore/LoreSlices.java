@@ -2275,7 +2275,9 @@ public final class LoreSlices {
         slice("agent_by_id",
             "SELECT actor_id, name, client_id, agent_role, harness, " +
             "out('OWNED_BY').kc_sub[0] AS owner, out('BELONGS_TO_PROJECT').slug AS projects " +
-            "FROM KnowActor WHERE kind = 'agent' AND actor_id = :id",
+            // AP-PEOPLE-PAGE (21.11.2026): автор-агент в ленте и истории записан учёткой (client_id) — карточка агента
+            // открывается и по ней, а не только по actor_id.
+            "FROM KnowActor WHERE kind = 'agent' AND (actor_id = :id OR client_id = :id)",
             List.of("id"), Map.of(), "");
         // Списки разделов «Люди» и «Агенты» v2: строка — человек (агент) и его проекты.
         slice("users",
