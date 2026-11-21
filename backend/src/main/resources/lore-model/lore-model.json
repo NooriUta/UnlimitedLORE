@@ -1,5 +1,6 @@
 {
   "format" : "lore-model/1",
+  "model_version" : 1,
   "about" : "Модель LORE — типы паспорта, их поля, связи и поверхности (ADR-LORE-048, D-2026-LORE-MODEL-AS-CONFIG). Канон; копия для образа бэкенда — backend/src/main/resources/lore-model/lore-model.json (LoreModelFileParityTest). Правка меняет контракт /lore/model и /lore/record — эталон MC-01 (LoreModelGoldenTest) покажет дифф.",
   "types" : [ {
     "type" : "sprint",
@@ -2901,7 +2902,7 @@
       "key" : "is_current",
       "label" : "Текущий",
       "labelKey" : "pp.field.isCurrent",
-      "kind" : "text",
+      "kind" : "bool",
       "group" : "props",
       "definition" : "Признак: это текущий выпущенный релиз проекта.",
       "labelEn" : "Current",
@@ -6013,7 +6014,7 @@
       "key" : "is_private",
       "label" : "Приватный",
       "labelKey" : "pp.field.isPrivate",
-      "kind" : "text",
+      "kind" : "bool",
       "group" : "props",
       "definition" : "Признак: репозиторий проекта закрытый.",
       "layer" : "stable",

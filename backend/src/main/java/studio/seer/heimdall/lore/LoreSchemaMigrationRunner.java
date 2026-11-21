@@ -317,10 +317,28 @@ public class LoreSchemaMigrationRunner {
         return marked ? SchemaSource.MODEL : SchemaSource.EMPTY;
     }
 
+    /**
+     * Шаг 1.18.1 (владелица 21.11.2026: «версию модели после миграции начни с 1»): база, собранная переносом 1.18 до
+     * патча, несёт отметку без номера. Номер 1 дописывается, если его нет; данные не меняются, повтор — без изменений.
+     */
+    static String modelVersionBackfillSql() {
+        return "UPDATE LoreModelSchema SET model_version = 1 WHERE model_version IS NULL";
+    }
+
+    private void backfillModelVersion() {
+        try {
+            exec(modelVersionBackfillSql());
+            LOG.info("[LORE MIGRATE] отметка схемы из модели: номер модели 1 дописан там, где его не было (шаг 1.18.1)");
+        } catch (RuntimeException e) {
+            // Номер — для /lore/version и выкатки; без него база работает, проба выкатки скажет о расхождении сама.
+            LOG.warnf("[LORE MIGRATE] номер модели в отметку не записан: %s", e.getMessage());
+        }
+    }
+
     /** Отметки LoreModelSchema; типа нет — список пуст (база не из модели), а не ошибка. */
     private List<Map<String, Object>> readModelMarkers() {
         try {
-            return ingest.queryPublic("SELECT model_hash, source, built_at FROM LoreModelSchema", Map.of());
+            return ingest.queryPublic("SELECT model_hash, model_version, source, built_at FROM LoreModelSchema", Map.of());
         } catch (RuntimeException e) {
             String d = String.valueOf(LoreUpstream.detail(e));
             if (d.contains("LoreModelSchema") && (d.contains("not found") || d.contains("does not exist") || d.contains("was not found"))) return List.of();
@@ -394,7 +412,9 @@ public class LoreSchemaMigrationRunner {
         // MIG-03: база собрана из модели — переходник чтения включается на ЛЮБОМ пути старта (и при выключенной
         // сверке), а накатка шагов V на неё запрещена: шаги пишут старую схему поверх новой.
         if (builtFromModel()) {
-            switch (onModelSchema(migrate, migrateOnly)) {
+            ModelStart start = onModelSchema(migrate, migrateOnly);
+            if (start != ModelStart.REFUSE) backfillModelVersion();
+            switch (start) {
                 case REFUSE -> throw new IllegalStateException(modelMigrateRefusal());
                 case SKIP_V_STEPS -> { modelSkipped = true; return; }
                 case READ_ADAPTER -> { /* ниже */ }

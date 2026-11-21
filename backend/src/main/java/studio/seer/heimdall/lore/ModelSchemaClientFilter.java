@@ -24,14 +24,25 @@ public class ModelSchemaClientFilter implements ClientRequestFilter, ClientRespo
 
     @Override
     public void filter(ClientRequestContext req) {
-        if (!ModelSchemaAdapter.enabled()) return;
         Object e = req.getEntity();
+        if (!ModelSchemaAdapter.enabled()) {
+            // MDL-06 (патч 1.18.1): и на старой схеме каждый :param — в карте, даже null; пропуск — отказ движка
+            if (e instanceof LoreCommandClient.LoreCommand c && isSql(c.language())) {
+                java.util.Map<String, Object> p = SqlParams.complete(c.command(), c.params());
+                if (p != c.params()) req.setEntity(new LoreCommandClient.LoreCommand(c.language(), c.command(), p),
+                    req.getEntityAnnotations(), req.getMediaType());
+            }
+            return;
+        }
         if (e instanceof MartQuery q && isSql(q.language())) {
-            req.setEntity(new MartQuery(q.language(), ModelSchemaAdapter.rewriteSql(q.command()),
-                ModelSchemaAdapter.rewriteParams(q.command(), q.params()), q.limit()), req.getEntityAnnotations(), req.getMediaType());
+            String sql = ModelSchemaAdapter.rewriteSql(q.command());
+            req.setEntity(new MartQuery(q.language(), sql,
+                SqlParams.complete(sql, ModelSchemaAdapter.rewriteParams(q.command(), q.params())), q.limit()), req.getEntityAnnotations(), req.getMediaType());
         } else if (e instanceof LoreCommandClient.LoreCommand c && isSql(c.language())) {
-            req.setEntity(new LoreCommandClient.LoreCommand(c.language(), ModelSchemaAdapter.rewriteSql(c.command()),
-                ModelSchemaAdapter.rewriteParams(c.command(), c.params())), req.getEntityAnnotations(), req.getMediaType());
+            // MDL-06 (патч 1.18.1): переходник переименовал :status_raw в :status — параметр под новым именем, и при null
+            String sql = ModelSchemaAdapter.rewriteSql(c.command());
+            req.setEntity(new LoreCommandClient.LoreCommand(c.language(), sql,
+                SqlParams.complete(sql, ModelSchemaAdapter.rewriteParams(c.command(), c.params()))), req.getEntityAnnotations(), req.getMediaType());
         }
     }
 
