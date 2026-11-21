@@ -7867,5 +7867,7 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-tilegauge__center { margin-top: -70px; height: 52px; display: flex; flex-direction: column; align-items: center; }
 .sk-tilegauge .sk-tile__value { font-family: var(--display); font-weight: 800; font-size: var(--fs-sm); }
 .sk-groupcard__photo { position: absolute; inset: 0; background-size: cover; background-position: center; }
-.sk-groupcard__photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg0) 0%, transparent 45%, var(--bg0) 100%); opacity: 0.85; }
+.sk-groupcard__photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg0) 0%, transparent 55%, var(--bg0) 100%), var(--bg0); opacity: 0.55; }
+.sk-groupcard.has-photo .sk-groupcard__title, .sk-groupcard.has-photo .sk-groupcard__main, .sk-groupcard.has-photo .sk-groupcard__empty { text-shadow: 0 1px 2px var(--bg0), 0 0 12px var(--bg0); }
+.sk-groupcard.has-photo .sk-groupcard__main.is-estimate { opacity: 0.92; }
 .sk-groupcard.has-photo .sk-groupcard__chip { background: var(--bg0); }
