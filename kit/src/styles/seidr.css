@@ -7885,7 +7885,7 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-topnav__space:focus-visible, .sk-topnav__chapter:focus-visible, .sk-bottombar__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .sk-topnav__end { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .sk-bottombar { display: none; }
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   .sk-bottombar { display: flex; position: sticky; bottom: 0; z-index: 20; justify-content: space-around; gap: 2px; padding: 4px 6px calc(4px + env(safe-area-inset-bottom)); background: var(--bg1); border-top: 1px solid var(--bd); }
   .sk-topnav__spaces .sk-topnav__space { display: none; }
 }
@@ -7929,7 +7929,7 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-dash__cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border-radius: 12px; background: var(--bg1); border: 1px solid var(--bd); }
 .sk-dash__cell.is-muted { opacity: 0.55; }
 .sk-dash__title { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; }
-@media (max-width: 720px) { .sk-dash__cell { grid-column: auto !important; } }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .sk-dash__cell { grid-column: auto !important; } }
 .sk-range { display: flex; flex-direction: column; gap: 6px; }
 .sk-range__row { display: grid; grid-template-columns: 28px 24px 32px 1fr 32px; align-items: center; gap: 6px; font-size: var(--fs-xs); }
 .sk-range__label { color: var(--t2); }

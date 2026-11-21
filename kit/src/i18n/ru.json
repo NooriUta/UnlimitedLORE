@@ -1371,5 +1371,6 @@
   "kit.scheme.empty": "плана нет",
   "kit.scheme.unplaced": "без места: {n} — у точек нет координат",
   "kit.scheme.zoomIn": "Крупнее",
-  "kit.scheme.zoomOut": "Мельче"
+  "kit.scheme.zoomOut": "Мельче",
+  "kit.chart.rendererMissing": "рисовальщик {name} выбран, но не подключён — показан свой SVG"
 }

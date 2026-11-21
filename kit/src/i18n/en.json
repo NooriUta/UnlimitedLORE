@@ -1371,5 +1371,6 @@
   "kit.scheme.empty": "no plan",
   "kit.scheme.unplaced": "unplaced: {n} — points without coordinates",
   "kit.scheme.zoomIn": "Zoom in",
-  "kit.scheme.zoomOut": "Zoom out"
+  "kit.scheme.zoomOut": "Zoom out",
+  "kit.chart.rendererMissing": "{name} renderer chosen but not connected — showing the built-in SVG"
 }
