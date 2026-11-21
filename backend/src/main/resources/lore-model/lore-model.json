@@ -8101,6 +8101,64 @@
       "writer" : "server: LoreRequestStats.flush, LoreKcLoginPoller, LoreBragiResource"
     }
   },
+  "agent_profiles" : {
+    "about" : "OH-MCP-HOSTED-SWITCH (решения владелицы 21.11.2026): роли учёток MCP и их порядок — full > architect > pm > (product-analyst | analyst | developer | marketer) > tester. «Роль A не выше B» — A == B или B среди предков A по parents; rank — порядок показа. У harness одна главная роль (main), младшие — допом: учётка выше главной для harness не выпускается. Имя учётки — lore-mcp-<роль>[_<suffix>] (у Claude Code суффикса нет), ключ секрета — LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<SUFFIX>].",
+    "profiles" : [ {
+      "code" : "full",
+      "rank" : 10,
+      "parents" : [ ],
+      "about" : "Полная поверхность MCP: всё, что разрешено учётке."
+    }, {
+      "code" : "architect",
+      "rank" : 20,
+      "parents" : [ "full" ],
+      "about" : "Архитектор: ADR, решения, спеки."
+    }, {
+      "code" : "pm",
+      "rank" : 30,
+      "parents" : [ "architect" ],
+      "about" : "Менеджер: спринты, задачи, статусы, релизы."
+    }, {
+      "code" : "product-analyst",
+      "rank" : 40,
+      "parents" : [ "pm" ],
+      "about" : "Продуктовый аналитик: сценарии, профиль клиента, ценность."
+    }, {
+      "code" : "analyst",
+      "rank" : 41,
+      "parents" : [ "pm" ],
+      "about" : "Аналитик: спеки, требования, сценарии."
+    }, {
+      "code" : "developer",
+      "rank" : 42,
+      "parents" : [ "pm" ],
+      "about" : "Разработчик: задачи, PR, статусы своей работы."
+    }, {
+      "code" : "marketer",
+      "rank" : 43,
+      "parents" : [ "pm" ],
+      "about" : "Маркетолог: линия BRAGI — публикации, каналы (решение владелицы: marketer под pm)."
+    }, {
+      "code" : "tester",
+      "rank" : 50,
+      "parents" : [ "product-analyst", "analyst", "developer", "marketer" ],
+      "about" : "Тестировщик: задачи тестирования, гейты качества."
+    } ],
+    "harness" : {
+      "claude-code" : {
+        "main" : "full",
+        "suffix" : ""
+      },
+      "codex" : {
+        "main" : "full",
+        "suffix" : "codex"
+      },
+      "kimi-code" : {
+        "main" : "full",
+        "suffix" : "kimi"
+      }
+    }
+  },
   "surfaces" : {
     "list" : {
       "actor" : {

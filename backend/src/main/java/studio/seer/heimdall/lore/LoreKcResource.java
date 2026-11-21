@@ -321,7 +321,12 @@ public class LoreKcResource extends LoreResourceBase {
 
     // ── S7A-12 A: учётка агента по шаблону профиля (UC-ADMIN-NEW-MACHINE) ────
 
-    public record KcAgentClientRequest(String profile, String machine) {}
+    /**
+     * OH-MCP-HOSTED-SWITCH (1.18.1): {@code harness} — имя по harness (lore-mcp-<роль>[_<harness>]), роль не выше
+     * главной harness (модель, agent_profiles). {@code machine} без harness — прежний путь lore-mcp-<профиль>_<машина>
+     * для уже заведённых по машинам; новые учётки по машине не нужны (машина остаётся в реестре и ACL).
+     */
+    public record KcAgentClientRequest(String profile, String machine, String harness) {}
 
     private Response kcRefused(HttpResponse<String> r) {
         String hint = LoreKcAgentClient.forbiddenHint(r.statusCode());
@@ -349,12 +354,22 @@ public class LoreKcResource extends LoreResourceBase {
     public Response createAgentClient(KcAgentClientRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
+        if (req == null) return badParams("profile и harness (или machine — прежний путь) обязательны");
+        LoreModelAgentProfiles.AgentProfiles model = LoreModelFile.content().agentProfiles();
+        final boolean byHarness = req.harness() != null && !req.harness().isBlank();
+        if (byHarness) {
+            // Правило модели — до Keycloak: отказ словами, а не «KC не настроен».
+            String refusal = LoreModelAgentProfiles.issueRefusal(model, req.profile(), req.harness());
+            if (refusal != null)
+                return noStore(Response.status(409).entity(new LoreError("ROLE_ABOVE_HARNESS_MAIN", refusal)));
+        }
         if (!configured()) return notConfigured();
-        if (req == null) return badParams("profile и machine обязательны");
-        final String templateId, newId;
+        final String templateId, newId, secretKey;
         try {
             templateId = LoreKcAgentClient.templateId(req.profile());
-            newId = LoreKcAgentClient.clientId(req.profile(), req.machine());
+            newId = byHarness ? LoreModelAgentProfiles.clientId(model, req.profile(), req.harness())
+                : LoreKcAgentClient.clientId(req.profile(), req.machine());
+            secretKey = byHarness ? LoreModelAgentProfiles.secretKey(model, req.profile(), req.harness()) : null;
         } catch (IllegalArgumentException e) { return badParams(e.getMessage()); }
         try {
             String t = adminToken();
@@ -435,6 +450,8 @@ public class LoreKcResource extends LoreResourceBase {
             out.put("template", templateId);
             out.put("secret", secret);
             out.put("secret_note", "показывается один раз: LORE его не хранит. Положите в Infisical или в конфиг машины сразу.");
+            // OH-MCP-HOSTED-SWITCH: ключ, под которым секрет кладут (LORE_MCP_SECRET_VAR у подключения).
+            if (secretKey != null) out.put("secret_key", secretKey);
             out.put("roles_copied", copied);
             if (rolesNote != null) out.put("roles_note", rolesNote);
             out.put("token_check", check);
