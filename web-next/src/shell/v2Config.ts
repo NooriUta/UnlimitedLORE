@@ -121,7 +121,21 @@ function navGroups(lang: KitLang, model: unknown): KitConfig['menu']['groups'] {
   }).groups;
 }
 
-export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string, model?: unknown): KitConfig {
+/**
+ * Вход в админку — пункт левого меню (владелица 21.11.2026: «админку пересадить на иконку настройки и показывать
+ * только логинам с admin, superadmin» · «не в шапке а в левом меню» · «у тебя есть шестерёнка в конце»): в группе
+ * «Личное» сразу после «Настроек». Пункт не раздел — оболочка по нему переключает модуль (V2Shell).
+ */
+export const ADMIN_ENTRY = 'admin-entry';
+
+/** Видеть ли вход в админку: admin/superadmin; копия без входа — да (ролей нет, решают 403 сервера); не прочитано — нет. */
+export function canSeeAdmin(b: { auth_enabled?: boolean; seer_role?: string | null } | null | undefined): boolean {
+  if (!b) return false;
+  if (b.auth_enabled === false) return true;
+  return b.seer_role === 'admin' || b.seer_role === 'superadmin';
+}
+
+export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses']['items'], module?: string, model?: unknown, canAdmin = false): KitConfig {
   const modelMenu = model === undefined ? [] : navGroups(lang, model);
   const t = (key: AppKey) => appT(lang, key);
   const item = (id: V2Section, icon: string, view?: string) =>
@@ -210,6 +224,16 @@ export function v2Config(lang: KitLang, statusesFromModel?: KitConfig['statuses'
     },
   };
   if (module === ADMIN_MODULE) return cfg;
+  if (canAdmin) {
+    const entry = { id: ADMIN_ENTRY, title: t('shell.mod.admin'), icon: 'cog' };
+    cfg.menu.groups = cfg.menu.groups.map(g => {
+      if (g.id !== 'personal') return g;
+      const at = g.items.findIndex(i => i.id === 'settings');
+      const items = [...g.items];
+      items.splice(at < 0 ? items.length : at + 1, 0, entry);
+      return { ...g, items };
+    });
+  }
   // S9-05 × MC-07 (приёмка v1.17.20): разделы, которых нет в меню (люди и агенты — уровень
   // admin), открываются по ссылке ?sec=…&open=… своим паспортом; без этого оболочка
   // откатывалась к первому пункту меню, и вместо паспорта человека открывались «Новости».

@@ -18,7 +18,8 @@ import { AnalyticsScreen } from '../analytics/AnalyticsScreen';
 import { planStatusOf } from '../sprints/taskStatus';
 import { newsHrefV2, newsRefHrefV2 } from '../news/newsLinks';
 import { NavSwitch } from '../settings/NavSwitch';
-import { V2_SECTIONS, v2Config, type V2Section } from './v2Config';
+import { ADMIN_ENTRY, V2_SECTIONS, canSeeAdmin, v2Config, type V2Section } from './v2Config';
+import { useWhoami } from '../admin/WhoamiBar';
 import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
 import { VersionCorner } from './VersionCorner';
@@ -149,7 +150,10 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
   const urlWin = win ?? (typeof window === 'undefined' ? undefined : window);
   const [mod, setMod] = useState<string | null>(() => moduleOf(urlWin));
   const isAdmin = mod === ADMIN_MODULE;
-  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined, statuses.model), [lang, statuses.items, mod, statuses.model]);
+  // Вход в админку — пунктом левого меню только для admin/superadmin (владелица 21.11.2026); роль — из «кто я».
+  const who = useWhoami();
+  const canAdmin = canSeeAdmin(who.data);
+  const config = useMemo(() => v2Config(lang, statuses.items, mod ?? undefined, statuses.model, canAdmin), [lang, statuses.items, mod, statuses.model, canAdmin]);
   useEffect(() => {
     if (!urlWin || typeof window === 'undefined' || urlWin !== window) return;
     const sync = () => setMod(moduleOf(window));
@@ -157,6 +161,12 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
     return () => window.removeEventListener('popstate', sync);
   }, [urlWin]);
   const onNavigate = useCallback((next: KitNav) => {
+    // Пункт «Админка» левого меню — не раздел: переключает модуль (адрес ?mod=admin, меню админки).
+    if (next.item === ADMIN_ENTRY) {
+      if (urlWin) urlWin.history.replaceState(null, '', `?mod=${ADMIN_MODULE}${urlWin.location.hash}`);
+      setMod(ADMIN_MODULE);
+      return;
+    }
     if ((next.module === ADMIN_MODULE) === isAdmin) return;
     // Другой модуль — другое меню: раздел прежнего в нём ничего не значит.
     if (urlWin) {
