@@ -757,7 +757,7 @@
   "kit.auth.error.title": "Вход не удался",
   "kit.auth.error.hint": "Вход не подтверждён — это не «пусто». Войдите снова.",
   "kit.auth.unconfigured.title": "Вход не настроен",
-  "kit.auth.unconfigured.hint": "Адрес входа (Keycloak) не задан настройками запуска этой установки. Задайте LORE_OIDC_ISSUER у контейнера веба и перезапустите его.",
+  "kit.auth.unconfigured.hint": "Адрес входа не задан настройками запуска этой установки. Задайте его у контейнера веба и перезапустите — причина ниже.",
   "kit.record.dock.full": "Паспорт на весь экран",
   "kit.record.dock.exitFull": "Выйти из полного экрана",
   "kit.record.view": "Вид паспорта",
