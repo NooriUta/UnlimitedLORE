@@ -415,6 +415,7 @@
   "lists.field.prs": "PRs",
   "lists.field.area": "Area",
   "lists.field.default_branch": "Default branch",
+  "lists.field.full_title": "Full title",
   "lists.field.parent": "Parent",
   "lists.field.team": "Team",
   "lists.field.tech": "Technologies",

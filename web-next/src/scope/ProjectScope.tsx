@@ -3,7 +3,7 @@
 // проводка: список из слайсов LORE (loadProjectScope.ts), честное состояние
 // (useLoadState), выбор — в URL (?proj=a,b), чтобы ссылка открывала тот же срез.
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { ScopePicker, createSafeStorage, formatScopeSelection, parseScopeSelection, resolveScopeSelection, useLoadState, useUrlParam, type SafeStorage } from '@seidr/kit';
+import { ScopePicker, createSafeStorage, formatScopeSelection, parseScopeSelection, resolveScopeSelection, useKitLang, useLoadState, useUrlParam, type SafeStorage } from '@seidr/kit';
 import { sliceFetcher } from '../api/loreSlice';
 import type { SliceFetcher } from '../api/loreSlice';
 import { useAppT } from '../i18n';
@@ -78,6 +78,7 @@ export function ProjectScope({ fetch, sub, me, narrow, onChange, storage: storag
   const storage = useMemo(() => storageProp ?? createSafeStorage(), [storageProp]);
   const [recent, setRecent] = useState<string[]>(() => readRecent(storage));
   const t = useAppT();
+  const lang = useKitLang();
   const doFetch = useMemo(() => fetch ?? sliceFetcher(), [fetch]);
   const result = useLoadState<ProjectScopeData>(
     signal => loadProjectScope({
@@ -85,8 +86,9 @@ export function ProjectScope({ fetch, sub, me, narrow, onChange, storage: storag
       sub,
       me: me === null ? undefined : (me ?? (sig => myProjects(sig).then(list => list.map(p => p.slug)))),
       signal,
+      lang,
     }),
-    [doFetch, sub, me],
+    [doFetch, sub, me, lang],
   );
   const [raw, setRaw] = useUrlParam(PROJECT_SCOPE_PARAM);
   const sel = useMemo(() => parseScopeSelection(raw), [raw]);
