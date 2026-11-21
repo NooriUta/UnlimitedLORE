@@ -51,7 +51,7 @@ async function main() {
   const dry = process.argv.includes('--dry');
   const token = process.env.FORGEJO_MCP_CLONE_TOKEN || '';
   if (!src && !token && !dry) {
-    console.error('BLOCKED: образ forgejo-mcp не собран — репозиторий AIDA/forgejo-mcp приватный, а нет ни --src <клон>, ни FORGEJO_MCP_CLONE_TOKEN (токен чтения этого репозитория). Разблокировать: секрет FORGEJO_MCP_CLONE_TOKEN в CI или свой клон через --src.');
+    console.error('BLOCKED: образ forgejo-mcp не собран — репозиторий AIDA/forgejo-mcp приватный, а нет ни --src <клон>, ни FORGEJO_MCP_CLONE_TOKEN (токен чтения этого репозитория). Разблокировать: секрет LORE_FJ_MCP_CLONE_TOKEN в CI (в шаг приходит переменной FORGEJO_MCP_CLONE_TOKEN) или свой клон через --src.');
     process.exit(3);
   }
   const work = src ? '' : dry ? path.join(os.tmpdir(), 'forgejo-mcp-<временный>') : fs.mkdtempSync(path.join(os.tmpdir(), 'forgejo-mcp-'));
