@@ -5,6 +5,7 @@ import type { KitData, KitLang, KitRecord } from '@seidr/kit';
 import { appT } from '../i18n';
 import type { SliceBody } from '../api/loreClient';
 import { planStatusOf } from '../sprints/taskStatus';
+import { agentLabel } from '../people/whoLabel';
 import { DECISION_STATUSES, FEATURE_STATUSES, QG_STATUSES, QUESTION_STATUSES, SPEC_STATUSES, axisStatusOf } from './axisStatus';
 
 type Row = Record<string, unknown>;
@@ -408,8 +409,10 @@ export function userRecord(row: Row): KitRecord {
 export function agentRecord(row: Row): KitRecord {
   const id = str(row.actor_id);
   return {
-    id, kind: 'agent', title: str(row.name) || id, status: '',
+    // AO-AGENT-HUMAN-NAME: заголовок — «имя · профиль» (машины у среза нет), учётка — полем и в поиске.
+    id, kind: 'agent', title: agentLabel({ name: str(row.name), harness: str(row.harness), clientId: str(row.client_id) }) || id, status: '',
     fields: { clientId: str(row.client_id), agentRole: str(row.agent_role), harness: str(row.harness), owner: str(row.owner), project: list(row.projects) },
+    ...(str(row.client_id) ? { search: str(row.client_id) } : {}),
   };
 }
 

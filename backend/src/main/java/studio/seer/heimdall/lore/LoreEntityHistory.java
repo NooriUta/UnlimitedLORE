@@ -271,6 +271,38 @@ final class LoreEntityHistory {
         return out;
     }
 
+    /** AO-AGENT-HUMAN-NAME: учётки авторов-агентов страницы — чтобы одним запросом взять их имена из реестра. */
+    static java.util.Set<String> agentClients(List<Map<String, Object>> rows) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        for (Map<String, Object> r : rows)
+            if (r.get("author") instanceof Map<?, ?> a && ChangeAuthor.KIND_AGENT.equals(a.get("kind")) && a.get("client_id") != null)
+                out.add(a.get("client_id").toString());
+        return out;
+    }
+
+    /**
+     * AO-AGENT-HUMAN-NAME (владелица 21.11.2026): автору-агенту — подпись «имя · профиль · машина»
+     * ({@link WhoLabel#agent}) в {@code display_name} и учётка в {@code hint}. client_id остаётся в данных (фильтр
+     * «автор», админка). Агента нет в реестре — подпись из учётки (профиль), не учётка текстом.
+     */
+    static List<Map<String, Object>> withAgentNames(List<Map<String, Object>> rows, Map<String, WhoLabel.Agent> agents) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (Map<String, Object> r : rows) {
+            if (r.get("author") instanceof Map<?, ?> a && ChangeAuthor.KIND_AGENT.equals(a.get("kind")) && a.get("client_id") != null) {
+                String client = a.get("client_id").toString();
+                WhoLabel.Agent ag = agents.get(client);
+                Map<String, Object> row = new LinkedHashMap<>(r);
+                @SuppressWarnings("unchecked") Map<String, Object> au = new LinkedHashMap<>((Map<String, Object>) a);
+                au.put("display_name", WhoLabel.agent(ag == null ? null : ag.name(), ag == null ? null : ag.harness(), client,
+                    a.get("machine") == null ? null : a.get("machine").toString()));
+                au.put("hint", client);
+                row.put("author", au);
+                out.add(row);
+            } else out.add(r);
+        }
+        return out;
+    }
+
     /** Поля тела версии по классу истории — то, что дифф обязан показать (HistoryBodyFieldsTest). */
     static final Map<String, List<String>> BODY_FIELDS = Map.of(
         "KnowTaskHist", List.of("note_md"),

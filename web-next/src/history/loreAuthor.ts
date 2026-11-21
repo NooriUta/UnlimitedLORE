@@ -10,7 +10,8 @@ export function loreAuthor(raw: unknown): KitHistoryAuthor {
   if (!raw || typeof raw !== 'object') return { kind: 'unknown' };
   const a = raw as Record<string, unknown>;
   if (a.kind === 'human') return { kind: 'human', id: str(a.kc_sub) ?? str(a.caller) ?? '', name: str(a.display_name) };
-  if (a.kind === 'agent') return { kind: 'agent', id: str(a.client_id) ?? str(a.caller) ?? '', name: null, owner: str(a.owner_kc_sub) };
+  // AO-AGENT-HUMAN-NAME: подпись «имя · профиль · машина» даёт сервер (display_name); учётка остаётся id — по ней фильтр.
+  if (a.kind === 'agent') return { kind: 'agent', id: str(a.client_id) ?? str(a.caller) ?? '', name: str(a.display_name), owner: str(a.owner_kc_sub) };
   // Автора не установили — так и говорим. «unknown» ≠ «правил никто».
   return { kind: 'unknown' };
 }
