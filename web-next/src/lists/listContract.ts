@@ -11,11 +11,26 @@
 import type { KitConfig, KitLang, KitRecord } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 
-export interface ListContract {
+/** Сегмент списка: сервер сам делит записи по статусу разными срезами (задачи: открытые / закрытые / все). */
+export interface ListSegment {
+  key: string;
   slice: string;
+  labelKey?: string;
+  default: boolean;
+}
+
+export interface ListContract {
+  /** Срез; при сегментах — срез сегмента по умолчанию. */
+  slice: string;
+  /** Есть — фильтр статуса серверный: переключатель сегментов, у каждого свой срез. */
+  segments: ListSegment[];
   idKey: string;
   titleKey: string;
+  /** Колонка статуса в строке среза; без сегментов — фильтр статуса на клиенте. */
+  statusKey?: string;
   recordPath: string;
+  /** Версия LORE, с которой срез отдаётся (`<=1.17` — был раньше). 404 UNKNOWN_SLICE на сервере старше — «ещё не отдаётся», не «пусто». */
+  since?: string;
   defaultMode?: 'rows' | 'cards';
   groupKeys: string[];
   /** Роль, без которой срез ответит 403 (гейт сервера) — экран говорит об этом, а не показывает «пусто». */
@@ -34,13 +49,31 @@ export function listContractOf(model: unknown, type: string): ListContract | nul
   const raw = list && isObj(list[type]) ? list[type] : null;
   if (!raw || !nonEmpty(raw.slice) || !nonEmpty(raw.id_key) || !nonEmpty(raw.title_key) || !nonEmpty(raw.record_path)) return null;
   const mode = raw.default_mode === 'rows' || raw.default_mode === 'cards' ? raw.default_mode : undefined;
+  const segments: ListSegment[] = Array.isArray(raw.segments)
+    ? raw.segments.filter(isObj).filter(s => nonEmpty(s.key) && nonEmpty(s.slice)).map(s => ({
+      key: s.key as string, slice: s.slice as string,
+      ...(nonEmpty(s.label_key) ? { labelKey: s.label_key } : {}),
+      default: s.default === true,
+    }))
+    : [];
   return {
-    slice: raw.slice, idKey: raw.id_key, titleKey: raw.title_key, recordPath: raw.record_path,
+    slice: raw.slice, segments, idKey: raw.id_key, titleKey: raw.title_key, recordPath: raw.record_path,
+    ...(nonEmpty(raw.status_key) ? { statusKey: raw.status_key } : {}),
+    ...(nonEmpty(raw.since) ? { since: raw.since } : {}),
     ...(mode ? { defaultMode: mode } : {}),
     groupKeys: Array.isArray(raw.group_keys) ? raw.group_keys.filter(nonEmpty) : [],
     ...(nonEmpty(raw.requires_role) ? { requiresRole: raw.requires_role } : {}),
     projectScoped: raw.project_scoped === true,
   };
+}
+
+/**
+ * Где фильтруется статус: `server` — есть сегменты (у каждого свой срез); `client` — один срез и колонка
+ * статуса; `none` — у типа нет статуса.
+ */
+export function statusFilterOf(c: ListContract): 'server' | 'client' | 'none' {
+  if (c.segments.length > 0) return 'server';
+  return c.statusKey ? 'client' : 'none';
 }
 
 /** Минимум экрана, который можно собрать из одного контракта (форма совместима с ListScreenDef). */

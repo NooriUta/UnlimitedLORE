@@ -41,6 +41,14 @@ public class LoreVersionResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response version() {
         if (!enabled) return disabled();
+        return noStore(Response.ok(info(System.getenv("LORE_RELEASE_TAG"))));
+    }
+
+    /**
+     * Сведения о сборке — одни для {@code /lore/version} и блока {@code server} в {@code /lore/model}
+     * (MC-09: клиент сравнивает с ними {@code since} контракта списка).
+     */
+    static Map<String, Object> info(String releaseEnv) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("commit", BUILD.get("commit"));
         out.put("built_at", BUILD.get("built_at"));
@@ -49,8 +57,8 @@ public class LoreVersionResource extends LoreResourceBase {
         out.put("schema_version", LoreSchemaMigrations.codeVersion());
         // Владелица 09.11: версия в правом нижнем углу. Тег релиза сборка не знает — его
         // передаёт выкатка прода (LORE_RELEASE_TAG). Нет — null, а не выдуманная версия.
-        out.put("release", releaseTag(System.getenv("LORE_RELEASE_TAG")));
-        return noStore(Response.ok(out));
+        out.put("release", releaseTag(releaseEnv));
+        return out;
     }
 
     private static final java.util.regex.Pattern TAG = java.util.regex.Pattern.compile("^v[0-9]+[.][0-9]+[.][0-9]+$");

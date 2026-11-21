@@ -2,7 +2,7 @@
 // получает экран из одной модели; свой экран берёт срез из модели, а умолчание — только когда её нет.
 import { describe, expect, it } from 'vitest';
 import { LIST_SCREENS, listScreenFor, withListContract } from './screens';
-import { listContractOf } from './listContract';
+import { listContractOf, statusFilterOf } from './listContract';
 
 const model = {
   format: 'model/0', version: 'v1',
@@ -50,6 +50,29 @@ describe('контракт списка из модели (MC-09)', () => {
   it('модели нет — умолчание приложения; типа нет нигде — null', () => {
     expect(listScreenFor('sprint', undefined)!.slice).toBe('sprints');
     expect(listScreenFor('nobody', model)).toBeNull();
+  });
+
+  it('сегменты и колонка статуса: фильтр статуса серверный, срез умолчания совпадает с slice', () => {
+    const doc = { surfaces: { list: { task: {
+      slice: 'open_tasks', id_key: 'task_uid', title_key: 'title', status_key: 'status_raw',
+      record_path: '/lore/record/task/{id}', requires_role: null, since: '<=1.17',
+      segments: [
+        { key: 'open', slice: 'open_tasks', label_key: 'lists.status.open', default: true },
+        { key: 'closed', slice: 'closed_tasks', label_key: 'lists.status.closed' },
+        { key: 'all', slice: 'all_tasks' },
+      ],
+    } } } };
+    const c = listContractOf(doc, 'task')!;
+    expect(c.statusKey).toBe('status_raw');
+    expect(c.since).toBe('<=1.17');
+    expect(c.requiresRole).toBeUndefined();
+    expect(c.segments.map(s => [s.key, s.slice, s.default])).toEqual([
+      ['open', 'open_tasks', true], ['closed', 'closed_tasks', false], ['all', 'all_tasks', false],
+    ]);
+    expect(c.segments[2].labelKey).toBeUndefined();
+    expect(statusFilterOf(c)).toBe('server');
+    expect(statusFilterOf({ ...c, segments: [] })).toBe('client');
+    expect(statusFilterOf({ ...c, segments: [], statusKey: undefined })).toBe('none');
   });
 
   it('неполный контракт не принимается (нет id_key) — действует умолчание', () => {

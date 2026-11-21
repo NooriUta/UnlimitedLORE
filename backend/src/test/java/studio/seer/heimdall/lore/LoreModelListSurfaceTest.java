@@ -78,10 +78,89 @@ class LoreModelListSurfaceTest {
             if (mode != null) assertTrue(Set.of("rows", "cards").contains(mode), t + ".default_mode: " + mode);
             Object gk = s.get("group_keys");
             if (gk != null) assertInstanceOf(List.class, gk, t + ".group_keys — массив");
-            Set<String> known = Set.of("slice", "id_key", "title_key", "record_path", "default_mode", "group_keys",
-                "requires_role", "project_scoped");
+            // Mobilepoc 21.11: requires_role есть в каждой записи (null — гейта нет), формат стабилен; since — с какой версии срез отдаётся.
+            assertTrue(s.containsKey("requires_role"), t + ": requires_role должен быть всегда (null — гейта нет)");
+            assertTrue(s.get("since") instanceof String v && (v.equals("<=1.17") || v.matches("[0-9]+[.][0-9]+[.][0-9]+")), t + ".since: " + s.get("since"));
+            Set<String> known = Set.of("slice", "id_key", "title_key", "status_key", "record_path", "default_mode", "group_keys",
+                "segments", "requires_role", "project_scoped", "since");
             assertTrue(known.containsAll(s.keySet()), t + ": лишние ключи " + s.keySet());
         }
+    }
+
+    /**
+     * Владелица 21.11.2026: «закрытые задачи тоже отдай; подумай, как указать, что в одном случае фильтр по
+     * статусу, а во втором нет». Сервер делит задачи двумя срезами — open_tasks и closed_tasks: это сегменты
+     * (фильтр статуса серверный), slice верхнего уровня = сегмент по умолчанию (совместимость).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void задачиОтдаютсяДвумяСегментами() {
+        Map<String, Object> task = (Map<String, Object>) servedList().get("task");
+        List<Map<String, Object>> seg = (List<Map<String, Object>>) task.get("segments");
+        assertNotNull(seg, "у задач нет segments — закрытые клиенту не достать");
+        assertEquals(List.of("open", "closed", "all"), seg.stream().map(s -> s.get("key")).toList());
+        assertEquals(List.of("open_tasks", "closed_tasks", "all_tasks"), seg.stream().map(s -> s.get("slice")).toList());
+        assertEquals(Boolean.TRUE, seg.get(0).get("default"));
+        assertEquals(task.get("slice"), seg.get(0).get("slice"), "slice верхнего уровня = сегмент по умолчанию");
+        assertEquals("status_raw", task.get("status_key"));
+    }
+
+    /** Форма сегментов: ровно один по умолчанию, ключи уникальны, slice верхнего уровня = срез умолчания. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void формаСегментов() {
+        for (Map.Entry<String, Object> e : servedList().entrySet()) {
+            Map<String, Object> s = (Map<String, Object>) e.getValue();
+            Object raw = s.get("segments");
+            if (raw == null) continue;
+            List<Map<String, Object>> seg = (List<Map<String, Object>>) raw;
+            String t = e.getKey();
+            assertTrue(seg.size() >= 2, t + ": сегмент один — это не разбиение");
+            assertEquals(1, seg.stream().filter(x -> Boolean.TRUE.equals(x.get("default"))).count(), t + ": ровно один default");
+            assertEquals(seg.size(), seg.stream().map(x -> x.get("key")).distinct().count(), t + ": ключи сегментов уникальны");
+            Map<String, Object> def = seg.stream().filter(x -> Boolean.TRUE.equals(x.get("default"))).findFirst().orElseThrow();
+            assertEquals(s.get("slice"), def.get("slice"), t + ": slice верхнего уровня = сегмент по умолчанию");
+            for (Map<String, Object> x : seg)
+                assertTrue(Set.of("key", "slice", "label_key", "default").containsAll(x.keySet()), t + ": лишние ключи сегмента " + x.keySet());
+        }
+    }
+
+    /**
+     * Mobilepoc 21.11: на проде v1.17.28 /lore/slice/organizations → 404 UNKNOWN_SLICE, и клиент не отличит его
+     * от «пусто». since называет версию, с которой срез отдаётся: срезов organizations и repositories в v1.17.28
+     * нет (сверено по тегу), остальные срезы контракта там уже были.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void sinceНазываетНовыеСрезы() {
+        Map<String, Object> list = servedList();
+        for (String t : List.of("organization", "repository"))
+            assertEquals("1.18.0", ((Map<String, Object>) list.get(t)).get("since"), t);
+        for (String t : List.of("task", "sprint", "agent", "track", "user"))
+            assertEquals("<=1.17", ((Map<String, Object>) list.get(t)).get("since"), t);
+    }
+
+    /** Версия сервера рядом с моделью: без неё since не с чем сравнить. Тот же источник, что /lore/version. */
+    @Test
+    void моделиОтдаётсяВерсияСервера() throws Exception {
+        Map<String, Object> info = LoreVersionResource.info("v1.18.0");
+        assertEquals("v1.18.0", info.get("release"));
+        assertTrue(info.containsKey("commit") && info.containsKey("schema_version"));
+        assertNull(LoreVersionResource.info(null).get("release"), "тега нет — null, а не выдуманная версия");
+        String src = java.nio.file.Files.readString(java.nio.file.Path.of(
+            "src/main/java/studio/seer/heimdall/lore/LoreModelResource.java"));
+        assertTrue(src.contains("doc.put(\"server\", LoreVersionResource.info("), "/lore/model не отдаёт версию сервера");
+    }
+
+    /** Сегмент без default или с двумя — отказ разбора словами. */
+    @Test
+    @SuppressWarnings("unchecked")
+    void дваСегментаПоУмолчаниюОтказывают() throws Exception {
+        io.vertx.core.json.JsonObject m = new io.vertx.core.json.JsonObject(LoreModelLiveReplaceTest.canon());
+        io.vertx.core.json.JsonArray seg = m.getJsonObject("surfaces").getJsonObject("list").getJsonObject("task").getJsonArray("segments");
+        seg.getJsonObject(1).put("default", true);
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> LoreModelFile.parse(m.encode()));
+        assertTrue(e.getMessage().contains("default"), e.getMessage());
     }
 
     /** Раздел отдан — в missing его больше нет: «описано» и «не описано» не путаются. */
