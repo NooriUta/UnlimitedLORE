@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+# Труба установщика LORE: «пустая машина → пакет из kkRepo → установка → перенос → сверка → проба».
+# SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04. Владелица 21.11.2026: «давай сделаем трубу, которая будет тестировать установку
+# с нуля и миграцию»; «отдельную у инсталлера на основе наших наработок».
+#
+# Свой здесь только каркас. Шаги — переиспользованные:
+#   fetch    пакет, выложенный lore-installer-publish.yml (kkRepo, каталог версии, SHA256SUMS) — скачать и сверить
+#   install  deploy/install/install.sh из архива исходников пакета (--build-from-source), вход выключен, без KC/Infisical
+#   migrate  .github/scripts/model-migration-run.sh STAGE=full (тот же, что lore-migration-snapshot.yml): connect
+#            --create-dst, два прогона transfer → edges → dst-fingerprint и сверка отпечатков; конвейер — бинарь пакета
+#   switch   LORE_DB установки → перенесённая база, перезапуск бэкенда
+#   probe    /lore/version отвечает, срезы open_tasks и organizations не пусты
+#
+# Запуск: lore-install-e2e.sh <plan|fetch|install|probe-fresh|migrate|switch|probe|all|down>
+# Входы (env):
+#   E2E_VERSION   версия пакета в kkRepo (1.18.0-rc.<sha8>) — обязательна
+#   KKREPO_BASE   http://192.168.3.131:8081/repository; KKREPO_REPO lore-installer
+#   E2E_WORK      рабочий каталог (по умолчанию ./install-e2e); E2E_DIR — каталог установки ($E2E_WORK/lore)
+#   E2E_BIND / E2E_HTTP_PORT / E2E_DB_PORT — 127.0.0.1 / 14400 / 2491 (ArcadeDB установки — только для переноса)
+#   E2E_REACH     host — по портам на E2E_BIND (машина); network — джоба в контейнере подключается к сети compose
+#   E2E_DST_DB    приёмник переноса в ArcadeDB установки (migration_dst_install; только migration_dst*)
+#   MIG_SRC_DB    снимок прода migration_src_* (только читается); MIG_DB_URL / MIG_DB_USER / MIG_DB_PASSWORD — его сервер
+#   E2E_SRC_ENV   файл доступа источника вместо трёх переменных (MIG_DB_URL, MIG_SRC_USER, MIG_SRC_PASSWORD) — значения
+#                 не печатаются
+#   E2E_DECISIONS файл решений (по умолчанию из исходников пакета: scripts/model-migration/rules/decisions.lore.json)
+#   E2E_WAIT_MIN  ожидание ответа LORE (20); E2E_KEEP=1 — `down` ничего не убирает
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+die() { echo "::error::$1"; exit "${2:-1}"; }
+say() { echo "── $*"; }
+lc() { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
+
+STAGE="${1:-plan}"
+V="${E2E_VERSION:-}"
+[ -n "$V" ] || die "E2E_VERSION не задана — какую версию пакета из kkRepo ставить (1.18.0-rc.<sha8>)" 2
+BASE="${KKREPO_BASE:-http://192.168.3.131:8081/repository}"; REPO="${KKREPO_REPO:-lore-installer}"
+WORK="${E2E_WORK:-$PWD/install-e2e}"; case "$WORK" in /*|[A-Za-z]:/*) ;; *) WORK="$PWD/$WORK" ;; esac
+DIR="${E2E_DIR:-$WORK/lore}"; PKG="$WORK/pkg"; TREE="$WORK/tree"
+# Бинарь пакета — lore-migrate-<версия>-linux-x64 (имена каталога версии — publish-plan.mjs).
+BIN="$PKG/lore-migrate-$V-linux-x64"
+BIND="${E2E_BIND:-127.0.0.1}"; PORT="${E2E_HTTP_PORT:-14400}"; DBPORT="${E2E_DB_PORT:-2491}"; REACH="${E2E_REACH:-host}"
+DST="${E2E_DST_DB:-migration_dst_install}"; WAIT_MIN="${E2E_WAIT_MIN:-20}"
+
+# Сторож приёмника — до любых действий (тот же, что в model-migration-run.sh и env.mjs).
+case "$(lc "$DST")" in system_aida_lore*) die "приёмник — рабочая база: $DST (нужен migration_dst*)" ;; esac
+case "$(lc "$DST")" in migration_dst*) ;; *) die "приёмник должен называться migration_dst*: $DST" ;; esac
+
+compose() {
+  local f=(-f "$DIR/docker-compose.yml"); [ -f "$DIR/docker-compose.e2e.yml" ] && f+=(-f "$DIR/docker-compose.e2e.yml")
+  docker compose --project-directory "$DIR" "${f[@]}" --env-file "$DIR/.env" "$@"
+}
+env_get() { [ -f "$2" ] && sed -n "s/^$1=//p" "$2" | tail -1; }
+web() { if [ "$REACH" = network ]; then echo "http://lore-app-next:80"; else echo "http://$BIND:$PORT"; fi; }
+
+plan() {
+  echo "план трубы установщика, версия $V:"
+  echo "  fetch    $BASE/$REPO/$V/ — пакет из lore-installer-publish.yml, сверка SHA256SUMS"
+  echo "  install  deploy/install/install.sh --build-from-source из src/lore-$V.tar.gz пакета, вход выключен, порт $BIND:$PORT"
+  echo "  probe    свежая установка: /lore/version, /lore/model"
+  echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
+  echo "  switch   LORE_DB=$DST, перезапуск lore-backend"
+  echo "  probe    /lore/version, /lore/slice/open_tasks и /lore/slice/organizations — не пусты"
+}
+
+fetch() {
+  mkdir -p "$PKG"; cd "$PKG" || die "нет каталога $PKG"
+  say "пакет $V из $BASE/$REPO"
+  curl -fsS "$BASE/$REPO/$V/SHA256SUMS" -o SHA256SUMS || die "SHA256SUMS версии $V не читается из kkRepo — пакета нет или kkRepo недоступен"
+  local n=0 name
+  while read -r _ name; do
+    [ -n "$name" ] || continue
+    # Образы (images/) нужны только с Forgejo — труба ставит без него; их сумма не проверяется, раз файла нет.
+    case "$name" in images/*) [ "${E2E_WITH_IMAGES:-0}" = 1 ] || continue ;; esac
+    mkdir -p "$(dirname "$name")"
+    curl -fsS "$BASE/$REPO/$V/$name" -o "$name" || die "файл пакета не скачан: $name"
+    n=$((n + 1))
+  done < SHA256SUMS
+  sha256sum -c --ignore-missing --quiet SHA256SUMS || die "SHA256SUMS не сошлись — пакет повреждён или подменён, установки не будет"
+  [ -f "$BIN" ] && [ -f "src/lore-$V.tar.gz" ] || die "в пакете нет $(basename "$BIN") или src/lore-$V.tar.gz"
+  chmod +x "$BIN"
+  echo "SHA256SUMS сошлись, файлов сверено: $n"
+}
+
+install_() {
+  [ -f "$PKG/src/lore-$V.tar.gz" ] || die "пакет не скачан — сначала fetch"
+  mkdir -p "$TREE"; tar -xzf "$PKG/src/lore-$V.tar.gz" -C "$TREE" || die "архив исходников пакета не распаковался"
+  [ -f "$TREE/deploy/install/install.sh" ] || die "в исходниках пакета нет deploy/install/install.sh"
+  say "установка с нуля: install.sh --build-from-source (вход выключен, без KC, Infisical и Forgejo)"
+  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" bash "$TREE/deploy/install/install.sh" \
+    --dir "$DIR" --port "$PORT" --bind "$BIND" --forgejo none --build-from-source || die "install.sh упал"
+  # Джоба в контейнере раннера: порты установки на 127.0.0.1 хоста ей не видны — подключаемся к сети compose и ходим
+  # по именам сервисов (arcadedb, lore-app-next). Сеть — <проект>_default; проект — COMPOSE_PROJECT_NAME (по умолчанию lore).
+  if [ "$REACH" = network ] && [ -f /.dockerenv ]; then
+    docker network connect "${COMPOSE_PROJECT_NAME:-lore}_default" "$(hostname)" || die "джоба не подключилась к сети установки ${COMPOSE_PROJECT_NAME:-lore}_default"
+  fi
+}
+
+# get <путь> — тело ответа; код не 200 — пусто и ненулевой выход.
+get() { curl -fsS -m 30 "$(web)$1"; }
+wait_up() {
+  local until=$(( $(date +%s) + WAIT_MIN * 60 ))
+  while [ "$(date +%s)" -lt "$until" ]; do get /lore/version >/dev/null 2>&1 && return 0; sleep 10; done
+  die "LORE не ответил на $(web)/lore/version за $WAIT_MIN мин — смотрите: docker compose logs lore-backend"
+}
+nonempty() { # nonempty <срез> — строк больше нуля, иначе причина словами
+  local b; b="$(get "/lore/slice/$1?limit=5")" || die "срез $1 не отвечает (ответ не 200)"
+  printf '%s' "$b" | grep -q '"rows":\[{' || die "срез $1 пуст: ${b:0:200}"
+  echo "срез $1: строки есть"
+}
+
+probe_fresh() {
+  wait_up; echo "/lore/version: $(get /lore/version)"
+  get /lore/model >/dev/null || die "/lore/model не отвечает на свежей установке"
+  echo "свежая установка отвечает: /lore/version и /lore/model"
+}
+
+migrate() {
+  [ -x "$BIN" ] || die "нет бинаря пакета — сначала fetch"
+  if [ -n "${E2E_SRC_ENV:-}" ]; then
+    [ -f "$E2E_SRC_ENV" ] || die "файла доступа источника нет: $E2E_SRC_ENV"
+    MIG_DB_URL="${MIG_DB_URL:-$(env_get MIG_DB_URL "$E2E_SRC_ENV")}"
+    MIG_DB_USER="$(env_get MIG_SRC_USER "$E2E_SRC_ENV")"; MIG_DB_PASSWORD="$(env_get MIG_SRC_PASSWORD "$E2E_SRC_ENV")"
+  fi
+  local dst_url
+  if [ "$REACH" = network ]; then dst_url="http://arcadedb:2480"
+  else
+    printf 'services:\n  arcadedb:\n    ports:\n      - "%s:%s:2480"\n' "$BIND" "$DBPORT" > "$DIR/docker-compose.e2e.yml"
+    compose up -d arcadedb >/dev/null || die "ArcadeDB установки не поднялась с портом $DBPORT"
+    dst_url="http://$BIND:$DBPORT"
+  fi
+  local dec="${E2E_DECISIONS:-$TREE/scripts/model-migration/rules/decisions.lore.json}"
+  say "перенос: model-migration-run.sh STAGE=full, бинарь пакета, приёмник $DST на $dst_url"
+  MIG_SRC_DB="${MIG_SRC_DB:-}" MIG_DST_DB="$DST" STAGE=full \
+  MIG_DB_URL="${MIG_DB_URL:-}" MIG_DB_USER="${MIG_DB_USER:-}" MIG_DB_PASSWORD="${MIG_DB_PASSWORD:-}" \
+  MIG_DST_URL="$dst_url" MIG_DST_USER=root MIG_DST_PASSWORD="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")" \
+  MIG_DECISIONS="$dec" MIG_NODE=env MIG_CLI="$BIN" MIG_REPORT_DIR="$WORK/report" \
+    bash "$HERE/model-migration-run.sh" || die "перенос упал — отчёт в $WORK/report"
+}
+
+switch() {
+  local env="$DIR/.env"
+  if grep -q '^LORE_DB=' "$env"; then sed -i "s/^LORE_DB=.*/LORE_DB=$DST/" "$env"; else echo "LORE_DB=$DST" >> "$env"; fi
+  say "LORE_DB=$DST, перезапуск lore-backend"
+  compose up -d --force-recreate lore-backend >/dev/null || die "lore-backend не перезапустился"
+}
+
+probe() {
+  wait_up
+  echo "/lore/version: $(get /lore/version)"
+  nonempty open_tasks; nonempty organizations
+  echo "LORE на перенесённой базе $DST отвечает"
+}
+
+down() {
+  [ "${E2E_KEEP:-0}" = 1 ] && { echo "E2E_KEEP=1 — установка оставлена: $DIR"; return 0; }
+  [ -f "$DIR/docker-compose.yml" ] && compose down -v --remove-orphans || true
+}
+
+case "$STAGE" in
+  plan) plan ;;
+  fetch) fetch ;;
+  install) install_ ;;
+  probe-fresh) probe_fresh ;;
+  migrate) migrate ;;
+  switch) switch ;;
+  probe) probe ;;
+  all) plan; fetch; install_; probe_fresh; migrate; switch; probe ;;
+  down) down ;;
+  *) die "шаг «$STAGE» неизвестен: plan | fetch | install | probe-fresh | migrate | switch | probe | all | down" 2 ;;
+esac
