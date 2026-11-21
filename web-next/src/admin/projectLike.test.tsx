@@ -48,7 +48,9 @@ const MATRIX = {
   ],
   sources_asked: ['graph'],
 };
-const GIT_PROJECTS = { rows: [{ slug: SRC, name: 'UnlimitedLORE', default_branch: 'develop', hosts: null }, { slug: 'AIDA/miniLORE', name: 'miniLORE' }] };
+// Хост git — из записи репозитория (SELF-PROVISION-STANDALONE): у похожего проекта primary на своём Forgejo.
+const GIT = 'https://forge.example.org';
+const GIT_PROJECTS = { rows: [{ slug: SRC, name: 'UnlimitedLORE', default_branch: 'develop', hosts: JSON.stringify([{ remote: 'origin', role: 'primary', base_url: `${GIT}/${SRC}` }]) }, { slug: 'AIDA/miniLORE', name: 'miniLORE' }] };
 
 // ── модель ────────────────────────────────────────────────────────────────
 
@@ -65,8 +67,8 @@ describe('модель · UC-5', () => {
   });
 
   it('hosts — primary на Forgejo в том же виде, что у зарегистрированных проектов', () => {
-    expect(forgejoHosts('AIDA/new-service', 'develop')).toEqual([{
-      remote: 'origin', role: 'primary', base_url: 'https://git.seidrstudio.pro/AIDA/new-service',
+    expect(forgejoHosts('AIDA/new-service', 'develop', 'https://git.acme.io')).toEqual([{
+      remote: 'origin', role: 'primary', base_url: 'https://git.acme.io/AIDA/new-service',
       file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{n}', default_branch: 'develop',
     }]);
   });
@@ -113,6 +115,8 @@ interface Opts {
   failFor?: string;
   /** role_matrix в сыром виде среза (projects/roles) — так его читает раздел «Проекты». */
   rawMatrix?: boolean;
+  /** Свой ответ git_projects (без hosts — адрес git-хоста неоткуда взять). */
+  gitProjects?: unknown;
 }
 
 const RAW_MATRIX = {
@@ -126,7 +130,7 @@ function mockFetch(opts: Opts = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? 'GET';
-    if (url.startsWith('/lore/slice/git_projects')) return json(GIT_PROJECTS);
+    if (url.startsWith('/lore/slice/git_projects')) return json(opts.gitProjects ?? GIT_PROJECTS);
     if (url.startsWith('/lore/slice/role_matrix')) return json(opts.rawMatrix ? RAW_MATRIX : MATRIX);
     if (url.startsWith('/lore/slice/agent_owners')) return json({ rows: [] });
     if (url.startsWith('/lore/slice/dictionary')) return json({ rows: [] });
@@ -191,7 +195,7 @@ describe('экран · UC-5 проект как у похожего', () => {
     await waitFor(() => expect(calls(f, '/lore/project')).toHaveLength(1));
     const reg = calls(f, '/lore/project')[0];
     expect(reg).toMatchObject({ slug: NEW, name: 'New service', default_branch: 'develop' });
-    expect(JSON.parse(String(reg.hosts))).toEqual(forgejoHosts(NEW, 'develop'));
+    expect(JSON.parse(String(reg.hosts))).toEqual(forgejoHosts(NEW, 'develop', GIT));
     expect((await screen.findByTestId('adm-wiz-registered')).textContent).toContain(NEW);
     next();
 
@@ -243,8 +247,17 @@ describe('экран · UC-5 проект как у похожего', () => {
     next();
     const u = await screen.findByTestId('adm-wiz-repo-unchecked');
     expect(u.textContent).toContain('FORGEJO_API_TOKEN');
-    expect(screen.getByTestId('adm-wiz-repo-link').getAttribute('href')).toBe(`https://git.seidrstudio.pro/${NEW}`);
+    expect(screen.getByTestId('adm-wiz-repo-link').getAttribute('href')).toBe(`${GIT}/${NEW}`);
     expect(nextBlocked()).toBe(false);
+  });
+
+  it('SELF-PROVISION: адрес git-хоста не задан (ни forgejo.url, ни hosts у проектов) — честная плашка, регистрации нет', async () => {
+    const f = mockFetch({ gitProjects: { rows: [{ slug: 'AIDA/miniLORE', name: 'miniLORE' }] } });
+    renderScreen(f as unknown as typeof fetch);
+    await fillProject();
+    expect((await screen.findByTestId('adm-wiz-githost-missing')).textContent).toContain('forgejo.url');
+    expect((screen.getByTestId('adm-wiz-register') as HTMLButtonElement).disabled).toBe(true);
+    expect(document.body.innerHTML).not.toMatch(/seidrstudio/);
   });
 
   it('регистрация без прав (403) — причина названа, вперёд нельзя', async () => {

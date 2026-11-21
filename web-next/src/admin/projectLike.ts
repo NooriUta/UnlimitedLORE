@@ -20,7 +20,8 @@ import { loreFetch } from '../auth/session';
 import { fetchSlice, LoreHttpError } from '../api/loreSlice';
 import type { CellState, PersonChanges, RolesData } from './roles';
 
-export const FORGEJO_BASE = 'https://git.seidrstudio.pro';
+// Адреса git-хоста здесь нет (SELF-PROVISION-STANDALONE): его даёт gitHost.ts — настройка forgejo.url
+// или хост primary у зарегистрированных проектов; нет ни того, ни другого — «адрес git-хоста не задан».
 
 /** Параметры адреса мастера — сбрасываются при смене мастера. */
 export const PROJECT_WIZ_PARAMS = ['adm-pslug', 'adm-pname', 'adm-pbranch', 'adm-prepo', 'adm-psrc'] as const;
@@ -44,11 +45,11 @@ export function repoProblem(repo: string): 'empty' | 'shape' | null {
 }
 
 /** hosts[] — primary на Forgejo, в том же виде, что у уже зарегистрированных проектов. */
-export function forgejoHosts(repo: string, branch: string) {
+export function forgejoHosts(repo: string, branch: string, gitHost: string) {
   return [{
     remote: 'origin',
     role: 'primary',
-    base_url: `${FORGEJO_BASE}/${repo.trim()}`,
+    base_url: `${gitHost.replace(/\/+$/, '')}/${repo.trim()}`,
     file_url_template: '{base}/src/branch/{branch}/{path}',
     pr_url_template: '{base}/pulls/{n}',
     default_branch: branch,
@@ -60,24 +61,40 @@ export interface GitProject {
   name: string | null;
   /** owner/repo primary-хоста; null — hosts нет. */
   repo: string | null;
+  /** origin primary-хоста (адрес git-хоста записи); null — hosts нет. */
+  host: string | null;
 }
 
-/** owner/repo из hosts[] primary (JSON-строка) — то же правило, что у ForgejoBridge.primaryRepoPath. */
-export function primaryRepoOf(hosts: unknown): string | null {
+function primaryUrl(hosts: unknown): URL | null {
   try {
     const arr: unknown = typeof hosts === 'string' ? JSON.parse(hosts) : hosts;
     if (!Array.isArray(arr)) return null;
     const p = arr.map(h => (h ?? {}) as Record<string, unknown>).find(h => h.role === 'primary');
-    const seg = new URL(String(p?.base_url ?? '')).pathname.replace(/^\/|\/$/g, '').split('/');
-    return seg.length >= 2 ? `${seg[seg.length - 2]}/${seg[seg.length - 1]}` : null;
+    return new URL(String(p?.base_url ?? ''));
   } catch {
     return null;
   }
 }
 
+/** owner/repo из hosts[] primary (JSON-строка) — то же правило, что у ForgejoBridge.primaryRepoPath. */
+export function primaryRepoOf(hosts: unknown): string | null {
+  const u = primaryUrl(hosts);
+  if (!u) return null;
+  const seg = u.pathname.replace(/^\/|\/$/g, '').split('/');
+  return seg.length >= 2 ? `${seg[seg.length - 2]}/${seg[seg.length - 1]}` : null;
+}
+
+/** origin primary-хоста из hosts[] — адрес git-хоста этой записи. */
+export function primaryHostOf(hosts: unknown): string | null {
+  const u = primaryUrl(hosts);
+  return u && (u.protocol === 'http:' || u.protocol === 'https:') ? u.origin : null;
+}
+
 export async function fetchGitProjects(fetchImpl: typeof fetch = loreFetch): Promise<GitProject[]> {
   const b = await fetchSlice<Record<string, unknown>>('git_projects', { limit: '1000', fields: 'slug,name,hosts' }, { fetchImpl });
-  return b.rows.map(r => ({ slug: str(r.slug) ?? '', name: str(r.name), repo: primaryRepoOf(r.hosts) })).filter(p => p.slug !== '');
+  return b.rows
+    .map(r => ({ slug: str(r.slug) ?? '', name: str(r.name), repo: primaryRepoOf(r.hosts), host: primaryHostOf(r.hosts) }))
+    .filter(p => p.slug !== '');
 }
 
 // ── люди похожего проекта ────────────────────────────────────────────────
@@ -115,7 +132,7 @@ export function likeProjectBatches(
 export interface Registered { outcome: string; rolesGranted: string[]; rolesWarning: string | null }
 
 export async function registerProject(
-  req: { slug: string; name: string; repo: string; branch: string },
+  req: { slug: string; name: string; repo: string; branch: string; gitHost: string },
   fetchImpl: typeof fetch = loreFetch,
 ): Promise<Registered> {
   const res = await fetchImpl('/lore/project', {
@@ -124,7 +141,7 @@ export async function registerProject(
     body: JSON.stringify({
       slug: req.slug.trim(),
       name: req.name.trim() || null,
-      hosts: JSON.stringify(forgejoHosts(req.repo, req.branch)),
+      hosts: JSON.stringify(forgejoHosts(req.repo, req.branch, req.gitHost)),
       default_branch: req.branch,
     }),
   });
