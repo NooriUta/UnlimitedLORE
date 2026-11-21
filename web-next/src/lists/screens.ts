@@ -16,6 +16,7 @@ import { MilestoneRowDetail } from '../milestone/MilestoneRowDetail';
 import { LORE_FILTER_FIELDS, STATUS_FACET } from './loreFilters';
 import { appT } from '../i18n';
 import { feedConfig, type FeedSpec } from './feed';
+import { contractScreen, listContractOf, type ListContract } from './listContract';
 import type { AppKey } from '../i18n';
 import {
   CLOSED_HIDDEN_NOTE, UC_OWN_LINKS_NOTE,
@@ -1030,3 +1031,33 @@ export const LIST_SCREENS = {
 } as const satisfies Record<string, ListScreenDef>;
 
 export type ListScreenId = keyof typeof LIST_SCREENS;
+
+/**
+ * MC-09: срез раздела — из контракта модели (`surfaces.list.<type>`), если он пришёл; срез выше — умолчание на
+ * случай, когда модели нет. Оформление (иконки, колонки, маппинг) остаётся своим. Тот же срез — тот же объект:
+ * экран не перезагружает строки, когда модель подтвердила умолчание.
+ */
+export function withListContract<D extends ListScreenDef>(def: D, contract: ListContract | null | undefined): D {
+  if (!contract || contract.slice === def.slice) return def;
+  return { ...def, slice: contract.slice };
+}
+
+/** Экран раздела, у которого есть тип модели: modelType экрана или вид его паспорта (`kindOf`). */
+function screenOfType(type: string, kindOf: (id: ListScreenId) => string | undefined): ListScreenDef | undefined {
+  for (const id of Object.keys(LIST_SCREENS) as ListScreenId[]) {
+    const def = LIST_SCREENS[id] as ListScreenDef;
+    if ((def.modelType ?? kindOf(id)) === type) return def;
+  }
+  return undefined;
+}
+
+/**
+ * Экран списка ЛЮБОГО типа модели: свой экран приложения со срезом из контракта; своего нет — экран, собранный
+ * из одного контракта (тип пришёл новой моделью — без сборки клиента). Нет ни того ни другого — null.
+ */
+export function listScreenFor(type: string, model: unknown, kindOf: (id: ListScreenId) => string | undefined = () => undefined): ListScreenDef | null {
+  const contract = listContractOf(model, type);
+  const own = screenOfType(type, kindOf);
+  if (own) return withListContract(own, contract);
+  return contract ? contractScreen(type, contract) : null;
+}

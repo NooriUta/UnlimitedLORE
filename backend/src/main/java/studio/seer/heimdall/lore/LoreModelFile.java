@@ -65,6 +65,8 @@ final class LoreModelFile {
         LoreEdgeHistory.EdgeHistory edgeHistory,
         // SUPERTAGS-SPIKE: свободные поля на ребре (TAGGED_WITH → тег), без истории (LoreEdgeFreeFields).
         Map<String, LoreEdgeFreeFields.Spec> edgeFreeFields,
+        // MC-09: контракт экрана-списка по типам — surfaces.list (LoreModelList).
+        Map<String, LoreModelList.Spec> listSurface,
         // Служебные свойства записей (перенос 1.18, хранение справочника): имя → зачем. Видны MCP и админке, в общий
         // паспорт не идут — ни полем, ни блоком «Не описано в модели» (решение владелицы: служебные поля — без вопросов).
         Map<String, String> serviceFields) {}
@@ -168,6 +170,7 @@ final class LoreModelFile {
             set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"), ro(create),
             LoreModelWorkflow.parse(doc.get("workflow")), ro(LoreModelSeries.parse(doc.get("series"))),
             LoreEdgeHistory.parse(doc.get("edge_history")), LoreEdgeFreeFields.parse(doc.get("edge_free_fields")),
+            ro(LoreModelList.parse(doc.get("surfaces"))),
             doc.get("service_fields") == null ? Map.of() : strMap(doc.get("service_fields"), "service_fields"));
         check(c);
         return c;
@@ -204,6 +207,7 @@ final class LoreModelFile {
         bad.addAll(LoreModelWorkflow.problems(c.workflow()));
         bad.addAll(LoreEdgeHistory.problems(c.edgeHistory(), c.typeDefs()));
         bad.addAll(LoreEdgeFreeFields.problems(c.edgeFreeFields(), c.typeDefs(), c.edgeHistory()));
+        bad.addAll(LoreModelList.problems(c.listSurface(), c.typeDefs(), c.passport()));
         if (!bad.isEmpty()) throw new IllegalStateException("файл модели несогласован: " + bad);
     }
 
@@ -302,6 +306,8 @@ final class LoreModelFile {
         d.put("create", create);
         d.put("workflow", LoreModelWorkflow.render(c.workflow()));
         d.put("series", LoreModelSeries.render(c.series()));
+        // MC-09: последним ключом — правка модели другими ветками (новые типы) не задевает этот блок.
+        if (!c.listSurface().isEmpty()) d.put("surfaces", Map.of("list", LoreModelList.surface(c.listSurface())));
         return new JsonObject(d).encodePrettily().replace("\r\n", "\n") + "\n";
     }
 
