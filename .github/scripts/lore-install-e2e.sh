@@ -45,11 +45,17 @@ DST="${E2E_DST_DB:-migration_dst_install}"; WAIT_MIN="${E2E_WAIT_MIN:-20}"
 case "$(lc "$DST")" in system_aida_lore*) die "приёмник — рабочая база: $DST (нужен migration_dst*)" ;; esac
 case "$(lc "$DST")" in migration_dst*) ;; *) die "приёмник должен называться migration_dst*: $DST" ;; esac
 
+# Имя проекта compose — одно на всё: из .env установки (его же читают помощники install.sh: dcurl, сеть
+# <проект>_default). Переменная окружения перекрыла бы .env для compose, но не для install.sh — так было на ryzenai
+# 21.11: compose поднял lore-e2e, а install.sh ходил в lore_default. Поэтому имя из окружения кладётся в .env до
+# install.sh, а все вызовы — без переменной.
+PROJECT_WANT="${COMPOSE_PROJECT_NAME:-}"
 compose() {
   local f=(-f "$DIR/docker-compose.yml"); [ -f "$DIR/docker-compose.e2e.yml" ] && f+=(-f "$DIR/docker-compose.e2e.yml")
-  docker compose --project-directory "$DIR" "${f[@]}" --env-file "$DIR/.env" "$@"
+  env -u COMPOSE_PROJECT_NAME docker compose --project-directory "$DIR" "${f[@]}" --env-file "$DIR/.env" "$@"
 }
 env_get() { [ -f "$2" ] && sed -n "s/^$1=//p" "$2" | tail -1; }
+project() { local p; p="$(env_get COMPOSE_PROJECT_NAME "$DIR/.env")"; printf '%s' "${p:-lore}"; }
 web() { if [ "$REACH" = network ]; then echo "http://lore-app-next:80"; else echo "http://$BIND:$PORT"; fi; }
 
 plan() {
@@ -100,14 +106,19 @@ install_() {
     || die "пакет установки не выложен командой install-bundle — в этой сборке пакета нет командного режима установки (появился в MIG-04 e2e); нужна новая сборка lore-installer-publish.yml"
   say "самопроверка установщика: install.sh --selftest"
   bash "$b/install.sh" --selftest >"$WORK/selftest.log" 2>&1 || { tail -20 "$WORK/selftest.log"; die "install.sh --selftest не прошёл — каркас установки сломан"; }
-  say "установка с нуля: install.sh --build-from-source (вход выключен, без KC, Infisical и Forgejo)"
-  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" bash "$b/install.sh" \
+  if [ -n "$PROJECT_WANT" ] && [ ! -f "$DIR/.env" ]; then
+    mkdir -p "$DIR"; (umask 077; cp "$b/.env.example" "$DIR/.env")
+    sed -i "s/^COMPOSE_PROJECT_NAME=.*/COMPOSE_PROJECT_NAME=$PROJECT_WANT/" "$DIR/.env"
+    grep -q "^COMPOSE_PROJECT_NAME=$PROJECT_WANT$" "$DIR/.env" || echo "COMPOSE_PROJECT_NAME=$PROJECT_WANT" >> "$DIR/.env"
+  fi
+  say "установка с нуля: install.sh --build-from-source (вход выключен, без KC, Infisical и Forgejo), проект $(project)"
+  LORE_SRC_ARCHIVE="$PKG/src/lore-$V.tar.gz" env -u COMPOSE_PROJECT_NAME bash "$b/install.sh" \
     --dir "$DIR" --port "$PORT" --bind "$BIND" --forgejo none --build-from-source || die "install.sh упал"
   note "установка с нуля: install.sh прошёл (selftest — зелёный)"
   # Джоба в контейнере раннера: порты установки на 127.0.0.1 хоста ей не видны — подключаемся к сети compose и ходим
   # по именам сервисов (arcadedb, lore-app-next). Сеть — <проект>_default; проект — COMPOSE_PROJECT_NAME (по умолчанию lore).
   if [ "$REACH" = network ] && [ -f /.dockerenv ]; then
-    docker network connect "${COMPOSE_PROJECT_NAME:-lore}_default" "$(hostname)" || die "джоба не подключилась к сети установки ${COMPOSE_PROJECT_NAME:-lore}_default"
+    docker network connect "$(project)_default" "$(hostname)" || die "джоба не подключилась к сети установки $(project)_default"
   fi
 }
 

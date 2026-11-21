@@ -95,6 +95,14 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(r.out).toMatch(/probe .*версия пакета.*seed_drift/);
   });
 
+  // Эмуляция на ryzenai 21.11: имя проекта переменной окружения расходилось с .env — compose поднимал lore-e2e,
+  // а помощники install.sh (dcurl, сеть <проект>_default) ходили в lore_default. Имя кладётся в .env до install.sh.
+  it('имя проекта compose — в .env установки до install.sh, не переменной окружения', () => {
+    const s = code(read(E2E));
+    expect(s).toMatch(/COMPOSE_PROJECT_NAME=/);
+    expect(s).toMatch(/env -u COMPOSE_PROJECT_NAME/);
+  });
+
   it('сам перенос не написан заново — вызывается model-migration-run.sh с бинарём пакета', () => {
     const s = code(read(E2E));
     expect(s).toMatch(/model-migration-run\.sh/);

@@ -316,15 +316,29 @@ start_stack() {
   fi
 }
 
+# Базовые образы есть на машине? Нет — отказ с именем образа (молча упасть на `up` хуже).
+need_images() {
+  [ "$DRY" = 1 ] && return 0
+  local s img
+  for s in "$@"; do
+    img="$(compose config --images "$s" 2>/dev/null | head -1)"
+    [ -n "$img" ] || continue
+    docker image inspect "$img" >/dev/null 2>&1 || die "образа $img нет на машине, и реестр его не отдал. Если это minio/minio — Docker Hub перестал его раздавать: загрузите образ (docker load) или задайте MINIO_VERSION/свой образ в .env"
+  done
+}
+
 images() {
   if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "загрузка образов"
-    run compose pull arcadedb minio lore-backend lore-app-next
+    run compose pull lore-backend lore-app-next
   else
     say "сборка образов из $LORE_SRC_RESOLVED (первый раз — 10–20 минут)"
     run compose build lore-backend lore-app-next
-    run compose pull arcadedb minio
   fi
+  # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (ryzenai 21.11.2026:
+  # Docker Hub отказал в minio/minio); образа нет нигде — need_images называет его.
+  run compose pull --ignore-pull-failures arcadedb minio
+  need_images arcadedb minio
   if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
   if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
 }
@@ -547,6 +561,10 @@ selftest() {
   grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
   grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
   grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
+  # 7a. базовые образы (arcadedb, minio): недоступный реестр не роняет установку, если образ уже есть на машине;
+  #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — ryzenai 21.11.2026).
+  grep -q 'pull --ignore-pull-failures arcadedb minio' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
+  grep -q 'need_images arcadedb minio' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
     grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
   done
