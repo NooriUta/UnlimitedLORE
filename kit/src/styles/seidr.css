@@ -7774,3 +7774,44 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
   .sk-dialog, .sk-dialog--wide { top: 0; left: 0; transform: none; width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border-width: 0; }
   .sk-sortable__row { align-items: flex-start; }
 }
+
+/* ═══ SPRINT_UXR_S15_KIT6 — «живые» кубики: команда с подтверждением, регулятор, загрузка, звук, плитка показания ═══ */
+.sk-cmdack { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sk-cmdack__state { font-size: var(--fs-xs); padding: 1px 8px; border-radius: 999px; border: 1px solid var(--bd); color: var(--t2); }
+.sk-cmdack__state--muted { color: var(--t3); }
+.sk-cmdack__state--info { color: var(--inf); border-color: var(--inf); }
+.sk-cmdack__state--warn { color: var(--wrn); border-color: var(--wrn); }
+.sk-cmdack__state--ok { color: var(--suc); border-color: var(--suc); }
+.sk-cmdack__state--bad { color: var(--dng); border-color: var(--dng); }
+.sk-livectl { display: grid; gap: 4px; min-width: 0; }
+.sk-livectl__head { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-xs); color: var(--t1); }
+.sk-livectl__fact { font-family: var(--mono); color: var(--t2); }
+.sk-livectl__pending { color: var(--wrn); }
+.sk-livectl__range { width: 100%; accent-color: var(--acc); }
+.sk-livectl__note { font-size: var(--fs-2xs); color: var(--wrn); }
+.sk-livetoggle { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--t1); cursor: pointer; }
+.sk-livetoggle__val { color: var(--t3); font-weight: 600; }
+.sk-livetoggle__val.is-on { color: var(--suc); }
+.sk-livetoggle__val.is-pending { color: var(--wrn); }
+.sk-upload { display: grid; gap: 6px; }
+.sk-upload__drop { display: grid; gap: 2px; padding: 12px; border: 1px dashed var(--bd); border-radius: var(--r-md); text-align: center; cursor: pointer; }
+.sk-upload__drop:focus-within, .sk-upload__drop:hover { border-color: var(--acc); }
+.sk-upload__label { font-size: var(--fs-sm); color: var(--t1); font-weight: 600; }
+.sk-upload__hint { font-size: var(--fs-xs); color: var(--t3); }
+.sk-upload__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sk-upload__row { display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-xs); min-width: 0; }
+.sk-upload__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t2); }
+.sk-upload__pct { font-family: var(--mono); color: var(--inf); }
+.sk-upload__ok { color: var(--suc); }
+.sk-upload__err { color: var(--dng); }
+.sk-audio { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--t2); }
+.sk-audio__label { color: var(--t1); }
+.sk-audio__player { width: 100%; }
+.sk-audio__err { color: var(--dng); }
+.sk-stattile { display: grid; gap: 2px; padding: 10px; min-width: 120px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.sk-stattile__label { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; }
+.sk-stattile__value { font-family: var(--mono); font-size: var(--fs-lg); color: var(--acc); }
+.sk-stattile__unit { font-size: var(--fs-xs); color: var(--t2); }
+.sk-stattile__age { font-size: var(--fs-2xs); color: var(--t3); }
+.sk-stattile.is-stale .sk-stattile__value, .sk-stattile.is-stale .sk-stattile__age { color: var(--wrn); }
+.sk-stattile.is-empty .sk-stattile__value { color: var(--t3); }
