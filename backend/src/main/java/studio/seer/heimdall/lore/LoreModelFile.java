@@ -69,7 +69,9 @@ final class LoreModelFile {
         Map<String, LoreModelList.Spec> listSurface,
         // Служебные свойства записей (перенос 1.18, хранение справочника): имя → зачем. Видны MCP и админке, в общий
         // паспорт не идут — ни полем, ни блоком «Не описано в модели» (решение владелицы: служебные поля — без вопросов).
-        Map<String, String> serviceFields) {}
+        Map<String, String> serviceFields,
+        // OH-MCP-HOSTED-SWITCH: роли учёток MCP с порядком и главная роль harness (LoreModelAgentProfiles).
+        LoreModelAgentProfiles.AgentProfiles agentProfiles) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -171,7 +173,8 @@ final class LoreModelFile {
             LoreModelWorkflow.parse(doc.get("workflow")), ro(LoreModelSeries.parse(doc.get("series"))),
             LoreEdgeHistory.parse(doc.get("edge_history")), LoreEdgeFreeFields.parse(doc.get("edge_free_fields")),
             ro(LoreModelList.parse(doc.get("surfaces"))),
-            doc.get("service_fields") == null ? Map.of() : strMap(doc.get("service_fields"), "service_fields"));
+            doc.get("service_fields") == null ? Map.of() : strMap(doc.get("service_fields"), "service_fields"),
+            LoreModelAgentProfiles.parse(doc.get("agent_profiles")));
         check(c);
         return c;
     }
@@ -207,6 +210,7 @@ final class LoreModelFile {
         bad.addAll(LoreModelWorkflow.problems(c.workflow()));
         bad.addAll(LoreEdgeHistory.problems(c.edgeHistory(), c.typeDefs()));
         bad.addAll(LoreEdgeFreeFields.problems(c.edgeFreeFields(), c.typeDefs(), c.edgeHistory()));
+        bad.addAll(LoreModelAgentProfiles.problems(c.agentProfiles()));
         bad.addAll(LoreModelList.problems(c.listSurface(), c.typeDefs(), c.passport()));
         if (!bad.isEmpty()) throw new IllegalStateException("файл модели несогласован: " + bad);
     }
@@ -306,6 +310,8 @@ final class LoreModelFile {
         d.put("create", create);
         d.put("workflow", LoreModelWorkflow.render(c.workflow()));
         d.put("series", LoreModelSeries.render(c.series()));
+        if (!c.agentProfiles().profiles().isEmpty() || !c.agentProfiles().harness().isEmpty())
+            d.put("agent_profiles", LoreModelAgentProfiles.render(c.agentProfiles()));
         // MC-09: последним ключом — правка модели другими ветками (новые типы) не задевает этот блок.
         if (!c.listSurface().isEmpty()) d.put("surfaces", Map.of("list", LoreModelList.surface(c.listSurface())));
         return new JsonObject(d).encodePrettily().replace("\r\n", "\n") + "\n";

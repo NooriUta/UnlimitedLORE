@@ -121,13 +121,58 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 - Администратор Keycloak — только для новой установки. Окно спрашивает его логин и пароль, чтобы завести область. Пароль не пишется на диск и не сохраняется.
 - Адрес веба LORE (`http(s)://хост[:порт]`, без пути): он становится адресом возврата клиента веба.
 
+Сначала окно спрашивает, что у вас уже есть («Keycloak: что у вас уже есть»). Молча оно ничего не заводит:
+
+- **ничего** — установщик заводит область и клиенты за вас;
+- **своя область** — область не трогается, в ней заводятся клиенты;
+- **LORE уже стоит** — доводка: недостающее дописывается, ничего не удаляется, секреты не перевыпускаются;
+- **свои клиенты и секреты** — LORE ничего не заводит и секретов не пишет. Он только берёт токен по вашей паре «клиент + секрет из вашей переменной» и проверяет в нём `agent_scope` и `seer_roles`. В admin API не идёт ни одного запроса.
+
+Имена клиентов по умолчанию — `lore-app` и `lore-mcp-<роль>[_<harness>]`. Своё имя впишите в поле «Свои имена клиентов» (`lore-mcp-full=acme-full`).
+
 Как настроить:
 
-1. В окне впишите «Адрес области Keycloak» (`https://<keycloak>/realms/<область>`) и «Адрес веба LORE».
-2. «План области Keycloak» показывает запросы без записи: область, роли `superadmin`, `admin`, `viewer`, клиент веба `lore-app` (публичный, PKCE S256) и клиенты MCP `lore-mcp-full` / `lore-mcp-full_<harness>`. Роли приходят в токене claim-ом `seer_roles`.
-3. «Завести область» выполняет план. Уже существующее не трогается, повтор безопасен. Секреты клиентов MCP уходят в файл `~/kc-clients-<область>.env` (права 600), на экран не выводятся.
+1. В окне впишите «Адрес области Keycloak» (`https://<keycloak>/realms/<область>`) и «Адрес веба LORE», затем выберите, что уже есть.
+2. «План области Keycloak» показывает запросы без записи: область, роли `superadmin`, `admin`, `viewer`, клиент веба `lore-app` и учётки MCP. Для доводки план читает область (нужен вход администратора), и каждая доводка видна отдельным шагом `fix-…`.
+3. «Завести область» выполняет план. То, что уже есть, не трогается, поэтому повтор безопасен. Секреты выдаются только клиентам, заведённым в этом прогоне, ключами `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]`. Они уходят в Infisical, если запись настроена (ниже), иначе в файл `~/kc-clients-<область>.env` с правами 600. На экран секреты не выводятся.
 4. «Собрать .env» включает вход: `LORE_AUTH_ENABLED=true`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID=lore-app`. Веб берёт их при запуске контейнера, в образ они не впекаются: после смены адреса или клиента достаточно `docker compose up -d`. Включение и выключение входа (`LORE_AUTH_ENABLED`) бэкенд фиксирует при сборке (`quarkus.oidc.enabled`), поэтому смена этого флага — повтор `install.sh`.
 5. Первому владельцу выдайте в Keycloak роль `superadmin`.
+
+Настройки клиентов совпадают с ранбуком LORE RUNBOOK-CORE-KC-INFISICAL-LOREHOST: так заведены 9 клиентов прод-KC.
+
+- **Клиент веба `lore-app`.** Публичный, PKCE S256. Адрес возврата `<веб>/*`, адрес после выхода тот же («+»), web origins — адрес веба.
+- **Учётки MCP.** Роли идут по порядку модели (`shared/model/lore-model.json`, раздел `agent_profiles`): full > architect > pm > (product-analyst | analyst | developer | marketer) > tester.
+  - Для Claude Code заводятся все роли: `lore-mcp-<роль>`.
+  - У другого harness заводится главная роль `lore-mcp-<главная>_<harness>` (у kimi это `lore-mcp-full_kimi`) и младшие из поля «Младшие роли для harness». Роль выше главной не заводится.
+  - У каждой учётки: Client authentication ON, Service accounts ON, Standard flow и Direct access OFF. Мапперы `agent_scope` (User Client Role) и `seer_roles` (User Realm Role). Клиентская роль `agent-<роль>` своего клиента выдана его сервисной учётке.
+  - Realm-роль `admin` есть только у главной `full`.
+  - Без `agent_scope` учётка только читает, а на запись получает 403.
+- **Смена секрета без простоя.** Нужны оба условия: флаг Keycloak `--features=…,client-secret-rotation` и клиентская политика `secret-rotation` в области. Без них при смене секрета старый перестаёт работать сразу.
+
+### Подключение harness: какой секрет брать
+
+Секрет учётки лежит под ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]`, заглавными буквами, «-» заменяется на «_». Примеры: `LORE_MCP_CLIENT_SECRET_FULL` для Claude Code, `LORE_MCP_CLIENT_SECRET_FULL_KIMI`, `LORE_MCP_CLIENT_SECRET_TESTER`. Переменная `LORE_MCP_SECRET_VAR` говорит подключению, из какого ключа брать секрет. У подагента младшей роли — своя учётка и свой ключ.
+
+Строка MCP для Claude Code (главная учётка `lore-mcp-full`):
+
+```json
+"aida-lore": { "type": "stdio", "command": "node", "args": ["<путь>/mcp-server/dist/index.js"],
+  "env": { "LORE_BACKEND_URL": "http://<хост>:9100", "LORE_OIDC_ISSUER": "https://<keycloak>/realms/<область>",
+           "LORE_MCP_CLIENT_ID": "lore-mcp-full", "LORE_MCP_SECRET_VAR": "LORE_MCP_CLIENT_SECRET_FULL",
+           "LORE_HARNESS": "claude-code", "LORE_MACHINE_ID": "<машина>" } }
+```
+
+Окно установщика собирает эту строку само: кнопка «Показать строку MCP» в разделе «Подключение агента на этой машине».
+
+Для другого harness, например Kimi Code (главная `lore-mcp-full_kimi`), меняются только имя клиента и ключ: `"LORE_MCP_CLIENT_ID": "lore-mcp-full_kimi"`, `"LORE_MCP_SECRET_VAR": "LORE_MCP_CLIENT_SECRET_FULL_KIMI"`, `"LORE_HARNESS": "kimi-code"`.
+
+### Infisical — по выбору
+
+Секреты учёток MCP можно класть в отдельный проект Infisical, например `lore-mcp-secrets` с окружением `prod`. Машинной учётке LORE нужна в нём роль member, и только в нём: свои роли проекта Infisical бесплатно не даёт, поэтому узкий доступ делается отдельным проектом. Запись включается, когда заданы `LORE_MCP_SECRETS_INFISICAL_URL`, `LORE_MCP_SECRETS_INFISICAL_PROJECT_ID`, `LORE_MCP_SECRETS_INFISICAL_CLIENT_ID` и `LORE_MCP_SECRETS_INFISICAL_CLIENT_SECRET`. Необязательные: `LORE_MCP_SECRETS_INFISICAL_ENVIRONMENT` (по умолчанию `prod`) и `LORE_MCP_SECRETS_INFISICAL_PATH` (по умолчанию `/`).
+
+- **Кто пишет.** В 1.18.1 пишет окно установщика. Запись из админки LORE (после выпуска учётки и после смены секрета) придёт в 1.18.2; до неё админка показывает секрет один раз и называет его ключ.
+- **Не настроено.** Секрет показывается один раз, как раньше.
+- **Сбой записи.** Секрет всё равно показывается один раз, а ошибка выводится громко.
 
 ## Völva — встроенные графики
 
@@ -280,7 +325,8 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
 | `FORGEJO_API_TOKEN` | токен моста LORE в Forgejo (статусы CI, PR, мерж); пусто — `/lore/forgejo/*` отвечает 503 | вписывает владелец (Forgejo → Настройки → Приложения) | `.env` 600 | Forgejo install или own | новый токен в Forgejo, значение в `.env`, `up -d`; старый отозвать | `deploy/install/docker-compose.install.yml`, `backend/src/main/java/studio/seer/heimdall/lore/ForgejoBridge.java` |
 | `FORGEJO_MCP_TOKEN`, `FORGEJO_TOKEN` | токен forgejo-mcp в Forgejo, отдельный от моста; в контейнер идёт как `FORGEJO_TOKEN` (AIDA/forgejo-mcp, src/config.ts) | вписывает владелец | `.env` 600 | Forgejo install или own | новый токен, `.env`, `up -d forgejo-mcp`; старый отозвать | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `FORGEJO_MCP_API_KEY` | ключ входа агентов в forgejo-mcp (`Authorization: Bearer`); без него HTTP-вход открыт | установщик генерирует при включённом forgejo-mcp | `.env` 600; у агента — в окружении машины, строка MCP ссылается на переменную | Forgejo install или own | новое значение в `.env`, `up -d forgejo-mcp`, обновить окружение агентов | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
-| `LORE_MCP_CLIENT_SECRET` | секрет клиента Keycloak `lore-mcp-full` / `lore-mcp-full_<harness>`: MCP aida-lore получает по нему токен агента. Клиент без настройки окружения шлёт ту же пару в заголовках X-Lore-Client-Id и X-Lore-Client-Secret | окно установщика заводит клиенты в Keycloak и выдаёт секреты | файл `~/kc-clients-<область>.env` 600, затем настройки harness или хранилище | если включён вход через Keycloak | перевыпустить секрет клиента в Keycloak, обновить настройки harness | `mcp-server/src/backend.ts` |
+| `LORE_MCP_CLIENT_SECRET`, `LORE_MCP_SECRET_VAR` | секрет учётки MCP aida-lore (клиент Keycloak `lore-mcp-<роль>[_<harness>]`): по нему MCP получает токен агента. Хранится ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]` (`…_FULL`, `…_FULL_KIMI`, `…_TESTER`); `LORE_MCP_SECRET_VAR` — имя этого ключа в строке MCP, не секрет. Клиент без настройки окружения шлёт пару в заголовках X-Lore-Client-Id и X-Lore-Client-Secret | окно установщика (режим «завести за меня») или админка LORE (выпуск учётки агента); свои клиенты — владелец, LORE только проверяет токен | Infisical, если запись настроена (отдельный проект `lore-mcp-secrets`), иначе файл `~/kc-clients-<область>.env` 600; у агента — окружение машины | если включён вход через Keycloak | сменить секрет в админке LORE (без простоя — с флагом KC `client-secret-rotation` и политикой `secret-rotation`), обновить окружение harness | `mcp-server/src/backend.ts`, `scripts/model-migration/setup.mjs` |
+| `LORE_MCP_SECRETS_INFISICAL_CLIENT_SECRET`, `LORE_MCP_SECRETS_INFISICAL_CLIENT_ID` | машинная учётка LORE (universal-auth) в отдельном проекте Infisical для секретов учёток MCP, роль member только там; рядом — не секреты `LORE_MCP_SECRETS_INFISICAL_URL`, `_PROJECT_ID`, `_ENVIRONMENT` (`prod`), `_PATH` (`/`) | владелец заводит учётку в Infisical | окружение окна установщика | только если секреты MCP пишутся в Infisical; без них — «запись в Infisical не настроена», секрет показан один раз | новый секрет учётки в Infisical, затем новое значение в окружении окна установщика | `scripts/model-migration/infisical.mjs` |
 | `LORE_DB_GUARD_AUTH`, `LORE_DB_GUARD_TOKEN_NAMES`, `GUARD_TOKEN_NAMES` | сторож входов ArcadeDB: токен группы db-guard (секрет) и список имён токенов (не секрет) | владелец заводит токен в ArcadeDB | `.env` 600 | только профиль `guard` | новый токен в ArcadeDB, `.env`, `up -d lore-db-guard` | `deploy/install/docker-compose.install.yml`, `deploy/db-guard/guard.mjs` |
 | `LORE_LLM_LOCAL_API_KEY` | ключ сервера локальной модели (заголовок `Authorization: Bearer`); пусто — без заголовка, обычный случай для Ollama | вписывает владелец, если раннер запущен с `--api-key` | `.env` 600 | только если сервер модели требует ключ | новый ключ на сервере модели и в `.env`, `up -d lore-backend` | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
 | пароль администратора Keycloak | заводить область и клиенты из окна установщика | у владельца Keycloak | нигде: только в запросе к Keycloak, на диск не пишется | новая установка с Keycloak | в Keycloak | — |
@@ -288,7 +334,7 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
 Чего в этом профиле нет:
 
 - **Секрета клиента для бэкенда и веба.** Бэкенд проверяет токены как сервис (`quarkus.oidc.application-type=service`). Веб — публичный клиент `lore-app` с PKCE, поэтому `LORE_OIDC_ISSUER` и `LORE_OIDC_CLIENT_ID` — адреса и имена, а не секреты.
-- **Infisical.** В установке `lore.secrets.provider=env`, бэкенд читает секреты из окружения контейнера, то есть из `.env`. Хранилище секретов не нужно.
+- **Infisical для секретов самого LORE.** В установке `lore.secrets.provider=env`: бэкенд читает свои секреты из окружения контейнера, то есть из `.env`. Infisical здесь нужен только по выбору и только для записи секретов учёток MCP (см. «Keycloak — вход по выбору»).
 - **`LORE_VOLVA_EMBED_SECRET`** (временная подпись HS256). Профиль его не передаёт. Без пары ES256 встройка Völva отвечает «не настроено».
 
 ## Версии и образы
