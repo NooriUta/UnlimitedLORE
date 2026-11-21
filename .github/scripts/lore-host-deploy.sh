@@ -16,6 +16,11 @@
 #   ship     docker save | ssh docker load, сверка Id; уже есть с тем же Id — пропуск.
 #   compose  бэкап docker-compose.yml.bak-<тег> в обоих каталогах, замена ТОЛЬКО
 #            тегов образов. .env не трогается.
+#   dbswap   1.18 (владелица 21.11: «старую базу бэкап, а новую под неё — на проде новые имена не делать»):
+#            задан источник SWAP_FROM (база переноса migration_dst* в LORE-ygg lore-host), а база прода
+#            ещё не собрана из модели → бэкенд стоп, прежняя база → <база>_bak_<время>, источник → <база>,
+#            сверка отметки LoreModelSchema; не вышло — прежняя на место. Тот же алгоритм, что у
+#            «LORE preprod DB refresh» с local_source. Бэкенд поднимает шаг up уже кодом тега.
 #   db       если код новее схемы прода (или версия прода неизвестна) — бэкап
 #            базы прода и накатка отдельным `compose run lore-migrate` (сервис
 #            профиля migrate: root, basic, LORE_MIGRATE_ONLY — DBR-01 шаг 4.2,
@@ -30,6 +35,7 @@
 #            (её же выполняет compose на lore-host: скрипт уходит туда по stdin).
 #   remote-backup <каталог> <база>    — BACKUP DATABASE кредом сервиса lore-migrate
 #            (разовый compose run; выполняется на lore-host; пароль хоста не покидает).
+#   remote-swap <каталог> <источник> <база> — замена базы (на lore-host; root — у lore-migrate).
 #
 # Окружение: TAG, DEPLOY_STATE, LORE_HOST, LORE_HOST_USER, LORE_HOST_FP,
 # LORE_HOST_SSH_KEY (ssh), R (ssh-команда, ставит шаг ssh), DRY_RUN.
@@ -83,6 +89,44 @@ remote_backup() {
   out="$(cd "$dir" && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 600 -u "$ARCADEDB_USER:$ARCADEDB_ROOT_PASSWORD" -H "Content-Type: application/json" -d "{\"language\":\"sql\",\"command\":\"BACKUP DATABASE\"}" "$MART_ARCADE_URL/api/v1/command/'"$db"'"')"
   grep -q '"result":"OK"' <<< "$out" || die "BACKUP DATABASE $db не подтверждён: $(printf '%s' "$out" | head -c 300)"
   echo "бэкап $db: $(printf '%s' "$out" | sed -nE 's/.*"backupFile":"([^"]*)".*/\1/p')"
+}
+
+# ── remote-swap (выполняется НА lore-host) ───────────────────────────────────
+# Запросы к ArcadeDB — разовым compose run lore-migrate (root есть только у него, DBR-01 4.2).
+acmd() { # acmd <каталог> <путь api> [тело json]
+  local dir="$1" path="$2" body="${3:-}"
+  # shellcheck disable=SC2016 # переменные раскрываются ВНУТРИ контейнера lore-migrate
+  (cd "$dir" && docker compose run --rm --no-deps -T -e "Q_PATH=$path" -e "Q_BODY=$body" --entrypoint sh lore-migrate -c \
+    'if [ -n "$Q_BODY" ]; then curl -s -m 120 -u "$ARCADEDB_USER:$ARCADEDB_ROOT_PASSWORD" -H "Content-Type: application/json" -d "$Q_BODY" "$MART_ARCADE_URL/api/v1/$Q_PATH"; else curl -s -m 60 -u "$ARCADEDB_USER:$ARCADEDB_ROOT_PASSWORD" "$MART_ARCADE_URL/api/v1/$Q_PATH"; fi')
+}
+model_marks() { # model_marks <каталог> <база> → число строк LoreModelSchema (пусто — не прочитано)
+  acmd "$1" "query/$2" '{"language":"sql","command":"SELECT count(*) AS n FROM LoreModelSchema"}' | tr -d '\n ' | sed -nE 's/.*"n":([0-9]+).*/\1/p'
+}
+remote_swap() {
+  local dir="$1" src="$2" dst="$3" ygg="${LORE_HOST_YGG:-LORE-ygg}" dbdir=/home/arcadedb/databases ts dbs n
+  case "$src" in migration_dst*) ;; *) die "источник замены — только база переноса migration_dst*: $src" ;; esac
+  [ "$src" != "$dst" ] || die "источник совпадает с базой прода"
+  ts="$(date -u +%Y%m%d%H%M%S)"
+  dbs="$(acmd "$dir" databases)"
+  case "$dbs" in *"\"$src\""*) ;; *) die "базы $src в $ygg lore-host нет — сначала перенос; ответ: $(printf '%s' "$dbs" | head -c 300)" ;; esac
+  n="$(model_marks "$dir" "$src")"
+  [ -n "$n" ] && [ "$n" -gt 0 ] || die "в $src нет отметки LoreModelSchema — это не база из модели; замену не делаю"
+  echo "источник $src: отметка модели есть ($n)"
+  (cd "$dir" && docker compose stop lore-backend) || die "бэкенд прода не остановился — замену не делаю"
+  acmd "$dir" server "{\"command\":\"close database $dst\"}" >/dev/null || true
+  if ! docker exec "$ygg" mv "$dbdir/$dst" "$dbdir/${dst}_bak_$ts"; then
+    (cd "$dir" && docker compose start lore-backend); die "прежняя база не переименована — замену не делаю, бэкенд запущен обратно"
+  fi
+  acmd "$dir" server "{\"command\":\"close database $src\"}" >/dev/null || true
+  if ! docker exec "$ygg" mv "$dbdir/$src" "$dbdir/$dst"; then
+    docker exec "$ygg" mv "$dbdir/${dst}_bak_$ts" "$dbdir/$dst"
+    acmd "$dir" server "{\"command\":\"open database $dst\"}" >/dev/null || true
+    (cd "$dir" && docker compose start lore-backend); die "источник не переименован — прежняя база возвращена, бэкенд запущен"
+  fi
+  acmd "$dir" server "{\"command\":\"open database $dst\"}" >/dev/null || true
+  n="$(model_marks "$dir" "$dst")"
+  [ -n "$n" ] && [ "$n" -gt 0 ] || die "после замены в $dst нет отметки модели — бэкенд НЕ запущен; прежняя база — ${dst}_bak_$ts"
+  echo "готово: $dst = база переноса $src; прежняя — ${dst}_bak_$ts (откат: обратное переименование)"
 }
 
 # ── resolve ──────────────────────────────────────────────────────────────────
@@ -266,6 +310,23 @@ compose_swap() {
 }
 
 # ── db ───────────────────────────────────────────────────────────────────────
+dbswap() {
+  load
+  local src="${SWAP_FROM:-}"
+  if [ -z "$src" ]; then
+    if [ "${PROD_SCHEMA:-}" != model ]; then
+      echo "::warning::источник замены базы (SWAP_FROM / vars.LORE_PROD_SWAP_FROM) не задан — прод остаётся на прежней базе $PROD_DB"
+      summary "- база: замены нет (источник не задан)"
+    fi
+    return 0
+  fi
+  if [ "${PROD_SCHEMA:-}" = model ]; then echo "база прода уже собрана из модели — замена не нужна ($src не тронут)"; return 0; fi
+  echo "── замена базы прода: $src → $PROD_DB (прежняя → ${PROD_DB}_bak_<время>)"
+  r "bash -s -- remote-swap $DIR_BE $src $PROD_DB" < "$SELF" || { restore_compose; die "замена базы прода не выполнена — compose возвращён из бэкапа"; }
+  put PROD_SCHEMA model
+  summary "- база: $PROD_DB заменена базой переноса $src (прежняя — _bak)"
+}
+
 db() {
   load
   local need=no
@@ -387,11 +448,13 @@ case "${1:-}" in
   plan)           plan ;;
   ship)           ship ;;
   compose)        compose_swap ;;
+  dbswap)         dbswap ;;
   db)             db ;;
   up)             up ;;
   theme)          theme ;;
   probe)          probe ;;
   swap-file)      swap_file "$2" "$3" "$4" ;;
   remote-backup)  remote_backup "$2" "$3" ;;
-  *) echo "::error::lore-host-deploy.sh: режим resolve|ssh|state|plan|ship|compose|db|up|theme|probe|swap-file|remote-backup"; exit 2 ;;
+  remote-swap)    remote_swap "$2" "$3" "$4" ;;
+  *) echo "::error::lore-host-deploy.sh: режим resolve|ssh|state|plan|ship|compose|dbswap|db|up|theme|probe|swap-file|remote-backup|remote-swap"; exit 2 ;;
 esac
