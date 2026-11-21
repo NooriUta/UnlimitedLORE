@@ -6,7 +6,7 @@
 #   resolve  тег → коммит, прошедший препрод → образы unlimitedlore-<сервис>:<sha8>
 #            НА 131. Кандидаты: сам коммит тега и его родители с ТЕМ ЖЕ деревом
 #            (merge preprod → main даёт новый коммит при том же содержимом).
-#            Нет всех трёх образов — красный, без «пересоберём». Коммит сборки
+#            Нет всех образов (бэкенд, lore-mcp, v1, v2) — красный, без «пересоберём». Коммит сборки
 #            бэкенда — из метки org.opencontainers.image.revision; по нему
 #            сверяется /lore/version и считается версия схемы кода.
 #   ssh      ключ CD (секрет LORE_HOST_SSH_KEY) + закреплённый отпечаток хоста.
@@ -26,11 +26,13 @@
 #            профиля migrate: root, basic, LORE_MIGRATE_ONLY — DBR-01 шаг 4.2,
 #            у рантайма root-пароля нет). Упала — compose возвращается из
 #            бэкапа, работающие контейнеры не тронуты.
-#   up       compose up -d по сервисам: бэкенд → ждём healthy → v1 → v2.
+#   up       сторож v2 → бэкенд (петля через публичное имя, сеть), затем compose up -d:
+#            бэкенд → ждём healthy → lore-mcp → ждём healthy → v1 → v2.
 #   theme    тема Keycloak из дерева тега → /home/nooriuta/keycloak/themes/lore,
 #            сверка размера css внутри контейнера keycloak.
 #   probe    хэш бандла v1/v2 (на lore-host по Host и по публичному имени),
-#            /lore/version = коммит сборки через nginx v1 И v2, в логе «БД vN = код vN».
+#            /lore/version = коммит сборки через nginx v1 И v2, /mcp через оба имени = 401/405,
+#            в логе «БД vN = код vN».
 #   swap-file <файл> <сервис> <тег>   — замена тега образа в одном compose-файле
 #            (её же выполняет compose на lore-host: скрипт уходит туда по stdin).
 #   remote-backup <каталог> <база>    — BACKUP DATABASE кредом сервиса lore-migrate
@@ -51,7 +53,11 @@ HOST_V1="${LORE_PROD_V1_HOST:-lore.odal.seidrstudio.pro}"
 HOST_V2="${LORE_PROD_V2_HOST:-new.lore.odal.seidrstudio.pro}"
 MIGR_JAVA="backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java"
 BUNDLE_RE='assets/index-[A-Za-z0-9_-]+\.js'
-SERVICES="lore-backend lore-app lore-app-next"
+# S8-02 (1.18.1): lore-mcp едет с релизом тем же :sha8, что прошёл препрод; живёт в каталоге
+# бэкенда (сеть unlimitedlore_default), наружу — только через location /mcp nginx v1/v2.
+SERVICES="lore-backend lore-mcp lore-app lore-app-next"
+# Сеть бэкенда, к которой обязан быть подключён v2: lore-backend:9100 и lore-mcp:9200 — по ней.
+NET_BE="${LORE_HOST_NET_BACKEND:-unlimitedlore_default}"
 
 err()  { echo "::error::$*"; }
 die()  { err "$*"; exit 1; }
@@ -61,11 +67,66 @@ summary() { [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$1" >> "$GITHUB_STEP_SUMM
 # shellcheck disable=SC2086 # R — составная ssh-команда намеренно
 r() { [ -n "${R:-}" ] || die "ssh-команда R не задана (шаг ssh не выполнялся)"; $R "$@"; }
 img_of() { echo "unlimitedlore-$1:$2"; }
-var_of() { case "$1" in lore-backend) echo BACKEND ;; lore-app) echo APP ;; lore-app-next) echo NEXT ;; esac; }
+var_of() { case "$1" in lore-backend) echo BACKEND ;; lore-mcp) echo MCP ;; lore-app) echo APP ;; lore-app-next) echo NEXT ;; esac; }
 dir_of() { case "$1" in lore-app-next) echo "$DIR_NEXT" ;; *) echo "$DIR_BE" ;; esac; }
 rollback_hint() {
-  echo "ОТКАТ на lore-host: cd $DIR_BE && cp docker-compose.yml.bak-${TAG:-<тег>} docker-compose.yml && docker compose up -d lore-backend lore-app;"
+  echo "ОТКАТ на lore-host: cd $DIR_BE && cp docker-compose.yml.bak-${TAG:-<тег>} docker-compose.yml && docker compose up -d lore-backend lore-mcp lore-app;"
   echo "                    cd $DIR_NEXT && cp docker-compose.yml.bak-${TAG:-<тег>} docker-compose.yml && docker compose up -d"
+}
+
+# ── сторож v2 → бэкенд (S8-02, 1.18.1) ───────────────────────────────────────
+# Правило: nginx v2 ходит в бэкенд НАПРЯМУЮ по docker-сети, никогда через публичное имя LORE.
+# 21.11 v2 стоял с LORE_BACKEND_URL=https://lore.odal.seidrstudio.pro: пока lore.odal вёл на v1,
+# это работало, а после переключения lore.odal на v2 nginx v2 проксировал сам в себя —
+# /lore/version висел. Публичное имя LORE (HOST_V1, HOST_V2 и любой поддомен HOST_V1) в
+# LORE_BACKEND_URL или LORE_BACKEND_HOST — петля в момент переключения, громкий отказ ДО up.
+# compose config не прочитан — тоже отказ: «не смогли проверить» ≠ «петли нет».
+host_of() { local u="$1"; u="${u#*://}"; u="${u%%/*}"; u="${u%%:*}"; printf '%s' "${u,,}"; }
+is_lore_public() {
+  local h="${1,,}"
+  [ -n "$h" ] || return 1
+  [ "$h" = "$HOST_V1" ] || [ "$h" = "$HOST_V2" ] && return 0
+  case "$h" in *".$HOST_V1") return 0 ;; esac
+  return 1
+}
+v2_guard() {
+  local cfg url hh bad=0
+  cfg="$(r "cd $DIR_NEXT && docker compose config" 2>&1)" \
+    || { err "compose config v2 ($DIR_NEXT) не прочитан — петлю v2 → публичное имя LORE проверить нечем, выкатка не идёт: ${cfg:0:300}"; return 1; }
+  url="$(sed -nE 's/^[[:space:]]*LORE_BACKEND_URL:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/p' <<<"$cfg" | head -1)"
+  hh="$(sed -nE 's/^[[:space:]]*LORE_BACKEND_HOST:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/p' <<<"$cfg" | head -1)"
+  if is_lore_public "$(host_of "$url")"; then
+    err "петля: у v2 LORE_BACKEND_URL=$url — публичное имя самого LORE; после переключения на v2 nginx проксирует сам в себя. Нужно LORE_BACKEND_URL=http://lore-backend:9100 в $DIR_NEXT"
+    bad=1
+  fi
+  if is_lore_public "$hh"; then
+    err "петля: у v2 LORE_BACKEND_HOST=$hh — с этим Host Traefik вернёт запрос в LORE же. Нужно LORE_BACKEND_HOST=lore-backend в $DIR_NEXT"
+    bad=1
+  fi
+  if ! grep -qE "^[[:space:]]*name:[[:space:]]*\"?${NET_BE}\"?[[:space:]]*$" <<<"$cfg"; then
+    err "v2 ($DIR_NEXT) не подключён к сети бэкенда $NET_BE — lore-backend:9100 и lore-mcp:9200 из nginx v2 не резолвятся (502)"
+    bad=1
+  fi
+  [ "$bad" -eq 0 ] && echo "v2 → бэкенд: ${url:-<пусто: lore-backend:9100>} (Host ${hh:-\$host}), сеть $NET_BE — напрямую, петли нет"
+  return "$bad"
+}
+
+# Проба /mcp по публичному имени: 401/405 — вход MCP ответил (lore-mcp жив за nginx).
+# 502/504 — nginx не достучался до lore-mcp:9200; 404 — нет location /mcp; 200 — SPA-заглушка.
+mcp_probe() {
+  local h="$1" code="" i n="${PROBE_ATTEMPTS:-1}"
+  for i in $(seq 1 "$n"); do
+    # shellcheck disable=SC2086 # PROBE_CURL — составная команда намеренно
+    code="$(${PROBE_CURL:-curl} -s -o /dev/null -m "${PROBE_TIMEOUT:-15}" -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "https://$h/mcp" 2>/dev/null)"
+    case "$code" in 401|405) echo "ok: https://$h/mcp → $code (вход MCP, lore-mcp отвечает)"; return 0 ;; esac
+    [ "$i" -lt "$n" ] && sleep "${PROBE_DELAY:-10}"
+  done
+  case "$code" in
+    502|503|504) err "https://$h/mcp → $code: nginx не достучался до lore-mcp:9200 (контейнера нет или он не в сети $NET_BE)" ;;
+    404) err "https://$h/mcp → 404: location /mcp не отвечает (не тот образ nginx?)" ;;
+    *)   err "https://$h/mcp → ${code:-нет ответа}: ждали 401/405 (вход MCP)" ;;
+  esac
+  return 1
 }
 
 # ── swap-file ────────────────────────────────────────────────────────────────
@@ -149,7 +210,7 @@ resolve() {
       img="$(img_of "$svc" "$c8")"
       docker image inspect "$img" --format '{{.Id}}' >/dev/null 2>&1 || miss="$miss $img"
     done
-    if [ -z "$miss" ]; then chosen="$c"; echo "  кандидат $c8: все три образа на 131 есть"; break; fi
+    if [ -z "$miss" ]; then chosen="$c"; echo "  кандидат $c8: все образы на 131 есть"; break; fi
     echo "  кандидат $c8: нет образов:$miss"
     missing="$missing$miss"
   done
@@ -222,6 +283,8 @@ state() {
       || { err "в $(dir_of "$s")/docker-compose.yml нет image: unlimitedlore-${s}:<тег>"; bad=1; }
   done
   r "test -d $THEME_DIR && test -w $THEME_DIR" || { err "каталог темы $THEME_DIR на lore-host не существует или не на запись"; bad=1; }
+  # S8-02: петля v2 → публичное имя LORE видна уже здесь, до ship/compose (повторно — в up).
+  v2_guard || bad=1
   # Метка версии: не ошибка выкатки, а честное предупреждение — без строки тег не доедет.
   r "grep -q 'LORE_RELEASE_TAG' $DIR_BE/docker-compose.yml" \
     || echo "::warning::в $DIR_BE/docker-compose.yml нет LORE_RELEASE_TAG — /lore/version отдаст release: null (метка в углу покажет коммит). Добавить в environment lore-backend: - LORE_RELEASE_TAG=\${LORE_RELEASE_TAG:-}"
@@ -379,6 +442,8 @@ db() {
 up() {
   load
   local at st i
+  # S8-02: петля v2 → публичное имя LORE и сеть бэкенда — до любого compose up.
+  v2_guard || { rollback_hint; die "v2 на lore-host настроен ходить в бэкенд не напрямую (см. выше) — выкатка остановлена до up, контейнеры не тронуты"; }
   at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   sed -i '/^UP_AT=/d' "$STATE"; put UP_AT "$at"
   # Тег релиза — в контейнер (/lore/version → release, метка версии в углу). В compose на
@@ -394,7 +459,19 @@ up() {
     r "cd $DIR_BE && docker compose logs --no-color --tail 80 lore-backend" || true
     rollback_hint; die "бэкенд прода не стал healthy за 300с (последний статус: $st)"
   fi
-  r "cd $DIR_BE && docker compose up -d lore-app" || { rollback_hint; die "compose up lore-app не прошёл"; }
+  # S8-02: lore-mcp — после healthy бэкенда, до фронтов (их location /mcp шлёт на lore-mcp:9200).
+  # --no-deps: бэкенд уже поднят с LORE_RELEASE_TAG, пересоздавать его зависимостью нельзя.
+  r "cd $DIR_BE && LORE_RELEASE_TAG=$TAG docker compose up -d --no-deps lore-mcp" || { rollback_hint; die "compose up lore-mcp не прошёл"; }
+  for i in $(seq 1 24); do
+    st="$(r "docker inspect -f '{{.State.Health.Status}}' \$(cd $DIR_BE && docker compose ps -q lore-mcp) 2>/dev/null" || echo missing)"
+    [ "$st" = healthy ] && { echo "lore-mcp прода healthy (${i}×5с)"; break; }
+    sleep 5
+  done
+  if [ "$st" != healthy ]; then
+    r "cd $DIR_BE && docker compose logs --no-color --tail 80 lore-mcp" || true
+    rollback_hint; die "lore-mcp прода не стал healthy за 120с (последний статус: $st)"
+  fi
+  r "cd $DIR_BE && LORE_RELEASE_TAG=$TAG docker compose up -d lore-app" || { rollback_hint; die "compose up lore-app не прошёл"; }
   r "cd $DIR_NEXT && docker compose up -d" || { rollback_hint; die "compose up v2 не прошёл"; }
   r "docker ps --format '{{.Names}}  {{.Image}}  {{.Status}}' | grep -E 'lore'" || true
 }
@@ -433,6 +510,9 @@ probe() {
   # через его прокси /lore/. Проба только по имени v1 этого пути не видела.
   EXPECT_COMMIT="$EXPECT_COMMIT" bash "$here/version-probe.sh" "https://$HOST_V1" || rc=1
   EXPECT_COMMIT="$EXPECT_COMMIT" bash "$here/version-probe.sh" "https://$HOST_V2" || rc=1
+  # S8-02: /mcp через оба публичных имени — вход MCP (401/405), а не 502 (нет lore-mcp) / 404.
+  mcp_probe "$HOST_V1" || rc=1
+  mcp_probe "$HOST_V2" || rc=1
   local schema_note
   if [ "${PROD_SCHEMA:-}" = model ]; then
     # Патч 1.18.1 (выкатка 1.18, задача 39647, была ложно красной): на базе из модели строки «схема сверена: БД vN»
@@ -462,7 +542,7 @@ probe() {
     schema_note="БД v$CODE_SCHEMA = код v$CODE_SCHEMA"
   fi
   if [ "$rc" -ne 0 ]; then rollback_hint; return 1; fi
-  summary "- пробы: бандлы v1/v2, /lore/version (v1 и v2) = ${EXPECT_COMMIT:0:8}, $schema_note"
+  summary "- пробы: бандлы v1/v2, /mcp (v1 и v2) = вход, /lore/version (v1 и v2) = ${EXPECT_COMMIT:0:8}, $schema_note"
 }
 
 case "${1:-}" in
