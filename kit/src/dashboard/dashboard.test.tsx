@@ -26,6 +26,14 @@ describe('DashGrid / DashCell', () => {
   });
 });
 
+describe('DashGrid cols — мозаика как в /app', () => {
+  it('cols задаёт число колонок (4 — как «Сейчас» в /app)', () => {
+    const { container } = render(<DashGrid cols={4}><DashCell>x</DashCell></DashGrid>);
+    expect((container.firstElementChild as HTMLElement).className).toMatch(/sk-dash--cols/);
+    expect((container.firstElementChild as HTMLElement).style.getPropertyValue('--dash-cols')).toBe('4');
+  });
+});
+
 describe('RangeBars — полоски «мин–макс»', () => {
   it('общая шкала по всем дням; полоса — от мин до макс дня', () => {
     const g = rangeGeometry([{ min: 0, max: 10 }, { min: 5, max: 20 }]);

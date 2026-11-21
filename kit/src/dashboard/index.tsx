@@ -18,8 +18,10 @@ export function VerdictBanner({ tone, headline, detail }: { tone: VerdictTone; h
   );
 }
 
-export function DashGrid({ children, min = 220 }: { children: ReactNode; /** Минимальная ширина колонки, px. */ min?: number }) {
-  return <div className="sk-dash" style={{ ['--dash-min' as string]: `${min}px` } as CSSProperties}>{children}</div>;
+export function DashGrid({ children, min = 220, cols }: { children: ReactNode; /** Минимальная ширина колонки, px. */ min?: number;
+  /** Мозаика с заданным числом колонок (как «Сейчас» в GLADSHEIM /app — 4): уже 1000px — 2, на телефоне — 1. */ cols?: number }) {
+  const style = (cols ? { ['--dash-cols' as string]: String(cols) } : { ['--dash-min' as string]: `${min}px` }) as CSSProperties;
+  return <div className={cols ? 'sk-dash sk-dash--cols' : 'sk-dash'} style={style}>{children}</div>;
 }
 
 export function DashCell({ span = 1, rows = 1, title, children, muted }: { span?: number; rows?: number; title?: string; children: ReactNode; muted?: boolean }) {

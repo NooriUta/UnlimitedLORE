@@ -96,7 +96,7 @@ export function TileBar(p: TileCommon & { fraction: number | null }) {
 // ── D ──────────────────────────────────────────────────────────────────────
 export interface GroupChip { key: string; icon: ReactNode; text: string; tone?: string; alarm?: boolean }
 
-export function GroupCard({ title, main, empty, chips, series, estimate, alarm, tone, onOpen, background, details, size }: {
+export function GroupCard({ title, main, empty, chips, series, estimate, alarm, tone, onOpen, background, details, size, photo = 'cover' }: {
   title: string; main: string | null; empty?: string; chips: GroupChip[]; series?: readonly SparkPoint[];
   estimate?: boolean; alarm?: boolean; tone?: string; onOpen?: () => void;
   /** Фон-картинка (фото комнаты, как в GLADSHEIM /app): адрес даёт приложение; поверх — затемнение для читаемости. */
@@ -105,6 +105,8 @@ export function GroupCard({ title, main, empty, chips, series, estimate, alarm, 
   details?: ReactNode;
   /** large — крупная карточка (2×2 в раскладке «бенто»): линия выше, главное значение крупнее. */
   size?: 'normal' | 'large';
+  /** Как лежит фон-картинка: cover — на всю карточку; top — узкой приглушённой полосой сверху (карточка комнаты в /app). */
+  photo?: 'cover' | 'top';
 }) {
   const lang = useKitLang();
   const body = (
@@ -127,7 +129,7 @@ export function GroupCard({ title, main, empty, chips, series, estimate, alarm, 
       {details && <span className="sk-groupcard__details">{details}</span>}
     </>
   );
-  const className = cls('sk-groupcard', { alarm }, [background ? 'has-photo' : '', size === 'large' ? 'sk-groupcard--large' : ''].filter(Boolean).join(' '));
+  const className = cls('sk-groupcard', { alarm }, [background ? (photo === 'top' ? 'has-photo-top' : 'has-photo') : '', size === 'large' ? 'sk-groupcard--large' : ''].filter(Boolean).join(' '));
   return onOpen
     ? <button type="button" className={className} style={toneVar(tone)} onClick={onOpen}>{body}</button>
     : <div className={className} style={toneVar(tone)}>{body}</div>;

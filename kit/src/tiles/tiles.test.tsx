@@ -93,6 +93,14 @@ describe('D · GroupCard — большая подробная карточка'
   });
 });
 
+describe('D · GroupCard — фото полосой сверху, как карточка комнаты в /app', () => {
+  it('photo="top" — снимок узкой полосой над текстом, приглушённо', () => {
+    const { container } = render(<GroupCard title="Кухня" main="22,4 °C" chips={[]} background="/k.jpg" photo="top" />);
+    expect(container.firstElementChild!.className).toMatch(/has-photo-top/);
+    expect((container.querySelector('.sk-groupcard__photo') as HTMLElement).style.backgroundImage).toContain('/k.jpg');
+  });
+});
+
 describe('E · TileGauge — кольцо-шкала', () => {
   it('дуга по доле; тревога — классом; значение в центре', () => {
     const { container } = render(<TileGauge label="CO₂" value="1167" icon={<i />} fraction={0.7} alarm />);

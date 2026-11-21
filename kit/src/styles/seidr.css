@@ -7993,3 +7993,28 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-gallery__empty { font-size: var(--fs-xs); color: var(--t3); }
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .sk-gallery__group { grid-template-columns: 1fr; } }
 .sk-hidden-note { margin: 0; padding: 6px 12px; font-size: var(--fs-xs); color: var(--t2); border-bottom: 1px solid var(--bd); }
+/* ═══ SPRINT_UXR_S15_KIT6 — «отрисовка» как в GLADSHEIM /app: градиенты из палитры ═══
+   Владелица 21.11.2026: «у нас было лучше отрисованы… и расположение». Источник — web/src/styles/tokens.css и app.css
+   /app: свет как будто падает сверху. Блик слабый (до 16 %), гаснет к низу; герой — одна карточка на экран;
+   полоска-акцент — два цвета из палитры. Порядок слоёв: градиент поверх плоского цвета — без color-mix карточка видна. */
+:root {
+  --grad-hero: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 16%, transparent) 0%, transparent 68%);
+  --grad-card: linear-gradient(180deg, color-mix(in srgb, var(--t1) 5%, transparent) 0%, transparent 42%);
+  --grad-card-hover: linear-gradient(180deg, color-mix(in srgb, var(--acc) 12%, transparent) 0%, transparent 55%);
+  --grad-accent: linear-gradient(90deg, var(--acc), var(--inf));
+  --grad-danger: linear-gradient(90deg, var(--wrn), var(--dng));
+}
+.sk-dash__cell, .sk-stattile, .sk-tilerow, .sk-tilegauge, .sk-groupcard:not(.has-photo), .sk-gallery__grid > div > .sk-tilerow { background-image: var(--grad-card); }
+.sk-tilesq:not(.is-on) { background-image: var(--grad-card); }
+button.sk-groupcard:hover:not(.has-photo), .sk-tilerow:hover { background-image: var(--grad-card-hover); }
+.sk-verdict { position: relative; overflow: hidden; background-image: var(--grad-hero); border-color: color-mix(in srgb, var(--acc) 30%, var(--bd)); }
+.sk-verdict::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background-image: var(--grad-accent); }
+.sk-verdict.is-bad::before { background-image: var(--grad-danger); }
+/* Мозаика как «Сейчас» в /app: 4 колонки, уже — 2, на телефоне — 1. */
+.sk-dash--cols { grid-template-columns: repeat(var(--dash-cols, 4), minmax(0, 1fr)); }
+@media (max-width: 1000px) { .sk-dash--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) { .sk-dash--cols { grid-template-columns: 1fr; } }
+/* Карточка с фото полосой сверху (карточка комнаты /app): подложка, а не иллюстрация — приглушена, гаснет к тексту. */
+.sk-groupcard.has-photo-top { padding-top: 4.2em; background-image: var(--grad-card); }
+.sk-groupcard.has-photo-top .sk-groupcard__photo { inset: 0 0 auto 0; height: 4.6em; opacity: 0.4; }
+.sk-groupcard.has-photo-top .sk-groupcard__photo::after { background: linear-gradient(180deg, transparent 0%, var(--bg2) 100%); opacity: 1; }
