@@ -12,6 +12,8 @@ export const HELP_STEPS = [
   { id: 'forgejo', title: 'Forgejo', headings: ['Forgejo'] },
   // Раздел «Локальная LLM…» — из #1663 (docs/installer-local-llm).
   { id: 'llm', title: 'LLM', headings: ['Локальная LLM'] },
+  // Решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов» (install.sh --files).
+  { id: 'files', title: 'Файлы', headings: ['Хранилище файлов'] },
   { id: 'secrets', title: 'Секреты', headings: ['Секреты рантайма'] },
   { id: 'check', title: 'Проверка', headings: ['Проверка', 'Обновление', 'Удаление'] },
 ];

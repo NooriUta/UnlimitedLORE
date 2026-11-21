@@ -35,8 +35,11 @@ const NOT_MACHINES = ['legion'];
 const VERSION_EDGE = 'HAS_STATE';
 
 /** Перенос связей и их сверка. log — куда писать ход. */
-export async function transferEdges(db, { log = console.log, at: atGiven } = {}) {
-  if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
+export async function transferEdges(db, { log = console.log, at: atGiven, freshInstall = false } = {}) {
+  // MIG-01: свежая установка (init-empty) — база самой установки, не рабочая база стенда (сторож как у transfer).
+  if (freshInstall) {
+    if (/^system_aida_lore/i.test(db.env.MIG_DST_DB)) throw new Error('свежая установка не пишет в system_aida_lore*');
+  } else if (!/^migration_dst/.test(db.env.MIG_DST_DB)) throw new Error('приёмник должен называться migration_dst*');
   const pool = async (items, n, fn) => { let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) await fn(items[i++]); })); };
   const pages = async (query, sql, fn, key = 'r') => {
     let last = '#-1:-1';
@@ -52,7 +55,8 @@ export async function transferEdges(db, { log = console.log, at: atGiven } = {})
   // адрес записи источника → адрес в приёмнике (все перенесённые типы)
   const dstRid = new Map();
   for (const T of OWN) await pages(q => db.dstQuery(q), last => `SELECT @rid AS r, mig_src_rid AS s FROM ${T} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`, x => dstRid.set(x.s, x.r));
-  if (!dstRid.size) throw new Error('в приёмнике нет перенесённых записей — сначала transfer.mjs');
+  // свежая установка: записей нет по построению — шаг связей заводит только виды связей
+  if (!dstRid.size && !freshInstall) throw new Error('в приёмнике нет перенесённых записей — сначала transfer.mjs');
   // момент переноса для связей без своего момента — снимок источника (детерминизм), не часы машины
   const at = atGiven || await sourceMoment(db, OWN.filter(T => T.endsWith('Hist')));
 

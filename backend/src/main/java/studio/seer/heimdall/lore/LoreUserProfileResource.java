@@ -78,6 +78,8 @@ public class LoreUserProfileResource extends LoreResourceBase {
         if (ref == null)
             return noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("NO_AVATAR", "у человека " + sub + " нет аватара — рисуйте инициалы")));
+        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
+        if (!s3.configured()) return BragiS3Service.notConfigured();
         String etag = UserProfiles.etagOf(ref);
         if (LoreEtag.matches(ifNoneMatch, etag))
             return Response.notModified().header("ETag", etag).build();
@@ -126,6 +128,9 @@ public class LoreUserProfileResource extends LoreResourceBase {
         Response refused = editRefusal(sub, role);
         if (refused != null) return refused;
         if (form == null || form.file == null) return badParams("file required");
+        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
+        if (!s3.configured()) return BragiS3Service.notConfigured();
+
         try {
             long size = java.nio.file.Files.size(form.file.uploadedFile());
             String mime = String.valueOf(form.file.contentType()).toLowerCase();

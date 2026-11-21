@@ -1,6 +1,6 @@
 # Установка LORE на Linux
 
-Самодостаточная установка LORE на чистую машину: своя ArcadeDB, бэкенд, веб-интерфейс v2 и MinIO для вложений. От нашей инфраструктуры (Keycloak, Infisical, Forgejo, Traefik) не зависит. Вход через Keycloak, встройка Völva и Forgejo с forgejo-mcp — по выбору (см. ниже).
+Самодостаточная установка LORE на чистую машину: своя ArcadeDB, бэкенд и веб-интерфейс v2. Файлы (вложения, аватары, ассеты BRAGI) — своё S3 или без файлов (см. «Хранилище файлов»). От нашей инфраструктуры (Keycloak, Infisical, Forgejo, Traefik) не зависит. Вход через Keycloak, встройка Völva и Forgejo с forgejo-mcp — по выбору (см. ниже).
 
 ## Требования
 
@@ -27,7 +27,7 @@ LORE_WEB_IMAGE=registry.example/lore-web:v1.17.21 \
 bash deploy/install/install.sh --dir /opt/lore
 ```
 
-Свои пароли вместо сгенерированных задаются переменными `ARCADEDB_ROOT_PASSWORD` и `MINIO_PASSWORD`. Посмотреть план без изменений можно флагом `--dry-run`.
+Свои пароли вместо сгенерированных задаются переменной `ARCADEDB_ROOT_PASSWORD`. Посмотреть план без изменений можно флагом `--dry-run`.
 
 Первый старт на пустой базе занимает несколько минут: бэкенд сам поднимает ядро схемы и накатывает все шаги миграций. Флаг `LORE_BOOTSTRAP` не нужен.
 
@@ -39,7 +39,7 @@ bash deploy/install/install.sh --dir /opt/lore
 
 - **Версия и образы** — `LORE_VERSION`, `LORE_SRC` (каталог исходников, заполняет `install.sh`), `LORE_BACKEND_IMAGE` и `LORE_WEB_IMAGE` (готовые образы, тогда сборки нет).
 - **База** — `ARCADEDB_VERSION`, `LORE_DB`, `ARCADEDB_ROOT_PASSWORD`.
-- **Вложения** — `MINIO_USER`, `MINIO_PASSWORD`.
+- **Файлы** — `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` (см. «Хранилище файлов»).
 - **Сеть** — `LORE_BIND` (по умолчанию `127.0.0.1`), `LORE_HTTP_PORT` (4400), `LORE_PUBLIC_URL` (https-адрес за reverse proxy).
 - **Вход** — `LORE_AUTH_ENABLED`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID` (см. «Keycloak»).
 - **Völva** — `LORE_VOLVA_ORIGIN`, `LORE_VOLVA_EMBED_SITE_URL`, `LORE_VOLVA_EMBED_ISSUER` (см. «Völva»).
@@ -91,8 +91,8 @@ bash deploy/install/install.sh --dir /opt/lore --uninstall --purge  # стере
   - `docker-compose.yml` — копия `docker-compose.install.yml`;
   - `.env` (права 600) — версия, пароли, порт;
   - `src/<тег>/` — исходники тега (или распакованный архив пакета при `--build-from-source`), из которых собраны образы.
-- Контейнеры проекта compose `lore`: `arcadedb`, `minio`, `lore-backend`, `lore-app-next`.
-- Тома: `lore_lore-db` (база), `lore_lore-db-backups` (бэкапы перед миграциями), `lore_lore-minio-data` (вложения).
+- Контейнеры проекта compose `lore`: `arcadedb`, `lore-backend`, `lore-app-next`.
+- Тома: `lore_lore-db` (база), `lore_lore-db-backups` (бэкапы перед миграциями). Файлы — в своём S3, на машине их нет.
 - Наружу открыт только веб-интерфейс, по умолчанию на `127.0.0.1:4400`. База и бэкенд портов не публикуют.
 
 ## Проверка
@@ -254,6 +254,15 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
   - нет потолка или цены — `budget_exhausted` с флагом `budget_unset` или `price_unknown`;
   - у рутины без аналитика (в этой версии — у всех) модель не вызывается вовсе.
 
+## Хранилище файлов
+
+Своего хранилища пакет не ставит: Docker Hub перестал отдавать образ MinIO (21.11.2026). Выбор — флаг `--files`:
+
+- **`--files none`** (по умолчанию) — без файлов. LORE работает; загрузка и показ вложений, аватаров и ассетов BRAGI отвечают «хранилище файлов не подключено» (503).
+- **`--files s3`** — своё S3: адрес, регион, бакет и ключи в окружении или в `.env` (`S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`). До запуска установщик проверяет связь: кладёт пробный объект и читает его обратно; не вышло — останавливается с причиной.
+
+Бакет один на все файлы: ключи разведены приставками — ассеты LORE `<тип>/<код>/…`, BRAGI `bragi/…`, аватары `user/…`.
+
 ## Секреты рантайма
 
 Здесь перечислено всё, что читает работающая установка. Секреты, нужные только для разработки, сюда не входят. Значения нигде не печатаются: инсталлятор пишет их в `.env` (права 600) и на экран не выводит. Колонка «где читается» — файл в этом репозитории, где переменную берёт рантайм. Перечень сверяет тест `scripts/model-migration/installer-forgejo.test.mjs` в обе стороны с compose и `.env.example`.
@@ -261,8 +270,8 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
 | секрет | зачем | кто создаёт | где хранится | обязателен | как сменить | где читается |
 |---|---|---|---|---|---|---|
 | `ARCADEDB_ROOT_PASSWORD` | пароль root ArcadeDB: бэкенд ходит в базу, инсталлятор создаёт базу | установщик генерирует (или ваше значение из окружения) | `.env` 600; внутри тома `lore-db` | всегда | сменить пароль root в ArcadeDB, затем значение в `.env`, `docker compose up -d` | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties`, `deploy/install/install.sh` |
-| `MINIO_PASSWORD`, `MINIO_ROOT_PASSWORD`, `S3_SECRET_KEY` | пароль MinIO (вложения); в контейнер MinIO идёт как `MINIO_ROOT_PASSWORD`, в бэкенд — как `S3_SECRET_KEY` | установщик генерирует | `.env` 600 | всегда | новое значение в `.env` и `docker compose up -d`: MinIO и бэкенд берут его вместе | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
-| `S3_ACCESS_KEY` | имя учётки MinIO (`MINIO_USER`) — не секрет, но читается рядом с паролем | установщик (по умолчанию `lore`) | `.env` | всегда | вместе с паролем MinIO | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
+| `S3_SECRET_KEY` | секретный ключ своего S3 (файлы) | владелец (`--files s3`) | `.env` 600 | только с `--files s3` | новое значение в `.env` и `docker compose up -d lore-backend` | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
+| `S3_ACCESS_KEY` | ключ доступа своего S3 — не секрет, но читается рядом с секретным | владелец (`--files s3`) | `.env` | только с `--files s3` | вместе с секретным ключом | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
 | `LORE_VOLVA_EMBED_ES256_PRIVATE_KEY` | закрытый ключ подписи встройки Völva (ES256, PKCS#8) | окно установщика («Ключи Völva») | файл `volva-embed.env` 600, затем `.env` 600 | если выбрана Völva | новая пара в окне установщика, обе строки в `.env`, `up -d`; Völva перечитает `/lore/embed/jwks` | `deploy/install/docker-compose.install.yml`, `backend/src/main/java/studio/seer/heimdall/lore/AidaLoreResource.java` |
 | `LORE_VOLVA_EMBED_ES256_PUBLIC_KEY` | открытый ключ пары, отдаётся в `/lore/embed/jwks`; не секрет | окно установщика, вместе с закрытым | `.env` | если выбрана Völva | вместе с закрытым | `deploy/install/docker-compose.install.yml`, `backend/src/main/java/studio/seer/heimdall/lore/AidaLoreResource.java` |
 | `FORGEJO_API_TOKEN` | токен моста LORE в Forgejo (статусы CI, PR, мерж); пусто — `/lore/forgejo/*` отвечает 503 | вписывает владелец (Forgejo → Настройки → Приложения) | `.env` 600 | Forgejo install или own | новый токен в Forgejo, значение в `.env`, `up -d`; старый отозвать | `deploy/install/docker-compose.install.yml`, `backend/src/main/java/studio/seer/heimdall/lore/ForgejoBridge.java` |

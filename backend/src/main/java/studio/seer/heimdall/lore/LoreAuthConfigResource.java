@@ -9,6 +9,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Настройка входа СВОЕЙ среды для фронта — {@code GET /lore/auth/config}, открытый путь (до входа).
@@ -28,8 +29,10 @@ public class LoreAuthConfigResource {
     @ConfigProperty(name = "quarkus.oidc.enabled", defaultValue = "false")
     boolean authEnabled;
 
-    @ConfigProperty(name = "quarkus.oidc.auth-server-url", defaultValue = "")
-    String issuer;
+    // MIG-04 (эмуляция установщика 21.11): при выключенном входе compose передаёт LORE_OIDC_ISSUER пустым — обязательный
+    // String валил старт «Failed to load config value». «Адреса нет» выражается типом (ConfigEmptyDefaultDeclaredTest).
+    @ConfigProperty(name = "quarkus.oidc.auth-server-url")
+    Optional<String> issuer;
 
     @ConfigProperty(name = "lore.web.oidc-client-id", defaultValue = "lore-app")
     String webClientId;
@@ -37,7 +40,7 @@ public class LoreAuthConfigResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response get() {
-        return Response.ok(body(authEnabled, issuer, webClientId)).header("Cache-Control", "no-store").build();
+        return Response.ok(body(authEnabled, issuer.orElse(null), webClientId)).header("Cache-Control", "no-store").build();
     }
 
     static Map<String, Object> body(boolean authEnabled, String issuer, String clientId) {

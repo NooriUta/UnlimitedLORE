@@ -20,3 +20,6 @@ backend/gradlew text eol=lf
 *.p12     export-ignore
 *.pfx     export-ignore
 *.jks     export-ignore
+
+# MIG-04: коммит исходников едет в архив пакета (git archive подставляет %H) — сборка из архива знает свою версию.
+backend/BUILD_COMMIT export-subst
