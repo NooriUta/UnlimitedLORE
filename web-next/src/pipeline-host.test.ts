@@ -268,6 +268,15 @@ describe('PL-05: lore-release.yml катит прод на lore-host', () => {
     expect(dep()).toMatch(/^ {4}if: .*github\.event_name == 'push'/m);
   });
 
+  // 1.18 (владелица 21.11: «старую базу бэкап, а новую под неё … а то нам и на проде придётся новые имена делать»).
+  it('замена базы прода базой переноса — после compose, до db; источник из поля или переменной', () => {
+    const sw = idx(/lore-host-deploy\.sh dbswap/);
+    expect(sw).toBeGreaterThan(idx(/lore-host-deploy\.sh compose/));
+    expect(sw).toBeLessThan(idx(/lore-host-deploy\.sh db$/m));
+    expect(depSteps()[sw].body).toMatch(/SWAP_FROM: \$\{\{ inputs\.swap_from \|\| vars\.LORE_PROD_SWAP_FROM \}\}/);
+    expect(read(REL)).toMatch(/^ {6}swap_from:$/m);
+  });
+
   it('ключ CD из секрета и отпечаток хоста закреплён', () => {
     expect(rel()).toMatch(/LORE_HOST_SSH_KEY: \$\{\{ secrets\.LORE_HOST_SSH_KEY \}\}/);
     expect(rel()).toMatch(/LORE_HOST_FP: SHA256:dp7oLAGQkIQ\+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA/);
@@ -527,6 +536,20 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', { timeout: SPAWN_TIMEOU
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/revision/);
     rmSync(r0.d, { recursive: true, force: true });
+  });
+});
+
+describe.skipIf(!bashBin)('lore-host-deploy.sh remote-swap: источник — только база переноса', { timeout: SPAWN_TIMEOUT }, () => {
+  const S = '.github/scripts/lore-host-deploy.sh';
+  it.each(['system_aida_lore', 'migration_src_2026_11_20', 'some_db'])('источник %s — отказ до обращения к docker', (src) => {
+    const r = run(S, ['remote-swap', '/nonexistent', src, 'system_aida_lore'], {});
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/источник замены — только база переноса migration_dst\*/);
+  });
+  it('источник совпадает с базой — отказ', () => {
+    const r = run(S, ['remote-swap', '/nonexistent', 'migration_dst_x', 'migration_dst_x'], {});
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/совпадает/);
   });
 });
 
