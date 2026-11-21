@@ -331,10 +331,7 @@ services:
       context: .
       dockerfile: web-next/Dockerfile
       args:
-        # build-time, как у lore-app: Vite впекает их в бандл.
-        VITE_LORE_AUTH_ENABLED: ${VITE_LORE_AUTH_ENABLED:-}
-        VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER:-}
-        VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+        # Настроек входа в сборке нет (SELF-PROVISION-STANDALONE) — они ниже, в environment.
         # S4-30: коммит выкатки доводится до бандла — метка версии в правом
         # нижнем углу сверяет его с коммитом бэкенда из /lore/version и
         # показывает ОДНУ версию только когда они совпали. Переменная та же,
@@ -349,6 +346,11 @@ services:
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
       LORE_BACKEND_URL: ${LORE_BACKEND_URL:-}
       LORE_BACKEND_HOST: ${LORE_BACKEND_HOST:-}
+      # Настройки входа — при ЗАПУСКЕ, в /config.json (SELF-PROVISION-STANDALONE): смена — `docker compose up -d`,
+      # без пересборки. Те же переменные, что у бэкенда; пусто — фронт спросит бэкенд своей среды.
+      LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-}
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+      LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
       # Метка в логе скрипта старта: «[LORE v2] …», чтобы по docker logs было
       # видно, чей это контейнер. В шаблон nginx НЕ попадает.
       LORE_FRONT: v2

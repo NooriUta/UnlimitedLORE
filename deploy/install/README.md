@@ -124,7 +124,7 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 1. В окне впишите «Адрес области Keycloak» (`https://<keycloak>/realms/<область>`) и «Адрес веба LORE».
 2. «План области Keycloak» показывает запросы без записи: область, роли `superadmin`, `admin`, `viewer`, клиент веба `lore-app` (публичный, PKCE S256) и клиенты MCP `lore-mcp-full` / `lore-mcp-full_<harness>`. Роли приходят в токене claim-ом `seer_roles`.
 3. «Завести область» выполняет план. Уже существующее не трогается, повтор безопасен. Секреты клиентов MCP уходят в файл `~/kc-clients-<область>.env` (права 600), на экран не выводятся.
-4. «Собрать .env» включает вход: `LORE_AUTH_ENABLED=true`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID=lore-app`. Флаг впекается в веб при сборке образа, поэтому после смены — повтор `install.sh`.
+4. «Собрать .env» включает вход: `LORE_AUTH_ENABLED=true`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID=lore-app`. Веб берёт их при запуске контейнера, в образ они не впекаются: после смены адреса или клиента достаточно `docker compose up -d`. Включение и выключение входа (`LORE_AUTH_ENABLED`) бэкенд фиксирует при сборке (`quarkus.oidc.enabled`), поэтому смена этого флага — повтор `install.sh`.
 5. Первому владельцу выдайте в Keycloak роль `superadmin`.
 
 ## Völva — встроенные графики

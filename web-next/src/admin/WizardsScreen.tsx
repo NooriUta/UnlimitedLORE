@@ -13,6 +13,7 @@ import {
   LoadError, SecretOnce, Skeleton, Steps, setUrlParams, useKitLang, useLoadState, useUrlParam, type StepDef, type StepsManualItem,
 } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { runtimeAuth } from '../auth/runtimeAuthConfig';
 import { useAppT, type AppKey } from '../i18n';
 import { useAdminNav } from './adminNav';
 import { DangerBatch } from './DangerBatch';
@@ -48,12 +49,13 @@ export interface WizardsScreenProps {
   fetchImpl?: typeof fetch;
   /** kc_sub смотрящего: он владелец агента новой машины (UC-7). */
   meSub: string | null;
-  /** Адреса для конфига MCP; по умолчанию — этот хост и issuer сборки. */
+  /** Адреса для конфига MCP; по умолчанию — этот хост и issuer из настроек запуска. */
   env?: WizardsEnv;
 }
 
 function defaultEnv(): WizardsEnv {
-  const issuer = (import.meta.env.VITE_OIDC_ISSUER as string | undefined) ?? '';
+  // Адрес входа — настройка запуска (/config.json → бэкенд), не сборки (SELF-PROVISION-STANDALONE).
+  const issuer = runtimeAuth()?.issuer ?? '';
   return { backend: backendOf(globalThis.location.origin), issuer: issuer || '<issuer Keycloak>' };
 }
 

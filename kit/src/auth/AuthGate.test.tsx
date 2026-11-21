@@ -83,4 +83,15 @@ describe('S3-18 · AuthGate', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Войти снова' }));
     expect(s.login).toHaveBeenCalledWith('/');
   });
+
+  it('SELF-PROVISION: вход не настроен — честный экран без приложения и без кнопки входа', () => {
+    const s = fakeSession({ status: 'unconfigured', error: new Error('адрес входа не задан') });
+    render(<AuthGate session={s}><p>app</p></AuthGate>);
+    expect(screen.queryByText('app')).toBeNull();
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('Вход не настроен');
+    expect(alert.textContent).toContain('адрес входа не задан');
+    expect(screen.queryByRole('button', { name: 'Войти снова' })).toBeNull();
+    expect(s.login).not.toHaveBeenCalled();
+  });
 });

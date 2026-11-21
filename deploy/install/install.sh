@@ -707,13 +707,15 @@ selftest() {
   grep -E 'PASSWORD=' "$SCRIPT_DIR/.env.example" | grep -vqE 'PASSWORD=(CHANGE_ME)?$' && fail ".env.example содержит пароль"; ok
   # 7. вход через Keycloak — по выбору (MIG-04, владелица 17.11.2026: «на новой установке ты заводишь kc»).
   #    По умолчанию входа нет, как раньше; включается LORE_AUTH_ENABLED=true в .env вместе с адресом области.
-  #    Флаг читается и на сборке (build-arg, OIDC впекается в образ), и в рантайме (фильтр ролей) — см. docker-compose.yml.
+  #    У бэкенда флаг читается и на сборке (build-arg OIDC Quarkus), и в рантайме (фильтр ролей). У веба вход — только
+  #    настройка запуска (SELF-PROVISION-STANDALONE): env контейнера → /config.json, в бандл ничего не впекается.
   local c="$SCRIPT_DIR/docker-compose.install.yml"
   grep -qE '^\s*- LORE_AUTH_ENABLED=false\s*$' "$c" && fail "вход прибит гвоздём: LORE_AUTH_ENABLED=false в профиле"; ok
   grep -q 'LORE_AUTH_ENABLED=${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет LORE_AUTH_ENABLED с умолчанием false в окружении"; ok
   grep -q 'LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет build-arg LORE_AUTH_ENABLED"; ok
-  grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
-  grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
+  grep -q 'VITE_LORE_AUTH_ENABLED\|VITE_OIDC_' "$c" && fail "веб: вход снова впекается в бандл (VITE_*) — должен быть env контейнера"; ok
+  grep -q 'LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}' "$c" || fail "веб: адрес входа не задаётся при запуске"; ok
+  grep -q 'LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
   grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
   # 7a. базовые образы (arcadedb): недоступный реестр не роняет установку, если образ уже есть на машине;
   #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — ryzenai 21.11.2026).

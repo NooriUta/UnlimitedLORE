@@ -31,19 +31,15 @@ COPY kit/demo /app/kit/demo
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
 COPY web-next/src ./src
 
-# Флаги auth — build-time (Vite впекает import.meta.env в бандл), как у v1.
-ARG VITE_LORE_AUTH_ENABLED=""
-ARG VITE_OIDC_ISSUER=""
-ARG VITE_OIDC_CLIENT_ID=""
+# Настроек входа (вход вкл/выкл, адрес Keycloak, клиент) в сборке НЕТ — это настройки ЗАПУСКА
+# (SPRINT_LORE_PRODUCT_BACKLOG/SELF-PROVISION-STANDALONE): env контейнера LORE_AUTH_ENABLED,
+# LORE_OIDC_ISSUER, LORE_OIDC_CLIENT_ID → /config.json скриптом старта 40-lore-runtime-config.sh.
+# Раньше они были build-arg VITE_*, и образ препрода увозил на прод вход в realm препрода (15.11).
 # S4-30: из какого коммита собран фронт — для метки версии в правом нижнем углу.
-# Тоже build-time, и по той же причине: Vite впекает import.meta.env в бандл, и
-# переменная контейнера до кода не доходит вовсе. Пусто — метка честно скажет
-# «сервер …», а не выдаст серверную версию за общую.
+# Это свойство самой сборки, а не среды, поэтому build-time: Vite впекает
+# import.meta.env в бандл. Пусто — метка честно скажет «сервер …».
 ARG VITE_LORE_BUILD_COMMIT=""
-ENV VITE_LORE_AUTH_ENABLED=$VITE_LORE_AUTH_ENABLED \
-    VITE_OIDC_ISSUER=$VITE_OIDC_ISSUER \
-    VITE_OIDC_CLIENT_ID=$VITE_OIDC_CLIENT_ID \
-    VITE_LORE_BUILD_COMMIT=$VITE_LORE_BUILD_COMMIT
+ENV VITE_LORE_BUILD_COMMIT=$VITE_LORE_BUILD_COMMIT
 
 RUN npm run build
 
@@ -64,4 +60,11 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 ENV LORE_FRONT=v2
 COPY docker/30-lore-public-url.sh /docker-entrypoint.d/30-lore-public-url.sh
 RUN chmod +x /docker-entrypoint.d/30-lore-public-url.sh
+# Настройки входа фронта — из env контейнера при старте в /config.json (SELF-PROVISION-STANDALONE).
+# Пустые умолчания: «не задано» — фронт спросит бэкенд своей среды, не скажет и он — «вход не настроен».
+ENV LORE_AUTH_ENABLED="" \
+    LORE_OIDC_ISSUER="" \
+    LORE_OIDC_CLIENT_ID=""
+COPY docker/40-lore-runtime-config.sh /docker-entrypoint.d/40-lore-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/40-lore-runtime-config.sh
 EXPOSE 80

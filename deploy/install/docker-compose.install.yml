@@ -137,12 +137,13 @@ services:
       dockerfile: web-next/Dockerfile
       args:
         VITE_LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
-        # Vite впекает вход в бандл — флипать вместе с бэкендом, тем же значением.
-        VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}
-        VITE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
-        VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
     restart: unless-stopped
     environment:
+      # Вход — настройка ЗАПУСКА (SELF-PROVISION-STANDALONE): скрипт старта образа кладёт её в /config.json.
+      # Смена — `docker compose up -d`, без пересборки; значения те же, что у бэкенда.
+      LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+      LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
       LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
