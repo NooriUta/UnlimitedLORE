@@ -100,7 +100,7 @@ services:
       - lore.secrets.provider=env
       # Схема накатывается на каждом старте под root; бэкап перед накаткой
       # пишется в том lore-db-backups (на пустой базе пропускается сам).
-      - lore.migrate=true
+      - lore.migrate=${LORE_MIGRATE:-true}
       - lore.mart.auth=basic
       # Своё S3 — из шага «Хранилище файлов» install.sh (--files s3); пусто — «без файлов».
       - S3_ENDPOINT=${S3_ENDPOINT:-}

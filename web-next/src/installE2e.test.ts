@@ -115,6 +115,8 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(s).not.toMatch(/dst-fingerprint/); // сверку отпечатков делает переиспользуемый скрипт
     expect(s).toMatch(/install-bundle --out/);
     expect(s).toMatch(/--files none/);
+    // ryzenai 21.11: на базе из модели бэкенд отказывает старт при lore.migrate=true — переключение ставит false.
+    expect(s).toMatch(/LORE_MIGRATE=false/);
     expect(s).toMatch(/FILES_NOT_CONFIGURED/);
     // ryzenai 21.11: ArcadeDB, пересозданная с портом, ещё не отвечала — connect получил ECONNRESET.
     expect(s).toMatch(/\/api\/v1\/ready/);

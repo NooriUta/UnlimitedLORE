@@ -629,7 +629,9 @@ selftest() {
   printf '%s' "$s1" | grep -qE '^[0-9a-f]{48}$' || fail "gen_secret: $s1"; ok
   [ "$s1" != "$s2" ] || fail "gen_secret повторился"; ok
   # 6. профиль установки не требует LORE_BOOTSTRAP и катит схему
-  grep -q 'lore.migrate=true' "$SCRIPT_DIR/docker-compose.install.yml" || fail "в профиле нет lore.migrate=true"; ok
+  # Свежая установка катит шаги V (по умолчанию true); база, перенесённая в модель 1.18, требует false — иначе бэкенд
+  # честно отказывает старт «схема собрана из модели, а lore.migrate=true» (эмуляция на ryzenai 21.11.2026).
+  grep -qF 'lore.migrate=${LORE_MIGRATE:-true}' "$SCRIPT_DIR/docker-compose.install.yml" || fail "в профиле нет lore.migrate=\${LORE_MIGRATE:-true}"; ok
   grep -qE '^\s*- (lore\.bootstrap|LORE_BOOTSTRAP)' "$SCRIPT_DIR/docker-compose.install.yml" && fail "профиль снова зависит от LORE_BOOTSTRAP"; ok
   grep -qE '^[A-Z_]*PASSWORD=(CHANGE_ME)?$' "$SCRIPT_DIR/.env.example" || fail ".env.example: пароли — только заглушки"; ok
   grep -E 'PASSWORD=' "$SCRIPT_DIR/.env.example" | grep -vqE 'PASSWORD=(CHANGE_ME)?$' && fail ".env.example содержит пароль"; ok

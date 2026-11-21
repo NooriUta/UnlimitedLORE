@@ -65,7 +65,7 @@ plan() {
   echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows []); загрузка ассета — 503 «хранилище файлов не подключено»"
   echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
   echo "  pr-data  «Дотянуть данные PR» из git-хоста (Forgejo; GitHub/GitLab потом): план «без заголовка N, дотянется M» → подтверждение → отчёт поимённо — шаг предусмотрен, код после 1.18 (SPEC-LORE-INSTALLER-PIPELINE)"
-  echo "  switch   LORE_DB=$DST, перезапуск lore-backend"
+  echo "  switch   LORE_DB=$DST, LORE_MIGRATE=false (база из модели 1.18), перезапуск lore-backend"
   echo "  probe    /lore/version, /lore/slice/open_tasks, /lore/slice/organizations и /lore/slice/repositories — не пусты"
 }
 
@@ -194,7 +194,9 @@ migrate() {
 switch() {
   local env="$DIR/.env"
   if grep -q '^LORE_DB=' "$env"; then sed -i "s/^LORE_DB=.*/LORE_DB=$DST/" "$env"; else echo "LORE_DB=$DST" >> "$env"; fi
-  say "LORE_DB=$DST, перезапуск lore-backend"
+  # База из модели 1.18: шаги V не катятся — иначе бэкенд честно откажет старт (ryzenai 21.11.2026).
+  if grep -q '^LORE_MIGRATE=' "$env"; then sed -i "s/^LORE_MIGRATE=.*/LORE_MIGRATE=false/" "$env"; else echo "LORE_MIGRATE=false" >> "$env"; fi
+  say "LORE_DB=$DST, LORE_MIGRATE=false (база из модели), перезапуск lore-backend"
   compose up -d --force-recreate lore-backend >/dev/null || die "lore-backend не перезапустился"
 }
 
