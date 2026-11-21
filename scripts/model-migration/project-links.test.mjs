@@ -28,6 +28,22 @@ test('проект по префиксу ключа: ключ, прежний к
   assert.equal(r('AIDA/research-llm-sql-dialect'), null);
 });
 
+// Владелица 21.11.2026: «два релиза: Mobilepoc привяжи к miniLORE, последний — к Odin». Явное соответствие ключей —
+// раздел project_links файла решений; цель ищется теми же шагами (ключ, прежний ключ → опора группы).
+test('явное соответствие из файла решений: Mobilepoc → miniLORE, research-llm-sql-dialect → ODIN', async () => {
+  const { projectLinkOverrides } = await import('./project-links.mjs');
+  const decisions = (await import('./rules/decisions.lore.json', { with: { type: 'json' } })).default;
+  const map = projectLinkOverrides(decisions);
+  assert.deepEqual(map, { 'NooriUta/Mobilepoc': 'AIDA/miniLORE', 'AIDA/research-llm-sql-dialect': 'NooriUta/ODIN' });
+  const withOdin = [...projects, { rid: '#p:5', slug: 'NooriUta/ODIN', aliases: ['NooriUta/ODIN'], hosts: [] }];
+  assert.deepEqual(resolveProject('NooriUta/Mobilepoc', withOdin, map), { slug: 'AIDA/miniLORE', how: 'decision' });
+  assert.deepEqual(resolveProject('AIDA/research-llm-sql-dialect', withOdin, map), { slug: 'NooriUta/ODIN', how: 'decision' });
+  const p = planProjectLinks({ projects: withOdin, releases, prs: [], overrides: map });
+  assert.deepEqual(p.unresolved.releases, [], 'релизов без проекта — 0');
+  assert.ok(p.releaseLinks.some(l => l.uid === 'NooriUta/Mobilepoc#v1.0.3' && l.slug === 'AIDA/miniLORE'));
+  assert.equal(resolveProject('Ghost/x', withOdin, { 'Ghost/x': 'Nobody/here' }), null, 'цель соответствия не найдена — не угадываем');
+});
+
 test('имя репозитория без владельца неоднозначно — не угадываем', () => {
   const two = [{ slug: 'A/x', aliases: null, hosts: [] }, { slug: 'B/x', aliases: null, hosts: [] }];
   assert.equal(resolveProject('x', two), null);

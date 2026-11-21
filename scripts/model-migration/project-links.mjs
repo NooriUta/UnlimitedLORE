@@ -32,9 +32,23 @@ function exact(prefix, projects) {
   return null;
 }
 
-/** Проект по префиксу ключа записи; null — не нашёлся (не угадываем). */
-export function resolveProject(prefix, projects) {
+/**
+ * Явные соответствия ключей из файла решений (раздел project_links.map): прежний ключ проекта → ключ проекта приёмника.
+ * Владелица 21.11.2026: «два релиза: Mobilepoc привяжи к miniLORE, последний — к Odin».
+ */
+export function projectLinkOverrides(doc) {
+  const m = doc && doc.project_links && doc.project_links.map;
+  return m && typeof m === 'object' ? { ...m } : {};
+}
+
+/** Проект по префиксу ключа записи; null — не нашёлся (не угадываем). overrides — явные соответствия владелицы. */
+export function resolveProject(prefix, projects, overrides = {}) {
   if (!prefix) return null;
+  const to = Object.entries(overrides).find(([k]) => lc(k) === lc(prefix));
+  if (to) {
+    const hit = exact(to[1], projects);   // цель — тоже по ключу или прежнему ключу: после перегруппировки — опора группы
+    return hit ? { slug: hit.slug, how: 'decision' } : null;
+  }
   const hit = exact(prefix, projects);
   if (hit) return hit;
   const at = prefix.indexOf('@');
@@ -62,20 +76,20 @@ const linked = r => Array.isArray(r.projects) && r.projects.filter(Boolean).leng
 const WHY = 'проект не найден ни по ключу, ни по прежним ключам, адресам и имени репозитория';
 
 /** План: связи релизов и PR с проектом, адреса PR, остаток поимённо. */
-export function planProjectLinks({ projects, releases, prs }) {
+export function planProjectLinks({ projects, releases, prs, overrides = {} }) {
   const bySlug = new Map(projects.map(p => [p.slug, p]));
   const releaseLinks = [], prLinks = [], prUrls = [], noUrl = [];
   const unresolved = { releases: [], prs: [] };
   for (const r of releases) {
     if (linked(r)) continue;
-    const hit = resolveProject(prefixOf(r.release_uid), projects);
+    const hit = resolveProject(prefixOf(r.release_uid), projects, overrides);
     if (hit) releaseLinks.push({ rid: r.rid, uid: r.release_uid, slug: hit.slug, how: hit.how });
     else unresolved.releases.push({ uid: r.release_uid, prefix: prefixOf(r.release_uid), why: WHY });
   }
   for (const r of prs) {
     let slug = linked(r) ? r.projects.filter(Boolean)[0] : null;
     if (!slug) {
-      const hit = resolveProject(prefixOf(r.pr_uid), projects);
+      const hit = resolveProject(prefixOf(r.pr_uid), projects, overrides);
       if (hit) { slug = hit.slug; prLinks.push({ rid: r.rid, uid: r.pr_uid, slug, how: hit.how }); }
       else unresolved.prs.push({ uid: r.pr_uid, prefix: prefixOf(r.pr_uid), why: WHY });
     }
