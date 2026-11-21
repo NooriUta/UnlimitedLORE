@@ -104,9 +104,11 @@ test('N2 Графики паспорта — вкладка «Графики» �
   await expect(dock.getByRole('tab', { name: /^Графики/ }).first(), '«Аналитика» открывает вкладку «Графики»').toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
   await expect(charts.first(), 'графики спринта во вкладке').toBeVisible({ timeout: 30_000 });
 
-  // «Ритм релизов» — график проекта (№8).
-  await openStand(page, `/?sec=project&open=${encodeURIComponent('NooriUta/UnlimitedLORE')}&tab=charts`, page.locator('[data-testid="kit-rec-loaded"]'));
-  await passportLoaded(page, 'паспорт проекта NooriUta/UnlimitedLORE');
+  // «Ритм релизов» — график проекта (№8). Ключ проекта LORE — из git_projects (на 1.18 может отличаться).
+  const slugs = rowsOf(await sliceBody(page, 'git_projects')).map(p => str(p.slug));
+  const lore = slugs.find(s => s === 'NooriUta/UnlimitedLORE') ?? slugs.find(s => /\/UnlimitedLORE$/i.test(s)) ?? 'NooriUta/UnlimitedLORE';
+  await openStand(page, `/?sec=project&open=${encodeURIComponent(lore)}&tab=charts`, page.locator('[data-testid="kit-rec-loaded"]'));
+  await passportLoaded(page, `паспорт проекта ${lore}`);
   await expect(charts.first(), 'графики проекта во вкладке «Графики»').toBeVisible({ timeout: 30_000 });
   await expect(charts.getByText(/Ритм релизов/).first(), 'график «Ритм релизов»').toBeVisible({ timeout: 30_000 });
   const chartsText = await textOf(charts, 2000);
