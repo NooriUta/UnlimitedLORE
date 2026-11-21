@@ -7893,3 +7893,27 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-bottombar__btn[aria-current] { color: var(--acc); background: var(--bg2); }
 .sk-bottombar__icon { display: inline-flex; }
 .sk-bottombar__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* ═══ SPRINT_UXR_S15_KIT6 — панель «Вид» и обои (узоры из мобилки miniLORE) ═══ */
+.sk-view { display: flex; flex-direction: column; gap: 10px; min-width: 280px; }
+.sk-view__row { display: flex; flex-direction: column; gap: 4px; }
+.sk-view__title { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; }
+.sk-view__opts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.sk-view__opt { border-radius: 999px; padding: 0 10px; }
+.sk-view__opt[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+.sk-view__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 6px; }
+.sk-view__quick { display: inline-flex; align-items: center; gap: 4px; }
+.sk-view__dot { width: 16px; height: 16px; padding: 0; border-radius: 999px; border: 1px solid var(--bd); cursor: pointer; }
+.sk-view__dot[aria-pressed="true"] { border: 2px solid var(--t1); }
+.sk-view__thumb { width: 56px; height: 40px; padding: 0; border-radius: 8px; border: 1px solid var(--bd); background-size: cover; background-position: center; cursor: pointer; }
+.sk-view__thumb[aria-pressed="true"] { border: 2px solid var(--acc); }
+.sk-view__dimlabel { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-2xs); color: var(--t2); }
+.sk-view__err { font-size: var(--fs-2xs); color: var(--dng); }
+.sk-wall { position: relative; min-height: 100%; }
+.sk-wall__content { position: relative; }
+.sk-wall__photo, .sk-wall__skin { position: absolute; inset: 0; pointer-events: none; }
+.sk-wall__photo { background-size: cover; background-attachment: fixed; }
+.sk-wall__dim { position: absolute; inset: 0; background: var(--bg0); }
+.sk-wall__lines { position: absolute; inset: 0; mix-blend-mode: screen; }
+.sk-wall__lines.is-light { mix-blend-mode: multiply; }
+.sk-wall__stroke { fill: none; stroke: var(--t1); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }

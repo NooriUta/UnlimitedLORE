@@ -83,6 +83,8 @@ export * from './live';
 export * from './tiles';
 // Меню «сверху», нижняя панель телефона, скрытие пространств по роли (SPRINT_UXR_S15_KIT6).
 export * from './nav';
+// Панель «Вид» и обои — фото, своя картинка, узоры из мобилки (SPRINT_UXR_S15_KIT6).
+export * from './appearance';
 // Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
 // меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
 export * from './reading';
