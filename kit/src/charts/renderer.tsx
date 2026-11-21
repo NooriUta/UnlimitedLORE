@@ -10,7 +10,8 @@ export type ChartRenderer = 'svg' | 'echarts';
 /** Что получает тело графика: те же данные, что и SVG-рисовальщик. */
 export interface LineBodyProps { title: string; unit?: string; series: { key: string; label: string; points: { x: number; y: number | null }[]; dashed?: boolean }[]; xLabel: (x: number) => string; height: number }
 export interface BarBodyProps { title: string; unit?: string; groups: { key: string; label: string }[]; data: { category: string; values: Record<string, number | null> }[]; height: number }
-export interface ChartBodies { line: (p: LineBodyProps) => ReactNode; bar: (p: BarBodyProps) => ReactNode }
+export interface SparkBodyProps { points: readonly { x: number; y: number | null }[]; height: number; area: boolean }
+export interface ChartBodies { line: (p: LineBodyProps) => ReactNode; bar: (p: BarBodyProps) => ReactNode; /** Мини-линия; нет — Sparkline рисует своим SVG. */ spark?: (p: SparkBodyProps) => ReactNode }
 
 const REGISTRY: Partial<Record<Exclude<ChartRenderer, 'svg'>, ChartBodies>> = {};
 

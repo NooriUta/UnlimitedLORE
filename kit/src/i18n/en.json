@@ -1372,5 +1372,13 @@
   "kit.scheme.unplaced": "unplaced: {n} — points without coordinates",
   "kit.scheme.zoomIn": "Zoom in",
   "kit.scheme.zoomOut": "Zoom out",
-  "kit.chart.rendererMissing": "{name} renderer chosen but not connected — showing the built-in SVG"
+  "kit.chart.rendererMissing": "{name} renderer chosen but not connected — showing the built-in SVG",
+  "kit.obj.langs": "Language",
+  "kit.obj.noImage": "no picture",
+  "kit.obj.asWas": "as before (default)",
+  "kit.obj.report": "reported {ago}",
+  "kit.obj.all": "All {n}",
+  "kit.obj.galleryEmpty": "nothing matches the filter",
+  "kit.obj.hidden": "{n} more hidden by permissions — not \"no records\".",
+  "kit.list.hiddenTail": " · {n} more hidden by permissions"
 }

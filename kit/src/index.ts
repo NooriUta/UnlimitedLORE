@@ -89,6 +89,8 @@ export * from './appearance';
 export * from './dashboard';
 // «Схема» — смотрелка плана: контуры, точки со статусом, слои, этажи, масштаб (SPRINT_UXR_S15_KIT6).
 export * from './scheme';
+// «Живые объекты»: языки, выбор картинки, шапка паспорта, галерея плиток, «скрыто правами» (SPRINT_UXR_S15_KIT6).
+export * from './objects';
 // Режим чтения: колонка ~680 px, широкие блоки с ⤢, Aa, ушко правой колонки,
 // меню по настройке (SPRINT_UXR_S5_RECORD_TASKS/S5-05).
 export * from './reading';

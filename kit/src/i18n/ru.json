@@ -1372,5 +1372,13 @@
   "kit.scheme.unplaced": "без места: {n} — у точек нет координат",
   "kit.scheme.zoomIn": "Крупнее",
   "kit.scheme.zoomOut": "Мельче",
-  "kit.chart.rendererMissing": "рисовальщик {name} выбран, но не подключён — показан свой SVG"
+  "kit.chart.rendererMissing": "рисовальщик {name} выбран, но не подключён — показан свой SVG",
+  "kit.obj.langs": "Язык",
+  "kit.obj.noImage": "без картинки",
+  "kit.obj.asWas": "как было (по умолчанию)",
+  "kit.obj.report": "доклад {ago}",
+  "kit.obj.all": "Всё {n}",
+  "kit.obj.galleryEmpty": "под фильтр ничего не попало",
+  "kit.obj.hidden": "Ещё {n} скрыты правами — это не «записей нет».",
+  "kit.list.hiddenTail": " · ещё {n} скрыты правами"
 }

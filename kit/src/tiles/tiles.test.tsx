@@ -5,7 +5,8 @@
 // kit не знает ни «температуры», ни «Meteocons»: картинку, цвет вида, подписи и значения даёт приложение.
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { GroupCard, Sparkline, TileBar, TileGauge, TileRow, TileSquare, sparkPath, tileFraction } from '.';
+import { GroupCard, TileBar, TileGauge, TileRow, TileSquare, tileFraction } from '.';
+import { Sparkline, sparkPath } from '../charts/spark';
 
 describe('доля шкалы (для заливки и дуги)', () => {
   it('значение внутри шкалы — доля; за пределами — прижато к 0 и 1; нет значения — null', () => {

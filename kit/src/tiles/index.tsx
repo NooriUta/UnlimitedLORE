@@ -10,8 +10,7 @@
 // «Оценка» (estimate) — значение не с датчика (макет, сводка): приглушено и со звёздочкой, пояснение — в title.
 import type { CSSProperties, ReactNode } from 'react';
 import { kitT, useKitLang } from '../i18n';
-
-export interface SparkPoint { x: number; y: number | null }
+import { Sparkline, type SparkPoint } from '../charts/spark';
 
 /** Доля значения на шкале [min, max], прижатая к 0..1; нет значения — null (не ноль). */
 export function tileFraction(value: number | null | undefined, scale: [number, number]): number | null {
@@ -19,33 +18,6 @@ export function tileFraction(value: number | null | undefined, scale: [number, n
   const [lo, hi] = scale;
   if (hi === lo) return null;
   return Math.max(0, Math.min(1, (value - lo) / (hi - lo)));
-}
-
-/** Путь мини-линии: пропуск (y = null) начинает новый отрезок. Меньше двух точек — пустая строка. */
-export function sparkPath(pts: readonly SparkPoint[], w: number, h: number): string {
-  const vals = pts.filter((p): p is { x: number; y: number } => p.y !== null);
-  if (vals.length < 2) return '';
-  const x0 = pts[0].x, x1 = pts[pts.length - 1].x;
-  const lo = Math.min(...vals.map((p) => p.y)), hi = Math.max(...vals.map((p) => p.y));
-  const X = (x: number) => (x1 === x0 ? w / 2 : ((x - x0) / (x1 - x0)) * w);
-  const Y = (y: number) => (hi === lo ? h / 2 : h - 1 - ((y - lo) / (hi - lo)) * (h - 2));
-  let d = '', pen = false;
-  for (const p of pts) {
-    if (p.y === null) { pen = false; continue; }
-    d += `${pen ? 'L' : 'M'}${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)} `;
-    pen = true;
-  }
-  return d.trim();
-}
-
-export function Sparkline({ points, height = 24, area = false, className }: { points: readonly SparkPoint[]; height?: number; area?: boolean; className?: string }) {
-  const d = sparkPath(points, 100, height);
-  return (
-    <svg className={['sk-spark', className].filter(Boolean).join(' ')} viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" aria-hidden="true" style={{ height }}>
-      {d && area && <path className="sk-spark__area" d={`${d} L100,${height} L0,${height} Z`} />}
-      {d && <path className="sk-spark__line" d={d} />}
-    </svg>
-  );
 }
 
 /** Общие части плиток. tone — токен темы цвета вида: 'var(--inf)'. */

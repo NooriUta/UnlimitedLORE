@@ -9,3 +9,5 @@ export * from './EmbedChartFrame';
 export * from './family';
 // Рычаг рисовальщика svg | echarts (D-2026-SEIDRKIT-ECHARTS-IN-KIT); тело echarts — вход @seidr/kit/charts-echarts.
 export * from './renderer';
+// Мини-линия — в семействе графиков (рычаг svg | echarts действует и на неё).
+export * from './spark';
