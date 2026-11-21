@@ -469,6 +469,8 @@
   "kit.scope.except": "Все, кроме выбранных",
   "kit.scope.summary.except": "Все, кроме {n}",
   "kit.scope.countExcept": "Исключено: {n}",
+  "kit.scope.expand": "Раскрыть: {title}",
+  "kit.scope.collapse": "Свернуть: {title}",
   "kit.list.text": "Текст в ID или названии",
   "kit.list.textPlaceholder": "Найти в списке…",
   "kit.list.desc.text": "Текст",

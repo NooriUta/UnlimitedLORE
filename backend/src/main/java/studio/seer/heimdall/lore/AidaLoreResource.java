@@ -1710,19 +1710,36 @@ public class AidaLoreResource extends LoreResourceBase {
      */
     private Map<String, Object> expandProductScope(Map<String, String> given) {
         if (!given.containsKey(SliceProjectNarrowing.PRODUCTS_PARAM)) return null;
-        return SliceProjectNarrowing.expandProducts(given, productProjects());
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT code, out('BELONGS_TO_PROJECT').slug AS projects, out('PARENT_PRODUCT').code AS parent_code "
+                + "FROM KnowDictEntry WHERE dict_type = 'product'", Map.of());
+        return SliceProjectNarrowing.expandProducts(given, productProjects(rows), productParents(rows));
     }
 
     /** Продукт → его проекты (BELONGS_TO_PROJECT): один запрос на вызов с выбором продукта. */
-    private Map<String, List<String>> productProjects() {
+    static Map<String, List<String>> productProjects(List<Map<String, Object>> rows) {
         Map<String, List<String>> out = new LinkedHashMap<>();
-        for (Map<String, Object> r : ingestService.queryPublic(
-                "SELECT code, out('BELONGS_TO_PROJECT').slug AS projects FROM KnowDictEntry WHERE dict_type = 'product'", Map.of())) {
+        for (Map<String, Object> r : rows) {
             Object code = r.get("code");
             if (code == null) continue;
             List<String> ps = new ArrayList<>();
             if (r.get("projects") instanceof List<?> l) for (Object x : l) if (x != null) ps.add(String.valueOf(x));
             out.put(String.valueOf(code), ps);
+        }
+        return out;
+    }
+
+    /**
+     * PS-PRODUCT-FILTER (владелица 21.11.2026): подпродукт → родитель (PARENT_PRODUCT, parent_code — список или строка);
+     * выбор родителя в шапке раскрывается вместе с подпродуктами.
+     */
+    static Map<String, String> productParents(List<Map<String, Object>> rows) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map<String, Object> r : rows) {
+            Object code = r.get("code"), p = r.get("parent_code");
+            if (code == null) continue;
+            Object first = p instanceof List<?> l ? l.stream().filter(java.util.Objects::nonNull).findFirst().orElse(null) : p;
+            if (first != null && !String.valueOf(first).isBlank()) out.put(String.valueOf(code), String.valueOf(first));
         }
         return out;
     }

@@ -29,7 +29,7 @@ import type { Completeness, LoadState } from '../states/loadState';
 import { EmptyState, Forbidden, LoadError, Skeleton } from '../states/StateViews';
 import { Truncated } from '../states/Truncated';
 import {
-  filterScopeOptions, mineScope, onlyScope, orderScopeOptions, scopeTitle, summarizeScope,
+  filterScopeOptions, mineScope, onlyScope, orderScopeOptions, scopeAncestors, scopeTitle, scopeTree, summarizeScope,
   toggleScope, unknownScopeIds,
 } from './scopeModel';
 import type { ScopeOption, ScopeSummary } from './scopeModel';
@@ -280,6 +280,13 @@ function ScopeBody({
   const hasData = state === 'ok' || state === 'partial';
   // Подписанные группы — только когда есть подписи и роли проверены: делить не по чему иначе.
   const grouped = !!groups && mineKnown;
+  // PS-PRODUCT-FILTER (владелица 21.11.2026: «раскрытием дерева с кнопочкой рядом с составным продуктом»): есть записи
+  // с родителем в списке — дерево. По умолчанию видны корни; раскрыты родители выбранных потомков (старая ссылка).
+  // Поиск — списком, без дерева: найденный потомок не прячется под свёрнутым родителем.
+  const tree = useMemo(() => scopeTree(ordered), [ordered]);
+  const treeMode = !grouped && tree.children.size > 0 && query.trim() === '';
+  const [expanded, setExpanded] = useState<Set<string>>(() => scopeAncestors(value, options));
+  const toggleExpanded = (id: string) => setExpanded(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const renderRow = (o: ScopeOption) => (
               <ScopeRow
                 key={o.id}
@@ -291,6 +298,24 @@ function ScopeBody({
                 onOnly={() => onChange(onlyScope(o.id))}
               />
             );
+  const renderTree = (o: ScopeOption, depth: number): ReactNode[] => {
+    const kids = tree.children.get(o.id) ?? [];
+    const open = expanded.has(o.id);
+    const row = (
+      <ScopeRow
+        key={o.id}
+        lang={lang}
+        option={o}
+        depth={depth}
+        checked={value.includes(o.id)}
+        showMine={mineKnown}
+        onToggle={() => onChange(toggleScope(value, o.id))}
+        onOnly={() => onChange(onlyScope(o.id))}
+        expander={kids.length ? { expanded: open, onToggle: () => toggleExpanded(o.id) } : undefined}
+      />
+    );
+    return open ? [row, ...kids.flatMap(k => renderTree(k, depth + 1))] : [row];
+  };
 
   const mineDisabled = !hasData || !mineKnown || mineIds.length === 0;
   const own = knownCount(mineCount);
@@ -300,7 +325,7 @@ function ScopeBody({
     : [];
   const recentSet = new Set(recentRows.map(o => o.id));
   // S9-04: группы по владельцу — только на телефоне и когда нет подписанных групп «свои/остальные».
-  const byOwner = !!narrow && !grouped;
+  const byOwner = !!narrow && !grouped && !treeMode;
   const ownerGroups = byOwner ? (() => {
     const m = new Map<string, ScopeOption[]>();
     for (const o of shown) {
@@ -385,7 +410,8 @@ function ScopeBody({
                 onOnly={() => onChange(onlyScope(id))}
               />
             ))}
-            {!byOwner && shown.filter(o => !recentSet.has(o.id)).map(renderRow)}
+            {treeMode && tree.roots.filter(o => !recentSet.has(o.id)).flatMap(o => renderTree(o, 0))}
+            {!treeMode && !byOwner && shown.filter(o => !recentSet.has(o.id)).map(renderRow)}
           </ul>
           )}
           {/* S9-04: на телефоне — группы по владельцу репозитория (часть кода до «/»). */}
@@ -464,12 +490,29 @@ interface RowProps {
   showMine?: boolean;
   onToggle: () => void;
   onOnly: () => void;
+  /** PS-PRODUCT-FILTER: уровень в дереве (0 — корень); потомки — отступом. */
+  depth?: number;
+  /** PS-PRODUCT-FILTER: у составной записи — кнопка раскрытия; выбор она не меняет. */
+  expander?: { expanded: boolean; onToggle: () => void };
 }
 
-function ScopeRow({ lang, option, checked, missing, showMine, onToggle, onOnly }: RowProps) {
+function ScopeRow({ lang, option, checked, missing, showMine, onToggle, onOnly, depth, expander }: RowProps) {
   const title = scopeTitle(option);
+  const tree = depth !== undefined;
   return (
-    <li className={['sk-scope__row', missing ? 'sk-scope__row--missing' : ''].filter(Boolean).join(' ')} data-scope-id={option.id}>
+    <li className={['sk-scope__row', missing ? 'sk-scope__row--missing' : ''].filter(Boolean).join(' ')}
+      data-scope-id={option.id} data-depth={tree ? String(depth) : undefined}>
+      {tree && (expander ? (
+        <button
+          type="button"
+          className="sk-scope__exp"
+          aria-expanded={expander.expanded}
+          aria-label={kitT(lang, expander.expanded ? 'kit.scope.collapse' : 'kit.scope.expand', { title })}
+          onClick={expander.onToggle}
+        >
+          <GameIcon slug={ICON_CANON.ctlTreeToggle} size={12} />
+        </button>
+      ) : <span className="sk-scope__exp sk-scope__exp--leaf" aria-hidden="true" />)}
       <label className="sk-scope__check">
         <input type="checkbox" checked={checked} onChange={onToggle} />
         <span className="sk-scope__title" title={title}>{title}</span>
