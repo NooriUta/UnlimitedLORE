@@ -41,15 +41,7 @@ public class LoreVersionResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response version() {
         if (!enabled) return disabled();
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("commit", BUILD.get("commit"));
-        out.put("built_at", BUILD.get("built_at"));
-        // Из того же реестра, что ведёт миграции: две правды о номере схемы
-        // разошлись бы первой же правкой.
-        out.put("schema_version", LoreSchemaMigrations.codeVersion());
-        // Владелица 09.11: версия в правом нижнем углу. Тег релиза сборка не знает — его
-        // передаёт выкатка прода (LORE_RELEASE_TAG). Нет — null, а не выдуманная версия.
-        out.put("release", releaseTag(System.getenv("LORE_RELEASE_TAG")));
+        Map<String, Object> out = info(System.getenv("LORE_RELEASE_TAG"));
         // MIG-01: база из модели (отметка LoreModelSchema) — версия модели, а не номер шага V кода. Отметки не прочитали —
         // номер шага, как раньше (база шагов или ещё не поднялась).
         java.util.List<Map<String, Object>> markers;
@@ -60,6 +52,23 @@ public class LoreVersionResource extends LoreResourceBase {
         }
         out.putAll(schemaOf(LoreSchemaMigrations.codeVersion(), markers));
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * Сведения о сборке — одни для {@code /lore/version} и блока {@code server} в {@code /lore/model}
+     * (MC-09: клиент сравнивает с ними {@code since} контракта списка).
+     */
+    static Map<String, Object> info(String releaseEnv) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("commit", BUILD.get("commit"));
+        out.put("built_at", BUILD.get("built_at"));
+        // Из того же реестра, что ведёт миграции: две правды о номере схемы
+        // разошлись бы первой же правкой.
+        out.put("schema_version", LoreSchemaMigrations.codeVersion());
+        // Владелица 09.11: версия в правом нижнем углу. Тег релиза сборка не знает — его
+        // передаёт выкатка прода (LORE_RELEASE_TAG). Нет — null, а не выдуманная версия.
+        out.put("release", releaseTag(releaseEnv));
+        return out;
     }
 
     /** Версия схемы базы: из модели — {@code model:<хэш модели>}, иначе — номер последнего шага V кода. */

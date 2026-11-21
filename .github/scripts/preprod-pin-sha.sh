@@ -50,7 +50,7 @@ if [ "$MODE" = revision ]; then
 fi
 
 rc=0
-for svc in lore-backend lore-app lore-app-next; do
+for svc in lore-backend lore-app lore-app-next lore-mcp; do
   cid="$(docker compose ps -q "$svc" 2>/dev/null | head -1)"
   if [ -z "$cid" ]; then
     echo "::error::на препроде не работает $svc — пометить нечем, релиз этого коммита не найдёт образ"

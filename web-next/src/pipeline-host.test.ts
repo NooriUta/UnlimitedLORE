@@ -453,6 +453,20 @@ exit 0
 `.replace(/\r\n/g, '\n'));
 chmodSync(join(stub, 'docker'), 0o755);
 
+// PROBE_CURL для пробы /mcp (S8-02): печатает HTTP-код по имени хоста из URL.
+// STUB_MCP_CODES="lore.odal.seidrstudio.pro=401 new.lore.odal.seidrstudio.pro=502"; по умолчанию 401.
+const mcpCurl = join(stub, 'mcpcurl').replace(/\\/g, '/');
+writeFileSync(mcpCurl, `#!/usr/bin/env bash
+url=""
+for a in "$@"; do case "$a" in http*) url="$a" ;; esac; done
+[ -n "\${MCP_CURL_LOG:-}" ] && echo "$url" >> "$MCP_CURL_LOG"
+h="\${url#*://}"; h="\${h%%/*}"
+code=401
+for kv in \${STUB_MCP_CODES:-}; do [ "\${kv%%=*}" = "$h" ] && code="\${kv#*=}"; done
+printf '%s' "$code"
+`.replace(/\r\n/g, '\n'));
+chmodSync(mcpCurl, 0o755);
+
 function run(script: string, args: string[], env: Record<string, string>) {
   const r = spawnSync(bashBin!, [resolve(repo, script).replace(/\\/g, '/'), ...args], {
     encoding: 'utf8',
@@ -497,6 +511,7 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', { timeout: SPAWN_TIMEOU
       `unlimitedlore-lore-backend:${r0.pre8} sha256:b1 ${r0.pre}`,
       `unlimitedlore-lore-app:${r0.pre8} sha256:a1 -`,
       `unlimitedlore-lore-app-next:${r0.pre8} sha256:n1 ${r0.pre}`,
+      `unlimitedlore-lore-mcp:${r0.pre8} sha256:m1 -`,
       `bundle unlimitedlore-lore-app:${r0.pre8} assets/index-V1.js`,
       `bundle unlimitedlore-lore-app-next:${r0.pre8} assets/index-V2.js`,
     ].join('\n') + '\n');
@@ -509,6 +524,7 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', { timeout: SPAWN_TIMEOU
     expect(st).toContain(`EXPECT_COMMIT=${r0.pre}`);
     expect(st).toContain('CODE_SCHEMA=71');
     expect(st).toContain('BUNDLE_V1=assets/index-V1.js');
+    expect(st).toContain('ID_MCP=sha256:m1');
     rmSync(r0.d, { recursive: true, force: true });
   });
 
@@ -531,6 +547,7 @@ describe.skipIf(!bashBin)('lore-host-deploy.sh resolve', { timeout: SPAWN_TIMEOU
       `unlimitedlore-lore-backend:${r0.pre8} sha256:b1 -`,
       `unlimitedlore-lore-app:${r0.pre8} sha256:a1 -`,
       `unlimitedlore-lore-app-next:${r0.pre8} sha256:n1 -`,
+      `unlimitedlore-lore-mcp:${r0.pre8} sha256:m1 -`,
     ].join('\n') + '\n');
     const r = run(S, ['resolve'], { CWD: r0.d, TAG: 'v9.9.9', STUB_IMAGES: imgs, DEPLOY_STATE: join(r0.d, 's.env') });
     expect(r.code).toBe(1);
@@ -763,7 +780,7 @@ describe.skipIf(!bashBin)('S8-01: проба прода /lore/version — чер
     writeFileSync(log, '');
     const r = run(fwd(join(d, 'lore-host-deploy.sh')), ['probe'], {
       DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), PROBE_LOG: fwd(log),
-      STUB_FAIL_HOST: failHost, TAG: 'v9.9.9',
+      STUB_FAIL_HOST: failHost, TAG: 'v9.9.9', PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1',
     });
     const calls = readFileSync(log, 'utf8').split('\n').filter(Boolean);
     rmSync(d, { recursive: true, force: true });
@@ -817,6 +834,7 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
     const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
     const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
       DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.0',
+      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1',
     });
     const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
     rmSync(d, { recursive: true, force: true });
@@ -841,5 +859,183 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
     const r = stepRun('probe', ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
       'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-20T00:00:00Z'], 'что-то другое');
     expect(r.code).toBe(1);
+  });
+});
+
+// SPRINT_UXR_S8_SWITCH/S8-02 (патч 1.18.1, факты прода lore-host 21.11):
+//   * петля — nginx v2 ходил в API по LORE_BACKEND_URL=https://lore.odal.seidrstudio.pro; после
+//     переключения lore.odal на v2 он проксировал сам в себя, /lore/version висел. Правило: v2 ходит
+//     в бэкенд напрямую по docker-сети (http://lore-backend:9100, сеть бэкенда unlimitedlore_default),
+//     а публичное имя LORE в LORE_BACKEND_URL/LORE_BACKEND_HOST — громкий отказ выкатки ДО up;
+//   * /mcp на v2 → 502: nginx шлёт на lore-mcp:9200, а контейнера lore-mcp на проде не было — релиз
+//     его не вёз (preprod-pin-sha.sh не метил, SERVICES не знал). Теперь едет тем же :sha8, что прошёл
+//     препрод, порядок up: бэкенд → healthy → lore-mcp → v1 → v2, проба /mcp через оба имени: 401/405.
+describe('S8-02: эталоны compose lore-host — v2 к бэкенду напрямую, lore-mcp рядом', () => {
+  const BE = 'docker/lore-host/docker-compose.yml';
+  const NEXT = 'docker/lore-host/docker-compose.next.yml';
+
+  it('v2: LORE_BACKEND_URL=http://lore-backend:9100, Host lore-backend, никакого публичного имени LORE', () => {
+    expect(has(NEXT), `${NEXT} нет`).toBe(true);
+    const v2 = code(job(NEXT, 'lore-app-next'));
+    expect(v2).toMatch(/^ {6}LORE_BACKEND_URL: http:\/\/lore-backend:9100$/m);
+    expect(v2).toMatch(/^ {6}LORE_BACKEND_HOST: lore-backend$/m);
+    expect(v2).not.toMatch(/LORE_BACKEND_(URL|HOST):.*lore\.odal\.seidrstudio\.pro/);
+    expect(v2).toMatch(/^ {6}- "4402:80"$/m);
+  });
+
+  it('v2 подключён к внешней сети бэкенда unlimitedlore_default (иначе lore-backend/lore-mcp не резолвятся)', () => {
+    const f = code(read(NEXT));
+    expect(f).toMatch(/^networks:\n {2}lore-be:\n {4}name: unlimitedlore_default\n {4}external: true$/m);
+    expect(code(job(NEXT, 'lore-app-next'))).toMatch(/^ {4}networks: \[default, lore-be\]$/m);
+  });
+
+  it('lore-mcp: образ :<sha8> как у остальных, бэкенд по сети, порта наружу нет, секреты только переменными', () => {
+    const m = code(job(BE, 'lore-mcp'));
+    expect(m, 'сервиса lore-mcp в эталоне нет').not.toBe('');
+    expect(m).toMatch(/^ {4}image: unlimitedlore-lore-mcp:[A-Za-z0-9._-]+$/m);
+    expect(m).toMatch(/^ {6}- LORE_BACKEND_URL=http:\/\/lore-backend:9100$/m);
+    expect(m).not.toMatch(/^ {4}ports:/m);
+    expect(m).toMatch(/condition: service_healthy/);
+    // Значений секретов в эталоне нет: всё, что похоже на секрет, — только ${…} с пустым дефолтом.
+    for (const l of m.split('\n').filter((x) => /SECRET|PASSWORD|TOKEN/.test(x))) {
+      expect(l).toMatch(/=\$\{[A-Z_]+:-\}$/);
+    }
+  });
+
+  it('preprod-pin-sha.sh метит :sha8 и lore-mcp — иначе релиз его не найдёт', () => {
+    expect(read('.github/scripts/preprod-pin-sha.sh')).toMatch(/for svc in lore-backend lore-app lore-app-next lore-mcp; do/);
+  });
+
+  it('lore-host-deploy.sh: lore-mcp в SERVICES, живёт в каталоге бэкенда', () => {
+    const s = code(read('.github/scripts/lore-host-deploy.sh'));
+    expect(s).toMatch(/^SERVICES="lore-backend lore-mcp lore-app lore-app-next"$/m);
+    expect(s).toMatch(/lore-mcp\) echo MCP/);
+  });
+});
+
+describe.skipIf(!bashBin)('S8-02: lore-host-deploy.sh — сторож петли, порядок up, проба /mcp', { timeout: SPAWN_TIMEOUT }, () => {
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+  const S = '.github/scripts/lore-host-deploy.sh';
+  const cfg = (url: string, host: string) => [
+    'name: lore-app-next',
+    'services:',
+    '  lore-app-next:',
+    '    environment:',
+    `      LORE_BACKEND_HOST: ${host}`,
+    `      LORE_BACKEND_URL: ${url}`,
+    '      LORE_PUBLIC_URL: https://new.lore.odal.seidrstudio.pro',
+    '    image: unlimitedlore-lore-app-next:abcdef12',
+    '    networks:',
+    '      lore-be: null',
+    'networks:',
+    '  lore-be:',
+    '    name: unlimitedlore_default',
+    '    external: true',
+    '',
+  ].join('\n');
+  const GOOD = cfg('http://lore-backend:9100', 'lore-backend');
+
+  /** step на копии скрипта; R — заглушка ssh: compose config → $CFG_FILE, health → healthy. */
+  function stepRun(step: string, config: string | null, extra: Record<string, string> = {}) {
+    const d = mkdtempSync(join(tmpdir(), 'lore-s802-'));
+    writeFileSync(join(d, 'lore-host-deploy.sh'), read(S));
+    writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    const cf = join(d, 'cfg.yml');
+    if (config !== null) writeFileSync(cf, config);
+    writeFileSync(join(d, 'r.sh'), [
+      '#!/usr/bin/env bash',
+      'echo "$*" >> "$R_LOG"',
+      'case "$*" in',
+      '  *"compose config"*) [ -f "$CFG_FILE" ] || { echo "no such file" >&2; exit 1; }; cat "$CFG_FILE" ;;',
+      '  *"State.Health.Status"*) echo healthy ;;',
+      '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
+      '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
+      '  *"compose logs"*) echo "схема сверена: БД v71 = код v71" ;;',
+      'esac', '',
+    ].join('\n'));
+    chmodSync(join(d, 'r.sh'), 0o755);
+    const st = join(d, 'state.env');
+    writeFileSync(st, ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+      'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=71', 'UP_AT=2026-11-21T00:00:00Z', ''].join('\n'));
+    const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
+    const mlog = join(d, 'mcp.log'); writeFileSync(mlog, '');
+    const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
+      DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), CFG_FILE: fwd(cf), TAG: 'v1.18.1',
+      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1', PROBE_DELAY: '0', MCP_CURL_LOG: fwd(mlog), ...extra,
+    });
+    const calls = readFileSync(rlog, 'utf8'); const mcp = readFileSync(mlog, 'utf8');
+    rmSync(d, { recursive: true, force: true });
+    return { ...r, calls, mcp };
+  }
+
+  it('up: бэкенд → healthy → lore-mcp → v1 → v2', () => {
+    const r = stepRun('up', GOOD);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    const at = (re: RegExp) => { const m = re.exec(r.calls); return m ? m.index : -1; };
+    const be = at(/docker compose up -d lore-backend$/m);
+    const health = at(/State\.Health\.Status/);
+    const mcp = at(/docker compose up -d (--no-deps )?lore-mcp$/m);
+    const v1 = at(/docker compose up -d lore-app$/m);
+    const v2 = at(/lore-app-next && docker compose up -d$/m);
+    expect([be, health, mcp, v1, v2].every((x) => x >= 0), r.calls).toBe(true);
+    expect(be).toBeLessThan(health);
+    expect(health).toBeLessThan(mcp);
+    expect(mcp).toBeLessThan(v1);
+    expect(v1).toBeLessThan(v2);
+  });
+
+  it.each([
+    ['https://lore.odal.seidrstudio.pro', 'lore.odal.seidrstudio.pro'],
+    ['https://new.lore.odal.seidrstudio.pro', 'lore-backend'],
+    ['http://lore.odal.seidrstudio.pro:443/', 'lore-backend'],
+    ['http://lore-backend:9100', 'lore.odal.seidrstudio.pro'],
+    ['http://lore-backend:9100', 'new.lore.odal.seidrstudio.pro'],
+  ])('up: LORE_BACKEND_URL=%s, HOST=%s — петля, громкий отказ ДО любого compose up', (url, host) => {
+    const r = stepRun('up', cfg(url, host));
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::.*петл/);
+    expect(r.calls).not.toMatch(/compose up/);
+  });
+
+  it('up: v2 не в сети бэкенда unlimitedlore_default — отказ до up', () => {
+    const r = stepRun('up', GOOD.replace('name: unlimitedlore_default', 'name: lore-app-next_default'));
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::.*unlimitedlore_default/);
+    expect(r.calls).not.toMatch(/compose up/);
+  });
+
+  it('up: compose config v2 не прочитан — «не смогли проверить», а не «петли нет»', () => {
+    const r = stepRun('up', null);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::.*не прочитан/);
+    expect(r.calls).not.toMatch(/compose up/);
+  });
+
+  it('state: тот же сторож — петля видна уже на шаге чтения', () => {
+    expect(stepRun('state', GOOD).code).toBe(0);
+    const r = stepRun('state', cfg('https://lore.odal.seidrstudio.pro', 'lore.odal.seidrstudio.pro'));
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::.*петл/);
+  });
+
+  it('probe: /mcp через оба имени отвечает 401 — зелёная', () => {
+    const r = stepRun('probe', GOOD);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.mcp).toContain('https://lore.odal.seidrstudio.pro/mcp');
+    expect(r.mcp).toContain('https://new.lore.odal.seidrstudio.pro/mcp');
+  });
+
+  it('probe: 405 на /mcp — тоже вход, зелёная', () => {
+    expect(stepRun('probe', GOOD, { STUB_MCP_CODES: 'lore.odal.seidrstudio.pro=405' }).code).toBe(0);
+  });
+
+  it.each(['502', '404', '000', '200'])('probe: /mcp на v2 отвечает %s — красная, с подсказкой отката', (c) => {
+    const r = stepRun('probe', GOOD, { STUB_MCP_CODES: `new.lore.odal.seidrstudio.pro=${c}` });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::.*\/mcp/);
+    expect(r.out).toMatch(/ОТКАТ на lore-host/);
   });
 });
