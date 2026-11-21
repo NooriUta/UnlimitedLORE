@@ -3968,9 +3968,20 @@
       "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
       "labelPl" : "Komponenty"
+    }, {
+      "key" : "is_extensible",
+      "label" : "Расширяемый",
+      "labelKey" : "pp.field.isExtensible",
+      "kind" : "bool",
+      "group" : "props",
+      "definition" : "Признак статьи справочника: в справочник можно добавлять новые значения (продукт — статья справочника product).",
+      "description" : "Признак справочника в целом, а не продукта: одинаков у всех продуктов; правится в админке справочников.",
+      "layer" : "optional",
+      "labelEn" : "Extensible",
+      "labelPl" : "Rozszerzalny"
     } ],
     "props" : [ {
-      "fields" : [ "label_en", "icon", "sort_order", "is_active", "parent", "projects", "components" ]
+      "fields" : [ "label_en", "icon", "sort_order", "is_active", "parent", "projects", "components", "is_extensible" ]
     } ],
     "relations" : [ {
       "key" : "parent",
@@ -4129,9 +4140,18 @@
       "layer" : "stable",
       "labelEn" : "Avatar",
       "labelPl" : "Awatar"
+    }, {
+      "key" : "name_source",
+      "label" : "Источник имени",
+      "labelKey" : "pp.field.nameSource",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Откуда имя человека: manual — задано в профиле человеком или админом, сверка с Keycloak его не трогает; kc — «Имя Фамилия» из Keycloak, обновляется сверкой; пусто — подписан логином.",
+      "labelEn" : "Name source",
+      "labelPl" : "Źródło imienia"
     } ],
     "props" : [ {
-      "fields" : [ "projects", "login", "avatar" ]
+      "fields" : [ "projects", "login", "avatar", "name_source" ]
     } ],
     "linkTabs" : [ {
       "key" : "tasks",
@@ -5678,10 +5698,98 @@
       "labelKey" : "pp.field.code",
       "kind" : "text",
       "group" : "head",
-      "definition" : "Код проекта — короткий ключ, по которому на запись ссылаются из других записей и в тексте ([[код]]).",
+      "definition" : "Внутренний ключ проекта «владелец/репозиторий» (slug): по нему проект знают MCP (git_project), роли и мост Forgejo. Людям показывается короткий код и краткое название.",
       "layer" : "stable",
       "labelEn" : "Code",
       "labelPl" : "Kod"
+    }, {
+      "key" : "short_code",
+      "label" : "Короткий код",
+      "labelKey" : "pp.field.shortCode",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Короткий код проекта для показа и ссылок (LORE, AIDA, DW). Внутренний ключ slug при этом не меняется.",
+      "description" : "Задаётся владелицей; при переносе 1.18 — из раздела project_names файла решений.",
+      "layer" : "stable",
+      "labelEn" : "Short code",
+      "labelPl" : "Krótki kod"
+    }, {
+      "key" : "short_title",
+      "label" : "Краткое название",
+      "labelKey" : "pp.field.shortTitle",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Краткое название проекта по-русски — им проект подписан в шапке, крошках, чипах, списках и фильтре.",
+      "description" : "Перевод — в полях «Краткое название (en)» и «(pl)»; нет перевода — показывается русское.",
+      "layer" : "stable",
+      "labelEn" : "Short title",
+      "labelPl" : "Krótka nazwa"
+    }, {
+      "key" : "short_title_en",
+      "label" : "Краткое название (en)",
+      "labelKey" : "pp.field.shortTitleEn",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Краткое название проекта по-английски — для интерфейса на английском.",
+      "description" : "Пусто — интерфейс показывает русское краткое название.",
+      "layer" : "optional",
+      "labelEn" : "Short title (en)",
+      "labelPl" : "Krótka nazwa (en)"
+    }, {
+      "key" : "short_title_pl",
+      "label" : "Краткое название (pl)",
+      "labelKey" : "pp.field.shortTitlePl",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Краткое название проекта по-польски — для интерфейса на польском.",
+      "description" : "Пусто — интерфейс показывает русское краткое название.",
+      "layer" : "optional",
+      "labelEn" : "Short title (pl)",
+      "labelPl" : "Krótka nazwa (pl)"
+    }, {
+      "key" : "title_en",
+      "label" : "Полное название (en)",
+      "labelKey" : "pp.field.titleEn",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Полное название проекта по-английски.",
+      "description" : "Пусто — показывается русское полное название.",
+      "layer" : "optional",
+      "labelEn" : "Full title (en)",
+      "labelPl" : "Pełna nazwa (en)"
+    }, {
+      "key" : "title_pl",
+      "label" : "Полное название (pl)",
+      "labelKey" : "pp.field.titlePl",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Полное название проекта по-польски.",
+      "description" : "Пусто — показывается русское полное название.",
+      "layer" : "optional",
+      "labelEn" : "Full title (pl)",
+      "labelPl" : "Pełna nazwa (pl)"
+    }, {
+      "key" : "description_en",
+      "label" : "Описание (en)",
+      "labelKey" : "pp.field.descriptionEn",
+      "kind" : "md",
+      "group" : "props",
+      "definition" : "Описание проекта по-английски.",
+      "description" : "Пусто — показывается русское описание.",
+      "layer" : "optional",
+      "labelEn" : "Description (en)",
+      "labelPl" : "Opis (en)"
+    }, {
+      "key" : "description_pl",
+      "label" : "Описание (pl)",
+      "labelKey" : "pp.field.descriptionPl",
+      "kind" : "md",
+      "group" : "props",
+      "definition" : "Описание проекта по-польски.",
+      "description" : "Пусто — показывается русское описание.",
+      "layer" : "optional",
+      "labelEn" : "Description (pl)",
+      "labelPl" : "Opis (pl)"
     }, {
       "key" : "default_branch",
       "label" : "Основная ветка",
@@ -5702,9 +5810,42 @@
       "layer" : "stable",
       "labelEn" : "Private",
       "labelPl" : "Prywatny"
+    }, {
+      "key" : "hosts",
+      "label" : "Адреса репозиториев",
+      "labelKey" : "pp.field.hosts",
+      "kind" : "kv",
+      "group" : "props",
+      "definition" : "Где лежит код проекта: по строке на адрес — имя remote, роль (основной, зеркало) и адрес репозитория.",
+      "description" : "После перегруппировки 1.18 — адреса опоры и всех влитых проектов без повторов.",
+      "layer" : "stable",
+      "labelEn" : "Repository addresses",
+      "labelPl" : "Adresy repozytoriów"
+    }, {
+      "key" : "aliases",
+      "label" : "Прежние ключи",
+      "labelKey" : "pp.field.aliases",
+      "kind" : "list",
+      "group" : "props",
+      "multi" : true,
+      "definition" : "Прежние ключи проектов, слитых в этот при перегруппировке 1.18 (включая ключ опоры).",
+      "description" : "По прежнему ключу проект находится и после слияния: ссылки и параметры со старым slug не теряются.",
+      "layer" : "stable",
+      "labelEn" : "Former keys",
+      "labelPl" : "Dawne klucze"
+    } ],
+    "body" : [ {
+      "key" : "description",
+      "label" : "Описание",
+      "labelKey" : "pp.field.description",
+      "definition" : "Что это за проект: из чего состоит и для чего он.",
+      "description" : "Переводы — в полях «Описание (en)» и «(pl)».",
+      "layer" : "stable",
+      "labelEn" : "Description",
+      "labelPl" : "Opis"
     } ],
     "props" : [ {
-      "fields" : [ "default_branch", "is_private" ]
+      "fields" : [ "short_title", "short_title_en", "short_title_pl", "title_en", "title_pl", "description_en", "description_pl", "default_branch", "is_private", "hosts", "aliases" ]
     } ],
     "linkTabs" : [ {
       "key" : "people",
@@ -6784,6 +6925,11 @@
     }
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
+  "service_fields" : {
+    "dict_type" : "Вид справочника у статьи KnowDictEntry (у продукта — product): по нему статья относится к справочнику; служебное хранения, в паспорте не показывается.",
+    "mig_src_rid" : "Адрес записи в базе-источнике переноса 1.18: по нему перенос сверяет «до и после» и повторяется без дублей; служебное переноса, в паспорте не показывается.",
+    "regroup" : "Код группы перегруппировки проектов 1.18 (продукт верхнего уровня), в которую слит проект; служебное переноса, в паспорте не показывается."
+  },
   "passport" : {
     "actor" : [ {
       "key" : "content",
@@ -7139,6 +7285,9 @@
       "slot" : "own"
     } ],
     "project" : [ {
+      "key" : "content",
+      "slot" : "own"
+    }, {
       "key" : "sprints",
       "slot" : "own"
     }, {

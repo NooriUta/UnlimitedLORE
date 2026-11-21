@@ -112,7 +112,8 @@ public class LoreUserProfileResource extends LoreResourceBase {
         if (!userExists(sub)) return notFound(sub);
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
             // У записи до V92 логин живёт в display_name: фиксируем его в login ДО смены имени, иначе он потеряется.
-            "UPDATE KnowUser SET login = coalesce(login, display_name), display_name = :n WHERE kc_sub = :s", Map.of("n", name.strip(), "s", sub)))
+            // Пакет 1.18: name_source = 'manual' — имя задано в профиле, сверка с KC (KcUserNames) его не перетирает.
+            "UPDATE KnowUser SET login = coalesce(login, display_name), display_name = :n, name_source = 'manual' WHERE kc_sub = :s", Map.of("n", name.strip(), "s", sub)))
             .await().indefinitely();
         return noStore(Response.ok(profileOf(sub)));
     }

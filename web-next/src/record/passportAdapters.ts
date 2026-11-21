@@ -11,6 +11,7 @@ import type { SliceBody } from '../api/loreSlice';
 import { loreEdgesConfig } from './loreEdges';
 import { planStatusOf } from '../sprints/taskStatus';
 import { loreStatuses, sprintKitData, SPRINT_FACTS, type SprintSliceRow, type SprintTaskSliceRow } from './loreRecord';
+import { projectShortTitle } from '../project/projectTitle';
 
 /**
  * Типы с паспортом в v2 — ровно те, что отдаёт фасад
@@ -108,7 +109,7 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   // ходят по тем же записям, что видны в разделе, а не по одним верхним.
   if (type === 'feature') return (await slice<Row>('use_cases', { fields: 'uc_id,title', limit: '1000' })).rows.map(r => ({ id: str(r.uc_id), title: str(r.title) || str(r.uc_id) }));
   // Проект: перечень — тот же срез, что выбор проекта (git_projects); ключ — slug.
-  if (type === 'project') return (await slice<Row>('git_projects', { fields: 'slug,name', limit: '1000' })).rows.map(r => ({ id: str(r.slug), title: str(r.name) || str(r.slug) }));
+  if (type === 'project') return (await slice<Row>('git_projects', { fields: 'slug,name,short_title', limit: '1000' })).rows.map(r => ({ id: str(r.slug), title: projectShortTitle(r) || str(r.slug) }));
   // Продукт: перечень — срез products; ключ — код, подпись — label_ru.
   // MD-04: профиль клиента, роли продукта и ранбуки — те же срезы, что их разделы.
   if (type === 'actor') return (await slice<Row>('actors', { fields: 'actor_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.actor_id), title: str(r.name) || str(r.actor_id) }));

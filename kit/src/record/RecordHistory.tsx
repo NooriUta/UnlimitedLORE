@@ -101,7 +101,7 @@ function AuthorChip({ v, lang }: { v: KitHistoryVersion; lang: KitLang }) {
       <span className="sk-pill sk-pill--value sk-rec-history__author" data-kind={a.kind}>
         {kitT(lang, a.kind === 'agent' ? 'kit.record.history.agent' : 'kit.record.history.human')}
       </span>
-      <span className="sk-rec-history__name">{a.name}</span>
+      <span className="sk-rec-history__name" title={a.kind === 'agent' ? a.hint : undefined}>{a.name}</span>
       {a.kind === 'agent' && a.owner && (
         <span className="sk-rec-history__owner">{kitT(lang, 'kit.record.history.owner', { who: a.owner })}</span>
       )}

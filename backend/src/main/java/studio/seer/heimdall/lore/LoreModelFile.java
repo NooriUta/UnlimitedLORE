@@ -64,7 +64,10 @@ final class LoreModelFile {
         // MDL-02: историчные связи — история в самом ребре, одно описание на модель (LoreEdgeHistory).
         LoreEdgeHistory.EdgeHistory edgeHistory,
         // SUPERTAGS-SPIKE: свободные поля на ребре (TAGGED_WITH → тег), без истории (LoreEdgeFreeFields).
-        Map<String, LoreEdgeFreeFields.Spec> edgeFreeFields) {}
+        Map<String, LoreEdgeFreeFields.Spec> edgeFreeFields,
+        // Служебные свойства записей (перенос 1.18, хранение справочника): имя → зачем. Видны MCP и админке, в общий
+        // паспорт не идут — ни полем, ни блоком «Не описано в модели» (решение владелицы: служебные поля — без вопросов).
+        Map<String, String> serviceFields) {}
 
     /**
      * Модель сервера. Ошибка чтения или проверки — ExceptionInInitializerError у первого читателя
@@ -164,7 +167,8 @@ final class LoreModelFile {
             ro(time), ro(display), ro(computed), strMap(doc.get("edge_fields"), "edge_fields"),
             set(doc, "legacy_role_strings"), ro(passport), List.copyOf(nav), strMap(doc.get("audience"), "audience"), ro(create),
             LoreModelWorkflow.parse(doc.get("workflow")), ro(LoreModelSeries.parse(doc.get("series"))),
-            LoreEdgeHistory.parse(doc.get("edge_history")), LoreEdgeFreeFields.parse(doc.get("edge_free_fields")));
+            LoreEdgeHistory.parse(doc.get("edge_history")), LoreEdgeFreeFields.parse(doc.get("edge_free_fields")),
+            doc.get("service_fields") == null ? Map.of() : strMap(doc.get("service_fields"), "service_fields"));
         check(c);
         return c;
     }
@@ -287,6 +291,7 @@ final class LoreModelFile {
         if (!c.edgeHistory().edges().isEmpty()) d.put("edge_history", LoreEdgeHistory.surface(c));
         if (!c.edgeFreeFields().isEmpty()) d.put("edge_free_fields", LoreEdgeFreeFields.surface(c, false));
         d.put("legacy_role_strings", sorted(c.legacyRoleStrings()));
+        if (!c.serviceFields().isEmpty()) d.put("service_fields", new TreeMap<>(c.serviceFields()));
         Map<String, Object> passport = new TreeMap<>();
         c.passport().forEach((k, v) -> passport.put(k, LoreModelCodec.encode(v)));
         d.put("passport", passport);

@@ -92,24 +92,27 @@ describe('S7A-02 · лента: дни, строки, время', () => {
     await mount(src());
     const row = firstRow('task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07');
     expect(row.dataset.type).toBe('task');
-    expect(row.querySelector('[data-kind-tag="ready"]')?.textContent).toMatch(/готово к выкатке/);
+    // K4-NEWS-ROW-COLUMNS: вид события — только значок, слово — в подсказке; UTC — в подсказке времени.
+    expect(row.querySelector('[data-kind-tag="ready"]')?.getAttribute('title')).toMatch(/готово к выкатке/);
     expect(row.querySelector('[data-kind-tag="ready"]')?.getAttribute('data-tone')).toBe('wrn');
     expect(within(row).getByTestId('news-time-local').textContent).toBe('17:42');
-    expect(within(row).getByTestId('news-time-utc').textContent).toMatch(/14:42 UTC/);
+    expect(within(row).getByTestId('news-time-local').getAttribute('title')).toMatch(/14:42 UTC/);
   });
 
   it('П18: у записи «только дата» время не рисуется и не выдумывается', async () => {
     await mount(src());
     const row = screen.getByTestId('news-row-release:v1.16.0|released|2026-11-07');
     expect(within(row).queryByTestId('news-time-local')).toBeNull();
-    expect(within(row).getByTestId('news-time-none').textContent).toMatch(/без времени/);
+    // K4-NEWS-ROW-COLUMNS: «без времени» — прочерк, слово — в имени и подсказке.
+    expect(within(row).getByTestId('news-time-none').textContent).toBe('—');
+    expect(within(row).getByTestId('news-time-none').getAttribute('aria-label')).toMatch(/без времени/);
   });
 
   it('местный день ≠ день машины: время UTC — с датой', async () => {
     await mount(src());
     fireEvent.click(dayBtn('2026-11-06'));
     const row = screen.getByTestId('news-row-sprint:SPRINT_AIDA_X|created|2026-11-06');
-    expect(within(row).getByTestId('news-time-utc').textContent).toMatch(/05\.11 22:30 UTC/);
+    expect(within(row).getByTestId('news-time-local').getAttribute('title')).toMatch(/05\.11 22:30 UTC/);
   });
 
   it('П17: «будущее» — пометка с подсказкой', async () => {
@@ -623,14 +626,17 @@ describe('S7A-12 · строка ленты: код — переход, без �
   // «в правой стороне новостей нет переходов у кодов; для спек код повторяется,
   // может излишне, хотя копировать приятно; переход статусов невыделенным
   // шрифтом написан — может значками сделать?»
-  it('код записи справа — ссылка на запись, рядом «скопировать»', async () => {
+  it('код записи — ссылка на запись; без префикса SPRINT_, полностью — в подсказке; копирует первая иконка', async () => {
     await mount(src());
     const row = firstRow('task:SPRINT_UXR_S7A_NEWS/S7A-02|ready|2026-11-07');
     const code = within(row).getByTestId('news-code');
     expect(code.tagName).toBe('A');
     expect(code.getAttribute('href')).toBeTruthy();
-    expect(code.textContent).toBe('SPRINT_UXR_S7A_NEWS/S7A-02');
-    expect(within(row).getByTestId('news-copy').getAttribute('aria-label')).toMatch(/SPRINT_UXR_S7A_NEWS\/S7A-02/);
+    expect(code.textContent).toBe('UXR_S7A_NEWS/S7A-02');
+    expect(code.getAttribute('title')).toBe('SPRINT_UXR_S7A_NEWS/S7A-02');
+    const copy = within(row).getByTestId('news-copy');
+    expect(copy.getAttribute('aria-label')).toMatch(/SPRINT_UXR_S7A_NEWS\/S7A-02/);
+    expect(copy.closest('[data-col]')?.getAttribute('data-col'), 'копирует иконка типа — первый столбец').toBe('type');
   });
 
   it('если заголовок и есть код — код второй раз не пишется, копирование остаётся', async () => {

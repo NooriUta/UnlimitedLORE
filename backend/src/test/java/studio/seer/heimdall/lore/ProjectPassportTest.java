@@ -189,6 +189,7 @@ class ProjectPassportTest {
         List<String> order = new java.util.ArrayList<>(TABS);
         order.add(2, "repositories");   // D-2026-MIG-REPOSITORY-ORGANIZATION: после компонентов, как в прототипе
         order.add("organizations");     // решение владелицы 19.11.2026: организации проекта — последней вкладкой
+        order.add(0, "content");        // 1.18 (владелица 21.11.2026): описание проекта — тело паспорта, первым
         assertEquals(order, keys, "Спринты · Компоненты · ADR · Релизы · Люди и агенты (53а), затем прямые связи (11.11)");
         for (Map<String, Object> m : sections) {
             Object g = m.get("group");
