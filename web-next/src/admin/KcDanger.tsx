@@ -28,8 +28,28 @@ import {
   postRealmRole, postRevokeOld, postRotate,
   type RealmAction, type RealmApply, type RealmRoleOption, type Rotation, type RotationPlan, type SecretState,
 } from './kc';
+import type { InfisicalOutcome } from './harnessAccounts';
 
-const reasonOf = (e: unknown): string =>
+/**
+ * 1.18.2 (OH-MCP-HOSTED-SWITCH): записан ли секрет в Infisical — после выпуска и смены секрета.
+ * Не настроено — предупреждение «покажут один раз»; сбой — громко (dng, alert) причиной сервера.
+ */
+export function InfisicalNote({ outcome }: { outcome: InfisicalOutcome | null }) {
+  const t = useAppT();
+  if (!outcome) {
+    return <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-hacc-infisical">{t('admin.hacc.infisicalUnknown')}</p>;
+  }
+  const failed = !outcome.written && outcome.state === 'failed';
+  const key = outcome.written ? 'admin.hacc.infisicalWritten' : failed ? 'admin.hacc.infisicalFailed' : 'admin.hacc.infisicalSkipped';
+  return (
+    <p className="adm-note" data-tone={outcome.written ? undefined : failed ? 'dng' : 'wrn'} role={failed ? 'alert' : 'status'}
+      data-testid="adm-hacc-infisical" data-state={outcome.state}>
+      {t(key, { reason: outcome.reason ?? '—' })}
+    </p>
+  );
+}
+
+const reasonOf =(e: unknown): string =>
   e instanceof LoreHttpError ? (e.detail || e.message) : e instanceof Error ? e.message : String(e);
 
 /** Отказ на чтении/диффе — разными словами: нет права · KC не подключён · запрос не принят · сбой. */
@@ -306,6 +326,10 @@ export function RotateDanger({ clientId, fetchImpl, onClose }: RotateDangerProps
           <p className="adm-note" role="status" data-testid="adm-rotate-env">
             {t('admin.kc.rotate.env')}
           </p>
+          {done.secretKey && (
+            <p className="adm-note" role="status" data-testid="adm-rotate-key">{t('admin.hacc.keyHint', { key: done.secretKey })}</p>
+          )}
+          <InfisicalNote outcome={done.infisical} />
           <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-rotate-done-noundo">{t('admin.kc.rotate.doneNoUndo')}</p>
           {done.oldSecretKept === true && <OldSecretSwitch clientId={clientId} fetchImpl={fetchImpl} />}
           {done.oldSecretKept === false && (
