@@ -267,21 +267,26 @@ public class LoreKcResource extends LoreResourceBase {
                 "SELECT kc_sub, login, display_name, name_source FROM KnowUser", Map.of());
             KcUserNames.Plan plan = KcUserNames.planFromKc(call(t), graphUsers);
             boolean dry = Boolean.TRUE.equals(dryRun);
+            // Запись, не нашедшая строку (человека удалили между чтением и записью), — промах, а не «обновлено»
+            // (WriteCount, сторож UpdateAffectedRowsGuardTest).
+            java.util.List<String> missed = new java.util.ArrayList<>();
             if (!dry)
                 for (KcUserNames.Update u : plan.updates())
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
-                        "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
-                        Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
-                        .await().indefinitely();
+                    if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
+                            "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
+                            Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
+                            .await().indefinitely()))
+                        missed.add(u.kcSub());
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("dry_run", dry);
             out.put("skipped", false);
-            out.putAll(plan.summary());
+            Map<String, Object> summary = dry ? plan.summary() : plan.summaryAfterWrite(missed);
+            out.putAll(summary);
             if (!dry) {
                 namesSyncedAt = now;
-                namesLastSummary = plan.summary();
+                namesLastSummary = summary;
                 out.put("synced_at", now.toString());
             }
             return noStore(Response.ok(out));

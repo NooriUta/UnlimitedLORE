@@ -58,6 +58,18 @@ final class KcUserNames {
             m.put("not_in_kc_subs", notInKc);
             return m;
         }
+
+        /**
+         * Итог после записи: {@code missed} — у кого запись не нашла строку (WriteCount = 0: человека удалили между
+         * чтением и записью). Они не «обновлены» — названы отдельно (сторож UpdateAffectedRowsGuardTest).
+         */
+        Map<String, Object> summaryAfterWrite(List<String> missedSubs) {
+            Map<String, Object> m = summary();
+            m.put("updated", updates.size() - missedSubs.size());
+            m.put("missed", missedSubs.size());
+            m.put("missed_subs", List.copyOf(missedSubs));
+            return m;
+        }
     }
 
     /** Имя задано человеком: явная отметка или (до отметок) имя, отличное от логина. */

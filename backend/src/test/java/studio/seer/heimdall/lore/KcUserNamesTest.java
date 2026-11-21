@@ -79,6 +79,23 @@ class KcUserNamesTest {
         assertEquals(8, p.checked());
     }
 
+    /**
+     * CI #1709 (UpdateAffectedRowsGuardTest): запись имени, не нашедшая строку (человека удалили между чтением и записью),
+     * — не «обновлено». Итог после записи считает задетые строки и называет промахи.
+     */
+    @Test
+    void промахЗаписиНеСчитаетсяОбновлением() {
+        KcUserNames.Plan p = KcUserNames.plan(
+            List.of(row("s1", "ivan", "ivan", null), row("s2", "olga", "olga", null)),
+            new JsonArray().add(kc("s1", "ivan", "Иван", "Иванов")).add(kc("s2", "olga", "Ольга", "Смирнова")));
+        Map<String, Object> s = p.summaryAfterWrite(List.of("s2"));
+        assertEquals(1, s.get("updated"));
+        assertEquals(1, s.get("missed"));
+        assertEquals(List.of("s2"), s.get("missed_subs"));
+        assertEquals(0, p.summaryAfterWrite(List.of()).get("missed"));
+        assertEquals(2, p.summaryAfterWrite(List.of()).get("updated"));
+    }
+
     @Test
     void kcНедоступен_отказ_аНеЛогины() {
         KcOps.KcCall down = (m, path, json) -> new KcOps.Resp(503, "");
