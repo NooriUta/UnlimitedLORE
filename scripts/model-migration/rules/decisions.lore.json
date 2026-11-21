@@ -1123,7 +1123,7 @@
     ]
   },
   "projects": {
-    "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at).",
+    "_about": "Перегруппировка проектов и репозитории (шаг «П» мастера переноса): ответы владелицы 19.11.2026, в т. ч. FORGEJO_MCP — компонент репозитория AIDA/forgejo-mcp. Перенесено из ui-decisions.json копии ryzenai один в один (map, repos, at). 21.11.2026: NooriUta/UnlimitedLORE → OMILORE записан явно (проект — у двух продуктов, OMILORE и HARPA; без правки группа бралась первой из двух).",
     "map": {
       "NooriUta/BRAGI": "SEIDR_BACKOFFICE",
       "AIDA/freyja": "SEIDR_BACKOFFICE",
@@ -1131,6 +1131,7 @@
       "AIDA/studio": "SEIDR_BACKOFFICE",
       "AIDA/core-services": "SEIDR_BACKOFFICE",
       "AIDA/forgejo-mcp": "OMILORE",
+      "NooriUta/UnlimitedLORE": "OMILORE",
       "AIDA/miniLoremobilekit": "SEIDR_BACKOFFICE",
       "AIDA/qwen-code-fork": "MINILORE",
       "NooriUta/AIDA-TestPlayGround": "AIDA",
@@ -1184,10 +1185,10 @@
         "short_title": { "ru": "MIDGARD", "en": "MIDGARD", "pl": "MIDGARD" },
         "title": { "ru": "MIDGARD", "en": "MIDGARD", "pl": "MIDGARD" },
         "description": { "ru": "Хаб GLADSHEIM и сервисы BOKVIT, TEIKN", "en": "GLADSHEIM hub and the BOKVIT and TEIKN services", "pl": "Hub GLADSHEIM oraz usługi BOKVIT i TEIKN" } },
-      { "code": "CORE", "slugs": ["AIDA/core-services"], "group": null,
+      { "code": "CORE", "slugs": ["AIDA/core-services", "NooriUta/seidr-site", "NooriUta/BRAGI", "AIDA/studio", "AIDA/freyja", "AIDA/miniLoremobilekit"], "group": "SEIDR_BACKOFFICE",
         "short_title": { "ru": "core-services", "en": "core-services", "pl": "core-services" },
         "title": { "ru": "Общие сервисы студии", "en": "Shared studio services", "pl": "Wspólne usługi studia" },
-        "description": { "ru": "Keycloak, Infisical, kkRepo, CoreDNS, раннеры CI, ryzenai; ведёт CICDGitHub", "en": "Keycloak, Infisical, kkRepo, CoreDNS, CI runners, ryzenai; maintained by CICDGitHub", "pl": "Keycloak, Infisical, kkRepo, CoreDNS, runnery CI, ryzenai; prowadzi CICDGitHub" } },
+        "description": { "ru": "Keycloak, Infisical, kkRepo, CoreDNS, раннеры CI, ryzenai; ведёт CICDGitHub. Сюда же влиты seidr-site, BRAGI, studio, freyja, miniLoremobilekit", "en": "Keycloak, Infisical, kkRepo, CoreDNS, CI runners, ryzenai; maintained by CICDGitHub. Also merged here: seidr-site, BRAGI, studio, freyja, miniLoremobilekit", "pl": "Keycloak, Infisical, kkRepo, CoreDNS, runnery CI, ryzenai; prowadzi CICDGitHub. Włączono tu też: seidr-site, BRAGI, studio, freyja, miniLoremobilekit" } },
       { "code": "MINILORE", "slugs": ["AIDA/miniLORE", "AIDA/miniLore_serverside", "AIDA/qwen-code-fork"], "group": "MINILORE",
         "short_title": { "ru": "miniLORE", "en": "miniLORE", "pl": "miniLORE" },
         "title": { "ru": "miniLORE — мобильный монитор сессий", "en": "miniLORE — mobile session monitor", "pl": "miniLORE — mobilny monitor sesji" },

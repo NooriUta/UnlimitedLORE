@@ -37,12 +37,51 @@ test('проект находится по ключу и по прежним к�
   assert.equal(p.updates.find(u => u.code === 'ODIN').set.description, null, 'нет описания — null, не выдумано');
 });
 
-test('расхождения названы: проект слит в чужую группу, проекта нет в приёмнике', () => {
+test('строка CORE — это группа SEIDR_BACKOFFICE (опора core-services, влиты seidr-site, BRAGI, studio, freyja, mobilekit)', () => {
   const p = planProjectNames(projectNamesOf(decisions), projects);
+  assert.equal(p.updates.find(u => u.code === 'CORE')?.slug, 'NooriUta/BRAGI', 'по любому прежнему ключу группы, какая бы опора ни вышла');
+  const core = projectNamesOf(decisions).find(x => x.code === 'CORE');
+  assert.equal(core.group, 'SEIDR_BACKOFFICE');
+  assert.deepEqual([...core.slugs].sort(), ['AIDA/core-services', 'AIDA/freyja', 'AIDA/miniLoremobilekit', 'AIDA/studio', 'NooriUta/BRAGI', 'NooriUta/seidr-site']);
+});
+
+test('расхождения названы: проект слит в чужую группу, проекта нет в приёмнике', () => {
+  const p = planProjectNames(projectNamesOf(decisions), [...projects, { slug: 'NooriUta/volva', aliases: ['NooriUta/volva'], regroup: 'HARPA' }]);
   const kinds = Object.fromEntries(p.problems.map(x => [x.code, x.kind]));
-  assert.equal(kinds.CORE, 'merged_into_other_group', 'core-services слит в SEIDR_BACKOFFICE — названия CORE легли бы на чужую группу');
+  assert.equal(kinds.VOLVA, 'merged_into_other_group', 'в чужую группу не пишется');
   assert.equal(kinds.DW, 'not_found');
-  assert.ok(!p.updates.some(u => u.code === 'CORE'), 'на чужую группу не пишется');
+  assert.ok(!p.updates.some(u => u.code === 'VOLVA'));
+});
+
+test('все 10 строк таблицы сходятся с группами перегруппировки 1.18', async () => {
+  const groups = [
+    ['AIDA/Datawanderers-ServerandLore', 'DW', ['AIDA/Datawanderers-ServerandLore', 'AIDA/Datawanderers-Unity']],
+    ['AIDA/MIDGARD', 'MIDGARD', ['AIDA/MIDGARD', 'AIDA/GLADSHEIM', 'AIDA/TEIKN', 'AIDA/BOKVIT']],
+    ['AIDA/core-services', 'SEIDR_BACKOFFICE', ['AIDA/core-services', 'NooriUta/seidr-site', 'NooriUta/BRAGI', 'AIDA/studio', 'AIDA/freyja', 'AIDA/miniLoremobilekit']],
+    ['AIDA/miniLORE', 'MINILORE', ['AIDA/miniLORE', 'AIDA/miniLore_serverside', 'AIDA/qwen-code-fork']],
+    ['AIDA/udwe-mig-gen', 'MIGGEN', ['AIDA/udwe-mig-gen', 'AIDA/udwe-engine', 'AIDA/udwe-rollout', 'ivanovalex32/UDWE']],
+    ['NooriUta/AIDA', 'AIDA', ['NooriUta/AIDA', 'NooriUta/AIDA-TestPlayGround']],
+    ['NooriUta/ODIN', 'ODIN', ['NooriUta/ODIN']],
+    ['NooriUta/UnlimitedLORE', 'OMILORE', ['NooriUta/UnlimitedLORE', 'AIDA/forgejo-mcp']],
+    ['NooriUta/aida-documentation', null, null],
+    ['NooriUta/volva', 'VOLVA', ['NooriUta/volva']],
+  ].map(([slug, regroup, aliases]) => ({ slug, regroup, aliases }));
+  const state = new Map(groups.map(p => [p.slug, { ...p }]));
+  const db = {
+    dstCommand: async (sql, p = {}) => { if (sql.startsWith('UPDATE KnowGitProject')) { const { slug, ...set } = p; Object.assign(state.get(slug), set); } return []; },
+    dstQuery: async () => [...state.values()],
+  };
+  const r = await applyProjectNames(db, projectNamesOf(decisions), groups, { log: () => {} });
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(r.unfilled, []);
+  assert.equal(r.applied, 10);
+  assert.equal(r.ok, true);
+  assert.equal(state.get('AIDA/core-services').short_code, 'CORE');
+  assert.equal(state.get('AIDA/core-services').name, 'Общие сервисы студии');
+});
+
+test('перегруппировка: UnlimitedLORE — в OMILORE явно, а не «первым из двух» (продукты OMILORE и HARPA)', () => {
+  assert.equal(decisions.projects.map['NooriUta/UnlimitedLORE'], 'OMILORE');
 });
 
 test('ключи двух строк ведут в один проект — двусмысленность, не тихая перезапись', () => {
@@ -63,9 +102,9 @@ test('применение: поля в приёмнике и сверка «п�
     dstQuery: async () => [...state.values()],
   };
   const r = await applyProjectNames(db, projectNamesOf(decisions), projects, { log: () => {} });
-  assert.equal(r.applied, 3);
+  assert.equal(r.applied, 4);
   assert.deepEqual(r.unfilled, []);
   assert.equal(state.get('AIDA/MIDGARD').short_title, 'MIDGARD');
-  assert.equal(r.ok, false, 'CORE и строки без проекта — сверка не сходится, пока владелица не решит');
+  assert.equal(r.ok, false, 'строки без проекта в приёмнике (DW …) — сверка не сходится');
   assert.ok(r.problems.length >= 1);
 });
