@@ -251,6 +251,7 @@
   "kit.record.tab.links": "Links",
   "kit.record.tab.graph": "Graph",
   "kit.record.tab.journal": "Journal",
+  "kit.record.tab.charts": "Charts",
   "kit.record.updated": "updated {at}",
   "kit.record.loaded.now": "loaded just now",
   "kit.record.loaded.min": "loaded {n} min ago",

@@ -6,7 +6,7 @@
 // свойства во весь экран — рейка и свёртка самого RecordView (сессия kit, #914).
 // Свой чанк: MartProse и граф тянут MD-элементы, список за них не платит.
 import { RecordNotFound } from '../api/liveRecord';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   RecordCrumbs, RecordPager, RecordReader, RecordScreen, pushUrlState,
   useKitLang, useLoadState, useRecordTab,
@@ -471,13 +471,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
           {...(typeof contract?.values.date === 'string' ? { when: contract.values.date } : {})}
         />
       )}
-      {/* Графики 19.11.2026 (пачка 1): веха — прогноз (№7) и поток (№2); спринт — поток (№2) и время цикла (№1). Вместе с Velocity и Burnup по спринтам вехи (#1632): на телефоне свёрнуты кнопкой, на компьютере открыты. */}
-      {type === 'milestone' && <MilestoneCharts milestoneId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
-      {type === 'sprint' && <SprintCharts sprintId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
-      {/* Пачка 2: проект — возраст открытых задач (№4) и ритм релизов (№8); гейт — доля пройденных (№16). */}
-      {type === 'project' && <ProjectCharts slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
-      {type === 'quality_gate' && <GateCharts qgId={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
     <RecordReader record={view.record} ctx={ctx} tab={tab} onTab={setTab} facts={view.facts} mdEditor={mdEditor}
+      // Графики (19.11, пачки 1–2): веха — прогноз и поток (+ Velocity и Burnup по спринтам вехи, #1632); спринт —
+      // поток и время цикла; проект — возраст открытых задач и ритм релизов; гейт — доля пройденных. Владелица
+      // 21.11: «графики встают над header а не отдельной вкладкой аналитика — перенеси во вкладку аналитика» →
+      // слот kit `charts`: вкладка «Графики» первой в режиме «Аналитика».
+      charts={passportCharts(type, view.record.id, fetchImpl)}
       // Порядок и места разделов — данными модели (S4-29): «задачи первыми,
       // потом контент, зависимости в конце контента, редкое под Ещё».
       sections={order.order}
@@ -511,4 +510,14 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       {...(rightColumn === 'auto' ? {} : { defaultPropsOpen: rightColumn === 'open' })} />
     </RecordScreen>
   );
+}
+
+/** Графики паспорта по типу записи — вкладкой «Графики» в «Аналитике» (владелица 21.11.2026); у прочих типов нет. */
+export function passportCharts(type: string, id: string, fetchImpl?: typeof fetch): ReactNode | undefined {
+  const f = fetchImpl ? { fetchImpl } : {};
+  if (type === 'milestone') return <MilestoneCharts milestoneId={id} {...f} />;
+  if (type === 'sprint') return <SprintCharts sprintId={id} {...f} />;
+  if (type === 'project') return <ProjectCharts slug={id} {...f} />;
+  if (type === 'quality_gate') return <GateCharts qgId={id} {...f} />;
+  return undefined;
 }
