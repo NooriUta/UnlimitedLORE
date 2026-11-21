@@ -174,6 +174,79 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 - **Не настроено.** Секрет показывается один раз, как раньше.
 - **Сбой записи.** Секрет всё равно показывается один раз, а ошибка выводится громко.
 
+## Подключить агента к MCP
+
+MCP-сервер LORE ставится вместе со стеком (сервис `lore-mcp`). Своего порта у него нет: агент ходит на `https://<хост>/mcp` через nginx веба — тот же адрес и порт, что у веба LORE (`LORE_PUBLIC_URL`). Проверка без входа — `https://<хост>/mcp/health`. После установки `install.sh` проверяет оба адреса: `/mcp/health` отвечает 200, `POST /mcp` без входа — 401 (или 405). 502 значит, что nginx не достал `lore-mcp`, 404 — что `/mcp` не проксируется.
+
+- **Вход выключен** (`LORE_AUTH_ENABLED=false`, по умолчанию). `/mcp` всё равно ждёт заголовок `Authorization: Bearer <что-нибудь>`, но бэкенд без входа токен не проверяет. Пускайте агентов только с этой машины или через свой прокси с авторизацией: MCP пишет в базу так же, как веб (см. «Безопасность»).
+- **Вход через Keycloak.** У каждого агента своя учётка `lore-mcp-<роль>[_<harness>]`, её заводит окно установщика (раздел «Keycloak» выше). Секрет учётки лежит под ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]`, например `LORE_MCP_CLIENT_SECRET_FULL` для Claude Code или `LORE_MCP_CLIENT_SECRET_FULL_OPENCODE`. Переменная `LORE_MCP_SECRET_VAR` называет ключ, из которого подключение берёт секрет; без неё берётся `LORE_MCP_CLIENT_SECRET`. Значение секрета держите в окружении машины агента или в Infisical, в файлы настроек его не вписывайте. Подагенту младшей роли — своя учётка и свой ключ.
+- **Без MCP.** Если образа `lore-mcp` нет (своего `LORE_MCP_IMAGE` нет, а в реестре выпуска его не оказалось), установка не падает. Она громко пишет «MCP не будет запущен», а проверка показывает строку «НЕТ lore-mcp». Выход — свой `LORE_MCP_IMAGE` или повтор с `--build`.
+
+### Claude Code (http + headersHelper)
+
+Токен client_credentials живёт минуты, поэтому его выдаёт помощник `mcp-server/scripts/lore-mcp-headers.mjs` из исходников LORE. Claude Code запускает его при подключении и после 401. В окружении Claude Code нужны `LORE_OIDC_ISSUER` (`https://<keycloak>/realms/<область>`), `LORE_MCP_CLIENT_ID` (`lore-mcp-full`), `LORE_MCP_SECRET_VAR` (`LORE_MCP_CLIENT_SECRET_FULL`) и сам ключ `LORE_MCP_CLIENT_SECRET_FULL`. По желанию — `LORE_MCP_PROFILE` (по умолчанию `full`), `LORE_HARNESS`, `LORE_MACHINE_ID`.
+
+```json
+{
+  "mcpServers": {
+    "aida-lore": {
+      "type": "http",
+      "url": "https://<хост>/mcp",
+      "headersHelper": "node <путь>/mcp-server/scripts/lore-mcp-headers.mjs"
+    }
+  }
+}
+```
+
+### OpenCode
+
+Удалённо (`remote`). OpenCode не умеет обновлять токен, поэтому он шлёт пару «клиент + секрет», а токен по ней берёт сам сервер MCP. Для этого у сервиса `lore-mcp` должен быть задан `LORE_OIDC_ISSUER` в `.env` установки, иначе вход парой отвечает 503. `"oauth": false` обязателен: без него OpenCode на 401 уходит искать OAuth и отправляет заголовки с секретом на чужие пути. Адрес — только `https://`, потому что секрет едет в каждом запросе.
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "aida-lore": {
+      "type": "remote",
+      "url": "https://<хост>/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "X-Lore-Client-Id": "lore-mcp-full_opencode",
+        "X-Lore-Client-Secret": "{env:LORE_MCP_CLIENT_SECRET_FULL_OPENCODE}",
+        "X-Lore-Mcp-Profile": "full",
+        "X-Lore-Harness": "opencode",
+        "X-Lore-Machine": "{env:LORE_MACHINE_ID}"
+      }
+    }
+  }
+}
+```
+
+Локально (`local`). MCP запускается на машине агента из исходников (`cd mcp-server && npm ci && npm run build`) и ходит в LORE через тот же nginx: `LORE_BACKEND_URL` — адрес веба, без `/mcp`. Токен процесс берёт сам и обновляет его.
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "aida-lore": {
+      "type": "local",
+      "command": ["node", "<путь>/mcp-server/dist/index.js"],
+      "enabled": true,
+      "environment": {
+        "LORE_BACKEND_URL": "https://<хост>",
+        "LORE_OIDC_ISSUER": "https://<keycloak>/realms/<область>",
+        "LORE_MCP_CLIENT_ID": "lore-mcp-full_opencode",
+        "LORE_MCP_CLIENT_SECRET": "{env:LORE_MCP_CLIENT_SECRET_FULL_OPENCODE}",
+        "LORE_HARNESS": "opencode"
+      }
+    }
+  }
+}
+```
+
+Файл настроек OpenCode — `opencode.json` в проекте или в `~/.config/opencode/`.
+
 ## Völva — встроенные графики
 
 По выбору. Völva ставится своей поставкой, установщик настраивает только связь: LORE подписывает встройку ключом ES256, Völva проверяет подпись.
