@@ -65,7 +65,7 @@ FRESH_DB="${LORE_FRESH_DB:-lore}"
 MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
 # Образ для запуска lore-migrate.mjs (когда исполняемого файла нет — он едет отдельным вложением релиза).
 MIGRATE_NODE_IMAGE="${MIGRATE_NODE_IMAGE:-node:26-alpine}"
-FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на нашем стенде
+FORGEJO_VERSION_DEFAULT="17.0.2"   # версия Forgejo, которую ставит пакет
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
 MINILORE=""                       # --minilore install|none: сервер miniLORE в этой установке (по умолчанию не ставится)

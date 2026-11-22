@@ -29,7 +29,11 @@ const ALLOWED: { path: string; match?: RegExp; why: string }[] = [
 // ── Пакет установки (решение владелицы 21.11.2026: «в пакете установки не должно быть наших настроек») ──────────
 // Не только домены: наши realm, машины и хосты, адреса LAN, наши org/repo. Комментарии тоже считаются — пакет
 // уезжает к чужим людям целиком, и README показывает окно установщика. Умолчания-примеры — только нейтральные.
-const INSTALL_OURS = /seidrstudio\.pro|\bodal\.|omilore|\blore-host\b|\bci-server\b|lorcetus|ryzenai|192\.168\.|\bAIDA\/|NooriUta|UnlimitedLORE/i;
+// 22.11.2026 правило расширено по разбору документации: сторож искал только наши ДОМЕНЫ и хосты, а в пакете
+// нашлись имена — клиент разработчика мобильного приложения и упоминания «нашего стенда и прода». Такое
+// вычитывается глазами ровно один раз, потом возвращается; поэтому перечень, а не вычитка.
+// Исключение одно и названо ниже: схема возврата приложения вшита в APK и меняется только вместе с ним.
+const INSTALL_OURS = /seidrstudio\.pro|\bodal\.|omilore|\blore-host\b|\bci-server\b|lorcetus|ryzenai|192\.168\.|\bAIDA\/|NooriUta|UnlimitedLORE|mobilepoc|на (нашем|нашей) (стенде|проде|инфраструктуре)/i;
 const INSTALL_ALLOWED: { file: RegExp; match: RegExp; why: string }[] = [
   {
     file: /(^|\/)README\.md$/, match: /seidrstudio\.pro|\bAIDA\/|NooriUta|UnlimitedLORE/i,
@@ -38,6 +42,14 @@ const INSTALL_ALLOWED: { file: RegExp; match: RegExp; why: string }[] = [
   {
     file: /(^|\/)install\.sh$/, match: /GHCR_OWNER="\$\{GHCR_OWNER:-nooriuta\}"/,
     why: 'реестр выпусков образов LORE (ghcr) по умолчанию для мажорной версии без --build; вынесено владелице на решение',
+  },
+  {
+    file: /./, match: /pro\.seidrstudio\.minilore/,
+    why: 'схема возврата мобильного приложения вшита в APK манифестом (appAuthRedirectScheme): её нельзя заменить на нейтральную, не пересобрав приложение — владелец заводит ИМЕННО её как redirect в своём Keycloak',
+  },
+  {
+    file: /(^|\/)install\.sh$/, match: /needle in "mobilepoc-app"/,
+    why: 'строка самопроверки, которая ЛОВИТ умолчание разработчика в плане установки: имя нужно ей как образец для поиска, второе имя она собирает на месте',
   },
 ];
 

@@ -163,7 +163,7 @@ services:
       lore-backend:
         condition: service_healthy
 
-  # MCP-сервер LORE для агентов (1.18.2, SELF-PROVISION-STANDALONE) — как на нашем проде: Streamable HTTP на 9200 в сети
+  # MCP-сервер LORE для агентов (1.18.2, SELF-PROVISION-STANDALONE): Streamable HTTP на 9200 в сети
   # compose, наружу только через nginx веба v2 — https://<хост>/mcp и /mcp/health. Своего порта нет.
   # Образ: свой реестр (LORE_MCP_IMAGE; мажор без --build — ghcr рядом с бэкендом и вебом) или сборка из mcp-server того
   # же тега. Секретов у сервиса нет: токен (Authorization: Bearer) или пару X-Lore-Client-Id/Secret присылает клиент;
@@ -191,7 +191,7 @@ services:
         condition: service_healthy
 
   # Forgejo — по выбору (MIG-04, владелица 20.11.2026: «установка Forgejo если нет нашей версии»). Профиль forgejo:
-  # без него сервис не стартует. Версия — та же, что на нашем стенде. База — sqlite в томе forgejo-data; SSH выключен
+  # без него сервис не стартует. База — sqlite в томе forgejo-data; SSH выключен
   # (клон по http). Администратора владелец заводит в первом окне Forgejo — установщик паролей Forgejo не знает.
   forgejo:
     profiles: ["forgejo"]
@@ -243,7 +243,7 @@ services:
   # решение D-2026-INSTALL-MINILORE-IN-PACKAGE («включаем miniLORE в пакет», владелица 22.11.2026).
   #
   # Состав, который везём в этой версии: ТОЛЬКО сервер. Установщик шлюза (Windows/Linux) и приложение APK выйдут
-  # следующей версией: у Mobilepoc труба сборки APK сейчас красная, а адрес обновлений трея снят с гвоздя лишь в
+  # следующей версией: труба сборки APK у разработчика сейчас красная, а адрес обновлений трея снят с гвоздя лишь в
   # невлитой ветке. Раздавать файл, который не собрала труба, нельзя — друг не сможет его воспроизвести.
   #
   # База — та же ArcadeDB, что у LORE. Две базы, minilore и minilore_archive, заводит УСТАНОВЩИК: сервер 0.4.19
@@ -264,7 +264,7 @@ services:
       # Вход — тот же Keycloak, что у LORE: отдельной области для miniLORE не заводим.
       - KC_ISSUER=${LORE_OIDC_ISSUER:-}
       - KC_AUDIENCE=${MINILORE_KC_AUDIENCE:-minilore-srv}
-      # Клиент мобильного приложения В KEYCLOAK ВЛАДЕЛЬЦА. Умолчание Mobilepoc — mobilepoc-app — это НАШ клиент,
+      # Клиент мобильного приложения В KEYCLOAK ВЛАДЕЛЬЦА. Умолчания нет намеренно: у разработчика клиент свой,
       # поэтому здесь его нет: без своего значения телефон владельца не войдёт, и лучше узнать это при установке.
       - MINILORE_APP_CLIENT_ID=${MINILORE_APP_CLIENT_ID:-}
       # Схема возврата вшита в APK манифестом (appAuthRedirectScheme) — менять её нельзя, её нужно ЗАВЕСТИ
