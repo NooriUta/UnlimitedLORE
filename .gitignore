@@ -43,4 +43,5 @@ web-next/e2e/stand/.auth/
 /build/lore-migrate*
 # пакет установки для вложений релиза и сборщики под него (release-installer-asset.sh)
 /build/asset/
+/build/src/
 /.installer-tools/
