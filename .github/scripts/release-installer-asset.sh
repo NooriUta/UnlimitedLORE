@@ -43,6 +43,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TAG="${TAG:-}"
 OUT="${OUT:-$ROOT/build}"
 WITH_EXE="${WITH_EXE:-false}"
+# Исходники LORE (нужны для --build-from-source) и образ сервера miniLORE (нужен для --minilore install)
+# едут ОТДЕЛЬНЫМИ вложениями: класть их в архив значит превратить лёгкий пакет в 300 МБ, а не класть вовсе —
+# обещать в README то, чего в релизе нет (разбор документации 22.11.2026).
+WITH_SOURCES="${WITH_SOURCES:-true}"
+WITH_MINILORE_IMAGE="${WITH_MINILORE_IMAGE:-false}"
 TOOLS="${INSTALLER_TOOLS_DIR:-$ROOT/.installer-tools}"
 SRC_DIR="$ROOT/deploy/install"
 CREATED_JSON="${CREATED_JSON:-/tmp/created.json}"
@@ -67,6 +72,7 @@ ARCHIVE="$STAGE_NAME.tar.gz"
 # Windows без лишних программ не распаковать, а права на install.sh в zip не выживают.
 WIN_ARCHIVE="$STAGE_NAME-windows.zip"
 EXE_ASSET="lore-migrate-linux-x64"
+SRC_ASSET="lore-src-$TAG.tar.gz"
 ASSET_DIR="$OUT/asset"
 
 warn() { echo "::warning::$*"; }
@@ -148,6 +154,39 @@ cmd_pack() {
     cp "$OUT/lore-migrate" "$ASSET_DIR/$EXE_ASSET" || die "не скопирован исполняемый файл"
   fi
 
+  # Исходники LORE — для install.sh --build-from-source. Без них у получателя остаётся только путь
+  # «готовые образы из реестра», а README обещает оба (разбор документации 22.11.2026: обещал и не прикладывал).
+  if [ "$WITH_SOURCES" = true ]; then
+    if node "$ROOT/scripts/model-migration/source-archive.mjs" --out "$OUT" --version "$TAG"; then
+      local src
+      src="$(ls "$OUT"/src/lore-*.tar.gz 2>/dev/null | head -1)"
+      if [ -n "$src" ] && [ -f "$src" ]; then
+        cp "$src" "$ASSET_DIR/$SRC_ASSET" || warn "исходники не скопированы в каталог вложений"
+      else
+        warn "исходники LORE не собрались — вложение $SRC_ASSET не поедет; установка из готовых образов остаётся"
+      fi
+    else
+      warn "source-archive.mjs не отработал — исходники к релизу $TAG не приложены"
+    fi
+  fi
+
+  # Образ сервера miniLORE — только по просьбе: ~150 МБ, и нужен лишь тем, кто ставит --minilore install.
+  # Из сети он не тянется: адресов наших реестров в пакете нет (сторож noBakedHosts), поэтому либо вложение,
+  # либо свой MINILORE_IMAGE у получателя.
+  if [ "$WITH_MINILORE_IMAGE" = true ]; then
+    if node "$ROOT/scripts/model-migration/minilore-image.mjs" --out "$OUT"; then
+      local img
+      img="$(ls "$OUT"/images/minilore-srv-*.tar 2>/dev/null | head -1)"
+      if [ -n "$img" ] && [ -f "$img" ]; then
+        cp "$img" "$ASSET_DIR/$(basename "$img")" || warn "образ miniLORE не скопирован в каталог вложений"
+      else
+        warn "образ miniLORE не собрался — вложение не поедет; установка с --minilore install у получателя не пройдёт"
+      fi
+    else
+      warn "minilore-image.mjs не отработал (нет MINILORE_SOURCE_IMAGE?) — образ к релизу $TAG не приложен"
+    fi
+  fi
+
   # Формат — тот же, что у выкладки в kkRepo (sha256sums() в publish-plan.mjs):
   # «хэш», два пробела, имя файла. Считаем в двоичном режиме (архив — не текст),
   # а метку режима `*` приводим ко второму пробелу: на Linux двоичного маркера
@@ -222,6 +261,12 @@ cmd_upload() {
   # и не рушим выпуск: под Linux пакет полон, а под Windows человек возьмёт tar.gz и распакует сам.
   [ -f "$ASSET_DIR/$WIN_ARCHIVE" ] && names+=("$WIN_ARCHIVE")
   [ "$WITH_EXE" = true ] && names+=("$EXE_ASSET")
+  # Исходники и образ — вложениями, если их положил шаг сборки. Нет файла — не беда: загрузка пропускает
+  # отсутствующее молча здесь и громко в upload_one, а релиз из-за необязательного файла не краснеет.
+  [ -f "$ASSET_DIR/$SRC_ASSET" ] && names+=("$SRC_ASSET")
+  local mimg
+  mimg="$(ls "$ASSET_DIR"/minilore-srv-*.tar 2>/dev/null | head -1)"
+  [ -n "$mimg" ] && names+=("$(basename "$mimg")")
   local bad=0 n
   for n in "${names[@]}"; do
     upload_one "$id" "$n" || bad=1

@@ -1257,6 +1257,16 @@ out=""; prev=""
 for a in "$@"; do [ "$prev" = "--out" ] && out="$a"; prev="$a"; done
 [ -n "$out" ] || exit 0
 mkdir -p "$out"
+# source-archive.mjs кладёт исходники в <out>/src — заглушка повторяет это. Иначе прогон по умолчанию
+# ругался бы «исходники не собрались» там, где настоящий скрипт их собирает (22.11.2026).
+case "$*" in
+  *source-archive.mjs*)
+    ver=""; prev=""
+    for a in "$@"; do [ "$prev" = "--version" ] && ver="$a"; prev="$a"; done
+    mkdir -p "$out/src"
+    printf 'src\\n' > "$out/src/lore-\${ver:-v0.0.0}.tar.gz"
+    exit 0 ;;
+esac
 printf 'bundle\\n' > "$out/lore-migrate.mjs"
 case "$*" in *--exe*) printf 'ELF\\n' > "$out/lore-migrate" ;; esac
 exit 0
@@ -1361,12 +1371,20 @@ exit 0
     expect(r.node).not.toMatch(/--exe/);
     expect(listTar(d)).not.toContain('lore-migrate');
     expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(false);
+<<<<<<< HEAD
     // Два архива — tar.gz и zip — плюс их подписи: zip считается в SHA256SUMS наравне, иначе проверка
     // подписи у человека на Windows не нашла бы его строку и выглядела бы как битое вложение.
     expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(2);
     expect(names(r.curl).sort()).toEqual(
       ['SHA256SUMS', 'lore-installer-v9.9.9-windows.zip', 'lore-installer-v9.9.9.tar.gz'].sort(),
     );
+=======
+    // Со списком вложений теперь едут и исходники (WITH_SOURCES по умолчанию true, 22.11.2026): две строки
+    // подписей — архив пакета и архив исходников; бинаря среди них нет, и это здесь проверяется.
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(2);
+    expect(names(r.curl).sort())
+      .toEqual(['SHA256SUMS', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz']);
+>>>>>>> origin/develop
     rmSync(d, { recursive: true, force: true });
   });
 
@@ -1502,5 +1520,37 @@ describe('зеркало SeidrStudio: мажорный тег, громкий BL
   it('отставшее зеркало не роняет уже опубликованный релиз', () => {
     expect(mirror()!.body.length > 0).toBe(true);
     expect(JSON.stringify(mirror())).toMatch(/continue-on-error/);
+  });
+});
+
+// ── Состав вложений релиза (22.11.2026, разбор документации) ─────────────────
+// Находка: README обещал «скачайте исходники / образ miniLORE со страницы выпуска», а релиз прикладывал
+// только лёгкий архив. То есть по документации друг не мог ни собрать образы у себя, ни поставить miniLORE.
+describe('релиз прикладывает то, что обещает README', () => {
+  const asset = () => steps(job(REL, 'publish')).find((s) => s.body.includes(ASSET_SH))!;
+  const sh = () => read(ASSET_SH);
+
+  it('исходники LORE — вложением по умолчанию (нужны для --build-from-source)', () => {
+    expect(asset().body).toMatch(/WITH_SOURCES: \$\{\{ inputs\.with_sources \|\| 'true' \}\}/);
+    expect(sh()).toMatch(/SRC_ASSET="lore-src-\$TAG\.tar\.gz"/);
+    expect(sh(), 'исходники собираются тем же скриптом, что и для kkRepo').toMatch(/source-archive\.mjs/);
+  });
+
+  it('образ miniLORE — только по просьбе: он ~150 МБ и нужен не каждому', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_minilore_image:');
+    expect(from, 'входа with_minilore_image нет').toBeGreaterThan(-1);
+    let to = lines.length;
+    for (let i = from + 1; i < lines.length; i++) if (/^ {0,6}\S/.test(lines[i])) { to = i; break; }
+    expect(lines.slice(from, to).join('\n')).toMatch(/^ {8}default: 'false'$/m);
+    expect(sh()).toMatch(/minilore-image\.mjs/);
+  });
+
+  it('необязательное вложение не роняет релиз: отсутствие — предупреждение, а не die', () => {
+    const body = sh();
+    const block = body.slice(body.indexOf('WITH_SOURCES" = true'), body.indexOf('Формат — тот же'));
+    expect(block, 'на несобравшихся исходниках — warn').toMatch(/warn "исходники/);
+    expect(block, 'на несобравшемся образе — warn').toMatch(/warn "образ miniLORE/);
+    expect(block).not.toMatch(/die "исходники/);
   });
 });
