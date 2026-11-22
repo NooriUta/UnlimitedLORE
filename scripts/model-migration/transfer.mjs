@@ -121,16 +121,25 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const statusCodes = {};
   for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
   const calc = {}; // T → [{ rid, res }]
+  // Старая база не знает типов, заведённых позже: SELECT из такого типа ArcadeDB отвечает 500 «Type with name
+  // 'KnowCanvas' was not found», и перенос падал невнятно — прогон установщика 1.18.2 на бэкапе прода 01.11.2026
+  // (ryzenai 22.11.2026): 15 типов карты из 69 в источнике отсутствуют. Нет типа в источнике = нет записей:
+  // в приёмнике он заводится из модели пустым, а имена названы в отчёте (absent_in_source), чтобы «пусто»
+  // не выглядело потерей.
+  const srcTypeNames = new Set((await db.src('SELECT name FROM schema:types')).map(x => x.name));
+  const absentInSource = [];
   // MDL-08: «было» по легаси-полям — по исходным записям, независимо от исполнителя карты (сверка с остатком на шаге 2)
   const legacyBefore = {};
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
+    if (!srcTypeNames.has(T)) { absentInSource.push(T); continue; }
     for await (const rec of db.scan(T)) countLegacyBefore(T, rec, legacyBefore), calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], deferEmpty: true }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};
   for (const B of BASES) {
     const H = B + 'Hist'; let last = '#-1:-1'; orphans[H] = 0;
+    if (!srcTypeNames.has(H)) continue;
     for (;;) {
       const rows = await db.src(`SELECT @rid AS r, in('${EDGE}').@rid AS p FROM ${H} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
       if (!rows.length) break;
@@ -140,7 +149,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   }
   report.stages.read = Object.fromEntries(Object.entries(calc).map(([T, a]) => [T, a.length]));
   report.stages.read.versions_without_record = orphans;
+  report.stages.read.absent_in_source = absentInSource;
   log('1 чтение:', JSON.stringify(report.stages.read));
+  if (absentInSource.length) log('1 нет в источнике (в приёмнике заведутся пустыми):', absentInSource.join(', '));
 
   // ── 2. Сведение ───────────────────────────────────────────────────────────────────────────────────
   const merge = { to_version_set: 0, to_version_kept_existing: 0, no_current_version: 0, phase_title_from_status: 0, phase_title_already_set: 0 };
