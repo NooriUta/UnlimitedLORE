@@ -421,13 +421,13 @@ docker compose exec minilore-srv wget -qO- http://127.0.0.1:8080/config   # на
 Keycloak. `kcIssuer: null` значит, что вход LORE не настроен: сервер работает, но телефон войти не сможет.
 
 
-### Шлюз miniLORE — выпуск link-v0.3.80
+### Шлюз miniLORE — выпуск link-v0.3.81
 
 **Что это.** Программа на вашей машине (не в этом стеке), которая показывает телефону живые сессии агентов —
 Claude Code, Qwen, OpenCode, Kimi — и позволяет им отвечать, передавать картинки и файлы и закрывать их с телефона. Сервер miniLORE из этого
 пакета без шлюза работает, но показывать ему будет нечего: сессии видит именно шлюз.
 
-**Честный статус — прочитайте до установки.** Это настоящий выпуск: тег `link-v0.3.80`, байты собраны трубой, а
+**Честный статус — прочитайте до установки.** Это настоящий выпуск: тег `link-v0.3.81`, байты собраны трубой, а
 не руками на чьей-то машине. Но одно сказать обязаны: **на Linux он живьём не проверялся** — проверен на
 Windows. Файлы под Linux собраны той же трубой из того же кода, однако запуска на Linux пока никто не видел.
 Нужна версия, обкатанная дольше, — возьмите предыдущий выпуск шлюза.
@@ -440,21 +440,21 @@ Windows. Файлы под Linux собраны той же трубой из т
 
 | файл | для чего | размер |
 |---|---|---|
-| `miniLORE-link-setup-0.3.80.exe` | Windows, обычный установщик | 21,9 МБ |
-| `minilore-link_0.3.80_amd64.deb` | Debian и Ubuntu | 46,4 МБ |
-| `minilore-link-linux-0.3.80.tar.gz` | другие Linux; нужен системный Node 22 и новее | 3,6 МБ |
+| `miniLORE-link-setup-0.3.81.exe` | Windows, обычный установщик | 21,9 МБ |
+| `minilore-link_0.3.81_amd64.deb` | Debian и Ubuntu | 46,4 МБ |
+| `minilore-link-linux-0.3.81.tar.gz` | другие Linux; нужен системный Node 22 и новее | 3,6 МБ |
 
 **Как поставить.**
 
 ```bash
 # Windows (тихая установка)
-miniLORE-link-setup-0.3.80.exe /S
+miniLORE-link-setup-0.3.81.exe /S
 
 # Debian/Ubuntu
-sudo dpkg -i minilore-link_0.3.80_amd64.deb
+sudo dpkg -i minilore-link_0.3.81_amd64.deb
 
 # другой Linux
-tar -xzf minilore-link-linux-0.3.80.tar.gz && cd minilore-link-0.3.80 && ./install.sh
+tar -xzf minilore-link-linux-0.3.81.tar.gz && cd minilore-link-0.3.81 && ./install.sh
 ```
 
 **Обязательная настройка.** Шлюзу нужен файл `~/.minilore/config.toml`: адрес вашего сервера miniLORE, код этой
