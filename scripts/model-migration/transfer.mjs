@@ -77,7 +77,13 @@ export function notNullMissing(calc, schema) {
 export function asRead(v, type) {
   if (type !== 'DATETIME' || typeof v !== 'string') return v;
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v + ' 00:00:00.000';
-  return v.replace('T', ' ').replace(/Z$/, '');
+  const s = v.replace('T', ' ').replace(/Z$/, '');
+  // DATETIME ArcadeDB — миллисекунды: секунды она дополняет до .000, наносекунды Instant.toString() отбрасывает
+  // до трёх знаков. Старая база несёт все формы сразу (бэкап прода 01.11.2026: 19, 20, 23, 24, 27 и 30 знаков),
+  // и сверка «было = стало» сравнивала строки — равные моменты объявлялись расхождением (ryzenai 22.11.2026).
+  const m = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2})(:\d{2})?(?:\.(\d+))?$/.exec(s);
+  if (!m) return s;
+  return m[1] + (m[2] || ':00') + '.' + ((m[3] || '') + '000').slice(0, 3);
 }
 /** Поля, в которых запись приёмника разошлась с расчётом: имя, что в базе, что ждали (значения до 120 символов). */
 export function fieldDiff(got, want) {
