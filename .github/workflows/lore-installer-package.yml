@@ -1,0 +1,103 @@
+# Пакет установки LORE в Packages Forgejo — ручной запуск.
+#
+# Слово владелицы 22.11.2026: «просто в packages seidr studio выложить и пока всё». Повод: у выпусков 1.18.0 и
+# 1.18.1 вложений не было вовсе (шаг вложений появился только 22.11), и скачать установку было негде. Ждать
+# следующего тега не нужно: здесь пакет собирается из указанной ветки и кладётся в общий реестр пакетов, где у
+# него постоянный адрес, не привязанный к выпуску.
+#
+# Почему именно Packages, а не вложение выпуска: вложение живёт при выпуске и появляется только с тегом, а пакет
+# в реестре можно положить в любой момент и перезаписать новой версией, не трогая выпуски.
+#
+# Токен — тот же автоматический токен прогона, которым труба выпуска грузит вложения. Прав на запись пакетов нет
+# — шаг говорит это вслух и падает: «не смогли выложить» не должно выглядеть как «выложено».
+name: LORE installer → Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'версия пакета в реестре (напр. 1.19.0 или 2026-11-22-<sha8>); пусто — дата и коммит'
+        required: false
+        default: ''
+        type: string
+      with_sources:
+        description: 'true — приложить архив исходников LORE (для сборки образов у себя, ~15 МБ)'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['false', 'true']
+
+concurrency:
+  group: lore-installer-package
+  cancel-in-progress: false
+
+# Записи пакетов прогон по умолчанию не имеет — просим явно. Остальное только на чтение.
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Собрать пакет и выложить в Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Версия пакета
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          V="${INPUT_VERSION:-}"
+          if [ -z "$V" ]; then V="$(date -u +%Y-%m-%d)-$(git rev-parse --short=8 HEAD)"; fi
+          # Имя версии в реестре: без пробелов и косых — иначе адрес пакета не собрать.
+          case "$V" in *[!A-Za-z0-9._-]*) echo "::error::версия «$V» содержит недопустимые знаки — только буквы, цифры, точка, дефис, подчёркивание"; exit 1 ;; esac
+          echo "PKG_VERSION=$V" >> "$GITHUB_ENV"
+          echo "версия пакета в реестре: $V"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Собрать пакет (тот же сценарий, что у выпуска)
+        env:
+          TAG: v${{ env.PKG_VERSION }}
+          WITH_SOURCES: ${{ inputs.with_sources }}
+          OUT: ${{ github.workspace }}/build
+        run: |
+          bash .github/scripts/release-installer-asset.sh build
+          bash .github/scripts/release-installer-asset.sh pack
+          ls -l "$OUT/asset"
+
+      # Выкладка в общий реестр пакетов: PUT по файлу. Один и тот же файл можно перезалить, подняв версию;
+      # перезапись существующей версии реестр запрещает — поэтому 409 объясняется словами, а не кодом.
+      # Ключ: сначала личный (секрет PACKAGES_TOKEN, право «запись пакетов»), иначе автоматический токен прогона.
+      # Такой порядок потому, что права автоматического токена на запись пакетов зависят от настроек сервера, а
+      # личный ключ владелицы работает наверняка. Если нет ни одного — громкий отказ, а не тихий пропуск.
+      - name: Выложить в Packages
+        env:
+          TOKEN: ${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+          OUT: ${{ github.workspace }}/build
+        run: |
+          set -u
+          [ -n "${TOKEN:-}" ] || { echo "::error::BLOCKED: нет токена прогона — пакет не выложен. Зачем: без записи в реестр ссылки на установку не будет. Как разблокировать: положить в секрет PACKAGES_TOKEN личный ключ с правом «запись пакетов» (Настройки → Приложения → Создать токен, область write:package) — это один шаг и работает наверняка"; exit 1; }
+          API="${GITHUB_SERVER_URL:-https://git.seidrstudio.pro}/api/packages/${GITHUB_REPOSITORY%%/*}/generic/lore-installer/${PKG_VERSION}"
+          bad=0
+          for f in "$OUT"/asset/*; do
+            n="$(basename "$f")"
+            code="$(curl -sS -o /tmp/pkg-up.txt -w '%{http_code}' -X PUT \
+                      -H "Authorization: token $TOKEN" --upload-file "$f" "$API/$n" || echo 000)"
+            case "$code" in
+              201|204) echo "выложено: $n ($(stat -c%s "$f") байт)" ;;
+              409) echo "::warning::$n: версия $PKG_VERSION в реестре уже есть — реестр не даёт перезаписывать. Поднимите версию или удалите пакет в интерфейсе"; bad=1 ;;
+              *)   echo "::error::$n: реестр ответил $code — $(head -c 300 /tmp/pkg-up.txt)"; bad=1 ;;
+            esac
+          done
+          [ "$bad" = 0 ] || { echo "::error::BLOCKED: пакет выложен не полностью — ссылку давать нельзя"; exit 1; }
+          echo "## Пакет установки в реестре" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          for f in "$OUT"/asset/*; do
+            n="$(basename "$f")"
+            echo "- [$n]($API/$n)" >> "$GITHUB_STEP_SUMMARY"
+          done
