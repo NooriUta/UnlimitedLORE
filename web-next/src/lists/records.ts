@@ -412,7 +412,10 @@ export function agentRecord(row: Row): KitRecord {
   return {
     // AO-AGENT-HUMAN-NAME: заголовок — «имя · профиль» (машины у среза нет), учётка — полем и в поиске.
     id, kind: 'agent', title: agentLabel({ name: str(row.name), harness: str(row.harness), clientId: str(row.client_id) }) || id, status: '',
-    fields: { clientId: str(row.client_id), agentRole: str(row.agent_role), harness: str(row.harness), owner: str(row.owner), project: list(row.projects) },
+    // Владелец — ИМЯ человека, опознаватель Keycloak остаётся запасным. Находка владелицы 22.11.2026: в колонке
+    // стояли одни uuid, и в списке нельзя было узнать даже себя. Данные были целы — срез отдавал только kc_sub
+    // (сторож agentOwnerName.test.ts).
+    fields: { clientId: str(row.client_id), agentRole: str(row.agent_role), harness: str(row.harness), owner: str(row.owner_name) || str(row.owner), project: list(row.projects) },
     ...(str(row.client_id) ? { search: str(row.client_id) } : {}),
   };
 }
