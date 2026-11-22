@@ -69,7 +69,11 @@ FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на наш�
 MINILORE=""                       # --minilore install|none: сервер miniLORE в этой установке (по умолчанию не ставится)
 MINILORE_CLIENT_ID_ARG=""         # --minilore-client-id: клиент приложения miniLORE в Keycloak владельца (обязателен при install)
 MINILORE_OWNER_ARG=""             # --minilore-owner: имя владельца, чьи сессии показывает монитор (обязателен при install)
-MINILORE_IMAGE_DEFAULT="git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
+# Образ сервера miniLORE — ЛОКАЛЬНОЕ имя, без реестра. Адрес нашего реестра в пакете держать нельзя: пакет едет
+# чужим людям, и сторож noBakedHosts это ловит (поймал меня же 22.11.2026). Сам образ кладётся в пакет архивом
+# images/minilore-srv-<версия>.tar, как у forgejo-mcp; свой образ задаётся переменной MINILORE_IMAGE.
+MINILORE_IMAGE_DEFAULT="minilore-srv:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
+MINILORE_ARCHIVE_REL="images/minilore-srv-0.4.19.tar"
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
 FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
 FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-bbe9f59c.tar.gz"
@@ -355,7 +359,7 @@ write_env() {
       minilore_env | sed 's/^/[dry-run]   /'
       case "$MINILORE" in
         install)
-          say "[dry-run] поднять сервер miniLORE $MINILORE_IMAGE_DEFAULT; базы minilore и minilore_archive он заводит сам в вашей ArcadeDB, порт наружу не публикуется"
+          say "[dry-run] поднять сервер miniLORE $MINILORE_IMAGE_DEFAULT (образ из images/ пакета или свой MINILORE_IMAGE); базы minilore и minilore_archive заводит установщик, порт наружу не публикуется"
           say "[dry-run] вписать свой MINILORE_APP_CLIENT_ID и MINILORE_OWNER: умолчания разработчика — чужая учётка и чужое имя, они не подставляются"
           say "[dry-run] шлюз (установщик) и приложение APK в этой версии НЕ входят — следующей версией" ;;
       esac
@@ -478,6 +482,35 @@ images() {
   need_images arcadedb
   if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
   if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
+  if has_profile minilore || [ "$MINILORE" = install ]; then minilore_image; fi
+}
+
+# Образ сервера miniLORE. Порядок, как у forgejo-mcp, но без сборки из исходников: исходник сервера не наш.
+#   1) MINILORE_IMAGE — свой готовый образ, перекрывает всё (его и тянем из своего реестра);
+#   2) архив пакета images/minilore-srv-<версия>.tar — docker load при совпадении sha256;
+#   3) образ уже лежит на машине (например, вы его сами собрали или притянули) — берём как есть;
+#   4) ничего нет — отказ с перечнем выходов. Молча ничего не подставляется и в наш реестр установка не ходит:
+#      адреса нашего реестра в пакете нет (сторож noBakedHosts).
+minilore_image() {
+  local img a
+  img="${MINILORE_IMAGE:-$(env_get MINILORE_IMAGE "$DIR/.env")}"
+  if [ -n "$img" ] && [ "$img" != "$MINILORE_IMAGE_DEFAULT" ]; then
+    say "miniLORE: готовый образ $img"; run compose pull minilore-srv; return 0
+  fi
+  a="${MINILORE_ARCHIVE:-$SCRIPT_DIR/$MINILORE_ARCHIVE_REL}"
+  if [ -f "$a" ]; then
+    pkg_sha_ok "$a" "образ miniLORE"
+    say "sha256 архива miniLORE сходится"
+    run docker load -i "$a"
+    if [ "$DRY" != 1 ]; then
+      docker image inspect "$MINILORE_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $MINILORE_IMAGE_DEFAULT"
+    fi
+    return 0
+  fi
+  if [ "$DRY" != 1 ] && docker image inspect "$MINILORE_IMAGE_DEFAULT" >/dev/null 2>&1; then
+    say "miniLORE: образ $MINILORE_IMAGE_DEFAULT уже на машине"; return 0
+  fi
+  die "образа сервера miniLORE нет: ни архива $MINILORE_ARCHIVE_REL в пакете, ни своего MINILORE_IMAGE, ни образа $MINILORE_IMAGE_DEFAULT на машине. Задайте MINILORE_IMAGE=<ваш образ>, положите каталог images/ из пакета рядом с install.sh или ставьте без miniLORE (--minilore none)"
 }
 
 # Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»; 21.11.2026: «исходник кладём
@@ -596,6 +629,28 @@ wait_db() {
     dcurl -X POST -H 'Content-Type: application/json' -d "{\"command\":\"create database $db\"}" \
       "http://arcadedb:2480/api/v1/server" | grep -q '"ok"' || die "база $db не создана"
   fi
+  minilore_dbs
+}
+
+# Базы miniLORE заводит УСТАНОВЩИК, а не их сервер (находка прогона на чужой машине 22.11.2026).
+# Сервер 0.4.19 сразу катит свои миграции и падает, если базы нет:
+#   миграция schema/001-transcript.sql не применилась: ArcadeDB ответила 404 {"error":"Database not found"}
+# — и уходит в бесконечный перезапуск. В README пакета было написано, что он заводит базы сам; это оказалось
+# неверно, строку поправили. Создание идемпотентно: база уже есть — пропуск. Когда их сервер научится заводить
+# базы сам, этот шаг просто перестанет находить работу.
+minilore_dbs() {
+  has_profile minilore || return 0
+  local have db
+  have="$(dcurl "http://arcadedb:2480/api/v1/databases" || true)"
+  for db in "$(env_get MINILORE_ARCADE_DATABASE "$DIR/.env")" "$(env_get MINILORE_ARCHIVE_DATABASE "$DIR/.env")"; do
+    [ -n "$db" ] || continue
+    case "$have" in
+      *"\"$db\""*) say "база miniLORE $db уже есть"; continue ;;
+    esac
+    say "создание базы miniLORE $db"
+    dcurl -X POST -H 'Content-Type: application/json' -d "{\"command\":\"create database $db\"}" \
+      "http://arcadedb:2480/api/v1/server" | grep -q '"ok"' || die "база miniLORE $db не создана"
+  done
 }
 
 wait_backend() {
@@ -927,11 +982,16 @@ selftest() {
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=$' || fail "none: профили Forgejo не сняты: $out"; ok
 
   # miniLORE (D-2026-INSTALL-MINILORE-IN-PACKAGE): свой выбор, не зависящий от Forgejo.
+  # Образ сервера едет архивом в images/ — как у forgejo-mcp. Поддельный архив с подписью: проверки ниже про
+  # выбор и настройки, а не про образ, но без образа установка теперь честно отказывает (и это проверено отдельно).
+  mkdir -p "$t/pkg/images"; printf 'образ-miniLORE' > "$t/pkg/images/m0.tar"
+  ( cd "$t/pkg/images" && sha256sum m0.tar > m0.tar.sha256 )
+  export MINILORE_ARCHIVE="$t/pkg/images/m0.tar"
   expect_rc 2 --dry-run --dir "$t/inst" --minilore maybe
   printf '%s' "$out" | grep -q -- '--minilore' || fail "--minilore: неизвестное значение без причины: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id their-app --minilore-owner their-owner
   printf '%s' "$out" | grep -q 'minilore' || fail "--minilore install: miniLORE не назван в плане: $out"; ok
-  printf '%s' "$out" | grep -q 'git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
+  printf '%s' "$out" | grep -q 'minilore-srv:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
   # Умолчания разработчика (их клиент и их владелец) в чужую установку не подставляются.
   printf '%s' "$out" | grep -q 'mobilepoc-app' && fail "в план попал ЧУЖОЙ клиент mobilepoc-app"; ok
   printf '%s' "$out" | grep -q 'omiloreadmin' && fail "в план попал ЧУЖОЙ владелец omiloreadmin"; ok
@@ -948,6 +1008,26 @@ selftest() {
   printf '%s' "$out" | grep -q 'MINILORE_OWNER=someone' || fail "miniLORE: владелец не доехал до .env: $out"; ok
   MINILORE_APP_CLIENT_ID=env-app MINILORE_OWNER=env-owner expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
   printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID=env-app' || fail "miniLORE: клиент из окружения не взят: $out"; ok
+  # Образ сервера miniLORE: адреса нашего реестра в пакете быть не должно (пакет едет чужим людям — сторож
+  # noBakedHosts поймал это у меня 22.11.2026). Образ едет архивом в images/, как у forgejo-mcp; подпись сверяется.
+  for f in install.sh .env.example docker-compose.install.yml README.md; do
+    grep -q 'git\.seidrstudio\.pro' "$SCRIPT_DIR/$f" && fail "$f: в пакете снова наш реестр — он чужим людям не доступен"; ok
+  done
+  mkdir -p "$t/pkg/images"; printf 'образ-miniLORE' > "$t/pkg/images/m.tar"
+  ( cd "$t/pkg/images" && sha256sum m.tar > m.tar.sha256 )
+  MINILORE_ARCHIVE="$t/pkg/images/m.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q "docker load -i $t/pkg/images/m.tar" || fail "архив miniLORE есть — в плане нет docker load: $out"; ok
+  printf 'подмена' > "$t/pkg/images/m.tar"
+  MINILORE_ARCHIVE="$t/pkg/images/m.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый архив miniLORE взят молча: $out"; ok
+  rm -f "$t/pkg/images/m.tar.sha256"
+  MINILORE_ARCHIVE="$t/pkg/images/m.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q 'sha256' || fail "архив miniLORE без подписи взят молча: $out"; ok
+  MINILORE_ARCHIVE="$t/pkg/нет.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q 'MINILORE_IMAGE' || fail "образа нет — не названы выходы: $out"; ok
+  # Базы miniLORE заводит установщик: их сервер 0.4.19 падает с «Database not found» и уходит в перезапуск.
+  grep -q 'minilore_dbs' "$0" || fail "нет шага создания баз miniLORE"; ok
+  grep -q 'create database \$db' "$0" || fail "базы miniLORE создаются не командой create database"; ok
   expect_rc 2 --dry-run --dir "$t/inst" --minilore none --minilore-client-id x
   printf '%s' "$out" | grep -q -- '--minilore install' || fail "ключи miniLORE без установки: причина не названа: $out"; ok
   # Отказ ArcadeDB называет ПРИЧИНУ, а не только «не ответила»: в журнале базы «Authentication failed» значит,

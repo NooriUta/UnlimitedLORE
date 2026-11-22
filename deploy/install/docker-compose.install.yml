@@ -251,7 +251,7 @@ services:
   # установки, снаружи — через прокси владельца, если он его заводит.
   minilore-srv:
     profiles: ["minilore"]
-    image: ${MINILORE_IMAGE:-git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19}
+    image: ${MINILORE_IMAGE:-minilore-srv:0.4.19}
     restart: unless-stopped
     # Просто «после ArcadeDB», без ожидания здоровья: у службы arcadedb в этом пакете healthcheck не объявлен,
     # и `condition: service_healthy` роняет весь запуск словами «container … has no healthcheck configured»

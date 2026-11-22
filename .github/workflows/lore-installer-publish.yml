@@ -32,6 +32,12 @@ on:
         default: 'include'
         type: choice
         options: ['include', 'skip']
+      minilore:
+        description: 'include — положить образ сервера miniLORE архивом в images/ (в пакете имя без реестра); skip — без него'
+        required: true
+        default: 'include'
+        type: choice
+        options: ['include', 'skip']
       source_archive:
         description: 'include — положить исходники LORE архивом src/lore-<версия>.tar.gz (собственная сборка); skip — без него'
         required: true
@@ -87,6 +93,16 @@ jobs:
         env:
           FORGEJO_MCP_CLONE_TOKEN: ${{ secrets.LORE_FJ_MCP_CLONE_TOKEN }}
         run: node scripts/model-migration/forgejo-mcp-image.mjs --out build
+
+      # Образ сервера miniLORE — тем же способом, архивом docker save в build/images/. Адрес реестра живёт ЗДЕСЬ,
+      # в трубе, а не в пакете: пакет едет чужим людям, нашего реестра у них нет (сторож noBakedHosts запрещает
+      # такие адреса в deploy/install/**). В пакете образ зовётся minilore-srv:<версия>, install.sh грузит архив
+      # docker load при совпадении sha256. Адреса нет — BLOCKED громко, а не пакет без miniLORE втихую.
+      - name: Образ сервера miniLORE → архив images/
+        if: inputs.minilore == 'include'
+        env:
+          MINILORE_SOURCE_IMAGE: ${{ vars.MINILORE_SOURCE_IMAGE || 'git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19' }}
+        run: node scripts/model-migration/minilore-image.mjs --out build
 
       # Исходники LORE архивом в build/src/ (слово владелицы 20.11.2026: «так же там же архивом наш проект для собственной
       # сборки если что»). git archive этого коммита, без .env*/*.secret/*.key (.gitattributes export-ignore + сверка
