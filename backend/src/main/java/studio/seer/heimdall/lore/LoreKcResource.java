@@ -266,36 +266,49 @@ public class LoreKcResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         }
         try {
-            String t = adminToken();
-            java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
-                "SELECT kc_sub, login, display_name, name_source FROM KnowUser", Map.of());
-            KcUserNames.Plan plan = KcUserNames.planFromKc(call(t), graphUsers);
-            boolean dry = Boolean.TRUE.equals(dryRun);
-            // Запись, не нашедшая строку (человека удалили между чтением и записью), — промах, а не «обновлено»
-            // (WriteCount, сторож UpdateAffectedRowsGuardTest).
-            java.util.List<String> missed = new java.util.ArrayList<>();
-            if (!dry)
-                for (KcUserNames.Update u : plan.updates())
-                    if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
-                            "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
-                            Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
-                            .await().indefinitely()))
-                        missed.add(u.kcSub());
+            Map<String, Object> summary = runNamesSync(Boolean.TRUE.equals(dryRun));
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
-            out.put("dry_run", dry);
+            out.put("dry_run", Boolean.TRUE.equals(dryRun));
             out.put("skipped", false);
-            Map<String, Object> summary = dry ? plan.summary() : plan.summaryAfterWrite(missed);
             out.putAll(summary);
-            if (!dry) {
-                namesSyncedAt = now;
-                namesLastSummary = summary;
-                out.put("synced_at", now.toString());
-            }
+            if (!Boolean.TRUE.equals(dryRun)) out.put("synced_at", String.valueOf(namesSyncedAt));
             return noStore(Response.ok(out));
         } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
         catch (Exception e) { return upstream(e); }
+    }
+
+    /** Настроен ли мост — для фоновой сверки {@link LoreKcNamesPoller}: ей отвечать 503 некому. */
+    boolean namesSyncConfigured() { return configured(); }
+
+    /**
+     * Сверка имён: план по KC и запись. Одна точка входа для кнопки и для фона
+     * (владелица 22.11.2026: «сервер должен обновлять сам фоново с kc данные, а не по кнопке»),
+     * чтобы правила не разъехались по двум копиям. Роль здесь не проверяется — это делает вызывающий:
+     * у эндпоинта {@code requireAdmin}, у фона человека нет вовсе.
+     */
+    Map<String, Object> runNamesSync(boolean dryRun) throws Exception {
+        String t = adminToken();
+        java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
+            "SELECT kc_sub, login, display_name, name_source FROM KnowUser", Map.of());
+        KcUserNames.Plan plan = KcUserNames.planFromKc(call(t), graphUsers);
+        // Запись, не нашедшая строку (человека удалили между чтением и записью), — промах, а не «обновлено»
+        // (WriteCount, сторож UpdateAffectedRowsGuardTest).
+        java.util.List<String> missed = new java.util.ArrayList<>();
+        if (!dryRun)
+            for (KcUserNames.Update u : plan.updates())
+                if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
+                        "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
+                        Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
+                        .await().indefinitely()))
+                    missed.add(u.kcSub());
+        Map<String, Object> summary = dryRun ? plan.summary() : plan.summaryAfterWrite(missed);
+        if (!dryRun) {
+            namesSyncedAt = java.time.Instant.now();
+            namesLastSummary = summary;
+        }
+        return summary;
     }
 
     public record KcUserCreate(String username, String email) {}
