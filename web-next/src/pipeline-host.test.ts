@@ -1454,3 +1454,37 @@ describe('MD-05 · прогон «Дотянуть данные PR»', () => {
     expect(s).toMatch(/среда «\$ENVN» неизвестна/);
   });
 });
+
+// ── Зеркало SeidrStudio на мажорном релизе (22.11.2026) ──────────────────────
+// Слово владелицы: «я попросила всё, что едет, продублировать как зеркала и выносить при смене x.y релизов».
+// Смысл: друг, которому отдали пакет установки, должен иметь возможность посмотреть исходники того, что ставит.
+// Поэтому зеркало обновляется на vX.Y.0 и молчит на патчах — иначе оно пушит каждый патч и обходит правило.
+describe('зеркало SeidrStudio: мажорный тег, громкий BLOCKED без секрета', () => {
+  const relSteps = () => steps(job('.github/workflows/lore-release.yml', 'publish'));
+  const mirror = () => relSteps().find((s) => /Mirror main \+ tag to SeidrStudio/.test(s.name ?? s.body));
+
+  it('шаг есть и стоит в джобе публикации', () => {
+    expect(mirror(), 'шаг зеркала SeidrStudio в джобе publish').toBeTruthy();
+  });
+
+  it('патчи не зеркалятся: условие на vX.Y.0', () => {
+    expect(mirror()!.body).toMatch(/v\[0-9\]\+\\.\[0-9\]\+\\.0\$|v\[0-9\]\+\.\[0-9\]\+\.0\$/);
+    expect(mirror()!.body).toMatch(/не трогаем/);
+  });
+
+  it('нет секрета — громкий BLOCKED с выходом из разблокировки, а не тихий пропуск', () => {
+    const b = mirror()!.body;
+    expect(b).toMatch(/BLOCKED/);
+    expect(b).toMatch(/MIRROR_PUSH_TOKEN/);
+    expect(b, 'сказано, кто разблокирует').toMatch(/выпускает владелица|кладёт CICDGitHub/);
+  });
+
+  it('тег обязан быть в main — зеркало отражает релизы, а не произвольные точки', () => {
+    expect(mirror()!.body).toMatch(/merge-base --is-ancestor/);
+  });
+
+  it('отставшее зеркало не роняет уже опубликованный релиз', () => {
+    expect(mirror()!.body.length > 0).toBe(true);
+    expect(JSON.stringify(mirror())).toMatch(/continue-on-error/);
+  });
+});

@@ -449,6 +449,59 @@ jobs:
             exit 1
           fi
 
+      # ── Зеркало в SeidrStudio (22.11.2026) ─────────────────────────────────
+      # Слово владелицы: «я попросила всё, что едет, продублировать как зеркала и выносить при смене x.y
+      # релизов» — то есть зеркало обновляется на мажорном теге vX.Y.0, патчи не зеркалятся. Смысл зеркала:
+      # друг, которому отдали пакет установки, должен иметь возможность ПОСМОТРЕТЬ исходники того, что ставит.
+      # Организация закрытая (limited): доступ друг получает учёткой, публичной видимости не делаем — её решение.
+      #
+      # Это наш же Forgejo, поэтому ни прокси, ни TLS-плясок, как с github.com, тут нет: push идёт на тот же
+      # хост, с которого шёл checkout.
+      #
+      # Отсутствие секрета — ГРОМКИЙ BLOCKED, а не тихий пропуск (просьба CICDGitHub и наше общее правило):
+      # «зеркало не обновилось, потому что токена нет» обязано быть видно в прогоне, иначе зеркало тихо
+      # отстанет на несколько релизов и обнаружится это у друга, а не у нас. Шаг под continue-on-error:
+      # отставшее зеркало не повод ронять уже опубликованный релиз — его ненулевой код ловит вердикт в конце.
+      - name: Mirror main + tag to SeidrStudio
+        id: mirror_seidr
+        continue-on-error: true
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+          MIRROR_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
+          INPUT_TAG: ${{ inputs.tag || '' }}
+        run: |
+          set -u
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.0$'; then
+            echo "::notice::зеркало SeidrStudio не трогаем: $TAG — не vX.Y.0 (зеркала выносятся при смене x.y)"
+            exit 0
+          fi
+
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::error::BLOCKED: зеркало SeidrStudio НЕ обновлено — нет секрета MIRROR_PUSH_TOKEN (организация AIDA, Settings -> Actions -> Secrets). Тег $TAG и релиз в Forgejo на месте; зеркало отстало. Разблокировать: токен с правом записи в ${MIRROR_REPO} выпускает владелица, кладёт CICDGitHub."
+            exit 1
+          fi
+
+          git fetch origin main:refs/remotes/origin/main --force
+          git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force 2>/dev/null || true
+
+          # То же правило, что у зеркала GitHub: тег обязан быть В main. Зеркало отражает релизы, а не
+          # произвольные точки истории; тег мимо main — ошибка процесса, и молча отражать её нельзя.
+          if ! git merge-base --is-ancestor "refs/tags/$TAG" origin/main; then
+            echo "::warning::тег $TAG не содержится в main — зеркало SeidrStudio пропущено. Сначала влейте preprod в main, потом ставьте тег."
+            exit 0
+          fi
+
+          HOST="${GITHUB_SERVER_URL:-http://forgejo:3000}"
+          if ! git push "${HOST%/}/${MIRROR_REPO}.git" \
+               "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG" \
+               -c http.extraheader="Authorization: token ${MIRROR_TOKEN}"; then
+            echo "::error::зеркало SeidrStudio НЕ обновлено: git push на ${MIRROR_REPO} не прошёл. Тег $TAG и релиз на месте, зеркало отстало."
+            exit 1
+          fi
+          echo "зеркало обновлено: main + $TAG -> ${MIRROR_REPO}"
+
       # ── Оповещение о релизе (TG-01, хвост) ─────────────────────────────────
       # Telegram в этом файле раньше был только про здоровье GH_MIRROR_TOKEN
       # (шаг Verify mirror token выше) — про сам факт «релиз X вышел» файл
