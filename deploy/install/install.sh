@@ -63,6 +63,8 @@ FILES=""
 FRESH=0
 FRESH_DB="${LORE_FRESH_DB:-lore}"
 MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
+# Образ для запуска lore-migrate.mjs (когда исполняемого файла нет — он едет отдельным вложением релиза).
+MIGRATE_NODE_IMAGE="${MIGRATE_NODE_IMAGE:-node:26-alpine}"
 FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на нашем стенде
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
@@ -362,7 +364,11 @@ write_env() {
         install)
           say "[dry-run] поднять сервер miniLORE $MINILORE_IMAGE_DEFAULT (образ из images/ пакета или свой MINILORE_IMAGE); базы minilore и minilore_archive заводит установщик, порт наружу не публикуется"
           say "[dry-run] вписать свой MINILORE_APP_CLIENT_ID и MINILORE_OWNER: умолчания разработчика — чужая учётка и чужое имя, они не подставляются"
-          say "[dry-run] шлюз (установщик) и приложение APK в этой версии НЕ входят — следующей версией" ;;
+          say "[dry-run] шлюз (установщик) и приложение APK в этой версии НЕ входят — следующей версией"
+          # Вход: с пустым издателем сервер работает (проверено на стенде, /config отдаёт kcIssuer: null),
+          # но телефон войти не сможет. В плане это видно ДО установки, а не после.
+          [ -n "$(env_get LORE_OIDC_ISSUER "$env")" ] \
+            || say "[dry-run] вход не настроен: LORE_OIDC_ISSUER пуст — сервер поднимется, но телефон войти не сможет" ;;
       esac
     fi
     return 0
@@ -423,6 +429,12 @@ write_env() {
     # когда .env правили руками: сервер miniLORE без клиента не стартует, и молча ставить его нельзя.
     [ "$MINILORE" != install ] || [ -n "$(env_get MINILORE_APP_CLIENT_ID "$env")" ] \
       || die "в $env пуст MINILORE_APP_CLIENT_ID — сервер miniLORE не стартует, а уходит в бесконечный перезапуск" 2
+    # Вход. Проверено на живом стенде 22.11.2026: с пустым издателем сервер ПОДНИМАЕТСЯ и работает, его дверь
+    # /config честно отдаёт kcIssuer: null — не стартует он только без клиента приложения и владельца (выше).
+    # Поэтому здесь предупреждение, а не отказ: установка годная, но телефон в неё войти не сможет.
+    if [ "$MINILORE" = install ] && [ -z "$(env_get LORE_OIDC_ISSUER "$env")" ]; then
+      warn "miniLORE поставлен, но вход не настроен: LORE_OIDC_ISSUER пуст (и LORE_AUTH_ENABLED=$(env_get LORE_AUTH_ENABLED "$env")). Сервер поднимется и ответит, но ТЕЛЕФОН ВОЙТИ НЕ СМОЖЕТ: у него нет издателя Keycloak. Включите вход LORE (LORE_AUTH_ENABLED=true и LORE_OIDC_ISSUER=<адрес области>) и повторите install.sh — это обновление"
+    fi
   fi
   # Ключ входа агентов в forgejo-mcp — только когда он включён; как пароли: своё значение из окружения или генератор.
   if has_profile forgejo-mcp; then
@@ -643,7 +655,13 @@ minilore_dbs() {
   has_profile minilore || return 0
   local have db
   have="$(dcurl "http://arcadedb:2480/api/v1/databases" || true)"
-  for db in "$(env_get MINILORE_ARCADE_DATABASE "$DIR/.env")" "$(env_get MINILORE_ARCHIVE_DATABASE "$DIR/.env")"; do
+  # Умолчания — те же, что в compose. Ключей в .env может не быть вовсе: так бывает при повторном запуске с
+  # --minilore install поверх .env от установки БЕЗ miniLORE (разбор документации 22.11.2026). Раньше цикл в этом
+  # случае пропускал обе базы МОЛЧА, и сервер падал «Database not found» — то есть молчание выглядело успехом.
+  local main_db arch_db
+  main_db="$(env_get MINILORE_ARCADE_DATABASE "$DIR/.env")"; main_db="${main_db:-minilore}"
+  arch_db="$(env_get MINILORE_ARCHIVE_DATABASE "$DIR/.env")"; arch_db="${arch_db:-minilore_archive}"
+  for db in "$main_db" "$arch_db"; do
     [ -n "$db" ] || continue
     case "$have" in
       *"\"$db\""*) say "база miniLORE $db уже есть"; continue ;;
@@ -760,17 +778,44 @@ migrate_bin() {
   if [ -z "${LORE_MIGRATE_BIN+x}" ] && [ -f "$SCRIPT_DIR/.lore-migrate-path" ]; then b="$(head -1 "$SCRIPT_DIR/.lore-migrate-path")"; fi
   printf '%s' "$b"
 }
+
+# Второй путь к тому же коду: lore-migrate.mjs. Он лежит в ЛЁГКОМ архиве релиза, а исполняемый файл (125 МБ)
+# едет отдельным вложением и у друга его может не быть вовсе. Разбор документации 22.11.2026 показал, что
+# свежая установка из скачанного архива падала на первом же шаге: «исполняемый файл не найден». Теперь .mjs
+# запускается в контейнере с Node — так же, как исполняемый файл запускается в debian.
+migrate_mjs() {
+  local m="${LORE_MIGRATE_MJS-}"
+  if [ -z "${LORE_MIGRATE_MJS+x}" ] && [ -f "$SCRIPT_DIR/lore-migrate.mjs" ]; then m="$SCRIPT_DIR/lore-migrate.mjs"; fi
+  printf '%s' "$m"
+}
+
+# Чем собирать пустую базу: «bin <путь>» | «mjs <путь>» | пусто.
+migrate_runner() {
+  local b m
+  b="$(migrate_bin)"; [ -n "$b" ] && { printf 'bin %s' "$b"; return 0; }
+  m="$(migrate_mjs)"; [ -n "$m" ] && { printf 'mjs %s' "$m"; return 0; }
+  printf ''
+}
+
 migrate_bin_say() {
-  local b; b="$(migrate_bin)"
-  if [ -n "$b" ]; then printf '%s' "$b"; else printf 'исполняемый файл установщика не найден — задайте LORE_MIGRATE_BIN (lore-migrate-<версия>-linux-x64 из пакета)'; fi
+  local r; r="$(migrate_runner)"
+  case "$r" in
+    bin*) printf '%s' "${r#bin }" ;;
+    mjs*) printf '%s (в контейнере %s)' "${r#mjs }" "$MIGRATE_NODE_IMAGE" ;;
+    *) printf 'установщик не найден: положите lore-migrate.mjs рядом с install.sh (он есть в архиве релиза) или задайте LORE_MIGRATE_BIN — путь к lore-migrate-<версия>-linux-x64' ;;
+  esac
 }
 
 # MIG-01: «схема и база собираются заново из нормализованной модели». Пустая база из модели — тем же кодом, что перенос,
 # без источника: lore-migrate init-empty в одноразовом контейнере в сети стека (порт базы наружу не публикуется).
 init_model_db() {
-  local bin db pw envf
-  bin="$(migrate_bin)"
-  [ -n "$bin" ] && [ -f "$bin" ] || die "$(migrate_bin_say): без него свежая база из модели не собирается"
+  local run_as db pw envf
+  run_as="$(migrate_runner)"
+  case "$run_as" in
+    bin*) [ -f "${run_as#bin }" ] || die "$(migrate_bin_say): файла нет — свежая база из модели не собирается" ;;
+    mjs*) [ -f "${run_as#mjs }" ] || die "$(migrate_bin_say): файла нет — свежая база из модели не собирается" ;;
+    *) die "$(migrate_bin_say)" ;;
+  esac
   db="$(env_get LORE_DB "$DIR/.env")"; pw="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")"
   say "пустая база из модели: lore-migrate init-empty → $db"
   # файл доступа с паролем root базы — удаляется сразу после запуска, в том числе при отказе (без trap: он пережил бы функцию)
@@ -782,8 +827,15 @@ init_model_db() {
     echo "MIG_DST_DB=$db"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$pw"
   } > "$envf" )
   local rc=0
-  docker run --rm --network "$(project)_default" -v "$bin:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
-    "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || rc=$?
+  # Исполняемый файл — в debian (внутри него свой Node); lore-migrate.mjs — в образе с Node. Оба варианта
+  # одноразовым контейнером в сети стека: порт базы наружу не публикуется.
+  if [ "${run_as%% *}" = bin ]; then
+    docker run --rm --network "$(project)_default" -v "${run_as#bin }:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
+      "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || rc=$?
+  else
+    docker run --rm --network "$(project)_default" -v "${run_as#mjs }:/opt/lore-migrate.mjs:ro" -v "$envf:/run/mig.env:ro" \
+      "$MIGRATE_NODE_IMAGE" node /opt/lore-migrate.mjs init-empty --env /run/mig.env || rc=$?
+  fi
   rm -f "$envf"
   [ "$rc" = 0 ] || die "пустая база из модели не собрана (lore-migrate init-empty) — схема и справочники не записаны"
   say "база $db собрана из модели: шаги V не катятся (LORE_MIGRATE=false)"
@@ -901,6 +953,17 @@ selftest() {
   # (lore-migrate init-empty) и запускает бэкенд без шагов V; база установки — lore, не system_aida_lore.
   LORE_MIGRATE_BIN=/opt/x/lore-migrate expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
   printf '%s' "$out" | grep -q 'пустая база из модели: lore-migrate init-empty' || fail "свежая установка: нет шага «пустая база из модели»: $out"; ok
+  # 22.11.2026, разбор документации (CICDGitHub): в релизном архиве лежит lore-migrate.mjs, а НЕ исполняемый файл
+  # (он 125 МБ и едет отдельно). Раньше свежая установка из такого архива падала «исполняемый файл не найден»:
+  # первый же шаг после распаковки. Теперь годится и .mjs — он запускается в контейнере с Node.
+  printf 'console.log(1)\n' > "$t/lore-migrate.mjs"
+  LORE_MIGRATE_MJS="$t/lore-migrate.mjs" expect_rc 0 --dry-run --dir "$t/fresh2" --version v9.0.0
+  printf '%s' "$out" | grep -q 'lore-migrate.mjs' || fail "свежая установка из .mjs: источник не назван: $out"; ok
+  printf '%s' "$out" | grep -qE 'node:[0-9]' || fail "свежая установка из .mjs: не сказано, в чём он запустится: $out"; ok
+  # Нет ни того, ни другого — отказ, называющий ОБА выхода, а не только исполняемый файл.
+  expect_rc 0 --dry-run --dir "$t/fresh3" --version v9.0.0
+  printf '%s' "$out" | grep -q 'LORE_MIGRATE_BIN' || fail "без установщика: не назван LORE_MIGRATE_BIN: $out"; ok
+  printf '%s' "$out" | grep -q 'lore-migrate.mjs' || fail "без установщика: не назван путь через .mjs: $out"; ok
   printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
   printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
   # trap … RETURN остаётся после выхода из функции и срабатывает в чужом return, где её local уже нет (set -u) —
@@ -908,8 +971,10 @@ selftest() {
   grep -qE "trap '[^']*' RETURN" "$0" && fail "trap … RETURN в install.sh — срабатывает после функции (set -u роняет установку)"; ok
   # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, эмуляция 21.11.2026)
   sed -n '/^wait_db()/,/^}/p' "$0" | grep -q 'FRESH=1' || fail "свежая установка определяется не по базе (wait_db не ставит FRESH)"; ok
-  LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
-  printf '%s' "$out" | grep -q 'исполняемый файл установщика не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
+  # Ни исполняемого файла, ни .mjs: отказ обязан назвать ОБА выхода, а не один (разбор документации 22.11.2026 —
+  # у друга в архиве релиза лежит именно .mjs, и прежний текст звал его искать то, чего ему не присылали).
+  LORE_MIGRATE_BIN= LORE_MIGRATE_MJS= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
+  printf '%s' "$out" | grep -q 'установщик не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
   # дальше проверки читают план сборки — вернуть его в $out
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok
@@ -1033,6 +1098,15 @@ selftest() {
   # Базы miniLORE заводит установщик: их сервер 0.4.19 падает с «Database not found» и уходит в перезапуск.
   grep -q 'minilore_dbs' "$0" || fail "нет шага создания баз miniLORE"; ok
   grep -q 'create database \$db' "$0" || fail "базы miniLORE создаются не командой create database"; ok
+  # Имён баз в .env может не быть (повторный запуск поверх старого .env) — тогда берутся умолчания compose,
+  # а не молчаливый пропуск: молчание тут выглядело бы успехом, а сервер падал бы «Database not found».
+  grep -q 'main_db:-minilore}' "$0" || fail "нет умолчания имени основной базы miniLORE"; ok
+  grep -q 'arch_db:-minilore_archive}' "$0" || fail "нет умолчания имени базы архива miniLORE"; ok
+  # Вход для телефона: без издателя Keycloak сервер РАБОТАЕТ (проверено на стенде: /config отдаёт kcIssuer: null),
+  # но телефон войти не сможет. Поэтому предупреждение словами, а не отказ и не молчание.
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -qi 'телефон войти не сможет' || fail "miniLORE без входа: не сказано про телефон: $out"; ok
+  printf '%s' "$out" | grep -q 'LORE_OIDC_ISSUER' || fail "miniLORE без входа: не названа настройка: $out"; ok
   expect_rc 2 --dry-run --dir "$t/inst" --minilore none --minilore-client-id x
   printf '%s' "$out" | grep -q -- '--minilore install' || fail "ключи miniLORE без установки: причина не названа: $out"; ok
   # Отказ ArcadeDB называет ПРИЧИНУ, а не только «не ответила»: в журнале базы «Authentication failed» значит,
