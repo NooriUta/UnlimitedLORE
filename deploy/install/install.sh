@@ -957,11 +957,14 @@ selftest() {
   # (он 125 МБ и едет отдельно). Раньше свежая установка из такого архива падала «исполняемый файл не найден»:
   # первый же шаг после распаковки. Теперь годится и .mjs — он запускается в контейнере с Node.
   printf 'console.log(1)\n' > "$t/lore-migrate.mjs"
-  LORE_MIGRATE_MJS="$t/lore-migrate.mjs" expect_rc 0 --dry-run --dir "$t/fresh2" --version v9.0.0
+  # LORE_MIGRATE_BIN гасим ЯВНО: в распакованном пакете рядом с install.sh лежит .lore-migrate-path (его пишет
+  # install-bundle), и без этого проверка смотрела бы на исполняемый файл машины, а не на .mjs. Поймано прогоном
+  # на чужой машине 22.11.2026: у нас проверка была зелёной, а в пакете — красной.
+  LORE_MIGRATE_BIN= LORE_MIGRATE_MJS="$t/lore-migrate.mjs" expect_rc 0 --dry-run --dir "$t/fresh2" --version v9.0.0
   printf '%s' "$out" | grep -q 'lore-migrate.mjs' || fail "свежая установка из .mjs: источник не назван: $out"; ok
   printf '%s' "$out" | grep -qE 'node:[0-9]' || fail "свежая установка из .mjs: не сказано, в чём он запустится: $out"; ok
   # Нет ни того, ни другого — отказ, называющий ОБА выхода, а не только исполняемый файл.
-  expect_rc 0 --dry-run --dir "$t/fresh3" --version v9.0.0
+  LORE_MIGRATE_BIN= LORE_MIGRATE_MJS= expect_rc 0 --dry-run --dir "$t/fresh3" --version v9.0.0
   printf '%s' "$out" | grep -q 'LORE_MIGRATE_BIN' || fail "без установщика: не назван LORE_MIGRATE_BIN: $out"; ok
   printf '%s' "$out" | grep -q 'lore-migrate.mjs' || fail "без установщика: не назван путь через .mjs: $out"; ok
   printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
