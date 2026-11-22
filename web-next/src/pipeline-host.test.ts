@@ -1409,8 +1409,8 @@ describe('MD-05 · прогон «Дотянуть данные PR»', () => {
   it('запускается только руками, с выбором среды и отдельным согласием на запись', () => {
     const y = read(WF);
     expect(y).toMatch(/workflow_dispatch:/);
-    expect(y).not.toMatch(/
-\s{2}(push|pull_request|schedule):/);
+    // Автоматических запусков у прогона нет: он пишет в базу среды, и срабатывать «сам» не должен.
+    for (const auto of ['\n  push:', '\n  pull_request:', '\n  schedule:']) expect(y).not.toContain(auto);
     expect(y).toMatch(/options: \[preprod, prod\]/);
     expect(y).toMatch(/apply:[\s\S]*default: 'false'/);
   });
