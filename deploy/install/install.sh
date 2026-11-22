@@ -6,6 +6,7 @@
 #     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; forgejo-mcp — образ из images/ или исходник из src/ пакета
 #   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
 #     … [--files none|s3] — хранилище файлов: без файлов (по умолчанию) или своё S3 (S3_* в окружении или .env)
+#     … [--minilore install|none] — сервер miniLORE (мобильный монитор сессий) в этой же установке; по умолчанию не ставится
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -63,6 +64,8 @@ MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
 FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на нашем стенде
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
+MINILORE=""                       # --minilore install|none: сервер miniLORE в этой установке (по умолчанию не ставится)
+MINILORE_IMAGE_DEFAULT="minilore-srv:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
 FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
 FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-bbe9f59c.tar.gz"
@@ -101,13 +104,14 @@ run() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files)
+      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files|--minilore)
         [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "у $1 нет значения" 2
         case "$1" in
           --dir) DIR="$2" ;; --version) VERSION="$2" ;; --src) SRC="$2" ;;
           --port) PORT="$2" ;; --bind) BIND="$2" ;;
           --forgejo) FORGEJO="$2" ;; --forgejo-url) FORGEJO_URL_ARG="$2" ;;
           --files) FILES="$2" ;;
+          --minilore) MINILORE="$2" ;;
         esac
         shift 2 ;;
       --uninstall) MODE="uninstall"; shift ;;
@@ -143,6 +147,10 @@ parse_args() {
       FORGEJO_URL_ARG="${FORGEJO_URL_ARG%/}" ;;
     *) die "--forgejo: install (поставить Forgejo $FORGEJO_VERSION_DEFAULT), own (свой Forgejo) или none" 2 ;;
   esac
+  case "$MINILORE" in
+    ""|install|none) ;;
+    *) die "--minilore: install (поставить сервер miniLORE $MINILORE_IMAGE_DEFAULT) или none" 2 ;;
+  esac
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
   case "$FILES" in
     ""|none) ;;
@@ -161,11 +169,18 @@ parse_args() {
 merge_profiles() { # текущие-профили режим
   local out="" p
   for p in $(printf '%s' "$1" | tr ',' ' '); do
-    case "$p" in forgejo|forgejo-mcp) ;; *) out="${out:+$out,}$p" ;; esac
+    case "$p" in forgejo|forgejo-mcp|minilore) ;; *) out="${out:+$out,}$p" ;; esac
   done
   case "$2" in
     install) out="${out:+$out,}forgejo,forgejo-mcp" ;;
     own)     out="${out:+$out,}forgejo-mcp" ;;
+  esac
+  # miniLORE — свой выбор, не зависящий от Forgejo: профиль добавляется, когда его попросили,
+  # и сохраняется при повторном запуске (установка — это и обновление).
+  case "$MINILORE" in
+    install) out="${out:+$out,}minilore" ;;
+    none)    ;;
+    *)       case ",$1," in *",minilore,"*) out="${out:+$out,}minilore" ;; esac ;;
   esac
   printf '%s' "$out"
 }
@@ -179,6 +194,14 @@ forgejo_env() { # текущие-профили
     none)    printf 'FORGEJO_URL=\nFORGEJO_BASE_OVERRIDE=\n' ;;
   esac
 }
+# Что выбор miniLORE пишет в .env. Клиент приложения и владельца НЕ подставляем: умолчания разработчика
+# (mobilepoc-app, omiloreadmin) принадлежат нам, и тихо подставить их значит отдать владельцу чужую учётку.
+minilore_env() {
+  case "$MINILORE" in
+    install) printf 'MINILORE_IMAGE=%s\n' "$MINILORE_IMAGE_DEFAULT" ;;
+  esac
+}
+
 has_profile() { case ",$(env_get COMPOSE_PROFILES "$DIR/.env")," in *",$1,"*) return 0 ;; esac; return 1; }
 
 gen_secret() { head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
@@ -290,6 +313,16 @@ write_env() {
         say "[dry-run] FORGEJO_MCP_API_KEY — сгенерировать; forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN (токен вписывает владелец)"
       fi
     fi
+    if [ -n "$MINILORE" ]; then
+      say "[dry-run] miniLORE: $MINILORE — профили compose: $(merge_profiles "$(env_get COMPOSE_PROFILES "$env")" "$FORGEJO")"
+      minilore_env | sed 's/^/[dry-run]   /'
+      case "$MINILORE" in
+        install)
+          say "[dry-run] поднять сервер miniLORE $MINILORE_IMAGE_DEFAULT; базы minilore и minilore_archive он заводит сам в вашей ArcadeDB, порт наружу не публикуется"
+          say "[dry-run] вписать свой MINILORE_APP_CLIENT_ID и MINILORE_OWNER: умолчания разработчика — чужая учётка и чужое имя, они не подставляются"
+          say "[dry-run] шлюз (установщик) и приложение APK в этой версии НЕ входят — следующей версией" ;;
+      esac
+    fi
     return 0
   fi
   mkdir -p "$DIR"; chmod 700 "$DIR"
@@ -337,6 +370,15 @@ write_env() {
     local line
     while IFS= read -r line; do env_set "${line%%=*}" "${line#*=}" "$env"; done < <(forgejo_env "$(env_get COMPOSE_PROFILES "$env")")
     say "Forgejo: $FORGEJO (профили compose: $(env_get COMPOSE_PROFILES "$env"))"
+  fi
+  # miniLORE — свой выбор, отдельно от Forgejo: профиль обновляется и когда Forgejo не трогали.
+  if [ -n "$MINILORE" ]; then
+    local mline
+    env_set COMPOSE_PROFILES "$(merge_profiles "$(env_get COMPOSE_PROFILES "$env")" "$FORGEJO")" "$env"
+    while IFS= read -r mline; do env_set "${mline%%=*}" "${mline#*=}" "$env"; done < <(minilore_env)
+    say "miniLORE: $MINILORE (профили compose: $(env_get COMPOSE_PROFILES "$env"))"
+    [ "$MINILORE" != install ] || [ -n "$(env_get MINILORE_APP_CLIENT_ID "$env")" ] \
+      || warn "miniLORE поставлен, но MINILORE_APP_CLIENT_ID пуст — телефон не войдёт. Заведите клиент приложения в своём Keycloak (redirect pro.seidrstudio.minilore://auth/callback, public, PKCE S256) и впишите его имя в $env"
   fi
   # Ключ входа агентов в forgejo-mcp — только когда он включён; как пароли: своё значение из окружения или генератор.
   if has_profile forgejo-mcp; then
@@ -841,6 +883,18 @@ selftest() {
   printf '%s' "$out" | grep -q 'tok-' && fail "dry-run напечатал токен"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo none
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=$' || fail "none: профили Forgejo не сняты: $out"; ok
+
+  # miniLORE (D-2026-INSTALL-MINILORE-IN-PACKAGE): свой выбор, не зависящий от Forgejo.
+  expect_rc 2 --dry-run --dir "$t/inst" --minilore maybe
+  printf '%s' "$out" | grep -q -- '--minilore' || fail "--minilore: неизвестное значение без причины: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
+  printf '%s' "$out" | grep -q 'minilore' || fail "--minilore install: miniLORE не назван в плане: $out"; ok
+  printf '%s' "$out" | grep -q 'minilore-srv:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
+  # Умолчания разработчика (их клиент и их владелец) в чужую установку не подставляются.
+  printf '%s' "$out" | grep -q 'mobilepoc-app' && fail "в план попал ЧУЖОЙ клиент mobilepoc-app"; ok
+  printf '%s' "$out" | grep -q 'omiloreadmin' && fail "в план попал ЧУЖОЙ владелец omiloreadmin"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore none
+  printf '%s' "$out" | grep -q 'minilore-srv' && fail "--minilore none: сервер miniLORE всё равно в плане: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
   printf '%s' "$out" | grep -qi 'forgejo' && fail "без --forgejo план не должен трогать Forgejo: $out"; ok
   [ "$(merge_profiles 'guard,forgejo' install)" = 'guard,forgejo,forgejo-mcp' ] || fail "профили: guard теряется"; ok

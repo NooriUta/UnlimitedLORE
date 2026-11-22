@@ -44,7 +44,7 @@ export function checkChoice(c) {
 // Forgejo — по выбору (владелица 20.11.2026: «установка Forgejo если нет нашей версии и дистрибутив MCP forgejo или
 // указаны настройки если у владельца есть»). install — поставить Forgejo нашей версии; own — свой Forgejo владельца;
 // none — без Forgejo (по умолчанию, как было). В install и own в пакет входит forgejo-mcp.
-export const FORGEJO_VERSION = '15.0.5'; // та же версия, что на нашем стенде (get_server_version, 20.11.2026)
+export const FORGEJO_VERSION = '17.0.2'; // та же версия, что на нашем стенде и проде (апгрейд 15 → 17, 22.11.2026)
 const FORGEJO_MODES = ['install', 'own', 'none'];
 
 /** Что выбор Forgejo кладёт в .env пакета установки. Без секретов: токены вписывает владелец, ключ forgejo-mcp — install.sh. */

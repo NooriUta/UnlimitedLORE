@@ -239,6 +239,47 @@ services:
     ports:
       - "${LORE_BIND:-127.0.0.1}:${FORGEJO_MCP_PORT:-4430}:3000"
 
+  # miniLORE — сервер мобильного монитора сессий (AIDA/miniLore_serverside). Профиль minilore: ставится по выбору,
+  # решение D-2026-INSTALL-MINILORE-IN-PACKAGE («включаем miniLORE в пакет», владелица 22.11.2026).
+  #
+  # Состав, который везём в этой версии: ТОЛЬКО сервер. Установщик шлюза (Windows/Linux) и приложение APK выйдут
+  # следующей версией: у Mobilepoc труба сборки APK сейчас красная, а адрес обновлений трея снят с гвоздя лишь в
+  # невлитой ветке. Раздавать файл, который не собрала труба, нельзя — друг не сможет его воспроизвести.
+  #
+  # База — та же ArcadeDB, что у LORE (так же, как на нашем проде): сервер заводит и использует свои базы
+  # minilore и minilore_archive, чужих не трогает. Порт наружу не публикуется: miniLORE доступен только изнутри
+  # установки, снаружи — через прокси владельца, если он его заводит.
+  minilore-srv:
+    profiles: ["minilore"]
+    image: ${MINILORE_IMAGE:-minilore-srv:0.4.19}
+    restart: unless-stopped
+    depends_on:
+      arcadedb:
+        condition: service_healthy
+    environment:
+      # Вход — тот же Keycloak, что у LORE: отдельной области для miniLORE не заводим.
+      - KC_ISSUER=${LORE_OIDC_ISSUER:-}
+      - KC_AUDIENCE=${MINILORE_KC_AUDIENCE:-minilore-srv}
+      # Клиент мобильного приложения В KEYCLOAK ВЛАДЕЛЬЦА. Умолчание Mobilepoc — mobilepoc-app — это НАШ клиент,
+      # поэтому здесь его нет: без своего значения телефон владельца не войдёт, и лучше узнать это при установке.
+      - MINILORE_APP_CLIENT_ID=${MINILORE_APP_CLIENT_ID:-}
+      # Схема возврата вшита в APK манифестом (appAuthRedirectScheme) — менять её нельзя, её нужно ЗАВЕСТИ
+      # в Keycloak владельца как redirect pro.seidrstudio.minilore://auth/callback (шаг мастера).
+      - MINILORE_APP_AUTH_SCHEME=${MINILORE_APP_AUTH_SCHEME:-pro.seidrstudio.minilore}
+      - MINILORE_ARCADE_URL=${MINILORE_ARCADE_URL:-http://arcadedb:2480}
+      - MINILORE_ARCADE_USER=${MINILORE_ARCADE_USER:-root}
+      - MINILORE_ARCADE_PASSWORD=${ARCADEDB_ROOT_PASSWORD:?пароль ArcadeDB нужен miniLORE: он заводит свои базы}
+      - MINILORE_ARCADE_DATABASE=${MINILORE_ARCADE_DATABASE:-minilore}
+      - MINILORE_ARCHIVE_DATABASE=${MINILORE_ARCHIVE_DATABASE:-minilore_archive}
+      # Чтение LORE сервером miniLORE — по желанию владельца: пусто, и двери чтения отвечают 503 с причиной.
+      - MINILORE_LORE_BASE_URL=${MINILORE_LORE_BASE_URL:-}
+      - MINILORE_LORE_CLIENT_ID=${MINILORE_LORE_CLIENT_ID:-}
+      - MINILORE_LORE_CLIENT_SECRET=${MINILORE_LORE_CLIENT_SECRET:-}
+      # Владелец установки. Умолчание Mobilepoc — omiloreadmin — НАШЕ имя, поэтому здесь его нет.
+      - MINILORE_OWNER=${MINILORE_OWNER:-}
+      - MINILORE_HTTP_PORT=8080
+      - MINILORE_LOG_LEVEL=${MINILORE_LOG_LEVEL:-INFO}
+
 volumes:
   lore-db:
   lore-db-backups:

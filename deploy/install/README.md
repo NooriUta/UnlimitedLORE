@@ -279,6 +279,33 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 - **own** — Forgejo не ставится. Адрес вашего Forgejo уходит в forgejo-mcp (`FORGEJO_URL`), профиль compose — только `forgejo-mcp`.
 - **none** — профили Forgejo снимаются, мост LORE отвечает 503, как без Forgejo.
 
+## miniLORE — мобильный монитор сессий (по выбору)
+
+`install.sh --minilore install` поднимает **сервер miniLORE** в той же установке. По умолчанию он не ставится.
+
+**Что входит в этой версии и чего нет.** Входит только сервер. Установщик шлюза (Windows и Linux) и приложение
+для телефона (APK) выйдут следующей версией: сборочная труба приложения сейчас не зелёная, а раздавать файл,
+который не собрала труба, нельзя — вы не сможете его воспроизвести и проверить.
+
+**База — ваша же ArcadeDB.** Сервер сам заводит в ней базы `minilore` и `minilore_archive`; чужих баз не трогает.
+Порт наружу не публикуется: снаружи miniLORE доступен только через ваш прокси, если вы его заводите.
+
+**Что обязательно вписать в `.env`** (без этого телефон не войдёт):
+
+| ключ | что это |
+|---|---|
+| `MINILORE_APP_CLIENT_ID` | ваш клиент мобильного приложения в Keycloak |
+| `MINILORE_OWNER` | ваш логин — чьи это записи |
+
+У клиента приложения обязаны быть: redirect `pro.seidrstudio.minilore://auth/callback` (схема вшита в приложение
+и не меняется), public client, PKCE S256, маппер audience `minilore-srv`.
+
+Умолчания разработчика (`mobilepoc-app`, `omiloreadmin`) установщик НЕ подставляет намеренно: это чужая учётка и
+чужое имя, и тихая подстановка увела бы вашу установку в чужой Keycloak.
+
+**Проверка после установки:** `curl http://<ваш-адрес>/config` без токена — 200 и семь полей настройки.
+
+
 В вариантах install и own в пакет входит **forgejo-mcp**: репозиторий `AIDA/forgejo-mcp`, версия 0.1.7 (форк `@ric_/forgejo-mcp` с инструментами Actions/CI). Исходники прибиты к коммиту `bbe9f59c`.
 
 Образ forgejo-mcp ни в какой реестр не публикуется. Пакет установщика везёт его двумя способами, оба со сверкой sha256: архивом образа `images/forgejo-mcp-bbe9f59c.tar` и исходником того же коммита `src/forgejo-mcp-bbe9f59c.tar.gz` (рядом лицензия MIT — `src/forgejo-mcp-bbe9f59c.LICENSE`). Положите каталоги `images/` и `src/` рядом с `install.sh`. Сети к чьему-либо git установке не нужно. Порядок выбора:
@@ -403,6 +430,8 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
 | `FORGEJO_MCP_TOKEN`, `FORGEJO_TOKEN` | токен forgejo-mcp в Forgejo, отдельный от моста; в контейнер идёт как `FORGEJO_TOKEN` (AIDA/forgejo-mcp, src/config.ts) | вписывает владелец | `.env` 600 | Forgejo install или own | новый токен, `.env`, `up -d forgejo-mcp`; старый отозвать | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `FORGEJO_MCP_API_KEY` | ключ входа агентов в forgejo-mcp (`Authorization: Bearer`); без него HTTP-вход открыт | установщик генерирует при включённом forgejo-mcp | `.env` 600; у агента — в окружении машины, строка MCP ссылается на переменную | Forgejo install или own | новое значение в `.env`, `up -d forgejo-mcp`, обновить окружение агентов | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `LORE_MCP_CLIENT_SECRET`, `LORE_MCP_SECRET_VAR` | секрет учётки MCP aida-lore (клиент Keycloak `lore-mcp-<роль>[_<harness>]`): по нему MCP получает токен агента. Хранится ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]` (`…_FULL`, `…_FULL_KIMI`, `…_TESTER`); `LORE_MCP_SECRET_VAR` — имя этого ключа в строке MCP, не секрет. Клиент без настройки окружения шлёт пару в заголовках X-Lore-Client-Id и X-Lore-Client-Secret | окно установщика (режим «завести за меня») или админка LORE (выпуск учётки агента); свои клиенты — владелец, LORE только проверяет токен | Infisical, если запись настроена (отдельный проект `lore-mcp-secrets`), иначе файл `~/kc-clients-<область>.env` 600; у агента — окружение машины | если включён вход через Keycloak | сменить секрет в админке LORE (без простоя — с флагом KC `client-secret-rotation` и политикой `secret-rotation`), обновить окружение harness | `mcp-server/src/backend.ts`, `scripts/model-migration/setup.mjs` |
+| `MINILORE_ARCADE_PASSWORD` | пароль, которым сервер miniLORE ходит в вашу ArcadeDB (заводит свои базы `minilore` и `minilore_archive`) | берётся из `ARCADEDB_ROOT_PASSWORD` той же установки — отдельного пароля не заводим | `.env` 600 | только с `--minilore install` | вместе с паролем root ArcadeDB | `deploy/install/docker-compose.install.yml` |
+| `MINILORE_LORE_CLIENT_SECRET` | секрет служебной учётки, которой сервер miniLORE читает LORE; пусто — двери чтения LORE отвечают 503 с причиной, остальное работает | владелец (клиент в своём Keycloak) | `.env` 600 | нет — только если включаете чтение LORE из miniLORE | новый секрет в Keycloak, значение в `.env`, `up -d minilore-srv` | `deploy/install/docker-compose.install.yml` |
 | `LORE_MCP_SECRETS_INFISICAL_CLIENT_SECRET`, `LORE_MCP_SECRETS_INFISICAL_CLIENT_ID` | машинная учётка LORE (universal-auth) в отдельном проекте Infisical для секретов учёток MCP, роль member только там; рядом — не секреты `LORE_MCP_SECRETS_INFISICAL_URL`, `_PROJECT_ID`, `_ENVIRONMENT` (`prod`), `_PATH` (`/`) | владелец заводит учётку в Infisical | окружение окна установщика | только если секреты MCP пишутся в Infisical; без них — «запись в Infisical не настроена», секрет показан один раз | новый секрет учётки в Infisical, затем новое значение в окружении окна установщика | `scripts/model-migration/infisical.mjs` |
 | `LORE_DB_GUARD_AUTH`, `LORE_DB_GUARD_TOKEN_NAMES`, `GUARD_TOKEN_NAMES` | сторож входов ArcadeDB: токен группы db-guard (секрет) и список имён токенов (не секрет) | владелец заводит токен в ArcadeDB | `.env` 600 | только профиль `guard` | новый токен в ArcadeDB, `.env`, `up -d lore-db-guard` | `deploy/install/docker-compose.install.yml`, `deploy/db-guard/guard.mjs` |
 | `LORE_LLM_LOCAL_API_KEY` | ключ сервера локальной модели (заголовок `Authorization: Bearer`); пусто — без заголовка, обычный случай для Ollama | вписывает владелец, если раннер запущен с `--api-key` | `.env` 600 | только если сервер модели требует ключ | новый ключ на сервере модели и в `.env`, `up -d lore-backend` | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |
