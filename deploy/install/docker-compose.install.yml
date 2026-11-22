@@ -239,7 +239,7 @@ services:
     ports:
       - "${LORE_BIND:-127.0.0.1}:${FORGEJO_MCP_PORT:-4430}:3000"
 
-  # miniLORE — сервер мобильного монитора сессий (AIDA/miniLore_serverside). Профиль minilore: ставится по выбору,
+  # miniLORE — сервер мобильного монитора сессий. Профиль minilore: ставится по выбору,
   # решение D-2026-INSTALL-MINILORE-IN-PACKAGE («включаем miniLORE в пакет», владелица 22.11.2026).
   #
   # Состав, который везём в этой версии: ТОЛЬКО сервер. Установщик шлюза (Windows/Linux) и приложение APK выйдут
@@ -251,7 +251,7 @@ services:
   # установки, снаружи — через прокси владельца, если он его заводит.
   minilore-srv:
     profiles: ["minilore"]
-    image: ${MINILORE_IMAGE:-git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19}
+    image: ${MINILORE_IMAGE:-minilore-srv:0.4.19}
     restart: unless-stopped
     # Просто «после ArcadeDB», без ожидания здоровья: у службы arcadedb в этом пакете healthcheck не объявлен,
     # и `condition: service_healthy` роняет весь запуск словами «container … has no healthcheck configured»
@@ -280,7 +280,7 @@ services:
       - MINILORE_LORE_BASE_URL=${MINILORE_LORE_BASE_URL:-}
       - MINILORE_LORE_CLIENT_ID=${MINILORE_LORE_CLIENT_ID:-}
       - MINILORE_LORE_CLIENT_SECRET=${MINILORE_LORE_CLIENT_SECRET:-}
-      # Владелец установки. Умолчание Mobilepoc — omiloreadmin — НАШЕ имя, поэтому здесь его нет.
+      # Владелец установки. Умолчания нет намеренно: у разработчика это его собственное имя, и здесь ему не место.
       - MINILORE_OWNER=${MINILORE_OWNER:-}
       - MINILORE_HTTP_PORT=8080
       - MINILORE_LOG_LEVEL=${MINILORE_LOG_LEVEL:-INFO}
