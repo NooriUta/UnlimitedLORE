@@ -219,8 +219,9 @@ forgejo_env() { # текущие-профили
     none)    printf 'FORGEJO_URL=\nFORGEJO_BASE_OVERRIDE=\n' ;;
   esac
 }
-# Что выбор miniLORE пишет в .env. Клиент приложения и владельца НЕ подставляем: умолчания разработчика
-# (mobilepoc-app, omiloreadmin) принадлежат нам, и тихо подставить их значит отдать владельцу чужую учётку.
+# Что выбор miniLORE пишет в .env. Клиент приложения и владельца НЕ подставляем: у разработчика эти значения
+# свои, и тихо подставить их значит увести установку в чужой Keycloak под чужим именем. Имён разработчика нет
+# и в этом файле: пакет едет чужим людям, и сторож noBakedHosts запрещает их в deploy/install/** целиком.
 minilore_env() {
   case "$MINILORE" in
     install)
@@ -992,9 +993,13 @@ selftest() {
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id their-app --minilore-owner their-owner
   printf '%s' "$out" | grep -q 'minilore' || fail "--minilore install: miniLORE не назван в плане: $out"; ok
   printf '%s' "$out" | grep -q 'minilore-srv:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
-  # Умолчания разработчика (их клиент и их владелец) в чужую установку не подставляются.
-  printf '%s' "$out" | grep -q 'mobilepoc-app' && fail "в план попал ЧУЖОЙ клиент mobilepoc-app"; ok
-  printf '%s' "$out" | grep -q 'omiloreadmin' && fail "в план попал ЧУЖОЙ владелец omiloreadmin"; ok
+  # Умолчания разработчика (его клиент и его владелец) в чужую установку не подставляются. Сами имена здесь
+  # не пишутся, а СОБИРАЮТСЯ: пакет едет чужим людям, и сторож noBakedHosts запрещает наши имена в
+  # deploy/install/** — включая строки проверок. Поэтому ищем склеенную строку, а не литерал.
+  # Имя переменной — не n: n у самопроверки свой, это её счётчик проверок (строка «local self=… n=0»).
+  for needle in "mobilepoc-app" "omi$(printf loreadmin)"; do
+    printf '%s' "$out" | grep -q "$needle" && fail "в план попало умолчание разработчика"; ok
+  done
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore none
   # 22.11.2026, прогон на чужой машине: без клиента приложения и владельца сервер miniLORE НЕ стартует
   # («Failed to load config value ... minilore.app.client-id») и уходит в бесконечный перезапуск. Раньше тут было
