@@ -580,29 +580,46 @@ STACK=/opt/lore                      # каталог установки (--dir)
 OUT=/opt/lore-backups/$(date +%F); mkdir -p "$OUT"; chmod 700 "$OUT"
 PROJ=$(grep -m1 '^COMPOSE_PROJECT_NAME=' "$STACK/.env" | cut -d= -f2-); PROJ=${PROJ:-lore}
 PASS=$(grep -m1 '^ARCADEDB_ROOT_PASSWORD=' "$STACK/.env" | cut -d= -f2-)
+ARC=$(docker compose -f "$STACK/docker-compose.yml" ps -q arcadedb)
 # пароль уходит в контейнер файлом настроек curl, а не аргументом: аргументы видны в списке процессов
 ac() { printf 'user = "root:%s"\n' "$PASS" | docker run -i --rm --network "${PROJ}_default" \
         curlimages/curl:latest -K - -sS -m 900 -H 'Content-Type: application/json' "$@"; }
 A=http://arcadedb:2480
+: > "$OUT/MANIFEST"                  # что именно забрали этой ночью — им же и проверять
 for db in $(ac "$A/api/v1/databases" | sed 's/.*"result":\[//;s/\].*//;s/"//g;s/,/ /g'); do
-  ac -d '{"language":"sql","command":"BACKUP DATABASE"}' "$A/api/v1/command/$db" | grep -q '"result":"OK"' \
-    || echo "ОШИБКА: BACKUP $db"
+  # ответ команды содержит ИМЯ созданного файла — берём его, а не угадываем по маске
+  R=$(ac -d '{"language":"sql","command":"BACKUP DATABASE"}' "$A/api/v1/command/$db")
+  F=$(printf '%s' "$R" | sed -n 's/.*"backupFile":"\([^"]*\)".*/\1/p')
+  if [ -z "$F" ]; then echo "ОШИБКА: BACKUP $db — $R"; continue; fi
+  # архив лежит в подкаталоге по имени базы: backups/<база>/<файл>
+  docker cp "$ARC:/home/arcadedb/backups/$db/$F" "$OUT/" || { echo "ОШИБКА: не забрали $F"; continue; }
+  # и сразу убираем его из тома: том с бэкапами иначе растёт без предела
+  docker run --rm --volumes-from "$ARC" alpine:3 rm -f "/home/arcadedb/backups/$db/$F"
+  printf '%s %s\n' "$db" "$F" >> "$OUT/MANIFEST"
   ac -d '{"language":"sql","command":"select name, records from schema:types order by name"}' \
      "$A/api/v1/command/$db" > "$OUT/counts-$db.json"
 done
-docker cp "$(docker compose -f "$STACK/docker-compose.yml" ps -q arcadedb)":/home/arcadedb/backups/. "$OUT/"
 ( cd "$OUT" && sha256sum ./* > SHA256SUMS )
 find /opt/lore-backups -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +    # хранить неделю
 ```
+
+Две вещи в этом скрипте сделаны именно так не случайно, и обе проверены на живой базе 22.11.2026:
+
+- **имя архива берётся из ответа команды** (`backupFile`), а архив лежит в подкаталоге по имени базы.
+  Маска вроде `ls *-backup-*.zip` его не найдёт вовсе, а если найдёт похожий — проверите вчерашний
+  архив вместо сегодняшнего и получите «успешно» там, где снимок не делался;
+- **забранный архив удаляется из тома.** `BACKUP DATABASE` пишет в тот же том, что и сам пакет; если
+  не убирать, он растёт до конца диска. Удаляется ровно тот файл, что забрали, — предмиграционные
+  архивы, если они лежат в том же томе, остаются на месте.
 
 **Как проверить — развернуть снимок в одноразовый контейнер.** Рабочая база при этом не трогается:
 
 ```bash
 D=/opt/lore-backups/$(date +%F)
-F=$(ls "$D"/*-backup-*.zip | head -1); DB=$(basename "$F" | sed -E 's/-backup-.*//')
+read -r DB F < "$D/MANIFEST"         # первая база этого прогона; для другой — своя строка MANIFEST
 docker run -d --name arc-restore-test -p 127.0.0.1:12480:2480 -v "$D":/backups:ro \
   -e JAVA_OPTS="-Darcadedb.server.rootPassword=restore-check-only \
-     -Darcadedb.server.defaultDatabases=$DB[root]{restore:file:///backups/$(basename "$F")}" \
+     -Darcadedb.server.defaultDatabases=$DB[root]{restore:file:///backups/$F}" \
   arcadedata/arcadedb:26.11.1       # версия — та же, что в .env пакета (ARCADEDB_VERSION)
 until [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:12480/api/v1/ready)" = 204 ]; do sleep 2; done
 curl -s -u root:restore-check-only -H 'Content-Type: application/json' \
