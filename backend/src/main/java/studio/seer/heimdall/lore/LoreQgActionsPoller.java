@@ -263,17 +263,21 @@ public class LoreQgActionsPoller {
             LOG.warnf("[LORE QG] проект %s не разрешается в репозиторий Forgejo — пропущен", slug);
             return "не разрешается в репозиторий Forgejo";
         }
+        // page=1 обязателен: без него Forgejo 17 игнорирует limit и отдаёт ВЕСЬ список прогонов
+        // (22.11.2026, апгрейд 15 → 17: /actions/runs?limit=3 вернул 10 391 запись, 180 МБ).
+        // Сторож — ForgejoListPagingGuardTest.
         var resp = forgejo.api(repo.get(), "GET",
             "/repos/" + repo.get().owner() + "/" + repo.get().name()
-                + "/actions/runs?limit=" + pageSize, null);
+                + "/actions/runs?page=1&limit=" + pageSize, null);
         if (resp.statusCode() != 200) {
             LOG.warnf("[LORE QG] Forgejo вернул %d на список прогонов %s", resp.statusCode(), slug);
             return "Forgejo вернул " + resp.statusCode();
         }
         JsonObject body = new JsonObject(resp.body());
         JsonArray all = body.getJsonArray("workflow_runs", new JsonArray());
-        // 15.11.2026 на проде Forgejo при limit=30 вернул 8068 прогонов: limit сервер не
-        // соблюдает. Заход разбирает не больше страницы — новые первыми, остальное уже записано.
+        // Обрезка остаётся страховкой, хотя page=1 выше уже ограничивает ответ: 15.11.2026 на проде
+        // Forgejo при limit=30 вернул 8068 прогонов, и полагаться на то, что сервер соблюдает limit,
+        // мы больше не хотим. Заход разбирает не больше страницы — новые первыми, остальное уже записано.
         JsonArray runs = pageOf(all, pageSize);
         if (all.size() > runs.size()) {
             LOG.debugf("[LORE QG] Forgejo вернул %d прогонов при limit=%d — взяты первые %d",

@@ -100,7 +100,9 @@ public class QgBranchTaskStatusRoutine implements QgRoutine {
     /** Тег последнего опубликованного релиза или {@code null}, если Forgejo не ответил. */
     String lastReleaseTag(ForgejoBridge.Repo repo) {
         try {
-            var resp = forgejo.api(repo, "GET", "/repos/" + repo.path() + "/releases?draft=false&limit=1", null);
+            // page=1 обязателен: Forgejo 17 игнорирует limit без page — «дай последний релиз» превращается
+            // в «дай все» (находка апгрейда 22.11.2026; сторож ForgejoListPagingGuardTest).
+            var resp = forgejo.api(repo, "GET", "/repos/" + repo.path() + "/releases?draft=false&page=1&limit=1", null);
             if (resp.statusCode() != 200) {
                 LOG.warnf("[QG %s] Forgejo вернул %d на список релизов", NAME, resp.statusCode());
                 return null;
