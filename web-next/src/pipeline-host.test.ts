@@ -1321,6 +1321,7 @@ exit 0
         // curl — явным путём: на Windows подмена через PATH невозможна, Git Bash
         // ставит /mingw64/bin перед унаследованным PATH (как PROBE_CURL выше)
         CURL_BIN: fwd(join(abin, 'curl')),
+        ZIP_BIN: fwd(zipStub),
         NODE_LOG: fwd(join(d, 'node.log')),
         NPM_LOG: fwd(join(d, 'npm.log')),
         CURL_LOG: fwd(join(d, 'curl.log')),
@@ -1339,13 +1340,24 @@ exit 0
   };
   const names = (curl: string) => [...curl.matchAll(/assets\?name=(\S+)/g)].map((m) => m[1]);
 
+  // Заглушка упаковщика zip. Нужна по той же причине, что заглушка curl: на машине разработчика zip может
+  // не стоять вовсе (в Git Bash его нет), и тогда прогон зависел бы от машины — «зелено у меня, красно у
+  // соседа». Заглушка кладёт файл с нужным именем; содержимое ZIP проверять нечем и незачем — внутрь кладётся
+  // ТОТ ЖЕ каталог, что в tar.gz, а его состав сторожится ниже. Настоящий zip проверен в образе CI
+  // forgejo-ci-runtime:jdk21 (22.11.2026): оба архива собрались, внутри 7 файлов, install.ps1 на месте.
+  const zipStub = join(abin, 'zipstub');
+  writeFileSync(zipStub, `#!/usr/bin/env bash\nout=""\nfor a in "$@"; do case "$a" in *.zip) out="$a";; esac; done\nprintf 'zip-stub' > "$out"\nexit 0\n`);
+  chmodSync(zipStub, 0o755);
+
   it('архив — ровно лёгкая часть пакета: install.sh, compose, .env.example, README, lore-migrate.mjs', () => {
     const d = area();
     const r = asset('all', d);
     expect(r.out, r.out).not.toMatch(/::warning::/);
     expect(r.code).toBe(0);
+    // install.ps1 — вход под Windows (слово владелицы 22.11.2026: «собирай установщик под windows и linux»).
+    // Он обязан быть ВНУТРИ архива: без него человек на Windows получает пакет, который нечем запустить.
     expect(listTar(d).sort()).toEqual(
-      ['.env.example', 'README.md', 'docker-compose.install.yml', 'install.sh', 'lore-migrate.mjs'].sort(),
+      ['.env.example', 'README.md', 'docker-compose.install.yml', 'install.ps1', 'install.sh', 'lore-migrate.mjs'].sort(),
     );
     // SHA256SUMS — отдельным файлом рядом с архивом
     expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8'))
@@ -1359,11 +1371,13 @@ exit 0
     expect(r.node).not.toMatch(/--exe/);
     expect(listTar(d)).not.toContain('lore-migrate');
     expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(false);
-    // Со списком вложений теперь едут и исходники (WITH_SOURCES по умолчанию true, 22.11.2026): две строки
-    // подписей — архив пакета и архив исходников; бинаря среди них нет, и это здесь проверяется.
-    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(2);
-    expect(names(r.curl).sort())
-      .toEqual(['SHA256SUMS', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz']);
+    // Вложений теперь четыре: пакет (tar.gz), тот же пакет в zip для Windows, архив исходников и подписи.
+    // Подписи считаются на все три файла — иначе проверка у человека не нашла бы строку своего архива и
+    // выглядела бы как битое вложение.
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(3);
+    expect(names(r.curl).sort()).toEqual(
+      ['SHA256SUMS', 'lore-installer-v9.9.9-windows.zip', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz'].sort(),
+    );
     rmSync(d, { recursive: true, force: true });
   });
 
