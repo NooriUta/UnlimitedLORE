@@ -100,6 +100,23 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      with_sources:
+        # Исходники LORE архивом (git archive, ~14 МБ). Нужны для install.sh --build-from-source: без них
+        # у получателя пакета остаётся только путь «готовые образы из реестра». Разбор документации
+        # 22.11.2026 показал, что README обещал этот файл, а релиз его не прикладывал.
+        description: 'true — приложить исходники LORE (нужны для сборки образов у себя, ~14 МБ)'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+      with_minilore_image:
+        # Образ сервера miniLORE архивом (~150 МБ). Нужен для install.sh --minilore install: из сети он не
+        # тянется, адресов наших реестров в пакете нет. По умолчанию выключен — не каждому релизу нужен.
+        description: 'true — приложить образ сервера miniLORE (нужен для --minilore install, ~150 МБ)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 permissions:
   contents: write        # нужно для создания Release
@@ -298,6 +315,9 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_TAG: ${{ inputs.tag || '' }}
           WITH_EXE: ${{ inputs.with_exe || 'false' }}
+          WITH_SOURCES: ${{ inputs.with_sources || 'true' }}
+          WITH_MINILORE_IMAGE: ${{ inputs.with_minilore_image || 'false' }}
+          MINILORE_SOURCE_IMAGE: ${{ vars.MINILORE_SOURCE_IMAGE }}
         run: |
           set -u
           export TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
