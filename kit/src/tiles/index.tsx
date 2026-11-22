@@ -94,10 +94,19 @@ export function TileBar(p: TileCommon & { fraction: number | null }) {
 }
 
 // ── D ──────────────────────────────────────────────────────────────────────
-export interface GroupChip { key: string; icon: ReactNode; text: string; tone?: string; alarm?: boolean }
+/** Показание карточки группы. С `value` — плашка «значок · число · единица» (число крупно, единица мелко); без него —
+ *  прежний чип-строка `text`. `alarm` — тревога: идёт отдельной строкой под названием, а не в ряд с показаниями
+ *  (разбор дизайнера 22.11.2026 по референсам HA, Apple Home, Aqara: «главная цифра одна, показания ~0,6 от неё,
+ *  тревоги отдельно»). `title` — подсказка (например «свет частично» к плашке «3/4»). */
+export interface GroupChip { key: string; icon: ReactNode; text: string; value?: string; unit?: string; title?: string; tone?: string; alarm?: boolean;
+  /** Уровень по нормам приложения: warn/bad красят число (как светофор Airthings/Awair). */ level?: 'ok' | 'warn' | 'bad';
+  /** Тренд стрелкой вместо отдельного графика (как TVOC у IKEA Vindstyrka). */ trend?: 'up' | 'down' | 'flat' }
 
-export function GroupCard({ title, main, empty, chips, series, estimate, alarm, tone, onOpen, background, details, size, photo = 'cover' }: {
-  title: string; main: string | null; empty?: string; chips: GroupChip[]; series?: readonly SparkPoint[];
+export function GroupCard({ title, main, sub, badge, aside, empty, chips, series, estimate, alarm, tone, onOpen, background, details, size, photo = 'cover' }: {
+  title: string; main: string | null; /** Подстрока под главным значением (разброс «20,1–24,3 °C · 4 узла»). */ sub?: string;
+  /** Вердикт рядом с названием — одно слово по худшему показателю (как Awair/Netatmo): «воздух хороший», «душно». */ badge?: ReactNode;
+  /** Справа в шапке — статус не-климата (свет «3/4»), как статусная строка Apple Home. */ aside?: ReactNode;
+  empty?: string; chips: GroupChip[]; series?: readonly SparkPoint[];
   estimate?: boolean; alarm?: boolean; tone?: string; onOpen?: () => void;
   /** Фон-картинка (фото комнаты, как в GLADSHEIM /app): адрес даёт приложение; поверх — затемнение для читаемости. */
   background?: string;
@@ -109,21 +118,40 @@ export function GroupCard({ title, main, empty, chips, series, estimate, alarm, 
   photo?: 'cover' | 'top';
 }) {
   const lang = useKitLang();
+  const alerts = chips.filter((c) => c.alarm);
+  const readings = chips.filter((c) => !c.alarm);
   const body = (
     <>
       {background && <span className="sk-groupcard__photo" style={{ backgroundImage: `url("${background.replace(/"/g, '%22')}")` }} aria-hidden="true" />}
-      {series && <Sparkline className="sk-groupcard__bg" points={series} height={30} area />}
+      {series && !chips.some((c) => c.trend) && <Sparkline className="sk-groupcard__bg" points={series} height={30} area />}
       <span className="sk-groupcard__head">
         <span className="sk-groupcard__title">{title}</span>
+        {badge && <span className="sk-groupcard__badge">{badge}</span>}
         {estimate && <span className="sk-tile__sub" title={kitT(lang, 'kit.tile.estimate')}>*</span>}
+        {aside && <span className="sk-groupcard__aside">{aside}</span>}
       </span>
-      {main == null
-        ? <span className="sk-groupcard__empty">{empty ?? kitT(lang, 'kit.stat.none')}</span>
-        : <span className={estimate ? 'sk-groupcard__main is-estimate' : 'sk-groupcard__main'}>{main}</span>}
-      {chips.length > 0 && (
+      {alerts.length > 0 && (
+        <span className="sk-groupcard__alerts">
+          {alerts.map((c) => (
+            <span key={c.key} className="sk-groupcard__chip is-alarm" style={toneVar(c.tone)} title={c.title}>
+              <span className="sk-tile__icon">{c.icon}</span>{c.text}</span>))}
+        </span>)}
+      <span className="sk-groupcard__mainrow">
+        {main == null
+          ? <span className="sk-groupcard__empty">{empty ?? kitT(lang, 'kit.stat.none')}</span>
+          : <span className={estimate ? 'sk-groupcard__main is-estimate' : 'sk-groupcard__main'}>{main}</span>}
+        {sub && <span className="sk-groupcard__sub">{sub}</span>}
+      </span>
+      {readings.length > 0 && (
         <span className="sk-groupcard__chips">
-          {chips.map((c) => (
-            <span key={c.key} className={c.alarm ? 'sk-groupcard__chip is-alarm' : 'sk-groupcard__chip'} style={toneVar(c.tone)}>
+          {readings.map((c) => c.value !== undefined ? (
+            <span key={c.key} className={c.level && c.level !== 'ok' ? `sk-groupcard__plate is-${c.level}` : 'sk-groupcard__plate'} style={toneVar(c.tone)} title={c.title ?? c.text}>
+              <span className="sk-tile__icon">{c.icon}</span>
+              <span className="sk-groupcard__num"><span className="sk-groupcard__val">{c.value}</span>{c.unit ? <span className="sk-groupcard__unit">{c.unit}</span> : null}
+                {c.trend && <span className="sk-groupcard__trend" role="img" aria-label={kitT(lang, `kit.trend.${c.trend}` as never)}>{c.trend === 'up' ? '↗' : c.trend === 'down' ? '↘' : '→'}</span>}</span>
+            </span>
+          ) : (
+            <span key={c.key} className="sk-groupcard__chip" style={toneVar(c.tone)} title={c.title}>
               <span className="sk-tile__icon">{c.icon}</span>{c.text}</span>))}
         </span>)}
       {details && <span className="sk-groupcard__details">{details}</span>}

@@ -7126,6 +7126,14 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-list__th[data-w='s'], .sk-list__td[data-w='s'] { width: 104px; }
 .sk-list__th[data-w='m'], .sk-list__td[data-w='m'] { width: 168px; }
 .sk-list__th[data-w='l'], .sk-list__td[data-w='l'] { width: 240px; }
+/* Шаг ширины — и потолок: в автотаблице width только нижняя граница, и nowrap-текст многоточия раздвигал колонку
+   на всю свою длину (страница шлюза 22.11: «Запись» 1100 px, таблица 1800 px в окне 950). «fill» — остаток строки:
+   max-width: 0 при width: 100% — обычный приём автотаблицы, многоточие режет по остатку. */
+.sk-list__td[data-w='xs'] { max-width: 64px; }
+.sk-list__td[data-w='s'] { max-width: 104px; }
+.sk-list__td[data-w='m'] { max-width: 168px; }
+.sk-list__td[data-w='l'] { max-width: 240px; }
+.sk-list__td[data-w='fill'] { width: 100%; max-width: 0; }
 .sk-list__ellip { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .sk-list__ellip[data-open='true'] { white-space: normal; overflow: visible; }
 @media (max-width: 1280px) {
@@ -7610,7 +7618,7 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-kv__rows .sk-kv__key { padding-right: 16px; }
 .sk-kv__rows th, .sk-kv__rows td, .sk-kv__sub th, .sk-kv__sub td { padding: 2px 8px 2px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--bd); }
 .sk-kv__key { color: var(--t2); font-weight: 400; white-space: nowrap; }
-.sk-kv__val { font-family: var(--mono); color: var(--t1); overflow-wrap: anywhere; }
+.sk-kv__val { color: var(--t1); overflow-wrap: anywhere; }
 .sk-kv__sub th { color: var(--t3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; white-space: nowrap; }
 .sk-kv__group { margin: 4px 0 0; padding-left: 10px; border-left: 2px solid var(--bd); }
 .sk-kv__group > summary { cursor: pointer; padding: 2px 0; list-style: none; }
@@ -7885,17 +7893,17 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
 .sk-tilebar__bubble { position: relative; width: 40px; height: 40px; flex: none; border-radius: 999px; display: grid; place-items: center; background: var(--bg1); }
 .sk-tilebar__label { position: relative; flex: 1; }
 .sk-tilebar .sk-tile__value { position: relative; font-weight: 700; font-size: var(--fs-md); color: var(--acc); }
-.sk-groupcard { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 150px; padding: 14px; border-radius: 18px; background: var(--bg2); border: 0; color: var(--t1); text-align: left; overflow: hidden; font: inherit; }
+.sk-groupcard { position: relative; display: flex; flex-direction: column; gap: 4px; align-self: start; padding: 10px 12px; border-radius: 18px; background: var(--bg2); border: 0; color: var(--t1); text-align: left; overflow: hidden; font: inherit; }
 button.sk-groupcard { cursor: pointer; }
 button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .sk-groupcard.is-alarm { box-shadow: inset 0 0 0 1px var(--dng); }
 .sk-groupcard__bg { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; opacity: 0.35; }
 .sk-groupcard__head { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.sk-groupcard__title { font-weight: 600; font-size: var(--fs-sm); color: var(--t2); }
+.sk-groupcard__title { font-weight: 600; font-size: var(--fs-md); color: var(--t1); }
 .sk-groupcard__main { position: relative; font-weight: 700; font-size: var(--fs-2xl); line-height: 1.1; color: var(--tile-tone, var(--acc)); }
 .sk-groupcard__main.is-estimate { opacity: 0.75; }
 .sk-groupcard__empty { position: relative; font-size: var(--fs-xs); color: var(--t3); }
-.sk-groupcard__chips { position: relative; display: flex; gap: 6px; flex-wrap: wrap; }
+.sk-groupcard__chips { position: relative; display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .sk-groupcard__chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px; background: var(--bg1); font-size: var(--fs-xs); color: var(--t1); }
 .sk-groupcard__chip.is-alarm { color: var(--dng); }
 .sk-tilegauge { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px; border-radius: 18px; background: var(--bg2); }
@@ -7964,13 +7972,13 @@ button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offse
 .sk-verdict.is-warn .sk-verdict__headline { color: var(--wrn); }
 .sk-verdict.is-bad .sk-verdict__headline { color: var(--dng); }
 .sk-verdict.is-bad { border-color: var(--dng); }
-.sk-dash { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--dash-min, 220px), 1fr)); grid-auto-rows: minmax(150px, auto); grid-auto-flow: dense; gap: 12px; padding: 12px; }
+.sk-dash { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--dash-min, 220px), 1fr)); grid-auto-rows: auto; grid-auto-flow: dense; gap: 12px; padding: 12px; }
 .sk-dash__cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border-radius: 12px; background: var(--bg1); border: 1px solid var(--bd); }
 .sk-dash__cell.is-muted { opacity: 0.55; }
 .sk-dash__title { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; }
-@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .sk-dash__cell { grid-column: auto !important; } }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .sk-dash > * { grid-column: auto !important; grid-row: auto !important; } }
 .sk-range { display: flex; flex-direction: column; gap: 6px; }
-.sk-range__row { display: grid; grid-template-columns: 28px 24px 32px 1fr 32px; align-items: center; gap: 6px; font-size: var(--fs-xs); }
+.sk-range__row { display: grid; grid-template-columns: 7ch 4.5em 4ch 1fr 4ch; align-items: center; gap: 6px; font-size: var(--fs-xs); }
 .sk-range__label { color: var(--t2); }
 .sk-range__icon { display: inline-flex; }
 .sk-range__min { color: var(--t3); text-align: right; }
@@ -8054,9 +8062,51 @@ button.sk-groupcard:hover:not(.has-photo), .sk-tilerow:hover { background-image:
 @media (max-width: 1000px) { .sk-dash--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px), (pointer: coarse) and (max-height: 500px) { .sk-dash--cols { grid-template-columns: 1fr; } }
 /* Карточка с фото полосой сверху (карточка комнаты /app): подложка, а не иллюстрация — приглушена, гаснет к тексту. */
-.sk-groupcard.has-photo-top { padding-top: 4.2em; background-image: var(--grad-card); }
-.sk-groupcard.has-photo-top .sk-groupcard__photo { inset: 0 0 auto 0; height: 4.6em; opacity: 0.4; }
+.sk-groupcard.has-photo-top { padding-top: 2.4em; background-image: var(--grad-card); }
+.sk-groupcard.has-photo-top .sk-groupcard__photo { inset: 0 0 auto 0; height: 2.6em; opacity: 0.4; }
 .sk-groupcard.has-photo-top .sk-groupcard__photo::after { background: linear-gradient(180deg, transparent 0%, var(--bg2) 100%); opacity: 1; }
 /* Типографика как в GLADSHEIM /app (владелица 21.11.2026: «сверься по правильности расстановки шрифтов, акцентов… моноширинный лишний раз не используй»): числа и заголовки карточек — Manrope 700 цветом акцента, подписи — Manrope 400 t2/t3; моноширинный — только время на часах; Unbounded — бренд и заголовки экранов. */
 /* Пара шрифтов «только IBM Plex Mono» (как в мобилке miniLORE): переменные, а не шрифт в правилах. */
 [data-font="mono"] { --font: var(--mono); --display: var(--mono); }
+/* Схема модели (ModelDiagram): разрез сверху, ER — с горизонтальной прокруткой (на телефоне не ужимаем в нечитаемое), статусы таблицей. */
+.sk-mdiag { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sk-mdiag__bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sk-mdiag__bar .sk-btn[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+.sk-mdiag__pick { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-xs); color: var(--t3); }
+.sk-mdiag__er { overflow-x: auto; border: 1px solid var(--bd); border-radius: 10px; padding: 8px; background: var(--bg1); }
+.sk-mdiag__note, .sk-mdiag__empty { font-size: var(--fs-xs); color: var(--t3); margin: 0; }
+.sk-mdiag__empty.is-bad { color: var(--dng); }
+.sk-mdiag__st { min-width: 0; }
+.sk-mdiag__h { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; margin-bottom: 4px; }
+.sk-mdiag__tbl { border-collapse: collapse; width: 100%; font-size: var(--fs-sm); }
+.sk-mdiag__tbl th { text-align: left; font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; padding: 4px 6px; }
+.sk-mdiag__tbl td { padding: 5px 6px; border-top: 1px solid var(--bd); color: var(--t2); }
+/* Пропорции и читаемость (разбор дизайнера 22.11.2026 по показу /appnew: «где-то много пустых мест, где-то значки не
+   читаемые»). Рейка иконок: значок 18 px, неактивный — t2 без прозрачности, активный — t1; группы разделены линией. */
+.sk-shell--menu-rail .sk-shell__item .sk-icon { width: 18px; height: 18px; }
+.sk-shell--menu-rail .sk-shell__item { color: var(--t2); }
+.sk-shell--menu-rail .sk-shell__item[aria-current="page"], .sk-shell--menu-rail .sk-shell__item:hover { color: var(--t1); }
+.sk-shell--menu-rail .sk-shell__grp + .sk-shell__grp { border-top: 1px solid var(--bd); margin-top: 4px; padding-top: 4px; }
+/* Карточка группы — компактно, как комплексные датчики (разбор дизайнера 22.11.2026: Awair, Netatmo, IKEA Vindstyrka,
+   Airthings): одна главная цифра, вердикт словом по худшему показателю в шапке, показания одной строкой «значок·число»,
+   тревоги отдельно; карточка по высоте содержимого и не тянется за соседом по строке. */
+.sk-groupcard__head { flex-wrap: wrap; justify-content: flex-start; }
+.sk-groupcard__badge { font-size: var(--fs-2xs); }
+.sk-groupcard__aside { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--t2); }
+.sk-groupcard__mainrow { position: relative; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sk-groupcard__sub { position: relative; font-size: var(--fs-xs); color: var(--t2); }
+.sk-groupcard__alerts { position: relative; display: flex; flex-wrap: wrap; gap: 4px; }
+.sk-groupcard__alerts .sk-groupcard__chip { font-size: var(--fs-2xs); background: transparent; border: 1px solid currentColor; padding: 0 8px 0 4px; }
+.sk-groupcard__plate { display: inline-flex; align-items: center; gap: 4px; }
+.sk-groupcard__plate .sk-tile__icon { width: 14px; height: 14px; color: var(--tile-tone, var(--acc)); }
+.sk-groupcard__num { display: inline-flex; align-items: baseline; gap: 2px; white-space: nowrap; }
+.sk-groupcard__val { font-weight: 700; font-size: var(--fs-md); color: var(--acc); }
+.sk-groupcard__plate.is-warn .sk-groupcard__val { color: var(--wrn); }
+.sk-groupcard__plate.is-bad .sk-groupcard__val { color: var(--dng); }
+.sk-groupcard__unit { font-size: var(--fs-2xs); color: var(--t2); }
+.sk-groupcard__trend { font-size: var(--fs-xs); color: var(--t2); margin-left: 2px; }
+/* Телефон: строка-карточка ~90 px — фото тонкой полосой, на экран 6–7 комнат. */
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
+  .sk-groupcard.has-photo-top { padding-top: 1.8em; }
+  .sk-groupcard.has-photo-top .sk-groupcard__photo { height: 1.6em; }
+}

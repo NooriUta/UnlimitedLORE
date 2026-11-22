@@ -17,7 +17,8 @@ describe('места показа записи — данными', () => {
   });
 
   it('литерал набора мест нигде в коде kit и web-next, кроме объявления списка', () => {
-    const root = join(process.cwd(), '..');
+    const root = process.cwd();
+    const lore = process.env.LORE_ROOT;
     const hits: string[] = [];
     const re = /'left'\s*[,|]\s*'right'\s*[,|]\s*'bottom'\s*[,|]\s*'full'/;
     const walk = (dir: string) => {
@@ -25,11 +26,11 @@ describe('места показа записи — данными', () => {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) { if (name !== 'node_modules' && name !== 'test') walk(p); continue; }
         if (!/\.(ts|tsx)$/.test(name) || /\.test\.tsx?$/.test(name)) continue;
-        if (re.test(readFileSync(p, 'utf8'))) hits.push(p.slice(root.length + 1).split('\\').join('/'));
+        if (re.test(readFileSync(p, 'utf8'))) hits.push((p.startsWith(root) ? p.slice(root.length + 1) : 'web-next/' + p.slice(join(lore ?? '', 'web-next').length + 1)).split('\\').join('/'));
       }
     };
-    walk(join(root, 'kit', 'src'));
-    walk(join(root, 'web-next', 'src'));
-    expect(hits).toEqual(['kit/src/record/RecordDock.ts'.replace('.ts', '.tsx')]);
+    walk(join(root, 'src'));
+    if (lore) walk(join(lore, 'web-next', 'src')); // потребитель — только при LORE_ROOT (гоняет CI LORE)
+    expect(hits).toEqual(['src/record/RecordDock.tsx']);
   });
 });

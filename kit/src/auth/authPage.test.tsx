@@ -40,8 +40,9 @@ describe('PU-21 · экран входа как у KC и Völva', () => {
     expect(container.querySelector('.sk-auth__brand')).toBeNull();
     expect(container.querySelector('.sk-auth__card')).toBeTruthy();
   });
-  it('иллюстрация — тот же рисунок, что у темы Keycloak (копии не расходятся)', () => {
-    const ftl = readFileSync(`${process.cwd()}/../backend/keycloak/themes/lore/login/volva-illustration.ftl`, 'utf8');
+  // Тема Keycloak живёт у потребителя (UnlimitedLORE backend/); сверка — при LORE_ROOT, её гоняет CI LORE.
+  it.skipIf(!process.env.LORE_ROOT)('иллюстрация — тот же рисунок, что у темы Keycloak LORE (копии не расходятся; нужен LORE_ROOT)', () => {
+    const ftl = readFileSync(`${process.env.LORE_ROOT}/backend/keycloak/themes/lore/login/volva-illustration.ftl`, 'utf8');
     expect(VOLVA_ILLUSTRATION_SVG.trim()).toBe(ftl.trim());
   });
 });

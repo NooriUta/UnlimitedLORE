@@ -14,7 +14,10 @@ import { fileURLToPath } from 'node:url';
 import { PALETTES, MODES, DENSITIES } from '../tokens/prefs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const v1Css = readFileSync(resolve(here, '../../../src/styles/tokens.css'), 'utf8');
+// v1 LORE (корневой src/) — у потребителя: сверка «один источник» гоняется при LORE_ROOT (CI LORE). Без него —
+// пропуск с пометкой в имени, а не «зелёное ни на чём».
+const LORE = process.env.LORE_ROOT;
+const v1Css = LORE ? readFileSync(resolve(LORE, 'src/styles/tokens.css'), 'utf8') : '';
 const v2Css = readFileSync(resolve(here, 'seidr.css'), 'utf8');
 
 /** Блоки верхнего уровня `селектор { … }` → карта токенов (последний блок с тем же селектором дописывает). */
@@ -48,7 +51,7 @@ const selectorOf = (palette: string, mode: string) => {
   return (t + md) || ':root';
 };
 
-describe('S4-00a · сам разбор видит токены (иначе сверка «зелёная» ни на чём)', () => {
+describe.skipIf(!LORE)('S4-00a · сам разбор видит токены (иначе сверка «зелёная» ни на чём) (сверка с v1 LORE, нужен LORE_ROOT)', () => {
   it('в v1 и v2 найден :root с ядром палитры', () => {
     for (const map of [v1, v2]) {
       const root = map.get(':root');
@@ -87,7 +90,7 @@ const AA_V2_FIXES: Record<string, Record<string, { v1: string; v2: string }>> = 
  */
 const V2_ONLY_PALETTES = new Set(['mono']);
 
-describe('S4-00b · палитры только v2 — полное ядро в обоих режимах', () => {
+describe.skipIf(!LORE)('S4-00b · палитры только v2 — полное ядро в обоих режимах (сверка с v1 LORE, нужен LORE_ROOT)', () => {
   for (const p of PALETTES.filter(x => V2_ONLY_PALETTES.has(x.id))) for (const mode of MODES) {
     it(`${p.id} / ${mode}`, () => {
       const b = v2.get(selectorOf(p.id, mode));
@@ -97,7 +100,7 @@ describe('S4-00b · палитры только v2 — полное ядро в 
   }
 });
 
-describe('S4-00a · палитры v2 = палитры v1', () => {
+describe.skipIf(!LORE)('S4-00a · палитры v2 = палитры v1 (сверка с v1 LORE, нужен LORE_ROOT)', () => {
   for (const p of PALETTES.filter(x => !V2_ONLY_PALETTES.has(x.id))) {
     for (const mode of MODES) {
       const sel = selectorOf(p.id, mode);
@@ -127,7 +130,7 @@ describe('S4-00a · палитры v2 = палитры v1', () => {
   });
 });
 
-describe('S4-00a · шкала и шрифты = v1', () => {
+describe.skipIf(!LORE)('S4-00a · шкала и шрифты = v1 (сверка с v1 LORE, нужен LORE_ROOT)', () => {
   it('шкала --fs-* совпадает ступень-в-ступень', () => {
     // С S4-16 шкала v2 записана через множитель: `calc(12px * var(--fs-k))`
     // вместо `12px`. Сверять дословно больше нельзя — но и ослаблять сверку
@@ -155,7 +158,7 @@ describe('S4-00a · шкала и шрифты = v1', () => {
   });
 });
 
-describe('S4-00a · плотность и касание', () => {
+describe.skipIf(!LORE)('S4-00a · плотность и касание (сверка с v1 LORE, нужен LORE_ROOT)', () => {
   it('плотность: roomy по умолчанию (:root), у каждого режима свой блок', () => {
     expect(DENSITIES[0]).toBe('roomy');
     const root = v2.get(':root')!;
@@ -185,10 +188,10 @@ describe('S4-00a · плотность и касание', () => {
   });
 });
 
-describe('S4-00a · образцы палитр в выборе темы — тоже токены и тоже из v1', () => {
+describe.skipIf(!LORE)('S4-00a · образцы палитр в выборе темы — тоже токены и тоже из v1 (сверка с v1 LORE, нужен LORE_ROOT)', () => {
   // v1 держит образцы hex-строками в src/theme/prefs.ts; в kit hex в TS запрещён
   // (STYLE-01), поэтому образец — токен --swatch-<палитра> в seidr.css.
-  const v1Prefs = readFileSync(resolve(here, '../../../src/theme/prefs.ts'), 'utf8');
+  const v1Prefs = LORE ? readFileSync(resolve(LORE, 'src/theme/prefs.ts'), 'utf8') : '';
   const v1Swatch = Object.fromEntries(
     [...v1Prefs.matchAll(/id:\s*'([\w-]+)'[^}]*swatch:\s*'(#[0-9a-fA-F]{6})'/g)].map(m => [m[1], m[2].toLowerCase()]),
   );
