@@ -15,7 +15,7 @@
 // docker/ssh/git в PATH).
 import { afterAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1195,5 +1195,205 @@ describe.skipIf(!bashBin)('S8-02: lore-host-deploy.sh — сторож петл�
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/::error::.*\/mcp/);
     expect(r.out).toMatch(/ОТКАТ на lore-host/);
+  });
+});
+
+// ── Готовый пакет установки вложением релиза ─────────────────────────────────
+// Слово владелицы 22.11.2026: «мне нужна сборка инсталятор для друзей». Друг
+// скачивает ОДИН файл из релиза, а не клонирует репозиторий и собирает сам.
+// Пакет лёгкий (install.sh + compose + .env.example + README + lore-migrate.mjs);
+// исполняемый файл на 125 МБ — только по явной просьбе (вход with_exe): он
+// всё равно собирается на месте, тащить его в каждый релиз незачем. Сбой сборки
+// или загрузки не смеет помешать уже опубликованному релизу — отсюда
+// continue-on-error и отдельный вердикт, как у зеркала GitHub.
+const ASSET_SH = '.github/scripts/release-installer-asset.sh';
+
+describe('релиз несёт готовый пакет установки вложением', () => {
+  const pubSteps = () => steps(job(REL, 'publish'));
+  const assetStep = () => pubSteps().find((s) => s.body.includes(ASSET_SH));
+
+  it('шаг идёт ПОСЛЕ публикации и не роняет релиз (continue-on-error)', () => {
+    const st = pubSteps();
+    const iPub = st.findIndex((s) => s.name === 'Publish');
+    const iAsset = st.findIndex((s) => s.body.includes(ASSET_SH));
+    expect(iPub, 'шаг Publish не найден').toBeGreaterThan(-1);
+    expect(iAsset, 'шага с пакетом установки нет').toBeGreaterThan(iPub);
+    expect(st[iAsset].body).toMatch(/continue-on-error: true/);
+    expect(st[iAsset].body).toMatch(/id: installer_asset/);
+  });
+
+  it('честный вердикт отдельным шагом — как у зеркала', () => {
+    const v = pubSteps().find((s) => /Вердикт вложений/.test(s.name));
+    expect(v, 'шага «Вердикт вложений» нет').toBeTruthy();
+    expect(v!.body).toMatch(/always\(\)/);
+    expect(v!.body).toMatch(/steps\.installer_asset\.outcome == 'failure'/);
+    expect(v!.body).toMatch(/::error::/);
+  });
+
+  it('бинарь — только по явной просьбе: вход with_exe, по умолчанию false', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_exe:');
+    expect(from, 'входа with_exe нет').toBeGreaterThan(-1);
+    let to = lines.length;
+    for (let i = from + 1; i < lines.length; i++) {
+      if (/^ {0,6}\S/.test(lines[i])) { to = i; break; }
+    }
+    expect(lines.slice(from, to).join('\n')).toMatch(/^ {8}default: 'false'$/m);
+    expect(assetStep()!.body).toMatch(/WITH_EXE: \$\{\{ inputs\.with_exe \|\| 'false' \}\}/);
+  });
+});
+
+describe.skipIf(!bashBin)('release-installer-asset.sh', { timeout: SPAWN_TIMEOUT }, () => {
+  const abin = mkdtempSync(join(tmpdir(), 'lore-asset-bin-'));
+  afterAll(() => rmSync(abin, { recursive: true, force: true }));
+  const sh = (name: string, body: string) => {
+    writeFileSync(join(abin, name), `#!/usr/bin/env bash\n${body}`.replace(/\r\n/g, '\n'));
+    chmodSync(join(abin, name), 0o755);
+  };
+
+  // node: вместо build-installer.mjs — запись аргументов и ровно те файлы, что он кладёт в --out.
+  const NODE_STUB = `echo "$*" >> "$NODE_LOG"
+out=""; prev=""
+for a in "$@"; do [ "$prev" = "--out" ] && out="$a"; prev="$a"; done
+[ -n "$out" ] || exit 0
+mkdir -p "$out"
+printf 'bundle\\n' > "$out/lore-migrate.mjs"
+case "$*" in *--exe*) printf 'ELF\\n' > "$out/lore-migrate" ;; esac
+exit 0
+`;
+  sh('node', NODE_STUB);
+  // npm: только отметка о вызове — сеть в тестах не трогаем.
+  sh('npm', 'echo "$*" >> "$NPM_LOG"\nexit "${NPM_CODE:-0}"\n');
+  // curl: ответы API Forgejo по URL; -o пишет тело, -w печатает код.
+  sh('curl', `echo "$*" >> "$CURL_LOG"
+o=""; prev=""; url=""
+for a in "$@"; do
+  [ "$prev" = "-o" ] && o="$a"
+  case "$a" in http*) url="$a" ;; esac
+  prev="$a"
+done
+code=200
+body='{"id":77,"assets":[]}'
+case "$url" in
+  *assets\\?name=*) code="\${STUB_UPLOAD_CODE:-201}"; body='{"id":5,"name":"a"}' ;;
+  *) body="\${STUB_RELEASE_JSON:-$body}" ;;
+esac
+if [ -n "$o" ]; then printf '%s' "$body" > "$o"; else printf '%s' "$body"; fi
+case "$*" in *-w*) printf '%s' "$code" ;; esac
+exit 0
+`);
+
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+
+  function area() {
+    const d = mkdtempSync(join(tmpdir(), 'lore-asset-'));
+    // сборщики «уже установлены» — npm в тестах звать незачем
+    mkdirSync(join(d, 'tools', 'node_modules', 'esbuild'), { recursive: true });
+    mkdirSync(join(d, 'tools', 'node_modules', 'postject'), { recursive: true });
+    writeFileSync(join(d, 'created.json'), '{"id":77,"tag_name":"v9.9.9"}');
+    writeFileSync(join(d, 'existing.json'), '{"errors":["release does not exist"]}');
+    return d;
+  }
+
+  function asset(cmd: string, d: string, env: Record<string, string> = {}) {
+    const r = spawnSync(bashBin!, [resolve(repo, ASSET_SH).replace(/\\/g, '/'), cmd], {
+      encoding: 'utf8',
+      cwd: repo,
+      env: {
+        ...process.env,
+        TAG: 'v9.9.9',
+        API: 'http://forgejo:3000/api/v1/repos/AIDA/UnlimitedLORE',
+        TOKEN: 'tkn',
+        OUT: fwd(join(d, 'build')),
+        INSTALLER_TOOLS_DIR: fwd(join(d, 'tools')),
+        CREATED_JSON: fwd(join(d, 'created.json')),
+        EXISTING_JSON: fwd(join(d, 'existing.json')),
+        // curl — явным путём: на Windows подмена через PATH невозможна, Git Bash
+        // ставит /mingw64/bin перед унаследованным PATH (как PROBE_CURL выше)
+        CURL_BIN: fwd(join(abin, 'curl')),
+        NODE_LOG: fwd(join(d, 'node.log')),
+        NPM_LOG: fwd(join(d, 'npm.log')),
+        CURL_LOG: fwd(join(d, 'curl.log')),
+        ...env,
+        PATH: `${abin}${delimiter}${process.env.PATH ?? ''}`,
+      },
+    });
+    const log = (f: string) => (existsSync(join(d, f)) ? readFileSync(join(d, f), 'utf8') : '');
+    return { code: r.status, out: `${r.stdout}${r.stderr}`, node: log('node.log'), npm: log('npm.log'), curl: log('curl.log') };
+  }
+
+  const listTar = (d: string) => {
+    // cd + относительное имя: абсолютный путь с двоеточием (C:/…) GNU tar читает как «хост:файл»
+    const r = spawnSync(bashBin!, ['-c', `cd "${fwd(join(d, 'build', 'asset'))}" && tar -tzf lore-installer-v9.9.9.tar.gz`], { encoding: 'utf8' });
+    return r.stdout.split('\n').map((l) => l.replace(/^lore-installer-v9\.9\.9\//, '').replace(/\/$/, '')).filter(Boolean);
+  };
+  const names = (curl: string) => [...curl.matchAll(/assets\?name=(\S+)/g)].map((m) => m[1]);
+
+  it('архив — ровно лёгкая часть пакета: install.sh, compose, .env.example, README, lore-migrate.mjs', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(r.out, r.out).not.toMatch(/::warning::/);
+    expect(r.code).toBe(0);
+    expect(listTar(d).sort()).toEqual(
+      ['.env.example', 'README.md', 'docker-compose.install.yml', 'install.sh', 'lore-migrate.mjs'].sort(),
+    );
+    // SHA256SUMS — отдельным файлом рядом с архивом
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8'))
+      .toMatch(/^[0-9a-f]{64} {2}lore-installer-v9\.9\.9\.tar\.gz$/m);
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_exe=false (по умолчанию): бинаря нет ни в архиве, ни во вложениях, и он не собирается', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(r.node).not.toMatch(/--exe/);
+    expect(listTar(d)).not.toContain('lore-migrate');
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(false);
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(1);
+    expect(names(r.curl).sort()).toEqual(['SHA256SUMS', 'lore-installer-v9.9.9.tar.gz']);
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_exe=true: бинарь собирается и едет ОТДЕЛЬНЫМ вложением, архив остаётся лёгким', () => {
+    const d = area();
+    const r = asset('all', d, { WITH_EXE: 'true' });
+    expect(r.code).toBe(0);
+    expect(r.node).toMatch(/--exe/);
+    expect(listTar(d)).not.toContain('lore-migrate');
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(true);
+    expect(names(r.curl)).toContain('lore-migrate-linux-x64');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('id релиза — из ответа публикации; его нет — из уже существующего релиза', () => {
+    const d = area();
+    expect(asset('all', d).curl).toMatch(/releases\/77\/assets\?name=/);
+    rmSync(d, { recursive: true, force: true });
+
+    const d2 = area();
+    rmSync(join(d2, 'created.json'));
+    writeFileSync(join(d2, 'existing.json'), '{"id":42,"assets":[]}');
+    expect(asset('all', d2).curl).toMatch(/releases\/42\/assets\?name=/);
+    rmSync(d2, { recursive: true, force: true });
+  });
+
+  it('ошибка загрузки — предупреждение и ненулевой код шага, а не ::error:: посреди релиза', () => {
+    const d = area();
+    const r = asset('all', d, { STUB_UPLOAD_CODE: '500' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::warning::/);
+    expect(r.out).not.toMatch(/::error::/);
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('сборка не удалась — предупреждение, вложения не выдумываются', () => {
+    const d = area();
+    sh('node', 'exit 1\n');
+    const r = asset('all', d);
+    sh('node', NODE_STUB);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::warning::/);
+    expect(r.curl).not.toMatch(/assets\?name=/);
+    rmSync(d, { recursive: true, force: true });
   });
 });
