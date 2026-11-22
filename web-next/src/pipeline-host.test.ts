@@ -1533,3 +1533,41 @@ describe('релиз прикладывает то, что обещает README
     expect(block).not.toMatch(/die "исходники/);
   });
 });
+
+// 22.11.2026: публикация образов наружу два выпуска подряд не выполнялась — шаг стоял в задаче выкатки прода
+// ПОСЛЕ «Проб прода», а те падали на ложном красном (проба знала только базу шагов V, а прод собран из модели).
+// Наружу не уехало ни одного образа, и об этом никто не узнал: пропущенный шаг выглядит как «всё хорошо».
+// CICDGitHub вынесла публикацию в свою задачу (#1766). Сторож ниже — чтобы её не вернули обратно при следующей
+// перестановке шагов: здоровье НАШЕГО прода не повод оставлять человека без образов. Образ тот же :sha8, что
+// прошёл препрод, — это и проверяется шагом resolve внутри задачи.
+describe('публикация образов наружу не зависит от проб нашего прода', () => {
+  const rel = '.github/workflows/lore-release.yml';
+  const ghcr = () => job(rel, 'publish-ghcr');
+  const deploy = () => job(rel, 'deploy-prod');
+
+  it('положительный контроль: обе задачи в трубе есть', () => {
+    expect(ghcr().length, 'задача publish-ghcr').toBeGreaterThan(0);
+    expect(deploy().length, 'задача deploy-prod').toBeGreaterThan(0);
+  });
+
+  it('публикация стоит отдельной задачей, а не шагом выкатки прода', () => {
+    expect(deploy(), 'шаг публикации вернулся в выкатку прода').not.toMatch(/ghcr-publish\.sh/);
+    expect(ghcr()).toMatch(/ghcr-publish\.sh/);
+  });
+
+  it('она не ждёт выкатку прода ни через needs, ни через её шаги', () => {
+    const needs = /needs:\s*(\[[^\]]*\]|[^\n]*)/.exec(ghcr())?.[1] ?? '';
+    expect(needs, 'publish-ghcr не должна зависеть от deploy-prod').not.toMatch(/deploy-prod/);
+    expect(needs, 'зависит от публикации выпуска — образы едут вместе с вложениями').toMatch(/publish/);
+    expect(ghcr(), 'в задаче публикации не должно быть проб прода').not.toMatch(/Пробы прода|lore-host-deploy\.sh probe/);
+  });
+
+  it('образы берутся те, что прошли препрод, — без пересборки', () => {
+    expect(ghcr(), 'нет сверки образов тега (resolve)').toMatch(/lore-host-deploy\.sh resolve/);
+    expect(ghcr(), 'публикация не пересобирает образы').not.toMatch(/compose build|docker build/);
+  });
+
+  it('наружу уезжает только то, что в main', () => {
+    expect(ghcr()).toMatch(/merge-base --is-ancestor/);
+  });
+});
