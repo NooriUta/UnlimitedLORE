@@ -8019,3 +8019,5 @@ button.sk-groupcard:hover:not(.has-photo), .sk-tilerow:hover { background-image:
 .sk-groupcard.has-photo-top .sk-groupcard__photo { inset: 0 0 auto 0; height: 4.6em; opacity: 0.4; }
 .sk-groupcard.has-photo-top .sk-groupcard__photo::after { background: linear-gradient(180deg, transparent 0%, var(--bg2) 100%); opacity: 1; }
 /* Типографика как в GLADSHEIM /app (владелица 21.11.2026: «сверься по правильности расстановки шрифтов, акцентов… моноширинный лишний раз не используй»): числа и заголовки карточек — Manrope 700 цветом акцента, подписи — Manrope 400 t2/t3; моноширинный — только время на часах; Unbounded — бренд и заголовки экранов. */
+/* Пара шрифтов «только IBM Plex Mono» (как в мобилке miniLORE): переменные, а не шрифт в правилах. */
+[data-font="mono"] { --font: var(--mono); --display: var(--mono); }

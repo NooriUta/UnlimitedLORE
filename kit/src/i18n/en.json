@@ -1380,5 +1380,8 @@
   "kit.obj.all": "All {n}",
   "kit.obj.galleryEmpty": "nothing matches the filter",
   "kit.obj.hidden": "{n} more hidden by permissions — not \"no records\".",
-  "kit.list.hiddenTail": " · {n} more hidden by permissions"
+  "kit.list.hiddenTail": " · {n} more hidden by permissions",
+  "kit.view.fontPair": "Font pair",
+  "kit.view.font.lore": "Manrope + IBM Plex Mono — LORE pair",
+  "kit.view.font.mono": "IBM Plex Mono only — one font, no contrast"
 }

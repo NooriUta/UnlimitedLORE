@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ViewPanel, WallpaperFrame, meshPoints, parquetTile, denseGearsTile, wallpaperLayer, readWallpaper, writeWallpaper } from '.';
 
-afterEach(() => { cleanup(); localStorage.clear(); document.documentElement.removeAttribute('data-mode'); document.documentElement.removeAttribute('data-theme'); });
+afterEach(() => { cleanup(); localStorage.clear(); for (const a of ['data-mode', 'data-theme', 'data-font']) document.documentElement.removeAttribute(a); });
 
 describe('обои: слой и хранение', () => {
   it('нет картинки — нет слоя; асимметрия — позиция; затемнение в 0..0.9', () => {
@@ -40,6 +40,17 @@ describe('узоры из мобилки', () => {
   it('плитки детерминированы', () => {
     expect(parquetTile()).toBe(parquetTile());
     expect(denseGearsTile().length).toBeGreaterThan(1000);
+  });
+});
+
+describe('Пара шрифтов (как в мобилке miniLORE)', () => {
+  it('выбор пары ставит data-font на корень и запоминается; шрифты — переменными, не зашиты', () => {
+    render(<ViewPanel storageKey="app" />);
+    fireEvent.click(screen.getByRole('button', { name: /Только IBM Plex Mono|IBM Plex Mono only/ }));
+    expect(document.documentElement.getAttribute('data-font')).toBe('mono');
+    expect(JSON.parse(localStorage.getItem('app.view') ?? '{}').font).toBe('mono');
+    fireEvent.click(screen.getByRole('button', { name: /пара LORE|LORE pair/ }));
+    expect(document.documentElement.hasAttribute('data-font')).toBe(false);
   });
 });
 
