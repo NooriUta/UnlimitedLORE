@@ -65,7 +65,7 @@ FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на наш�
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
 MINILORE=""                       # --minilore install|none: сервер miniLORE в этой установке (по умолчанию не ставится)
-MINILORE_IMAGE_DEFAULT="minilore-srv:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
+MINILORE_IMAGE_DEFAULT="git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
 FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
 FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-bbe9f59c.tar.gz"
@@ -889,7 +889,7 @@ selftest() {
   printf '%s' "$out" | grep -q -- '--minilore' || fail "--minilore: неизвестное значение без причины: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
   printf '%s' "$out" | grep -q 'minilore' || fail "--minilore install: miniLORE не назван в плане: $out"; ok
-  printf '%s' "$out" | grep -q 'minilore-srv:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
+  printf '%s' "$out" | grep -q 'git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
   # Умолчания разработчика (их клиент и их владелец) в чужую установку не подставляются.
   printf '%s' "$out" | grep -q 'mobilepoc-app' && fail "в план попал ЧУЖОЙ клиент mobilepoc-app"; ok
   printf '%s' "$out" | grep -q 'omiloreadmin' && fail "в план попал ЧУЖОЙ владелец omiloreadmin"; ok

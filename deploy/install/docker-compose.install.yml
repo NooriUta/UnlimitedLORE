@@ -251,7 +251,7 @@ services:
   # установки, снаружи — через прокси владельца, если он его заводит.
   minilore-srv:
     profiles: ["minilore"]
-    image: ${MINILORE_IMAGE:-minilore-srv:0.4.19}
+    image: ${MINILORE_IMAGE:-git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19}
     restart: unless-stopped
     depends_on:
       arcadedb:
@@ -268,7 +268,9 @@ services:
       - MINILORE_APP_AUTH_SCHEME=${MINILORE_APP_AUTH_SCHEME:-pro.seidrstudio.minilore}
       - MINILORE_ARCADE_URL=${MINILORE_ARCADE_URL:-http://arcadedb:2480}
       - MINILORE_ARCADE_USER=${MINILORE_ARCADE_USER:-root}
-      - MINILORE_ARCADE_PASSWORD=${ARCADEDB_ROOT_PASSWORD:?пароль ArcadeDB нужен miniLORE: он заводит свои базы}
+      # Двоеточия в тексте отказа тут нельзя: строка списка с «: » разбирается YAML как пара ключ-значение,
+      # и compose падает «environment.[6]: unexpected type map» (поймано прогоном на чужой машине 22.11.2026).
+      - "MINILORE_ARCADE_PASSWORD=${ARCADEDB_ROOT_PASSWORD:?нужен пароль ArcadeDB — miniLORE заводит свои базы}"
       - MINILORE_ARCADE_DATABASE=${MINILORE_ARCADE_DATABASE:-minilore}
       - MINILORE_ARCHIVE_DATABASE=${MINILORE_ARCHIVE_DATABASE:-minilore_archive}
       # Чтение LORE сервером miniLORE — по желанию владельца: пусто, и двери чтения отвечают 503 с причиной.
