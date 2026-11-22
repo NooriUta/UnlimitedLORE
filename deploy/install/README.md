@@ -10,7 +10,8 @@ forgejo-mcp и мобильный монитор miniLORE — по выбору,
 
 | файл | зачем | когда нужен |
 |---|---|---|
-| `lore-installer-<версия>.tar.gz` | `install.sh`, `docker-compose.install.yml`, `.env.example`, этот README и `lore-migrate.mjs` | всегда |
+| `lore-installer-<версия>.tar.gz` | пакет целиком: `install.sh`, `install.ps1`, `docker-compose.install.yml`, `.env.example`, этот README, `lore-migrate.mjs` | **Linux и macOS** |
+| `lore-installer-<версия>-windows.zip` | то же самое, в zip — Windows распаковывает его без лишних программ | **Windows** |
 | `SHA256SUMS` | подписи вложений выпуска | всегда — проверьте перед установкой |
 | `lore-migrate-linux-x64` | то же, что `lore-migrate.mjs`, одним исполняемым файлом (125 МБ) | не обязателен: без него установщик запускает `.mjs` в контейнере с Node |
 | `lore-src-<версия>.tar.gz` | исходники LORE | только для `--build-from-source` (сборка образов у себя) |
@@ -20,10 +21,27 @@ forgejo-mcp и мобильный монитор miniLORE — по выбору,
 и установщик ищет их там же. Дополнительные вложения кладите туда же: исходники в `src/`, образы в `images/`.
 
 ```bash
+# Linux и macOS
 tar -xzf lore-installer-<версия>.tar.gz && cd lore-installer-<версия>
 sha256sum -c SHA256SUMS      # подписи
 bash install.sh --dir /opt/lore --version v1.18.0
 ```
+
+```powershell
+# Windows (PowerShell): распакуйте zip и запускайте install.ps1 — ключи те же, что у install.sh
+Expand-Archive lore-installer-<версия>-windows.zip -DestinationPath .
+Set-Location lore-installer-<версия>
+.\install.ps1 --dir C:\lore --version v1.18.0
+```
+
+**Про Windows отдельно.** Установки две разные нам не нужны: пакет — это docker compose без привязок к путям
+хоста, поэтому под обеими системами ставит один и тот же `install.sh`. `install.ps1` его только запускает — через
+WSL (его требует и сам Docker Desktop) либо через bash из Git для Windows, который он находит сам. Нет ни того,
+ни другого — скажет об этом прямо и назовёт, что поставить, а не станет пытаться «как-нибудь». Так у вас не
+будет второй реализации, которая молча отстаёт от первой.
+
+Что нужно на машине с Windows: **Docker Desktop в режиме Linux-контейнеров** (установщик проверит режим и
+откажется работать в режиме Windows-контейнеров — образы LORE там не запустятся) и WSL либо Git для Windows.
 
 Без `--version` берётся версия пакета. Свой пароль базы вместо сгенерированного — переменной
 `ARCADEDB_ROOT_PASSWORD`. Посмотреть план, ничего не меняя, — `--dry-run`: это стоит сделать первым запуском.
