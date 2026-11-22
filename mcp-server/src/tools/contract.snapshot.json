@@ -885,9 +885,9 @@
       "action": "enum(add|remove)?",
       "fields": "record<unknown>?",
       "id": "string",
-      "rel": "enum(actor|adr|answers|blocks|builds_on|component|decision|delivers|dep|depends_on|desired_by|extends|felt_by|file|fills_role|gain|gates|includes|job|milestone|pain|parent|performed_by|performs|phase|pr|produced_by|product|project|raised_in|release|relieves|rubric|serves|shipped_in|sprint|success_of|supersedes|tag|task)",
+      "rel": "enum(actor|adr|answers|blocks|builds_on|component|decision|delivers|dep|depends_on|desired_by|extends|felt_by|file|fills_role|gain|gates|includes|job|milestone|mirror|pain|parent|performed_by|performs|phase|pr|produced_by|product|project|raised_in|release|relieves|rubric|serves|shipped_in|sprint|success_of|supersedes|tag|task|uses)",
       "target_id": "number | number | string[] | string?",
-      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|phase|product|question|release|runbook|spec|sprint|task|uc|vp)"
+      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|phase|product|question|release|repository|runbook|spec|sprint|task|uc|vp)"
     },
     "output": {
       "content": [
@@ -926,7 +926,7 @@
     "input": {
       "fields": "record<unknown>?",
       "id": "string?",
-      "type": "enum(actor|adr|bragi_campaign|bragi_channel|bragi_integration|bragi_keyword|bragi_page|bragi_publication|bragi_rubric|bragi_variant|component|decision|dict|doc|feature|gain|insight|job|milestone|pain|phase|project|project_actor|question|release|runbook|spec|sprint|task|tech|uc)"
+      "type": "enum(actor|adr|bragi_campaign|bragi_channel|bragi_integration|bragi_keyword|bragi_page|bragi_publication|bragi_rubric|bragi_variant|component|decision|dict|doc|feature|gain|insight|job|milestone|pain|phase|project|project_actor|question|release|repository|runbook|spec|sprint|task|tech|uc)"
     },
     "output": {
       "content": [
