@@ -84,15 +84,20 @@ export function judgeCreateCell(p: CreateProbe): CreateCell {
   return cell('pass', `форма открылась, пустой черновик не сохраняется: ${p.whyText.trim()}`);
 }
 
-/** Итог типа по ячейкам: хоть один FAIL — fail; ни одной выполненной — not-run; иначе pass. */
+/**
+ * Итог типа по ячейкам: хоть один FAIL — fail; все «не применимо» — n/a (среда не та, проверять нечего);
+ * ни одной выполненной — not-run; иначе pass. «Не применимо» вперемешку с «не выполнено» — not-run:
+ * выполненного всё равно нет (1.18.3, итог n/a общий с отчётом смоука).
+ */
 export function typeOutcome(cells: readonly CreateCell[]): Outcome {
   if (cells.some(c => c.outcome === 'fail')) return 'fail';
-  if (cells.every(c => c.outcome === 'not-run')) return 'not-run';
+  if (cells.length > 0 && cells.every(c => c.outcome === 'n/a')) return 'n/a';
+  if (cells.every(c => c.outcome === 'not-run' || c.outcome === 'n/a')) return 'not-run';
   return 'pass';
 }
 
-/** Строка отчёта по типу: «учётка — PASS/FAIL/НЕ ВЫПОЛНЕН: причина» через «; ». */
+/** Строка отчёта по типу: «учётка — PASS/FAIL/НЕ ВЫПОЛНЕН/НЕ ПРИМЕНИМО: причина» через «; ». */
 export function renderCells(cells: readonly CreateCell[]): string {
-  const word: Record<Outcome, string> = { pass: 'PASS', fail: 'FAIL', 'not-run': 'НЕ ВЫПОЛНЕН' };
+  const word: Record<Outcome, string> = { pass: 'PASS', fail: 'FAIL', 'not-run': 'НЕ ВЫПОЛНЕН', 'n/a': 'НЕ ПРИМЕНИМО' };
   return cells.map(c => `${c.account} — ${word[c.outcome]}: ${c.reason}`).join('; ');
 }

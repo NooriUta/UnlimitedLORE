@@ -32,8 +32,9 @@ name: LORE Release (publish on tag)
 #      накатка отдельным `compose run lore-migrate` (root, basic, LORE_MIGRATE_ONLY);
 #   7. up — compose up -d: бэкенд (ждём healthy) → v1 → v2;
 #   8. theme — тема KC из дерева тега → /home/nooriuta/keycloak/themes/lore;
-#   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит
-#      сборки, в логе «схема сверена: БД vN = код vN».
+#   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит сборки, схема:
+#      база из модели — schema_source=model и schema_version=model:<номер модели тега>,
+#      база шагов V — «схема сверена: БД vN = код vN» в логе; вид не определён — красная (1.18.3).
 # Ручной запуск: tag + dry_run=true — только 1–3 и план, без публикации релиза;
 # deploy=true — боевая выкатка указанного тега (так же делается ОТКАТ на прошлый
 # тег: его образы :sha8 лежат на 131 и на lore-host). Только dispatch tag без

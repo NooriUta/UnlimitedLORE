@@ -102,4 +102,18 @@ describe('typeOutcome и renderCells', () => {
   it('строка отчёта называет учётку и исход словами', () => {
     expect(renderCells([pass, nr])).toBe('a — PASS: ок; b — НЕ ВЫПОЛНЕН: нет входа');
   });
+
+  // 1.18.3: у итога появился четвёртый вид — «не применимо» (среда не та). Ячейки покрытия его пока не
+  // выдают, но тип общий с отчётом смоука: без ветки строка отчёта молча печатала бы undefined, а итог
+  // «все не применимы» выдал бы себя за pass. Сторож держит обе дыры закрытыми.
+  const na = { account: 'd', outcome: 'n/a' as const, reason: 'мастер только в установщике' };
+  it('«не применимо» названо словами, а не undefined', () => {
+    expect(renderCells([na])).toBe('d — НЕ ПРИМЕНИМО: мастер только в установщике');
+  });
+  it('все ячейки «не применимо» — итог n/a; вперемешку с «не выполнено» — not-run; с pass — pass', () => {
+    expect(typeOutcome([na, na])).toBe('n/a');
+    expect(typeOutcome([na, nr])).toBe('not-run');
+    expect(typeOutcome([na, pass])).toBe('pass');
+    expect(typeOutcome([na, fail])).toBe('fail');
+  });
 });
