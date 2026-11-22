@@ -43,6 +43,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TAG="${TAG:-}"
 OUT="${OUT:-$ROOT/build}"
 WITH_EXE="${WITH_EXE:-false}"
+# Исходники LORE (нужны для --build-from-source) и образ сервера miniLORE (нужен для --minilore install)
+# едут ОТДЕЛЬНЫМИ вложениями: класть их в архив значит превратить лёгкий пакет в 300 МБ, а не класть вовсе —
+# обещать в README то, чего в релизе нет (разбор документации 22.11.2026).
+WITH_SOURCES="${WITH_SOURCES:-true}"
+WITH_MINILORE_IMAGE="${WITH_MINILORE_IMAGE:-false}"
 TOOLS="${INSTALLER_TOOLS_DIR:-$ROOT/.installer-tools}"
 SRC_DIR="$ROOT/deploy/install"
 CREATED_JSON="${CREATED_JSON:-/tmp/created.json}"
@@ -52,13 +57,22 @@ EXISTING_JSON="${EXISTING_JSON:-/tmp/existing.json}"
 # /mingw64/bin:/usr/bin ПЕРЕД унаследованным PATH, и настоящий curl всегда
 # находится первым. Тот же приём, что у PROBE_CURL в lore-host-deploy.sh.
 CURL="${CURL_BIN:-curl}"
+# zip — тоже переменной, и по той же причине: тесты подменяют его заглушкой, а на Windows подмена через PATH
+# невозможна. На машине разработчика zip может отсутствовать вовсе — тогда шаг честно предупреждает.
+ZIP="${ZIP_BIN:-zip}"
 
 # Лёгкая часть пакета установки. Тот же перечень, что вшивает в установщик
 # install-bundle-sync.mjs, плюс сам собранный lore-migrate.mjs.
-BUNDLE_FILES=(install.sh docker-compose.install.yml .env.example README.md)
+BUNDLE_FILES=(install.sh install.ps1 docker-compose.install.yml .env.example README.md)
 STAGE_NAME="lore-installer-$TAG"
 ARCHIVE="$STAGE_NAME.tar.gz"
+# Слово владелицы 22.11.2026: «собирай установщик под windows и linux». Содержимое у архивов ОДНО — пакет
+# один и тот же (compose без привязок к путям хоста), разный только вход: install.sh под Linux, install.ps1
+# под Windows (он запускает тот же install.sh через WSL или bash из Git). Форма разная потому, что tar.gz на
+# Windows без лишних программ не распаковать, а права на install.sh в zip не выживают.
+WIN_ARCHIVE="$STAGE_NAME-windows.zip"
 EXE_ASSET="lore-migrate-linux-x64"
+SRC_ASSET="lore-src-$TAG.tar.gz"
 ASSET_DIR="$OUT/asset"
 
 warn() { echo "::warning::$*"; }
@@ -118,6 +132,19 @@ cmd_pack() {
   # (C:/… на машине разработчика) GNU tar читает как «хост:файл» и лезет в сеть.
   ( cd "$ASSET_DIR" && tar -czf "$ARCHIVE" "$STAGE_NAME" ) \
     || die "архив $ARCHIVE не собрался"
+
+  # Второй архив — тот же каталог в zip, для Windows. Инструмент берём какой есть: zip на раннере обычно
+  # стоит, python как запасной. Нет ни одного — говорим вслух и не приложим ZIP, но tar.gz уже собран,
+  # поэтому выпуск не рушим: под Linux пакет полон.
+  if command -v "$ZIP" >/dev/null 2>&1; then
+    ( cd "$ASSET_DIR" && "$ZIP" -qr "$WIN_ARCHIVE" "$STAGE_NAME" ) || warn "ZIP $WIN_ARCHIVE не собрался (zip)"
+  elif command -v python3 >/dev/null 2>&1; then
+    ( cd "$ASSET_DIR" && python3 -m zipfile -c "$WIN_ARCHIVE" "$STAGE_NAME" ) \
+      || warn "ZIP $WIN_ARCHIVE не собрался (python3)"
+  else
+    warn "ни zip, ни python3 — вложение для Windows ($WIN_ARCHIVE) не собрано; tar.gz на месте"
+  fi
+
   rm -rf "${ASSET_DIR:?}/$STAGE_NAME"
 
   # Исполняемый файл — ОТДЕЛЬНЫМ вложением, не внутри архива: иначе лёгкий
@@ -125,6 +152,39 @@ cmd_pack() {
   if [ "$WITH_EXE" = true ]; then
     [ -f "$OUT/lore-migrate" ] || die "нет $OUT/lore-migrate — исполняемый файл не собрался"
     cp "$OUT/lore-migrate" "$ASSET_DIR/$EXE_ASSET" || die "не скопирован исполняемый файл"
+  fi
+
+  # Исходники LORE — для install.sh --build-from-source. Без них у получателя остаётся только путь
+  # «готовые образы из реестра», а README обещает оба (разбор документации 22.11.2026: обещал и не прикладывал).
+  if [ "$WITH_SOURCES" = true ]; then
+    if node "$ROOT/scripts/model-migration/source-archive.mjs" --out "$OUT" --version "$TAG"; then
+      local src
+      src="$(ls "$OUT"/src/lore-*.tar.gz 2>/dev/null | head -1)"
+      if [ -n "$src" ] && [ -f "$src" ]; then
+        cp "$src" "$ASSET_DIR/$SRC_ASSET" || warn "исходники не скопированы в каталог вложений"
+      else
+        warn "исходники LORE не собрались — вложение $SRC_ASSET не поедет; установка из готовых образов остаётся"
+      fi
+    else
+      warn "source-archive.mjs не отработал — исходники к релизу $TAG не приложены"
+    fi
+  fi
+
+  # Образ сервера miniLORE — только по просьбе: ~150 МБ, и нужен лишь тем, кто ставит --minilore install.
+  # Из сети он не тянется: адресов наших реестров в пакете нет (сторож noBakedHosts), поэтому либо вложение,
+  # либо свой MINILORE_IMAGE у получателя.
+  if [ "$WITH_MINILORE_IMAGE" = true ]; then
+    if node "$ROOT/scripts/model-migration/minilore-image.mjs" --out "$OUT"; then
+      local img
+      img="$(ls "$OUT"/images/minilore-srv-*.tar 2>/dev/null | head -1)"
+      if [ -n "$img" ] && [ -f "$img" ]; then
+        cp "$img" "$ASSET_DIR/$(basename "$img")" || warn "образ miniLORE не скопирован в каталог вложений"
+      else
+        warn "образ miniLORE не собрался — вложение не поедет; установка с --minilore install у получателя не пройдёт"
+      fi
+    else
+      warn "minilore-image.mjs не отработал (нет MINILORE_SOURCE_IMAGE?) — образ к релизу $TAG не приложен"
+    fi
   fi
 
   # Формат — тот же, что у выкладки в kkRepo (sha256sums() в publish-plan.mjs):
@@ -197,7 +257,16 @@ cmd_upload() {
   id="$(release_id)" || die "id релиза $TAG не определён (ни ответ публикации, ни API по тегу) — вложения не загружены"
   echo "релиз $TAG — id $id"
   local names=("$ARCHIVE" SHA256SUMS)
+  # Архив для Windows — если собрался. Его отсутствие уже сказано вслух на упаковке; тут не повторяем
+  # и не рушим выпуск: под Linux пакет полон, а под Windows человек возьмёт tar.gz и распакует сам.
+  [ -f "$ASSET_DIR/$WIN_ARCHIVE" ] && names+=("$WIN_ARCHIVE")
   [ "$WITH_EXE" = true ] && names+=("$EXE_ASSET")
+  # Исходники и образ — вложениями, если их положил шаг сборки. Нет файла — не беда: загрузка пропускает
+  # отсутствующее молча здесь и громко в upload_one, а релиз из-за необязательного файла не краснеет.
+  [ -f "$ASSET_DIR/$SRC_ASSET" ] && names+=("$SRC_ASSET")
+  local mimg
+  mimg="$(ls "$ASSET_DIR"/minilore-srv-*.tar 2>/dev/null | head -1)"
+  [ -n "$mimg" ] && names+=("$(basename "$mimg")")
   local bad=0 n
   for n in "${names[@]}"; do
     upload_one "$id" "$n" || bad=1

@@ -1257,6 +1257,16 @@ out=""; prev=""
 for a in "$@"; do [ "$prev" = "--out" ] && out="$a"; prev="$a"; done
 [ -n "$out" ] || exit 0
 mkdir -p "$out"
+# source-archive.mjs кладёт исходники в <out>/src — заглушка повторяет это. Иначе прогон по умолчанию
+# ругался бы «исходники не собрались» там, где настоящий скрипт их собирает (22.11.2026).
+case "$*" in
+  *source-archive.mjs*)
+    ver=""; prev=""
+    for a in "$@"; do [ "$prev" = "--version" ] && ver="$a"; prev="$a"; done
+    mkdir -p "$out/src"
+    printf 'src\\n' > "$out/src/lore-\${ver:-v0.0.0}.tar.gz"
+    exit 0 ;;
+esac
 printf 'bundle\\n' > "$out/lore-migrate.mjs"
 case "$*" in *--exe*) printf 'ELF\\n' > "$out/lore-migrate" ;; esac
 exit 0
@@ -1311,6 +1321,7 @@ exit 0
         // curl — явным путём: на Windows подмена через PATH невозможна, Git Bash
         // ставит /mingw64/bin перед унаследованным PATH (как PROBE_CURL выше)
         CURL_BIN: fwd(join(abin, 'curl')),
+        ZIP_BIN: fwd(zipStub),
         NODE_LOG: fwd(join(d, 'node.log')),
         NPM_LOG: fwd(join(d, 'npm.log')),
         CURL_LOG: fwd(join(d, 'curl.log')),
@@ -1329,13 +1340,24 @@ exit 0
   };
   const names = (curl: string) => [...curl.matchAll(/assets\?name=(\S+)/g)].map((m) => m[1]);
 
+  // Заглушка упаковщика zip. Нужна по той же причине, что заглушка curl: на машине разработчика zip может
+  // не стоять вовсе (в Git Bash его нет), и тогда прогон зависел бы от машины — «зелено у меня, красно у
+  // соседа». Заглушка кладёт файл с нужным именем; содержимое ZIP проверять нечем и незачем — внутрь кладётся
+  // ТОТ ЖЕ каталог, что в tar.gz, а его состав сторожится ниже. Настоящий zip проверен в образе CI
+  // forgejo-ci-runtime:jdk21 (22.11.2026): оба архива собрались, внутри 7 файлов, install.ps1 на месте.
+  const zipStub = join(abin, 'zipstub');
+  writeFileSync(zipStub, `#!/usr/bin/env bash\nout=""\nfor a in "$@"; do case "$a" in *.zip) out="$a";; esac; done\nprintf 'zip-stub' > "$out"\nexit 0\n`);
+  chmodSync(zipStub, 0o755);
+
   it('архив — ровно лёгкая часть пакета: install.sh, compose, .env.example, README, lore-migrate.mjs', () => {
     const d = area();
     const r = asset('all', d);
     expect(r.out, r.out).not.toMatch(/::warning::/);
     expect(r.code).toBe(0);
+    // install.ps1 — вход под Windows (слово владелицы 22.11.2026: «собирай установщик под windows и linux»).
+    // Он обязан быть ВНУТРИ архива: без него человек на Windows получает пакет, который нечем запустить.
     expect(listTar(d).sort()).toEqual(
-      ['.env.example', 'README.md', 'docker-compose.install.yml', 'install.sh', 'lore-migrate.mjs'].sort(),
+      ['.env.example', 'README.md', 'docker-compose.install.yml', 'install.ps1', 'install.sh', 'lore-migrate.mjs'].sort(),
     );
     // SHA256SUMS — отдельным файлом рядом с архивом
     expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8'))
@@ -1349,8 +1371,13 @@ exit 0
     expect(r.node).not.toMatch(/--exe/);
     expect(listTar(d)).not.toContain('lore-migrate');
     expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(false);
-    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(1);
-    expect(names(r.curl).sort()).toEqual(['SHA256SUMS', 'lore-installer-v9.9.9.tar.gz']);
+    // Вложений теперь четыре: пакет (tar.gz), тот же пакет в zip для Windows, архив исходников и подписи.
+    // Подписи считаются на все три файла — иначе проверка у человека не нашла бы строку своего архива и
+    // выглядела бы как битое вложение.
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(3);
+    expect(names(r.curl).sort()).toEqual(
+      ['SHA256SUMS', 'lore-installer-v9.9.9-windows.zip', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz'].sort(),
+    );
     rmSync(d, { recursive: true, force: true });
   });
 
@@ -1486,5 +1513,75 @@ describe('зеркало SeidrStudio: мажорный тег, громкий BL
   it('отставшее зеркало не роняет уже опубликованный релиз', () => {
     expect(mirror()!.body.length > 0).toBe(true);
     expect(JSON.stringify(mirror())).toMatch(/continue-on-error/);
+  });
+});
+
+// ── Состав вложений релиза (22.11.2026, разбор документации) ─────────────────
+// Находка: README обещал «скачайте исходники / образ miniLORE со страницы выпуска», а релиз прикладывал
+// только лёгкий архив. То есть по документации друг не мог ни собрать образы у себя, ни поставить miniLORE.
+describe('релиз прикладывает то, что обещает README', () => {
+  const asset = () => steps(job(REL, 'publish')).find((s) => s.body.includes(ASSET_SH))!;
+  const sh = () => read(ASSET_SH);
+
+  it('исходники LORE — вложением по умолчанию (нужны для --build-from-source)', () => {
+    expect(asset().body).toMatch(/WITH_SOURCES: \$\{\{ inputs\.with_sources \|\| 'true' \}\}/);
+    expect(sh()).toMatch(/SRC_ASSET="lore-src-\$TAG\.tar\.gz"/);
+    expect(sh(), 'исходники собираются тем же скриптом, что и для kkRepo').toMatch(/source-archive\.mjs/);
+  });
+
+  it('образ miniLORE — только по просьбе: он ~150 МБ и нужен не каждому', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_minilore_image:');
+    expect(from, 'входа with_minilore_image нет').toBeGreaterThan(-1);
+    let to = lines.length;
+    for (let i = from + 1; i < lines.length; i++) if (/^ {0,6}\S/.test(lines[i])) { to = i; break; }
+    expect(lines.slice(from, to).join('\n')).toMatch(/^ {8}default: 'false'$/m);
+    expect(sh()).toMatch(/minilore-image\.mjs/);
+  });
+
+  it('необязательное вложение не роняет релиз: отсутствие — предупреждение, а не die', () => {
+    const body = sh();
+    const block = body.slice(body.indexOf('WITH_SOURCES" = true'), body.indexOf('Формат — тот же'));
+    expect(block, 'на несобравшихся исходниках — warn').toMatch(/warn "исходники/);
+    expect(block, 'на несобравшемся образе — warn').toMatch(/warn "образ miniLORE/);
+    expect(block).not.toMatch(/die "исходники/);
+  });
+});
+
+// 22.11.2026: публикация образов наружу два выпуска подряд не выполнялась — шаг стоял в задаче выкатки прода
+// ПОСЛЕ «Проб прода», а те падали на ложном красном (проба знала только базу шагов V, а прод собран из модели).
+// Наружу не уехало ни одного образа, и об этом никто не узнал: пропущенный шаг выглядит как «всё хорошо».
+// CICDGitHub вынесла публикацию в свою задачу (#1766). Сторож ниже — чтобы её не вернули обратно при следующей
+// перестановке шагов: здоровье НАШЕГО прода не повод оставлять человека без образов. Образ тот же :sha8, что
+// прошёл препрод, — это и проверяется шагом resolve внутри задачи.
+describe('публикация образов наружу не зависит от проб нашего прода', () => {
+  const rel = '.github/workflows/lore-release.yml';
+  const ghcr = () => job(rel, 'publish-ghcr');
+  const deploy = () => job(rel, 'deploy-prod');
+
+  it('положительный контроль: обе задачи в трубе есть', () => {
+    expect(ghcr().length, 'задача publish-ghcr').toBeGreaterThan(0);
+    expect(deploy().length, 'задача deploy-prod').toBeGreaterThan(0);
+  });
+
+  it('публикация стоит отдельной задачей, а не шагом выкатки прода', () => {
+    expect(deploy(), 'шаг публикации вернулся в выкатку прода').not.toMatch(/ghcr-publish\.sh/);
+    expect(ghcr()).toMatch(/ghcr-publish\.sh/);
+  });
+
+  it('она не ждёт выкатку прода ни через needs, ни через её шаги', () => {
+    const needs = /needs:\s*(\[[^\]]*\]|[^\n]*)/.exec(ghcr())?.[1] ?? '';
+    expect(needs, 'publish-ghcr не должна зависеть от deploy-prod').not.toMatch(/deploy-prod/);
+    expect(needs, 'зависит от публикации выпуска — образы едут вместе с вложениями').toMatch(/publish/);
+    expect(ghcr(), 'в задаче публикации не должно быть проб прода').not.toMatch(/Пробы прода|lore-host-deploy\.sh probe/);
+  });
+
+  it('образы берутся те, что прошли препрод, — без пересборки', () => {
+    expect(ghcr(), 'нет сверки образов тега (resolve)').toMatch(/lore-host-deploy\.sh resolve/);
+    expect(ghcr(), 'публикация не пересобирает образы').not.toMatch(/compose build|docker build/);
+  });
+
+  it('наружу уезжает только то, что в main', () => {
+    expect(ghcr()).toMatch(/merge-base --is-ancestor/);
   });
 });

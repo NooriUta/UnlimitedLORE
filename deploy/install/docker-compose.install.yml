@@ -20,7 +20,7 @@ name: ${COMPOSE_PROJECT_NAME:-lore}
 
 services:
   arcadedb:
-    image: arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
+    image: ${LORE_IMAGE_REGISTRY:-}arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
     restart: unless-stopped
     environment:
       # Пароль root приходит из .env и в файлы не пишется.
@@ -195,7 +195,7 @@ services:
   # (клон по http). Администратора владелец заводит в первом окне Forgejo — установщик паролей Forgejo не знает.
   forgejo:
     profiles: ["forgejo"]
-    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17.0.2}
+    image: ${FORGEJO_IMAGE:-codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17.0.2}}
     restart: unless-stopped
     environment:
       - USER_UID=1000
@@ -217,7 +217,7 @@ services:
   # FORGEJO_TOKEN обязателен — без него сервер не стартует; install.sh тогда его не поднимает и говорит, что вписать.
   forgejo-mcp:
     profiles: ["forgejo-mcp"]
-    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:bbe9f59c}
+    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:e7d57dee}
     build:
       context: ${FORGEJO_MCP_SRC:-./forgejo-mcp-src}
     restart: unless-stopped
@@ -242,9 +242,11 @@ services:
   # miniLORE — сервер мобильного монитора сессий. Профиль minilore: ставится по выбору,
   # решение D-2026-INSTALL-MINILORE-IN-PACKAGE («включаем miniLORE в пакет», владелица 22.11.2026).
   #
-  # Состав, который везём в этой версии: ТОЛЬКО сервер. Установщик шлюза (Windows/Linux) и приложение APK выйдут
-  # следующей версией: труба сборки APK у разработчика сейчас красная, а адрес обновлений трея снят с гвоздя лишь в
-  # невлитой ветке. Раздавать файл, который не собрала труба, нельзя — друг не сможет его воспроизвести.
+  # Состав в этой версии: сервер (здесь) и — отдельными вложениями выпуска — установщики ШЛЮЗА выпуска
+  # link-v0.3.81 (байты собраны трубой, не руками). Шлюз ставится на машину человека, а не в этот стек,
+  # поэтому службы у него тут нет.
+  # Приложение APK не везём: труба сборки у разработчика красная, выпуск 1.12.85 вышел без APK. Раздавать файл,
+  # который не собрала труба, нельзя — друг не сможет его воспроизвести.
   #
   # База — та же ArcadeDB, что у LORE. Две базы, minilore и minilore_archive, заводит УСТАНОВЩИК: сервер 0.4.19
   # сам их не создаёт и падает «Database not found», уходя в бесконечный перезапуск (проверено 22.11.2026).
