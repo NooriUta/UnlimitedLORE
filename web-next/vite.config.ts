@@ -28,7 +28,7 @@ export default defineConfig({
   ssr: { resolve: { conditions: ['seidr-source', ...defaultServerConditions] } },
   resolve: {
     conditions: ['seidr-source', ...defaultClientConditions],
-    dedupe: [
+    dedupe: ['echarts', 
       'react', 'react-dom', '@iconify/react',
       '@tiptap/core', '@tiptap/react', '@tiptap/pm', '@tiptap/starter-kit', '@tiptap/extension-image',
       '@tiptap/extension-table', '@tiptap/extension-task-list', '@tiptap/extension-task-item',

@@ -1382,6 +1382,6 @@
   "kit.obj.hidden": "Ещё {n} скрыты правами — это не «записей нет».",
   "kit.list.hiddenTail": " · ещё {n} скрыты правами",
   "kit.view.fontPair": "Пара шрифтов",
-  "kit.view.font.lore": "Manrope + IBM Plex Mono — пара LORE",
-  "kit.view.font.mono": "Только IBM Plex Mono — один шрифт, без контраста"
+  "kit.view.font.mono": "Только IBM Plex Mono — один шрифт, без контраста",
+  "kit.view.font.pair": "Manrope + IBM Plex Mono — контрастная пара"
 }

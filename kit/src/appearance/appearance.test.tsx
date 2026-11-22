@@ -49,7 +49,7 @@ describe('Пара шрифтов (как в мобилке miniLORE)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Только IBM Plex Mono|IBM Plex Mono only/ }));
     expect(document.documentElement.getAttribute('data-font')).toBe('mono');
     expect(JSON.parse(localStorage.getItem('app.view') ?? '{}').font).toBe('mono');
-    fireEvent.click(screen.getByRole('button', { name: /пара LORE|LORE pair/ }));
+    fireEvent.click(screen.getByRole('button', { name: /контрастная пара|contrast pair/ }));
     expect(document.documentElement.hasAttribute('data-font')).toBe(false);
   });
 });

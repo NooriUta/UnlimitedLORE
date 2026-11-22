@@ -142,10 +142,10 @@ export function WallpaperFrame({ storageKey, phaseKey, children }: { storageKey:
 
 // ── панель «Вид» ──────────────────────────────────────────────────────────
 
-/** Пара шрифтов — как в мобилке miniLORE («Пара шрифтов»): lore — Manrope + Unbounded + IBM Plex Mono; mono — только
+/** Пара шрифтов — как в мобилке miniLORE («Пара шрифтов»): pair — Manrope + Unbounded + IBM Plex Mono; mono — только
  *  IBM Plex Mono. Переключает переменные --font/--display (атрибут data-font на корне), шрифты нигде не зашиты. */
-export type FontPair = 'lore' | 'mono';
-export const FONT_PAIRS: readonly FontPair[] = ['lore', 'mono'];
+export type FontPair = 'pair' | 'mono';
+export const FONT_PAIRS: readonly FontPair[] = ['pair', 'mono'];
 type ViewPrefs = ThemePrefs & DisplayPrefs & { font?: FontPair };
 function applyFont(f: FontPair | undefined) {
   if (f === 'mono') document.documentElement.setAttribute('data-font', 'mono');
@@ -217,7 +217,7 @@ export function ViewPanel({ storageKey, photos = [] }: { storageKey: string; pho
       </Row>
       <Row title={t('kit.view.mode')}>{MODES.map((m) => <Opt key={m} on={v.mode === m} onClick={() => set({ mode: m })}>{t(m === 'dark' ? 'kit.view.dark' : 'kit.view.light')}</Opt>)}</Row>
       <Row title={t('kit.view.density')}>{DENSITIES.map((d) => <Opt key={d} on={v.density === d} onClick={() => set({ density: d })}>{t(`kit.view.density.${d}`)}</Opt>)}</Row>
-      <Row title={t('kit.view.fontPair')}>{FONT_PAIRS.map((f) => <Opt key={f} on={(v.font ?? 'lore') === f} onClick={() => set({ font: f })}>{t(`kit.view.font.${f}`)}</Opt>)}</Row>
+      <Row title={t('kit.view.fontPair')}>{FONT_PAIRS.map((f) => <Opt key={f} on={(v.font ?? 'pair') === f} onClick={() => set({ font: f })}>{t(`kit.view.font.${f}`)}</Opt>)}</Row>
       <Row title={t('kit.view.textSize')}>{TEXT_SIZES.map((s) => <Opt key={s} on={v.textSize === s} onClick={() => set({ textSize: s })}>{s}</Opt>)}</Row>
       <Row title={t('kit.view.stripes')}>
         <Opt on={v.stripes} onClick={() => set({ stripes: true })}>{t('kit.view.on')}</Opt><Opt on={!v.stripes} onClick={() => set({ stripes: false })}>{t('kit.view.off')}</Opt>
