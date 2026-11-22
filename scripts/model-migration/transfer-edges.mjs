@@ -34,6 +34,22 @@ const NOT_MACHINES = ['legion'];
 
 const VERSION_EDGE = 'HAS_STATE';
 
+/**
+ * Сколько связей версий ждать в приёмнике: у версии ОДНА запись, поэтому ожидание считается по версиям, а не по
+ * связям источника. Старая база несёт лишние связи (бэкап прода 01.11.2026: 44 связи на версии, уже привязанные
+ * к другой записи) — их число возвращается отдельно, чтобы сверка не говорила «не сошлась» без причины.
+ * rows: [{ o, i, ot, it }] — концы и их типы; own — свои типы записей; moved — адреса, перенесённые в приёмник.
+ */
+export function keptVersionEdges(rows, own, moved) {
+  const versions = new Set();
+  let duplicates = 0;
+  for (const x of rows) {
+    if (!own.includes(x.ot) || x.it !== x.ot + 'Hist' || !moved.has(x.o) || !moved.has(x.i)) continue;
+    if (versions.has(x.i)) duplicates++; else versions.add(x.i);
+  }
+  return { expected: versions.size, duplicate_versions: duplicates };
+}
+
 /** Перенос связей и их сверка. log — куда писать ход. */
 export async function transferEdges(db, { log = console.log, at: atGiven, freshInstall = false } = {}) {
   // MIG-01: свежая установка (init-empty) — база самой установки, не рабочая база стенда (сторож как у transfer).
@@ -128,12 +144,14 @@ export async function transferEdges(db, { log = console.log, at: atGiven, freshI
   const hsGot = dstTypes.has(VERSION_EDGE) ? (await db.dstQuery(`SELECT count(*) AS n FROM ${VERSION_EDGE}`))[0].n : 0;
   // ожидаемое — связи версий источника, у которых оба конца перенесены: запись, не перенесённая этапом записи
   // (дубль — остаток с причиной), не переносит и свои версии (задачи без спринта, 19.11.2026)
-  let hsKept = 0;
+  const hsRows = [];
   // (та же выборка, что hs: запись своего типа → её тип версий; прочие направления — аномалии, не переносятся)
   await pages(q => db.src(q), last => `SELECT @rid AS r, @out AS o, @in AS i, @out.@type AS ot, @in.@type AS it FROM ${VERSION_EDGE} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`,
-    x => { if (OWN.includes(x.ot) && x.it === x.ot + 'Hist' && dstRid.has(x.o) && dstRid.has(x.i)) hsKept++; });
-  report.moved[VERSION_EDGE] = { source: hs, expected: hsKept, target: hsGot };
-  if (hsKept !== hsGot) ok = false;
+    x => hsRows.push(x));
+  const hsKept = keptVersionEdges(hsRows, OWN, dstRid);
+  report.moved[VERSION_EDGE] = { source: hs, expected: hsKept.expected, target: hsGot, ...(hsKept.duplicate_versions ? { duplicate_versions: hsKept.duplicate_versions } : {}) };
+  if (hsKept.duplicate_versions) log('связи версий: лишних связей в источнике', hsKept.duplicate_versions, '— версия уже привязана к другой записи; в приёмнике у версии одна запись');
+  if (hsKept.expected !== hsGot) ok = false;
   // MDL-13 (владелица 20.11.2026): зависимости DEPENDS_ON — вид кодом объединённого справочника dependency_kind
   // (hard → blocks), пустой вид — по ответу шага «Вид зависимостей», причина у старых — «перенесено без причины»;
   // было → стало по паре концов и виду, потерь 0
