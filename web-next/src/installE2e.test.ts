@@ -138,12 +138,8 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(s).toMatch(/pr-backfill --url .* --dry-run/);
     expect(s).toMatch(/FORGEJO_NOT_CONFIGURED/);
     expect(s).not.toMatch(/ещё не реализован/);
-    // Пробный прогон не пишет в базу: в шаге нет записи без --dry-run.
-    expect(s).not.toMatch(/pr-backfill[^
-]*--limit[^
-]*
-[^
-]*dstCommand/);
+    // Пробный прогон не пишет в базу: у КОМАНДЫ (а не у имени файла отчёта) всегда есть --dry-run.
+    expect(s).not.toMatch(/"\$BIN" pr-backfill(?!.*--dry-run)/);
   });
 });
 
