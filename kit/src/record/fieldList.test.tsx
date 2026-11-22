@@ -15,7 +15,7 @@ import { FieldValue } from './RecordView';
 
 // Модель — СНЯТАЯ с живого сервера (shared/fixtures/model.json), а не собранная руками
 // (CT-KIT-FIXTURES): у первого поля задачи подменяется только вид.
-const MODEL = join(__dirname, '..', '..', '..', 'shared', 'fixtures', 'model.json');
+const MODEL = join(__dirname, '..', '..', 'fixtures', 'model.json') // снимок живой модели LORE (из UnlimitedLORE shared/fixtures, 22.11.2026);
 const doc = (kind: string) => {
   const raw = JSON.parse(readFileSync(MODEL, 'utf8')) as { types: Record<string, { fields: { key: string; kind: string; visibility: string }[] }> };
   const first = raw.types.task.fields[0];

@@ -109,3 +109,41 @@ describe('E · TileGauge — кольцо-шкала', () => {
     expect(screen.getByRole('meter').getAttribute('aria-valuenow')).toBe('70');
   });
 });
+
+describe('D · GroupCard — показания плашками, тревоги отдельно (разбор дизайнера 22.11: «сенсоры мелкие»)', () => {
+  it('показание с value/unit — плашка: число и единица раздельно; тревога — в строке тревог, не среди показаний', () => {
+    const { container } = render(<GroupCard title="Гостиная" main="22,6 °C" sub="20,1–24,3 °C · 4 узла" chips={[
+      { key: 'h', icon: <i />, value: '43', unit: '%', text: '43 %' },
+      { key: 'l', icon: <i />, value: '5/7', unit: '', text: 'свет частично 5/7', title: 'свет частично' },
+      { key: 'b', icon: <i />, text: 'не отвечает 1', alarm: true },
+    ]} />);
+    const plates = container.querySelectorAll('.sk-groupcard__chips .sk-groupcard__plate');
+    expect(plates).toHaveLength(2);
+    expect(plates[0].querySelector('.sk-groupcard__val')?.textContent).toBe('43');
+    expect(plates[0].querySelector('.sk-groupcard__unit')?.textContent).toBe('%');
+    expect(plates[1].getAttribute('title')).toBe('свет частично');
+    expect(container.querySelector('.sk-groupcard__alerts')?.textContent).toContain('не отвечает 1');
+    expect(container.querySelector('.sk-groupcard__chips')?.textContent).not.toContain('не отвечает');
+    expect(container.querySelector('.sk-groupcard__sub')?.textContent).toBe('20,1–24,3 °C · 4 узла');
+  });
+  it('старый вид чипа (только text) рисуется как раньше — совместимость', () => {
+    const { container } = render(<GroupCard title="Кухня" main="22,4 °C" chips={[{ key: 'h', icon: <i />, text: '41 %' }]} />);
+    expect(container.querySelector('.sk-groupcard__chip')?.textContent).toContain('41 %');
+  });
+});
+
+describe('D · GroupCard — компактная (разбор дизайнера по комплексным датчикам: Awair, Netatmo, Vindstyrka)', () => {
+  it('badge и aside — в шапке; уровень показания красит число; тренд — стрелкой', () => {
+    const { container } = render(<GroupCard title="Кухня" main="22,4 °C" badge={<b>воздух хороший</b>} aside={<i>3/4</i>} chips={[
+      { key: 'h', icon: <i />, value: '41', unit: '%', text: '41 %', level: 'ok' },
+      { key: 'c', icon: <i />, value: '1300', unit: 'ppm', text: 'CO₂', level: 'bad', trend: 'up' },
+    ]} />);
+    const head = container.querySelector('.sk-groupcard__head')!;
+    expect(head.querySelector('.sk-groupcard__badge')?.textContent).toBe('воздух хороший');
+    expect(head.querySelector('.sk-groupcard__aside')?.textContent).toBe('3/4');
+    const plates = container.querySelectorAll('.sk-groupcard__plate');
+    expect(plates[1].classList.contains('is-bad')).toBe(true);
+    expect(plates[1].querySelector('.sk-groupcard__trend')?.getAttribute('aria-label')).toMatch(/растёт|rising/);
+  });
+});
+

@@ -1524,6 +1524,10 @@ export function ListView({
   const valueCell = (key: string, r: KitRecord): ReactNode => {
     const vs = valuesOf(r, key);
     if (!vs.length) return '—';
+    // Поле «да/нет» — словами kit, как в паспорте (RecordView), а не сырым true/false (показ /appnew 22.11.2026).
+    if (fieldType(r.kind, key) === 'bool') {
+      return vs.map((v) => (v === 'true' ? t('kit.field.yes') : v === 'false' ? t('kit.field.no') : v)).join(', ');
+    }
     const labelOf = chipLabelsOf(r, key);
     if (fieldType(r.kind, key) === 'date') {
       return (
