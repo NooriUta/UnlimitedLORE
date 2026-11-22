@@ -88,7 +88,7 @@ describe('outcomeOf: статус Playwright → итог сценария', () 
 describe('buildSummary: счёт и вердикт', () => {
   it('все прошли — green', () => {
     const s = buildSummary({ ...base, results: [res('S1', 'pass'), res('S2', 'pass')] });
-    expect(s.counts).toEqual({ pass: 2, fail: 0, notRun: 0, total: 2 });
+    expect(s.counts).toEqual({ pass: 2, fail: 0, notRun: 0, na: 0, total: 2 });
     expect(s.verdict).toBe('green');
   });
 
@@ -136,6 +136,79 @@ describe('renderMarkdown: отчёт выкатки', () => {
 
   it('бандл не достали — так и написано, а не пусто', () => {
     expect(renderMarkdown(buildSummary({ ...base, bundle: null, results: [] }))).toMatch(/бандл: не получен/);
+  });
+});
+
+// 1.18.3 · «не применимо» — отдельный итог, не «не выполнено». Смоук стенда краснел на кейсах, которые
+// на стенде выполнить НЕЛЬЗЯ по устройству: MA7 проверяет мастер переноса, а мастер живёт только в
+// установщике (адрес LORE_MIGRATE_UI_URL владелица заводить не стала). Такой кейс пропускался как
+// not-run, а not-run при LORE_STAND_REQUIRE_RUN=1 роняет шаг — красный прогон при исправном коде.
+// Правило: «не применимо в этой среде» (с причиной) считается отдельно и вердикт не портит; «не
+// выполнен» (вход, права, данные) — как прежде, не зелёный.
+describe('n/a: сценарий, не применимый в этой среде, — не «не выполнен»', () => {
+  const caseOf = (src: string, id: string) => {
+    const i = src.indexOf(`test('${id} `);
+    if (i < 0) return '';
+    const j = src.indexOf('\ntest(', i + 1);
+    return src.slice(i, j < 0 ? undefined : j);
+  };
+
+  it('skip с причиной «не применимо …» — n/a; любой другой пропуск — not-run', () => {
+    expect(outcomeOf('skipped', 'не применимо на стенде: мастер переноса живёт только в установщике')).toBe('n/a');
+    expect(outcomeOf('skipped', 'вход истёк')).toBe('not-run');
+    expect(outcomeOf('skipped')).toBe('not-run');
+    expect(outcomeOf('passed', 'не применимо')).toBe('pass');
+  });
+
+  it('pass + n/a — зелёный; «не применимо» в счёте отдельно, not-run нет', () => {
+    const s = buildSummary({ ...base, results: [res('S1', 'pass'), res('MA7', 'n/a', 'не применимо на стенде: мастер в установщике')] });
+    expect(s.counts).toEqual({ pass: 1, fail: 0, notRun: 0, na: 1, total: 2 });
+    expect(s.verdict).toBe('green');
+  });
+
+  it('все сценарии «не применимо» — НЕ зелёный: проверено ничего', () => {
+    expect(buildSummary({ ...base, results: [res('MA7', 'n/a', 'не применимо на стенде')] }).verdict).toBe('not-run');
+  });
+
+  it('n/a не прячет падения', () => {
+    expect(buildSummary({ ...base, results: [res('S1', 'fail'), res('MA7', 'n/a', 'не применимо')] }).verdict).toBe('red');
+  });
+
+  it('в отчёте «не применимо» — словами и с причиной', () => {
+    const md = renderMarkdown(buildSummary({
+      ...base,
+      results: [res('S1', 'pass'), { id: 'MA7', title: 'Мастер, шаг «З»', outcome: 'n/a', reason: 'не применимо на стенде: мастер только в установщике' }],
+    }));
+    expect(md).toContain('не применимо 1');
+    expect(md).toContain('не применимо — MA7');
+    expect(md).toContain('мастер только в установщике');
+  });
+
+  it('репортёр отдаёт причину пропуска в outcomeOf и сохраняет её для n/a', () => {
+    const r = read('e2e/stand/reporter.ts');
+    expect(r).toMatch(/outcomeOf\(result\.status, skip\)/);
+    expect(r).toMatch(/'n\/a'/);
+  });
+
+  it('MA7: причина — «не применимо» на стенде, и сказано, где проверка живёт теперь', () => {
+    const ma7 = caseOf(read('e2e/stand/migration-admin.stand.ts'), 'MA7');
+    expect(ma7, 'кейс MA7 на месте (не удалён)').not.toBe('');
+    expect(ma7).toMatch(/не применимо/);
+    expect(ma7).toMatch(/orphan-sprints\.test\.mjs/);
+  });
+
+  it('MA3: «прогона переноса не было» — проверяемое состояние экрана, а не пропуск кейса', () => {
+    const ma3 = caseOf(read('e2e/stand/migration-admin.stand.ts'), 'MA3');
+    expect(ma3, 'кейс MA3 на месте').not.toBe('');
+    expect(ma3, 'no_run больше не пропуск').not.toMatch(/test\.skip\([^;]*no_run/);
+    expect(ma3, 'проверяется честный экран «прогона ещё не было»').toMatch(/adm-mig-norun/);
+  });
+
+  it('проверка шага «З» переехала в прогон установщика (node --test scripts/model-migration)', () => {
+    const wiz = read('../scripts/model-migration/orphan-sprints.test.mjs');
+    expect(wiz).toMatch(/api\/orphan-sprints/);
+    expect(wiz).toMatch(/os-state/);
+    expect(read('../.github/workflows/lore-installer-publish.yml')).toMatch(/node --test scripts\/model-migration\/\*\.test\.mjs/);
   });
 });
 

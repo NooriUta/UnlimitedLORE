@@ -7,3 +7,7 @@ export * from './embedFrame';
 export * from './EmbedChartFrame';
 // Графики одним семейством (SPRINT_UXR_S13_KIT4/K4-CHARTS): line · scatter · bar · heat.
 export * from './family';
+// Рычаг рисовальщика svg | echarts (D-2026-SEIDRKIT-ECHARTS-IN-KIT); тело echarts — вход @seidr/kit/charts-echarts.
+export * from './renderer';
+// Мини-линия — в семействе графиков (рычаг svg | echarts действует и на неё).
+export * from './spark';

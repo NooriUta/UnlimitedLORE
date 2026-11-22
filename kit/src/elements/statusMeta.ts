@@ -93,8 +93,11 @@ export function resetStatuses(): void {
 }
 
 /** Подпись статуса, зарегистрированная приложением; нет — undefined. */
-export function statusLabel(status: string | null | undefined, lang: 'ru' | 'en'): string | undefined {
-  return LABELS[(status ?? '').trim().toLowerCase()]?.[lang];
+export function statusLabel(status: string | null | undefined, lang: string): string | undefined {
+  // Подписи приложения — на ru/en; у подключённого языка (K6-I18N-PLUGGABLE) их нет — «нет», и дальше
+  // работает откат через строки kit, а не чужая подпись.
+  if (lang !== 'ru' && lang !== 'en') return undefined;
+  return LABELS[(status ?? '').trim().toLowerCase()]?.[lang as 'ru' | 'en'];
 }
 
 export function statusMeta(status: string | null | undefined): StatusMeta {

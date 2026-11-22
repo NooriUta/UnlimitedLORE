@@ -10,7 +10,7 @@
 // Чего здесь нет намеренно (K-14): ни имени поля времени, ни имён параметров
 // сервера, ни ключа адреса. Их называет приложение — kit получает их данными.
 import type { KitRecord } from '../core/contract';
-import { kitT } from '../i18n';
+import { kitLocale, kitT } from '../i18n';
 import type { KitKey, KitLang } from '../i18n';
 import { fieldValue, valueKey } from './listModel';
 
@@ -213,7 +213,7 @@ const monthCache = new Map<KitLang, Intl.DateTimeFormat>();
 function monthOf(day: string, lang: KitLang): string {
   let f = monthCache.get(lang);
   if (!f) {
-    f = new Intl.DateTimeFormat(lang === 'ru' ? 'ru-RU' : 'en-US', { timeZone: 'UTC', day: 'numeric', month: lang === 'ru' ? 'long' : 'short' });
+    f = new Intl.DateTimeFormat(kitLocale(lang), { timeZone: 'UTC', day: 'numeric', month: lang === 'ru' ? 'long' : 'short' });
     monthCache.set(lang, f);
   }
   return f.formatToParts(new Date(dayMs(day))).find(p => p.type === 'month')?.value ?? day.slice(5, 7);

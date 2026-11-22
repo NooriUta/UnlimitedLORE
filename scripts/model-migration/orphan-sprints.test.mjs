@@ -88,3 +88,75 @@ test('перенос и мастер: ребро — только по отве�
   assert.match(ui, /data-step="o"/);
   assert.match(ui, /api\/orphan-sprints/);
 });
+
+// 1.18.3 · Шаг «З» живым мастером — проверка переехала из стендового смоука (кейс MA7). На стенде мастера
+// нет и не будет: он поднимается установщиком, а переменную LORE_MIGRATE_UI_URL владелица решила не
+// заводить — там кейс вечно висел «не выполнено» и ронял смоук. Проверяем то же, что проверял MA7: у каждой
+// строки вид предложения и непустое основание, состояние «ждут решения» показано, ответ его уменьшает, а
+// ответ без «кто принял» — честный отказ. Источник — заглушка в памяти (как decision-refs-wizard.test.mjs).
+const SRC = {
+  loose: [
+    { task_uid: 'MIGGEN_PIPELINE/PRINT-ONE-PARSE', task_id: 'PRINT-ONE-PARSE', title: 'Разбор печати', status_raw: 'в работе' },
+    { task_uid: 'MOBILEPOC/UX-SERVER-PROBE', task_id: 'UX-SERVER-PROBE', title: 'Проба сервера', status_raw: 'готово' },
+    { task_uid: 'SPRINT_AIDA_INFRA_DEBT/AID-44', task_id: 'AID-44', title: 'Долг инфраструктуры', status_raw: 'готово' },
+    { task_uid: 'ZZZ/Q-1', task_id: 'Q-1', title: 'Ничейная', status_raw: 'план' },
+  ],
+  linked: [{ task_uid: 'SPRINT_AIDA_PREPROD_MIGRATION/AID-44', task_id: 'AID-44' }],
+  sprints: ['SPRINT_MIGGEN_PIPELINE', 'SPRINT_MOBILEPOC_MVP', 'SPRINT_AIDA_PREPROD_MIGRATION', 'SPRINT_LORE_MODEL_DOCS_TIDY'],
+};
+
+/** Источник в памяти: отвечает ровно на запросы readOrphanSprintInput. */
+function orphanFixture() {
+  return {
+    env: { MIG_SRC_DB: 'fixture-orphan-sprints', MIG_DST_DB: 'fixture-dst' },
+    async src(sql) {
+      if (/FROM KnowSprint/.test(sql)) return SRC.sprints.map(s => ({ sprint_id: s }));
+      if (/PART_OF'\)\.size\(\) = 0/.test(sql)) return SRC.loose.map(x => ({ ...x }));
+      if (/PART_OF'\)\.size\(\) > 0/.test(sql)) return SRC.linked.map(x => ({ ...x }));
+      throw new Error('заглушка источника: запрос не поддержан: ' + sql.slice(0, 80));
+    },
+  };
+}
+
+test('мастер установщика, шаг «З»: у каждой строки предложение с основанием, «ждут решения» показано и убывает (было MA7 смоука)', async () => {
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { serve } = await import('./ui.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mig-os-'));
+  const file = path.join(dir, 'decisions.json');
+  const server = await serve({ port: 0, db: orphanFixture(), decisionsFile: file });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const page = await (await fetch(base + '/')).text();
+    assert.match(page, /data-step="o"[^>]*>.*Задачи без спринта/, 'шаг «З» есть в мастере');
+    assert.match(page, /data-testid="os-state"/, 'состояние «ждут решения» показано, не молча');
+    for (const w of ['точно', 'похоже, подтвердите', 'возможен дубль', 'куда?'])
+      assert.ok(page.includes(w), `вид предложения «${w}» назван словами`);
+
+    const g = await (await fetch(base + '/api/orphan-sprints')).json();
+    assert.equal(g.rows.length, SRC.loose.length, 'строки шага прочитаны (не «честная ошибка чтения»)');
+    for (const r of g.rows) {
+      assert.ok(['exact', 'duplicate', 'similar', 'where'].includes(r.kind), `вид предложения у ${r.task_uid}: ${r.kind}`);
+      assert.ok(String(r.why).length > 10, `основание не пустое у ${r.task_uid}`);
+    }
+    assert.equal(g.waiting.length, g.rows.length, 'без ответов ждут решения все строки');
+
+    const target = g.rows.find(r => r.kind === 'exact');
+    assert.ok(target, 'строка «точно» есть — её и принимаем');
+    const post = await fetch(base + '/api/orphan-sprints', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ map: { [target.task_uid]: target.sprint }, by: 'node-test' }) });
+    assert.equal(post.status, 200);
+    const g2 = await (await fetch(base + '/api/orphan-sprints')).json();
+    assert.equal(g2.waiting.length, g.waiting.length - 1, '«ждут решения» уменьшилось на одну строку');
+    assert.equal(g2.answers[target.task_uid], target.sprint, 'ответ записан в файл решений');
+    assert.equal(g2.by, 'node-test', 'кто принял — рядом с ответом');
+
+    const bad = await fetch(base + '/api/orphan-sprints', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ map: { 'ZZZ/Q-1': 'SPRINT_LORE_MODEL_DOCS_TIDY' }, by: '' }) });
+    assert.equal(bad.status, 400, 'без «кто принял» — отказ, а не тихая запись');
+    assert.equal((await (await fetch(base + '/api/orphan-sprints')).json()).waiting.length, g2.waiting.length);
+  } finally {
+    server.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
