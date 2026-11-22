@@ -82,7 +82,7 @@ services:
         # Зеркала Maven и Gradle (Dockerfile.local умеет их сам): закрытая сеть или деградированный прямой канал.
         # Пусто — сборка идёт в Maven Central и Gradle Plugin Portal напрямую, как раньше. Без этих переменных
         # установка «собрать самому» на такой машине падает невнятным «Plugin [id: io.quarkus] was not found»
-        # (ryzenai 21.11.2026: половина запросов к repo.maven.apache.org и plugins.gradle.org обрывалась).
+        # (замер на машине с деградированным каналом: половина запросов к публичным репозиториям обрывалась).
         LORE_MAVEN_MIRROR: ${LORE_MAVEN_MIRROR:-}
         LORE_PLUGIN_MIRROR: ${LORE_PLUGIN_MIRROR:-}
         LORE_GRADLE_DIST_MIRROR: ${LORE_GRADLE_DIST_MIRROR:-}
