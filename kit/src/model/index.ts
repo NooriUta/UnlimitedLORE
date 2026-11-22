@@ -9,3 +9,4 @@ export * from './navFromModel';
 export * from './edgeLabelsFromModel';
 // Палитры данными из модели, а не списком внутри kit (K-14, п. 5).
 export * from './palettes';
+export * from './modelDiagram';
