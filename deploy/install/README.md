@@ -270,12 +270,12 @@ MCP-сервер LORE ставится вместе со стеком (серв�
 Три варианта, по умолчанию — без Forgejo, как раньше:
 
 ```bash
-bash deploy/install/install.sh --version v1.18.0 --forgejo install                                   # поставить Forgejo 15.0.5
+bash deploy/install/install.sh --version v1.18.0 --forgejo install                                   # поставить Forgejo 17.0.2
 bash deploy/install/install.sh --version v1.18.0 --forgejo own --forgejo-url https://git.example.org  # свой Forgejo
 bash deploy/install/install.sh --version v1.18.0 --forgejo none                                      # без Forgejo
 ```
 
-- **install** — пакет поднимает Forgejo 15.0.5 (та же версия, что на нашем стенде; образ `codeberg.org/forgejo/forgejo`) и forgejo-mcp. Профили compose `forgejo` и `forgejo-mcp`, веб Forgejo — на `127.0.0.1:3000`. Администратора Forgejo вы заводите сами в его первом окне.
+- **install** — пакет поднимает Forgejo 17.0.2 (та же версия, что на нашем стенде; образ `codeberg.org/forgejo/forgejo`) и forgejo-mcp. Профили compose `forgejo` и `forgejo-mcp`, веб Forgejo — на `127.0.0.1:3000`. Администратора Forgejo вы заводите сами в его первом окне.
 - **own** — Forgejo не ставится. Адрес вашего Forgejo уходит в forgejo-mcp (`FORGEJO_URL`), профиль compose — только `forgejo-mcp`.
 - **none** — профили Forgejo снимаются, мост LORE отвечает 503, как без Forgejo.
 

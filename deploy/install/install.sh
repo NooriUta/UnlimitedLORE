@@ -60,7 +60,7 @@ FILES=""
 FRESH=0
 FRESH_DB="${LORE_FRESH_DB:-lore}"
 MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
-FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
+FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на нашем стенде
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
@@ -833,7 +833,7 @@ selftest() {
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo,forgejo-mcp' || fail "install: нет профилей forgejo и forgejo-mcp: $out"; ok
   printf '%s' "$out" | grep -q 'FORGEJO_BASE_OVERRIDE=http://forgejo:3000' || fail "install: мост LORE не направлен на forgejo:3000"; ok
-  printf '%s' "$out" | grep -q 'forgejo 15.0.5' || fail "install: версия Forgejo не названа"; ok
+  printf '%s' "$out" | grep -q 'forgejo 17.0.2' || fail "install: версия Forgejo не названа"; ok
   printf '%s' "$out" | grep -q 'forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN' || fail "install: нет предупреждения про токен forgejo-mcp"; ok
   FORGEJO_API_TOKEN=tok-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org/ --forgejo-mcp-build
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo-mcp$' || fail "own: профиль только forgejo-mcp: $out"; ok
