@@ -1371,20 +1371,13 @@ exit 0
     expect(r.node).not.toMatch(/--exe/);
     expect(listTar(d)).not.toContain('lore-migrate');
     expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(false);
-<<<<<<< HEAD
-    // Два архива — tar.gz и zip — плюс их подписи: zip считается в SHA256SUMS наравне, иначе проверка
-    // подписи у человека на Windows не нашла бы его строку и выглядела бы как битое вложение.
-    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(2);
+    // Вложений теперь четыре: пакет (tar.gz), тот же пакет в zip для Windows, архив исходников и подписи.
+    // Подписи считаются на все три файла — иначе проверка у человека не нашла бы строку своего архива и
+    // выглядела бы как битое вложение.
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(3);
     expect(names(r.curl).sort()).toEqual(
-      ['SHA256SUMS', 'lore-installer-v9.9.9-windows.zip', 'lore-installer-v9.9.9.tar.gz'].sort(),
+      ['SHA256SUMS', 'lore-installer-v9.9.9-windows.zip', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz'].sort(),
     );
-=======
-    // Со списком вложений теперь едут и исходники (WITH_SOURCES по умолчанию true, 22.11.2026): две строки
-    // подписей — архив пакета и архив исходников; бинаря среди них нет, и это здесь проверяется.
-    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(2);
-    expect(names(r.curl).sort())
-      .toEqual(['SHA256SUMS', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz']);
->>>>>>> origin/develop
     rmSync(d, { recursive: true, force: true });
   });
 
