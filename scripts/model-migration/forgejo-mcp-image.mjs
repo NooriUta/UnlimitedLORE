@@ -17,7 +17,10 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export const FORGEJO_MCP_REPO = 'https://git.seidrstudio.pro/AIDA/forgejo-mcp.git';
-export const FORGEJO_MCP_COMMIT = 'bbe9f59c2167655c3c87fb51b102db29a275d13a'; // develop AIDA/forgejo-mcp, 0.1.7
+// Тег v0.1.7-aida.1 (22.11.2026). Прежний bbe9f59 СЛОМАН на Forgejo 17: список с limit, но без page, отдаёт
+// всё целиком — доказано на проде (запрос шести прогонов вернул одиннадцать). Это тот же дефект, что мы
+// чинили у себя в мосте LORE; здесь он жил в forgejo-mcp.
+export const FORGEJO_MCP_COMMIT = 'e7d57deeb14044b20ad36fe38e09b7d043b88411'; // AIDA/forgejo-mcp, тег v0.1.7-aida.1
 export const FORGEJO_MCP_IMAGE = 'lore-install-forgejo-mcp:' + FORGEJO_MCP_COMMIT.slice(0, 8);
 export const FORGEJO_MCP_ARCHIVE = 'images/forgejo-mcp-' + FORGEJO_MCP_COMMIT.slice(0, 8) + '.tar';
 // Исходник forgejo-mcp того же коммита — в пакете установки (владелица 21.11.2026: «исходник кладём прямо в пакет
