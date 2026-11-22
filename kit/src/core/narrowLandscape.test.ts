@@ -16,8 +16,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { NARROW_QUERY, useNarrow } from './narrow';
 
 const LANDSCAPE = '(pointer: coarse) and (max-height: 500px)';
-const root = `${process.cwd()}/..`;
-const read = (p: string) => readFileSync(`${root}/${p}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+// kit — свой репозиторий (AIDA/lorekit): свои файлы от своего корня. CSS потребителя (web-next LORE) сверяется,
+// только если указан его корень LORE_ROOT — так этот сторож гоняет CI LORE; без него — тест-пометка, не молчание.
+const root = process.cwd();
+const LORE = process.env.LORE_ROOT;
+const read = (p: string) => readFileSync(p.startsWith('web-next/') ? `${LORE}/${p}` : `${root}/${p}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 /** Все условия @media, где есть узкий порог 720. */
 const narrowMedia = (css: string) => [...css.matchAll(/@media([^{]*max-width:\s*720px[^{]*)\{/g)].map(m => m[1].trim());
@@ -41,18 +44,20 @@ describe('ландшафт телефона — тоже «узко»', () => {
   });
 
   it('ReadingView не держит свой порог, а берёт общий', () => {
-    const src = read('kit/src/reading/ReadingView.tsx');
+    const src = read('src/reading/ReadingView.tsx');
     expect(src).not.toMatch(/const NARROW_QUERY\s*=/);
     expect(src).toMatch(/NARROW_QUERY/);
   });
 
   // Не список файлов, а КАЖДЫЙ CSS приложения: новый файл с узким @media
   // иначе прошёл бы мимо сторожа (так было бы с App.css).
-  const webCss = (dir: string): string[] => readdirSync(`${root}/${dir}`, { withFileTypes: true }).flatMap(e =>
+  const webCss = (dir: string): string[] => readdirSync(`${LORE}/${dir}`, { withFileTypes: true }).flatMap(e =>
     e.isDirectory() ? webCss(`${dir}/${e.name}`) : e.name.endsWith('.css') ? [`${dir}/${e.name}`] : []);
-  const files = ['kit/src/styles/seidr.css', ...webCss('web-next/src')].filter(f => narrowMedia(read(f)).length > 0);
-  it('положительный контроль: узкие @media найдены и в kit, и в web-next', () => {
-    expect(files).toContain('kit/src/styles/seidr.css');
+  const files = ['src/styles/seidr.css', ...(LORE ? webCss('web-next/src') : [])].filter(f => narrowMedia(read(f)).length > 0);
+  it('положительный контроль: узкие @media найдены в kit', () => {
+    expect(files).toContain('src/styles/seidr.css');
+  });
+  it.skipIf(!LORE)('сверка с потребителем: узкие @media найдены и в web-next LORE (нужен LORE_ROOT)', () => {
     expect(files.some(f => f.startsWith('web-next/'))).toBe(true);
   });
   for (const file of files) {

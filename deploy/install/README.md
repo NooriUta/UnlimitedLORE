@@ -1,37 +1,65 @@
 # Установка LORE на Linux
 
-Готовый пакет: вложение релиза `lore-installer-<версия>.tar.gz`, рядом `SHA256SUMS` — скачайте со страницы выпуска, собирать из исходников не нужно.
+Самодостаточная установка LORE на чистую машину: своя ArcadeDB, бэкенд и веб-интерфейс. Внешних сервисов не
+требует. Файлы (вложения, аватары) — своё S3 или без файлов. Вход через Keycloak, встройка Völva, Forgejo с
+forgejo-mcp и мобильный монитор miniLORE — по выбору, каждый своим разделом ниже.
 
-Самодостаточная установка LORE на чистую машину: своя ArcadeDB, бэкенд и веб-интерфейс v2. Файлы (вложения, аватары, ассеты BRAGI) — своё S3 или без файлов (см. «Хранилище файлов»). От нашей инфраструктуры (Keycloak, Infisical, Forgejo, Traefik) не зависит. Вход через Keycloak, встройка Völva и Forgejo с forgejo-mcp — по выбору (см. ниже).
+## Что скачать
+
+Со страницы выпуска:
+
+| файл | зачем | когда нужен |
+|---|---|---|
+| `lore-installer-<версия>.tar.gz` | `install.sh`, `docker-compose.install.yml`, `.env.example`, этот README и `lore-migrate.mjs` | всегда |
+| `SHA256SUMS` | подписи вложений выпуска | всегда — проверьте перед установкой |
+| `lore-migrate-linux-x64` | то же, что `lore-migrate.mjs`, одним исполняемым файлом (125 МБ) | не обязателен: без него установщик запускает `.mjs` в контейнере с Node |
+| `lore-src-<версия>.tar.gz` | исходники LORE | только для `--build-from-source` (сборка образов у себя) |
+| `minilore-srv-<версия>.tar` | образ сервера miniLORE | только для `--minilore install` |
+
+Распакуйте архив и работайте из получившегося каталога — `install.sh`, compose и `.env.example` лежат рядом,
+и установщик ищет их там же. Дополнительные вложения кладите туда же: исходники в `src/`, образы в `images/`.
+
+```bash
+tar -xzf lore-installer-<версия>.tar.gz && cd lore-installer-<версия>
+sha256sum -c SHA256SUMS      # подписи
+bash install.sh --dir /opt/lore --version v1.18.0
+```
+
+Без `--version` берётся версия пакета. Свой пароль базы вместо сгенерированного — переменной
+`ARCADEDB_ROOT_PASSWORD`. Посмотреть план, ничего не меняя, — `--dry-run`: это стоит сделать первым запуском.
+
+Если образы LORE уже есть в вашем реестре, сборку можно пропустить:
+
+```bash
+LORE_BACKEND_IMAGE=registry.example/lore-backend:v1.18.0 \
+LORE_WEB_IMAGE=registry.example/lore-web:v1.18.0 \
+bash install.sh --dir /opt/lore
+```
 
 ## Требования
 
 - Linux x86_64, 4 ГБ RAM и 10 ГБ диска (сборка образов — основная нагрузка).
 - Docker Engine 24+ с плагином `docker compose` v2, пользователь в группе `docker`.
-- `git` — если ставите конкретный тег (`--version`).
-- Доступ в интернет к Docker Hub, Maven Central и npm (для сборки образов).
-- Свободный порт веб-интерфейса (по умолчанию 4400).
+- `sha256sum` и `tar` (обычно уже есть), `git` — только если ставите по тегу из клона репозитория.
+- Доступ к реестру образов: Docker Hub (ArcadeDB, Node, nginx, curl, debian) и, для готовых образов LORE,
+  `ghcr.io`. Доступа к Docker Hub нет — укажите своё зеркало в настройках Docker (`registry-mirrors`),
+  иначе сборка остановится на первом же базовом образе.
+- Для сборки образов из исходников — выход к Maven Central и npm (или свои зеркала, см. «Настройка окружения»).
+- Свободный порт веб-интерфейса (по умолчанию 4400); для Forgejo — ещё 3000 и 4430, если ставите его.
+- Свой Keycloak — только если включаете вход (и обязательно, если ставите miniLORE: иначе телефон не войдёт).
 
-## Установка одной строкой
+## Как собирается схема при первой установке
 
-Из клона репозитория:
+Свежая база собирается из модели **установщиком**, а не бэкендом: шаг `lore-migrate init-empty` создаёт типы,
+связи и справочники, после чего бэкенд стартует с `LORE_MIGRATE=false` — шаги миграций на такой базе не катятся,
+они нужны только базам, которые старше модели.
 
-```bash
-git clone <url-репозитория> lore && cd lore && git fetch --tags
-bash deploy/install/install.sh --dir /opt/lore --version v1.17.21
-```
+Запускается это одним из двух способов, установщик выбирает сам:
 
-Без `--version` образы собираются из текущего состояния клона. Если образы уже есть в вашем реестре, сборку можно пропустить:
+- `lore-migrate.mjs` рядом с `install.sh` (он есть в архиве) — в одноразовом контейнере с Node;
+- исполняемый файл, если вы его скачали, — путь к нему в `LORE_MIGRATE_BIN`.
 
-```bash
-LORE_BACKEND_IMAGE=registry.example/lore-backend:v1.17.21 \
-LORE_WEB_IMAGE=registry.example/lore-web:v1.17.21 \
-bash deploy/install/install.sh --dir /opt/lore
-```
-
-Свои пароли вместо сгенерированных задаются переменной `ARCADEDB_ROOT_PASSWORD`. Посмотреть план без изменений можно флагом `--dry-run`.
-
-Первый старт на пустой базе занимает несколько минут: бэкенд сам поднимает ядро схемы и накатывает все шаги миграций. Флаг `LORE_BOOTSTRAP` не нужен.
+Нет ни того, ни другого — установка остановится и скажет об этом словами. Флаг `LORE_BOOTSTRAP` не нужен.
 
 ## Настройка окружения
 
@@ -270,12 +298,12 @@ MCP-сервер LORE ставится вместе со стеком (серв�
 Три варианта, по умолчанию — без Forgejo, как раньше:
 
 ```bash
-bash deploy/install/install.sh --version v1.18.0 --forgejo install                                   # поставить Forgejo 15.0.5
+bash deploy/install/install.sh --version v1.18.0 --forgejo install                                   # поставить Forgejo 17.0.2
 bash deploy/install/install.sh --version v1.18.0 --forgejo own --forgejo-url https://git.example.org  # свой Forgejo
 bash deploy/install/install.sh --version v1.18.0 --forgejo none                                      # без Forgejo
 ```
 
-- **install** — пакет поднимает Forgejo 15.0.5 (та же версия, что на нашем стенде; образ `codeberg.org/forgejo/forgejo`) и forgejo-mcp. Профили compose `forgejo` и `forgejo-mcp`, веб Forgejo — на `127.0.0.1:3000`. Администратора Forgejo вы заводите сами в его первом окне.
+- **install** — пакет поднимает Forgejo 17.0.2 (образ `codeberg.org/forgejo/forgejo`) и forgejo-mcp. Профили compose `forgejo` и `forgejo-mcp`, веб Forgejo — на `127.0.0.1:3000`. Администратора Forgejo вы заводите сами в его первом окне.
 - **own** — Forgejo не ставится. Адрес вашего Forgejo уходит в forgejo-mcp (`FORGEJO_URL`), профиль compose — только `forgejo-mcp`.
 - **none** — профили Forgejo снимаются, мост LORE отвечает 503, как без Forgejo.
 
@@ -299,6 +327,53 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 Пока `FORGEJO_MCP_TOKEN` пуст, forgejo-mcp не запускается, и инсталлятор пишет об этом предупреждение.
 
 Проект в LORE регистрируется с адресом репозитория: `<адрес Forgejo>/<организация>/<репозиторий>`. Из этого адреса мост берёт организацию и репозиторий. При своей установке Forgejo используйте `http://localhost:3000/...`: бэкенд из контейнера ходит на этот адрес через `forgejo:3000` (`FORGEJO_BASE_OVERRIDE`).
+
+## miniLORE — мобильный монитор сессий (по выбору)
+
+`install.sh --minilore install` поднимает **сервер miniLORE** в той же установке. По умолчанию он не ставится.
+
+**Что входит в этой версии и чего нет.** Входит только сервер. Установщик шлюза (Windows и Linux) и приложение
+для телефона (APK) выйдут следующей версией: сборочная труба приложения сейчас не зелёная, а раздавать файл,
+который не собрала труба, нельзя — вы не сможете его воспроизвести и проверить.
+
+**База — ваша же ArcadeDB.** Базы `minilore` и `minilore_archive` заводит **установщик**, чужих баз не трогает.
+Раньше здесь было написано, что их заводит сам сервер; на версии 0.4.19 это неверно — он сразу катит свои миграции
+и падает с `Database not found`, уходя в бесконечный перезапуск (поймано живым прогоном 22.11.2026).
+Порт наружу не публикуется: снаружи miniLORE доступен только через ваш прокси, если вы его заводите.
+
+**Образ сервера** едет в пакете архивом `images/minilore-srv-0.4.19.tar` и грузится `docker load` при совпадении
+подписи `sha256` — как и образ forgejo-mcp. Из сети он не тянется: имя образа в пакете локальное
+(`minilore-srv:0.4.19`), адресов наших реестров в пакете нет. Свой образ — переменной `MINILORE_IMAGE`.
+
+**Два значения обязательны — без них установка не начнётся.** Так сделано по живому прогону на чужой машине
+22.11.2026: сервер miniLORE без них не запускается вовсе (`Failed to load config value … minilore.app.client-id`)
+и уходит в бесконечный перезапуск. Раньше установщик ограничивался предупреждением — установка «проходила», а
+контейнер крутился в рестарте, и вы узнавали об этом сами, разбирая журналы.
+
+| ключ | ключ запуска | что это |
+|---|---|---|
+| `MINILORE_APP_CLIENT_ID` | `--minilore-client-id` | ваш клиент мобильного приложения в Keycloak |
+| `MINILORE_OWNER` | `--minilore-owner` | ваш логин — чьи это записи |
+
+Значения берутся из ключей запуска, из окружения с теми же именами или из уже лежащего `.env` — в этом порядке.
+
+У клиента приложения обязаны быть: redirect `pro.seidrstudio.minilore://auth/callback` (схема вшита в приложение
+и не меняется), public client, PKCE S256, маппер audience `minilore-srv`.
+
+Умолчаний у этих двух значений нет намеренно: имя клиента и имя владельца у разработчика свои, и тихая
+подстановка увела бы вашу установку в чужой Keycloak, под чужое имя.
+
+**Проверка после установки.** Порт miniLORE наружу не публикуется, поэтому проверять его нужно изнутри
+установки, из каталога, куда вы ставили:
+
+```bash
+docker compose ps minilore-srv                                            # running, а не restarting
+docker compose exec minilore-srv wget -qO- http://127.0.0.1:8080/config   # настройки сервера
+```
+
+В ответе смотрите на два поля: `kcClientId` — ваш клиент приложения (не пустой), `kcIssuer` — адрес вашего
+Keycloak. `kcIssuer: null` значит, что вход LORE не настроен: сервер работает, но телефон войти не сможет.
+
 
 ## Локальная LLM: векторный индекс и гейты качества
 
@@ -403,6 +478,8 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
 | `FORGEJO_MCP_TOKEN`, `FORGEJO_TOKEN` | токен forgejo-mcp в Forgejo, отдельный от моста; в контейнер идёт как `FORGEJO_TOKEN` (AIDA/forgejo-mcp, src/config.ts) | вписывает владелец | `.env` 600 | Forgejo install или own | новый токен, `.env`, `up -d forgejo-mcp`; старый отозвать | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `FORGEJO_MCP_API_KEY` | ключ входа агентов в forgejo-mcp (`Authorization: Bearer`); без него HTTP-вход открыт | установщик генерирует при включённом forgejo-mcp | `.env` 600; у агента — в окружении машины, строка MCP ссылается на переменную | Forgejo install или own | новое значение в `.env`, `up -d forgejo-mcp`, обновить окружение агентов | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `LORE_MCP_CLIENT_SECRET`, `LORE_MCP_SECRET_VAR` | секрет учётки MCP aida-lore (клиент Keycloak `lore-mcp-<роль>[_<harness>]`): по нему MCP получает токен агента. Хранится ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]` (`…_FULL`, `…_FULL_KIMI`, `…_TESTER`); `LORE_MCP_SECRET_VAR` — имя этого ключа в строке MCP, не секрет. Клиент без настройки окружения шлёт пару в заголовках X-Lore-Client-Id и X-Lore-Client-Secret | окно установщика (режим «завести за меня») или админка LORE (выпуск учётки агента); свои клиенты — владелец, LORE только проверяет токен | Infisical, если запись настроена (отдельный проект `lore-mcp-secrets`), иначе файл `~/kc-clients-<область>.env` 600; у агента — окружение машины | если включён вход через Keycloak | сменить секрет в админке LORE (без простоя — с флагом KC `client-secret-rotation` и политикой `secret-rotation`), обновить окружение harness | `mcp-server/src/backend.ts`, `scripts/model-migration/setup.mjs` |
+| `MINILORE_ARCADE_PASSWORD` | пароль, которым сервер miniLORE ходит в вашу ArcadeDB (в базы `minilore` и `minilore_archive`, их заводит установщик) | берётся из `ARCADEDB_ROOT_PASSWORD` той же установки — отдельного пароля не заводим | `.env` 600 | только с `--minilore install` | вместе с паролем root ArcadeDB | `deploy/install/docker-compose.install.yml` |
+| `MINILORE_LORE_CLIENT_SECRET` | секрет служебной учётки, которой сервер miniLORE читает LORE; пусто — двери чтения LORE отвечают 503 с причиной, остальное работает | владелец (клиент в своём Keycloak) | `.env` 600 | нет — только если включаете чтение LORE из miniLORE | новый секрет в Keycloak, значение в `.env`, `up -d minilore-srv` | `deploy/install/docker-compose.install.yml` |
 | `LORE_MCP_SECRETS_INFISICAL_CLIENT_SECRET`, `LORE_MCP_SECRETS_INFISICAL_CLIENT_ID` | машинная учётка LORE (universal-auth) в отдельном проекте Infisical для секретов учёток MCP, роль member только там; рядом — не секреты `LORE_MCP_SECRETS_INFISICAL_URL`, `_PROJECT_ID`, `_ENVIRONMENT` (`prod`), `_PATH` (`/`) | владелец заводит учётку в Infisical | окружение окна установщика | только если секреты MCP пишутся в Infisical; без них — «запись в Infisical не настроена», секрет показан один раз | новый секрет учётки в Infisical, затем новое значение в окружении окна установщика | `scripts/model-migration/infisical.mjs` |
 | `LORE_DB_GUARD_AUTH`, `LORE_DB_GUARD_TOKEN_NAMES`, `GUARD_TOKEN_NAMES` | сторож входов ArcadeDB: токен группы db-guard (секрет) и список имён токенов (не секрет) | владелец заводит токен в ArcadeDB | `.env` 600 | только профиль `guard` | новый токен в ArcadeDB, `.env`, `up -d lore-db-guard` | `deploy/install/docker-compose.install.yml`, `deploy/db-guard/guard.mjs` |
 | `LORE_LLM_LOCAL_API_KEY` | ключ сервера локальной модели (заголовок `Authorization: Bearer`); пусто — без заголовка, обычный случай для Ollama | вписывает владелец, если раннер запущен с `--api-key` | `.env` 600 | только если сервер модели требует ключ | новый ключ на сервере модели и в `.env`, `up -d lore-backend` | `deploy/install/docker-compose.install.yml`, `backend/src/main/resources/application.properties` |

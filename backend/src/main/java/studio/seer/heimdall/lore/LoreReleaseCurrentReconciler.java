@@ -129,8 +129,10 @@ public class LoreReleaseCurrentReconciler {
         if (repo.isEmpty()) return;   // не в нашем Forgejo — не знаем, не трогаем
         List<String> tags;
         try {
+            // page=1 обязателен: Forgejo 17 игнорирует limit без page и отдаёт все теги разом
+            // (находка апгрейда 22.11.2026; сторож ForgejoListPagingGuardTest).
             HttpResponse<String> r = forgejo.api(repo.get(), "GET",
-                "/repos/" + repo.get().path() + "/tags?limit=" + TAG_PAGE, null);
+                "/repos/" + repo.get().path() + "/tags?page=1&limit=" + TAG_PAGE, null);
             if (r.statusCode() != 200) {
                 LOG.debugf("[LORE RELEASE] %s: Forgejo ответил %d на список тегов — флаг не трогаю", gp, r.statusCode());
                 return;

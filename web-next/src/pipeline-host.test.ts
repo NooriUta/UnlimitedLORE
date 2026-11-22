@@ -1397,3 +1397,94 @@ exit 0
     rmSync(d, { recursive: true, force: true });
   });
 });
+
+// ── «Дотянуть данные PR» кнопкой (MD-05; владелица 22.11.2026, вариант «б») ──────────────────────────────
+// Операция была только в бэкенде и в установщике: запустить её на нашей среде мог лишь человек с токеном
+// суперадмина, и смоук RFD2-MD05 оставался красным «по данным». Прогон берёт служебную учётку lore-ci-ops
+// из Infisical среды и получает токен сам.
+describe('MD-05 · прогон «Дотянуть данные PR»', () => {
+  const WF = '.github/workflows/lore-pr-backfill.yml';
+  const SH = '.github/scripts/lore-pr-backfill.sh';
+
+  it('запускается только руками, с выбором среды и отдельным согласием на запись', () => {
+    const y = read(WF);
+    expect(y).toMatch(/workflow_dispatch:/);
+    // Автоматических запусков у прогона нет: он пишет в базу среды, и срабатывать «сам» не должен.
+    for (const auto of ['\n  push:', '\n  pull_request:', '\n  schedule:']) expect(y).not.toContain(auto);
+    expect(y).toMatch(/options: \[preprod, prod\]/);
+    expect(y).toMatch(/apply:[\s\S]*default: 'false'/);
+  });
+
+  it('две дотяжки на одной среде не идут параллельно и не отменяют друг друга', () => {
+    const y = read(WF);
+    expect(y).toMatch(/group: lore-pr-backfill-\$\{\{ inputs\.environment \}\}/);
+    expect(y).toMatch(/cancel-in-progress: false/);
+  });
+
+  it('учётка берётся из Infisical среды, токен — у Keycloak той же среды', () => {
+    const s = read(SH);
+    expect(s).toMatch(/LORE_CI_OPS_CLIENT_ID/);
+    expect(s).toMatch(/LORE_CI_OPS_CLIENT_SECRET/);
+    expect(s).toMatch(/REALM="omilorePreprod"/);
+    expect(s).toMatch(/REALM="omilore"/);
+    expect(s).toMatch(/\/kc\/realms\/\$REALM/);
+    expect(s).toMatch(/grant_type=client_credentials/);
+    // Среда задаёт И адрес, И realm: иначе прогон с выбором «preprod» сходил бы токеном прода.
+    expect(s).toMatch(/preprod\) BASE=.*REALM="omilorePreprod"/);
+  });
+
+  it('пробный прогон идёт ВСЕГДА, настоящий — только при apply=true', () => {
+    const s = read(SH);
+    expect(s).toMatch(/pr-backfill --url "\$BASE" --limit "\$LIMIT" --dry-run/);
+    expect(s).toMatch(/if \[ "\$APPLY" = true \]/);
+    // Настоящий прогон стоит ПОСЛЕ пробного и не запускается, если пробный упал.
+    expect(s.indexOf('--dry-run')).toBeLessThan(s.indexOf('"$APPLY" = true'));
+    expect(s).toMatch(/настоящий не запускаю/);
+  });
+
+  it('секреты не печатаются: токен в выводе затирается', () => {
+    const s = read(SH);
+    expect(s).toMatch(/Bearer \*\*\*/);
+    expect(s).not.toMatch(/echo .*\$CLIENT_SECRET/);
+    expect(s).not.toMatch(/echo .*\$LORE_TOKEN/);
+  });
+
+  it('неизвестная среда — отказ словами, а не молчаливый preprod', () => {
+    const s = read(SH);
+    expect(s).toMatch(/среда «\$ENVN» неизвестна/);
+  });
+});
+
+// ── Зеркало SeidrStudio на мажорном релизе (22.11.2026) ──────────────────────
+// Слово владелицы: «я попросила всё, что едет, продублировать как зеркала и выносить при смене x.y релизов».
+// Смысл: друг, которому отдали пакет установки, должен иметь возможность посмотреть исходники того, что ставит.
+// Поэтому зеркало обновляется на vX.Y.0 и молчит на патчах — иначе оно пушит каждый патч и обходит правило.
+describe('зеркало SeidrStudio: мажорный тег, громкий BLOCKED без секрета', () => {
+  const relSteps = () => steps(job('.github/workflows/lore-release.yml', 'publish'));
+  const mirror = () => relSteps().find((s) => /Mirror main \+ tag to SeidrStudio/.test(s.name ?? s.body));
+
+  it('шаг есть и стоит в джобе публикации', () => {
+    expect(mirror(), 'шаг зеркала SeidrStudio в джобе publish').toBeTruthy();
+  });
+
+  it('патчи не зеркалятся: условие на vX.Y.0', () => {
+    expect(mirror()!.body).toMatch(/v\[0-9\]\+\\.\[0-9\]\+\\.0\$|v\[0-9\]\+\.\[0-9\]\+\.0\$/);
+    expect(mirror()!.body).toMatch(/не трогаем/);
+  });
+
+  it('нет секрета — громкий BLOCKED с выходом из разблокировки, а не тихий пропуск', () => {
+    const b = mirror()!.body;
+    expect(b).toMatch(/BLOCKED/);
+    expect(b).toMatch(/MIRROR_PUSH_TOKEN/);
+    expect(b, 'сказано, кто разблокирует').toMatch(/выпускает владелица|кладёт CICDGitHub/);
+  });
+
+  it('тег обязан быть в main — зеркало отражает релизы, а не произвольные точки', () => {
+    expect(mirror()!.body).toMatch(/merge-base --is-ancestor/);
+  });
+
+  it('отставшее зеркало не роняет уже опубликованный релиз', () => {
+    expect(mirror()!.body.length > 0).toBe(true);
+    expect(JSON.stringify(mirror())).toMatch(/continue-on-error/);
+  });
+});

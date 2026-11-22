@@ -1,0 +1,49 @@
+# «Дотянуть данные PR» на среде — кнопкой, а не руками с чужим токеном.
+# SPRINT_LORE_MODEL_DOCS_TIDY/MD-05; владелица 22.11.2026 выбрала вариант «б»: служебная учётка lore-ci-ops
+# в Keycloak обеих сред, секрет — в Infisical, токен прогон берёт сам (client_credentials).
+#
+# Почему прогон, а не разовая команда: дотяжку придётся гонять после каждой выкатки, где копились PR без
+# заголовка, и на каждой новой установке. Пока её не было, смоук RFD2-MD05 оставался красным «по данным»,
+# а запустить операцию мог только человек с токеном суперадмина.
+name: LORE PR backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Среда
+        type: choice
+        options: [preprod, prod]
+        default: preprod
+        required: true
+      apply:
+        description: Писать (false — только оценка «дотянется N из M»)
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+        required: true
+      limit:
+        description: Размер порции
+        default: '200'
+        required: false
+
+concurrency:
+  # Две дотяжки на одной среде одновременно не нужны: вторая увидит уже дотянутое и напишет «без изменений»,
+  # но порции обеих будут ходить по одному корпусу. Очередь, а не отмена: начатый прогон дописывает отчёт.
+  group: lore-pr-backfill-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    env:
+      LORE_SECRETS_URL: http://infisical:18080
+      LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
+      LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}
+      LORE_SECRETS_PROJECT_ID: ${{ secrets.LORE_SECRETS_PROJECT_ID }}
+      LORE_SECRETS_SCOPE: /
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Дотянуть данные PR
+        run: bash .github/scripts/lore-pr-backfill.sh "${{ inputs.environment }}" "${{ inputs.apply }}" "${{ inputs.limit }}"

@@ -1,3 +1,5 @@
+import { splitGaps, gapLine, strictMode } from './source-gap.mjs';
+
 // SPRINT_QG_REBUILD/QG-01 · Охват гейта (scope) при переносе 1.18. Решение владелицы 19.11.2026 «2а 3а»
 // (D-2026-MIG-118-OWNER-ANSWERS-1119): у гейта явный признак scope = global | project; четыре гейта гигиены данных LORE —
 // общие (global) и без проекта; остальные гейты с проектом — project; старый смоук QG-T13-SMOKE — снять (retired с причиной).
@@ -61,12 +63,60 @@ export async function applyQgScope(db, gates, rule, { log = console.log } = {}) 
     global_with_project: got.filter(g => g.scope === 'global' && proj(g).length).length,
     unscoped: got.filter(g => !g.scope && g.status !== 'retired').length,
   };
-  const ok = !p.problems.length && after.global === p.counts.global && after.project === p.counts.project
-    && after.global_with_project === 0 && after.unscoped === 0 && dropped >= p.counts.project_links_dropped
-    && p.retire.every(r => got.some(g => g.qg_id === r.qg_id && g.status === 'retired'));
+  const written = qgWritten({
+    after, counts: p.counts, dropped,
+    noProject: p.problems.filter(x => x && x.kind === 'no_project').length,
+    retireOk: p.retire.every(r => got.some(g => g.qg_id === r.qg_id && g.status === 'retired')),
+  });
+  const v = judgeQgScope({ ok: written, problems: p.problems });
   log(`охват гейтов: общих ${after.global}, проектных ${after.project}, снято ${after.retired}; снято связей общих гейтов с проектом ${dropped}`
-    + (p.problems.length ? '; отклонения: ' + p.problems.map(x => x.qg_id + ' ' + x.kind).join(', ') : ''));
-  log('сверка охвата гейтов:', ok ? 'сошлась' : 'НЕ сошлась');
-  return { ok, decision: rule.decision || null, plan: p.counts, after, project_links_dropped: dropped, problems: p.problems,
-    scope: p.scope, retired: p.retire.map(r => r.qg_id) };
+    + (v.mismatch.length ? '; отклонения: ' + v.mismatch.map(x => x.qg_id + ' ' + x.kind).join(', ') : '') + v.line);
+  log('сверка охвата гейтов:', v.ok ? 'сошлась' : 'НЕ сошлась');
+  return { ok: v.ok, decision: rule.decision || null, plan: p.counts, after, project_links_dropped: dropped, problems: p.problems,
+    scope: p.scope, retired: p.retire.map(r => r.qg_id), absent_in_source: v.absent };
+}
+
+/**
+ * Записалось ли то, что шаг обязан был записать.
+ *
+ * <p>Главное тут — последнее слагаемое. Раньше условие требовало {@code after.unscoped === 0}: «не должно
+ * остаться ни одного гейта без охвата». На снимке нашего прода таких 20, и охват им взять НЕОТКУДА — у них нет
+ * проекта. Условие было невыполнимо в принципе, и шаг объявлял «НЕ сошлась» при полностью верной записи
+ * (прогон на чужой машине 22.11.2026; утренняя правка вердикта этого не лечила — она про другой слой).
+ * Теперь: без охвата могут остаться РОВНО гейты без проекта, лишний — красный.
+ */
+export function qgWritten({ after, counts, dropped, noProject = 0, retireOk }) {
+  return after.global === counts.global
+    && after.project === counts.project
+    && after.global_with_project === 0
+    && dropped >= counts.project_links_dropped
+    && retireOk
+    && after.unscoped === noProject;
+}
+
+/**
+ * Вердикт шага. Два вида «делать нечего» установку НЕ роняют, но называются поимённо:
+ * <ul>
+ *   <li>{@code rule_gate_missing} — правило называет гейт, которого в источнике нет (база старше правила:
+ *       на бэкапе до 1.18 гейтов гигиены ещё не существовало);</li>
+ *   <li>{@code no_project} — у гейта нет проекта, и охват ему задать нечем. Запись при этом верна: гейт остаётся
+ *       без охвата, в отчёте он в {@code after.unscoped}. Правка 22.11.2026 по прогону на чужой машине: раньше
+ *       это было красным «всегда», и перенос снимка нашего прода объявлял «НЕ сошлась» из-за 20 таких гейтов,
+ *       ничего не записав неправильно — у человека это выглядело бы как сломанная установка.</li>
+ * </ul>
+ * Красным остаётся {@code many_projects} — охват неоднозначен, тут выбор за человеком. В строгом режиме
+ * ({@code LORE_MIGRATE_STRICT=1}, наша труба на свежем снимке) красным становится и то и другое: у нас гейт без
+ * проекта — настоящая дыра в данных.
+ */
+export function judgeQgScope({ ok, problems = [] }, { strict = strictMode() } = {}) {
+  const g = splitGaps(problems, ['rule_gate_missing', 'no_project'], { strict });
+  return {
+    ok: ok && g.blocking.length === 0,
+    absent: g.absent,
+    mismatch: g.mismatch,
+    line: gapLine(g.absent, x => x.kind === 'no_project'
+      ? `${x.qg_id} (у гейта нет проекта — охват не задан)`
+      : `${x.qg_id} (гейта нет в источнике)`,
+      'охват задать нечему (пропущено, не ошибка)'),
+  };
 }

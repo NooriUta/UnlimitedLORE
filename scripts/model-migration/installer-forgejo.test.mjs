@@ -14,10 +14,12 @@ const DIR = new URL('../../deploy/install/', import.meta.url);
 const read = f => fs.readFileSync(new URL(f, DIR), 'utf8');
 const base = { components: ['lore'], kc: 'own', secrets: 'own', mode: 'new' };
 
-test('Forgejo: версия пакета — 15.0.5, та же, что на нашем стенде (get_server_version 20.11.2026)', () => {
-  assert.equal(FORGEJO_VERSION, '15.0.5');
-  assert.match(read('.env.example'), /^FORGEJO_VERSION=15\.0\.5$/m);
-  assert.match(read('docker-compose.install.yml'), /codeberg\.org\/forgejo\/forgejo:\$\{FORGEJO_VERSION:-15\.0\.5\}/);
+test('Forgejo: версия пакета — 17.0.2, та же, что на нашем стенде и проде (апгрейд 22.11.2026)', () => {
+  assert.equal(FORGEJO_VERSION, '17.0.2');
+  assert.ok(read('.env.example').split('\n').some(l => l.trim() === `FORGEJO_VERSION=${FORGEJO_VERSION}`),
+    'в .env.example пакета версия Forgejo должна совпадать с FORGEJO_VERSION установщика');
+  assert.ok(read('docker-compose.install.yml').includes(`codeberg.org/forgejo/forgejo:\${FORGEJO_VERSION:-${FORGEJO_VERSION}}`),
+    'в compose пакета умолчание версии Forgejo должно совпадать с FORGEJO_VERSION установщика');
 });
 
 test('выбор Forgejo: install / own / none; не указан — none, как раньше', () => {
@@ -45,7 +47,7 @@ test('.env по варианту: профили compose, адрес Forgejo д�
   assert.deepEqual(forgejoEnv({ forgejo: 'none' }), { COMPOSE_PROFILES: '', FORGEJO_URL: '', FORGEJO_BASE_OVERRIDE: '' });
   assert.deepEqual(forgejoEnv({}), { COMPOSE_PROFILES: '', FORGEJO_URL: '', FORGEJO_BASE_OVERRIDE: '' }, 'по умолчанию — none');
   assert.deepEqual(forgejoEnv({ forgejo: 'install' }),
-    { COMPOSE_PROFILES: 'forgejo,forgejo-mcp', FORGEJO_URL: 'http://forgejo:3000', FORGEJO_BASE_OVERRIDE: 'http://forgejo:3000', FORGEJO_VERSION: '15.0.5' });
+    { COMPOSE_PROFILES: 'forgejo,forgejo-mcp', FORGEJO_URL: 'http://forgejo:3000', FORGEJO_BASE_OVERRIDE: 'http://forgejo:3000', FORGEJO_VERSION: '17.0.2' });
   assert.deepEqual(forgejoEnv({ forgejo: 'own', url: 'https://git.example.org/' }),
     { COMPOSE_PROFILES: 'forgejo-mcp', FORGEJO_URL: 'https://git.example.org', FORGEJO_BASE_OVERRIDE: '' });
   assert.throws(() => forgejoEnv({ forgejo: 'own', url: '' }), /адрес своего Forgejo/);

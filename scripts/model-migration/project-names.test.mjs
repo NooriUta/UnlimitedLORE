@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { projectNamesOf, planProjectNames, applyProjectNames } from './project-names.mjs';
+import { judgeProjectNames } from './project-names.mjs';
 import decisions from './rules/decisions.lore.json' with { type: 'json' };
 
 const projects = [
@@ -105,6 +106,34 @@ test('применение: поля в приёмнике и сверка «п�
   assert.equal(r.applied, 4);
   assert.deepEqual(r.unfilled, []);
   assert.equal(state.get('AIDA/MIDGARD').short_title, 'MIDGARD');
-  assert.equal(r.ok, false, 'строки без проекта в приёмнике (DW …) — сверка не сходится');
-  assert.ok(r.problems.length >= 1);
+  // 22.11.2026, MIG-04: прежде здесь ждали ok=false — «строки без проекта в приёмнике — сверка не сходится».
+  // Правило изменено по находке прогона установщика: у друга база СТАРШЕ нашей таблицы, и «такого проекта нет»
+  // значит «переносить нечего», а не ошибка. Пропуск обязан быть назван поимённо; красной установка от него
+  // больше не становится. В строгом режиме нашей трубы прежнее поведение сохранено — см. тест ниже.
+  assert.equal(r.ok, true, 'нет проекта в приёмнике — пропуск, а не расхождение');
+  assert.ok(r.problems.length >= 1, 'пропущенные строки по-прежнему перечислены');
+  assert.ok(r.absent_in_source.length >= 1, 'и названы отдельно от настоящих расхождений');
+});
+
+// ── База старше таблицы названий (MIG-04, прогон 22.11.2026) ──
+// На бэкапе прода от 01.11 шаг краснел: код DW вёл сразу в два проекта (их слили в группу позже),
+// часть строк не находила проекта вовсе. Переносить нечего — это не ошибка, но названо быть должно.
+test('мягкий режим: «нет такого проекта» и «ещё не слиты в группу» не роняют установку', () => {
+  const v = judgeProjectNames({ problems: [{ code: 'DW', kind: 'ambiguous', projects: ['a', 'b'] },
+    { code: 'X', kind: 'not_found', slugs: ['Ghost/x'] }], unfilled: [] }, { strict: false });
+  assert.equal(v.ok, true);
+  assert.deepEqual(v.absent.map(p => p.code), ['DW', 'X']);
+  assert.match(v.line, /DW/);
+});
+
+test('настоящее расхождение красное в обоих режимах', () => {
+  for (const strict of [false, true]) {
+    assert.equal(judgeProjectNames({ problems: [{ code: 'A', kind: 'same_project_as_B' }], unfilled: [] }, { strict }).ok, false);
+    assert.equal(judgeProjectNames({ problems: [], unfilled: [{ code: 'A', fields: ['name'] }] }, { strict }).ok, false,
+      'записали и не сошлось — это запись, а не отсутствие');
+  }
+});
+
+test('строгий режим нашей трубы краснеет и на пропуске', () => {
+  assert.equal(judgeProjectNames({ problems: [{ code: 'DW', kind: 'ambiguous' }], unfilled: [] }, { strict: true }).ok, false);
 });

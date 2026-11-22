@@ -594,7 +594,11 @@ const agentsSpec: SectionSpec = {
   quick: [['no-owner', 'lists.quick.noOwner', { owner: '' }]],
   filters: [LORE_FILTER_FIELDS.project],
   groupings: ['fields.agentRole', LORE_FILTER_FIELDS.project],
-  columns: ['id', 'title', 'agentRole', 'clientId', 'owner'],
+  // Без внутреннего кода (слово владелицы 22.11.2026: «и код для агентов скрывай, это лишнее»): агент опознаётся
+  // именем и учёткой, а AGENT-FULL-msbt0fed человеку ничего не говорит и занимал первую, самую заметную колонку.
+  // Так же устроен раздел людей. Код никуда не делся: он остаётся опознавателем записи, адресом паспорта и
+  // значением поиска — спрятана колонка, а не данные.
+  columns: ['title', 'agentRole', 'clientId', 'owner'],
 };
 
 /** Вопросы: группировка по статусу — прямая просьба владелицы (06.11). */
