@@ -253,9 +253,12 @@ services:
     profiles: ["minilore"]
     image: ${MINILORE_IMAGE:-git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19}
     restart: unless-stopped
+    # Просто «после ArcadeDB», без ожидания здоровья: у службы arcadedb в этом пакете healthcheck не объявлен,
+    # и `condition: service_healthy` роняет весь запуск словами «container … has no healthcheck configured»
+    # (поймано прогоном на чужой машине 22.11.2026). Готовность базы сервер miniLORE переживает сам: не достучался —
+    # повторит. Так же сделаны lore-db-guard и lore-backend выше.
     depends_on:
-      arcadedb:
-        condition: service_healthy
+      - arcadedb
     environment:
       # Вход — тот же Keycloak, что у LORE: отдельной области для miniLORE не заводим.
       - KC_ISSUER=${LORE_OIDC_ISSUER:-}
