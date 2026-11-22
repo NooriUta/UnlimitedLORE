@@ -31,8 +31,12 @@ export function splitGaps(problems, kinds, { strict = strictMode() } = {}) {
   return { absent, mismatch, blocking: strict ? [...mismatch, ...absent] : mismatch };
 }
 
-/** Строка отчёта про пропущенное: называем поимённо, молчать нельзя. */
-export function gapLine(absent, describe = p => p.kind) {
+/**
+ * Строка отчёта про пропущенное: называем поимённо, молчать нельзя.
+ * title — общая причина шага; когда у пропусков причины РАЗНЫЕ (гейта нет в источнике / у гейта нет проекта),
+ * шаг передаёт нейтральное «делать нечего», а причину несёт сам пункт.
+ */
+export function gapLine(absent, describe = p => p.kind, title = 'нет в источнике (пропущено, не ошибка)') {
   if (!absent.length) return '';
-  return `; нет в источнике (пропущено, не ошибка): ${absent.map(describe).join(', ')}`;
+  return `; ${title}: ${absent.map(describe).join(', ')}`;
 }

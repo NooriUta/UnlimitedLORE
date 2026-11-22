@@ -7,6 +7,8 @@
 #   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
 #     … [--files none|s3] — хранилище файлов: без файлов (по умолчанию) или своё S3 (S3_* в окружении или .env)
 #     … [--minilore install|none] — сервер miniLORE (мобильный монитор сессий) в этой же установке; по умолчанию не ставится
+#     … [--minilore-client-id <клиент>] [--minilore-owner <логин>] — обязательны при --minilore install: без них сервер
+#         miniLORE не стартует и уходит в бесконечный перезапуск
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -65,6 +67,8 @@ FORGEJO_VERSION_DEFAULT="17.0.2"   # та же версия, что на наш�
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
 MINILORE=""                       # --minilore install|none: сервер miniLORE в этой установке (по умолчанию не ставится)
+MINILORE_CLIENT_ID_ARG=""         # --minilore-client-id: клиент приложения miniLORE в Keycloak владельца (обязателен при install)
+MINILORE_OWNER_ARG=""             # --minilore-owner: имя владельца, чьи сессии показывает монитор (обязателен при install)
 MINILORE_IMAGE_DEFAULT="git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
 FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
 FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
@@ -104,7 +108,7 @@ run() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files|--minilore)
+      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files|--minilore|--minilore-client-id|--minilore-owner)
         [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "у $1 нет значения" 2
         case "$1" in
           --dir) DIR="$2" ;; --version) VERSION="$2" ;; --src) SRC="$2" ;;
@@ -112,6 +116,8 @@ parse_args() {
           --forgejo) FORGEJO="$2" ;; --forgejo-url) FORGEJO_URL_ARG="$2" ;;
           --files) FILES="$2" ;;
           --minilore) MINILORE="$2" ;;
+          --minilore-client-id) MINILORE_CLIENT_ID_ARG="$2" ;;
+          --minilore-owner) MINILORE_OWNER_ARG="$2" ;;
         esac
         shift 2 ;;
       --uninstall) MODE="uninstall"; shift ;;
@@ -152,6 +158,21 @@ parse_args() {
     *) die "--minilore: install (поставить сервер miniLORE $MINILORE_IMAGE_DEFAULT) или none" 2 ;;
   esac
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
+  # miniLORE: клиент приложения и владелец ОБЯЗАТЕЛЬНЫ при установке (находка прогона на чужой машине 22.11.2026).
+  # Без них сервер не стартует вообще — «Failed to load config value of type class java.lang.String for:
+  # minilore.app.client-id» и бесконечный перезапуск контейнера. Раньше тут было предупреждение: установка
+  # «проходила», а монитор крутился в рестарте, и человек узнавал об этом сам, разбирая журналы.
+  # Значение берём из ключа, из окружения или из уже лежащего .env — в этом порядке.
+  if [ "$MINILORE" = install ]; then
+    MINILORE_CLIENT_ID_ARG="${MINILORE_CLIENT_ID_ARG:-${MINILORE_APP_CLIENT_ID:-$(env_get MINILORE_APP_CLIENT_ID "$DIR/.env" 2>/dev/null)}}"
+    MINILORE_OWNER_ARG="${MINILORE_OWNER_ARG:-${MINILORE_OWNER:-$(env_get MINILORE_OWNER "$DIR/.env" 2>/dev/null)}}"
+    local mmiss=""
+    [ -n "$MINILORE_CLIENT_ID_ARG" ] || mmiss="$mmiss MINILORE_APP_CLIENT_ID (--minilore-client-id)"
+    [ -n "$MINILORE_OWNER_ARG" ] || mmiss="$mmiss MINILORE_OWNER (--minilore-owner)"
+    [ -z "$mmiss" ] || die "--minilore install: не заданы$mmiss. Без них сервер miniLORE не стартует и уходит в бесконечный перезапуск. Клиент приложения заводится в вашем Keycloak: public, PKCE S256, redirect pro.seidrstudio.minilore://auth/callback; владелец — имя человека, чьи сессии показывает монитор" 2
+  else
+    [ -z "$MINILORE_CLIENT_ID_ARG$MINILORE_OWNER_ARG" ] || die "--minilore-client-id и --minilore-owner — только вместе с --minilore install" 2
+  fi
   case "$FILES" in
     ""|none) ;;
     s3)
@@ -198,7 +219,23 @@ forgejo_env() { # текущие-профили
 # (mobilepoc-app, omiloreadmin) принадлежат нам, и тихо подставить их значит отдать владельцу чужую учётку.
 minilore_env() {
   case "$MINILORE" in
-    install) printf 'MINILORE_IMAGE=%s\n' "$MINILORE_IMAGE_DEFAULT" ;;
+    install)
+      printf 'MINILORE_IMAGE=%s\n' "$MINILORE_IMAGE_DEFAULT"
+      # Значения владельца — свои, из ключей запуска или окружения; пустыми они сюда не доходят (parse_args отказывает).
+      printf 'MINILORE_APP_CLIENT_ID=%s\n' "$MINILORE_CLIENT_ID_ARG"
+      printf 'MINILORE_OWNER=%s\n' "$MINILORE_OWNER_ARG"
+      ;;
+  esac
+}
+
+# Почему ArcadeDB не ответила — по её собственному журналу. «Authentication failed» значит не «база не поднялась»,
+# а «пароль из .env не подходит к УЖЕ существующей базе»: том остался от прошлой установки с тем же именем проекта
+# compose (поймано на чужой машине 22.11.2026 — два захода в каталогах с одинаковым именем lore).
+arcadedb_hint() {
+  case "$1" in
+    *"Authentication failed"*)
+      printf '%s' "в журнале базы «Authentication failed» — пароль ARCADEDB_ROOT_PASSWORD из .env не подходит к уже существующей базе. Так бывает, когда том остался от прошлой установки с тем же именем проекта compose: задайте своё COMPOSE_PROJECT_NAME в .env или уберите прежний том (docker volume rm <проект>_lore-db)" ;;
+    *) printf '%s' "журнал базы: docker compose -f $DIR/docker-compose.yml logs arcadedb" ;;
   esac
 }
 
@@ -377,8 +414,10 @@ write_env() {
     env_set COMPOSE_PROFILES "$(merge_profiles "$(env_get COMPOSE_PROFILES "$env")" "$FORGEJO")" "$env"
     while IFS= read -r mline; do env_set "${mline%%=*}" "${mline#*=}" "$env"; done < <(minilore_env)
     say "miniLORE: $MINILORE (профили compose: $(env_get COMPOSE_PROFILES "$env"))"
+    # Пустым значение тут уже быть не может — parse_args отказывает до установки. Проверка остаётся на случай,
+    # когда .env правили руками: сервер miniLORE без клиента не стартует, и молча ставить его нельзя.
     [ "$MINILORE" != install ] || [ -n "$(env_get MINILORE_APP_CLIENT_ID "$env")" ] \
-      || warn "miniLORE поставлен, но MINILORE_APP_CLIENT_ID пуст — телефон не войдёт. Заведите клиент приложения в своём Keycloak (redirect pro.seidrstudio.minilore://auth/callback, public, PKCE S256) и впишите его имя в $env"
+      || die "в $env пуст MINILORE_APP_CLIENT_ID — сервер miniLORE не стартует, а уходит в бесконечный перезапуск" 2
   fi
   # Ключ входа агентов в forgejo-mcp — только когда он включён; как пароли: своё значение из окружения или генератор.
   if has_profile forgejo-mcp; then
@@ -538,7 +577,10 @@ wait_db() {
   say "ожидание ArcadeDB"
   for i in $(seq 1 60); do
     dcurl "http://arcadedb:2480/api/v1/databases" 2>/dev/null | grep -q '"result"' && break
-    [ "$i" = 60 ] && die "ArcadeDB не ответила за 120 с: docker compose -f $DIR/docker-compose.yml logs arcadedb"
+    if [ "$i" = 60 ]; then
+      local alog; alog="$(docker compose -f "$DIR/docker-compose.yml" logs --tail 50 arcadedb 2>/dev/null || true)"
+      die "ArcadeDB не ответила за 120 с. $(arcadedb_hint "$alog")"
+    fi
     sleep 2
   done
   if dcurl "http://arcadedb:2480/api/v1/databases" | grep -q "\"$db\""; then
@@ -887,13 +929,35 @@ selftest() {
   # miniLORE (D-2026-INSTALL-MINILORE-IN-PACKAGE): свой выбор, не зависящий от Forgejo.
   expect_rc 2 --dry-run --dir "$t/inst" --minilore maybe
   printf '%s' "$out" | grep -q -- '--minilore' || fail "--minilore: неизвестное значение без причины: $out"; ok
-  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id their-app --minilore-owner their-owner
   printf '%s' "$out" | grep -q 'minilore' || fail "--minilore install: miniLORE не назван в плане: $out"; ok
   printf '%s' "$out" | grep -q 'git.seidrstudio.pro/minilore-ci/minilore_serverside:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
   # Умолчания разработчика (их клиент и их владелец) в чужую установку не подставляются.
   printf '%s' "$out" | grep -q 'mobilepoc-app' && fail "в план попал ЧУЖОЙ клиент mobilepoc-app"; ok
   printf '%s' "$out" | grep -q 'omiloreadmin' && fail "в план попал ЧУЖОЙ владелец omiloreadmin"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore none
+  # 22.11.2026, прогон на чужой машине: без клиента приложения и владельца сервер miniLORE НЕ стартует
+  # («Failed to load config value ... minilore.app.client-id») и уходит в бесконечный перезапуск. Раньше тут было
+  # предупреждение — установка «проходила», а контейнер крутился в рестарте. Теперь отказ до установки.
+  expect_rc 2 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
+  printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID' || fail "miniLORE без клиента: имя настройки не названо: $out"; ok
+  printf '%s' "$out" | grep -q 'MINILORE_OWNER' || fail "miniLORE без владельца: имя настройки не названо: $out"; ok
+  printf '%s' "$out" | grep -qi 'перезапуск' || fail "miniLORE: не сказано, ЧТО будет без этих настроек: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id minilore-app --minilore-owner someone
+  printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID=minilore-app' || fail "miniLORE: клиент не доехал до .env: $out"; ok
+  printf '%s' "$out" | grep -q 'MINILORE_OWNER=someone' || fail "miniLORE: владелец не доехал до .env: $out"; ok
+  MINILORE_APP_CLIENT_ID=env-app MINILORE_OWNER=env-owner expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
+  printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID=env-app' || fail "miniLORE: клиент из окружения не взят: $out"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --minilore none --minilore-client-id x
+  printf '%s' "$out" | grep -q -- '--minilore install' || fail "ключи miniLORE без установки: причина не названа: $out"; ok
+  # Отказ ArcadeDB называет ПРИЧИНУ, а не только «не ответила»: в журнале базы «Authentication failed» значит,
+  # что пароль в .env не подходит к УЖЕ существующей базе (том прошлой установки с тем же именем проекта).
+  case "$(arcadedb_hint 'INFO [GetDatabasesHandler] Authentication failed: User/Password not valid')" in
+    *пароль*) ok ;; *) fail "подсказка ArcadeDB: про пароль не сказано" ;;
+  esac
+  case "$(arcadedb_hint 'INFO [ArcadeDBServer] <ArcadeDB_0> Starting ArcadeDB Server...')" in
+    *пароль*) fail "подсказка ArcadeDB: пароль назван там, где его в журнале нет" ;; *) ok ;;
+  esac
   printf '%s' "$out" | grep -q 'minilore-srv' && fail "--minilore none: сервер miniLORE всё равно в плане: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
   printf '%s' "$out" | grep -qi 'forgejo' && fail "без --forgejo план не должен трогать Forgejo: $out"; ok
