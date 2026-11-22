@@ -457,6 +457,185 @@ vLLM (`vllm serve <модель> --port 8000`) и LM Studio (сервер на `
   - нет потолка или цены — `budget_exhausted` с флагом `budget_unset` или `price_unknown`;
   - у рутины без аналитика (в этой версии — у всех) модель не вызывается вовсе.
 
+## Рекомендации: что стоит доделать после установки
+
+Пакет ставит рабочую LORE, но «рабочая» и «готовая к жизни» — не одно и то же. Ниже то, чего пакет НЕ делает за
+вас, и что обычно нужно. Решать вам: каждый пункт отдельный, без него установка работает — но хуже, и ровно в
+названных местах. Форма одинаковая: что это, что будет без этого, как сделать, как проверить.
+
+Пункты собраны по итогам нашей собственной эксплуатации (CICDGitHub, 22.11.2026) — это не теория, а то, на чём
+спотыкались мы сами.
+
+### 1. HTTPS-прокси перед LORE
+
+**Что это.** Обратный прокси с настоящим сертификатом перед веб-интерфейсом. В этом пакете веб и MCP живут на
+одном порте (`4400`): MCP доступен путём `/mcp` через тот же nginx, своего порта у него нет. Сервер miniLORE
+порт наружу не публикует вовсе — до него прокси должен дотянуться в сети стека.
+
+**Что будет без этого.** LORE откроется только по `http://адрес:4400` в локальной сети. MCP-клиенты, которым
+нужен https (агенты в редакторах, удалённые подключения), не подключатся. Телефон с приложением miniLORE не
+войдёт: вход через Keycloak и обращения к API требуют https. Браузер будет ругаться на небезопасное соединение.
+
+**Как сделать — Caddy** (сертификат получает сам; нужны открытые 80 и 443 и DNS-имя на эту машину):
+
+```caddy
+# /etc/caddy/Caddyfile
+lore.example.org {
+    reverse_proxy 127.0.0.1:4400        # и веб, и /mcp — это один порт пакета
+}
+
+# только при профиле miniLORE: его порт наружу не опубликован,
+# поэтому Caddy должен быть в сети стека (--network <проект>_default)
+minilore.example.org {
+    reverse_proxy minilore-srv:8080
+}
+```
+
+**Как сделать — Traefik** (файловый провайдер; `certResolver: le` настраивается в статической конфигурации):
+
+```yaml
+# dynamic/lore.yml
+http:
+  routers:
+    lore-web:
+      rule: "Host(`lore.example.org`)"
+      service: lore-web
+      tls: { certResolver: le }
+    minilore:                                  # только при профиле miniLORE
+      rule: "Host(`minilore.example.org`)"
+      service: minilore
+      tls: { certResolver: le }
+  services:
+    lore-web: { loadBalancer: { servers: [ { url: "http://127.0.0.1:4400" } ] } }
+    minilore: { loadBalancer: { servers: [ { url: "http://minilore-srv:8080" } ] } }
+```
+
+**Как проверить.**
+
+```bash
+curl -sS -o /dev/null -w '%{http_code} %{ssl_verify_result}\n' https://lore.example.org/
+# ожидаемо: 200 0   (ноль во втором поле — сертификат проверен)
+curl -sS -o /dev/null -w '%{http_code}\n' https://lore.example.org/mcp
+# ожидаемо: 401 или 405 — MCP жив и просит ключ. НЕ 404 и НЕ 502
+```
+
+### 2. Внутреннее имя — на внутренний адрес (если ставите дома)
+
+Причина и объяснение — в разделе «Если ставите дома, за роутером» выше. Здесь готовые куски.
+
+**Машина с systemd-resolved** (ваш DNS спрашивается только про ваш домен):
+
+```bash
+sudo mkdir -p /etc/systemd/resolved.conf.d
+sudo tee /etc/systemd/resolved.conf.d/lore-split.conf <<'CONF'
+[Resolve]
+DNS=10.0.0.10          # локальный DNS, который знает внутренние адреса
+Domains=~example.org      # тильда означает «только для этого домена»
+CONF
+sudo systemctl restart systemd-resolved
+```
+
+Своего DNS нет — строка в `/etc/hosts` на каждой машине:
+`10.0.0.20  lore.example.org minilore.example.org`.
+
+**dnsmasq на роутере или сервере** (работает сразу у всех, включая телефоны):
+
+```conf
+# /etc/dnsmasq.d/lore.conf
+address=/lore.example.org/10.0.0.20
+address=/minilore.example.org/10.0.0.20
+```
+
+…и раздавать этот dnsmasq как DNS в DHCP роутера; вторым — любой публичный, на случай его падения.
+
+**Как проверить.**
+
+```bash
+getent ahosts lore.example.org | head -1
+# ожидаемо: адрес вашей домашней сети, а не внешний адрес роутера
+curl -sS -o /dev/null -w 'connect=%{time_connect} total=%{time_total}\n' https://lore.example.org/
+# ожидаемо: connect меньше 0,05 с. Секунды — значит запрос уходит через внешний адрес
+```
+
+Цифры не выдуманы: у нас 22.11.2026 через внешний адрес соединение занимало 1,0–4,2 секунды и дало 13 таймаутов
+за десять минут; через внутренний — 13–21 миллисекунду.
+
+### 3. Бэкап базы и проверка, что он восстанавливается
+
+**Что это.** Регулярный снимок баз ArcadeDB встроенной командой, счёт записей на момент снимка — и отдельная
+проверка, что снимок действительно разворачивается.
+
+**Что будет без этого.** Весь граф LORE — задачи, решения, история — лежит в одной базе. Сбой диска, неудачное
+обновление или ошибочная массовая правка, и возвращать нечего. Бэкап без проверки восстановления — это надежда,
+а не бэкап: архив может оказаться пустым или битым ровно тогда, когда понадобится.
+
+**Важно для этого пакета:** порт базы наружу не публикуется. Поэтому запросы к ней идут одноразовым контейнером
+в сети стека — так же, как это делает сам установщик.
+
+```bash
+#!/bin/bash
+# /opt/lore/backup.sh — например, в cron: 30 2 * * * /opt/lore/backup.sh
+set -uo pipefail
+STACK=/opt/lore                      # каталог установки (--dir)
+OUT=/opt/lore-backups/$(date +%F); mkdir -p "$OUT"; chmod 700 "$OUT"
+PROJ=$(grep -m1 '^COMPOSE_PROJECT_NAME=' "$STACK/.env" | cut -d= -f2-); PROJ=${PROJ:-lore}
+PASS=$(grep -m1 '^ARCADEDB_ROOT_PASSWORD=' "$STACK/.env" | cut -d= -f2-)
+# пароль уходит в контейнер файлом настроек curl, а не аргументом: аргументы видны в списке процессов
+ac() { printf 'user = "root:%s"\n' "$PASS" | docker run -i --rm --network "${PROJ}_default" \
+        curlimages/curl:latest -K - -sS -m 900 -H 'Content-Type: application/json' "$@"; }
+A=http://arcadedb:2480
+for db in $(ac "$A/api/v1/databases" | sed 's/.*"result":\[//;s/\].*//;s/"//g;s/,/ /g'); do
+  ac -d '{"language":"sql","command":"BACKUP DATABASE"}' "$A/api/v1/command/$db" | grep -q '"result":"OK"' \
+    || echo "ОШИБКА: BACKUP $db"
+  ac -d '{"language":"sql","command":"select name, records from schema:types order by name"}' \
+     "$A/api/v1/command/$db" > "$OUT/counts-$db.json"
+done
+docker cp "$(docker compose -f "$STACK/docker-compose.yml" ps -q arcadedb)":/home/arcadedb/backups/. "$OUT/"
+( cd "$OUT" && sha256sum ./* > SHA256SUMS )
+find /opt/lore-backups -maxdepth 1 -type d -mtime +7 -exec rm -rf {} +    # хранить неделю
+```
+
+**Как проверить — развернуть снимок в одноразовый контейнер.** Рабочая база при этом не трогается:
+
+```bash
+D=/opt/lore-backups/$(date +%F)
+F=$(ls "$D"/*-backup-*.zip | head -1); DB=$(basename "$F" | sed -E 's/-backup-.*//')
+docker run -d --name arc-restore-test -p 127.0.0.1:12480:2480 -v "$D":/backups:ro \
+  -e JAVA_OPTS="-Darcadedb.server.rootPassword=restore-check-only \
+     -Darcadedb.server.defaultDatabases=$DB[root]{restore:file:///backups/$(basename "$F")}" \
+  arcadedata/arcadedb:26.11.1       # версия — та же, что в .env пакета (ARCADEDB_VERSION)
+until [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:12480/api/v1/ready)" = 204 ]; do sleep 2; done
+curl -s -u root:restore-check-only -H 'Content-Type: application/json' \
+  -d '{"language":"sql","command":"select name, records from schema:types order by name"}' \
+  "http://127.0.0.1:12480/api/v1/command/$DB" > /tmp/after.json
+docker logs arc-restore-test 2>&1 | grep -q 'Full restore completed' && echo 'восстановление завершено'
+docker rm -f arc-restore-test
+```
+
+Сравните числа из `counts-<база>.json` и `/tmp/after.json`: по каждому типу они обязаны совпасть. У нас такая
+проверка на настоящем снимке дала 17 типов и 28 669 записей до и после — расхождений ноль.
+
+### 4. Свой Keycloak — или честно без входа
+
+**Что это.** LORE умеет вход через OIDC, но провайдер должен быть ваш: пакет его не ставит.
+
+**Что будет без этого.** Установка работает БЕЗ входа: кто открыл адрес — видит всё. Для домашнего стенда это
+нормально, для машины, доступной извне, — нет. Телефон miniLORE без входа не работает вовсе.
+
+**Как сделать.** Поднимите Keycloak (или другой провайдер OIDC), заведите клиент `lore-app` (public, PKCE S256,
+redirect на адрес вашего веба) и укажите в `.env`: `LORE_AUTH_ENABLED=true`, `LORE_OIDC_ISSUER=<адрес области>`,
+`LORE_OIDC_ORIGIN=<адрес Keycloak>`. Повторите `install.sh` в тот же каталог — это обновление, пароли
+сохраняются. Подробности — раздел «Keycloak — вход по выбору».
+
+**Как проверить.** В вебе должна появиться кнопка входа, а `/lore/whoami` после входа — вернуть ваше имя и роль,
+а не «не определён».
+
+### 5. Зеркало базовых образов
+
+См. «Требования»: `LORE_IMAGE_REGISTRY` для образов, которые пакет запускает, и `registry-mirrors` в настройках
+docker — для сборки из исходников. Нужно, если у машины нет доступа к Docker Hub: иначе установка встаёт на
+первом же образе.
+
 ## Хранилище файлов
 
 Своего хранилища пакет не ставит: Docker Hub перестал отдавать образ MinIO (21.11.2026). Выбор — флаг `--files`:
