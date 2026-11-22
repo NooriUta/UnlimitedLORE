@@ -1,3 +1,5 @@
+import { splitGaps, gapLine, strictMode } from './source-gap.mjs';
+
 // SPRINT_QG_REBUILD/QG-01 · Охват гейта (scope) при переносе 1.18. Решение владелицы 19.11.2026 «2а 3а»
 // (D-2026-MIG-118-OWNER-ANSWERS-1119): у гейта явный признак scope = global | project; четыре гейта гигиены данных LORE —
 // общие (global) и без проекта; остальные гейты с проектом — project; старый смоук QG-T13-SMOKE — снять (retired с причиной).
@@ -61,12 +63,29 @@ export async function applyQgScope(db, gates, rule, { log = console.log } = {}) 
     global_with_project: got.filter(g => g.scope === 'global' && proj(g).length).length,
     unscoped: got.filter(g => !g.scope && g.status !== 'retired').length,
   };
-  const ok = !p.problems.length && after.global === p.counts.global && after.project === p.counts.project
+  const written = after.global === p.counts.global && after.project === p.counts.project
     && after.global_with_project === 0 && after.unscoped === 0 && dropped >= p.counts.project_links_dropped
     && p.retire.every(r => got.some(g => g.qg_id === r.qg_id && g.status === 'retired'));
+  const v = judgeQgScope({ ok: written, problems: p.problems });
   log(`охват гейтов: общих ${after.global}, проектных ${after.project}, снято ${after.retired}; снято связей общих гейтов с проектом ${dropped}`
-    + (p.problems.length ? '; отклонения: ' + p.problems.map(x => x.qg_id + ' ' + x.kind).join(', ') : ''));
-  log('сверка охвата гейтов:', ok ? 'сошлась' : 'НЕ сошлась');
-  return { ok, decision: rule.decision || null, plan: p.counts, after, project_links_dropped: dropped, problems: p.problems,
-    scope: p.scope, retired: p.retire.map(r => r.qg_id) };
+    + (v.mismatch.length ? '; отклонения: ' + v.mismatch.map(x => x.qg_id + ' ' + x.kind).join(', ') : '') + v.line);
+  log('сверка охвата гейтов:', v.ok ? 'сошлась' : 'НЕ сошлась');
+  return { ok: v.ok, decision: rule.decision || null, plan: p.counts, after, project_links_dropped: dropped, problems: p.problems,
+    scope: p.scope, retired: p.retire.map(r => r.qg_id), absent_in_source: v.absent };
+}
+
+/**
+ * Вердикт шага. Гейт, названный правилом и отсутствующий в источнике (rule_gate_missing), — это база СТАРШЕ
+ * правила: на бэкапе до 1.18 гейтов гигиены ещё не существовало. Переносить нечего: пропуск называется и
+ * установку не роняет. Противоречия самого переноса — проектный гейт без проекта (no_project) и с несколькими
+ * проектами (many_projects) — красные всегда: это уже о записанных данных, а не об отсутствии.
+ */
+export function judgeQgScope({ ok, problems = [] }, { strict = strictMode() } = {}) {
+  const g = splitGaps(problems, ['rule_gate_missing'], { strict });
+  return {
+    ok: ok && g.blocking.length === 0,
+    absent: g.absent,
+    mismatch: g.mismatch,
+    line: gapLine(g.absent, x => `${x.qg_id} (гейта нет в источнике)`),
+  };
 }

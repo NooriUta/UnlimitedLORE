@@ -93,8 +93,10 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     expect(r.out).toMatch(/migrate .*model-migration-run\.sh STAGE=full/);
     expect(r.out).toMatch(/probe .*\/lore\/version.*open_tasks.*organizations.*repositories/);
     expect(r.out).toMatch(/probe .*версия пакета.*seed_drift/);
-    // Владелица 21.11: «ок и шагом» · «в инсталляции» — дотяжка данных PR из git-хоста, шаг после переноса (код после 1.18).
-    expect(r.out).toMatch(/pr-data .*после 1\.18/);
+    // Владелица 21.11: «ок и шагом» · «в инсталляции» — дотяжка данных PR из git-хоста. С 1.18.2 шаг РАБОЧИЙ
+    // (команда pr-backfill, #1730): в трубе идёт пробным прогоном и ничего не пишет.
+    expect(r.out).toMatch(/pr-data .*pr-backfill --dry-run/);
+    expect(r.out).not.toMatch(/pr-data .*не реализован/);
     // Решение владелицы 21.11: «пока ставь указать s3 хранилище или без опции файлов» — сценарий А идёт без файлов.
     expect(r.out).toMatch(/install .*--files none/);
     expect(r.out).toMatch(/probe .*хранилище файлов не подключено/);
@@ -126,6 +128,22 @@ describe.skipIf(!bashBin)('MIG-04 · труба установщика: карк
     // ryzenai 21.11: ArcadeDB, пересозданная с портом, ещё не отвечала — connect получил ECONNRESET.
     expect(s).toMatch(/\/api\/v1\/ready/);
     expect(s).toMatch(/install\.sh" --selftest/);
+  });
+
+  // MIG-04, прогон на ryzenai 22.11: шаг «Дотянуть данные PR» был заглушкой «ещё не реализован», хотя команда
+  // pr-backfill появилась в 1.18.2 (#1730). Теперь шаг рабочий: пробный прогон, мост не настроен — пропуск
+  // с причиной (у чужой установки токена git-хоста может не быть вовсе), любой другой отказ — красный.
+  it('pr-data: пробный прогон дотяжки; «мост не настроен» — пропуск, иной отказ — падение', () => {
+    const s = code(read(E2E));
+    expect(s).toMatch(/pr-backfill --url .* --dry-run/);
+    expect(s).toMatch(/FORGEJO_NOT_CONFIGURED/);
+    expect(s).not.toMatch(/ещё не реализован/);
+    // Пробный прогон не пишет в базу: в шаге нет записи без --dry-run.
+    expect(s).not.toMatch(/pr-backfill[^
+]*--limit[^
+]*
+[^
+]*dstCommand/);
   });
 });
 
