@@ -217,7 +217,7 @@ services:
   # FORGEJO_TOKEN обязателен — без него сервер не стартует; install.sh тогда его не поднимает и говорит, что вписать.
   forgejo-mcp:
     profiles: ["forgejo-mcp"]
-    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:bbe9f59c}
+    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:e7d57dee}
     build:
       context: ${FORGEJO_MCP_SRC:-./forgejo-mcp-src}
     restart: unless-stopped
