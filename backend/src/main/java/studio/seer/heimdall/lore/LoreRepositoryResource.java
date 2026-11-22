@@ -123,7 +123,12 @@ public class LoreRepositoryResource extends LoreResourceBase {
             String sql = existed
                 ? "UPDATE KnowRepository SET " + set + " WHERE url=:url"
                 : "INSERT INTO KnowRepository SET url=:url, " + set;
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, p)).await().indefinitely();
+            Object wrote = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql, p))
+                .await().indefinitely();
+            // Правка по ключу, не нашедшая строку, — отказ, а не ok:true (сторож UpdateAffectedRowsGuardTest).
+            // Случай живой: запись могли удалить между проверкой exists и этим UPDATE.
+            if (existed && WriteCount.missed(wrote))
+                return WriteCount.notFound("repository", k.url(), "обновление полей репозитория");
             for (String e : TARGETS.values().stream().map(t -> t.get(0)).distinct().toList())
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE TYPE " + e + " IF NOT EXISTS", Map.of())).await().indefinitely();
