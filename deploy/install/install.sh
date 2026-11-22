@@ -479,8 +479,41 @@ need_images() {
   done
 }
 
+# Образы из архивов в images/ — «мегапакет» (слово владелицы 22.11.2026: «общий мегаустановщик сейчас один раз
+# выложила бы и всё»). Весь набор уезжает одним файлом, и установка идёт БЕЗ реестра и БЕЗ сборки: ни Docker Hub,
+# ни ghcr, ни нашей сети. Путь тот же, что у сервера miniLORE и моста Forgejo: есть архив рядом и подпись
+# сходится — грузим из него. Имя архива — images/<служба>-<версия>.tar.
+# Берём ТОЛЬКО если на месте все три: иначе осталось бы «половина из архива, половина из сети», а такую
+# установку потом не воспроизвести.
+images_dir() { printf "%s" "${LORE_IMAGES_DIR:-$SCRIPT_DIR/images}"; }
+lore_images_from_archives() {
+  local svc a want n=0
+  for svc in lore-backend lore-app-next lore-mcp; do
+    [ -f "$(images_dir)/$svc-$VERSION.tar" ] || return 1
+  done
+  for svc in lore-backend lore-app-next lore-mcp; do
+    a="$(images_dir)/$svc-$VERSION.tar"
+    pkg_sha_ok "$a" "образ $svc"
+    run docker load -i "$a"
+    n=$((n + 1))
+  done
+  say "образы LORE взяты из архивов пакета ($n из 3) — реестр не нужен"
+  # Сверяем, что в архивах лежали именно те образы, которые ждёт compose: иначе `up` упал бы позже и невнятно.
+  if [ "$DRY" != 1 ]; then
+    for svc in lore-backend lore-app-next lore-mcp; do
+      want="$(compose config --images "$svc" 2>/dev/null | head -1)"
+      [ -n "$want" ] || continue
+      docker image inspect "$want" >/dev/null 2>&1 \
+        || die "в архиве $(images_dir)/$svc-$VERSION.tar нет образа $want — архив от другой версии; возьмите мегапакет этого тега"
+    done
+  fi
+  return 0
+}
+
 images() {
-  if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
+  if lore_images_from_archives; then
+    : # образы уже на машине — ни тянуть, ни собирать нечего
+  elif [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "загрузка образов"
     if ! run compose pull lore-backend lore-app-next lore-mcp; then
       # Выпуски до 1.18.2 публиковали в ghcr только бэкенд и веб: без образа MCP установка не падает, а говорит громко.
@@ -1215,6 +1248,32 @@ selftest() {
   LORE_BACKEND_IMAGE=r/b:1 LORE_WEB_IMAGE=r/w:1 expect_rc 2 --dry-run --dir "$t/inst" --build-from-source
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
   printf '%s' "$out" | grep -q 'tar -xzf' && fail "без --build-from-source план распаковывает архив исходников"; ok
+
+  # 12. мегапакет (владелица 22.11.2026: «общий мегаустановщик сейчас один раз выложила бы и всё»): образы LORE
+  #     лежат архивами в images/ — установка идёт без реестра и без сборки. Берётся только полный набор из трёх:
+  #     половина из архива и половина из сети дала бы установку, которую не воспроизвести.
+  local im="$t/pkg/images" svc
+  mkdir -p "$im"
+  for svc in lore-backend lore-app-next lore-mcp; do
+    printf 'архив образа %s\n' "$svc" > "$im/$svc-v9.0.0.tar"
+    ( cd "$im" && sha256sum "$svc-v9.0.0.tar" > "$svc-v9.0.0.tar.sha256" )
+  done
+  LORE_IMAGES_DIR="$im" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'образы LORE взяты из архивов пакета (3 из 3)' || fail "мегапакет: образы не взяты из архивов: $out"; ok
+  printf '%s' "$out" | grep -qF "docker load -i $im/lore-backend-v9.0.0.tar" || fail "мегапакет: нет docker load бэкенда: $out"; ok
+  printf '%s' "$out" | grep -q 'compose pull lore-backend' && fail "мегапакет: план всё равно тянет образы из реестра"; ok
+  # Имя образа в плане может ВЫГЛЯДЕТЬ как адрес реестра (ghcr.io/…) — это нормально: такое имя несёт сам
+  # архив, и docker находит его локально после load. Важно другое: в сеть за ним никто не идёт, и это проверено
+  # отсутствием 'compose pull' выше.
+  # Подпись не сходится — отказ, а не «ну и ладно»: подменённый образ хуже отсутствующего.
+  printf 'подмена' >> "$im/lore-mcp-v9.0.0.tar"
+  LORE_IMAGES_DIR="$im" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "мегапакет: подменённый архив образа принят: $out"; ok
+  rm -f "$im/lore-mcp-v9.0.0.tar" "$im/lore-mcp-v9.0.0.tar.sha256"
+  # Набор неполный — обычный путь (реестр), и это видно в плане.
+  LORE_IMAGES_DIR="$im" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'образы LORE взяты из архивов' && fail "мегапакет: неполный набор принят за полный"; ok
+  printf '%s' "$out" | grep -q 'compose pull lore-backend' || fail "неполный набор архивов: план не вернулся к реестру: $out"; ok
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }
