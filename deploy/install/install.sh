@@ -76,9 +76,9 @@ MINILORE_OWNER_ARG=""             # --minilore-owner: имя владельца,
 # images/minilore-srv-<версия>.tar, как у forgejo-mcp; свой образ задаётся переменной MINILORE_IMAGE.
 MINILORE_IMAGE_DEFAULT="minilore-srv:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
 MINILORE_ARCHIVE_REL="images/minilore-srv-0.4.19.tar"
-FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
-FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
-FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-bbe9f59c.tar.gz"
+FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:e7d57dee"
+FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-e7d57dee.tar"
+FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-e7d57dee.tar.gz"
 FORGEJO_MCP_BUILD=0
 # Сборка из архива исходников пакета (MIG-04, владелица 20.11.2026: «архивом наш проект для собственной сборки если
 # что»): src/lore-<версия>.tar.gz и .sha256 рядом с install.sh (или LORE_SRC_ARCHIVE). Без флага — как раньше.

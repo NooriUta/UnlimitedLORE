@@ -307,9 +307,12 @@ bash deploy/install/install.sh --version v1.18.0 --forgejo none                 
 - **own** — Forgejo не ставится. Адрес вашего Forgejo уходит в forgejo-mcp (`FORGEJO_URL`), профиль compose — только `forgejo-mcp`.
 - **none** — профили Forgejo снимаются, мост LORE отвечает 503, как без Forgejo.
 
-В вариантах install и own в пакет входит **forgejo-mcp**: репозиторий `AIDA/forgejo-mcp`, версия 0.1.7 (форк `@ric_/forgejo-mcp` с инструментами Actions/CI). Исходники прибиты к коммиту `bbe9f59c`.
+В вариантах install и own в пакет входит **forgejo-mcp**: репозиторий `AIDA/forgejo-mcp`, версия 0.1.7 с нашими
+доработками, тег `v0.1.7-aida.1` (форк `@ric_/forgejo-mcp` с инструментами Actions/CI). Исходники прибиты к
+коммиту `e7d57dee`. В нём, среди прочего, исправлен запрос списков к Forgejo 17: без явного указания страницы
+ограничение на число записей игнорировалось, и «дай шесть прогонов» возвращало всё подряд.
 
-Образ forgejo-mcp ни в какой реестр не публикуется. Пакет установщика везёт его двумя способами, оба со сверкой sha256: архивом образа `images/forgejo-mcp-bbe9f59c.tar` и исходником того же коммита `src/forgejo-mcp-bbe9f59c.tar.gz` (рядом лицензия MIT — `src/forgejo-mcp-bbe9f59c.LICENSE`). Положите каталоги `images/` и `src/` рядом с `install.sh`. Сети к чьему-либо git установке не нужно. Порядок выбора:
+Образ forgejo-mcp ни в какой реестр не публикуется. Пакет установщика везёт его двумя способами, оба со сверкой sha256: архивом образа `images/forgejo-mcp-e7d57dee.tar` и исходником того же коммита `src/forgejo-mcp-e7d57dee.tar.gz` (рядом лицензия MIT — `src/forgejo-mcp-e7d57dee.LICENSE`). Положите каталоги `images/` и `src/` рядом с `install.sh`. Сети к чьему-либо git установке не нужно. Порядок выбора:
 
 1. `FORGEJO_MCP_IMAGE` — ваш готовый образ, перекрывает всё остальное.
 2. `FORGEJO_MCP_SRC` — ваши исходники (каталог или git-адрес#коммит), сборка.
