@@ -307,6 +307,18 @@ jobs:
       - name: Сторож входов в ArcadeDB (deploy/db-guard) — тесты
         run: node --test deploy/db-guard/*.test.mjs
 
+      # Пакет установки и перенос (MIG-04). До 22.11.2026 эти проверки гонялись ТОЛЬКО при публикации пакета,
+      # то есть уже ПОСЛЕ мержа. Из-за этого правка версии Forgejo в пакете (#1745) проехала мимо зелёного CI:
+      # сторож версии жил здесь, и никто его не спрашивал. Прогон быстрый (node --test, без сети и зависимостей)
+      # и путями не ограничен: ломается он от правок пакета, модели и правил переноса — а их задевают и чужие PR.
+      - name: Пакет установки и перенос (scripts/model-migration) — тесты
+        run: node --test scripts/model-migration/*.test.mjs
+
+      # Самопроверка самого install.sh: его собственные развилки (ключи, профили, секреты, отказы) на временных
+      # каталогах, с --dry-run, без docker. Здесь же и по той же причине: отказ должен быть виден на PR.
+      - name: Самопроверка установщика (install.sh --selftest)
+        run: bash deploy/install/install.sh --selftest
+
       - name: LORE v2 (web-next) — install + typecheck
         if: steps.scope.outputs.v2 == 'true'
         working-directory: web-next
