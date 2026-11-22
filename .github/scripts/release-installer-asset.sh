@@ -57,12 +57,20 @@ EXISTING_JSON="${EXISTING_JSON:-/tmp/existing.json}"
 # /mingw64/bin:/usr/bin ПЕРЕД унаследованным PATH, и настоящий curl всегда
 # находится первым. Тот же приём, что у PROBE_CURL в lore-host-deploy.sh.
 CURL="${CURL_BIN:-curl}"
+# zip — тоже переменной, и по той же причине: тесты подменяют его заглушкой, а на Windows подмена через PATH
+# невозможна. На машине разработчика zip может отсутствовать вовсе — тогда шаг честно предупреждает.
+ZIP="${ZIP_BIN:-zip}"
 
 # Лёгкая часть пакета установки. Тот же перечень, что вшивает в установщик
 # install-bundle-sync.mjs, плюс сам собранный lore-migrate.mjs.
-BUNDLE_FILES=(install.sh docker-compose.install.yml .env.example README.md)
+BUNDLE_FILES=(install.sh install.ps1 docker-compose.install.yml .env.example README.md)
 STAGE_NAME="lore-installer-$TAG"
 ARCHIVE="$STAGE_NAME.tar.gz"
+# Слово владелицы 22.11.2026: «собирай установщик под windows и linux». Содержимое у архивов ОДНО — пакет
+# один и тот же (compose без привязок к путям хоста), разный только вход: install.sh под Linux, install.ps1
+# под Windows (он запускает тот же install.sh через WSL или bash из Git). Форма разная потому, что tar.gz на
+# Windows без лишних программ не распаковать, а права на install.sh в zip не выживают.
+WIN_ARCHIVE="$STAGE_NAME-windows.zip"
 EXE_ASSET="lore-migrate-linux-x64"
 SRC_ASSET="lore-src-$TAG.tar.gz"
 ASSET_DIR="$OUT/asset"
@@ -124,6 +132,19 @@ cmd_pack() {
   # (C:/… на машине разработчика) GNU tar читает как «хост:файл» и лезет в сеть.
   ( cd "$ASSET_DIR" && tar -czf "$ARCHIVE" "$STAGE_NAME" ) \
     || die "архив $ARCHIVE не собрался"
+
+  # Второй архив — тот же каталог в zip, для Windows. Инструмент берём какой есть: zip на раннере обычно
+  # стоит, python как запасной. Нет ни одного — говорим вслух и не приложим ZIP, но tar.gz уже собран,
+  # поэтому выпуск не рушим: под Linux пакет полон.
+  if command -v "$ZIP" >/dev/null 2>&1; then
+    ( cd "$ASSET_DIR" && "$ZIP" -qr "$WIN_ARCHIVE" "$STAGE_NAME" ) || warn "ZIP $WIN_ARCHIVE не собрался (zip)"
+  elif command -v python3 >/dev/null 2>&1; then
+    ( cd "$ASSET_DIR" && python3 -m zipfile -c "$WIN_ARCHIVE" "$STAGE_NAME" ) \
+      || warn "ZIP $WIN_ARCHIVE не собрался (python3)"
+  else
+    warn "ни zip, ни python3 — вложение для Windows ($WIN_ARCHIVE) не собрано; tar.gz на месте"
+  fi
+
   rm -rf "${ASSET_DIR:?}/$STAGE_NAME"
 
   # Исполняемый файл — ОТДЕЛЬНЫМ вложением, не внутри архива: иначе лёгкий
@@ -236,6 +257,9 @@ cmd_upload() {
   id="$(release_id)" || die "id релиза $TAG не определён (ни ответ публикации, ни API по тегу) — вложения не загружены"
   echo "релиз $TAG — id $id"
   local names=("$ARCHIVE" SHA256SUMS)
+  # Архив для Windows — если собрался. Его отсутствие уже сказано вслух на упаковке; тут не повторяем
+  # и не рушим выпуск: под Linux пакет полон, а под Windows человек возьмёт tar.gz и распакует сам.
+  [ -f "$ASSET_DIR/$WIN_ARCHIVE" ] && names+=("$WIN_ARCHIVE")
   [ "$WITH_EXE" = true ] && names+=("$EXE_ASSET")
   # Исходники и образ — вложениями, если их положил шаг сборки. Нет файла — не беда: загрузка пропускает
   # отсутствующее молча здесь и громко в upload_one, а релиз из-за необязательного файла не краснеет.

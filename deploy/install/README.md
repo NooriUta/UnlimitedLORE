@@ -10,7 +10,8 @@ forgejo-mcp и мобильный монитор miniLORE — по выбору,
 
 | файл | зачем | есть у выпуска |
 |---|---|---|
-| `lore-installer-<версия>.tar.gz` | `install.sh`, `docker-compose.install.yml`, `.env.example`, этот README и `lore-migrate.mjs` | всегда |
+| `lore-installer-<версия>.tar.gz` | пакет целиком: `install.sh`, `install.ps1`, `docker-compose.install.yml`, `.env.example`, этот README, `lore-migrate.mjs` | **Linux и macOS** |
+| `lore-installer-<версия>-windows.zip` | то же самое, в zip — Windows распаковывает его без лишних программ | **Windows** |
 | `SHA256SUMS` | подписи вложений выпуска | всегда — проверьте перед установкой |
 | `lore-src-<версия>.tar.gz` | исходники LORE для `--build-from-source` (сборка образов у себя) | обычно да |
 | `lore-migrate-linux-x64` | то же, что `lore-migrate.mjs`, одним исполняемым файлом (125 МБ) | по просьбе: без него установщик запускает `.mjs` в контейнере с Node |
@@ -24,10 +25,27 @@ forgejo-mcp и мобильный монитор miniLORE — по выбору,
 (каталоги создайте сами). Имена файлов менять не нужно: установщик ищет их по именам из этой таблицы.
 
 ```bash
+# Linux и macOS
 tar -xzf lore-installer-<версия>.tar.gz && cd lore-installer-<версия>
 sha256sum -c SHA256SUMS      # подписи
 bash install.sh --dir /opt/lore --version v1.18.0
 ```
+
+```powershell
+# Windows (PowerShell): распакуйте zip и запускайте install.ps1 — ключи те же, что у install.sh
+Expand-Archive lore-installer-<версия>-windows.zip -DestinationPath .
+Set-Location lore-installer-<версия>
+.\install.ps1 --dir C:\lore --version v1.18.0
+```
+
+**Про Windows отдельно.** Установки две разные нам не нужны: пакет — это docker compose без привязок к путям
+хоста, поэтому под обеими системами ставит один и тот же `install.sh`. `install.ps1` его только запускает — через
+WSL (его требует и сам Docker Desktop) либо через bash из Git для Windows, который он находит сам. Нет ни того,
+ни другого — скажет об этом прямо и назовёт, что поставить, а не станет пытаться «как-нибудь». Так у вас не
+будет второй реализации, которая молча отстаёт от первой.
+
+Что нужно на машине с Windows: **Docker Desktop в режиме Linux-контейнеров** (установщик проверит режим и
+откажется работать в режиме Windows-контейнеров — образы LORE там не запустятся) и WSL либо Git для Windows.
 
 Без `--version` берётся версия пакета. Свой пароль базы вместо сгенерированного — переменной
 `ARCADEDB_ROOT_PASSWORD`. Посмотреть план, ничего не меняя, — `--dry-run`: это стоит сделать первым запуском.
@@ -403,13 +421,13 @@ docker compose exec minilore-srv wget -qO- http://127.0.0.1:8080/config   # на
 Keycloak. `kcIssuer: null` значит, что вход LORE не настроен: сервер работает, но телефон войти не сможет.
 
 
-### Шлюз miniLORE — выпуск link-v0.3.80
+### Шлюз miniLORE — выпуск link-v0.3.81
 
 **Что это.** Программа на вашей машине (не в этом стеке), которая показывает телефону живые сессии агентов —
 Claude Code, Qwen, OpenCode, Kimi — и позволяет им отвечать, передавать картинки и файлы и закрывать их с телефона. Сервер miniLORE из этого
 пакета без шлюза работает, но показывать ему будет нечего: сессии видит именно шлюз.
 
-**Честный статус — прочитайте до установки.** Это настоящий выпуск: тег `link-v0.3.80`, байты собраны трубой, а
+**Честный статус — прочитайте до установки.** Это настоящий выпуск: тег `link-v0.3.81`, байты собраны трубой, а
 не руками на чьей-то машине. Но одно сказать обязаны: **на Linux он живьём не проверялся** — проверен на
 Windows. Файлы под Linux собраны той же трубой из того же кода, однако запуска на Linux пока никто не видел.
 Нужна версия, обкатанная дольше, — возьмите предыдущий выпуск шлюза.
@@ -422,21 +440,21 @@ Windows. Файлы под Linux собраны той же трубой из т
 
 | файл | для чего | размер |
 |---|---|---|
-| `miniLORE-link-setup-0.3.80.exe` | Windows, обычный установщик | 21,9 МБ |
-| `minilore-link_0.3.80_amd64.deb` | Debian и Ubuntu | 46,4 МБ |
-| `minilore-link-linux-0.3.80.tar.gz` | другие Linux; нужен системный Node 22 и новее | 3,6 МБ |
+| `miniLORE-link-setup-0.3.81.exe` | Windows, обычный установщик | 21,9 МБ |
+| `minilore-link_0.3.81_amd64.deb` | Debian и Ubuntu | 46,4 МБ |
+| `minilore-link-linux-0.3.81.tar.gz` | другие Linux; нужен системный Node 22 и новее | 3,6 МБ |
 
 **Как поставить.**
 
 ```bash
 # Windows (тихая установка)
-miniLORE-link-setup-0.3.80.exe /S
+miniLORE-link-setup-0.3.81.exe /S
 
 # Debian/Ubuntu
-sudo dpkg -i minilore-link_0.3.80_amd64.deb
+sudo dpkg -i minilore-link_0.3.81_amd64.deb
 
 # другой Linux
-tar -xzf minilore-link-linux-0.3.80.tar.gz && cd minilore-link-0.3.80 && ./install.sh
+tar -xzf minilore-link-linux-0.3.81.tar.gz && cd minilore-link-0.3.81 && ./install.sh
 ```
 
 **Обязательная настройка.** Шлюзу нужен файл `~/.minilore/config.toml`: адрес вашего сервера miniLORE, код этой
