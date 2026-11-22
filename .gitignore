@@ -41,3 +41,6 @@ web-next/e2e/stand/.auth/
 
 # установщик переноса (scripts/model-migration/build-installer.mjs): сборка, не исходник
 /build/lore-migrate*
+# пакет установки для вложений релиза и сборщики под него (release-installer-asset.sh)
+/build/asset/
+/.installer-tools/
