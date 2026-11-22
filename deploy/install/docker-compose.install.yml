@@ -79,6 +79,13 @@ services:
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
+        # Зеркала Maven и Gradle (Dockerfile.local умеет их сам): закрытая сеть или деградированный прямой канал.
+        # Пусто — сборка идёт в Maven Central и Gradle Plugin Portal напрямую, как раньше. Без этих переменных
+        # установка «собрать самому» на такой машине падает невнятным «Plugin [id: io.quarkus] was not found»
+        # (замер на машине с деградированным каналом: половина запросов к публичным репозиториям обрывалась).
+        LORE_MAVEN_MIRROR: ${LORE_MAVEN_MIRROR:-}
+        LORE_PLUGIN_MIRROR: ${LORE_PLUGIN_MIRROR:-}
+        LORE_GRADLE_DIST_MIRROR: ${LORE_GRADLE_DIST_MIRROR:-}
     restart: unless-stopped
     depends_on:
       - arcadedb

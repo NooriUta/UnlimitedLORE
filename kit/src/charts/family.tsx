@@ -18,8 +18,9 @@
 //     график вырастал до 400 px).
 // Граница K-14: что считать сериями и откуда данные — приложение; kit только рисует.
 import { useLayoutEffect, useState, type ReactNode } from 'react';
-import { kitT, useKitLang, type KitLang } from '../i18n';
+import { kitLocale, kitT, useKitLang, type KitLang } from '../i18n';
 import { EmptyState, LoadError, Skeleton } from '../states/StateViews';
+import { useChartBodies, type ChartRenderer } from './renderer';
 
 /** Палитра категорий kit — только токены. */
 export const CHART_TONES = ['--acc', '--inf', '--suc', '--wrn', '--dng', '--t2'] as const;
@@ -84,6 +85,8 @@ export interface ChartCommon {
   shown?: number;
   total?: number;
   className?: string;
+  /** Рычаг рисовальщика для этого графика (главнее KitChartsProvider): 'svg' | 'echarts'. */
+  renderer?: ChartRenderer;
 }
 
 interface FrameProps extends ChartCommon {
@@ -177,7 +180,7 @@ export interface LineChartProps extends ChartCommon { series: LineSeries[]; /** 
 export function LineChart(p: LineChartProps) {
   const [plot, W] = useChartWidth();
   const lang = useKitLang();
-  const fmt = p.xLabel ?? ((x: number) => new Date(x).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { day: '2-digit', month: '2-digit' }));
+  const fmt = p.xLabel ?? ((x: number) => new Date(x).toLocaleDateString(lang === 'en' ? 'en-GB' : kitLocale(lang), { day: '2-digit', month: '2-digit' }));
   const all = p.series.flatMap(s => s.points);
   const ys = all.map(q => q.y).filter((v): v is number => v !== null);
   const xs = all.map(q => q.x);
@@ -191,11 +194,13 @@ export function LineChart(p: LineChartProps) {
   const last = first?.length ? first[first.length - 1].y! : undefined;
   const xTicks = [...new Set(xs)].sort((a, b) => a - b);
   const step = Math.max(1, Math.ceil(xTicks.length / 5));
+  const { bodies, missing } = useChartBodies(p.renderer);
+  const notes = [...(gaps ? [kitT(lang, 'kit.chart.gaps', { n: gaps })] : []), ...(missing ? [kitT(lang, 'kit.chart.rendererMissing', { name: missing })] : [])];
   return (
     <ChartFrame {...p} kind="line" empty={ys.length === 0}
       summary={summaryText(lang, ys, last, p.unit)}
       legend={p.series.map((s, i) => ({ label: s.label, color: tone(i), dashed: s.dashed }))}
-      notes={gaps ? [kitT(lang, 'kit.chart.gaps', { n: gaps })] : undefined}
+      notes={notes.length ? notes : undefined}
       table={() => (
         <table className="sk-chart__table">
           <thead><tr><th>{kitT(lang, 'kit.chart.when')}</th>{p.series.map(s => <th key={s.key}>{s.label}</th>)}</tr></thead>
@@ -207,7 +212,7 @@ export function LineChart(p: LineChartProps) {
           ))}</tbody>
         </table>
       )}>
-      <Svg label={p.title} plot={plot} w={W}>
+      {bodies ? bodies.line({ title: p.title, unit: p.unit, series: p.series, xLabel: fmt, height: H }) : <Svg label={p.title} plot={plot} w={W}>
         <YAxis ticks={ticks} y={y} w={W} />
         {p.series.flatMap(s => s.points.map((q, i) => {
           if (q.y !== null) return null;
@@ -228,7 +233,7 @@ export function LineChart(p: LineChartProps) {
         {xTicks.filter((_, i) => i % step === 0).map(xv => (
           <text key={xv} x={x(xv)} y={H - 6} textAnchor="middle" className="sk-chart__tick">{fmt(xv)}</text>
         ))}
-      </Svg>
+      </Svg>}
     </ChartFrame>
   );
 }
@@ -308,11 +313,13 @@ export function BarChart(p: BarChartProps) {
   const every = Math.max(1, Math.ceil(p.data.length / Math.max(1, Math.floor((W - PAD.l - PAD.r) / 40))));
   // Подпись не шире своей полосы (≈7 px на знак): длиннее — многоточие, полное имя — в <title> и «Таблицей».
   const fit = Math.max(3, Math.floor((band * every) / 7));
+  const { bodies, missing } = useChartBodies(p.renderer);
+  const notes = [...(nulls ? [kitT(lang, 'kit.chart.gaps', { n: nulls })] : []), ...(missing ? [kitT(lang, 'kit.chart.rendererMissing', { name: missing })] : [])];
   return (
     <ChartFrame {...p} kind="bar" empty={p.data.length === 0 || vals.length === 0}
       summary={summaryText(lang, vals, undefined, p.unit)}
       legend={p.groups.map((g, i) => ({ label: g.label, color: tone(i) }))}
-      notes={nulls ? [kitT(lang, 'kit.chart.gaps', { n: nulls })] : undefined}
+      notes={notes.length ? notes : undefined}
       table={() => (
         <table className="sk-chart__table">
           <thead><tr><th>{kitT(lang, 'kit.chart.category')}</th>{p.groups.map(g => <th key={g.key}>{g.label}</th>)}</tr></thead>
@@ -324,7 +331,7 @@ export function BarChart(p: BarChartProps) {
           ))}</tbody>
         </table>
       )}>
-      <Svg label={p.title} plot={plot} w={W}>
+      {bodies ? bodies.bar({ title: p.title, unit: p.unit, groups: p.groups, data: p.data, height: H }) : <Svg label={p.title} plot={plot} w={W}>
         <YAxis ticks={ticks} y={y} w={W} />
         {p.data.map((d, ci) => {
           const x0 = PAD.l + ci * band + (band - bw * p.groups.length) / 2;
@@ -343,7 +350,7 @@ export function BarChart(p: BarChartProps) {
             </g>
           );
         })}
-      </Svg>
+      </Svg>}
     </ChartFrame>
   );
 }

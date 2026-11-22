@@ -67,6 +67,7 @@ bash deploy/install/install.sh --dir /opt/lore --build-from-source
 - Версия берётся из имени архива, `--version` с этим флагом не задаётся. Готовые образы (`LORE_BACKEND_IMAGE`, `LORE_WEB_IMAGE`) с этим флагом тоже не задаются — одно из двух.
 - Свой архив вместо лежащего рядом — переменная `LORE_SRC_ARCHIVE=<путь к lore-<версия>.tar.gz>`.
 - Сборке нужен доступ к Docker Hub, Maven Central и npm, как в разделе «Требования». Первая сборка — 10–20 минут.
+- Прямой канал к Maven Central и Gradle Plugin Portal бывает закрыт или обрывается — тогда сборка бэкенда падает невнятным «Plugin [id: 'io.quarkus'] was not found». Свои зеркала задаются в `.env` установки (или в окружении): `LORE_MAVEN_MIRROR`, `LORE_PLUGIN_MIRROR`, `LORE_GRADLE_DIST_MIRROR` — например `http://<nexus>:8081/repository/maven-central-proxy/`, `http://<nexus>:8081/repository/gradle-plugins-proxy/`, `http://<nexus>:8081/repository/gradle-dist-proxy/`. Пусто — как раньше, напрямую.
 
 Без флага всё как раньше: архив не трогается. В окне установщика это выбор на «Старте»: «готовые образы» или «собрать из исходников пакета».
 

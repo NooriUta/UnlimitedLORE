@@ -6,14 +6,14 @@
 // без адреса или с протухшим входом ничего не проверил, и сводка обязана сказать
 // это прямо, а не показать «0 упавших».
 
-export type Outcome = 'pass' | 'fail' | 'not-run';
+export type Outcome = 'pass' | 'fail' | 'not-run' | 'n/a';
 export type Verdict = 'green' | 'red' | 'not-run';
 
 export interface ScenarioResult {
   id: string;
   title: string;
   outcome: Outcome;
-  /** Почему не выполнен / чем упал — первая строка ошибки или причина skip. */
+  /** Почему не выполнен / не применим / чем упал — первая строка ошибки или причина skip. */
   reason?: string;
   /** Имя файла скрина в папке отчёта. */
   screenshot?: string;
@@ -33,7 +33,7 @@ export interface Summary {
   version: StandVersion | null;
   startedAt: string;
   finishedAt: string;
-  counts: { pass: number; fail: number; notRun: number; total: number };
+  counts: { pass: number; fail: number; notRun: number; na: number; total: number };
   verdict: Verdict;
   /** Общая причина not-run (предполётная проверка), если была. */
   reason: string | null;
@@ -42,6 +42,20 @@ export interface Summary {
 
 /** Причина not-run без сохранённого входа — дословно ищется в отчётах и логах CI. */
 export const NO_LOGIN = 'нет сохранённого входа — смоук не выполнен';
+
+/**
+ * 1.18.3 · Приставка причины для сценария, который в ЭТОЙ среде выполнить нельзя по устройству, а не
+ * из-за входа, прав или данных: мастер переноса живёт только в установщике, и на стенде его нет.
+ * Такой сценарий — отдельный итог «не применимо» (с причиной), а не «не выполнено»: иначе кейс висит
+ * как непроверенный и при LORE_STAND_REQUIRE_RUN=1 роняет шаг при исправном коде. Проверку при этом
+ * не выбрасывают — она переезжает туда, где среда есть (прогон установщика).
+ */
+export const NOT_APPLICABLE = 'не применимо';
+
+/** Итог пропущенного сценария: «не применимо …» — n/a, всё остальное — not-run (не зелёный). */
+export function outcomeOfSkip(reason: string | undefined): Outcome {
+  return reason?.trim().toLowerCase().startsWith(NOT_APPLICABLE) ? 'n/a' : 'not-run';
+}
 
 /**
  * Адреса прода — смоук по ним запрещён. :4400 на ci-server — пересыльщик прод-фронта
@@ -81,9 +95,9 @@ export function extractBundle(html: string): string | null {
   return m ? m[1] : null;
 }
 
-export function outcomeOf(status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'interrupted'): Outcome {
+export function outcomeOf(status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'interrupted', skipReason?: string): Outcome {
   if (status === 'passed') return 'pass';
-  if (status === 'skipped') return 'not-run';
+  if (status === 'skipped') return outcomeOfSkip(skipReason);
   return 'fail';
 }
 
@@ -101,10 +115,13 @@ export function buildSummary(input: {
     pass: results.filter(r => r.outcome === 'pass').length,
     fail: results.filter(r => r.outcome === 'fail').length,
     notRun: results.filter(r => r.outcome === 'not-run').length,
+    na: results.filter(r => r.outcome === 'n/a').length,
     total: results.length,
   };
+  // Зелёный — только когда что-то ПРОВЕРЕНО и всё проверенное прошло: ни падений, ни «не выполнено»,
+  // и хотя бы один pass. Прогон из одних «не применимо» (и пустой) — not-run, а не «0 упавших = зелёный».
   const verdict: Verdict = counts.fail > 0 ? 'red'
-    : counts.total === 0 || counts.notRun > 0 ? 'not-run'
+    : counts.notRun > 0 || counts.pass === 0 ? 'not-run'
       : 'green';
   return {
     standUrl: input.standUrl, bundle: input.bundle, version: input.version,
@@ -118,7 +135,7 @@ const VERDICT_TEXT: Record<Verdict, string> = {
   red: 'красный — есть упавшие сценарии',
   'not-run': 'НЕ ВЫПОЛНЕН — проверено не всё, это не зелёный',
 };
-const MARK: Record<Outcome, string> = { pass: 'pass', fail: 'FAIL', 'not-run': 'not-run' };
+const MARK: Record<Outcome, string> = { pass: 'pass', fail: 'FAIL', 'not-run': 'not-run', 'n/a': NOT_APPLICABLE };
 
 /** Отчёт выкатки: заголовки + буллеты, без таблиц (уходит в Telegram-разметку). */
 export function renderMarkdown(s: Summary): string {
@@ -127,7 +144,7 @@ export function renderMarkdown(s: Summary): string {
     '# Смоук v2 на стенде',
     '',
     `- Вердикт: ${VERDICT_TEXT[s.verdict]}`,
-    `- Счёт: pass ${s.counts.pass} · fail ${s.counts.fail} · not-run ${s.counts.notRun} (из ${s.counts.total})`,
+    `- Счёт: pass ${s.counts.pass} · fail ${s.counts.fail} · not-run ${s.counts.notRun} · ${NOT_APPLICABLE} ${s.counts.na} (из ${s.counts.total})`,
     `- Стенд: ${s.standUrl ?? 'не задан'}`,
     `- бандл: ${s.bundle ?? 'не получен'}`,
     `- /lore/version: ${v}`,

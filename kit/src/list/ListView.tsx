@@ -1313,6 +1313,8 @@ export function ListView({
     : shown.kind === 'truncated'
       ? t('kit.list.shownTruncated', { shown: shown.shown, total: shown.total, loaded: shown.loaded })
       : t('kit.list.shownUnknown', { shown: shown.shown, loaded: shown.loaded });
+  // «Часть скрыта правами» (SPRINT_UXR_S15_KIT6): счёт того, что источник не отдал, — словами в той же строке.
+  const shownLine = data.meta.hidden ? `${shownText}${t('kit.list.hiddenTail', { n: data.meta.hidden })}` : shownText;
 
   /**
    * Оговорка о потолке групп (S9-02): словами, а не только видом списка.
@@ -2817,7 +2819,7 @@ export function ListView({
             {t('kit.list.selectMode')}
           </button>
         )}
-        <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownText}</p>
+        <p className="sk-list__shown" data-testid="kit-list-shown" data-kind={shown.kind} role="status">{shownLine}</p>
         {/* Полнота счёта — словами рядом с «Показано N из M» (S9-01): «посчитано
             не целиком», «счётчиков не бывает», «нет разрешённых проектов»,
             «сбой» — каждое своё, и ни одно из них не ноль. */}

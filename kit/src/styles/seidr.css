@@ -7813,3 +7813,250 @@ a.sk-vsum__why:hover { color: var(--acc); text-decoration: underline; }
   .sk-dialog, .sk-dialog--wide { top: 0; left: 0; transform: none; width: 100vw; height: 100dvh; max-height: none; border-radius: 0; border-width: 0; }
   .sk-sortable__row { align-items: flex-start; }
 }
+
+/* ═══ SPRINT_UXR_S15_KIT6 — «живые» кубики: команда с подтверждением, регулятор, загрузка, звук, плитка показания ═══ */
+.sk-cmdack { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sk-cmdack__state { font-size: var(--fs-xs); padding: 1px 8px; border-radius: 999px; border: 1px solid var(--bd); color: var(--t2); }
+.sk-cmdack__state--muted { color: var(--t3); }
+.sk-cmdack__state--info { color: var(--inf); border-color: var(--inf); }
+.sk-cmdack__state--warn { color: var(--wrn); border-color: var(--wrn); }
+.sk-cmdack__state--ok { color: var(--suc); border-color: var(--suc); }
+.sk-cmdack__state--bad { color: var(--dng); border-color: var(--dng); }
+.sk-livectl { display: grid; gap: 4px; min-width: 0; }
+.sk-livectl__head { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-xs); color: var(--t1); }
+.sk-livectl__fact { color: var(--t2); }
+.sk-livectl__pending { color: var(--wrn); }
+.sk-livectl__range { width: 100%; accent-color: var(--acc); }
+.sk-livectl__note { font-size: var(--fs-2xs); color: var(--wrn); }
+.sk-livetoggle { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--t1); cursor: pointer; }
+.sk-livetoggle__val { color: var(--t3); font-weight: 600; }
+.sk-livetoggle__val.is-on { color: var(--suc); }
+.sk-livetoggle__val.is-pending { color: var(--wrn); }
+.sk-upload { display: grid; gap: 6px; }
+.sk-upload__drop { display: grid; gap: 2px; padding: 12px; border: 1px dashed var(--bd); border-radius: var(--r-md); text-align: center; cursor: pointer; }
+.sk-upload__drop:focus-within, .sk-upload__drop:hover { border-color: var(--acc); }
+.sk-upload__label { font-size: var(--fs-sm); color: var(--t1); font-weight: 600; }
+.sk-upload__hint { font-size: var(--fs-xs); color: var(--t3); }
+.sk-upload__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sk-upload__row { display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-xs); min-width: 0; }
+.sk-upload__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t2); }
+.sk-upload__pct { color: var(--inf); }
+.sk-upload__ok { color: var(--suc); }
+.sk-upload__err { color: var(--dng); }
+.sk-audio { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--t2); }
+.sk-audio__label { color: var(--t1); }
+.sk-audio__player { width: 100%; }
+.sk-audio__err { color: var(--dng); }
+.sk-stattile { display: grid; gap: 2px; padding: 10px; min-width: 120px; border: 1px solid var(--bd); border-radius: var(--r-md); background: var(--bg1); }
+.sk-stattile__label { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; }
+.sk-stattile__value { font-weight: 700; font-size: var(--fs-lg); color: var(--acc); }
+.sk-stattile__unit { font-size: var(--fs-xs); color: var(--t2); }
+.sk-stattile__age { font-size: var(--fs-2xs); color: var(--t3); }
+.sk-stattile.is-stale .sk-stattile__value, .sk-stattile.is-stale .sk-stattile__age { color: var(--wrn); }
+.sk-stattile.is-empty .sk-stattile__value { color: var(--t3); }
+
+/* ═══ SPRINT_UXR_S15_KIT6 — плитки показаний и устройств: A строка, B квадрат, C заливка, D карточка группы, E кольцо; мини-линия ═══ */
+.sk-spark { display: block; width: 100%; color: var(--tile-tone, var(--acc)); }
+.sk-spark__line { fill: none; stroke: currentColor; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.sk-spark__area { fill: currentColor; opacity: 0.15; }
+.sk-tile__label { font-size: var(--fs-sm); font-weight: 600; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-tile__value { font-size: var(--fs-xs); color: var(--t1); white-space: nowrap; }
+.sk-tile__value.is-estimate { opacity: 0.7; }
+.sk-tile__mark { color: var(--t3); margin-left: 1px; }
+.sk-tile__sub { font-size: var(--fs-2xs); color: var(--t2); }
+.sk-tile__icon { display: inline-flex; color: var(--tile-tone, var(--acc)); }
+.sk-tile__bubble { position: relative; width: 38px; height: 38px; flex: none; border-radius: 999px; display: grid; place-items: center; }
+.sk-tile__bubble-bg { position: absolute; inset: 0; border-radius: 999px; background: var(--tile-tone, var(--acc)); opacity: 0.2; }
+.sk-tile__bubble .sk-tile__icon { position: relative; }
+.is-alarm .sk-tile__value, .is-alarm .sk-groupcard__main { color: var(--dng); }
+.sk-tilerow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg2); min-width: 0; }
+.sk-tilerow.is-alarm { box-shadow: inset 0 0 0 1px var(--dng); }
+.sk-tilerow__text { display: flex; flex-direction: column; min-width: 0; }
+.sk-tilesq { aspect-ratio: 1 / 1; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; background: var(--bg2); color: var(--t2); overflow: hidden; }
+.sk-tilesq .sk-tile__icon { color: var(--t3); }
+.sk-tilesq.is-on { background: var(--t1); color: var(--bg0); }
+.sk-tilesq.is-on .sk-tile__label, .sk-tilesq.is-on .sk-tile__value { color: var(--bg0); }
+.sk-tilesq.is-on .sk-tile__icon { color: var(--tile-tone, var(--acc)); }
+.sk-tilesq.is-alarm { box-shadow: inset 0 0 0 2px var(--dng); }
+.sk-tilesq__text { display: flex; flex-direction: column; min-width: 0; }
+.sk-tilebar { position: relative; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px 0 6px; border-radius: 999px; background: var(--bg2); overflow: hidden; }
+.sk-tilebar__fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--tile-tone, var(--acc)); opacity: 0.22; }
+.sk-tilebar.is-alarm .sk-tilebar__fill { background: var(--dng); }
+.sk-tilebar__bubble { position: relative; width: 40px; height: 40px; flex: none; border-radius: 999px; display: grid; place-items: center; background: var(--bg1); }
+.sk-tilebar__label { position: relative; flex: 1; }
+.sk-tilebar .sk-tile__value { position: relative; font-weight: 700; font-size: var(--fs-md); color: var(--acc); }
+.sk-groupcard { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 150px; padding: 14px; border-radius: 18px; background: var(--bg2); border: 0; color: var(--t1); text-align: left; overflow: hidden; font: inherit; }
+button.sk-groupcard { cursor: pointer; }
+button.sk-groupcard:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.sk-groupcard.is-alarm { box-shadow: inset 0 0 0 1px var(--dng); }
+.sk-groupcard__bg { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; opacity: 0.35; }
+.sk-groupcard__head { position: relative; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sk-groupcard__title { font-weight: 600; font-size: var(--fs-sm); color: var(--t2); }
+.sk-groupcard__main { position: relative; font-weight: 700; font-size: var(--fs-2xl); line-height: 1.1; color: var(--tile-tone, var(--acc)); }
+.sk-groupcard__main.is-estimate { opacity: 0.75; }
+.sk-groupcard__empty { position: relative; font-size: var(--fs-xs); color: var(--t3); }
+.sk-groupcard__chips { position: relative; display: flex; gap: 6px; flex-wrap: wrap; }
+.sk-groupcard__chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px; background: var(--bg1); font-size: var(--fs-xs); color: var(--t1); }
+.sk-groupcard__chip.is-alarm { color: var(--dng); }
+.sk-tilegauge { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px; border-radius: 18px; background: var(--bg2); }
+.sk-tilegauge__ring { width: 96px; height: 96px; transform: rotate(135deg); }
+.sk-tilegauge__track { fill: none; stroke: var(--bd); stroke-width: 7; stroke-linecap: round; }
+.sk-tilegauge__arc { fill: none; stroke: var(--tile-tone, var(--acc)); stroke-width: 7; stroke-linecap: round; }
+.sk-tilegauge.is-alarm .sk-tilegauge__arc { stroke: var(--dng); }
+.sk-tilegauge__center { margin-top: -70px; height: 52px; display: flex; flex-direction: column; align-items: center; }
+.sk-tilegauge .sk-tile__value { font-weight: 700; font-size: var(--fs-sm); }
+.sk-groupcard__photo { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.sk-groupcard__photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg0) 0%, transparent 55%, var(--bg0) 100%), var(--bg0); opacity: 0.55; }
+.sk-groupcard.has-photo .sk-groupcard__title, .sk-groupcard.has-photo .sk-groupcard__main, .sk-groupcard.has-photo .sk-groupcard__empty { text-shadow: 0 1px 2px var(--bg0), 0 0 12px var(--bg0); }
+.sk-groupcard.has-photo .sk-groupcard__main.is-estimate { opacity: 0.92; }
+.sk-groupcard.has-photo .sk-groupcard__chip { background: var(--bg0); }
+.sk-groupcard__details { position: relative; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; font-size: var(--fs-xs); color: var(--t1); }
+.sk-groupcard--large { min-height: 320px; padding: 18px; }
+.sk-groupcard--large .sk-groupcard__main { font-size: calc(var(--fs-2xl) * 1.6); }
+.sk-groupcard--large .sk-groupcard__bg { height: 120px; }
+.sk-groupcard--large .sk-groupcard__title { font-size: var(--fs-md); }
+/* ═══ SPRINT_UXR_S15_KIT6 — меню «сверху» и нижняя панель телефона ═══ */
+.sk-topnav { border-bottom: 1px solid var(--bd); background: var(--bg1); }
+.sk-topnav__spaces, .sk-topnav__chapters { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; padding: 0 8px; }
+.sk-topnav__space, .sk-topnav__chapter { border: 0; background: none; cursor: pointer; padding: 6px 10px; font: inherit; font-size: var(--fs-xs); color: var(--t2); border-bottom: 2px solid transparent; }
+.sk-topnav__space { text-transform: uppercase; letter-spacing: 0.04em; }
+.sk-topnav__space[aria-current], .sk-topnav__chapter[aria-current] { color: var(--acc); border-bottom-color: var(--acc); }
+.sk-topnav__space:focus-visible, .sk-topnav__chapter:focus-visible, .sk-bottombar__btn:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.sk-topnav__end { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.sk-bottombar { display: none; }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
+  .sk-bottombar { display: flex; position: sticky; bottom: 0; z-index: 20; justify-content: space-around; gap: 2px; padding: 4px 6px calc(4px + env(safe-area-inset-bottom)); background: var(--bg1); border-top: 1px solid var(--bd); }
+  .sk-topnav__spaces .sk-topnav__space { display: none; }
+}
+.sk-bottombar__btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; border: 0; background: none; color: var(--t2); font: inherit; font-size: var(--fs-2xs); cursor: pointer; border-radius: 10px; }
+.sk-bottombar__btn[aria-current] { color: var(--acc); background: var(--bg2); }
+.sk-bottombar__icon { display: inline-flex; }
+.sk-bottombar__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* ═══ SPRINT_UXR_S15_KIT6 — панель «Вид» и обои (узоры из мобилки miniLORE) ═══ */
+.sk-view { display: flex; flex-direction: column; gap: 10px; min-width: 280px; }
+.sk-view__row { display: flex; flex-direction: column; gap: 4px; }
+.sk-view__title { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; }
+.sk-view__opts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.sk-view__opt { border-radius: 999px; padding: 0 10px; }
+.sk-view__opt[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+.sk-view__swatch { display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 6px; }
+.sk-view__quick { display: inline-flex; align-items: center; gap: 4px; }
+.sk-view__dot { width: 16px; height: 16px; padding: 0; border-radius: 999px; border: 1px solid var(--bd); cursor: pointer; }
+.sk-view__dot[aria-pressed="true"] { border: 2px solid var(--t1); }
+.sk-view__thumb { width: 56px; height: 40px; padding: 0; border-radius: 8px; border: 1px solid var(--bd); background-size: cover; background-position: center; cursor: pointer; }
+.sk-view__thumb[aria-pressed="true"] { border: 2px solid var(--acc); }
+.sk-view__dimlabel { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-2xs); color: var(--t2); }
+.sk-view__err { font-size: var(--fs-2xs); color: var(--dng); }
+.sk-wall { position: relative; min-height: 100%; }
+.sk-wall__content { position: relative; }
+.sk-wall__photo, .sk-wall__skin { position: absolute; inset: 0; pointer-events: none; }
+.sk-wall__photo { background-size: cover; background-attachment: fixed; }
+.sk-wall__dim { position: absolute; inset: 0; background: var(--bg0); }
+.sk-wall__lines { position: absolute; inset: 0; mix-blend-mode: screen; }
+.sk-wall__lines.is-light { mix-blend-mode: multiply; }
+.sk-wall__stroke { fill: none; stroke: var(--t1); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
+/* ═══ SPRINT_UXR_S15_KIT6 — баннер-вердикт, сетка-дашборд, полоски «мин–макс» ═══ */
+.sk-verdict { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; border-radius: 14px; background: var(--bg1); border: 1px solid var(--bd); text-align: center; }
+.sk-verdict__headline { font-weight: 700; font-size: var(--fs-2xl); color: var(--t2); }
+.sk-verdict__detail { font-size: var(--fs-xs); color: var(--t2); }
+.sk-verdict.is-ok .sk-verdict__headline { color: var(--suc); }
+.sk-verdict.is-warn .sk-verdict__headline { color: var(--wrn); }
+.sk-verdict.is-bad .sk-verdict__headline { color: var(--dng); }
+.sk-verdict.is-bad { border-color: var(--dng); }
+.sk-dash { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--dash-min, 220px), 1fr)); grid-auto-rows: minmax(150px, auto); grid-auto-flow: dense; gap: 12px; padding: 12px; }
+.sk-dash__cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border-radius: 12px; background: var(--bg1); border: 1px solid var(--bd); }
+.sk-dash__cell.is-muted { opacity: 0.55; }
+.sk-dash__title { font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: 0.06em; }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .sk-dash__cell { grid-column: auto !important; } }
+.sk-range { display: flex; flex-direction: column; gap: 6px; }
+.sk-range__row { display: grid; grid-template-columns: 28px 24px 32px 1fr 32px; align-items: center; gap: 6px; font-size: var(--fs-xs); }
+.sk-range__label { color: var(--t2); }
+.sk-range__icon { display: inline-flex; }
+.sk-range__min { color: var(--t3); text-align: right; }
+.sk-range__max { color: var(--t1); font-weight: 600; }
+.sk-range__track { position: relative; height: 4px; border-radius: 999px; background: var(--bg2); }
+.sk-range__bar { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--inf), var(--acc)); }
+.sk-range__empty { font-size: var(--fs-xs); color: var(--t3); }
+/* ═══ SPRINT_UXR_S15_KIT6 — «Схема»: смотрелка плана ═══ */
+.sk-scheme { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sk-scheme__bar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.sk-scheme__chip { border-radius: 999px; padding: 0 10px; }
+.sk-scheme__chip[aria-pressed="false"] { opacity: 0.45; }
+.sk-scheme__chip[aria-pressed="true"] { border-color: var(--acc); }
+.sk-scheme__zoom { margin-left: auto; display: inline-flex; gap: 4px; }
+.sk-scheme__svg { width: 100%; background: var(--bg0); border-radius: 10px; touch-action: none; cursor: grab; }
+/* Светлые стены на тёмной земле, как план в GLADSHEIM /app (владелица 21.11: «дизайн светлый»). */
+.sk-scheme__area { fill: color-mix(in srgb, var(--t1) 5%, transparent); stroke: var(--t2); stroke-linejoin: round; }
+.sk-scheme__area.is-muted { fill: none; stroke-dasharray: 2 2; }
+.sk-scheme__label { fill: var(--t1); pointer-events: none; font-family: var(--font); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.sk-scheme__sub { fill: var(--t3); pointer-events: none; font-family: var(--font); }
+.sk-scheme__point { stroke: var(--bg0); cursor: pointer; }
+.sk-scheme__point.is-ok { fill: var(--suc); }
+.sk-scheme__point.is-warn { fill: var(--wrn); }
+.sk-scheme__point.is-bad { fill: var(--dng); }
+.sk-scheme__point.is-info { fill: var(--inf); }
+.sk-scheme__point.is-muted { fill: var(--t3); }
+.sk-scheme__point.is-selected { stroke: var(--t1); }
+.sk-scheme__empty, .sk-scheme__note { font-size: var(--fs-xs); color: var(--t3); }
+.sk-scheme__empty { padding: 24px; text-align: center; border: 1px dashed var(--bd); border-radius: 10px; }
+/* ═══ SPRINT_UXR_S15_KIT6 — «живые объекты»: языки, выбор картинки, шапка паспорта, галерея плиток, «скрыто правами» ═══ */
+.sk-langs { display: inline-flex; gap: 4px; }
+.sk-langs__btn { border-radius: 999px; padding: 0 8px; }
+.sk-langs__btn[aria-pressed="false"] { opacity: 0.55; }
+.sk-imgpick { display: flex; flex-direction: column; gap: 6px; width: 220px; }
+.sk-imgpick__grid { display: flex; gap: 4px; flex-wrap: wrap; }
+.sk-imgpick__thumb { width: 56px; height: 40px; padding: 0; border-radius: 8px; border: 1px solid var(--bd); background-color: var(--bg2); background-size: cover; background-position: center; cursor: pointer; color: var(--t3); font-size: var(--fs-2xs); }
+.sk-imgpick__thumb[aria-pressed="true"] { border: 2px solid var(--acc); }
+.sk-imgpick__err { font-size: var(--fs-2xs); color: var(--dng); }
+.sk-livehead { display: flex; flex-direction: column; gap: 4px; }
+.sk-livehead__row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sk-livehead__title { font-weight: 700; font-size: var(--fs-xl); margin: 0; }
+.sk-livehead__status { border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; font-size: var(--fs-xs); color: var(--t3); }
+.sk-livehead__status.is-ok { color: var(--suc); }
+.sk-livehead__status.is-warn { color: var(--wrn); }
+.sk-livehead__status.is-bad { color: var(--dng); }
+.sk-livehead__status.is-info { color: var(--inf); }
+.sk-livehead__note { font-size: var(--fs-2xs); color: var(--t3); }
+.sk-livehead__meta { font-size: var(--fs-xs); color: var(--t3); }
+.sk-livehead__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sk-gallery { display: flex; flex-direction: column; gap: 10px; }
+.sk-gallery__bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.sk-gallery__chip { border-radius: 999px; padding: 0 10px; display: inline-flex; align-items: center; gap: 4px; }
+.sk-gallery__chip[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+.sk-gallery__by { margin-left: auto; display: inline-flex; gap: 4px; }
+.sk-gallery__group { display: grid; grid-template-columns: 140px 1fr; gap: 10px; align-items: start; border-top: 1px solid var(--bd); padding-top: 8px; }
+.sk-gallery__title { font-size: var(--fs-2xs); color: var(--t2); text-transform: uppercase; letter-spacing: 0.04em; display: flex; gap: 6px; }
+.sk-gallery__count { color: var(--t3); }
+.sk-gallery__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--gal-min, 120px), 1fr)); gap: 8px; }
+.sk-gallery__empty { font-size: var(--fs-xs); color: var(--t3); }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .sk-gallery__group { grid-template-columns: 1fr; } }
+.sk-hidden-note { margin: 0; padding: 6px 12px; font-size: var(--fs-xs); color: var(--t2); border-bottom: 1px solid var(--bd); }
+/* ═══ SPRINT_UXR_S15_KIT6 — «отрисовка» как в GLADSHEIM /app: градиенты из палитры ═══
+   Владелица 21.11.2026: «у нас было лучше отрисованы… и расположение». Источник — web/src/styles/tokens.css и app.css
+   /app: свет как будто падает сверху. Блик слабый (до 16 %), гаснет к низу; герой — одна карточка на экран;
+   полоска-акцент — два цвета из палитры. Порядок слоёв: градиент поверх плоского цвета — без color-mix карточка видна. */
+:root {
+  --grad-hero: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 16%, transparent) 0%, transparent 68%);
+  --grad-card: linear-gradient(180deg, color-mix(in srgb, var(--t1) 5%, transparent) 0%, transparent 42%);
+  --grad-card-hover: linear-gradient(180deg, color-mix(in srgb, var(--acc) 12%, transparent) 0%, transparent 55%);
+  --grad-accent: linear-gradient(90deg, var(--acc), var(--inf));
+  --grad-danger: linear-gradient(90deg, var(--wrn), var(--dng));
+}
+.sk-dash__cell, .sk-stattile, .sk-tilerow, .sk-tilegauge, .sk-groupcard:not(.has-photo), .sk-gallery__grid > div > .sk-tilerow { background-image: var(--grad-card); }
+.sk-tilesq:not(.is-on) { background-image: var(--grad-card); }
+button.sk-groupcard:hover:not(.has-photo), .sk-tilerow:hover { background-image: var(--grad-card-hover); }
+.sk-verdict { position: relative; overflow: hidden; background-image: var(--grad-hero); border-color: color-mix(in srgb, var(--acc) 30%, var(--bd)); }
+.sk-verdict::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background-image: var(--grad-accent); }
+.sk-verdict.is-bad::before { background-image: var(--grad-danger); }
+/* Мозаика как «Сейчас» в /app: 4 колонки, уже — 2, на телефоне — 1. */
+.sk-dash--cols { grid-template-columns: repeat(var(--dash-cols, 4), minmax(0, 1fr)); }
+@media (max-width: 1000px) { .sk-dash--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) { .sk-dash--cols { grid-template-columns: 1fr; } }
+/* Карточка с фото полосой сверху (карточка комнаты /app): подложка, а не иллюстрация — приглушена, гаснет к тексту. */
+.sk-groupcard.has-photo-top { padding-top: 4.2em; background-image: var(--grad-card); }
+.sk-groupcard.has-photo-top .sk-groupcard__photo { inset: 0 0 auto 0; height: 4.6em; opacity: 0.4; }
+.sk-groupcard.has-photo-top .sk-groupcard__photo::after { background: linear-gradient(180deg, transparent 0%, var(--bg2) 100%); opacity: 1; }
+/* Типографика как в GLADSHEIM /app (владелица 21.11.2026: «сверься по правильности расстановки шрифтов, акцентов… моноширинный лишний раз не используй»): числа и заголовки карточек — Manrope 700 цветом акцента, подписи — Manrope 400 t2/t3; моноширинный — только время на часах; Unbounded — бренд и заголовки экранов. */
+/* Пара шрифтов «только IBM Plex Mono» (как в мобилке miniLORE): переменные, а не шрифт в правилах. */
+[data-font="mono"] { --font: var(--mono); --display: var(--mono); }

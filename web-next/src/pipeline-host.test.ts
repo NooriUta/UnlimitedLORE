@@ -889,6 +889,137 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
   });
 });
 
+// 1.18.3 · САМОПРОВЕРКА ВЫКАТКИ ПРОДА. Вид схемы прода брался ТОЛЬКО из лога бэкенда, и строку искали
+// такой, какой её никто не пишет: на базе из модели рантайм (lore.migrate=false) пишет «схема собрана из
+// модели — шаги V не применяются, переходник чтения включён», а «(LoreModelSchema)» есть лишь у пути сверки
+// шагов V, до которого такая база не доходит (LoreSchemaMigrationRunner.runSchema → builtFromModel). Итог:
+// PROD_SCHEMA пуст → проба шла веткой шагов V и требовала «схема сверена: БД v93» → задача деплоя красная
+// два релиза подряд (1.18.0 — 39647, 1.18.1 — 39867) при исправном проде. Правило: вид схемы спрашиваем у
+// самого бэкенда (/lore/version: schema_source, schema_version), лог — запасной путь, «не определили» —
+// честный отказ вслух, а не молчаливая ветка V.
+describe.skipIf(!bashBin)('1.18.3: вид схемы прода — из /lore/version, лог — запасной путь', { timeout: SPAWN_TIMEOUT }, () => {
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+  const S = '.github/scripts/lore-host-deploy.sh';
+  const RUNNER = 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrationRunner.java';
+  // Строка, которую правда пишет рантайм прода на базе из модели (путь READ_ADAPTER).
+  const RUNTIME_MODEL_LINE = '[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)';
+  const MODEL_JSON = '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","model_hash":"d7e16a827891d5e0"}';
+  const STEPS_JSON = '{"commit":"0123456789abcdef","schema_version":93,"schema_source":"steps"}';
+  // Исправный v2 для сторожа петли (state зовёт v2_guard).
+  const CFG = ['name: lore-app-next', 'services:', '  lore-app-next:', '    environment:',
+    '      LORE_BACKEND_HOST: lore-backend', '      LORE_BACKEND_URL: http://lore-backend:9100',
+    '    networks:', '      lore-be: null', 'networks:', '  lore-be:', '    name: unlimitedlore_default',
+    '    external: true', ''].join('\n');
+
+  /** Шаг на копии скрипта; R — заглушка ssh: /lore/version → version.json, лог → $LOG_LINE, compose config → исправный v2. */
+  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '', extra: Record<string, string> = {}) {
+    const d = mkdtempSync(join(tmpdir(), 'lore-pl-kind-'));
+    writeFileSync(join(d, 'lore-host-deploy.sh'), read(S));
+    writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version.json'), versionJson);
+    writeFileSync(join(d, 'cfg.yml'), CFG);
+    writeFileSync(join(d, 'r.sh'), [
+      '#!/usr/bin/env bash',
+      'echo "$*" >> "$R_LOG"',
+      'case "$*" in',
+      `  *"/lore/version"*) cat "${fwd(join(d, 'version.json'))}" ;;`,
+      `  *"compose config"*) cat "${fwd(join(d, 'cfg.yml'))}" ;;`,
+      '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
+      '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
+      '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
+      '  *"State.Health.Status"*) echo healthy ;;',
+      'esac', '',
+    ].join('\n'));
+    chmodSync(join(d, 'r.sh'), 0o755);
+    const st = join(d, 'state.env');
+    writeFileSync(st, [...stateLines, ''].join('\n'));
+    const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
+    const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
+      DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.3',
+      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1', PROBE_DELAY: '0', ...extra,
+    });
+    const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
+    rmSync(d, { recursive: true, force: true });
+    return { ...r, state, calls };
+  }
+
+  const PROBE_STATE = ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+    'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-21T00:00:00Z'];
+
+  it('state: /lore/version говорит schema_source=model — PROD_SCHEMA=model, строки в логе не требуется', () => {
+    const r = stepRun('state', [], '', MODEL_JSON);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=model$/m);
+  });
+
+  // Заглушка R отдаёт строку лога целиком (настоящий grep выполняется на lore-host), поэтому здесь
+  // проверяется разбор строки; что шаблон скрипта её вообще ловит — последний тест этого describe.
+  it('state: /lore/version не прочитан, в логе — строка рантайма про модель (без «(LoreModelSchema)») — PROD_SCHEMA=model', () => {
+    const r = stepRun('state', [], RUNTIME_MODEL_LINE, '');
+    expect(r.code).toBe(0);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=model$/m);
+  });
+
+  it('state: /lore/version говорит steps, в логе «БД v93» — PROD_SCHEMA=93', () => {
+    const r = stepRun('state', [], 'схема сверена: БД v93 = код v93', STEPS_JSON);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=93$/m);
+  });
+
+  it('state: steps по /lore/version, номера в логе нет — PROD_SCHEMA=steps (вид ясен, номер нет), а не пусто', () => {
+    const r = stepRun('state', [], '', STEPS_JSON);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=steps$/m);
+  });
+
+  it('state: ни /lore/version, ни строки в логе — PROD_SCHEMA пуст и сказано вслух «не определён»', () => {
+    const r = stepRun('state', [], '', '');
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=$/m);
+    expect(r.out).toMatch(/вид схемы прода не определён/);
+  });
+
+  it('probe: база из модели, вида схемы в state нет (как в 1.18.0 и 1.18.1) — зелёная по /lore/version, а не красная из-за «БД v95»', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], RUNTIME_MODEL_LINE, MODEL_JSON);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/schema_version=model:1/);
+  });
+
+  it('probe: ни /lore/version, ни строки в логе — красная словами «вид схемы прода не определён»', () => {
+    const r = stepRun('probe', PROBE_STATE, 'что-то другое', '');
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/вид схемы прода не определён/);
+  });
+
+  it('db: вид схемы — шаги V, номера нет (PROD_SCHEMA=steps) — бэкап и накатка, а не «прод НОВЕЕ кода»', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=steps', 'PROD_DB=system_aida_lore'], '');
+    expect(r.out).not.toMatch(/НОВЕЕ кода/);
+    expect(r.calls, r.out).toMatch(/remote-backup/);
+  });
+
+  it('plan: база прода собрана из модели — так и сказано, без «прод НОВЕЕ кода» и арифметической ругани', () => {
+    const r = stepRun('plan', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'SRC8=abcdef12', 'PROD_DB=system_aida_lore'], '');
+    expect(r.out).toMatch(/из модели/);
+    expect(r.out).not.toMatch(/НОВЕЕ кода/);
+    expect(r.out).not.toMatch(/integer expected|integer expression/);
+  });
+
+  it('скрипт ищет в логе строку, которую бэкенд правда пишет (а не «(LoreModelSchema)» из пути сверки шагов)', () => {
+    const runner = read(RUNNER);
+    // Строки «из модели», которые пишет рантайм и путь сверки: разбор обрывается на склейке Java — её хватает.
+    const logged = [...runner.matchAll(/"(\[LORE MIGRATE\][^"]*схема собрана из модели[^"]*)"/g)].map(m => m[1]);
+    expect(logged.length, 'бэкенд пишет хотя бы одну строку «схема собрана из модели»').toBeGreaterThan(0);
+    // Шаблоны grep скрипта (в одинарных кавычках — как их видит удалённый shell), где есть ветка про модель.
+    const pats = [...read(S).matchAll(/'([^'\n]*схема собрана из модели[^'\n]*)'/g)].map(m => m[1]);
+    expect(pats.length, 'скрипт ищет в логе строку «схема собрана из модели»').toBeGreaterThan(0);
+    for (const p of pats) {
+      const alt = p.split('|').find(a => a.includes('из модели'));
+      expect(alt, `в шаблоне «${p}» нет ветки про модель`).toBeTruthy();
+      for (const s of logged) expect(new RegExp(alt!).test(s), `шаблон «${alt}» не ловит строку бэкенда «${s}»`).toBe(true);
+    }
+  });
+});
+
 // SPRINT_UXR_S8_SWITCH/S8-02 (патч 1.18.1, факты прода lore-host 21.11):
 //   * петля — nginx v2 ходил в API по LORE_BACKEND_URL=https://lore.odal.seidrstudio.pro; после
 //     переключения lore.odal на v2 он проксировал сам в себя, /lore/version висел. Правило: v2 ходит

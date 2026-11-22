@@ -32,6 +32,8 @@
       "@tiptap/*": ["./node_modules/@tiptap/*"],
       "tiptap-markdown": ["./node_modules/tiptap-markdown"],
       "marked": ["./node_modules/marked"],
+      "echarts": ["./node_modules/echarts"],
+      "echarts/*": ["./node_modules/echarts/*"],
       "katex": ["./node_modules/katex"],
       "mermaid": ["./node_modules/mermaid"],
       "force-graph": ["./node_modules/force-graph"],
