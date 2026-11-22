@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { planQgScope, applyQgScope } from './qg-scope.mjs';
+import { judgeQgScope } from './qg-scope.mjs';
 import rule from './rules/qg-scope.json' with { type: 'json' };
 
 const gates = [
@@ -68,4 +69,26 @@ test('применение в приёмник: признак, снятие п�
   assert.deepEqual(r.after, { global: 4, project: 2, retired: 1, global_with_project: 0, unscoped: 0 });
   assert.equal(r.project_links_dropped, 4);
   assert.equal(state.get('QG-T13-SMOKE').status, 'retired');
+});
+
+// ── База старше правила: гейта ещё не существовало (MIG-04, прогон 22.11.2026) ──
+// На бэкапе прода от 01.11 правило называло QG-LORE-BLOCKED-REASON и QG-LORE-PROJECT-BINDING,
+// которых в той базе нет. Переносить нечего — установка идти должна, пропуск — вслух.
+test('мягкий режим: гейта нет в источнике — пропуск с именем, не ошибка', () => {
+  const v = judgeQgScope({ ok: true, problems: [{ qg_id: 'QG-LORE-BLOCKED-REASON', kind: 'rule_gate_missing' }] }, { strict: false });
+  assert.equal(v.ok, true);
+  assert.match(v.line, /QG-LORE-BLOCKED-REASON/);
+});
+
+test('проектный гейт без проекта — красный всегда: это о записанных данных', () => {
+  for (const strict of [false, true])
+    assert.equal(judgeQgScope({ ok: true, problems: [{ qg_id: 'QG-X', kind: 'no_project' }] }, { strict }).ok, false);
+});
+
+test('строгий режим нашей трубы краснеет и на отсутствующем гейте', () => {
+  assert.equal(judgeQgScope({ ok: true, problems: [{ qg_id: 'QG-Y', kind: 'rule_gate_missing' }] }, { strict: true }).ok, false);
+});
+
+test('несошедшаяся запись остаётся красной и без отклонений', () => {
+  assert.equal(judgeQgScope({ ok: false, problems: [] }, { strict: false }).ok, false);
 });

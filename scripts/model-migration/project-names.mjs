@@ -1,3 +1,5 @@
+import { splitGaps, gapLine, strictMode } from './source-gap.mjs';
+
 // 1.18 · Код, краткое и полное название, описание проекта — ru/en/pl (владелица 21.11.2026: «не вижу на препроде полей,
 // перепроверяй, я просила код, краткое название, полное название, описание»). Значения — раздел project_names файла
 // решений (таблица владелицы; en/pl — перевод агента на проверку). Внутренний ключ slug не меняется: по нему проект знают
@@ -78,11 +80,28 @@ export async function applyProjectNames(db, rows, projects, { log = console.log 
     const empty = want.filter(f => typeof r[f] !== 'string' || !r[f].trim() || r[f] !== u.set[f]);
     if (empty.length) unfilled.push({ code: u.code, slug: u.slug, fields: empty });
   }
-  const ok = !p.problems.length && !unfilled.length;
-  log(`названия проектов: записано ${p.updates.length} из ${rows.length}` + (p.problems.length ? '; расхождения: '
-    + p.problems.map(x => `${x.code} ${x.kind}${x.group ? ' (' + x.group + ')' : ''}`).join(', ') : '')
+  const v = judgeProjectNames({ problems: p.problems, unfilled });
+  log(`названия проектов: записано ${p.updates.length} из ${rows.length}` + (v.mismatch.length ? '; расхождения: '
+    + v.mismatch.map(x => `${x.code} ${x.kind}${x.group ? ' (' + x.group + ')' : ''}`).join(', ') : '') + v.line
     + (unfilled.length ? '; не заполнено: ' + unfilled.map(x => x.code + ' ' + x.fields.join('/')).join(', ') : ''));
-  log('сверка названий проектов:', ok ? 'сошлась' : 'НЕ сошлась');
-  return { ok, applied: p.updates.length, rows: rows.length, mapped: p.updates.map(u => ({ code: u.code, slug: u.slug })),
-    problems: p.problems, unfilled };
+  log('сверка названий проектов:', v.ok ? 'сошлась' : 'НЕ сошлась');
+  return { ok: v.ok, applied: p.updates.length, rows: rows.length, mapped: p.updates.map(u => ({ code: u.code, slug: u.slug })),
+    problems: p.problems, unfilled, absent_in_source: v.absent };
+}
+
+/**
+ * Вердикт шага. «Проекта с такими ключами нет» (not_found) и «ключи ведут в несколько проектов» (ambiguous) —
+ * это источник старше таблицы: на базе до перегруппировки 1.18 слитые проекты ещё лежат порознь. Переносить
+ * нечего, установку не роняем, но называем поимённо. Противоречие самой таблицы (две строки на один проект,
+ * проект слит в чужую группу) и «записали, а не сошлось» (unfilled) — красные всегда.
+ */
+export function judgeProjectNames({ problems = [], unfilled = [] }, { strict = strictMode() } = {}) {
+  const g = splitGaps(problems, ['not_found', 'ambiguous'], { strict });
+  const blocking = [...g.blocking, ...unfilled];
+  return {
+    ok: blocking.length === 0,
+    absent: g.absent,
+    mismatch: g.mismatch,
+    line: gapLine(g.absent, x => `${x.code} (${x.kind === 'ambiguous' ? 'ещё не слиты в группу' : 'нет такого проекта'})`),
+  };
 }
