@@ -69,7 +69,8 @@ describe('сторож: заменённые слаги не вернулись 
   const REPLACED = ['checklist', 'newspaper', 'funnel', 'histogram', 'round-star', 'back-forth', 'lightning-trio', 'three-friends',
     'rocket', 'cancel', 'backward-time', 'fire', 'arrow-flights', 'plain-arrow', 'stone-tower', 'hamburger-menu', 'trash-can',
     'play-button', 'eye-target', 'laurel-crown'];
-  const roots = [resolve(process.cwd(), 'src'), resolve(process.cwd(), '../web-next/src')];
+  // kit — свой код; web-next LORE — только при LORE_ROOT (сверка с потребителем гоняется из CI LORE).
+  const roots = [resolve(process.cwd(), 'src'), ...(process.env.LORE_ROOT ? [resolve(process.env.LORE_ROOT, 'web-next/src')] : [])];
   const files: string[] = [];
   const walk = (d: string) => {
     for (const n of readdirSync(d)) {

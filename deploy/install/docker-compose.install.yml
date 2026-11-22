@@ -20,7 +20,7 @@ name: ${COMPOSE_PROJECT_NAME:-lore}
 
 services:
   arcadedb:
-    image: arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
+    image: ${LORE_IMAGE_REGISTRY:-}arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
     restart: unless-stopped
     environment:
       # Пароль root приходит из .env и в файлы не пишется.
@@ -195,7 +195,7 @@ services:
   # (клон по http). Администратора владелец заводит в первом окне Forgejo — установщик паролей Forgejo не знает.
   forgejo:
     profiles: ["forgejo"]
-    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17.0.2}
+    image: ${FORGEJO_IMAGE:-codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17.0.2}}
     restart: unless-stopped
     environment:
       - USER_UID=1000
