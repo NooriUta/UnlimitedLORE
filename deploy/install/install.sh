@@ -52,7 +52,7 @@ MODE="install"
 PURGE=0
 DRY=0
 WAIT_SECS="${WAIT_SECS:-900}"
-CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
+CURL_IMAGE="${CURL_IMAGE:-${LORE_IMAGE_REGISTRY:-}curlimages/curl:latest}"
 # Forgejo (MIG-04, владелица 20.11.2026). Пусто — выбор в .env не трогается (по умолчанию без Forgejo, как раньше).
 FORGEJO=""
 FORGEJO_URL_ARG=""
@@ -62,9 +62,9 @@ FILES=""
 # MIG-01: свежая установка — база из модели (lore-migrate init-empty), шаги V не катятся. FRESH=1 — .env ещё не было.
 FRESH=0
 FRESH_DB="${LORE_FRESH_DB:-lore}"
-MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
+MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-${LORE_IMAGE_REGISTRY:-}debian:bookworm-slim}"
 # Образ для запуска lore-migrate.mjs (когда исполняемого файла нет — он едет отдельным вложением релиза).
-MIGRATE_NODE_IMAGE="${MIGRATE_NODE_IMAGE:-node:26-alpine}"
+MIGRATE_NODE_IMAGE="${MIGRATE_NODE_IMAGE:-${LORE_IMAGE_REGISTRY:-}node:26-alpine}"
 FORGEJO_VERSION_DEFAULT="17.0.2"   # версия Forgejo, которую ставит пакет
 # forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
 # scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
@@ -281,6 +281,9 @@ acurl() { docker run --rm --network "$(project)_default" "$CURL_IMAGE" -sS -m 30
 
 check_prereq() {
   say "проверка окружения"
+  # Зеркало базовых образов называем вслух: человек без доступа к Docker Hub должен видеть в плане, откуда
+  # пойдут образы, — иначе узнает об этом из отказа на первом же pull (прогон на чужой машине 22.11.2026).
+  [ -z "${LORE_IMAGE_REGISTRY:-}" ] || say "базовые образы — из зеркала ${LORE_IMAGE_REGISTRY}"
   if [ "$DRY" = 1 ]; then
     command -v docker >/dev/null 2>&1 && say "docker найден" || warn "docker не найден (dry-run продолжает)"
     return 0
@@ -1023,6 +1026,17 @@ selftest() {
   #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — эмуляция 21.11.2026).
   grep -q 'pull --ignore-pull-failures arcadedb' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
   grep -q 'need_images arcadedb' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
+  # 7б. Зеркало базовых образов (22.11.2026). У пакета есть зеркала Maven и Gradle, а у базовых образов не было:
+  #     машина без доступа к Docker Hub вставала на первом же образе, и указать ей было нечего. Проверено на
+  #     чужой машине — два захода подряд упали «dial tcp: lookup registry-1.docker.io».
+  grep -qE '^LORE_IMAGE_REGISTRY=' "$SCRIPT_DIR/.env.example" || fail ".env.example: нет LORE_IMAGE_REGISTRY (зеркало базовых образов)"; ok
+  grep -q 'LORE_IMAGE_REGISTRY' "$SCRIPT_DIR/docker-compose.install.yml" || fail "compose: базовые образы не берут зеркало"; ok
+  grep -q 'LORE_IMAGE_REGISTRY' "$0" || fail "install.sh: его собственные образы (curl, debian, node) не берут зеркало"; ok
+  LORE_IMAGE_REGISTRY=mirror.example/ expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'mirror.example/' || fail "зеркало образов не названо в плане: $out"; ok
+  # README обязан объяснить и второй путь — зеркало в самом docker: compose-переменная покрывает ЗАПУСК,
+  # а сборку из исходников (базовые образы в Dockerfile) — только настройка демона.
+  grep -q 'registry-mirrors' "$SCRIPT_DIR/README.md" || fail "README: не сказано про registry-mirrors для сборки из исходников"; ok
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
     grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
   done
