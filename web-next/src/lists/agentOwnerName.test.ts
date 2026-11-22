@@ -36,3 +36,27 @@ describe('S9-05 · владелец агента в списке — имя че
     expect(r.fields.owner).toBe('');
   });
 });
+
+// ── Код агента в списке не показываем (слово владелицы 22.11.2026: «и код для агентов скрывай, это лишнее») ──
+// Агент опознаётся именем и учёткой; внутренний код вида AGENT-FULL-msbt0fed человеку ничего не говорит и
+// занимает первую, самую заметную колонку. Так же сделан раздел людей: там колонки «имя · логин · проекты».
+// Код не удалён из данных — он остаётся опознавателем записи, адресом паспорта и значением поиска.
+import { LIST_SCREENS } from './screens';
+
+describe('S9-05 · список агентов читается человеком', () => {
+  it('колонки: без внутреннего кода, с именем, учёткой и владельцем', () => {
+    const cols = LIST_SCREENS.agents.config('ru').list?.columns ?? [];
+    expect(cols).not.toContain('id');
+    expect(cols).toContain('title');
+    expect(cols).toContain('clientId');
+    expect(cols).toContain('owner');
+  });
+
+  it('код остаётся опознавателем записи — его прячет колонка, а не данные', () => {
+    const r = agentRecord({
+      actor_id: 'AGENT-FULL-msbt0fed', name: 'Claude Code (full)', client_id: 'lore-mcp-full',
+      agent_role: 'full', harness: 'claude', owner: null, owner_name: null, projects: [],
+    });
+    expect(r.id).toBe('AGENT-FULL-msbt0fed');
+  });
+});
