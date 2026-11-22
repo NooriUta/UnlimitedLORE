@@ -375,10 +375,10 @@ docker compose exec minilore-srv wget -qO- http://127.0.0.1:8080/config   # на
 Keycloak. `kcIssuer: null` значит, что вход LORE не настроен: сервер работает, но телефон войти не сможет.
 
 
-### Шлюз miniLORE — КАНДИДАТ 0.3.79
+### Шлюз miniLORE — КАНДИДАТ 0.3.80
 
 **Что это.** Программа на вашей машине (не в этом стеке), которая показывает телефону живые сессии агентов —
-Claude Code, Qwen, OpenCode, Kimi — и позволяет им отвечать и закрывать их с телефона. Сервер miniLORE из этого
+Claude Code, Qwen, OpenCode, Kimi — и позволяет им отвечать, передавать картинки и файлы и закрывать их с телефона. Сервер miniLORE из этого
 пакета без шлюза работает, но показывать ему будет нечего: сессии видит именно шлюз.
 
 **Честный статус — прочитайте до установки.** Это **кандидат**, а не выпуск:
@@ -393,21 +393,21 @@ Claude Code, Qwen, OpenCode, Kimi — и позволяет им отвечат�
 
 | файл | для чего | размер |
 |---|---|---|
-| `miniLORE-link-setup-0.3.79.exe` | Windows, обычный установщик | 23 МБ |
-| `minilore-link_0.3.79_amd64.deb` | Debian и Ubuntu | 49 МБ |
-| `minilore-link-linux-0.3.79.tar.gz` | другие Linux; нужен системный Node 22 и новее | 3,7 МБ |
+| `miniLORE-link-setup-0.3.80.exe` | Windows, обычный установщик | 23 МБ |
+| `minilore-link_0.3.80_amd64.deb` | Debian и Ubuntu | 49 МБ |
+| `minilore-link-linux-0.3.80.tar.gz` | другие Linux; нужен системный Node 22 и новее | 3,7 МБ |
 
 **Как поставить.**
 
 ```bash
 # Windows (тихая установка)
-miniLORE-link-setup-0.3.79.exe /S
+miniLORE-link-setup-0.3.80.exe /S
 
 # Debian/Ubuntu
-sudo dpkg -i minilore-link_0.3.79_amd64.deb
+sudo dpkg -i minilore-link_0.3.80_amd64.deb
 
 # другой Linux
-tar -xzf minilore-link-linux-0.3.79.tar.gz && cd minilore-link-0.3.79 && ./install.sh
+tar -xzf minilore-link-linux-0.3.80.tar.gz && cd minilore-link-0.3.80 && ./install.sh
 ```
 
 **Обязательная настройка.** Шлюзу нужен файл `~/.minilore/config.toml`: адрес вашего сервера miniLORE, код этой
