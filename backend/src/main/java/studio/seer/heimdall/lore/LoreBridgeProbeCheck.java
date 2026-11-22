@@ -126,7 +126,8 @@ public class LoreBridgeProbeCheck implements HealthCheck {
      */
     private String probeForgejo() throws Exception {
         String base = forgejo.probeBase().orElseThrow();
-        HttpRequest req = HttpRequest.newBuilder(URI.create(base + "/api/v1/repos/search?limit=1"))
+        // page=1 обязателен: Forgejo 17 игнорирует limit без page и отдаёт ВЕСЬ список (сторож ForgejoListPagingGuardTest).
+        HttpRequest req = HttpRequest.newBuilder(URI.create(base + "/api/v1/repos/search?page=1&limit=1"))
             .timeout(Duration.ofSeconds(10))
             .header("Authorization", "token " + forgejo.probeToken())
             .header("Accept", "application/json").GET().build();
