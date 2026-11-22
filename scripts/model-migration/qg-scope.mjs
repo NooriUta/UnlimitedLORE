@@ -63,15 +63,35 @@ export async function applyQgScope(db, gates, rule, { log = console.log } = {}) 
     global_with_project: got.filter(g => g.scope === 'global' && proj(g).length).length,
     unscoped: got.filter(g => !g.scope && g.status !== 'retired').length,
   };
-  const written = after.global === p.counts.global && after.project === p.counts.project
-    && after.global_with_project === 0 && after.unscoped === 0 && dropped >= p.counts.project_links_dropped
-    && p.retire.every(r => got.some(g => g.qg_id === r.qg_id && g.status === 'retired'));
+  const written = qgWritten({
+    after, counts: p.counts, dropped,
+    noProject: p.problems.filter(x => x && x.kind === 'no_project').length,
+    retireOk: p.retire.every(r => got.some(g => g.qg_id === r.qg_id && g.status === 'retired')),
+  });
   const v = judgeQgScope({ ok: written, problems: p.problems });
   log(`охват гейтов: общих ${after.global}, проектных ${after.project}, снято ${after.retired}; снято связей общих гейтов с проектом ${dropped}`
     + (v.mismatch.length ? '; отклонения: ' + v.mismatch.map(x => x.qg_id + ' ' + x.kind).join(', ') : '') + v.line);
   log('сверка охвата гейтов:', v.ok ? 'сошлась' : 'НЕ сошлась');
   return { ok: v.ok, decision: rule.decision || null, plan: p.counts, after, project_links_dropped: dropped, problems: p.problems,
     scope: p.scope, retired: p.retire.map(r => r.qg_id), absent_in_source: v.absent };
+}
+
+/**
+ * Записалось ли то, что шаг обязан был записать.
+ *
+ * <p>Главное тут — последнее слагаемое. Раньше условие требовало {@code after.unscoped === 0}: «не должно
+ * остаться ни одного гейта без охвата». На снимке нашего прода таких 20, и охват им взять НЕОТКУДА — у них нет
+ * проекта. Условие было невыполнимо в принципе, и шаг объявлял «НЕ сошлась» при полностью верной записи
+ * (прогон на чужой машине 22.11.2026; утренняя правка вердикта этого не лечила — она про другой слой).
+ * Теперь: без охвата могут остаться РОВНО гейты без проекта, лишний — красный.
+ */
+export function qgWritten({ after, counts, dropped, noProject = 0, retireOk }) {
+  return after.global === counts.global
+    && after.project === counts.project
+    && after.global_with_project === 0
+    && dropped >= counts.project_links_dropped
+    && retireOk
+    && after.unscoped === noProject;
 }
 
 /**

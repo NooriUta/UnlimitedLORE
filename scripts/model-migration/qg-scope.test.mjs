@@ -108,3 +108,25 @@ test('строгий режим нашей трубы краснеет и на �
 test('несошедшаяся запись остаётся красной и без отклонений', () => {
   assert.equal(judgeQgScope({ ok: false, problems: [] }, { strict: false }).ok, false);
 });
+
+// ── «Записалось ли» не должно требовать невозможного (прогон на чужой машине 22.11.2026) ──
+// Утренняя правка вердикта (no_project — остаток, а не отказ) не помогла: шаг всё равно объявлял «НЕ сошлась»,
+// потому что признак «записалось» требовал after.unscoped === 0. А гейты без проекта охвата не получают НИКОГДА —
+// им его неоткуда взять. Получалось условие, которое на снимке нашего прода (20 таких гейтов) не выполнимо,
+// сколько ни чини вердикт. Правильно: без охвата могут остаться ровно те гейты, у которых нет проекта.
+import { qgWritten } from './qg-scope.mjs';
+
+test('записалось: без охвата остались ровно гейты без проекта — это полная запись', () => {
+  assert.equal(qgWritten({ after: { global: 2, project: 0, global_with_project: 0, unscoped: 20 },
+    counts: { global: 2, project: 0, project_links_dropped: 0 }, dropped: 0, noProject: 20, retireOk: true }), true);
+});
+
+test('записалось: без охвата остался ЛИШНИЙ гейт — запись неполна, это красный', () => {
+  assert.equal(qgWritten({ after: { global: 2, project: 0, global_with_project: 0, unscoped: 21 },
+    counts: { global: 2, project: 0, project_links_dropped: 0 }, dropped: 0, noProject: 20, retireOk: true }), false);
+});
+
+test('записалось: общий гейт со связью на проект — всегда красный, связь обязаны были снять', () => {
+  assert.equal(qgWritten({ after: { global: 2, project: 0, global_with_project: 1, unscoped: 0 },
+    counts: { global: 2, project: 0, project_links_dropped: 0 }, dropped: 0, noProject: 0, retireOk: true }), false);
+});
