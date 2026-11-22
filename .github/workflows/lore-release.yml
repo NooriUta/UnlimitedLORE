@@ -35,6 +35,11 @@ name: LORE Release (publish on tag)
 #   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит сборки, схема:
 #      база из модели — schema_source=model и schema_version=model:<номер модели тега>,
 #      база шагов V — «схема сверена: БД vN = код vN» в логе; вид не определён — красная (1.18.3).
+# Джоб publish-ghcr — образы мажора (vX.Y.0) в ghcr.io для внешнего установщика — ОТДЕЛЬНО
+# от deploy-prod: публикация наружу не зависит от здоровья НАШЕГО прода (22.11.2026: на
+# v1.18.0 и v1.18.1 ложный красный «Проб прода» оставил шаг публикации skipped, наружу не
+# уехал ни один образ). Ждёт только publish (релиз и вложения — вместе с образами) и сам
+# проверяет resolve'ом, что образы :sha8 прошли препрод. Ручной догон: tag + ghcr=true.
 # Ручной запуск: tag + dry_run=true — только 1–3 и план, без публикации релиза;
 # deploy=true — боевая выкатка указанного тега (так же делается ОТКАТ на прошлый
 # тег: его образы :sha8 лежат на 131 и на lore-host). Только dispatch tag без
@@ -86,6 +91,14 @@ on:
         # PL-05: true — боевая выкатка тега на lore-host (повтор или откат на
         # прошлый тег). По умолчанию ручной запуск прод НЕ трогает.
         description: 'true — выкатить этот тег на прод (lore-host)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      ghcr:
+        # Публикация образов мажора в ghcr.io без выкатки прода (джоб publish-ghcr):
+        # догнать ghcr для уже выпущенного мажорного тега. Прод не трогается.
+        description: 'true — опубликовать образы мажорного тега в ghcr.io (прод не трогается)'
         required: false
         default: 'false'
         type: choice
@@ -803,15 +816,42 @@ jobs:
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/lore-host-deploy.sh probe
 
-      # SELF-PROVISION-STANDALONE (владелица 14.11.2026): образы мажорного релиза (vX.Y.0) —
-      # в ghcr.io для внешнего установщика; те же :sha8, что прошли препрод и прод, без
-      # пересборки. Не мажор — шаг ничего не делает. Нет токена на мажоре — BLOCKED, красно.
-      - name: Публикация образов мажорного релиза в ghcr.io
-        if: steps.mode.outputs.live == 'true'
-        env:
-          GHCR_PUSH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
-        run: bash .github/scripts/ghcr-publish.sh publish
-
       - name: Убрать ключ
         if: always()
         run: rm -f ~/.ssh/lore_host
+
+  publish-ghcr:
+    name: Publish major images to ghcr.io (same :sha8 as preprod; not gated by prod probes)
+    # См. шапку: НЕ needs deploy-prod и не стоит в одной задаче с «Пробами прода».
+    # needs publish — образы наружу только вместе с выпуском (тело + вложения пакета).
+    needs: publish
+    if: github.event_name == 'push' || (inputs.dry_run != 'true' && (inputs.deploy == 'true' || inputs.ghcr == 'true'))
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_STATE: /tmp/lore-ghcr.env
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Тег и его место в main
+        env:
+          INPUT_TAG: ${{ inputs.tag || '' }}
+        run: |
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          git fetch -q --tags origin "+refs/heads/main:refs/remotes/origin/main" || true
+          git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null || { echo "::error::тега $TAG нет"; exit 1; }
+          git merge-base --is-ancestor "refs/tags/$TAG" origin/main             || { echo "::error::тег $TAG НЕ содержится в main — наружу публикуется только релиз из main (ADR-LORE-046)"; exit 1; }
+          echo "тег $TAG содержится в main"
+
+      # resolve — только чтение на 131: тег → коммит препрода → образы :sha8 есть и прошли препрод.
+      - name: Образы тега на 131 (прошли препрод), без пересборки
+        run: bash .github/scripts/lore-host-deploy.sh resolve
+
+      # SELF-PROVISION-STANDALONE (владелица 14.11.2026). Не мажор — ничего не делает.
+      # Нет GHCR_PUSH_TOKEN на мажоре — BLOCKED и красно (ghcr-publish.sh), не тихий пропуск.
+      - name: Публикация образов мажорного релиза в ghcr.io
+        env:
+          GHCR_PUSH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
+        run: bash .github/scripts/ghcr-publish.sh publish
