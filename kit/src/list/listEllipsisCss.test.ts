@@ -25,3 +25,20 @@ describe('колонка с многоточием не растягивает �
     expect(css).toMatch(/\.sk-list__td\[data-w='fill'\] \{[^}]*width: 100%[^}]*max-width: 0/);
   });
 });
+
+// SPRINT_UXR_S13_KIT4/K4-PASSPORT-NO-LIST-RESET, смоук стенда 22.11.2026 (RFD2-K4RESET, «прокрутка сброшена: 307»).
+// Заголовок записи в колонке «fill» с многоточием — кнопка/ссылка (display: -webkit-box) внутри nowrap-обёртки:
+// у атомарного блока многоточия нет, и он вырастал до полной длины строки (382–637 px в ячейке 65 px). Текст
+// обрезался посреди слова без «…», а сама кнопка торчала за край списка — и любой «показать, если не видно»
+// (фокус с клавиатуры, клик Playwright) центрировал её, сдвигая прокрутку списка под паспортом на ~300 px.
+it('заголовок записи в ячейке с многоточием не шире ячейки и режется «…»', () => {
+  const rule = css.match(/\.sk-list__ellip > \.sk-list__title \{([^}]*)\}/)?.[1] ?? '';
+  expect(rule, 'правило для заголовка внутри обёртки многоточия').not.toBe('');
+  expect(rule).toMatch(/display: block/);
+  expect(rule).toMatch(/max-width: 100%/);
+  expect(rule).toMatch(/overflow: hidden/);
+  expect(rule).toMatch(/text-overflow: ellipsis/);
+  expect(rule).toMatch(/white-space: nowrap/);
+  // раскрытие по касанию возвращает перенос
+  expect(css).toMatch(/\.sk-list__ellip\[data-open='true'\] > \.sk-list__title \{[^}]*white-space: normal/);
+});
