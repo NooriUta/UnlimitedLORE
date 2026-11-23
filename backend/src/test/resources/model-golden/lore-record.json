@@ -22486,12 +22486,42 @@
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
+      }, {
+        "key" : "sprints",
+        "label" : "Спринты",
+        "label_key" : "pp.field.sprints",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "sprint",
+          "rel" : null,
+          "dir" : null
+        },
+        "label_en" : "Sprints",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Sprinty",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Спринты задач, которые PR закрывает: выводятся по пути задача → PR (CLOSED_BY) и задача → спринт (PART_OF), без повтора. Своего ребра спринт → PR нет (HAS_PR снят переносом 1.18) — поле только для чтения; у PR без задач спринтов нет.",
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
       } ],
       "layout" : {
         "body" : [ ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "url", "state", "merged_at", "projects", "head_ref", "base_ref", "pr_number" ]
+          "fields" : [ "url", "state", "merged_at", "projects", "sprints", "head_ref", "base_ref", "pr_number" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ ],
@@ -22763,12 +22793,42 @@
         "write" : null,
         "required_level" : null,
         "required_rules" : [ ]
+      }, {
+        "key" : "sprints",
+        "label" : "Спринты",
+        "label_key" : "pp.field.sprints",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "sprint",
+          "rel" : null,
+          "dir" : null
+        },
+        "label_en" : "Sprints",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Sprinty",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Спринты задач, которые PR закрывает: выводятся по пути задача → PR (CLOSED_BY) и задача → спринт (PART_OF), без повтора. Своего ребра спринт → PR нет (HAS_PR снят переносом 1.18) — поле только для чтения; у PR без задач спринтов нет.",
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ]
       } ],
       "layout" : {
         "body" : [ ],
         "props" : [ {
           "section" : null,
-          "fields" : [ "url", "state", "merged_at", "projects", "head_ref", "base_ref", "pr_number" ]
+          "fields" : [ "url", "state", "merged_at", "projects", "sprints", "head_ref", "base_ref", "pr_number" ]
         } ],
         "parts" : [ ],
         "link_tabs" : [ ],

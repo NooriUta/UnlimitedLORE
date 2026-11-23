@@ -35,6 +35,8 @@ final class LoreRecordFrom {
         RAW,
         /** Список строк; одиночное значение — список из одного, пустые выброшены. */
         LIST,
+        /** MD-05: список строк без повтора, порядок первого появления; вложенный список (путь в два шага) — развёрнут. */
+        DISTINCT_LIST,
         /** Строка без краевых пробелов (разделы текста ADR). */
         TRIM,
         /** Дата — первые 10 символов (ISO-время → день). */
@@ -126,6 +128,7 @@ final class LoreRecordFrom {
             case STR -> LoreRecordValues.str(first);
             case RAW -> first;
             case LIST -> LoreRecordValues.arr(first);
+            case DISTINCT_LIST -> distinctFlat(first);
             case TRIM -> trim(LoreRecordValues.str(first));
             case DATE10 -> date10(LoreRecordValues.str(first));
             case BOOL_YES -> Boolean.TRUE.equals(first) ? "Да" : null;
@@ -256,6 +259,15 @@ final class LoreRecordFrom {
 
     /** Переименование колонки: строка как есть. */
     private static Val s(String key, String column) { return v(key, Transform.STR, column); }
+
+    /** Список строк без повтора; элементы-списки разворачиваются на один уровень. */
+    static List<String> distinctFlat(Object v) {
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        if (v instanceof List<?> l) {
+            for (Object o : l) out.addAll(LoreRecordValues.arr(o));
+        } else out.addAll(LoreRecordValues.arr(v));
+        return new java.util.ArrayList<>(out);
+    }
 
     private static Val list(String key, String column) { return v(key, Transform.LIST, column); }
 
@@ -552,7 +564,9 @@ final class LoreRecordFrom {
             // Проект — поле git_project и ребро BELONGS_TO_PROJECT одним списком (срез сводит их unionall); чипы без повтора.
             list("projects", "git_projects"),
             s("head_ref", "head_ref"),
-            s("base_ref", "base_ref"))),
+            s("base_ref", "base_ref"),
+            // MD-05: спринты PR — через задачи, которые он закрывает (CLOSED_BY → PART_OF); ребра нет, повтор снят.
+            v("sprints", Transform.DISTINCT_LIST, "sprint_ids"))),
         // S4-PRODUCTS-NODE: продукт — статья словаря (ключ code); подпись — label_ru, иначе код.
         // Цвет — колонка color статьи как есть: нет её — null, цвет не выдумывается.
         Map.entry("product", List.of(

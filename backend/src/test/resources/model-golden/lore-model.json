@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "517198510ad5b3b5",
+  "version" : "8681577725f87c9a",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -12800,6 +12800,45 @@
         "property" : "pr_number",
         "property_type" : "INTEGER",
         "source" : "CONFIRMS"
+      }, {
+        "key" : "sprints",
+        "label" : "Спринты",
+        "label_key" : "pp.field.sprints",
+        "kind" : "ref",
+        "group" : "props",
+        "required" : false,
+        "editable" : false,
+        "multi" : true,
+        "ref" : {
+          "type" : "sprint",
+          "rel" : null,
+          "dir" : null
+        },
+        "label_en" : "Sprints",
+        "short_label_en" : null,
+        "definition_en" : null,
+        "description_en" : null,
+        "label_pl" : "Sprinty",
+        "short_label_pl" : null,
+        "definition_pl" : null,
+        "description_pl" : null,
+        "short_label" : null,
+        "definition" : "Спринты задач, которые PR закрывает: выводятся по пути задача → PR (CLOSED_BY) и задача → спринт (PART_OF), без повтора. Своего ребра спринт → PR нет (HAS_PR снят переносом 1.18) — поле только для чтения; у PR без задач спринтов нет.",
+        "description" : null,
+        "layer" : "optional",
+        "historic" : false,
+        "write" : null,
+        "required_level" : null,
+        "required_rules" : [ ],
+        "visibility" : "visible",
+        "display" : {
+          "priority" : 3,
+          "width" : "m",
+          "overflow" : "more"
+        },
+        "property" : null,
+        "property_type" : null,
+        "source" : "SUPPLIES"
       } ],
       "relations" : [ {
         "key" : "projects",
@@ -16451,11 +16490,11 @@
     } ]
   },
   "field_texts" : {
-    "fields" : 251,
+    "fields" : 252,
     "without_definition" : 10,
     "without_label_en" : 0,
     "without_label_pl" : 0,
-    "without_definition_en" : 250
+    "without_definition_en" : 251
   },
   "edge_history" : {
     "fields" : [ "valid_from", "valid_to" ],
