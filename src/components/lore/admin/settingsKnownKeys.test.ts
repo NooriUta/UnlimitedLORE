@@ -11,10 +11,9 @@ const src = SRC['./SettingsTab.tsx'];
 const admin = (l: unknown) => (l as { lore: { admin: Record<string, string> } }).lore.admin;
 
 describe('Настройки: известные ключи app_setting', () => {
-  it('qg.actions_projects в реестре нет: что опрашивать в Actions, задаёт гейт с ребром на проект (AP-DICT-UPSERT-DUP)', () => {
+  it('реестр содержит qg.actions_projects', () => {
     const reg = src.slice(src.indexOf('const KNOWN_SETTINGS'), src.indexOf('export function SettingsTab'));
-    expect(reg).toContain("key: 'charts.layer'");        // положительный контроль: реестр вырезан
-    expect(reg).not.toContain("key: 'qg.actions_projects'");
+    expect(reg).toContain("key: 'qg.actions_projects'");
   });
 
   it('известный ключ редактируем: сохранение через /dict/entry с label_ru и is_active', () => {
@@ -30,7 +29,7 @@ describe('Настройки: известные ключи app_setting', () => 
   });
 
   it('строки редактирования есть в обеих локалях', () => {
-    for (const k of ['settingEdit', 'settingSave', 'settingNotSet']) {
+    for (const k of ['settingEdit', 'settingSave', 'settingNotSet', 'settingQgProjectsDescr', 'settingQgProjectsDef', 'settingQgProjectsHint', 'settingTypeProjects']) {
       expect(admin(ru)[k], `ru ${k}`).toBeTruthy();
       expect(admin(en)[k], `en ${k}`).toBeTruthy();
     }
