@@ -54,8 +54,8 @@ const calls = (f: typeof fetch) => (f as unknown as ReturnType<typeof vi.fn>).mo
 const mount = (f: typeof fetch) => render(<KitLangProvider lang="ru"><AppSettings fetchImpl={f} /></KitLangProvider>);
 
 describe('S7B-31 · модель параметров приложения', () => {
-  it('реестр известных ключей — тот же, что у v1 (AL-38)', () => {
-    expect(KNOWN_SETTINGS.map(k => k.key)).toEqual(['volva.url', 'charts.layer', 'qg.actions_projects', 'md_images_enabled', 'md_image_max_mb']);
+  it('реестр известных ключей — тот же, что у v1 (AL-38), плюс forgejo.url (SELF-PROVISION-STANDALONE, читает gitHost.ts); qg.actions_projects снята — её заменил гейт канала Actions (AP-DICT-UPSERT-DUP)', () => {
+    expect(KNOWN_SETTINGS.map(k => k.key)).toEqual(['volva.url', 'forgejo.url', 'charts.layer', 'md_images_enabled', 'md_image_max_mb']);
   });
 
   it('известный ключ без записи — null («не задано»); неопознанные — только активные', () => {

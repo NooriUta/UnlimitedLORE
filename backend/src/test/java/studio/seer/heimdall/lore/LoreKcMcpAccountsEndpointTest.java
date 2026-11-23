@@ -32,6 +32,39 @@ class LoreKcMcpAccountsEndpointTest {
         .then().statusCode(409).body("detail", containsString("ghost"));
     }
 
+    /** 1.18.2 «гирлянда»: harness из модели — списком, без KC. */
+    @Test
+    void harnessListComesFromModel() {
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/kc/harness")
+        .then().statusCode(200).body("harness.code", org.hamcrest.Matchers.hasItem("claude-code"));
+    }
+
+    /** KC тестового окружения не настроен — срез отвечает деревом и честным «не смогли проверить», а не пустотой. */
+    @Test
+    void accountsTreeWithoutKcIsUnknownNotEmpty() {
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/kc/harness/claude-code/accounts")
+        .then().statusCode(200)
+            .body("kc.state", equalTo("not_configured"))
+            .body("nodes[0].role", equalTo("full"))
+            .body("nodes[0].account.state", equalTo("unknown"));
+    }
+
+    @Test
+    void accountsTreeOfUnknownHarnessIs404() {
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/kc/harness/ghost/accounts")
+        .then().statusCode(404);
+    }
+
+    @Test
+    void accountsTreeIsAdminOnly() {
+        given().header("X-Seer-Role", "viewer")
+        .when().get("/lore/kc/harness/claude-code/accounts")
+        .then().statusCode(403);
+    }
+
     @Test
     void allowedRoleGoesOnToKcBridge() {
         // Правило пропустило — дальше честное «KC не настроен» тестового окружения, а не отказ правилом.

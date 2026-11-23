@@ -9,9 +9,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prunePlan, versionsFromAssets } from './prune-plan.mjs';
-import { FORGEJO_MCP_ARCHIVE } from './forgejo-mcp-image.mjs';
+import { FORGEJO_MCP_ARCHIVE, FORGEJO_MCP_LICENSE, FORGEJO_MCP_SRC_ARCHIVE } from './forgejo-mcp-image.mjs';
+import { MINILORE_ARCHIVE } from './minilore-image.mjs';
 
 const FMCP_TAR = path.basename(FORGEJO_MCP_ARCHIVE);
+// Образ сервера miniLORE — тем же каталогом images/ версии (22.11.2026): в пакете он зовётся без реестра,
+// адрес реестра остаётся в трубе. Без этой строки архив образа молча не выкладывался бы.
+const MINILORE_TAR = path.basename(MINILORE_ARCHIVE);
+// Исходник forgejo-mcp и его лицензия (владелица 21.11.2026: «исходник кладём прямо в пакет установки») — каталогом src/.
+const FMCP_SRC = [path.basename(FORGEJO_MCP_SRC_ARCHIVE), path.basename(FORGEJO_MCP_SRC_ARCHIVE) + '.sha256', path.basename(FORGEJO_MCP_LICENSE)];
 
 const VERSION_RE = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 
@@ -35,6 +41,8 @@ function published(name, version) {
   }
   // Образ forgejo-mcp архивом docker save (20.11.2026: «не публиковать, включить в инсталятор») — каталогом images/ версии.
   if (name === FMCP_TAR || name === FMCP_TAR + '.sha256') return 'images/' + name;
+  if (name === MINILORE_TAR || name === MINILORE_TAR + '.sha256') return 'images/' + name;
+  if (FMCP_SRC.includes(name)) return 'src/' + name;
   // Архив исходников LORE для собственной сборки (20.11.2026: «архивом наш проект для собственной сборки если что») —
   // каталогом src/ версии (source-archive.mjs); версия в имени обязана совпасть с каталогом.
   const src = /^lore-(.+)\.tar\.gz(\.sha256)?$/.exec(name);
@@ -113,11 +121,11 @@ async function main() {
   const msis = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => /^lore-installer-.+-win-x64\.msi$/.test(n)) : [];
   const files = ['lore-migrate.mjs', 'lore-migrate', 'lore-migrate.exe', ...msis].filter(n => fs.existsSync(path.join(dir, n)))
     .map(n => ({ name: n, bytes: fs.readFileSync(path.join(dir, n)) }));
-  for (const n of [FORGEJO_MCP_ARCHIVE, FORGEJO_MCP_ARCHIVE + '.sha256']) {
+  for (const n of [FORGEJO_MCP_ARCHIVE, FORGEJO_MCP_ARCHIVE + '.sha256', MINILORE_ARCHIVE, MINILORE_ARCHIVE + '.sha256']) {
     if (fs.existsSync(path.join(dir, n))) files.push({ name: path.basename(n), bytes: fs.readFileSync(path.join(dir, n)) });
   }
   const srcDir = path.join(dir, 'src');
-  if (fs.existsSync(srcDir)) for (const n of fs.readdirSync(srcDir).filter(n => /^lore-.+\.tar\.gz(\.sha256)?$/.test(n)).sort()) files.push({ name: n, bytes: fs.readFileSync(path.join(srcDir, n)) });
+  if (fs.existsSync(srcDir)) for (const n of fs.readdirSync(srcDir).filter(n => /^lore-.+\.tar\.gz(\.sha256)?$/.test(n) || FMCP_SRC.includes(n)).sort()) files.push({ name: n, bytes: fs.readFileSync(path.join(srcDir, n)) });
   if (!files.length) throw new Error('в ' + dir + ' нет файлов установщика — сначала build-installer.mjs или готовый MSI');
   const plan = publishPlan({ base: process.env.KKREPO_BASE || 'http://192.168.3.131:8081/repository', repo: process.env.KKREPO_REPO || 'lore-installer', version, files });
   const user = process.env.KKREPO_USER, pass = process.env.KKREPO_PASSWORD;

@@ -41,6 +41,10 @@ public class LoreKcResource extends LoreResourceBase {
     @jakarta.inject.Inject
     KcBridge bridge;
 
+    /** 1.18.2: запись секрета учётки MCP в Infisical после выпуска и смены секрета. */
+    @jakarta.inject.Inject
+    McpSecretsWriter mcpSecrets;
+
     @ConfigProperty(name = "quarkus.oidc.enabled", defaultValue = "false")
     boolean oidcEnabled;
 
@@ -262,36 +266,49 @@ public class LoreKcResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         }
         try {
-            String t = adminToken();
-            java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
-                "SELECT kc_sub, login, display_name, name_source FROM KnowUser", Map.of());
-            KcUserNames.Plan plan = KcUserNames.planFromKc(call(t), graphUsers);
-            boolean dry = Boolean.TRUE.equals(dryRun);
-            // Запись, не нашедшая строку (человека удалили между чтением и записью), — промах, а не «обновлено»
-            // (WriteCount, сторож UpdateAffectedRowsGuardTest).
-            java.util.List<String> missed = new java.util.ArrayList<>();
-            if (!dry)
-                for (KcUserNames.Update u : plan.updates())
-                    if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
-                            "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
-                            Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
-                            .await().indefinitely()))
-                        missed.add(u.kcSub());
+            Map<String, Object> summary = runNamesSync(Boolean.TRUE.equals(dryRun));
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
-            out.put("dry_run", dry);
+            out.put("dry_run", Boolean.TRUE.equals(dryRun));
             out.put("skipped", false);
-            Map<String, Object> summary = dry ? plan.summary() : plan.summaryAfterWrite(missed);
             out.putAll(summary);
-            if (!dry) {
-                namesSyncedAt = now;
-                namesLastSummary = summary;
-                out.put("synced_at", now.toString());
-            }
+            if (!Boolean.TRUE.equals(dryRun)) out.put("synced_at", String.valueOf(namesSyncedAt));
             return noStore(Response.ok(out));
         } catch (KcOps.KcFailed e) { return kcPageFailed(e); }
         catch (Exception e) { return upstream(e); }
+    }
+
+    /** Настроен ли мост — для фоновой сверки {@link LoreKcNamesPoller}: ей отвечать 503 некому. */
+    boolean namesSyncConfigured() { return configured(); }
+
+    /**
+     * Сверка имён: план по KC и запись. Одна точка входа для кнопки и для фона
+     * (владелица 22.11.2026: «сервер должен обновлять сам фоново с kc данные, а не по кнопке»),
+     * чтобы правила не разъехались по двум копиям. Роль здесь не проверяется — это делает вызывающий:
+     * у эндпоинта {@code requireAdmin}, у фона человека нет вовсе.
+     */
+    Map<String, Object> runNamesSync(boolean dryRun) throws Exception {
+        String t = adminToken();
+        java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
+            "SELECT kc_sub, login, display_name, name_source FROM KnowUser", Map.of());
+        KcUserNames.Plan plan = KcUserNames.planFromKc(call(t), graphUsers);
+        // Запись, не нашедшая строку (человека удалили между чтением и записью), — промах, а не «обновлено»
+        // (WriteCount, сторож UpdateAffectedRowsGuardTest).
+        java.util.List<String> missed = new java.util.ArrayList<>();
+        if (!dryRun)
+            for (KcUserNames.Update u : plan.updates())
+                if (WriteCount.missed(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        // Логин фиксируется ДО смены имени: у записей до V92 он жил в display_name.
+                        "UPDATE KnowUser SET login = coalesce(login, :l, display_name), display_name = :n, name_source = 'kc' WHERE kc_sub = :s",
+                        Map.of("l", u.login() == null ? u.kcSub() : u.login(), "n", u.name(), "s", u.kcSub())))
+                        .await().indefinitely()))
+                    missed.add(u.kcSub());
+        Map<String, Object> summary = dryRun ? plan.summary() : plan.summaryAfterWrite(missed);
+        if (!dryRun) {
+            namesSyncedAt = java.time.Instant.now();
+            namesLastSummary = summary;
+        }
+        return summary;
     }
 
     public record KcUserCreate(String username, String email) {}
@@ -452,12 +469,84 @@ public class LoreKcResource extends LoreResourceBase {
             out.put("secret_note", "показывается один раз: LORE его не хранит. Положите в Infisical или в конфиг машины сразу.");
             // OH-MCP-HOSTED-SWITCH: ключ, под которым секрет кладут (LORE_MCP_SECRET_VAR у подключения).
             if (secretKey != null) out.put("secret_key", secretKey);
+            // 1.18.2: и сразу пишем его в Infisical (lore-mcp-secrets), если запись настроена; сбой — секрет всё равно в ответе.
+            McpSecretsInfisical.putInto(out, mcpSecrets.write(secretKey, secret));
             out.put("roles_copied", copied);
             if (rolesNote != null) out.put("roles_note", rolesNote);
             out.put("token_check", check);
             return noStore(Response.ok(out));
         } catch (KcCallFailed e) { return kcRefused(e.response); }
         catch (Exception e) { return upstream(e); }
+    }
+
+    // ── «Гирлянда» учёток harness (OH-MCP-HOSTED-SWITCH, 1.18.2) ───────────────
+
+    /** Harness из модели (agent_profiles.harness): код, главная роль, суффикс. KC не нужен. */
+    @GET
+    @Path("harness")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response listHarness(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        LoreModelAgentProfiles.AgentProfiles model = LoreModelFile.content().agentProfiles();
+        List<Map<String, Object>> hs = new java.util.ArrayList<>();
+        model.harness().forEach((code, h) -> {
+            Map<String, Object> o = new java.util.LinkedHashMap<>();
+            o.put("code", code);
+            o.put("main", h.main());
+            o.put("suffix", h.suffix());
+            hs.add(o);
+        });
+        return noStore(Response.ok(Map.of("harness", hs)));
+    }
+
+    /**
+     * Учётки одного harness деревом ролей ({@link HarnessAccounts}): что выпущено в Keycloak, можно ли выпустить,
+     * когда сменён секрет, «перешёл?». KC не настроен / недоступен — 200 с честным {@code kc.state} и
+     * {@code account.state = unknown}, а не пустое дерево. Секретов в ответе нет.
+     */
+    @GET
+    @Path("harness/{harness}/accounts")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response harnessAccounts(@PathParam("harness") String harness, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        LoreModelAgentProfiles.AgentProfiles model = LoreModelFile.content().agentProfiles();
+        if (LoreModelAgentProfiles.harness(model, harness) == null)
+            return noStore(Response.status(404).entity(new LoreError("NOT_FOUND",
+                "harness «" + harness + "»: в модели (agent_profiles.harness) его нет")));
+        HarnessAccounts.KcView kc;
+        if (!configured()) {
+            kc = HarnessAccounts.KcView.notConfigured("мост Keycloak не настроен: нет " + bridge.missingConfig());
+        } else {
+            try {
+                String t = adminToken();
+                kc = HarnessAccounts.KcView.checked(cid -> {
+                    try {
+                        HttpResponse<String> r = kc("GET", "/clients?clientId=" + URLEncoder.encode(cid, StandardCharsets.UTF_8), null, t);
+                        if (r.statusCode() != 200) {
+                            String hint = LoreKcAgentClient.forbiddenHint(r.statusCode());
+                            return HarnessAccounts.Lookup.failed(hint != null ? hint : "Keycloak ответил " + r.statusCode());
+                        }
+                        io.vertx.core.json.JsonArray a = new io.vertx.core.json.JsonArray(r.body());
+                        // поиск KC по clientId — подстрочный: берём точное совпадение
+                        for (int i = 0; i < a.size(); i++)
+                            if (cid.equals(a.getJsonObject(i).getString("clientId")))
+                                return HarnessAccounts.Lookup.found(a.getJsonObject(i).encode());
+                        return HarnessAccounts.Lookup.absent();
+                    } catch (Exception e) {
+                        return HarnessAccounts.Lookup.failed("Keycloak не ответил: " + e.getMessage());
+                    }
+                });
+            } catch (Exception e) {
+                kc = HarnessAccounts.KcView.unavailable("Keycloak недоступен: " + e.getMessage());
+            }
+        }
+        Map<String, Object> out = HarnessAccounts.build(model, harness, kc,
+            (cid, rotatedAt) -> KcSecretRotation.switched(rotatedAt == null ? List.of() : agentSessions(cid), rotatedAt),
+            java.time.Instant.now());
+        out.put("infisical", McpSecretsInfisical.missing(mcpSecrets.config()) == null ? "configured" : "not_configured");
+        return noStore(Response.ok(out));
     }
 
     /** S7B-20: {@code dry_run} — только дифф «включена → выключена» (или обратно). */
@@ -828,6 +917,10 @@ public class LoreKcResource extends LoreResourceBase {
                     "Keycloak ответил без значения секрета — старый, скорее всего, уже недействителен; выпустите новый")));
             // v1 (AgentsTab) читает секрет из поля value — тот же единственный ответ, не вторая выдача.
             out.put("value", out.get("secret"));
+            // 1.18.2: новый секрет — в Infisical тем же ключом, что при выпуске (учётки по схеме harness).
+            String rotKey = LoreModelAgentProfiles.secretKeyOfClient(LoreModelFile.content().agentProfiles(), clientId);
+            if (rotKey != null) out.put("secret_key", rotKey);
+            McpSecretsInfisical.putInto(out, mcpSecrets.write(rotKey, String.valueOf(out.get("secret"))));
             // S7B-19: сохранил ли KC прежний секрет — по клиенту, перечитанному ПОСЛЕ ротации.
             HttpResponse<String> after = kc("GET", "/clients/" + uuid, null, t);
             out.putAll(KcSecretRotation.rotationOutcome(after.statusCode() == 200 ? after.body() : null, java.time.Instant.now()));

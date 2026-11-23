@@ -74,6 +74,9 @@ fi
 API="http://$GW:2480/api/v1"
 acurl() { curl -s -m 600 -u "root:$ARCADEDB_ROOT_PASSWORD" -H 'Content-Type: application/json' "$@"; }
 server_cmd() { acurl -X POST -d "{\"command\":\"$1\"}" "$API/server"; }
+model_n() { # model_n <база> → число отметок модели LoreModelSchema (модельная схема, 1.18+)
+  acurl -X POST -d '{"language":"sql","command":"SELECT count(*) AS n FROM LoreModelSchema"}' "$API/command/$1" | tr -d '\n ' | sed -nE 's/.*"n":([0-9]+).*/\1/p'
+}
 query_ver() { # query_ver <база> → max(version)
   acurl -X POST -d '{"language":"sql","command":"SELECT max(version) AS v FROM LoreSchemaVersion"}' "$API/command/$1" \
     | tr -d '\n ' | sed -nE 's/.*"v":([0-9]+).*/\1/p'
@@ -104,7 +107,6 @@ fi
 # LoreModelSchema в новой базе. Откат — обратное переименование.
 if [ -n "$LOCAL_SOURCE" ]; then
   case "$dbs" in *"\"$LOCAL_SOURCE\""*) ;; *) die "базы $LOCAL_SOURCE на 131 нет — сначала перенос (lore-migration-snapshot.yml, action=migrate)" ;; esac
-  model_n() { acurl -X POST -d '{"language":"sql","command":"SELECT count(*) AS n FROM LoreModelSchema"}' "$API/command/$1" | tr -d '\n ' | sed -nE 's/.*"n":([0-9]+).*/\1/p'; }
   src_n="$(model_n "$LOCAL_SOURCE")"
   [ -n "$src_n" ] && [ "$src_n" -gt 0 ] || die "в $LOCAL_SOURCE нет отметки LoreModelSchema — это не база, собранная из модели; не ставлю"
   echo "источник $LOCAL_SOURCE: отметка модели есть ($src_n)"
@@ -167,6 +169,14 @@ lsum="$(sha256sum "$SNAP" | awk '{print $1}')"
 echo "снимок на 131: $SNAP ($(du -h "$SNAP" | cut -f1)), sha256 совпал"
 src_ver="$(r "cd $REMOTE_BACKEND_DIR && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 60 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"SELECT max(version) AS v FROM LoreSchemaVersion\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'" | tr -d '\n ' | sed -nE 's/.*"v":([0-9]+).*/\1/p')"
 echo "схема прода: v${src_ver:-?}"
+# С 1.18 схема модельная: LoreSchemaVersion нет, номер пуст — тогда сверяем отметку модели LoreModelSchema,
+# как ветка local_source. Без этого сверка не проходила НИКОГДА и оставляла препрод остановленным (run 40542, 23.11.2026).
+src_model=""
+if [ -z "$src_ver" ]; then
+  src_model="$(r "cd $REMOTE_BACKEND_DIR && docker compose run --rm --no-deps -T --entrypoint sh lore-migrate -c 'curl -s -m 60 -u \"\$ARCADEDB_USER:\$ARCADEDB_ROOT_PASSWORD\" -H \"Content-Type: application/json\" -d \"{\\\"language\\\":\\\"sql\\\",\\\"command\\\":\\\"SELECT count(*) AS n FROM LoreModelSchema\\\"}\" \"\$MART_ARCADE_URL/api/v1/command/$SOURCE_DB\"'" | tr -d '\n ' | sed -nE 's/.*"n":([0-9]+).*/\1/p')"
+  echo "схема прода модельная: отметок LoreModelSchema ${src_model:-?}"
+  [ -n "$src_model" ] && [ "$src_model" -gt 0 ] || die "у прода нет ни номера схемы, ни отметки модели — снимок не заливаю"
+fi
 
 # ── 3. замена базы препрода ─────────────────────────────────────────────────
 restart_preprod() { [ -n "$pcid" ] && docker start "$pcid" >/dev/null && echo "бэкенд препрода запущен обратно"; return 0; }
@@ -193,6 +203,15 @@ echo "open database: $(printf '%s' "$r_open" | head -c 200)"
 # ── 4. сверка ───────────────────────────────────────────────────────────────
 dst_ver="$(query_ver "$TARGET_DB")"
 echo "схема $TARGET_DB на 131: v${dst_ver:-?}"
+if [ -n "$src_model" ]; then
+  dst_model="$(model_n "$TARGET_DB")"
+  echo "отметок модели в $TARGET_DB: ${dst_model:-?} (у прода $src_model)"
+  [ -z "$dst_ver" ] && [ "${dst_model:-}" = "$src_model" ] \
+    || die "отметка модели снимка (${dst_model:-?}) ≠ прода ($src_model) — препрод НЕ запускаю, разберитесь руками"
+  restart_preprod
+  echo "готово: $TARGET_DB = снимок $SOURCE_DB (модельная схема, отметок $src_model) от $TS; прежняя база — ${TARGET_DB}_bak_$TS"
+  exit 0
+fi
 [ -n "$dst_ver" ] && [ "$dst_ver" = "${src_ver:-}" ] || die "версия схемы снимка (v${dst_ver:-?}) ≠ прода (v${src_ver:-?}) — препрод НЕ запускаю, разберитесь руками"
 restart_preprod
 echo "готово: $TARGET_DB = снимок $SOURCE_DB (v$dst_ver) от $TS; прежняя база — ${TARGET_DB}_bak_$TS"

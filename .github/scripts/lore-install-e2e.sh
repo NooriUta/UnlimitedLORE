@@ -64,7 +64,7 @@ plan() {
   echo "  install  lore-migrate install-bundle (пакет установки из бинаря, командный режим) → install.sh --selftest → install.sh --build-from-source --files none из src/lore-$V.tar.gz, вход выключен, без файлов, порт $BIND:$PORT"
   echo "  probe    свежая установка: /lore/version — версия пакета (коммит ${V##*.}); /lore/model, seed_drift=false; списки пусты честно (200, rows []); загрузка ассета — 503 «хранилище файлов не подключено»; schema_version — модель; organizations, repositories, project_prs — 200 и пусто"
   echo "  migrate  model-migration-run.sh STAGE=full: ${MIG_SRC_DB:-<MIG_SRC_DB>} → $DST в ArcadeDB установки, бинарь пакета, два прогона и отпечатки"
-  echo "  pr-data  «Дотянуть данные PR» из git-хоста (Forgejo; GitHub/GitLab потом): план «без заголовка N, дотянется M» → подтверждение → отчёт поимённо — шаг предусмотрен, код после 1.18 (SPEC-LORE-INSTALLER-PIPELINE)"
+  echo "  pr-data  «Дотянуть данные PR» из git-хоста: пробный прогон lore-migrate pr-backfill --dry-run («без заголовка N, дотянулось бы M»); мост не настроен — пропуск с причиной"
   echo "  switch   LORE_DB=$DST, LORE_MIGRATE=false (база из модели 1.18), перезапуск lore-backend"
   echo "  probe    /lore/version, /lore/slice/open_tasks, /lore/slice/organizations и /lore/slice/repositories — не пусты"
 }
@@ -203,6 +203,28 @@ switch() {
   compose up -d --force-recreate lore-backend >/dev/null || die "lore-backend не перезапустился"
 }
 
+# «Дотянуть данные PR» (владелица 21.11: «ок и шагом» · «в инсталляции»). Команда появилась в 1.18.2 (#1730),
+# поэтому заглушка снята. Прогон — ПРОБНЫЙ (--dry-run): труба меряет, сколько PR дотянулось бы, и ничего не пишет.
+# Мост не настроен (у установки нет токена git-хоста) — это законный исход, а не падение: шаг говорит причину
+# и идёт дальше. Непредвиденный отказ — красный.
+pr_data() {
+  [ -x "$BIN" ] || die "нет бинаря пакета — сначала fetch"
+  wait_up
+  local out="$WORK/report/pr-backfill.txt" rc=0
+  mkdir -p "$WORK/report"
+  LORE_TOKEN="${E2E_LORE_TOKEN:-}" "$BIN" pr-backfill --url "$(web)" --dry-run > "$out" 2>&1 || rc=$?
+  if [ "$rc" = 0 ]; then
+    note "pr-data: пробная дотяжка — $(grep -m1 '^PR:' "$out" || echo 'отчёт в report/pr-backfill.txt')"
+    return 0
+  fi
+  if grep -q 'FORGEJO_NOT_CONFIGURED' "$out"; then
+    note "pr-data: мост git-хоста в установке не настроен (FORGEJO_API_TOKEN не задан) — дотягивать неоткуда, пропущено"
+    return 0
+  fi
+  cat "$out"
+  die "pr-data: пробная дотяжка PR упала не по причине «мост не настроен» — отчёт в $out"
+}
+
 probe() {
   wait_up
   echo "/lore/version: $(get /lore/version)"
@@ -221,9 +243,7 @@ case "$STAGE" in
   install) install_ ;;
   probe-fresh) probe_fresh ;;
   migrate) migrate ;;
-  # Шаг предусмотрен спекой (владелица 21.11: «ок и шагом» · «в инсталляции»), код — после 1.18. Не притворяется
-  # выполненным: говорит, что не реализован, и выходит с кодом 0 только потому, что в трубу пока не включён.
-  pr-data) note "pr-data: «Дотянуть данные PR» — шаг предусмотрен, ещё не реализован (после 1.18)" ;;
+  pr-data) pr_data ;;
   switch) switch ;;
   probe) probe ;;
   all) plan; fetch; install_; probe_fresh; migrate; switch; probe ;;

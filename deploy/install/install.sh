@@ -3,9 +3,12 @@
 #
 #   install.sh [--dir DIR] --version vX.Y.0 [--build] [--port N] [--bind ADDR] [--dry-run]
 #   install.sh [--dir DIR] --src DIR [--port N] [--bind ADDR] [--dry-run]   — сборка из рабочего чекаута (разработка)
-#     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; образ forgejo-mcp — из images/ пакета
+#     … [--forgejo install|own|none] [--forgejo-url URL] [--forgejo-mcp-build] — Forgejo; forgejo-mcp — образ из images/ или исходник из src/ пакета
 #   install.sh [--dir DIR] --build-from-source [--port N] [--bind ADDR] [--dry-run] — сборка из архива исходников пакета src/lore-<версия>.tar.gz
 #     … [--files none|s3] — хранилище файлов: без файлов (по умолчанию) или своё S3 (S3_* в окружении или .env)
+#     … [--minilore install|none] — сервер miniLORE (мобильный монитор сессий) в этой же установке; по умолчанию не ставится
+#     … [--minilore-client-id <клиент>] [--minilore-owner <логин>] — обязательны при --minilore install: без них сервер
+#         miniLORE не стартует и уходит в бесконечный перезапуск
 #   install.sh --verify    [--dir DIR]           — только проверки готовой установки
 #   install.sh --uninstall [--purge] [--dir DIR] — остановить (данные остаются; --purge — стереть)
 #   install.sh --selftest                        — самопроверка разбора аргументов и плана, без docker
@@ -26,7 +29,7 @@
 # (D-2026-LORE-AUTO-BOOTSTRAP-CORE), шаги миграций добирают остальное.
 #
 # Окружение (необязательно): ARCADEDB_ROOT_PASSWORD — задать свой; S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY — своё S3 (--files s3)
-# пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE — готовые
+# пароли вместо сгенерированных; LORE_BACKEND_IMAGE, LORE_WEB_IMAGE, LORE_MCP_IMAGE — готовые
 # образы; WAIT_SECS (900) — сколько ждать первого старта; CURL_IMAGE; GHCR_OWNER.
 #
 # Версии — ТОЛЬКО мажорные vX.Y.0 (решение владелицы 14.11.2026; то же правило, что у
@@ -49,7 +52,7 @@ MODE="install"
 PURGE=0
 DRY=0
 WAIT_SECS="${WAIT_SECS:-900}"
-CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:latest}"
+CURL_IMAGE="${CURL_IMAGE:-${LORE_IMAGE_REGISTRY:-}curlimages/curl:latest}"
 # Forgejo (MIG-04, владелица 20.11.2026). Пусто — выбор в .env не трогается (по умолчанию без Forgejo, как раньше).
 FORGEJO=""
 FORGEJO_URL_ARG=""
@@ -59,16 +62,29 @@ FILES=""
 # MIG-01: свежая установка — база из модели (lore-migrate init-empty), шаги V не катятся. FRESH=1 — .env ещё не было.
 FRESH=0
 FRESH_DB="${LORE_FRESH_DB:-lore}"
-MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-debian:bookworm-slim}"
-FORGEJO_VERSION_DEFAULT="15.0.5"   # та же версия, что на нашем стенде
-# forgejo-mcp: коммит AIDA/forgejo-mcp, образ и архив в пакете — те же, что в docker-compose.install.yml и
-# scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs).
-FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:bbe9f59c"
-FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-bbe9f59c.tar"
+MIGRATE_RUNNER_IMAGE="${MIGRATE_RUNNER_IMAGE:-${LORE_IMAGE_REGISTRY:-}debian:bookworm-slim}"
+# Образ для запуска lore-migrate.mjs (когда исполняемого файла нет — он едет отдельным вложением релиза).
+MIGRATE_NODE_IMAGE="${MIGRATE_NODE_IMAGE:-${LORE_IMAGE_REGISTRY:-}node:26-alpine}"
+FORGEJO_VERSION_DEFAULT="17.0.2"   # версия Forgejo, которую ставит пакет
+# forgejo-mcp: коммит, образ, архив образа и исходник в пакете — те же, что в docker-compose.install.yml и
+# scripts/model-migration/forgejo-mcp-image.mjs (сверяет forgejo-mcp-image.test.mjs). Сверка — по .sha256 рядом.
+MINILORE=""                       # --minilore install|none: сервер miniLORE в этой установке (по умолчанию не ставится)
+MINILORE_CLIENT_ID_ARG=""         # --minilore-client-id: клиент приложения miniLORE в Keycloak владельца (обязателен при install)
+MINILORE_OWNER_ARG=""             # --minilore-owner: имя владельца, чьи сессии показывает монитор (обязателен при install)
+# Образ сервера miniLORE — ЛОКАЛЬНОЕ имя, без реестра. Адрес нашего реестра в пакете держать нельзя: пакет едет
+# чужим людям, и сторож noBakedHosts это ловит (поймал меня же 22.11.2026). Сам образ кладётся в пакет архивом
+# images/minilore-srv-<версия>.tar, как у forgejo-mcp; свой образ задаётся переменной MINILORE_IMAGE.
+MINILORE_IMAGE_DEFAULT="minilore-srv:0.4.19"   # версия сервера miniLORE; шлюз и приложение — следующей версией
+MINILORE_ARCHIVE_REL="images/minilore-srv-0.4.19.tar"
+FORGEJO_MCP_IMAGE_DEFAULT="lore-install-forgejo-mcp:e7d57dee"
+FORGEJO_MCP_ARCHIVE_REL="images/forgejo-mcp-e7d57dee.tar"
+FORGEJO_MCP_SRC_ARCHIVE_REL="src/forgejo-mcp-e7d57dee.tar.gz"
 FORGEJO_MCP_BUILD=0
 # Сборка из архива исходников пакета (MIG-04, владелица 20.11.2026: «архивом наш проект для собственной сборки если
 # что»): src/lore-<версия>.tar.gz и .sha256 рядом с install.sh (или LORE_SRC_ARCHIVE). Без флага — как раньше.
 FROM_SOURCE=0
+# MCP (1.18.2): причина, по которой lore-mcp не поднимается (нет образа); пусто — поднимается вместе со стеком.
+MCP_OFF=""
 SRC_ARCHIVE=""
 SRC_TAG=""
 
@@ -85,7 +101,9 @@ default_images() {
   [ -n "$VERSION" ] && [ "$BUILD" = 0 ] || return 0
   : "${LORE_BACKEND_IMAGE:=ghcr.io/$GHCR_OWNER/lore-backend:$VERSION}"
   : "${LORE_WEB_IMAGE:=ghcr.io/$GHCR_OWNER/lore-web:$VERSION}"
-  export LORE_BACKEND_IMAGE LORE_WEB_IMAGE
+  # MCP (1.18.2) — тот же мажор в ghcr; в выпусках до 1.18.2 его там нет — тогда images() говорит это громко.
+  : "${LORE_MCP_IMAGE:=ghcr.io/$GHCR_OWNER/lore-mcp:$VERSION}"
+  export LORE_BACKEND_IMAGE LORE_WEB_IMAGE LORE_MCP_IMAGE
 }
 
 # Команда, меняющая систему: в --dry-run только печатается.
@@ -96,13 +114,16 @@ run() {
 parse_args() {
   while [ $# -gt 0 ]; do
     case "$1" in
-      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files)
+      --dir|--version|--src|--port|--bind|--forgejo|--forgejo-url|--files|--minilore|--minilore-client-id|--minilore-owner)
         [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#--}" = "$2" ] || die "у $1 нет значения" 2
         case "$1" in
           --dir) DIR="$2" ;; --version) VERSION="$2" ;; --src) SRC="$2" ;;
           --port) PORT="$2" ;; --bind) BIND="$2" ;;
           --forgejo) FORGEJO="$2" ;; --forgejo-url) FORGEJO_URL_ARG="$2" ;;
           --files) FILES="$2" ;;
+          --minilore) MINILORE="$2" ;;
+          --minilore-client-id) MINILORE_CLIENT_ID_ARG="$2" ;;
+          --minilore-owner) MINILORE_OWNER_ARG="$2" ;;
         esac
         shift 2 ;;
       --uninstall) MODE="uninstall"; shift ;;
@@ -138,7 +159,26 @@ parse_args() {
       FORGEJO_URL_ARG="${FORGEJO_URL_ARG%/}" ;;
     *) die "--forgejo: install (поставить Forgejo $FORGEJO_VERSION_DEFAULT), own (свой Forgejo) или none" 2 ;;
   esac
+  case "$MINILORE" in
+    ""|install|none) ;;
+    *) die "--minilore: install (поставить сервер miniLORE $MINILORE_IMAGE_DEFAULT) или none" 2 ;;
+  esac
   case "$DIR" in /*) ;; *) DIR="$(pwd)/$DIR" ;; esac
+  # miniLORE: клиент приложения и владелец ОБЯЗАТЕЛЬНЫ при установке (находка прогона на чужой машине 22.11.2026).
+  # Без них сервер не стартует вообще — «Failed to load config value of type class java.lang.String for:
+  # minilore.app.client-id» и бесконечный перезапуск контейнера. Раньше тут было предупреждение: установка
+  # «проходила», а монитор крутился в рестарте, и человек узнавал об этом сам, разбирая журналы.
+  # Значение берём из ключа, из окружения или из уже лежащего .env — в этом порядке.
+  if [ "$MINILORE" = install ]; then
+    MINILORE_CLIENT_ID_ARG="${MINILORE_CLIENT_ID_ARG:-${MINILORE_APP_CLIENT_ID:-$(env_get MINILORE_APP_CLIENT_ID "$DIR/.env" 2>/dev/null)}}"
+    MINILORE_OWNER_ARG="${MINILORE_OWNER_ARG:-${MINILORE_OWNER:-$(env_get MINILORE_OWNER "$DIR/.env" 2>/dev/null)}}"
+    local mmiss=""
+    [ -n "$MINILORE_CLIENT_ID_ARG" ] || mmiss="$mmiss MINILORE_APP_CLIENT_ID (--minilore-client-id)"
+    [ -n "$MINILORE_OWNER_ARG" ] || mmiss="$mmiss MINILORE_OWNER (--minilore-owner)"
+    [ -z "$mmiss" ] || die "--minilore install: не заданы$mmiss. Без них сервер miniLORE не стартует и уходит в бесконечный перезапуск. Клиент приложения заводится в вашем Keycloak: public, PKCE S256, redirect pro.seidrstudio.minilore://auth/callback; владелец — имя человека, чьи сессии показывает монитор" 2
+  else
+    [ -z "$MINILORE_CLIENT_ID_ARG$MINILORE_OWNER_ARG" ] || die "--minilore-client-id и --minilore-owner — только вместе с --minilore install" 2
+  fi
   case "$FILES" in
     ""|none) ;;
     s3)
@@ -156,11 +196,18 @@ parse_args() {
 merge_profiles() { # текущие-профили режим
   local out="" p
   for p in $(printf '%s' "$1" | tr ',' ' '); do
-    case "$p" in forgejo|forgejo-mcp) ;; *) out="${out:+$out,}$p" ;; esac
+    case "$p" in forgejo|forgejo-mcp|minilore) ;; *) out="${out:+$out,}$p" ;; esac
   done
   case "$2" in
     install) out="${out:+$out,}forgejo,forgejo-mcp" ;;
     own)     out="${out:+$out,}forgejo-mcp" ;;
+  esac
+  # miniLORE — свой выбор, не зависящий от Forgejo: профиль добавляется, когда его попросили,
+  # и сохраняется при повторном запуске (установка — это и обновление).
+  case "$MINILORE" in
+    install) out="${out:+$out,}minilore" ;;
+    none)    ;;
+    *)       case ",$1," in *",minilore,"*) out="${out:+$out,}minilore" ;; esac ;;
   esac
   printf '%s' "$out"
 }
@@ -174,6 +221,31 @@ forgejo_env() { # текущие-профили
     none)    printf 'FORGEJO_URL=\nFORGEJO_BASE_OVERRIDE=\n' ;;
   esac
 }
+# Что выбор miniLORE пишет в .env. Клиент приложения и владельца НЕ подставляем: у разработчика эти значения
+# свои, и тихо подставить их значит увести установку в чужой Keycloak под чужим именем. Имён разработчика нет
+# и в этом файле: пакет едет чужим людям, и сторож noBakedHosts запрещает их в deploy/install/** целиком.
+minilore_env() {
+  case "$MINILORE" in
+    install)
+      printf 'MINILORE_IMAGE=%s\n' "$MINILORE_IMAGE_DEFAULT"
+      # Значения владельца — свои, из ключей запуска или окружения; пустыми они сюда не доходят (parse_args отказывает).
+      printf 'MINILORE_APP_CLIENT_ID=%s\n' "$MINILORE_CLIENT_ID_ARG"
+      printf 'MINILORE_OWNER=%s\n' "$MINILORE_OWNER_ARG"
+      ;;
+  esac
+}
+
+# Почему ArcadeDB не ответила — по её собственному журналу. «Authentication failed» значит не «база не поднялась»,
+# а «пароль из .env не подходит к УЖЕ существующей базе»: том остался от прошлой установки с тем же именем проекта
+# compose (поймано на чужой машине 22.11.2026 — два захода в каталогах с одинаковым именем lore).
+arcadedb_hint() {
+  case "$1" in
+    *"Authentication failed"*)
+      printf '%s' "в журнале базы «Authentication failed» — пароль ARCADEDB_ROOT_PASSWORD из .env не подходит к уже существующей базе. Так бывает, когда том остался от прошлой установки с тем же именем проекта compose: задайте своё COMPOSE_PROJECT_NAME в .env или уберите прежний том (docker volume rm <проект>_lore-db)" ;;
+    *) printf '%s' "журнал базы: docker compose -f $DIR/docker-compose.yml logs arcadedb" ;;
+  esac
+}
+
 has_profile() { case ",$(env_get COMPOSE_PROFILES "$DIR/.env")," in *",$1,"*) return 0 ;; esac; return 1; }
 
 gen_secret() { head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
@@ -209,6 +281,9 @@ acurl() { docker run --rm --network "$(project)_default" "$CURL_IMAGE" -sS -m 30
 
 check_prereq() {
   say "проверка окружения"
+  # Зеркало базовых образов называем вслух: человек без доступа к Docker Hub должен видеть в плане, откуда
+  # пойдут образы, — иначе узнает об этом из отказа на первом же pull (прогон на чужой машине 22.11.2026).
+  [ -z "${LORE_IMAGE_REGISTRY:-}" ] || say "базовые образы — из зеркала ${LORE_IMAGE_REGISTRY}"
   if [ "$DRY" = 1 ]; then
     command -v docker >/dev/null 2>&1 && say "docker найден" || warn "docker не найден (dry-run продолжает)"
     return 0
@@ -285,6 +360,20 @@ write_env() {
         say "[dry-run] FORGEJO_MCP_API_KEY — сгенерировать; forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN (токен вписывает владелец)"
       fi
     fi
+    if [ -n "$MINILORE" ]; then
+      say "[dry-run] miniLORE: $MINILORE — профили compose: $(merge_profiles "$(env_get COMPOSE_PROFILES "$env")" "$FORGEJO")"
+      minilore_env | sed 's/^/[dry-run]   /'
+      case "$MINILORE" in
+        install)
+          say "[dry-run] поднять сервер miniLORE $MINILORE_IMAGE_DEFAULT (образ из images/ пакета или свой MINILORE_IMAGE); базы minilore и minilore_archive заводит установщик, порт наружу не публикуется"
+          say "[dry-run] вписать свой MINILORE_APP_CLIENT_ID и MINILORE_OWNER: умолчания разработчика — чужая учётка и чужое имя, они не подставляются"
+          say "[dry-run] шлюз (установщик) и приложение APK в этой версии НЕ входят — следующей версией"
+          # Вход: с пустым издателем сервер работает (проверено на стенде, /config отдаёт kcIssuer: null),
+          # но телефон войти не сможет. В плане это видно ДО установки, а не после.
+          [ -n "$(env_get LORE_OIDC_ISSUER "$env")" ] \
+            || say "[dry-run] вход не настроен: LORE_OIDC_ISSUER пуст — сервер поднимется, но телефон войти не сможет" ;;
+      esac
+    fi
     return 0
   fi
   mkdir -p "$DIR"; chmod 700 "$DIR"
@@ -316,6 +405,7 @@ write_env() {
   case "$bc" in [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) env_set LORE_BUILD_COMMIT "$bc" "$env" ;; esac
   [ -z "${LORE_BACKEND_IMAGE:-}" ] || env_set LORE_BACKEND_IMAGE "$LORE_BACKEND_IMAGE" "$env"
   [ -z "${LORE_WEB_IMAGE:-}" ]     || env_set LORE_WEB_IMAGE "$LORE_WEB_IMAGE" "$env"
+  [ -z "${LORE_MCP_IMAGE:-}" ]     || env_set LORE_MCP_IMAGE "$LORE_MCP_IMAGE" "$env"
   # Хранилище файлов: s3 — адрес, регион, бакет и ключи из окружения в .env (ключи на экран не выводятся);
   # none — S3 пуст. Без --files выбор в .env не трогается.
   if [ "$FILES" = s3 ]; then
@@ -332,6 +422,23 @@ write_env() {
     while IFS= read -r line; do env_set "${line%%=*}" "${line#*=}" "$env"; done < <(forgejo_env "$(env_get COMPOSE_PROFILES "$env")")
     say "Forgejo: $FORGEJO (профили compose: $(env_get COMPOSE_PROFILES "$env"))"
   fi
+  # miniLORE — свой выбор, отдельно от Forgejo: профиль обновляется и когда Forgejo не трогали.
+  if [ -n "$MINILORE" ]; then
+    local mline
+    env_set COMPOSE_PROFILES "$(merge_profiles "$(env_get COMPOSE_PROFILES "$env")" "$FORGEJO")" "$env"
+    while IFS= read -r mline; do env_set "${mline%%=*}" "${mline#*=}" "$env"; done < <(minilore_env)
+    say "miniLORE: $MINILORE (профили compose: $(env_get COMPOSE_PROFILES "$env"))"
+    # Пустым значение тут уже быть не может — parse_args отказывает до установки. Проверка остаётся на случай,
+    # когда .env правили руками: сервер miniLORE без клиента не стартует, и молча ставить его нельзя.
+    [ "$MINILORE" != install ] || [ -n "$(env_get MINILORE_APP_CLIENT_ID "$env")" ] \
+      || die "в $env пуст MINILORE_APP_CLIENT_ID — сервер miniLORE не стартует, а уходит в бесконечный перезапуск" 2
+    # Вход. Проверено на живом стенде 22.11.2026: с пустым издателем сервер ПОДНИМАЕТСЯ и работает, его дверь
+    # /config честно отдаёт kcIssuer: null — не стартует он только без клиента приложения и владельца (выше).
+    # Поэтому здесь предупреждение, а не отказ: установка годная, но телефон в неё войти не сможет.
+    if [ "$MINILORE" = install ] && [ -z "$(env_get LORE_OIDC_ISSUER "$env")" ]; then
+      warn "miniLORE поставлен, но вход не настроен: LORE_OIDC_ISSUER пуст (и LORE_AUTH_ENABLED=$(env_get LORE_AUTH_ENABLED "$env")). Сервер поднимется и ответит, но ТЕЛЕФОН ВОЙТИ НЕ СМОЖЕТ: у него нет издателя Keycloak. Включите вход LORE (LORE_AUTH_ENABLED=true и LORE_OIDC_ISSUER=<адрес области>) и повторите install.sh — это обновление"
+    fi
+  fi
   # Ключ входа агентов в forgejo-mcp — только когда он включён; как пароли: своё значение из окружения или генератор.
   if has_profile forgejo-mcp; then
     cur="$(env_get FORGEJO_MCP_API_KEY "$env")"
@@ -346,10 +453,16 @@ write_env() {
 # Сервисы для `compose up`: forgejo-mcp без своего токена падает на старте (FORGEJO_TOKEN обязателен), поэтому
 # без FORGEJO_MCP_TOKEN он не поднимается, а установщик громко говорит, что сделать.
 start_stack() {
+  local skip=()
   if has_profile forgejo-mcp && [ -z "$(env_get FORGEJO_MCP_TOKEN "$DIR/.env")" ]; then
     warn "forgejo-mcp не запущен: нет FORGEJO_MCP_TOKEN. Создайте токен в Forgejo (Настройки → Приложения), впишите в $DIR/.env и повторите install.sh — это обновление"
+    skip+=(-e forgejo-mcp)
+  fi
+  # lore-mcp без образа (images() уже сказал почему) не поднимается — иначе `up` упал бы на всём стеке.
+  [ -z "$MCP_OFF" ] || skip+=(-e lore-mcp)
+  if [ "${#skip[@]}" -gt 0 ]; then
     # shellcheck disable=SC2046
-    compose up -d $(compose config --services | grep -vx forgejo-mcp)
+    compose up -d $(compose config --services | grep -vxF "${skip[@]}")
   else
     compose up -d
   fi
@@ -366,43 +479,156 @@ need_images() {
   done
 }
 
+# Образы из архивов в images/ — «мегапакет» (слово владелицы 22.11.2026: «общий мегаустановщик сейчас один раз
+# выложила бы и всё»). Весь набор уезжает одним файлом, и установка идёт БЕЗ реестра и БЕЗ сборки: ни Docker Hub,
+# ни ghcr, ни нашей сети. Путь тот же, что у сервера miniLORE и моста Forgejo: есть архив рядом и подпись
+# сходится — грузим из него. Имя архива — images/<служба>-<версия>.tar.
+# Берём ТОЛЬКО если на месте все три: иначе осталось бы «половина из архива, половина из сети», а такую
+# установку потом не воспроизвести.
+images_dir() { printf "%s" "${LORE_IMAGES_DIR:-$SCRIPT_DIR/images}"; }
+lore_images_from_archives() {
+  local svc a want n=0
+  for svc in lore-backend lore-app-next lore-mcp; do
+    [ -f "$(images_dir)/$svc-$VERSION.tar" ] || return 1
+  done
+  for svc in lore-backend lore-app-next lore-mcp; do
+    a="$(images_dir)/$svc-$VERSION.tar"
+    pkg_sha_ok "$a" "образ $svc"
+    run docker load -i "$a"
+    n=$((n + 1))
+  done
+  say "образы LORE взяты из архивов пакета ($n из 3) — реестр не нужен"
+  # Сверяем, что в архивах лежали именно те образы, которые ждёт compose: иначе `up` упал бы позже и невнятно.
+  if [ "$DRY" != 1 ]; then
+    for svc in lore-backend lore-app-next lore-mcp; do
+      want="$(compose config --images "$svc" 2>/dev/null | head -1)"
+      [ -n "$want" ] || continue
+      docker image inspect "$want" >/dev/null 2>&1 \
+        || die "в архиве $(images_dir)/$svc-$VERSION.tar нет образа $want — архив от другой версии; возьмите мегапакет этого тега"
+    done
+  fi
+  return 0
+}
+
 images() {
-  if [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
+  if lore_images_from_archives; then
+    : # образы уже на машине — ни тянуть, ни собирать нечего
+  elif [ -n "${LORE_BACKEND_IMAGE:-}" ] && [ -n "${LORE_WEB_IMAGE:-}" ]; then
     say "загрузка образов"
-    run compose pull lore-backend lore-app-next
+    if ! run compose pull lore-backend lore-app-next lore-mcp; then
+      # Выпуски до 1.18.2 публиковали в ghcr только бэкенд и веб: без образа MCP установка не падает, а говорит громко.
+      run compose pull lore-backend lore-app-next
+      MCP_OFF="образ ${LORE_MCP_IMAGE:-lore-mcp} не загружен"
+      warn "MCP не будет запущен: $MCP_OFF. Агенты не подключатся к /mcp. Задайте свой LORE_MCP_IMAGE или поставьте с --build (сборка из исходников тега)"
+    fi
   else
     say "сборка образов из $LORE_SRC_RESOLVED (первый раз — 10–20 минут)"
-    run compose build lore-backend lore-app-next
+    run compose build lore-backend lore-app-next lore-mcp
   fi
-  # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (ryzenai 21.11.2026:
+  # Базовые образы: недоступный реестр не роняет установку, если образ уже есть на машине (эмуляция 21.11.2026:
   # Docker Hub перестал отдавать образ хранилища — потому его в пакете и нет); образа нет нигде — need_images называет его.
   run compose pull --ignore-pull-failures arcadedb
   need_images arcadedb
   if has_profile forgejo || [ "$FORGEJO" = install ]; then run compose pull forgejo; fi
   if has_profile forgejo-mcp || { [ -n "$FORGEJO" ] && [ "$FORGEJO" != none ]; }; then forgejo_mcp_image; fi
+  if has_profile minilore || [ "$MINILORE" = install ]; then minilore_image; fi
 }
 
-# Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»). Порядок:
+# Образ сервера miniLORE. Порядок, как у forgejo-mcp, но без сборки из исходников: исходник сервера не наш.
+#   1) MINILORE_IMAGE — свой готовый образ, перекрывает всё (его и тянем из своего реестра);
+#   2) архив пакета images/minilore-srv-<версия>.tar — docker load при совпадении sha256;
+#   3) образ уже лежит на машине (например, вы его сами собрали или притянули) — берём как есть;
+#   4) ничего нет — отказ с перечнем выходов. Молча ничего не подставляется и в наш реестр установка не ходит:
+#      адреса нашего реестра в пакете нет (сторож noBakedHosts).
+minilore_image() {
+  local img a
+  img="${MINILORE_IMAGE:-$(env_get MINILORE_IMAGE "$DIR/.env")}"
+  if [ -n "$img" ] && [ "$img" != "$MINILORE_IMAGE_DEFAULT" ]; then
+    say "miniLORE: готовый образ $img"; run compose pull minilore-srv; return 0
+  fi
+  a="${MINILORE_ARCHIVE:-$SCRIPT_DIR/$MINILORE_ARCHIVE_REL}"
+  if [ -f "$a" ]; then
+    pkg_sha_ok "$a" "образ miniLORE"
+    say "sha256 архива miniLORE сходится"
+    run docker load -i "$a"
+    if [ "$DRY" != 1 ]; then
+      docker image inspect "$MINILORE_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $MINILORE_IMAGE_DEFAULT"
+    fi
+    return 0
+  fi
+  if [ "$DRY" != 1 ] && docker image inspect "$MINILORE_IMAGE_DEFAULT" >/dev/null 2>&1; then
+    say "miniLORE: образ $MINILORE_IMAGE_DEFAULT уже на машине"; return 0
+  fi
+  die "образа сервера miniLORE нет: ни архива $MINILORE_ARCHIVE_REL в пакете, ни своего MINILORE_IMAGE, ни образа $MINILORE_IMAGE_DEFAULT на машине. Задайте MINILORE_IMAGE=<ваш образ>, положите каталог images/ из пакета рядом с install.sh или ставьте без miniLORE (--minilore none)"
+}
+
+# Образ forgejo-mcp (владелица 20.11.2026: «не публиковать, включить в инсталятор»; 21.11.2026: «исходник кладём
+# прямо в пакет установки», «в пакете установки не должно быть наших настроек»). Сетевого умолчания нет. Порядок:
 #   1) FORGEJO_MCP_IMAGE — свой готовый образ, перекрывает всё;
-#   2) архив пакета images/forgejo-mcp-<коммит>.tar — docker load, только если sha256 сходится;
-#   3) --forgejo-mcp-build — сборка из git на том же коммите (запасной путь, только по явному флагу).
-# Нет ни одного — отказ с причиной, а не тихая сборка.
-forgejo_mcp_image() {
-  local img a want got
-  img="${FORGEJO_MCP_IMAGE:-$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")}"
-  if [ -n "$img" ]; then say "forgejo-mcp: готовый образ $img"; run compose pull forgejo-mcp; return 0; fi
-  if [ "$FORGEJO_MCP_BUILD" = 1 ]; then say "forgejo-mcp: сборка из git (--forgejo-mcp-build)"; run compose build forgejo-mcp; return 0; fi
-  a="${FORGEJO_MCP_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_ARCHIVE_REL}"
-  [ -f "$a" ] || die "нет архива образа forgejo-mcp: $a. Положите каталог images/ из пакета установщика рядом с install.sh; либо --forgejo-mcp-build (сборка из git), либо FORGEJO_MCP_IMAGE (свой образ)"
-  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенный образ не гружу"
+#   2) FORGEJO_MCP_SRC — свои исходники (каталог или git-адрес#коммит), сборка;
+#   3) архив образа пакета images/forgejo-mcp-<коммит>.tar — docker load при совпадении sha256 (--forgejo-mcp-build
+#      его пропускает);
+#   4) исходник пакета src/forgejo-mcp-<коммит>.tar.gz — при совпадении sha256 распаковка в $DIR/forgejo-mcp-src и сборка;
+#   5) ничего нет — в терминале спросить источник (git-адрес, образ или «без forgejo-mcp»), без терминала — отказ
+#      с подсказкой. Молча ничего не подставляется.
+# Сверка sha256 архива пакета: нет .sha256 или не сходится — отказ.
+pkg_sha_ok() { # архив подпись
+  local a="$1" want got
+  [ -f "$a.sha256" ] || die "у архива $a нет файла sha256 ($a.sha256) — непроверенный $2 не беру"
   want="$(awk '{print $1; exit}' "$a.sha256")"
   got="$(sha256sum "$a" | awk '{print $1}')"
-  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не гружу"
-  say "sha256 архива forgejo-mcp сходится"
-  run docker load -i "$a"
-  if [ "$DRY" != 1 ]; then
-    docker image inspect "$FORGEJO_MCP_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $FORGEJO_MCP_IMAGE_DEFAULT"
+  { [ -n "$want" ] && [ "$want" = "$got" ]; } || die "sha256 не сходится у $a — архив повреждён или подменён; не беру"
+}
+forgejo_mcp_image() {
+  local img src a
+  img="${FORGEJO_MCP_IMAGE:-$(env_get FORGEJO_MCP_IMAGE "$DIR/.env")}"
+  if [ -n "$img" ]; then say "forgejo-mcp: готовый образ $img"; run compose pull forgejo-mcp; return 0; fi
+  src="${FORGEJO_MCP_SRC:-$(env_get FORGEJO_MCP_SRC "$DIR/.env")}"
+  if [ -n "$src" ]; then
+    say "forgejo-mcp: сборка из своих исходников $src (FORGEJO_MCP_SRC)"
+    FORGEJO_MCP_SRC="$src" run compose build forgejo-mcp; return 0
   fi
+  a="${FORGEJO_MCP_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_ARCHIVE_REL}"
+  if [ "$FORGEJO_MCP_BUILD" != 1 ] && [ -f "$a" ]; then
+    pkg_sha_ok "$a" "образ"
+    say "sha256 архива forgejo-mcp сходится"
+    run docker load -i "$a"
+    if [ "$DRY" != 1 ]; then
+      docker image inspect "$FORGEJO_MCP_IMAGE_DEFAULT" >/dev/null 2>&1 || die "в архиве $a нет образа $FORGEJO_MCP_IMAGE_DEFAULT"
+    fi
+    return 0
+  fi
+  a="${FORGEJO_MCP_SRC_ARCHIVE:-$SCRIPT_DIR/$FORGEJO_MCP_SRC_ARCHIVE_REL}"
+  if [ -f "$a" ]; then
+    pkg_sha_ok "$a" "исходник"
+    say "sha256 исходника forgejo-mcp сходится — сборка из пакета, без сети к чужому git"
+    if [ "$DRY" = 1 ]; then printf '[dry-run] распаковать %s в %s\n' "$a" "$DIR/forgejo-mcp-src"
+    else rm -rf "$DIR/forgejo-mcp-src"; mkdir -p "$DIR/forgejo-mcp-src"; tar -xzf "$a" -C "$DIR/forgejo-mcp-src"; fi
+    run compose build forgejo-mcp
+    return 0
+  fi
+  forgejo_mcp_ask
+}
+
+# Источника нет ни в окружении, ни в пакете. Терминал — спросить; иначе — отказ с вариантами (без молчаливого фолбэка).
+forgejo_mcp_ask() {
+  local hint c v
+  hint="FORGEJO_MCP_IMAGE=<готовый образ>, или FORGEJO_MCP_SRC=<каталог или git-адрес#коммит исходников forgejo-mcp>, или положите каталоги src/ и images/ из пакета установщика рядом с install.sh, или --forgejo none (без Forgejo и forgejo-mcp)"
+  if [ "$DRY" = 1 ] || [ ! -t 0 ]; then
+    die "источник forgejo-mcp не задан и в пакете его нет. Задайте: $hint"
+  fi
+  say "источник forgejo-mcp не задан и в пакете его нет. Откуда взять?"
+  printf '  1) git-адрес исходников (https://…/forgejo-mcp.git#коммит)\n  2) готовый образ из своего реестра\n  3) без forgejo-mcp\n'
+  read -r -p "1/2/3: " c
+  case "$c" in
+    1) read -r -p "git-адрес исходников forgejo-mcp: " v; [ -n "$v" ] || die "адрес не введён. $hint"
+       env_set FORGEJO_MCP_SRC "$v" "$DIR/.env"; FORGEJO_MCP_SRC="$v" run compose build forgejo-mcp ;;
+    2) read -r -p "образ forgejo-mcp: " v; [ -n "$v" ] || die "образ не введён. $hint"
+       env_set FORGEJO_MCP_IMAGE "$v" "$DIR/.env"; FORGEJO_MCP_IMAGE="$v" run compose pull forgejo-mcp ;;
+    3) env_set COMPOSE_PROFILES "$(printf '%s' "$(env_get COMPOSE_PROFILES "$DIR/.env")" | tr ',' '\n' | grep -vx 'forgejo-mcp' | paste -sd, -)" "$DIR/.env"
+       say "forgejo-mcp не ставится (профиль снят в $DIR/.env)" ;;
+    *) die "нет такого варианта: «$c». $hint" ;;
+  esac
 }
 
 # Архив исходников пакета: LORE_SRC_ARCHIVE или единственный src/lore-<версия>.tar.gz рядом с install.sh.
@@ -433,14 +659,17 @@ wait_db() {
   say "ожидание ArcadeDB"
   for i in $(seq 1 60); do
     dcurl "http://arcadedb:2480/api/v1/databases" 2>/dev/null | grep -q '"result"' && break
-    [ "$i" = 60 ] && die "ArcadeDB не ответила за 120 с: docker compose -f $DIR/docker-compose.yml logs arcadedb"
+    if [ "$i" = 60 ]; then
+      local alog; alog="$(docker compose -f "$DIR/docker-compose.yml" logs --tail 50 arcadedb 2>/dev/null || true)"
+      die "ArcadeDB не ответила за 120 с. $(arcadedb_hint "$alog")"
+    fi
     sleep 2
   done
   if dcurl "http://arcadedb:2480/api/v1/databases" | grep -q "\"$db\""; then
     say "база $db уже есть"
   else
     # MIG-01: базы установки ещё нет — свежая установка: база из модели под своим именем (не system_aida_lore), шаги V
-    # не катятся. Признак — сама база, а не .env (его могли положить заранее, ryzenai 21.11.2026).
+    # не катятся. Признак — сама база, а не .env (его могли положить заранее, эмуляция 21.11.2026).
     if [ "$db" = system_aida_lore ]; then db="$FRESH_DB"; env_set LORE_DB "$db" "$DIR/.env"; fi
     env_set LORE_MIGRATE false "$DIR/.env"
     FRESH=1
@@ -449,6 +678,34 @@ wait_db() {
     dcurl -X POST -H 'Content-Type: application/json' -d "{\"command\":\"create database $db\"}" \
       "http://arcadedb:2480/api/v1/server" | grep -q '"ok"' || die "база $db не создана"
   fi
+  minilore_dbs
+}
+
+# Базы miniLORE заводит УСТАНОВЩИК, а не их сервер (находка прогона на чужой машине 22.11.2026).
+# Сервер 0.4.19 сразу катит свои миграции и падает, если базы нет:
+#   миграция schema/001-transcript.sql не применилась: ArcadeDB ответила 404 {"error":"Database not found"}
+# — и уходит в бесконечный перезапуск. В README пакета было написано, что он заводит базы сам; это оказалось
+# неверно, строку поправили. Создание идемпотентно: база уже есть — пропуск. Когда их сервер научится заводить
+# базы сам, этот шаг просто перестанет находить работу.
+minilore_dbs() {
+  has_profile minilore || return 0
+  local have db
+  have="$(dcurl "http://arcadedb:2480/api/v1/databases" || true)"
+  # Умолчания — те же, что в compose. Ключей в .env может не быть вовсе: так бывает при повторном запуске с
+  # --minilore install поверх .env от установки БЕЗ miniLORE (разбор документации 22.11.2026). Раньше цикл в этом
+  # случае пропускал обе базы МОЛЧА, и сервер падал «Database not found» — то есть молчание выглядело успехом.
+  local main_db arch_db
+  main_db="$(env_get MINILORE_ARCADE_DATABASE "$DIR/.env")"; main_db="${main_db:-minilore}"
+  arch_db="$(env_get MINILORE_ARCHIVE_DATABASE "$DIR/.env")"; arch_db="${arch_db:-minilore_archive}"
+  for db in "$main_db" "$arch_db"; do
+    [ -n "$db" ] || continue
+    case "$have" in
+      *"\"$db\""*) say "база miniLORE $db уже есть"; continue ;;
+    esac
+    say "создание базы miniLORE $db"
+    dcurl -X POST -H 'Content-Type: application/json' -d "{\"command\":\"create database $db\"}" \
+      "http://arcadedb:2480/api/v1/server" | grep -q '"ok"' || die "база miniLORE $db не создана"
+  done
 }
 
 wait_backend() {
@@ -466,6 +723,26 @@ wait_backend() {
     [ "$t" -ge "$WAIT_SECS" ] && { compose logs --tail 60 lore-backend >&2 || true; die "бэкенд не стал здоровым за ${WAIT_SECS} с"; }
     sleep 5; t=$((t + 5))
   done
+}
+
+# MCP (1.18.2) — через тот же nginx веба v2, что увидит агент: /mcp/health — 200 с отметкой сборки, POST /mcp без входа —
+# 401 (или 405). 502 — nginx не достал lore-mcp, 404 — /mcp не проксируется: установка выглядит целой, а агенту
+# некуда подключиться. Сервис не поднят — строка «НЕТ» с причиной, а не тишина.
+probe_mcp() {
+  local c
+  if [ -z "$(compose ps -q lore-mcp 2>/dev/null)" ]; then
+    printf '  НЕТ   %-24s %s\n' "lore-mcp" "не запущен${MCP_OFF:+: $MCP_OFF} — /mcp ответит 502, агенты не подключатся"
+    warn "MCP не запущен — агенты не подключатся к /mcp (README, раздел «Подключить агента к MCP»)"
+    return 0
+  fi
+  base="http://lore-app-next"; probe "mcp /mcp/health" "/mcp/health" '"status":"ok"'
+  c="$(acurl -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' --data '{}' "http://lore-app-next/mcp" 2>/dev/null || true)"
+  case "$c" in
+    401|405) printf '  OK    %-24s %s\n' "mcp /mcp без входа" "$c" ;;
+    *) printf '  FAIL  %-24s %s\n' "mcp /mcp без входа" "${c:-нет ответа} (ждали 401/405; 502 — nginx не достал lore-mcp, 404 — /mcp не проксируется)"
+       fails=$((fails + 1)) ;;
+  esac
 }
 
 # Проверки результата — через фронт (заодно проверяется его прокси /lore/ к
@@ -494,6 +771,7 @@ verify() {
   else
     printf '  OK    %-24s\n' "backend /q/health/ready"
   fi
+  probe_mcp
   if has_profile forgejo; then base="http://forgejo:3000"; probe "forgejo /api/v1/version" "/api/v1/version" '"version"'; fi
   if has_profile forgejo-mcp && [ -n "$(env_get FORGEJO_MCP_TOKEN "$DIR/.env")" ]; then
     base="http://forgejo-mcp:3000"; probe "forgejo-mcp /health" "/health"
@@ -536,17 +814,44 @@ migrate_bin() {
   if [ -z "${LORE_MIGRATE_BIN+x}" ] && [ -f "$SCRIPT_DIR/.lore-migrate-path" ]; then b="$(head -1 "$SCRIPT_DIR/.lore-migrate-path")"; fi
   printf '%s' "$b"
 }
+
+# Второй путь к тому же коду: lore-migrate.mjs. Он лежит в ЛЁГКОМ архиве релиза, а исполняемый файл (125 МБ)
+# едет отдельным вложением и у друга его может не быть вовсе. Разбор документации 22.11.2026 показал, что
+# свежая установка из скачанного архива падала на первом же шаге: «исполняемый файл не найден». Теперь .mjs
+# запускается в контейнере с Node — так же, как исполняемый файл запускается в debian.
+migrate_mjs() {
+  local m="${LORE_MIGRATE_MJS-}"
+  if [ -z "${LORE_MIGRATE_MJS+x}" ] && [ -f "$SCRIPT_DIR/lore-migrate.mjs" ]; then m="$SCRIPT_DIR/lore-migrate.mjs"; fi
+  printf '%s' "$m"
+}
+
+# Чем собирать пустую базу: «bin <путь>» | «mjs <путь>» | пусто.
+migrate_runner() {
+  local b m
+  b="$(migrate_bin)"; [ -n "$b" ] && { printf 'bin %s' "$b"; return 0; }
+  m="$(migrate_mjs)"; [ -n "$m" ] && { printf 'mjs %s' "$m"; return 0; }
+  printf ''
+}
+
 migrate_bin_say() {
-  local b; b="$(migrate_bin)"
-  if [ -n "$b" ]; then printf '%s' "$b"; else printf 'исполняемый файл установщика не найден — задайте LORE_MIGRATE_BIN (lore-migrate-<версия>-linux-x64 из пакета)'; fi
+  local r; r="$(migrate_runner)"
+  case "$r" in
+    bin*) printf '%s' "${r#bin }" ;;
+    mjs*) printf '%s (в контейнере %s)' "${r#mjs }" "$MIGRATE_NODE_IMAGE" ;;
+    *) printf 'установщик не найден: положите lore-migrate.mjs рядом с install.sh (он есть в архиве релиза) или задайте LORE_MIGRATE_BIN — путь к lore-migrate-<версия>-linux-x64' ;;
+  esac
 }
 
 # MIG-01: «схема и база собираются заново из нормализованной модели». Пустая база из модели — тем же кодом, что перенос,
 # без источника: lore-migrate init-empty в одноразовом контейнере в сети стека (порт базы наружу не публикуется).
 init_model_db() {
-  local bin db pw envf
-  bin="$(migrate_bin)"
-  [ -n "$bin" ] && [ -f "$bin" ] || die "$(migrate_bin_say): без него свежая база из модели не собирается"
+  local run_as db pw envf
+  run_as="$(migrate_runner)"
+  case "$run_as" in
+    bin*) [ -f "${run_as#bin }" ] || die "$(migrate_bin_say): файла нет — свежая база из модели не собирается" ;;
+    mjs*) [ -f "${run_as#mjs }" ] || die "$(migrate_bin_say): файла нет — свежая база из модели не собирается" ;;
+    *) die "$(migrate_bin_say)" ;;
+  esac
   db="$(env_get LORE_DB "$DIR/.env")"; pw="$(env_get ARCADEDB_ROOT_PASSWORD "$DIR/.env")"
   say "пустая база из модели: lore-migrate init-empty → $db"
   # файл доступа с паролем root базы — удаляется сразу после запуска, в том числе при отказе (без trap: он пережил бы функцию)
@@ -558,8 +863,15 @@ init_model_db() {
     echo "MIG_DST_DB=$db"; echo "MIG_DST_USER=root"; echo "MIG_DST_PASSWORD=$pw"
   } > "$envf" )
   local rc=0
-  docker run --rm --network "$(project)_default" -v "$bin:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
-    "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || rc=$?
+  # Исполняемый файл — в debian (внутри него свой Node); lore-migrate.mjs — в образе с Node. Оба варианта
+  # одноразовым контейнером в сети стека: порт базы наружу не публикуется.
+  if [ "${run_as%% *}" = bin ]; then
+    docker run --rm --network "$(project)_default" -v "${run_as#bin }:/opt/lore-migrate:ro" -v "$envf:/run/mig.env:ro" \
+      "$MIGRATE_RUNNER_IMAGE" /opt/lore-migrate init-empty --env /run/mig.env || rc=$?
+  else
+    docker run --rm --network "$(project)_default" -v "${run_as#mjs }:/opt/lore-migrate.mjs:ro" -v "$envf:/run/mig.env:ro" \
+      "$MIGRATE_NODE_IMAGE" node /opt/lore-migrate.mjs init-empty --env /run/mig.env || rc=$?
+  fi
   rm -f "$envf"
   [ "$rc" = 0 ] || die "пустая база из модели не собрана (lore-migrate init-empty) — схема и справочники не записаны"
   say "база $db собрана из модели: шаги V не катятся (LORE_MIGRATE=false)"
@@ -582,7 +894,7 @@ do_install() {
       say "пустая база из модели: lore-migrate init-empty — $(migrate_bin_say)"
     fi
     run compose up -d
-    printf '[dry-run] ждать здоровья бэкенда, проверить dictionary и слайсы: %s use_cases_of_feature search\n' "$SLICES"
+    printf '[dry-run] ждать здоровья бэкенда, проверить dictionary и слайсы: %s use_cases_of_feature search; MCP: /mcp/health 200, POST /mcp без входа 401/405\n' "$SLICES"
     return 0
   fi
   wait_db
@@ -615,7 +927,7 @@ selftest() {
   fail() { echo "selftest FAIL: $*" >&2; exit 1; }
   expect_rc() { # код аргументы…
     local want="$1"; shift
-    rc=0; out="$(PATH="/usr/bin:/bin" bash "$self" "$@" 2>&1)" || rc=$?
+    rc=0; out="$(PATH="/usr/bin:/bin" bash "$self" "$@" 2>&1 </dev/null)" || rc=$?
     [ "$rc" = "$want" ] || fail "«$*» → код $rc, ждали $want: $out"; ok
   }
   # 1. разбор аргументов
@@ -635,11 +947,21 @@ selftest() {
   expect_rc 2 --dry-run --dir "$t/inst" --version v9.9.9
   printf '%s' "$out" | grep -q 'мажорных' || fail "не-мажорная версия: причина не названа: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
-  printf '%s' "$out" | grep -q 'ghcr.io/nooriuta/lore-backend:v9.0.0' || fail "мажор без --build: нет готового образа ghcr: $out"; ok
+  printf '%s' "$out" | grep -q "ghcr.io/$GHCR_OWNER/lore-backend:v9.0.0" || fail "мажор без --build: нет готового образа ghcr: $out"; ok
   printf '%s' "$out" | grep -q 'compose build' && fail "мажор без --build собирает образы"; ok
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next' || fail "в плане нет сборки: $out"; ok
   printf '%s' "$out" | grep -q 'compose up -d arcadedb' || fail "в плане нет подъёма базы"; ok
+  # 1.18.2: MCP едет в пакете — собирается с бэкендом и вебом, проверяется через nginx веба (/mcp 401/405, не 502/404).
+  printf '%s' "$out" | grep -q 'compose build lore-backend lore-app-next lore-mcp' || fail "--build: lore-mcp не собирается: $out"; ok
+  printf '%s' "$out" | grep -q 'POST /mcp без входа 401/405' || fail "в плане нет пробы /mcp: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'compose pull lore-backend lore-app-next lore-mcp' || fail "мажор без --build: lore-mcp не тянется: $out"; ok
+  local mc; mc="$(sed -n '/^  lore-mcp:$/,/^  [a-z][a-z0-9-]*:$/p' "$SCRIPT_DIR/docker-compose.install.yml")"
+  [ -n "$mc" ] || fail "compose установки: нет сервиса lore-mcp"; ok
+  printf '%s' "$mc" | grep -q 'LORE_BACKEND_URL=http://lore-backend:9100' || fail "lore-mcp: бэкенд не по имени в сети compose"; ok
+  printf '%s' "$mc" | grep -qE '^\s+ports:' && fail "lore-mcp: порт опубликован — MCP мимо TLS nginx"; ok
+  printf '%s' "$mc" | grep -q 'LORE_MCP_CLIENT_SECRET' && fail "lore-mcp: секрет клиента в compose"; ok
   # MIG-04, решение владелицы 21.11.2026: «пока ставь указать s3 хранилище или без опции файлов». MinIO пакет больше
   # не ставит (Docker Hub перестал отдавать образ): ни сервиса, ни тома, ни образа; файлы — своё S3 или без файлов.
   printf '%s' "$out" | grep -qi 'minio' && fail "план всё ещё ставит MinIO: $out"; ok
@@ -657,7 +979,7 @@ selftest() {
   S3_ENDPOINT=https://s3.example S3_BUCKET=b S3_ACCESS_KEY=a S3_SECRET_KEY=sekret-s3 expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --files s3
   printf '%s' "$out" | grep -q 'проверка S3: положить и прочитать пробный объект' || fail "--files s3: нет проверки связи в плане: $out"; ok
   printf '%s' "$out" | grep -q 'sekret-s3' && fail "dry-run напечатал ключ S3"; ok
-  # MIG-04, эмуляция на ryzenai 21.11.2026: сборка из архива исходников (.git там нет) давала /lore/version
+  # MIG-04, эмуляция 21.11.2026: сборка из архива исходников (.git там нет) давала /lore/version
   # «commit: unknown» — установка не говорила, из какого пакета она. Коммит едет в архиве (git archive export-subst,
   # backend/BUILD_COMMIT), install.sh передаёт его в сборку образов (LORE_BUILD_COMMIT в .env).
   grep -q 'BUILD_COMMIT export-subst' "$SCRIPT_DIR/../../.gitattributes" 2>/dev/null || [ ! -f "$SCRIPT_DIR/../../.gitattributes" ] \
@@ -667,15 +989,31 @@ selftest() {
   # (lore-migrate init-empty) и запускает бэкенд без шагов V; база установки — lore, не system_aida_lore.
   LORE_MIGRATE_BIN=/opt/x/lore-migrate expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
   printf '%s' "$out" | grep -q 'пустая база из модели: lore-migrate init-empty' || fail "свежая установка: нет шага «пустая база из модели»: $out"; ok
+  # 22.11.2026, разбор документации (CICDGitHub): в релизном архиве лежит lore-migrate.mjs, а НЕ исполняемый файл
+  # (он 125 МБ и едет отдельно). Раньше свежая установка из такого архива падала «исполняемый файл не найден»:
+  # первый же шаг после распаковки. Теперь годится и .mjs — он запускается в контейнере с Node.
+  printf 'console.log(1)\n' > "$t/lore-migrate.mjs"
+  # LORE_MIGRATE_BIN гасим ЯВНО: в распакованном пакете рядом с install.sh лежит .lore-migrate-path (его пишет
+  # install-bundle), и без этого проверка смотрела бы на исполняемый файл машины, а не на .mjs. Поймано прогоном
+  # на чужой машине 22.11.2026: у нас проверка была зелёной, а в пакете — красной.
+  LORE_MIGRATE_BIN= LORE_MIGRATE_MJS="$t/lore-migrate.mjs" expect_rc 0 --dry-run --dir "$t/fresh2" --version v9.0.0
+  printf '%s' "$out" | grep -q 'lore-migrate.mjs' || fail "свежая установка из .mjs: источник не назван: $out"; ok
+  printf '%s' "$out" | grep -qE 'node:[0-9]' || fail "свежая установка из .mjs: не сказано, в чём он запустится: $out"; ok
+  # Нет ни того, ни другого — отказ, называющий ОБА выхода, а не только исполняемый файл.
+  LORE_MIGRATE_BIN= LORE_MIGRATE_MJS= expect_rc 0 --dry-run --dir "$t/fresh3" --version v9.0.0
+  printf '%s' "$out" | grep -q 'LORE_MIGRATE_BIN' || fail "без установщика: не назван LORE_MIGRATE_BIN: $out"; ok
+  printf '%s' "$out" | grep -q 'lore-migrate.mjs' || fail "без установщика: не назван путь через .mjs: $out"; ok
   printf '%s' "$out" | grep -q 'LORE_MIGRATE=false' || fail "свежая установка: шаги V не выключены: $out"; ok
   printf '%s' "$out" | grep -q 'база lore' || fail "свежая установка: база установки не lore: $out"; ok
   # trap … RETURN остаётся после выхода из функции и срабатывает в чужом return, где её local уже нет (set -u) —
-  # установка на ryzenai 21.11 прошла, а код выхода был 1 («envf: unbound variable»).
+  # пробная установка 21.11 прошла, а код выхода был 1 («envf: unbound variable»).
   grep -qE "trap '[^']*' RETURN" "$0" && fail "trap … RETURN в install.sh — срабатывает после функции (set -u роняет установку)"; ok
-  # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, ryzenai 21.11.2026)
+  # признак свежей установки — отсутствие базы, а не отсутствие .env (труба кладёт .env заранее, эмуляция 21.11.2026)
   sed -n '/^wait_db()/,/^}/p' "$0" | grep -q 'FRESH=1' || fail "свежая установка определяется не по базе (wait_db не ставит FRESH)"; ok
-  LORE_MIGRATE_BIN= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
-  printf '%s' "$out" | grep -q 'исполняемый файл установщика не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
+  # Ни исполняемого файла, ни .mjs: отказ обязан назвать ОБА выхода, а не один (разбор документации 22.11.2026 —
+  # у друга в архиве релиза лежит именно .mjs, и прежний текст звал его искать то, чего ему не присылали).
+  LORE_MIGRATE_BIN= LORE_MIGRATE_MJS= expect_rc 0 --dry-run --dir "$t/fresh" --version v9.0.0
+  printf '%s' "$out" | grep -q 'установщик не найден' || fail "свежая установка без lore-migrate: причина не названа в плане: $out"; ok
   # дальше проверки читают план сборки — вернуть его в $out
   ARCADEDB_ROOT_PASSWORD=sekret-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --build --src "$t"
   printf '%s' "$out" | grep -q "archive v9.0.0" || fail "--version не дошёл до выгрузки исходников"; ok
@@ -700,30 +1038,48 @@ selftest() {
   [ "$s1" != "$s2" ] || fail "gen_secret повторился"; ok
   # 6. профиль установки не требует LORE_BOOTSTRAP и катит схему
   # Свежая установка катит шаги V (по умолчанию true); база, перенесённая в модель 1.18, требует false — иначе бэкенд
-  # честно отказывает старт «схема собрана из модели, а lore.migrate=true» (эмуляция на ryzenai 21.11.2026).
+  # честно отказывает старт «схема собрана из модели, а lore.migrate=true» (эмуляция 21.11.2026).
   grep -qF 'lore.migrate=${LORE_MIGRATE:-true}' "$SCRIPT_DIR/docker-compose.install.yml" || fail "в профиле нет lore.migrate=\${LORE_MIGRATE:-true}"; ok
   grep -qE '^\s*- (lore\.bootstrap|LORE_BOOTSTRAP)' "$SCRIPT_DIR/docker-compose.install.yml" && fail "профиль снова зависит от LORE_BOOTSTRAP"; ok
   grep -qE '^[A-Z_]*PASSWORD=(CHANGE_ME)?$' "$SCRIPT_DIR/.env.example" || fail ".env.example: пароли — только заглушки"; ok
   grep -E 'PASSWORD=' "$SCRIPT_DIR/.env.example" | grep -vqE 'PASSWORD=(CHANGE_ME)?$' && fail ".env.example содержит пароль"; ok
   # 7. вход через Keycloak — по выбору (MIG-04, владелица 17.11.2026: «на новой установке ты заводишь kc»).
   #    По умолчанию входа нет, как раньше; включается LORE_AUTH_ENABLED=true в .env вместе с адресом области.
-  #    Флаг читается и на сборке (build-arg, OIDC впекается в образ), и в рантайме (фильтр ролей) — см. docker-compose.yml.
+  #    У бэкенда флаг читается и на сборке (build-arg OIDC Quarkus), и в рантайме (фильтр ролей). У веба вход — только
+  #    настройка запуска (SELF-PROVISION-STANDALONE): env контейнера → /config.json, в бандл ничего не впекается.
   local c="$SCRIPT_DIR/docker-compose.install.yml"
   grep -qE '^\s*- LORE_AUTH_ENABLED=false\s*$' "$c" && fail "вход прибит гвоздём: LORE_AUTH_ENABLED=false в профиле"; ok
   grep -q 'LORE_AUTH_ENABLED=${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет LORE_AUTH_ENABLED с умолчанием false в окружении"; ok
   grep -q 'LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "бэкенд: нет build-arg LORE_AUTH_ENABLED"; ok
-  grep -q 'VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}' "$c" || fail "веб: флаг входа не впекается в бандл тем же значением"; ok
-  grep -q 'VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
+  grep -q 'VITE_LORE_AUTH_ENABLED\|VITE_OIDC_' "$c" && fail "веб: вход снова впекается в бандл (VITE_*) — должен быть env контейнера"; ok
+  grep -q 'LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}' "$c" || fail "веб: адрес входа не задаётся при запуске"; ok
+  grep -q 'LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}' "$c" || fail "веб: нет клиента входа lore-app"; ok
   grep -q 'LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}' "$c" || fail "веб: адрес Keycloak не настраивается"; ok
   # 7a. базовые образы (arcadedb): недоступный реестр не роняет установку, если образ уже есть на машине;
-  #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — ryzenai 21.11.2026).
+  #     образа нет нигде — отказ с именем образа (Docker Hub перестал отдавать minio/minio — эмуляция 21.11.2026).
   grep -q 'pull --ignore-pull-failures arcadedb' "$0" || fail "базовые образы: pull без --ignore-pull-failures — недоступный реестр валит установку при образе на машине"; ok
   grep -q 'need_images arcadedb' "$0" || fail "базовые образы: нет проверки, что образ есть на машине после pull"; ok
+  # 7б. Зеркало базовых образов (22.11.2026). У пакета есть зеркала Maven и Gradle, а у базовых образов не было:
+  #     машина без доступа к Docker Hub вставала на первом же образе, и указать ей было нечего. Проверено на
+  #     чужой машине — два захода подряд упали «dial tcp: lookup registry-1.docker.io».
+  grep -qE '^LORE_IMAGE_REGISTRY=' "$SCRIPT_DIR/.env.example" || fail ".env.example: нет LORE_IMAGE_REGISTRY (зеркало базовых образов)"; ok
+  grep -q 'LORE_IMAGE_REGISTRY' "$SCRIPT_DIR/docker-compose.install.yml" || fail "compose: базовые образы не берут зеркало"; ok
+  grep -q 'LORE_IMAGE_REGISTRY' "$0" || fail "install.sh: его собственные образы (curl, debian, node) не берут зеркало"; ok
+  LORE_IMAGE_REGISTRY=mirror.example/ expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'mirror.example/' || fail "зеркало образов не названо в плане: $out"; ok
+  # README обязан объяснить и второй путь — зеркало в самом docker: compose-переменная покрывает ЗАПУСК,
+  # а сборку из исходников (базовые образы в Dockerfile) — только настройка демона.
+  grep -q 'registry-mirrors' "$SCRIPT_DIR/README.md" || fail "README: не сказано про registry-mirrors для сборки из исходников"; ok
   for k in LORE_AUTH_ENABLED LORE_OIDC_ISSUER LORE_OIDC_ORIGIN LORE_OIDC_CLIENT_ID LORE_VOLVA_ORIGIN LORE_VOLVA_EMBED_SITE_URL LORE_VOLVA_EMBED_ISSUER; do
     grep -qE "^$k=" "$SCRIPT_DIR/.env.example" || fail ".env.example: нет $k"; ok
   done
   # 8. Forgejo — по выбору (MIG-04, владелица 20.11.2026): install — поставить Forgejo нашей версии, own — свой Forgejo
   #    владельца, none — без Forgejo (по умолчанию, как раньше). В install и own едет forgejo-mcp.
+  #    Исходник forgejo-mcp — в пакете (владелица 21.11.2026): поддельный архив с .sha256 вместо src/ пакета.
+  mkdir -p "$t/pkg/src/fmcp"; printf 'FROM scratch\n' > "$t/pkg/src/fmcp/Dockerfile"
+  tar -czf "$t/pkg/src/fmcp.tar.gz" -C "$t/pkg/src/fmcp" .
+  ( cd "$t/pkg/src" && sha256sum fmcp.tar.gz > fmcp.tar.gz.sha256 )
+  export FORGEJO_MCP_SRC_ARCHIVE="$t/pkg/src/fmcp.tar.gz"
   expect_rc 2 --dry-run --dir "$t/inst" --forgejo maybe
   expect_rc 2 --dry-run --dir "$t/inst" --forgejo own
   printf '%s' "$out" | grep -q 'forgejo-url' || fail "own без адреса: причина не названа: $out"; ok
@@ -732,7 +1088,7 @@ selftest() {
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo,forgejo-mcp' || fail "install: нет профилей forgejo и forgejo-mcp: $out"; ok
   printf '%s' "$out" | grep -q 'FORGEJO_BASE_OVERRIDE=http://forgejo:3000' || fail "install: мост LORE не направлен на forgejo:3000"; ok
-  printf '%s' "$out" | grep -q 'forgejo 15.0.5' || fail "install: версия Forgejo не названа"; ok
+  printf '%s' "$out" | grep -q 'forgejo 17.0.2' || fail "install: версия Forgejo не названа"; ok
   printf '%s' "$out" | grep -q 'forgejo-mcp не запустится, пока нет FORGEJO_MCP_TOKEN' || fail "install: нет предупреждения про токен forgejo-mcp"; ok
   FORGEJO_API_TOKEN=tok-не-печатать expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org/ --forgejo-mcp-build
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=forgejo-mcp$' || fail "own: профиль только forgejo-mcp: $out"; ok
@@ -740,6 +1096,78 @@ selftest() {
   printf '%s' "$out" | grep -q 'tok-' && fail "dry-run напечатал токен"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo none
   printf '%s' "$out" | grep -q 'COMPOSE_PROFILES=$' || fail "none: профили Forgejo не сняты: $out"; ok
+
+  # miniLORE (D-2026-INSTALL-MINILORE-IN-PACKAGE): свой выбор, не зависящий от Forgejo.
+  # Образ сервера едет архивом в images/ — как у forgejo-mcp. Поддельный архив с подписью: проверки ниже про
+  # выбор и настройки, а не про образ, но без образа установка теперь честно отказывает (и это проверено отдельно).
+  mkdir -p "$t/pkg/images"; printf 'образ-miniLORE' > "$t/pkg/images/m0.tar"
+  ( cd "$t/pkg/images" && sha256sum m0.tar > m0.tar.sha256 )
+  export MINILORE_ARCHIVE="$t/pkg/images/m0.tar"
+  expect_rc 2 --dry-run --dir "$t/inst" --minilore maybe
+  printf '%s' "$out" | grep -q -- '--minilore' || fail "--minilore: неизвестное значение без причины: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id their-app --minilore-owner their-owner
+  printf '%s' "$out" | grep -q 'minilore' || fail "--minilore install: miniLORE не назван в плане: $out"; ok
+  printf '%s' "$out" | grep -q 'minilore-srv:0.4.19' || fail "--minilore install: версия сервера miniLORE не названа: $out"; ok
+  # Умолчания разработчика (его клиент и его владелец) в чужую установку не подставляются. Сами имена здесь
+  # не пишутся, а СОБИРАЮТСЯ: пакет едет чужим людям, и сторож noBakedHosts запрещает наши имена в
+  # deploy/install/** — включая строки проверок. Поэтому ищем склеенную строку, а не литерал.
+  # Имя переменной — не n: n у самопроверки свой, это её счётчик проверок (строка «local self=… n=0»).
+  for needle in "mobilepoc-app" "omi$(printf loreadmin)"; do
+    printf '%s' "$out" | grep -q "$needle" && fail "в план попало умолчание разработчика"; ok
+  done
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore none
+  # 22.11.2026, прогон на чужой машине: без клиента приложения и владельца сервер miniLORE НЕ стартует
+  # («Failed to load config value ... minilore.app.client-id») и уходит в бесконечный перезапуск. Раньше тут было
+  # предупреждение — установка «проходила», а контейнер крутился в рестарте. Теперь отказ до установки.
+  expect_rc 2 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
+  printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID' || fail "miniLORE без клиента: имя настройки не названо: $out"; ok
+  printf '%s' "$out" | grep -q 'MINILORE_OWNER' || fail "miniLORE без владельца: имя настройки не названо: $out"; ok
+  printf '%s' "$out" | grep -qi 'перезапуск' || fail "miniLORE: не сказано, ЧТО будет без этих настроек: $out"; ok
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id minilore-app --minilore-owner someone
+  printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID=minilore-app' || fail "miniLORE: клиент не доехал до .env: $out"; ok
+  printf '%s' "$out" | grep -q 'MINILORE_OWNER=someone' || fail "miniLORE: владелец не доехал до .env: $out"; ok
+  MINILORE_APP_CLIENT_ID=env-app MINILORE_OWNER=env-owner expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install
+  printf '%s' "$out" | grep -q 'MINILORE_APP_CLIENT_ID=env-app' || fail "miniLORE: клиент из окружения не взят: $out"; ok
+  # Образ сервера miniLORE: адреса нашего реестра в пакете быть не должно (пакет едет чужим людям — сторож
+  # noBakedHosts поймал это у меня 22.11.2026). Образ едет архивом в images/, как у forgejo-mcp; подпись сверяется.
+  for f in install.sh .env.example docker-compose.install.yml README.md; do
+    grep -q 'git\.seidrstudio\.pro' "$SCRIPT_DIR/$f" && fail "$f: в пакете снова наш реестр — он чужим людям не доступен"; ok
+  done
+  mkdir -p "$t/pkg/images"; printf 'образ-miniLORE' > "$t/pkg/images/m.tar"
+  ( cd "$t/pkg/images" && sha256sum m.tar > m.tar.sha256 )
+  MINILORE_ARCHIVE="$t/pkg/images/m.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q "docker load -i $t/pkg/images/m.tar" || fail "архив miniLORE есть — в плане нет docker load: $out"; ok
+  printf 'подмена' > "$t/pkg/images/m.tar"
+  MINILORE_ARCHIVE="$t/pkg/images/m.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый архив miniLORE взят молча: $out"; ok
+  rm -f "$t/pkg/images/m.tar.sha256"
+  MINILORE_ARCHIVE="$t/pkg/images/m.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q 'sha256' || fail "архив miniLORE без подписи взят молча: $out"; ok
+  MINILORE_ARCHIVE="$t/pkg/нет.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -q 'MINILORE_IMAGE' || fail "образа нет — не названы выходы: $out"; ok
+  # Базы miniLORE заводит установщик: их сервер 0.4.19 падает с «Database not found» и уходит в перезапуск.
+  grep -q 'minilore_dbs' "$0" || fail "нет шага создания баз miniLORE"; ok
+  grep -q 'create database \$db' "$0" || fail "базы miniLORE создаются не командой create database"; ok
+  # Имён баз в .env может не быть (повторный запуск поверх старого .env) — тогда берутся умолчания compose,
+  # а не молчаливый пропуск: молчание тут выглядело бы успехом, а сервер падал бы «Database not found».
+  grep -q 'main_db:-minilore}' "$0" || fail "нет умолчания имени основной базы miniLORE"; ok
+  grep -q 'arch_db:-minilore_archive}' "$0" || fail "нет умолчания имени базы архива miniLORE"; ok
+  # Вход для телефона: без издателя Keycloak сервер РАБОТАЕТ (проверено на стенде: /config отдаёт kcIssuer: null),
+  # но телефон войти не сможет. Поэтому предупреждение словами, а не отказ и не молчание.
+  expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --minilore install --minilore-client-id a --minilore-owner b
+  printf '%s' "$out" | grep -qi 'телефон войти не сможет' || fail "miniLORE без входа: не сказано про телефон: $out"; ok
+  printf '%s' "$out" | grep -q 'LORE_OIDC_ISSUER' || fail "miniLORE без входа: не названа настройка: $out"; ok
+  expect_rc 2 --dry-run --dir "$t/inst" --minilore none --minilore-client-id x
+  printf '%s' "$out" | grep -q -- '--minilore install' || fail "ключи miniLORE без установки: причина не названа: $out"; ok
+  # Отказ ArcadeDB называет ПРИЧИНУ, а не только «не ответила»: в журнале базы «Authentication failed» значит,
+  # что пароль в .env не подходит к УЖЕ существующей базе (том прошлой установки с тем же именем проекта).
+  case "$(arcadedb_hint 'INFO [GetDatabasesHandler] Authentication failed: User/Password not valid')" in
+    *пароль*) ok ;; *) fail "подсказка ArcadeDB: про пароль не сказано" ;;
+  esac
+  case "$(arcadedb_hint 'INFO [ArcadeDBServer] <ArcadeDB_0> Starting ArcadeDB Server...')" in
+    *пароль*) fail "подсказка ArcadeDB: пароль назван там, где его в журнале нет" ;; *) ok ;;
+  esac
+  printf '%s' "$out" | grep -q 'minilore-srv' && fail "--minilore none: сервер miniLORE всё равно в плане: $out"; ok
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
   printf '%s' "$out" | grep -qi 'forgejo' && fail "без --forgejo план не должен трогать Forgejo: $out"; ok
   [ "$(merge_profiles 'guard,forgejo' install)" = 'guard,forgejo,forgejo-mcp' ] || fail "профили: guard теряется"; ok
@@ -748,7 +1176,7 @@ selftest() {
   grep -q '^FORGEJO_MCP_API_KEY=CHANGE_ME$' "$SCRIPT_DIR/.env.example" || fail ".env.example: ключ forgejo-mcp — заглушка CHANGE_ME"; ok
   grep -qE '^FORGEJO_(API|MCP)_TOKEN=$' "$SCRIPT_DIR/.env.example" || fail ".env.example: токены Forgejo — пустые"; ok
   # 9. образ forgejo-mcp — из архива пакета (владелица 20.11.2026: «не публиковать, включить в инсталятор»):
-  #    есть архив — docker load со сверкой sha256; нет — отказ; сборка из git — только --forgejo-mcp-build.
+  #    есть архив — docker load со сверкой sha256; нет — сборка из исходника пакета (src/), сети к git не нужно.
   mkdir -p "$t/pkg/images"; printf 'образ' > "$t/pkg/images/a.tar"
   ( cd "$t/pkg/images" && sha256sum a.tar > a.tar.sha256 )
   FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
@@ -761,10 +1189,29 @@ selftest() {
   rm -f "$t/pkg/images/a.tar.sha256"; printf 'образ' > "$t/pkg/images/a.tar"
   FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
   printf '%s' "$out" | grep -q 'нет файла sha256' || fail "архив без sha256: принят молча: $out"; ok
-  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org
-  printf '%s' "$out" | grep -q 'forgejo-mcp-build' || fail "нет архива: отказ не называет запасной путь: $out"; ok
-  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
-  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "--forgejo-mcp-build: нет сборки из git: $out"; ok
+  # Нет образа — сборка из исходника пакета: без сети к чьему-либо git (владелица 21.11.2026).
+  FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q "распаковать $t/pkg/src/fmcp.tar.gz" || fail "нет образа: исходник пакета не распакован: $out"; ok
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "исходник пакета: нет сборки: $out"; ok
+  printf '%s' "$out" | grep -qiE 'git clone|https?://[^ ]*forgejo-mcp' && fail "сборка forgejo-mcp ходит в сеть: $out"; ok
+  grep -qE 'context: \$\{FORGEJO_MCP_SRC:-\./forgejo-mcp-src\}$' "$SCRIPT_DIR/docker-compose.install.yml" || fail "compose: умолчание сборки forgejo-mcp — не исходник пакета"; ok
+  # --forgejo-mcp-build пропускает архив образа и собирает из исходника пакета.
+  FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install --forgejo-mcp-build
+  printf '%s' "$out" | grep -q 'docker load' && fail "--forgejo-mcp-build: план всё равно грузит образ"; ok
+  printf '%s' "$out" | grep -q 'compose build forgejo-mcp' || fail "--forgejo-mcp-build: нет сборки: $out"; ok
+  # Подменённый исходник пакета — отказ.
+  cp "$t/pkg/src/fmcp.tar.gz" "$t/pkg/src/bad.tar.gz"; printf 'x  bad.tar.gz\n' > "$t/pkg/src/bad.tar.gz.sha256"
+  FORGEJO_MCP_SRC_ARCHIVE="$t/pkg/src/bad.tar.gz" FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "подменённый исходник: принят: $out"; ok
+  # Своя замена: FORGEJO_MCP_SRC.
+  FORGEJO_MCP_SRC=/opt/my-fmcp FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
+  printf '%s' "$out" | grep -q 'своих исходников /opt/my-fmcp' || fail "FORGEJO_MCP_SRC не взят: $out"; ok
+  # Ничего нет и терминала нет — честный отказ с вариантами, без молчаливого фолбэка.
+  FORGEJO_MCP_SRC_ARCHIVE="$t/none.tar.gz" FORGEJO_MCP_ARCHIVE="$t/none.tar" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo own --forgejo-url https://git.example.org
+  printf '%s' "$out" | grep -q 'источник forgejo-mcp не задан' || fail "нет источника: причина не названа: $out"; ok
+  for k in FORGEJO_MCP_IMAGE FORGEJO_MCP_SRC 'forgejo none'; do
+    printf '%s' "$out" | grep -q -- "$k" || fail "нет источника: отказ не называет вариант $k: $out"; ok
+  done
   FORGEJO_MCP_IMAGE=reg.example/fmcp:1 FORGEJO_MCP_ARCHIVE="$t/pkg/images/a.tar" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0 --forgejo install
   printf '%s' "$out" | grep -q 'compose pull forgejo-mcp' || fail "FORGEJO_MCP_IMAGE не перекрыл архив: $out"; ok
   printf '%s' "$out" | grep -q 'docker load' && fail "FORGEJO_MCP_IMAGE задан, а план грузит архив"; ok
@@ -801,6 +1248,32 @@ selftest() {
   LORE_BACKEND_IMAGE=r/b:1 LORE_WEB_IMAGE=r/w:1 expect_rc 2 --dry-run --dir "$t/inst" --build-from-source
   expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
   printf '%s' "$out" | grep -q 'tar -xzf' && fail "без --build-from-source план распаковывает архив исходников"; ok
+
+  # 12. мегапакет (владелица 22.11.2026: «общий мегаустановщик сейчас один раз выложила бы и всё»): образы LORE
+  #     лежат архивами в images/ — установка идёт без реестра и без сборки. Берётся только полный набор из трёх:
+  #     половина из архива и половина из сети дала бы установку, которую не воспроизвести.
+  local im="$t/pkg/images" svc
+  mkdir -p "$im"
+  for svc in lore-backend lore-app-next lore-mcp; do
+    printf 'архив образа %s\n' "$svc" > "$im/$svc-v9.0.0.tar"
+    ( cd "$im" && sha256sum "$svc-v9.0.0.tar" > "$svc-v9.0.0.tar.sha256" )
+  done
+  LORE_IMAGES_DIR="$im" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'образы LORE взяты из архивов пакета (3 из 3)' || fail "мегапакет: образы не взяты из архивов: $out"; ok
+  printf '%s' "$out" | grep -qF "docker load -i $im/lore-backend-v9.0.0.tar" || fail "мегапакет: нет docker load бэкенда: $out"; ok
+  printf '%s' "$out" | grep -q 'compose pull lore-backend' && fail "мегапакет: план всё равно тянет образы из реестра"; ok
+  # Имя образа в плане может ВЫГЛЯДЕТЬ как адрес реестра (ghcr.io/…) — это нормально: такое имя несёт сам
+  # архив, и docker находит его локально после load. Важно другое: в сеть за ним никто не идёт, и это проверено
+  # отсутствием 'compose pull' выше.
+  # Подпись не сходится — отказ, а не «ну и ладно»: подменённый образ хуже отсутствующего.
+  printf 'подмена' >> "$im/lore-mcp-v9.0.0.tar"
+  LORE_IMAGES_DIR="$im" expect_rc 1 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'sha256 не сходится' || fail "мегапакет: подменённый архив образа принят: $out"; ok
+  rm -f "$im/lore-mcp-v9.0.0.tar" "$im/lore-mcp-v9.0.0.tar.sha256"
+  # Набор неполный — обычный путь (реестр), и это видно в плане.
+  LORE_IMAGES_DIR="$im" expect_rc 0 --dry-run --dir "$t/inst" --version v9.0.0
+  printf '%s' "$out" | grep -q 'образы LORE взяты из архивов' && fail "мегапакет: неполный набор принят за полный"; ok
+  printf '%s' "$out" | grep -q 'compose pull lore-backend' || fail "неполный набор архивов: план не вернулся к реестру: $out"; ok
   rm -rf "$t"
   echo "selftest ok ($n проверок)"
 }

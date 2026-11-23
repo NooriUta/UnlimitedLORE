@@ -192,6 +192,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // architect и pm — SE-11 (20.10.2026): их профили обещали project_new. Замок в
         // ресурсе (requireSuperAdminOrProjectAgent) читает ЭТУ строку, второго списка нет.
         Map.entry("project",   Set.of("full", "architect", "pm")),
+        // "repository" — реестр репозиториев (22.11.2026). Слово владелицы: «репозиторий только админам И КТО
+        // ЗАВОДИТ ПРОЕКТЫ» — отсюда тот же набор профилей, что у project, и тот же замок в ресурсе
+        // (requireSuperAdminOrProjectAgent). Организация строже: она в HUMAN_ONLY и там остаётся —
+        // «организацию только с административными правами full и с подтверждением».
+        Map.entry("repository", Set.of("full", "architect", "pm")),
         Map.entry("bragi",     Set.of("full", "marketer")),
         // NB: «quality» и «quality-gate» ниже — РАЗНЫЕ семейства. Первое —
         // проверка полноты записи (ничего не пишет, открыта всем), второе —

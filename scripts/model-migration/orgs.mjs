@@ -5,6 +5,8 @@
 // человека (раздел organizations файла решений) — какие проекты и чьи репозитории к ней относятся.
 // Чистая функция (planOrgs) + запись в приёмник (applyOrgs).
 
+import { splitGaps, gapLine, strictMode } from './source-gap.mjs';
+
 /** Ребро организация → репозиторий (вкладка «Репозитории» у организации). */
 export const ORG_REPO_EDGE = 'ORG_HAS_REPOSITORY';
 
@@ -42,9 +44,25 @@ export async function applyOrgs(db, doc, { log = console.log } = {}) {
   const n = async sql => Number((await q(sql))[0]?.n) || 0;
   const got = { orgs: await n('SELECT count(*) AS n FROM KnowOrganization'), projects: await n('SELECT count(*) AS n FROM ORG_HAS_PROJECT'), repos: await n(`SELECT count(*) AS n FROM ${ORG_REPO_EDGE}`) };
   const want = { orgs: plan.orgs.length, projects: plan.projectLinks.length, repos: plan.repoLinks.length };
-  const ok = Object.keys(want).every(k => want[k] === got[k]);
+  const counted = Object.keys(want).every(k => want[k] === got[k]);
+  const verdict = judgeOrgs({ ok: counted, unknownProjects: plan.unknownProjects });
   log(`организации: ${got.orgs}/${want.orgs}, организация → проект ${got.projects}/${want.projects}, организация → репозиторий ${got.repos}/${want.repos}`
-    + (plan.unknownProjects.length ? `; проекта нет в приёмнике: ${plan.unknownProjects.map(u => u.org + '→' + u.slug).join(', ')}` : ''));
-  log('сверка организаций:', ok ? 'сошлась' : 'НЕ сошлась');
-  return { ok: ok && plan.unknownProjects.length === 0, want, got, unknown: plan.unknownProjects };
+    + verdict.line);
+  log('сверка организаций:', verdict.ok ? 'сошлась' : 'НЕ сошлась');
+  return { ok: verdict.ok, want, got, unknown: plan.unknownProjects, absent_in_target: verdict.absent };
+}
+
+/**
+ * Вердикт шага. Счёт обязан сойтись всегда — это запись. «Проекта нет в приёмнике» — другое: источник старше
+ * правила (бэкап прода до 1.18 не знает проектов, заведённых позже). Такой пропуск называется поимённо и
+ * установку не роняет; в строгом режиме нашей трубы он красный, потому что там это дефект правила.
+ */
+export function judgeOrgs({ ok, unknownProjects = [] }, { strict = strictMode() } = {}) {
+  const gaps = splitGaps(unknownProjects.map(u => ({ ...u, kind: 'project_absent_in_target' })),
+    ['project_absent_in_target'], { strict });
+  return {
+    ok: ok && gaps.blocking.length === 0,
+    absent: gaps.absent,
+    line: gapLine(gaps.absent, u => `${u.org}→${u.slug}`),
+  };
 }

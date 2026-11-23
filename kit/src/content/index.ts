@@ -28,3 +28,4 @@ export { parseTagToken } from './TagChip';
 // Общий список выбора записи: окно ссылки и ref-редактор поля (S4-FIELD-EDITORS).
 export * from './RefSearchList';
 export { useRefPeek } from './RefPeekLayer';
+export * from './ModelDiagram';

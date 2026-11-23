@@ -32,8 +32,14 @@ name: LORE Release (publish on tag)
 #      накатка отдельным `compose run lore-migrate` (root, basic, LORE_MIGRATE_ONLY);
 #   7. up — compose up -d: бэкенд (ждём healthy) → v1 → v2;
 #   8. theme — тема KC из дерева тега → /home/nooriuta/keycloak/themes/lore;
-#   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит
-#      сборки, в логе «схема сверена: БД vN = код vN».
+#   9. probe — бандлы v1/v2 на lore.odal и new.lore, /lore/version = коммит сборки, схема:
+#      база из модели — schema_source=model и schema_version=model:<номер модели тега>,
+#      база шагов V — «схема сверена: БД vN = код vN» в логе; вид не определён — красная (1.18.3).
+# Джоб publish-ghcr — образы мажора (vX.Y.0) в ghcr.io для внешнего установщика — ОТДЕЛЬНО
+# от deploy-prod: публикация наружу не зависит от здоровья НАШЕГО прода (22.11.2026: на
+# v1.18.0 и v1.18.1 ложный красный «Проб прода» оставил шаг публикации skipped, наружу не
+# уехал ни один образ). Ждёт только publish (релиз и вложения — вместе с образами) и сам
+# проверяет resolve'ом, что образы :sha8 прошли препрод. Ручной догон: tag + ghcr=true.
 # Ручной запуск: tag + dry_run=true — только 1–3 и план, без публикации релиза;
 # deploy=true — боевая выкатка указанного тега (так же делается ОТКАТ на прошлый
 # тег: его образы :sha8 лежат на 131 и на lore-host). Только dispatch tag без
@@ -85,6 +91,48 @@ on:
         # PL-05: true — боевая выкатка тега на lore-host (повтор или откат на
         # прошлый тег). По умолчанию ручной запуск прод НЕ трогает.
         description: 'true — выкатить этот тег на прод (lore-host)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      ghcr:
+        # Публикация образов мажора в ghcr.io без выкатки прода (джоб publish-ghcr):
+        # догнать ghcr для уже выпущенного мажорного тега. Прод не трогается.
+        description: 'true — опубликовать образы мажорного тега в ghcr.io (прод не трогается)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      with_exe:
+        # Исполняемый файл lore-migrate (125 МБ, Node внутри) собирается на месте
+        # из lore-migrate.mjs — в каждом релизе он весил бы больше всего пакета
+        # вместе взятого. Нужен готовым — ручной запуск с with_exe=true, и тогда
+        # он едет ОТДЕЛЬНЫМ вложением, а архив остаётся лёгким.
+        description: 'true — приложить к релизу и исполняемый файл Linux x64 (125 МБ)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      with_migrate:
+        # Мастер переноса lore-migrate-<тег>.mjs (любая ОС, Node 20+) отдельным вложением. На мажорном теге — сам.
+        description: 'true — приложить мастер переноса lore-migrate-<тег>.mjs отдельным файлом'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      with_sources:
+        # Исходники LORE архивом (git archive, ~14 МБ). Нужны для install.sh --build-from-source: без них
+        # у получателя пакета остаётся только путь «готовые образы из реестра». Разбор документации
+        # 22.11.2026 показал, что README обещал этот файл, а релиз его не прикладывал.
+        description: 'true — приложить исходники LORE (нужны для сборки образов у себя, ~14 МБ)'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+      with_minilore_image:
+        # Образ сервера miniLORE архивом (~150 МБ). Нужен для install.sh --minilore install: из сети он не
+        # тянется, адресов наших реестров в пакете нет. По умолчанию выключен — не каждому релизу нужен.
+        description: 'true — приложить образ сервера miniLORE (нужен для --minilore install, ~150 МБ)'
         required: false
         default: 'false'
         type: choice
@@ -262,6 +310,47 @@ jobs:
           fi
           echo "релиз $TAG опубликован: $TITLE"
 
+      # ── Готовый пакет установки вложением релиза ──────────────────────────
+      # Слово владелицы 22.11.2026: «мне нужна сборка инсталятор для друзей».
+      # Друг открывает страницу релиза и скачивает ОДИН файл, а не клонирует
+      # репозиторий и собирает установщик сам. До этого пакет установки жил в
+      # двух местах, и оба друзьям недоступны: дерево репозитория и kkRepo во
+      # внутренней сети.
+      #
+      # Что уезжает: lore-installer-<тег>.tar.gz (install.sh,
+      # docker-compose.install.yml, .env.example, README.md, lore-migrate.mjs)
+      # и SHA256SUMS отдельным файлом рядом — как в выкладке kkRepo.
+      # Исполняемый файл на 125 МБ — только при with_exe=true (вход выше).
+      #
+      # continue-on-error — намеренно, как у зеркала (SE-12): релиз уже
+      # опубликован, и «сборщик не поставился» не повод прятать выпуск. Отказ
+      # при этом не теряется — его красит «Вердикт вложений» в конце job'а.
+      # Логика — .github/scripts/release-installer-asset.sh (многострочный bash
+      # в run: у Forgejo уже дважды ломал разбор workflow).
+      - name: Пакет установки → вложения релиза
+        id: installer_asset
+        continue-on-error: true
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag || '' }}
+          # Мажорный тег (vX.Y.0) кладёт единый файл ВСЕГДА — слово владелицы 22.11.2026: «тот установщик,
+          # визард миграции, подложи его тоже в публикацию». Это то, что человек скачивает одним файлом и
+          # запускает окно; ждать, пока кто-то вспомнит нажать флаг, для него значит не получить установщик.
+          # На догонках (vX.Y.Z, Z>0) по-прежнему не кладём: 119 МБ ради правки одной строки никому не нужны.
+          WITH_EXE: ${{ inputs.with_exe || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}
+          # Мастер переноса lore-migrate-<тег>.mjs отдельным вложением — слово владельца 23.11.2026: «и дистрибутив миграции
+          # нужно положить тоже». Правило как у единого файла: мажорный тег — всегда, догонка — по просьбе.
+          WITH_MIGRATE: ${{ inputs.with_migrate || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}
+          WITH_SOURCES: ${{ inputs.with_sources || 'true' }}
+          WITH_MINILORE_IMAGE: ${{ inputs.with_minilore_image || 'false' }}
+          MINILORE_SOURCE_IMAGE: ${{ vars.MINILORE_SOURCE_IMAGE }}
+        run: |
+          set -u
+          export TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+          export API="http://forgejo:3000/api/v1/repos/${GITHUB_REPOSITORY}"
+          bash .github/scripts/release-installer-asset.sh all
+
       # ── Зеркало GitHub ────────────────────────────────────────────────────
       # Последнее звено цепочки develop → preprod → main (tag) → mirror.
       #
@@ -406,6 +495,59 @@ jobs:
             head -c 300 /tmp/gh-created.json
             exit 1
           fi
+
+      # ── Зеркало в SeidrStudio (22.11.2026) ─────────────────────────────────
+      # Слово владелицы: «я попросила всё, что едет, продублировать как зеркала и выносить при смене x.y
+      # релизов» — то есть зеркало обновляется на мажорном теге vX.Y.0, патчи не зеркалятся. Смысл зеркала:
+      # друг, которому отдали пакет установки, должен иметь возможность ПОСМОТРЕТЬ исходники того, что ставит.
+      # Организация закрытая (limited): доступ друг получает учёткой, публичной видимости не делаем — её решение.
+      #
+      # Это наш же Forgejo, поэтому ни прокси, ни TLS-плясок, как с github.com, тут нет: push идёт на тот же
+      # хост, с которого шёл checkout.
+      #
+      # Отсутствие секрета — ГРОМКИЙ BLOCKED, а не тихий пропуск (просьба CICDGitHub и наше общее правило):
+      # «зеркало не обновилось, потому что токена нет» обязано быть видно в прогоне, иначе зеркало тихо
+      # отстанет на несколько релизов и обнаружится это у друга, а не у нас. Шаг под continue-on-error:
+      # отставшее зеркало не повод ронять уже опубликованный релиз — его ненулевой код ловит вердикт в конце.
+      - name: Mirror main + tag to SeidrStudio
+        id: mirror_seidr
+        continue-on-error: true
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+          MIRROR_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
+          INPUT_TAG: ${{ inputs.tag || '' }}
+        run: |
+          set -u
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.0$'; then
+            echo "::notice::зеркало SeidrStudio не трогаем: $TAG — не vX.Y.0 (зеркала выносятся при смене x.y)"
+            exit 0
+          fi
+
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::error::BLOCKED: зеркало SeidrStudio НЕ обновлено — нет секрета MIRROR_PUSH_TOKEN (организация AIDA, Settings -> Actions -> Secrets). Тег $TAG и релиз в Forgejo на месте; зеркало отстало. Разблокировать: токен с правом записи в ${MIRROR_REPO} выпускает владелица, кладёт CICDGitHub."
+            exit 1
+          fi
+
+          git fetch origin main:refs/remotes/origin/main --force
+          git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force 2>/dev/null || true
+
+          # То же правило, что у зеркала GitHub: тег обязан быть В main. Зеркало отражает релизы, а не
+          # произвольные точки истории; тег мимо main — ошибка процесса, и молча отражать её нельзя.
+          if ! git merge-base --is-ancestor "refs/tags/$TAG" origin/main; then
+            echo "::warning::тег $TAG не содержится в main — зеркало SeidrStudio пропущено. Сначала влейте preprod в main, потом ставьте тег."
+            exit 0
+          fi
+
+          HOST="${GITHUB_SERVER_URL:-http://forgejo:3000}"
+          if ! git push "${HOST%/}/${MIRROR_REPO}.git" \
+               "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG" \
+               -c http.extraheader="Authorization: token ${MIRROR_TOKEN}"; then
+            echo "::error::зеркало SeidrStudio НЕ обновлено: git push на ${MIRROR_REPO} не прошёл. Тег $TAG и релиз на месте, зеркало отстало."
+            exit 1
+          fi
+          echo "зеркало обновлено: main + $TAG -> ${MIRROR_REPO}"
 
       # ── Оповещение о релизе (TG-01, хвост) ─────────────────────────────────
       # Telegram в этом файле раньше был только про здоровье GH_MIRROR_TOKEN
@@ -563,6 +705,18 @@ jobs:
           echo "::error::зеркало GitHub НЕ обновилось (см. шаг Mirror main + tag to GitHub). Релиз в Forgejo опубликован; после починки — dispatch lore-release.yml с tag=<тег>, он идемпотентен."
           exit 1
 
+      # Тот же приём для готового пакета установки. Релиз без вложения выглядит
+      # нормальным, а друг на странице выпуска просто не находит, что скачать, —
+      # и узнаём мы об этом от него, а не из прогона. Поэтому отказ красит
+      # прогон: публикация при этом состоялась, а повторный dispatch идемпотентен
+      # (одноимённые вложения снимаются перед загрузкой).
+      - name: Вердикт вложений
+        if: ${{ always() && steps.installer_asset.outcome == 'failure' }}
+        run: |
+          echo "::error::готовый пакет установки НЕ приложен к релизу (см. шаг «Пакет установки → вложения релиза»). Релиз опубликован, но скачать установщик со страницы выпуска нельзя — придётся собирать из исходников."
+          echo "::error::После починки — dispatch lore-release.yml с tag=<тег>: шаг идемпотентен, одноимённые вложения заменяются."
+          exit 1
+
       # 04.11.2026: оповещение о релизе две недели не доходило (api.telegram.org
       # недоступен с ci-server — VPN-выход xray сломан), а прогоны были зелёными:
       # шаг под continue-on-error. Тот же приём, что у зеркала: релиз уже выложен,
@@ -676,15 +830,42 @@ jobs:
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/lore-host-deploy.sh probe
 
-      # SELF-PROVISION-STANDALONE (владелица 14.11.2026): образы мажорного релиза (vX.Y.0) —
-      # в ghcr.io для внешнего установщика; те же :sha8, что прошли препрод и прод, без
-      # пересборки. Не мажор — шаг ничего не делает. Нет токена на мажоре — BLOCKED, красно.
-      - name: Публикация образов мажорного релиза в ghcr.io
-        if: steps.mode.outputs.live == 'true'
-        env:
-          GHCR_PUSH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
-        run: bash .github/scripts/ghcr-publish.sh publish
-
       - name: Убрать ключ
         if: always()
         run: rm -f ~/.ssh/lore_host
+
+  publish-ghcr:
+    name: Publish major images to ghcr.io (same :sha8 as preprod; not gated by prod probes)
+    # См. шапку: НЕ needs deploy-prod и не стоит в одной задаче с «Пробами прода».
+    # needs publish — образы наружу только вместе с выпуском (тело + вложения пакета).
+    needs: publish
+    if: github.event_name == 'push' || (inputs.dry_run != 'true' && (inputs.deploy == 'true' || inputs.ghcr == 'true'))
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_STATE: /tmp/lore-ghcr.env
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Тег и его место в main
+        env:
+          INPUT_TAG: ${{ inputs.tag || '' }}
+        run: |
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          git fetch -q --tags origin "+refs/heads/main:refs/remotes/origin/main" || true
+          git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null || { echo "::error::тега $TAG нет"; exit 1; }
+          git merge-base --is-ancestor "refs/tags/$TAG" origin/main             || { echo "::error::тег $TAG НЕ содержится в main — наружу публикуется только релиз из main (ADR-LORE-046)"; exit 1; }
+          echo "тег $TAG содержится в main"
+
+      # resolve — только чтение на 131: тег → коммит препрода → образы :sha8 есть и прошли препрод.
+      - name: Образы тега на 131 (прошли препрод), без пересборки
+        run: bash .github/scripts/lore-host-deploy.sh resolve
+
+      # SELF-PROVISION-STANDALONE (владелица 14.11.2026). Не мажор — ничего не делает.
+      # Нет GHCR_PUSH_TOKEN на мажоре — BLOCKED и красно (ghcr-publish.sh), не тихий пропуск.
+      - name: Публикация образов мажорного релиза в ghcr.io
+        env:
+          GHCR_PUSH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
+        run: bash .github/scripts/ghcr-publish.sh publish

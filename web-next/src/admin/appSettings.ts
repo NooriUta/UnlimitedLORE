@@ -30,19 +30,21 @@ export interface KnownSetting {
 export const KNOWN_SETTINGS: readonly KnownSetting[] = [
   // Адрес Völva для ссылок «решение ↔ документ» (DS-LINK-1, DS-LINK-2).
   {
-    key: 'volva.url', kind: 'url', placeholder: 'https://volva.odal.seidrstudio.pro',
+    key: 'volva.url', kind: 'url', placeholder: 'https://volva.example.org',
     type: 'admin.set.type.url', def: 'admin.set.def.volvaUrl', descr: 'admin.set.descr.volvaUrl', hint: 'admin.set.hint.volvaUrl',
+  },
+  // Адрес git-хоста установки (SELF-PROVISION-STANDALONE): читает gitHost.ts (мастера, подсказки «руками»).
+  {
+    key: 'forgejo.url', kind: 'url', placeholder: 'https://git.example.org',
+    type: 'admin.set.type.url', def: 'admin.set.def.forgejoUrl', descr: 'admin.set.descr.forgejoUrl', hint: 'admin.set.hint.forgejoUrl',
   },
   // Слой графиков: свои графики на ECharts или встроенные графики Völva.
   {
     key: 'charts.layer', kind: 'choice', choices: ['echarts', 'volva'], placeholder: 'echarts',
     type: 'admin.set.type.chartLayer', def: 'admin.set.def.chartLayer', descr: 'admin.set.descr.chartLayer', hint: 'admin.set.hint.chartLayer',
   },
-  // QG-09: какие репозитории опрашивает канал прогонов Forgejo Actions.
-  {
-    key: 'qg.actions_projects', kind: 'projects', placeholder: 'NooriUta/UnlimitedLORE,NooriUta/AIDA',
-    type: 'admin.set.type.projects', def: 'admin.set.def.qgProjects', descr: 'admin.set.descr.qgProjects', hint: 'admin.set.hint.qgProjects',
-  },
+  // qg.actions_projects снята (SPRINT_LORE_ADMIN_POLISH/AP-DICT-UPSERT-DUP): что опрашивать в Actions, задаёт гейт
+  // QG-LORE-CI-ACTIONS с ребром на проект, а не строка-список в справочнике.
   // Картинки в MD-полях (LoreAssetResource) — читается при каждой загрузке.
   {
     key: 'md_images_enabled', kind: 'bool', placeholder: 'true',

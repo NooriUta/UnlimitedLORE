@@ -2279,7 +2279,10 @@ public final class LoreSlices {
             List.of("kc_sub"), Map.of(), "");
         slice("agent_by_id",
             "SELECT actor_id, name, client_id, agent_role, harness, " +
-            "out('OWNED_BY').kc_sub[0] AS owner, out('BELONGS_TO_PROJECT').slug AS projects " +
+            // owner_name — рядом с owner по той же причине, что и в срезе agents: в паспорте агента владелец
+            // тоже показывался опознавателем. Поля два, и оба нужны: имя человеку, kc_sub — отбору и связям.
+            "out('OWNED_BY').kc_sub[0] AS owner, out('OWNED_BY').display_name[0] AS owner_name, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             // AP-PEOPLE-PAGE (21.11.2026): автор-агент в ленте и истории записан учёткой (client_id) — карточка агента
             // открывается и по ней, а не только по actor_id.
             "FROM KnowActor WHERE kind = 'agent' AND (actor_id = :id OR client_id = :id)",
@@ -2289,9 +2292,13 @@ public final class LoreSlices {
             "SELECT kc_sub, display_name, coalesce(login, display_name) AS login, name_source, " +
             "outE('HAS_PROJECT_ROLE')[valid_to IS NULL].inV().slug AS projects FROM KnowUser",
             List.of(), Map.of(), " ORDER BY display_name");
+        // owner_name — имя владельца человеческими словами; owner (kc_sub) остаётся для отбора и связей.
+        // Находка владелицы 22.11.2026: в колонке «Владелец» раздела «Агенты» стояли одни uuid, хотя имя в графе
+        // есть и его отдаёт соседний срез agent_owners. Это была не потеря владельцев, а невыбранное поле.
         slice("agents",
             "SELECT actor_id, name, client_id, agent_role, harness, " +
-            "out('OWNED_BY').kc_sub[0] AS owner, out('BELONGS_TO_PROJECT').slug AS projects " +
+            "out('OWNED_BY').kc_sub[0] AS owner, out('OWNED_BY').display_name[0] AS owner_name, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
         slice("user_tasks",
@@ -2982,6 +2989,8 @@ public final class LoreSlices {
         slice("pr_by_id",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
             "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
+            // MD-05: спринт PR — выводной, через задачи (своего ребра спринт → PR нет); у фазы sprint_id нет — пусто.
+            "in('CLOSED_BY').out('PART_OF').sprint_id AS sprint_ids, " +
             "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
             "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
             List.of("id"), Map.of(), "");

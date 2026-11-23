@@ -5855,9 +5855,21 @@
       "layer" : "optional",
       "labelEn" : "Number",
       "labelPl" : "Numer"
+    }, {
+      "key" : "sprints",
+      "label" : "Спринты",
+      "labelKey" : "pp.field.sprints",
+      "kind" : "ref",
+      "group" : "props",
+      "multi" : true,
+      "refType" : "sprint",
+      "definition" : "Спринты задач, которые PR закрывает: выводятся по пути задача → PR (CLOSED_BY) и задача → спринт (PART_OF), без повтора. Своего ребра спринт → PR нет (HAS_PR снят переносом 1.18) — поле только для чтения; у PR без задач спринтов нет.",
+      "layer" : "optional",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty"
     } ],
     "props" : [ {
-      "fields" : [ "url", "state", "merged_at", "projects", "head_ref", "base_ref", "pr_number" ]
+      "fields" : [ "url", "state", "merged_at", "projects", "sprints", "head_ref", "base_ref", "pr_number" ]
     } ],
     "relations" : [ {
       "key" : "projects",

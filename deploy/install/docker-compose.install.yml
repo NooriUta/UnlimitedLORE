@@ -20,7 +20,7 @@ name: ${COMPOSE_PROJECT_NAME:-lore}
 
 services:
   arcadedb:
-    image: arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
+    image: ${LORE_IMAGE_REGISTRY:-}arcadedata/arcadedb:${ARCADEDB_VERSION:-26.11.1}
     restart: unless-stopped
     environment:
       # Пароль root приходит из .env и в файлы не пишется.
@@ -79,6 +79,13 @@ services:
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
+        # Зеркала Maven и Gradle (Dockerfile.local умеет их сам): закрытая сеть или деградированный прямой канал.
+        # Пусто — сборка идёт в Maven Central и Gradle Plugin Portal напрямую, как раньше. Без этих переменных
+        # установка «собрать самому» на такой машине падает невнятным «Plugin [id: io.quarkus] was not found»
+        # (замер на машине с деградированным каналом: половина запросов к публичным репозиториям обрывалась).
+        LORE_MAVEN_MIRROR: ${LORE_MAVEN_MIRROR:-}
+        LORE_PLUGIN_MIRROR: ${LORE_PLUGIN_MIRROR:-}
+        LORE_GRADLE_DIST_MIRROR: ${LORE_GRADLE_DIST_MIRROR:-}
     restart: unless-stopped
     depends_on:
       - arcadedb
@@ -137,12 +144,13 @@ services:
       dockerfile: web-next/Dockerfile
       args:
         VITE_LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
-        # Vite впекает вход в бандл — флипать вместе с бэкендом, тем же значением.
-        VITE_LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}
-        VITE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
-        VITE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
     restart: unless-stopped
     environment:
+      # Вход — настройка ЗАПУСКА (SELF-PROVISION-STANDALONE): скрипт старта образа кладёт её в /config.json.
+      # Смена — `docker compose up -d`, без пересборки; значения те же, что у бэкенда.
+      LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-false}
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+      LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
       LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
       LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-}
@@ -155,12 +163,39 @@ services:
       lore-backend:
         condition: service_healthy
 
+  # MCP-сервер LORE для агентов (1.18.2, SELF-PROVISION-STANDALONE): Streamable HTTP на 9200 в сети
+  # compose, наружу только через nginx веба v2 — https://<хост>/mcp и /mcp/health. Своего порта нет.
+  # Образ: свой реестр (LORE_MCP_IMAGE; мажор без --build — ghcr рядом с бэкендом и вебом) или сборка из mcp-server того
+  # же тега. Секретов у сервиса нет: токен (Authorization: Bearer) или пару X-Lore-Client-Id/Secret присылает клиент;
+  # для пары нужен адрес области LORE_OIDC_ISSUER (не секрет), без него вход парой отвечает 503, Bearer работает.
+  lore-mcp:
+    image: ${LORE_MCP_IMAGE:-lore-install-mcp:${LORE_VERSION:-local}}
+    build:
+      context: ${LORE_SRC:-../..}/mcp-server
+      args:
+        LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    restart: unless-stopped
+    environment:
+      - LORE_MCP_TRANSPORT=http
+      - LORE_MCP_PORT=9200
+      # Бэкенд — по имени в сети compose, мимо nginx.
+      - LORE_BACKEND_URL=http://lore-backend:9100
+      - LORE_OIDC_ISSUER=${LORE_OIDC_ISSUER:-}
+      # Инструменты forgejo_* — только когда мост Forgejo настроен (FORGEJO_API_TOKEN у бэкенда): LORE_MCP_FORGEJO=true.
+      - LORE_FORGEJO=${LORE_MCP_FORGEJO:-false}
+    depends_on:
+      lore-backend:
+        condition: service_healthy
+
   # Forgejo — по выбору (MIG-04, владелица 20.11.2026: «установка Forgejo если нет нашей версии»). Профиль forgejo:
-  # без него сервис не стартует. Версия — та же, что на нашем стенде. База — sqlite в томе forgejo-data; SSH выключен
+  # без него сервис не стартует. База — sqlite в томе forgejo-data; SSH выключен
   # (клон по http). Администратора владелец заводит в первом окне Forgejo — установщик паролей Forgejo не знает.
   forgejo:
     profiles: ["forgejo"]
-    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-15.0.5}
+    image: ${FORGEJO_IMAGE:-codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17.0.2}}
     restart: unless-stopped
     environment:
       - USER_UID=1000
@@ -174,15 +209,17 @@ services:
     ports:
       - "${LORE_BIND:-127.0.0.1}:${FORGEJO_HTTP_PORT:-3000}:3000"
 
-  # forgejo-mcp — MCP-сервер Forgejo для агентов (репозиторий AIDA/forgejo-mcp, форк @ric_/forgejo-mcp 0.1.7 с
-  # инструментами Actions/CI). Профиль forgejo-mcp: и при своей установке Forgejo, и при своём Forgejo владельца.
-  # Образ: свой реестр (FORGEJO_MCP_IMAGE) или сборка из исходников, прибитых к коммиту (FORGEJO_MCP_SRC).
+  # forgejo-mcp — MCP-сервер Forgejo для агентов (форк @ric_/forgejo-mcp 0.1.7 с инструментами Actions/CI, лицензия MIT).
+  # Профиль forgejo-mcp: и при своей установке Forgejo, и при своём Forgejo владельца.
+  # Образ: свой реестр (FORGEJO_MCP_IMAGE), архив образа из пакета или сборка. Сборка по умолчанию — из исходника,
+  # который едет в пакете (src/forgejo-mcp-<коммит>.tar.gz) и распаковывается install.sh в ./forgejo-mcp-src;
+  # FORGEJO_MCP_SRC — своя замена (каталог или git-адрес#коммит). Сетевого умолчания нет.
   # FORGEJO_TOKEN обязателен — без него сервер не стартует; install.sh тогда его не поднимает и говорит, что вписать.
   forgejo-mcp:
     profiles: ["forgejo-mcp"]
-    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:bbe9f59c}
+    image: ${FORGEJO_MCP_IMAGE:-lore-install-forgejo-mcp:e7d57dee}
     build:
-      context: ${FORGEJO_MCP_SRC:-https://git.seidrstudio.pro/AIDA/forgejo-mcp.git#bbe9f59c2167655c3c87fb51b102db29a275d13a}
+      context: ${FORGEJO_MCP_SRC:-./forgejo-mcp-src}
     restart: unless-stopped
     environment:
       - FORGEJO_URL=${FORGEJO_URL:-http://forgejo:3000}
@@ -201,6 +238,55 @@ services:
       - forgejo-data:/forgejo-data:ro
     ports:
       - "${LORE_BIND:-127.0.0.1}:${FORGEJO_MCP_PORT:-4430}:3000"
+
+  # miniLORE — сервер мобильного монитора сессий. Профиль minilore: ставится по выбору,
+  # решение D-2026-INSTALL-MINILORE-IN-PACKAGE («включаем miniLORE в пакет», владелица 22.11.2026).
+  #
+  # Состав в этой версии: сервер (здесь) и — отдельными вложениями выпуска — установщики ШЛЮЗА выпуска
+  # link-v0.3.81 (байты собраны трубой, не руками). Шлюз ставится на машину человека, а не в этот стек,
+  # поэтому службы у него тут нет.
+  # Приложение APK не везём: труба сборки у разработчика красная, выпуск 1.12.85 вышел без APK. Раздавать файл,
+  # который не собрала труба, нельзя — друг не сможет его воспроизвести.
+  #
+  # База — та же ArcadeDB, что у LORE. Две базы, minilore и minilore_archive, заводит УСТАНОВЩИК: сервер 0.4.19
+  # сам их не создаёт и падает «Database not found», уходя в бесконечный перезапуск (проверено 22.11.2026).
+  # Чужих баз сервер не трогает. Порт наружу не публикуется: miniLORE доступен только изнутри установки,
+  # снаружи — через прокси владельца, если он его заводит.
+  minilore-srv:
+    profiles: ["minilore"]
+    image: ${MINILORE_IMAGE:-minilore-srv:0.4.19}
+    restart: unless-stopped
+    # Просто «после ArcadeDB», без ожидания здоровья: у службы arcadedb в этом пакете healthcheck не объявлен,
+    # и `condition: service_healthy` роняет весь запуск словами «container … has no healthcheck configured»
+    # (поймано прогоном на чужой машине 22.11.2026). Готовность базы сервер miniLORE переживает сам: не достучался —
+    # повторит. Так же сделаны lore-db-guard и lore-backend выше.
+    depends_on:
+      - arcadedb
+    environment:
+      # Вход — тот же Keycloak, что у LORE: отдельной области для miniLORE не заводим.
+      - KC_ISSUER=${LORE_OIDC_ISSUER:-}
+      - KC_AUDIENCE=${MINILORE_KC_AUDIENCE:-minilore-srv}
+      # Клиент мобильного приложения В KEYCLOAK ВЛАДЕЛЬЦА. Умолчания нет намеренно: у разработчика клиент свой,
+      # поэтому здесь его нет: без своего значения телефон владельца не войдёт, и лучше узнать это при установке.
+      - MINILORE_APP_CLIENT_ID=${MINILORE_APP_CLIENT_ID:-}
+      # Схема возврата вшита в APK манифестом (appAuthRedirectScheme) — менять её нельзя, её нужно ЗАВЕСТИ
+      # в Keycloak владельца как redirect pro.seidrstudio.minilore://auth/callback (шаг мастера).
+      - MINILORE_APP_AUTH_SCHEME=${MINILORE_APP_AUTH_SCHEME:-pro.seidrstudio.minilore}
+      - MINILORE_ARCADE_URL=${MINILORE_ARCADE_URL:-http://arcadedb:2480}
+      - MINILORE_ARCADE_USER=${MINILORE_ARCADE_USER:-root}
+      # Двоеточия в тексте отказа тут нельзя: строка списка с «: » разбирается YAML как пара ключ-значение,
+      # и compose падает «environment.[6]: unexpected type map» (поймано прогоном на чужой машине 22.11.2026).
+      - "MINILORE_ARCADE_PASSWORD=${ARCADEDB_ROOT_PASSWORD:?нужен пароль ArcadeDB — miniLORE заводит свои базы}"
+      - MINILORE_ARCADE_DATABASE=${MINILORE_ARCADE_DATABASE:-minilore}
+      - MINILORE_ARCHIVE_DATABASE=${MINILORE_ARCHIVE_DATABASE:-minilore_archive}
+      # Чтение LORE сервером miniLORE — по желанию владельца: пусто, и двери чтения отвечают 503 с причиной.
+      - MINILORE_LORE_BASE_URL=${MINILORE_LORE_BASE_URL:-}
+      - MINILORE_LORE_CLIENT_ID=${MINILORE_LORE_CLIENT_ID:-}
+      - MINILORE_LORE_CLIENT_SECRET=${MINILORE_LORE_CLIENT_SECRET:-}
+      # Владелец установки. Умолчания нет намеренно: у разработчика это его собственное имя, и здесь ему не место.
+      - MINILORE_OWNER=${MINILORE_OWNER:-}
+      - MINILORE_HTTP_PORT=8080
+      - MINILORE_LOG_LEVEL=${MINILORE_LOG_LEVEL:-INFO}
 
 volumes:
   lore-db:

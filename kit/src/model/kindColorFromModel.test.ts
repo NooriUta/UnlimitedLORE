@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { configFromModel } from './configFromModel';
 import { parseModel } from './loadModel';
 
-const MODEL = join(__dirname, '..', '..', '..', 'shared', 'fixtures', 'model.json');
+const MODEL = join(__dirname, '..', '..', 'fixtures', 'model.json') // снимок живой модели LORE (из UnlimitedLORE shared/fixtures, 22.11.2026);
 const CSS = join(__dirname, '..', 'styles', 'seidr.css');
 type Doc = { types: Record<string, { color?: unknown }> };
 const snapshot = (): Doc => JSON.parse(readFileSync(MODEL, 'utf8')) as Doc;

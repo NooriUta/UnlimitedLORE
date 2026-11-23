@@ -202,8 +202,16 @@ test('M5 Админка «Организации» под super-admin: заве�
   // (recordCreate.ts, проба занятости), это не поломка. Считаем ошибки паспортов с этого места.
   expect(bad.filter(b => !b.startsWith(`404 /lore/record/organization/${code}`)), 'до создания — без ошибок, кроме пробы свободного кода').toEqual([]);
   bad.length = 0;
+  // У новой организации связей ещё нет, и пустая вкладка «Проекты» уходит под «Ещё» (K5-EMPTY-LINK-TABS, сценарий N6a).
+  // Поэтому вкладка открывается адресом (&tab=projects), как в ветке «организация уже была». Прямой щелчок по вкладке
+  // в ряду работал, только пока TEST-org-smoke оставалась на стенде с прошлых прогонов. На свежей копии прода
+  // (refresh 23.11.2026) организацию заводят заново, и M5 падал: «вкладка -tab-projects не найдена».
   const projTab = tabOf(page, 'projects');
-  await projTab.click();
+  if (await projTab.isVisible()) await projTab.click();
+  else {
+    await openStand(page, `/?mod=admin&sec=adm-orgs&open=${encodeURIComponent(code)}&tab=projects`, page.locator('[data-testid="kit-rec-loaded"]'));
+    await passportLoaded(page, `организация ${code}, вкладка «Проекты»`);
+  }
   const search = page.getByRole('searchbox', { name: /Привязать: Проекты/ });
   await expect(search, 'поиск проекта для привязки').toBeVisible({ timeout: 15_000 });
   await search.fill(preprod ? project : 'MIDGARD');

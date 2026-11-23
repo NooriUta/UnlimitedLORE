@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { loadModel } from './loadModel';
 import { configFromModel } from './configFromModel';
 
-const MODEL = join(__dirname, '..', '..', '..', 'shared', 'fixtures', 'model.json');
+const MODEL = join(__dirname, '..', '..', 'fixtures', 'model.json') // снимок живой модели LORE (из UnlimitedLORE shared/fixtures, 22.11.2026);
 const raw = (): unknown => JSON.parse(readFileSync(MODEL, 'utf8'));
 
 describe('CT-KIT-FIXTURES: модель с живого сервера', () => {

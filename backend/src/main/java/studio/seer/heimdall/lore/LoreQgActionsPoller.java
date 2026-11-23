@@ -86,17 +86,28 @@ public class LoreQgActionsPoller {
     java.util.Optional<String> projectsConfig;
 
     /**
-     * Значение конфига (фолбэк). Источник №1 — настройка админки
-     * {@link #SETTING_CODE}, читается на каждом заходе ({@link #currentProjects()}).
+     * Значение конфига (фолбэк). Источник №1 — гейты канала Actions и их проекты,
+     * читаются на каждом заходе ({@link #currentProjects()}).
      */
     String projectsCsv = "";
 
-    /** Ключ настройки в админке (dict_type=app_setting, значение — label_ru). */
-    static final String SETTING_CODE = "qg.actions_projects";
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-DICT-UPSERT-DUP (решение владелицы 21.11.2026 «перевязать не к репозиторию,
+     * а к проекту, они схлопнутся»; выбор владельца 23.11.2026 — вариант «а»): что опрашивать, задаёт ГЕЙТ канала
+     * Actions и его проект (ребро BELONGS_TO_PROJECT, QG-01). Строка-список в справочнике держала две строки на
+     * один ключ (Forgejo и зеркало GitHub) — уникальный индекс не создавался, чтение по ключу видело одну.
+     * Гейт канала узнаётся по рутине: поле {@code routine_name} или «**Routine:** `qg-actions-poll`» в тексте.
+     */
+    static final String ACTIONS_ROUTINE = "qg-actions-poll";
 
-    static final String SOURCE_SETTING = "настройка app_setting/" + SETTING_CODE;
-    static final String SOURCE_CONFIG  = "конфиг lore.qg.actions-projects";
-    static final String SOURCE_NONE    = "не задан";
+    /** Гейты-кандидаты: отбор по рутине доводит {@link #isActionsGate}. */
+    static final String GATES_SQL = "SELECT qg_id, status, content_md, routine_name, out('BELONGS_TO_PROJECT').slug AS projects "
+        + "FROM QualityGate WHERE routine_name = :r OR content_md LIKE :pat ORDER BY qg_id";
+
+    static final String SOURCE_GATES  = "гейты канала Actions: ";
+    static final String SOURCE_CONFIG = "конфиг lore.qg.actions-projects";
+    static final String SOURCE_NONE   = "не привязан проект: нет гейта канала Actions (рутина " + ACTIONS_ROUTINE
+        + ") с проектом — заведите гейт qg_new scope=project";
 
     /** Slug git-проекта: {@code owner/repo}, буквы/цифры/._- в обеих частях. */
     private static final Pattern SLUG = Pattern.compile("[A-Za-z0-9._-]+/[A-Za-z0-9._-]+");
@@ -120,7 +131,7 @@ public class LoreQgActionsPoller {
     @Inject
     LoreQgRunWriter writer;
 
-    /** Чтение настройки — тем же клиентом, что и {@code LoreAssetResource.setting}. */
+    /** Чтение гейтов и зеркал — публичным клиентом чтения. */
     @Inject
     LoreIngestService ingestService;
 
@@ -130,8 +141,8 @@ public class LoreQgActionsPoller {
     void start() {
         projectsCsv = projectsConfig == null ? "" : projectsConfig.orElse("");
         if (!loreEnabled || !pollEnabled) return;
-        // QG-09: расписание запускается ВСЕГДА, даже при пустом конфиге — список
-        // теперь задаётся в админке и может появиться без рестарта. Пустоту
+        // QG-09: расписание запускается ВСЕГДА, даже при пустом конфиге — проект
+        // привязывается гейтом и может появиться без рестарта. Пустоту
         // каждый заход проверяет сам и говорит о ней (pollQuietly).
         poller = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "lore-qg-actions-poll");
@@ -142,29 +153,64 @@ public class LoreQgActionsPoller {
         // может быть ещё не поднят, а стартовать с предупреждения об ошибке —
         // приучать не читать предупреждения.
         poller.scheduleAtFixedRate(this::pollQuietly, pollMinutes, pollMinutes, TimeUnit.MINUTES);
-        LOG.infof("[LORE QG] опрос прогонов Actions включён, раз в %d мин; проекты — настройка %s "
-            + "в админке, иначе конфиг lore.qg.actions-projects (сейчас: «%s»)",
-            pollMinutes, SETTING_CODE, projectsCsv);
+        LOG.infof("[LORE QG] опрос прогонов Actions включён, раз в %d мин; проекты — гейты рутины %s "
+            + "(ребро на проект), иначе конфиг lore.qg.actions-projects (сейчас: «%s»)",
+            pollMinutes, ACTIONS_ROUTINE, projectsCsv);
+    }
+
+    /** Гейт канала Actions: рутина {@link #ACTIONS_ROUTINE} полем или в тексте, гейт не снят. */
+    static boolean isActionsGate(Map<String, Object> g) {
+        if ("retired".equals(String.valueOf(g.get("status")))) return false;
+        Object rn = g.get("routine_name");
+        if (rn != null && ACTIONS_ROUTINE.equals(rn.toString().strip())) return true;
+        Object id = g.get("qg_id"), md = g.get("content_md");
+        return ACTIONS_ROUTINE.equals(QgMetricState.routineOf(id == null ? null : id.toString(), md == null ? null : md.toString()));
     }
 
     /**
-     * SPRINT_QG_REBUILD/QG-09: список проектов задаётся в админке. Порядок:
-     * непустая активная настройка → она; иначе конфиг (обратная совместимость
-     * с {@code LORE_QG_ACTIONS_PROJECTS}); иначе пусто.
+     * Порядок: проекты гейтов канала Actions → они; гейтов нет — конфиг (обратная совместимость с
+     * {@code LORE_QG_ACTIONS_PROJECTS}); иначе пусто с честным «не привязан проект».
      *
-     * <p>Непустая настройка побеждает, даже если в ней один мусор: владелец явно
-     * задал список, и тихо подменить его конфигом значило бы опрашивать не то,
-     * что он видит в админке. Мусор при этом назван в {@code rejected}.
+     * <p>Гейт есть, а проекта у него нет — конфигом это не подменяется: гейт назван в {@code rejected}.
      *
-     * <p>Чистая функция — без базы и Quarkus, правило проверяет
-     * {@code QgActionsProjectsResolveTest}.
+     * <p>Чистая функция — без базы и Quarkus, правило проверяет {@code QgActionsProjectsResolveTest}.
      */
-    static Projects resolveProjects(String setting, String config) {
-        List<String> fromSetting = items(setting);
-        if (!fromSetting.isEmpty()) return validate(fromSetting, SOURCE_SETTING);
+    static Projects resolveProjects(List<Map<String, Object>> gateRows, String config) {
+        List<String> gates = new ArrayList<>();
+        java.util.LinkedHashSet<String> slugs = new java.util.LinkedHashSet<>();
+        List<String> noProject = new ArrayList<>();
+        for (Map<String, Object> g : gateRows == null ? List.<Map<String, Object>>of() : gateRows) {
+            if (!isActionsGate(g)) continue;
+            String id = String.valueOf(g.get("qg_id"));
+            gates.add(id);
+            boolean any = false;
+            if (g.get("projects") instanceof java.util.Collection<?> c)
+                for (Object s : c) if (s != null && !s.toString().isBlank()) { slugs.add(s.toString().strip()); any = true; }
+            if (!any) noProject.add(id + " — гейт канала Actions, не привязан проект");
+        }
+        if (!gates.isEmpty()) {
+            Projects v = validate(List.copyOf(slugs), SOURCE_GATES + String.join(", ", gates));
+            List<String> rejected = new ArrayList<>(noProject);
+            rejected.addAll(v.rejected());
+            return new Projects(v.projects(), List.copyOf(rejected), v.source());
+        }
         List<String> fromConfig = items(config);
         if (!fromConfig.isEmpty()) return validate(fromConfig, SOURCE_CONFIG);
         return new Projects(List.of(), List.of(), SOURCE_NONE);
+    }
+
+    /**
+     * Зеркала проекта называются в строке захода, но не опрашиваются (решение 23.11.2026, «2а»): мост ходит
+     * только в Forgejo API, Actions на зеркале GitHub выключены. Чистая функция.
+     */
+    static List<String> mirrorNotes(List<String> urls) {
+        List<String> out = new ArrayList<>();
+        if (urls == null) return out;
+        for (String u : urls) {
+            if (u == null || u.isBlank()) continue;
+            out.add(u.strip().replaceFirst("^https?://", "").replaceFirst("/+$", "") + " — зеркало, Actions не опрашиваются");
+        }
+        return out;
     }
 
     private static List<String> items(String csv) {
@@ -185,24 +231,33 @@ public class LoreQgActionsPoller {
     }
 
     /**
-     * Список на ТЕКУЩИЙ заход: правка в админке подхватывается со следующего
-     * цикла, без рестарта. Отказ чтения настройки — WARN и конфиг: опрос не
-     * падает и не молчит, а неизвестность настройки не выдаётся за её отсутствие.
+     * Список на ТЕКУЩИЙ заход: новый гейт или его проект подхватываются со следующего
+     * цикла, без рестарта. Отказ чтения гейтов — WARN и конфиг: опрос не падает и
+     * не молчит, а неизвестность гейтов не выдаётся за их отсутствие.
      */
     Projects currentProjects() {
-        String setting;
+        List<Map<String, Object>> gates;
         try {
-            List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT label_ru FROM KnowDictEntry WHERE dict_type='app_setting' AND code=:c AND is_active=true",
-                Map.of("c", SETTING_CODE));
-            Object v = rows.isEmpty() ? null : rows.get(0).get("label_ru");
-            setting = v == null ? null : v.toString();
+            gates = ingestService.queryPublic(GATES_SQL, Map.of("r", ACTIONS_ROUTINE, "pat", "%`" + ACTIONS_ROUTINE + "`%"));
         } catch (RuntimeException e) {
-            LOG.warnf("[LORE QG] настройка %s не прочитана (%s) — на этот заход берём конфиг lore.qg.actions-projects",
-                SETTING_CODE, LoreUpstream.detail(e));
-            setting = null;
+            LOG.warnf("[LORE QG] гейты канала Actions не прочитаны (%s) — на этот заход берём конфиг lore.qg.actions-projects",
+                LoreUpstream.detail(e));
+            gates = List.of();
         }
-        return resolveProjects(setting, projectsCsv);
+        return resolveProjects(gates, projectsCsv);
+    }
+
+    /** Зеркала проекта из реестра (основной репозиторий → MIRRORED_TO); не прочитаны — строка об этом, не тишина. */
+    List<String> mirrorsOf(String slug) {
+        try {
+            List<String> urls = new ArrayList<>();
+            for (Map<String, Object> r : ingestService.queryPublic(
+                    "SELECT out('HAS_REPOSITORY').out('MIRRORED_TO').url AS m FROM KnowGitProject WHERE slug = :s", Map.of("s", slug)))
+                if (r.get("m") instanceof java.util.Collection<?> c) for (Object u : c) if (u != null) urls.add(u.toString());
+            return mirrorNotes(urls);
+        } catch (RuntimeException e) {
+            return List.of(slug + ": зеркала не прочитаны (" + LoreUpstream.detail(e) + ")");
+        }
     }
 
     @PreDestroy
@@ -224,11 +279,11 @@ public class LoreQgActionsPoller {
         lastResolution = sig;
         if (changed) {
             for (String bad : p.rejected())
-                LOG.warnf("[LORE QG] «%s» из %s — не slug вида owner/repo, пропущен", bad, p.source());
+                LOG.warnf("[LORE QG] «%s» из %s — пропущен (не проект вида owner/repo или гейт без проекта)", bad, p.source());
             if (p.projects().isEmpty()) {
                 LOG.warnf("[LORE QG] опрос прогонов Actions включён, но список проектов пуст (%s; задаётся "
-                    + "настройкой %s в админке или lore.qg.actions-projects) — записей канала 1 не будет. "
-                    + "Это НЕ то же самое, что «прогонов не было».", p.source(), SETTING_CODE);
+                    + "гейтом рутины %s с проектом или lore.qg.actions-projects) — записей канала 1 не будет. "
+                    + "Это НЕ то же самое, что «прогонов не было».", p.source(), ACTIONS_ROUTINE);
             } else {
                 LOG.infof("[LORE QG] опрос прогонов Actions: проекты %s (%s)", p.projects(), p.source());
             }
@@ -242,6 +297,7 @@ public class LoreQgActionsPoller {
                 LOG.warnf("[LORE QG] опрос прогонов %s не удался: %s", s, e.getMessage());
                 outcomes.add(s + ": ошибка");
             }
+            outcomes.addAll(mirrorsOf(s));
         }
         // Строка на КАЖДЫЙ заход (15.11.2026): без неё успешный проход и проход,
         // не увидевший настройку, неотличимы в журнале — оба молчат.
@@ -263,17 +319,21 @@ public class LoreQgActionsPoller {
             LOG.warnf("[LORE QG] проект %s не разрешается в репозиторий Forgejo — пропущен", slug);
             return "не разрешается в репозиторий Forgejo";
         }
+        // page=1 обязателен: без него Forgejo 17 игнорирует limit и отдаёт ВЕСЬ список прогонов
+        // (22.11.2026, апгрейд 15 → 17: /actions/runs?limit=3 вернул 10 391 запись, 180 МБ).
+        // Сторож — ForgejoListPagingGuardTest.
         var resp = forgejo.api(repo.get(), "GET",
             "/repos/" + repo.get().owner() + "/" + repo.get().name()
-                + "/actions/runs?limit=" + pageSize, null);
+                + "/actions/runs?page=1&limit=" + pageSize, null);
         if (resp.statusCode() != 200) {
             LOG.warnf("[LORE QG] Forgejo вернул %d на список прогонов %s", resp.statusCode(), slug);
             return "Forgejo вернул " + resp.statusCode();
         }
         JsonObject body = new JsonObject(resp.body());
         JsonArray all = body.getJsonArray("workflow_runs", new JsonArray());
-        // 15.11.2026 на проде Forgejo при limit=30 вернул 8068 прогонов: limit сервер не
-        // соблюдает. Заход разбирает не больше страницы — новые первыми, остальное уже записано.
+        // Обрезка остаётся страховкой, хотя page=1 выше уже ограничивает ответ: 15.11.2026 на проде
+        // Forgejo при limit=30 вернул 8068 прогонов, и полагаться на то, что сервер соблюдает limit,
+        // мы больше не хотим. Заход разбирает не больше страницы — новые первыми, остальное уже записано.
         JsonArray runs = pageOf(all, pageSize);
         if (all.size() > runs.size()) {
             LOG.debugf("[LORE QG] Forgejo вернул %d прогонов при limit=%d — взяты первые %d",

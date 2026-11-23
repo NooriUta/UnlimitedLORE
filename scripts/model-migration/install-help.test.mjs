@@ -11,9 +11,9 @@ import { pageHtml } from './ui.mjs';
 const README = fs.readFileSync(new URL('../../deploy/install/README.md', import.meta.url), 'utf8');
 const LLM = /^Локальная LLM/;
 
-test('шаги справки окна — Старт, Keycloak, Völva, Forgejo, LLM, Секреты, Проверка', () => {
-  assert.deepEqual(HELP_STEPS.map(s => s.id), ['start', 'keycloak', 'volva', 'forgejo', 'llm', 'files', 'secrets', 'check']);
-  assert.deepEqual(HELP_STEPS.map(s => s.title), ['Старт', 'Keycloak', 'Völva', 'Forgejo', 'LLM', 'Файлы', 'Секреты', 'Проверка']);
+test('шаги справки окна — Старт, Keycloak, Völva, Forgejo, LLM, Файлы, miniLORE, Секреты, Проверка', () => {
+  assert.deepEqual(HELP_STEPS.map(s => s.id), ['start', 'keycloak', 'volva', 'forgejo', 'llm', 'files', 'minilore', 'secrets', 'check']);
+  assert.deepEqual(HELP_STEPS.map(s => s.title), ['Старт', 'Keycloak', 'Völva', 'Forgejo', 'LLM', 'Файлы', 'miniLORE', 'Секреты', 'Проверка']);
 });
 
 test('разделы README по заголовкам ##: «## » внутри блока кода — не заголовок', () => {

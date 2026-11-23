@@ -29,6 +29,7 @@ import { derivePhaseStatus } from './status-unify.mjs';
 import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
 import { structurePlan, asIsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
+import { splitActionsSetting } from './qg-actions.mjs';
 import { repairVersions, addFixes } from './scd2-repair.mjs';
 import { countLegacyBefore, legacyLeftovers, legacyDrop, assertLegacyDrop, LEGACY_KIND } from './legacy.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
@@ -77,7 +78,13 @@ export function notNullMissing(calc, schema) {
 export function asRead(v, type) {
   if (type !== 'DATETIME' || typeof v !== 'string') return v;
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v + ' 00:00:00.000';
-  return v.replace('T', ' ').replace(/Z$/, '');
+  const s = v.replace('T', ' ').replace(/Z$/, '');
+  // DATETIME ArcadeDB — миллисекунды: секунды она дополняет до .000, наносекунды Instant.toString() отбрасывает
+  // до трёх знаков. Старая база несёт все формы сразу (бэкап прода 01.11.2026: 19, 20, 23, 24, 27 и 30 знаков),
+  // и сверка «было = стало» сравнивала строки — равные моменты объявлялись расхождением (ryzenai 22.11.2026).
+  const m = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2})(:\d{2})?(?:\.(\d+))?$/.exec(s);
+  if (!m) return s;
+  return m[1] + (m[2] || ':00') + '.' + ((m[3] || '') + '000').slice(0, 3);
 }
 /** Поля, в которых запись приёмника разошлась с расчётом: имя, что в базе, что ждали (значения до 120 символов). */
 export function fieldDiff(got, want) {
@@ -121,16 +128,25 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   const statusCodes = {};
   for (const r of dictRows) (statusCodes[r.dict_type] ||= []).push(r.code);
   const calc = {}; // T → [{ rid, res }]
+  // Старая база не знает типов, заведённых позже: SELECT из такого типа ArcadeDB отвечает 500 «Type with name
+  // 'KnowCanvas' was not found», и перенос падал невнятно — прогон установщика 1.18.2 на бэкапе прода 01.11.2026
+  // (ryzenai 22.11.2026): 15 типов карты из 69 в источнике отсутствуют. Нет типа в источнике = нет записей:
+  // в приёмнике он заводится из модели пустым, а имена названы в отчёте (absent_in_source), чтобы «пусто»
+  // не выглядело потерей.
+  const srcTypeNames = new Set((await db.src('SELECT name FROM schema:types')).map(x => x.name));
+  const absentInSource = [];
   // MDL-08: «было» по легаси-полям — по исходным записям, независимо от исполнителя карты (сверка с остатком на шаге 2)
   const legacyBefore = {};
   for (const T of Object.keys(MAP)) {
     calc[T] = [];
+    if (!srcTypeNames.has(T)) { absentInSource.push(T); continue; }
     for await (const rec of db.scan(T)) countLegacyBefore(T, rec, legacyBefore), calc[T].push({ rid: rec['@rid'], res: applyMap(T, MAP[T], rec, { statusCodes, statusDict: DICT_OF[T], statusVocab: VOCAB, canonToCode: { in_progress: 'active' }, decisions: DECISIONS, codeCase: CODE_CASE, phaseStatusMap: PHASE_MAP[T], statusRules: RULES.dictionaries[RULES_DICT_OF[T]], deferEmpty: true }) });
   }
   const parentOf = {}; // rid версии → rid записи
   const orphans = {};
   for (const B of BASES) {
     const H = B + 'Hist'; let last = '#-1:-1'; orphans[H] = 0;
+    if (!srcTypeNames.has(H)) continue;
     for (;;) {
       const rows = await db.src(`SELECT @rid AS r, in('${EDGE}').@rid AS p FROM ${H} WHERE @rid > ${last} ORDER BY @rid LIMIT 5000`);
       if (!rows.length) break;
@@ -140,7 +156,9 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
   }
   report.stages.read = Object.fromEntries(Object.entries(calc).map(([T, a]) => [T, a.length]));
   report.stages.read.versions_without_record = orphans;
+  report.stages.read.absent_in_source = absentInSource;
   log('1 чтение:', JSON.stringify(report.stages.read));
+  if (absentInSource.length) log('1 нет в источнике (в приёмнике заведутся пустыми):', absentInSource.join(', '));
 
   // ── 2. Сведение ───────────────────────────────────────────────────────────────────────────────────
   const merge = { to_version_set: 0, to_version_kept_existing: 0, no_current_version: 0, phase_title_from_status: 0, phase_title_already_set: 0 };
@@ -211,6 +229,15 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
       v.res.rejects = v.res.rejects.filter(x => x.field !== 'status_raw');
       merge.phase_status_from_tasks++;
     }
+  }
+  // настройка qg.actions_projects снимается (AP-DICT-UPSERT-DUP, выбор владельца 23.11.2026 «а»): что опрашивать в Actions,
+  // задаёт гейт канала Actions с ребром на проект — его заводит шаг связей (qg-actions.mjs); убыль — в остаток с причиной
+  if (calc.KnowDictEntry) {
+    const qa = splitActionsSetting(calc.KnowDictEntry);
+    calc.KnowDictEntry = qa.keep;
+    for (const x of qa.leftovers) leftovers.push({ src_type: 'KnowDictEntry', ...x });
+    report.stages.qg_actions_setting = { removed: qa.leftovers.map(x => x.src_rid), values: qa.values };
+    log('2 настройка qg.actions_projects: снято строк', qa.leftovers.length, qa.values.length ? '(' + qa.values.join(', ') + ') → гейт канала Actions' : '');
   }
   // дубли уникального ключа справочника (D-2026-MIG-SETTING-LIST-VALUE): отличаются только организацией — одна строка
   if (calc.KnowDictEntry) {

@@ -158,6 +158,11 @@ const UPSERT_DEFS = {
     ]).then(([p, s]) => ({ ...p, ...s })),
   },
   release: { idField: 'release_id', path: '/lore/release', replaces: ['release_new'] },
+  // Реестр репозиториев (решение владелицы 22.11.2026 «а что я, пусть доделывает MCP»): до этого вершины
+  // KnowRepository создавал ТОЛЬКО инструмент переноса, и реестр чинился раз в миграцию. Ключ — адрес
+  // репозитория; хост, владельца, имя и полный путь бэкенд вычисляет ИЗ него, чтобы в реестре не появилось
+  // записи, чей путь не сходится с адресом. Права — super-admin, как у проекта и организации.
+  repository: { idField: 'url', path: '/lore/repository', replaces: [] },
   runbook: {
     idField: 'runbook_id', path: '/lore/runbook', project: 'runbook', stripProject: true, guardProject: true,
     replaces: ['runbook_new'],
@@ -389,6 +394,24 @@ const LINK_DEFS = {
       return `unreachable: question/${rel}`;
     },
   },
+  // Связи реестра репозиториев. Направление ребра выбирает бэкенд: project и component идут ОТ чужой вершины
+  // к репозиторию (так их читает срез), uses и mirror — от самого репозитория. Роль (primary | mirror) —
+  // только у связи с проектом; её передаёт fields.role.
+  repository: {
+    rels: ['project', 'component', 'uses', 'mirror'],
+    replaces: [],
+    dispatch: (id, rel, t, action, f): LinkResult | string => {
+      const target = str(t);
+      if (!target) return `target_id required for rel="${rel}"`;
+      return {
+        path: '/lore/repository/link',
+        body: {
+          url: id, rel, target, action: action ?? 'add',
+          ...(str(f.role) ? { role: str(f.role) } : {}),
+        },
+      };
+    },
+  },
   release: {
     rels: ['sprint', 'pr'],
     replaces: ['release_link', 'release_unlink'],
@@ -506,6 +529,8 @@ const LINK_RELS = [
   'actor', 'includes', 'extends', 'relieves', 'delivers', 'performs', 'answers',
   'raised_in', 'gates', 'dep', 'phase', 'felt_by', 'desired_by', 'performed_by',
   'blocks', 'success_of', 'serves',
+  // связи реестра репозиториев (22.11.2026)
+  'uses', 'mirror',
 ] as const;
 
 // ── entity_delete / entity_move ─────────────────────────────────────────────
@@ -577,6 +602,11 @@ export function registerEntity(server: McpServer): void {
       'id per type: ' + TYPE_ID_LIST + '. Composite-id types (dict, phase, tech) take their id parts in fields ' +
       '(dict: dict_type+code; phase: sprint_id+phase_key; tech: component_id+tech_name+version) — omit id there; ' +
       'task takes the uid "SPRINT_X/T05".\n\n' +
+      'repository: the id IS the address (https://host/owner/name) — host, owner, name and full_path are derived ' +
+      'from it by the backend, so a registry row can never disagree with its address, and a clone address ' +
+      '(…/repo.git) and a page address are ONE repository, not two. Writing needs the project family ' +
+      '(full, architect, pm) or an admin. Link it with entity_link type=repository: project (fields.role ' +
+      'primary|mirror), component, uses, mirror.\n\n' +
       'Project guard (AL-113, parity with the old *_new orphan guard): for adr, doc, spec, runbook, question, ' +
       'uc, feature, tech a project is REQUIRED — pass fields.project or set LORE_ACTIVE_PROJECT; the ' +
       'BELONGS_TO_PROJECT edge is wired inline after the write. decision waives the guard when fields.adr_id is ' +

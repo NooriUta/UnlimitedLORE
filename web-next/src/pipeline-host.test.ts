@@ -15,7 +15,7 @@
 // docker/ssh/git в PATH).
 import { afterAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -357,6 +357,18 @@ describe('PL-04: снимок прода → база препрода (толь
     expect(s).toMatch(/mv "\$DB_DIR\/\$LOCAL_SOURCE" "\$DB_DIR\/\$TARGET_DB"/);
     expect(s).toMatch(/FROM LoreModelSchema/);
     expect(cd()).toMatch(/^ {6}LORE_DB: system_aida_lore_preprod$/m);
+  });
+
+  // 23.11.2026, run 40542: снимок прода 1.18 распакован и открыт, а сверка упала «v? ≠ v?» и оставила
+  // бэкенд препрода остановленным. С 1.18 схема модельная (schema_version «model:1»): таблицы LoreSchemaVersion
+  // нет, max(version) пуст с обеих сторон, и прежняя проверка `[ -n "$dst_ver" ]` не проходила НИКОГДА.
+  // Правило: нет номера версии ни у прода, ни у снимка — сверяем отметку модели LoreModelSchema (как local_source).
+  it('снимок прода с модельной схемой: сверка по отметке LoreModelSchema, а не по пустому номеру версии', () => {
+    const s = code(read('scripts/preprod-db-refresh.sh'));
+    const snap = s.slice(s.indexOf('dst_ver="$(query_ver "$TARGET_DB")"'));
+    expect(snap, 'ветка снимка знает модельную схему').toMatch(/model_n "\$TARGET_DB"/);
+    expect(snap).toMatch(/src_model/);
+    expect(s, 'отметка модели прода читается на lore-host').toMatch(/src_model="\$\(r /);
   });
 });
 
@@ -889,6 +901,137 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
   });
 });
 
+// 1.18.3 · САМОПРОВЕРКА ВЫКАТКИ ПРОДА. Вид схемы прода брался ТОЛЬКО из лога бэкенда, и строку искали
+// такой, какой её никто не пишет: на базе из модели рантайм (lore.migrate=false) пишет «схема собрана из
+// модели — шаги V не применяются, переходник чтения включён», а «(LoreModelSchema)» есть лишь у пути сверки
+// шагов V, до которого такая база не доходит (LoreSchemaMigrationRunner.runSchema → builtFromModel). Итог:
+// PROD_SCHEMA пуст → проба шла веткой шагов V и требовала «схема сверена: БД v93» → задача деплоя красная
+// два релиза подряд (1.18.0 — 39647, 1.18.1 — 39867) при исправном проде. Правило: вид схемы спрашиваем у
+// самого бэкенда (/lore/version: schema_source, schema_version), лог — запасной путь, «не определили» —
+// честный отказ вслух, а не молчаливая ветка V.
+describe.skipIf(!bashBin)('1.18.3: вид схемы прода — из /lore/version, лог — запасной путь', { timeout: SPAWN_TIMEOUT }, () => {
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+  const S = '.github/scripts/lore-host-deploy.sh';
+  const RUNNER = 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrationRunner.java';
+  // Строка, которую правда пишет рантайм прода на базе из модели (путь READ_ADAPTER).
+  const RUNTIME_MODEL_LINE = '[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)';
+  const MODEL_JSON = '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","model_hash":"d7e16a827891d5e0"}';
+  const STEPS_JSON = '{"commit":"0123456789abcdef","schema_version":93,"schema_source":"steps"}';
+  // Исправный v2 для сторожа петли (state зовёт v2_guard).
+  const CFG = ['name: lore-app-next', 'services:', '  lore-app-next:', '    environment:',
+    '      LORE_BACKEND_HOST: lore-backend', '      LORE_BACKEND_URL: http://lore-backend:9100',
+    '    networks:', '      lore-be: null', 'networks:', '  lore-be:', '    name: unlimitedlore_default',
+    '    external: true', ''].join('\n');
+
+  /** Шаг на копии скрипта; R — заглушка ssh: /lore/version → version.json, лог → $LOG_LINE, compose config → исправный v2. */
+  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '', extra: Record<string, string> = {}) {
+    const d = mkdtempSync(join(tmpdir(), 'lore-pl-kind-'));
+    writeFileSync(join(d, 'lore-host-deploy.sh'), read(S));
+    writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(join(d, 'version.json'), versionJson);
+    writeFileSync(join(d, 'cfg.yml'), CFG);
+    writeFileSync(join(d, 'r.sh'), [
+      '#!/usr/bin/env bash',
+      'echo "$*" >> "$R_LOG"',
+      'case "$*" in',
+      `  *"/lore/version"*) cat "${fwd(join(d, 'version.json'))}" ;;`,
+      `  *"compose config"*) cat "${fwd(join(d, 'cfg.yml'))}" ;;`,
+      '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
+      '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
+      '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
+      '  *"State.Health.Status"*) echo healthy ;;',
+      'esac', '',
+    ].join('\n'));
+    chmodSync(join(d, 'r.sh'), 0o755);
+    const st = join(d, 'state.env');
+    writeFileSync(st, [...stateLines, ''].join('\n'));
+    const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
+    const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
+      DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.3',
+      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1', PROBE_DELAY: '0', ...extra,
+    });
+    const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
+    rmSync(d, { recursive: true, force: true });
+    return { ...r, state, calls };
+  }
+
+  const PROBE_STATE = ['BUNDLE_V1=assets/index-V1.js', 'BUNDLE_V2=assets/index-V2.js',
+    'EXPECT_COMMIT=0123456789abcdef', 'CODE_SCHEMA=95', 'UP_AT=2026-11-21T00:00:00Z'];
+
+  it('state: /lore/version говорит schema_source=model — PROD_SCHEMA=model, строки в логе не требуется', () => {
+    const r = stepRun('state', [], '', MODEL_JSON);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=model$/m);
+  });
+
+  // Заглушка R отдаёт строку лога целиком (настоящий grep выполняется на lore-host), поэтому здесь
+  // проверяется разбор строки; что шаблон скрипта её вообще ловит — последний тест этого describe.
+  it('state: /lore/version не прочитан, в логе — строка рантайма про модель (без «(LoreModelSchema)») — PROD_SCHEMA=model', () => {
+    const r = stepRun('state', [], RUNTIME_MODEL_LINE, '');
+    expect(r.code).toBe(0);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=model$/m);
+  });
+
+  it('state: /lore/version говорит steps, в логе «БД v93» — PROD_SCHEMA=93', () => {
+    const r = stepRun('state', [], 'схема сверена: БД v93 = код v93', STEPS_JSON);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=93$/m);
+  });
+
+  it('state: steps по /lore/version, номера в логе нет — PROD_SCHEMA=steps (вид ясен, номер нет), а не пусто', () => {
+    const r = stepRun('state', [], '', STEPS_JSON);
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=steps$/m);
+  });
+
+  it('state: ни /lore/version, ни строки в логе — PROD_SCHEMA пуст и сказано вслух «не определён»', () => {
+    const r = stepRun('state', [], '', '');
+    expect(r.state, r.out).toMatch(/^PROD_SCHEMA=$/m);
+    expect(r.out).toMatch(/вид схемы прода не определён/);
+  });
+
+  it('probe: база из модели, вида схемы в state нет (как в 1.18.0 и 1.18.1) — зелёная по /lore/version, а не красная из-за «БД v95»', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], RUNTIME_MODEL_LINE, MODEL_JSON);
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/schema_version=model:1/);
+  });
+
+  it('probe: ни /lore/version, ни строки в логе — красная словами «вид схемы прода не определён»', () => {
+    const r = stepRun('probe', PROBE_STATE, 'что-то другое', '');
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/вид схемы прода не определён/);
+  });
+
+  it('db: вид схемы — шаги V, номера нет (PROD_SCHEMA=steps) — бэкап и накатка, а не «прод НОВЕЕ кода»', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=steps', 'PROD_DB=system_aida_lore'], '');
+    expect(r.out).not.toMatch(/НОВЕЕ кода/);
+    expect(r.calls, r.out).toMatch(/remote-backup/);
+  });
+
+  it('plan: база прода собрана из модели — так и сказано, без «прод НОВЕЕ кода» и арифметической ругани', () => {
+    const r = stepRun('plan', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'SRC8=abcdef12', 'PROD_DB=system_aida_lore'], '');
+    expect(r.out).toMatch(/из модели/);
+    expect(r.out).not.toMatch(/НОВЕЕ кода/);
+    expect(r.out).not.toMatch(/integer expected|integer expression/);
+  });
+
+  it('скрипт ищет в логе строку, которую бэкенд правда пишет (а не «(LoreModelSchema)» из пути сверки шагов)', () => {
+    const runner = read(RUNNER);
+    // Строки «из модели», которые пишет рантайм и путь сверки: разбор обрывается на склейке Java — её хватает.
+    const logged = [...runner.matchAll(/"(\[LORE MIGRATE\][^"]*схема собрана из модели[^"]*)"/g)].map(m => m[1]);
+    expect(logged.length, 'бэкенд пишет хотя бы одну строку «схема собрана из модели»').toBeGreaterThan(0);
+    // Шаблоны grep скрипта (в одинарных кавычках — как их видит удалённый shell), где есть ветка про модель.
+    const pats = [...read(S).matchAll(/'([^'\n]*схема собрана из модели[^'\n]*)'/g)].map(m => m[1]);
+    expect(pats.length, 'скрипт ищет в логе строку «схема собрана из модели»').toBeGreaterThan(0);
+    for (const p of pats) {
+      const alt = p.split('|').find(a => a.includes('из модели'));
+      expect(alt, `в шаблоне «${p}» нет ветки про модель`).toBeTruthy();
+      for (const s of logged) expect(new RegExp(alt!).test(s), `шаблон «${alt}» не ловит строку бэкенда «${s}»`).toBe(true);
+    }
+  });
+});
+
 // SPRINT_UXR_S8_SWITCH/S8-02 (патч 1.18.1, факты прода lore-host 21.11):
 //   * петля — nginx v2 ходил в API по LORE_BACKEND_URL=https://lore.odal.seidrstudio.pro; после
 //     переключения lore.odal на v2 он проксировал сам в себя, /lore/version висел. Правило: v2 ходит
@@ -1064,5 +1207,431 @@ describe.skipIf(!bashBin)('S8-02: lore-host-deploy.sh — сторож петл�
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/::error::.*\/mcp/);
     expect(r.out).toMatch(/ОТКАТ на lore-host/);
+  });
+});
+
+// ── Готовый пакет установки вложением релиза ─────────────────────────────────
+// Слово владелицы 22.11.2026: «мне нужна сборка инсталятор для друзей». Друг
+// скачивает ОДИН файл из релиза, а не клонирует репозиторий и собирает сам.
+// Пакет лёгкий (install.sh + compose + .env.example + README + lore-migrate.mjs);
+// исполняемый файл на 125 МБ — только по явной просьбе (вход with_exe): он
+// всё равно собирается на месте, тащить его в каждый релиз незачем. Сбой сборки
+// или загрузки не смеет помешать уже опубликованному релизу — отсюда
+// continue-on-error и отдельный вердикт, как у зеркала GitHub.
+const ASSET_SH = '.github/scripts/release-installer-asset.sh';
+
+describe('релиз несёт готовый пакет установки вложением', () => {
+  const pubSteps = () => steps(job(REL, 'publish'));
+  const assetStep = () => pubSteps().find((s) => s.body.includes(ASSET_SH));
+
+  it('шаг идёт ПОСЛЕ публикации и не роняет релиз (continue-on-error)', () => {
+    const st = pubSteps();
+    const iPub = st.findIndex((s) => s.name === 'Publish');
+    const iAsset = st.findIndex((s) => s.body.includes(ASSET_SH));
+    expect(iPub, 'шаг Publish не найден').toBeGreaterThan(-1);
+    expect(iAsset, 'шага с пакетом установки нет').toBeGreaterThan(iPub);
+    expect(st[iAsset].body).toMatch(/continue-on-error: true/);
+    expect(st[iAsset].body).toMatch(/id: installer_asset/);
+  });
+
+  it('честный вердикт отдельным шагом — как у зеркала', () => {
+    const v = pubSteps().find((s) => /Вердикт вложений/.test(s.name));
+    expect(v, 'шага «Вердикт вложений» нет').toBeTruthy();
+    expect(v!.body).toMatch(/always\(\)/);
+    expect(v!.body).toMatch(/steps\.installer_asset\.outcome == 'failure'/);
+    expect(v!.body).toMatch(/::error::/);
+  });
+
+  // 22.11.2026, слово владелицы: «тот установщик, визард миграции, подложи его тоже в публикацию».
+  // Единый файл (119 МБ, Node внутри, окно установки) — это то, ради чего человек вообще приходит за
+  // выпуском: скачал, запустил, прошёл по шагам. Раньше он прикладывался только при явном флаге, и
+  // владелица неделю не могла его получить: флаг надо было вспомнить нажать.
+  // Правило теперь такое: мажорный тег (vX.Y.0) кладёт его ВСЕГДА, догонка (vX.Y.Z, Z>0) — только по просьбе,
+  // потому что 119 МБ ради правки одной строки никому не нужны.
+  it('единый файл: на мажорном теге всегда, на догонке — по просьбе', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_exe:');
+    expect(from, 'входа with_exe нет').toBeGreaterThan(-1);
+    let to = lines.length;
+    for (let i = from + 1; i < lines.length; i++) {
+      if (/^ {0,6}\S/.test(lines[i])) { to = i; break; }
+    }
+    expect(lines.slice(from, to).join('\n'), 'ручной вход остаётся с умолчанием false').toMatch(/^ {8}default: 'false'$/m);
+    const b = assetStep()!.body;
+    expect(b, 'явная просьба по-прежнему главнее').toMatch(/WITH_EXE: \$\{\{ inputs\.with_exe \|\|/);
+    expect(b, 'на теге, оканчивающемся на .0, файл кладётся сам').toMatch(/endsWith\(github\.ref, '\.0'\)/);
+    expect(b, 'на не-теге и на догонке остаётся false').toMatch(/\|\| 'false' \}\}/);
+  });
+});
+
+describe.skipIf(!bashBin)('release-installer-asset.sh', { timeout: SPAWN_TIMEOUT }, () => {
+  const abin = mkdtempSync(join(tmpdir(), 'lore-asset-bin-'));
+  afterAll(() => rmSync(abin, { recursive: true, force: true }));
+  const sh = (name: string, body: string) => {
+    writeFileSync(join(abin, name), `#!/usr/bin/env bash\n${body}`.replace(/\r\n/g, '\n'));
+    chmodSync(join(abin, name), 0o755);
+  };
+
+  // node: вместо build-installer.mjs — запись аргументов и ровно те файлы, что он кладёт в --out.
+  const NODE_STUB = `echo "$*" >> "$NODE_LOG"
+out=""; prev=""
+for a in "$@"; do [ "$prev" = "--out" ] && out="$a"; prev="$a"; done
+[ -n "$out" ] || exit 0
+mkdir -p "$out"
+# source-archive.mjs кладёт исходники в <out>/src — заглушка повторяет это. Иначе прогон по умолчанию
+# ругался бы «исходники не собрались» там, где настоящий скрипт их собирает (22.11.2026).
+case "$*" in
+  *source-archive.mjs*)
+    ver=""; prev=""
+    for a in "$@"; do [ "$prev" = "--version" ] && ver="$a"; prev="$a"; done
+    mkdir -p "$out/src"
+    printf 'src\\n' > "$out/src/lore-\${ver:-v0.0.0}.tar.gz"
+    exit 0 ;;
+esac
+printf 'bundle\\n' > "$out/lore-migrate.mjs"
+case "$*" in *--exe*) printf 'ELF\\n' > "$out/lore-migrate" ;; esac
+exit 0
+`;
+  sh('node', NODE_STUB);
+  // npm: только отметка о вызове — сеть в тестах не трогаем.
+  sh('npm', 'echo "$*" >> "$NPM_LOG"\nexit "${NPM_CODE:-0}"\n');
+  // curl: ответы API Forgejo по URL; -o пишет тело, -w печатает код.
+  sh('curl', `echo "$*" >> "$CURL_LOG"
+o=""; prev=""; url=""
+for a in "$@"; do
+  [ "$prev" = "-o" ] && o="$a"
+  case "$a" in http*) url="$a" ;; esac
+  prev="$a"
+done
+code=200
+body='{"id":77,"assets":[]}'
+case "$url" in
+  *assets\\?name=*) code="\${STUB_UPLOAD_CODE:-201}"; body='{"id":5,"name":"a"}' ;;
+  *) body="\${STUB_RELEASE_JSON:-$body}" ;;
+esac
+if [ -n "$o" ]; then printf '%s' "$body" > "$o"; else printf '%s' "$body"; fi
+case "$*" in *-w*) printf '%s' "$code" ;; esac
+exit 0
+`);
+
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+
+  function area() {
+    const d = mkdtempSync(join(tmpdir(), 'lore-asset-'));
+    // сборщики «уже установлены» — npm в тестах звать незачем
+    mkdirSync(join(d, 'tools', 'node_modules', 'esbuild'), { recursive: true });
+    mkdirSync(join(d, 'tools', 'node_modules', 'postject'), { recursive: true });
+    writeFileSync(join(d, 'created.json'), '{"id":77,"tag_name":"v9.9.9"}');
+    writeFileSync(join(d, 'existing.json'), '{"errors":["release does not exist"]}');
+    return d;
+  }
+
+  function asset(cmd: string, d: string, env: Record<string, string> = {}) {
+    const r = spawnSync(bashBin!, [resolve(repo, ASSET_SH).replace(/\\/g, '/'), cmd], {
+      encoding: 'utf8',
+      cwd: repo,
+      env: {
+        ...process.env,
+        TAG: 'v9.9.9',
+        API: 'http://forgejo:3000/api/v1/repos/AIDA/UnlimitedLORE',
+        TOKEN: 'tkn',
+        OUT: fwd(join(d, 'build')),
+        INSTALLER_TOOLS_DIR: fwd(join(d, 'tools')),
+        CREATED_JSON: fwd(join(d, 'created.json')),
+        EXISTING_JSON: fwd(join(d, 'existing.json')),
+        // curl — явным путём: на Windows подмена через PATH невозможна, Git Bash
+        // ставит /mingw64/bin перед унаследованным PATH (как PROBE_CURL выше)
+        CURL_BIN: fwd(join(abin, 'curl')),
+        ZIP_BIN: fwd(zipStub),
+        NODE_LOG: fwd(join(d, 'node.log')),
+        NPM_LOG: fwd(join(d, 'npm.log')),
+        CURL_LOG: fwd(join(d, 'curl.log')),
+        ...env,
+        PATH: `${abin}${delimiter}${process.env.PATH ?? ''}`,
+      },
+    });
+    const log = (f: string) => (existsSync(join(d, f)) ? readFileSync(join(d, f), 'utf8') : '');
+    return { code: r.status, out: `${r.stdout}${r.stderr}`, node: log('node.log'), npm: log('npm.log'), curl: log('curl.log') };
+  }
+
+  const listTar = (d: string) => {
+    // cd + относительное имя: абсолютный путь с двоеточием (C:/…) GNU tar читает как «хост:файл»
+    const r = spawnSync(bashBin!, ['-c', `cd "${fwd(join(d, 'build', 'asset'))}" && tar -tzf lore-installer-v9.9.9.tar.gz`], { encoding: 'utf8' });
+    return r.stdout.split('\n').map((l) => l.replace(/^lore-installer-v9\.9\.9\//, '').replace(/\/$/, '')).filter(Boolean);
+  };
+  const names = (curl: string) => [...curl.matchAll(/assets\?name=(\S+)/g)].map((m) => m[1]);
+
+  // Заглушка упаковщика zip. Нужна по той же причине, что заглушка curl: на машине разработчика zip может
+  // не стоять вовсе (в Git Bash его нет), и тогда прогон зависел бы от машины — «зелено у меня, красно у
+  // соседа». Заглушка кладёт файл с нужным именем; содержимое ZIP проверять нечем и незачем — внутрь кладётся
+  // ТОТ ЖЕ каталог, что в tar.gz, а его состав сторожится ниже. Настоящий zip проверен в образе CI
+  // forgejo-ci-runtime:jdk21 (22.11.2026): оба архива собрались, внутри 7 файлов, install.ps1 на месте.
+  const zipStub = join(abin, 'zipstub');
+  writeFileSync(zipStub, `#!/usr/bin/env bash\nout=""\nfor a in "$@"; do case "$a" in *.zip) out="$a";; esac; done\nprintf 'zip-stub' > "$out"\nexit 0\n`);
+  chmodSync(zipStub, 0o755);
+
+  it('архив — ровно лёгкая часть пакета: install.sh, compose, .env.example, README, lore-migrate.mjs', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(r.out, r.out).not.toMatch(/::warning::/);
+    expect(r.code).toBe(0);
+    // install.ps1 — вход под Windows (слово владелицы 22.11.2026: «собирай установщик под windows и linux»).
+    // Он обязан быть ВНУТРИ архива: без него человек на Windows получает пакет, который нечем запустить.
+    expect(listTar(d).sort()).toEqual(
+      ['.env.example', 'README.md', 'docker-compose.install.yml', 'install.ps1', 'install.sh', 'lore-migrate.mjs'].sort(),
+    );
+    // SHA256SUMS — отдельным файлом рядом с архивом
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8'))
+      .toMatch(/^[0-9a-f]{64} {2}lore-installer-v9\.9\.9\.tar\.gz$/m);
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_exe=false (по умолчанию): бинаря нет ни в архиве, ни во вложениях, и он не собирается', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(r.node).not.toMatch(/--exe/);
+    expect(listTar(d)).not.toContain('lore-migrate');
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(false);
+    // Вложений теперь четыре: пакет (tar.gz), тот же пакет в zip для Windows, архив исходников и подписи.
+    // Подписи считаются на все три файла — иначе проверка у человека не нашла бы строку своего архива и
+    // выглядела бы как битое вложение.
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8').trim().split('\n')).toHaveLength(3);
+    expect(names(r.curl).sort()).toEqual(
+      ['SHA256SUMS', 'lore-installer-v9.9.9-windows.zip', 'lore-installer-v9.9.9.tar.gz', 'lore-src-v9.9.9.tar.gz'].sort(),
+    );
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_exe=true: бинарь собирается и едет ОТДЕЛЬНЫМ вложением, архив остаётся лёгким', () => {
+    const d = area();
+    const r = asset('all', d, { WITH_EXE: 'true' });
+    expect(r.code).toBe(0);
+    expect(r.node).toMatch(/--exe/);
+    expect(listTar(d)).not.toContain('lore-migrate');
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(true);
+    expect(names(r.curl)).toContain('lore-migrate-linux-x64');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  // 23.11.2026, слово владельца: «и дистрибутив миграции нужно положить тоже». Мастер переноса lore-migrate.mjs
+  // (любая ОС, Node 20+) жил только ВНУТРИ архива пакета — отдельно его со страницы выпуска не скачать.
+  // Теперь — отдельным вложением lore-migrate-<тег>.mjs со строкой в SHA256SUMS: на мажорном теге всегда, на догонке — по просьбе.
+  it('with_migrate=true: мастер переноса едет отдельным вложением lore-migrate-<тег>.mjs и подписан в SHA256SUMS', () => {
+    const d = area();
+    const r = asset('all', d, { WITH_MIGRATE: 'true' });
+    expect(r.code, r.out).toBe(0);
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-v9.9.9.mjs'))).toBe(true);
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8')).toMatch(/^[0-9a-f]{64} {2}lore-migrate-v9\.9\.9\.mjs$/m);
+    expect(names(r.curl)).toContain('lore-migrate-v9.9.9.mjs');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_migrate не задан: отдельного мастера переноса во вложениях нет', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-v9.9.9.mjs'))).toBe(false);
+    expect(names(r.curl)).not.toContain('lore-migrate-v9.9.9.mjs');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('мастер переноса в выпуске: на мажорном теге всегда, на догонке — по просьбе (вход with_migrate)', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_migrate:');
+    expect(from, 'входа with_migrate нет').toBeGreaterThan(-1);
+    const b = read(REL);
+    expect(b).toContain("WITH_MIGRATE: ${{ inputs.with_migrate || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}");
+  });
+
+  it('id релиза — из ответа публикации; его нет — из уже существующего релиза', () => {
+    const d = area();
+    expect(asset('all', d).curl).toMatch(/releases\/77\/assets\?name=/);
+    rmSync(d, { recursive: true, force: true });
+
+    const d2 = area();
+    rmSync(join(d2, 'created.json'));
+    writeFileSync(join(d2, 'existing.json'), '{"id":42,"assets":[]}');
+    expect(asset('all', d2).curl).toMatch(/releases\/42\/assets\?name=/);
+    rmSync(d2, { recursive: true, force: true });
+  });
+
+  it('ошибка загрузки — предупреждение и ненулевой код шага, а не ::error:: посреди релиза', () => {
+    const d = area();
+    const r = asset('all', d, { STUB_UPLOAD_CODE: '500' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::warning::/);
+    expect(r.out).not.toMatch(/::error::/);
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('сборка не удалась — предупреждение, вложения не выдумываются', () => {
+    const d = area();
+    sh('node', 'exit 1\n');
+    const r = asset('all', d);
+    sh('node', NODE_STUB);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::warning::/);
+    expect(r.curl).not.toMatch(/assets\?name=/);
+    rmSync(d, { recursive: true, force: true });
+  });
+});
+
+// ── «Дотянуть данные PR» кнопкой (MD-05; владелица 22.11.2026, вариант «б») ──────────────────────────────
+// Операция была только в бэкенде и в установщике: запустить её на нашей среде мог лишь человек с токеном
+// суперадмина, и смоук RFD2-MD05 оставался красным «по данным». Прогон берёт служебную учётку lore-ci-ops
+// из Infisical среды и получает токен сам.
+describe('MD-05 · прогон «Дотянуть данные PR»', () => {
+  const WF = '.github/workflows/lore-pr-backfill.yml';
+  const SH = '.github/scripts/lore-pr-backfill.sh';
+
+  it('запускается только руками, с выбором среды и отдельным согласием на запись', () => {
+    const y = read(WF);
+    expect(y).toMatch(/workflow_dispatch:/);
+    // Автоматических запусков у прогона нет: он пишет в базу среды, и срабатывать «сам» не должен.
+    for (const auto of ['\n  push:', '\n  pull_request:', '\n  schedule:']) expect(y).not.toContain(auto);
+    expect(y).toMatch(/options: \[preprod, prod\]/);
+    expect(y).toMatch(/apply:[\s\S]*default: 'false'/);
+  });
+
+  it('две дотяжки на одной среде не идут параллельно и не отменяют друг друга', () => {
+    const y = read(WF);
+    expect(y).toMatch(/group: lore-pr-backfill-\$\{\{ inputs\.environment \}\}/);
+    expect(y).toMatch(/cancel-in-progress: false/);
+  });
+
+  it('учётка берётся из Infisical среды, токен — у Keycloak той же среды', () => {
+    const s = read(SH);
+    expect(s).toMatch(/LORE_CI_OPS_CLIENT_ID/);
+    expect(s).toMatch(/LORE_CI_OPS_CLIENT_SECRET/);
+    expect(s).toMatch(/REALM="omilorePreprod"/);
+    expect(s).toMatch(/REALM="omilore"/);
+    expect(s).toMatch(/\/kc\/realms\/\$REALM/);
+    expect(s).toMatch(/grant_type=client_credentials/);
+    // Среда задаёт И адрес, И realm: иначе прогон с выбором «preprod» сходил бы токеном прода.
+    expect(s).toMatch(/preprod\) BASE=.*REALM="omilorePreprod"/);
+  });
+
+  it('пробный прогон идёт ВСЕГДА, настоящий — только при apply=true', () => {
+    const s = read(SH);
+    expect(s).toMatch(/pr-backfill --url "\$BASE" --limit "\$LIMIT" --dry-run/);
+    expect(s).toMatch(/if \[ "\$APPLY" = true \]/);
+    // Настоящий прогон стоит ПОСЛЕ пробного и не запускается, если пробный упал.
+    expect(s.indexOf('--dry-run')).toBeLessThan(s.indexOf('"$APPLY" = true'));
+    expect(s).toMatch(/настоящий не запускаю/);
+  });
+
+  it('секреты не печатаются: токен в выводе затирается', () => {
+    const s = read(SH);
+    expect(s).toMatch(/Bearer \*\*\*/);
+    expect(s).not.toMatch(/echo .*\$CLIENT_SECRET/);
+    expect(s).not.toMatch(/echo .*\$LORE_TOKEN/);
+  });
+
+  it('неизвестная среда — отказ словами, а не молчаливый preprod', () => {
+    const s = read(SH);
+    expect(s).toMatch(/среда «\$ENVN» неизвестна/);
+  });
+});
+
+// ── Зеркало SeidrStudio на мажорном релизе (22.11.2026) ──────────────────────
+// Слово владелицы: «я попросила всё, что едет, продублировать как зеркала и выносить при смене x.y релизов».
+// Смысл: друг, которому отдали пакет установки, должен иметь возможность посмотреть исходники того, что ставит.
+// Поэтому зеркало обновляется на vX.Y.0 и молчит на патчах — иначе оно пушит каждый патч и обходит правило.
+describe('зеркало SeidrStudio: мажорный тег, громкий BLOCKED без секрета', () => {
+  const relSteps = () => steps(job('.github/workflows/lore-release.yml', 'publish'));
+  const mirror = () => relSteps().find((s) => /Mirror main \+ tag to SeidrStudio/.test(s.name ?? s.body));
+
+  it('шаг есть и стоит в джобе публикации', () => {
+    expect(mirror(), 'шаг зеркала SeidrStudio в джобе publish').toBeTruthy();
+  });
+
+  it('патчи не зеркалятся: условие на vX.Y.0', () => {
+    expect(mirror()!.body).toMatch(/v\[0-9\]\+\\.\[0-9\]\+\\.0\$|v\[0-9\]\+\.\[0-9\]\+\.0\$/);
+    expect(mirror()!.body).toMatch(/не трогаем/);
+  });
+
+  it('нет секрета — громкий BLOCKED с выходом из разблокировки, а не тихий пропуск', () => {
+    const b = mirror()!.body;
+    expect(b).toMatch(/BLOCKED/);
+    expect(b).toMatch(/MIRROR_PUSH_TOKEN/);
+    expect(b, 'сказано, кто разблокирует').toMatch(/выпускает владелица|кладёт CICDGitHub/);
+  });
+
+  it('тег обязан быть в main — зеркало отражает релизы, а не произвольные точки', () => {
+    expect(mirror()!.body).toMatch(/merge-base --is-ancestor/);
+  });
+
+  it('отставшее зеркало не роняет уже опубликованный релиз', () => {
+    expect(mirror()!.body.length > 0).toBe(true);
+    expect(JSON.stringify(mirror())).toMatch(/continue-on-error/);
+  });
+});
+
+// ── Состав вложений релиза (22.11.2026, разбор документации) ─────────────────
+// Находка: README обещал «скачайте исходники / образ miniLORE со страницы выпуска», а релиз прикладывал
+// только лёгкий архив. То есть по документации друг не мог ни собрать образы у себя, ни поставить miniLORE.
+describe('релиз прикладывает то, что обещает README', () => {
+  const asset = () => steps(job(REL, 'publish')).find((s) => s.body.includes(ASSET_SH))!;
+  const sh = () => read(ASSET_SH);
+
+  it('исходники LORE — вложением по умолчанию (нужны для --build-from-source)', () => {
+    expect(asset().body).toMatch(/WITH_SOURCES: \$\{\{ inputs\.with_sources \|\| 'true' \}\}/);
+    expect(sh()).toMatch(/SRC_ASSET="lore-src-\$TAG\.tar\.gz"/);
+    expect(sh(), 'исходники собираются тем же скриптом, что и для kkRepo').toMatch(/source-archive\.mjs/);
+  });
+
+  it('образ miniLORE — только по просьбе: он ~150 МБ и нужен не каждому', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_minilore_image:');
+    expect(from, 'входа with_minilore_image нет').toBeGreaterThan(-1);
+    let to = lines.length;
+    for (let i = from + 1; i < lines.length; i++) if (/^ {0,6}\S/.test(lines[i])) { to = i; break; }
+    expect(lines.slice(from, to).join('\n')).toMatch(/^ {8}default: 'false'$/m);
+    expect(sh()).toMatch(/minilore-image\.mjs/);
+  });
+
+  it('необязательное вложение не роняет релиз: отсутствие — предупреждение, а не die', () => {
+    const body = sh();
+    const block = body.slice(body.indexOf('WITH_SOURCES" = true'), body.indexOf('Формат — тот же'));
+    expect(block, 'на несобравшихся исходниках — warn').toMatch(/warn "исходники/);
+    expect(block, 'на несобравшемся образе — warn').toMatch(/warn "образ miniLORE/);
+    expect(block).not.toMatch(/die "исходники/);
+  });
+});
+
+// 22.11.2026: публикация образов наружу два выпуска подряд не выполнялась — шаг стоял в задаче выкатки прода
+// ПОСЛЕ «Проб прода», а те падали на ложном красном (проба знала только базу шагов V, а прод собран из модели).
+// Наружу не уехало ни одного образа, и об этом никто не узнал: пропущенный шаг выглядит как «всё хорошо».
+// CICDGitHub вынесла публикацию в свою задачу (#1766). Сторож ниже — чтобы её не вернули обратно при следующей
+// перестановке шагов: здоровье НАШЕГО прода не повод оставлять человека без образов. Образ тот же :sha8, что
+// прошёл препрод, — это и проверяется шагом resolve внутри задачи.
+describe('публикация образов наружу не зависит от проб нашего прода', () => {
+  const rel = '.github/workflows/lore-release.yml';
+  const ghcr = () => job(rel, 'publish-ghcr');
+  const deploy = () => job(rel, 'deploy-prod');
+
+  it('положительный контроль: обе задачи в трубе есть', () => {
+    expect(ghcr().length, 'задача publish-ghcr').toBeGreaterThan(0);
+    expect(deploy().length, 'задача deploy-prod').toBeGreaterThan(0);
+  });
+
+  it('публикация стоит отдельной задачей, а не шагом выкатки прода', () => {
+    expect(deploy(), 'шаг публикации вернулся в выкатку прода').not.toMatch(/ghcr-publish\.sh/);
+    expect(ghcr()).toMatch(/ghcr-publish\.sh/);
+  });
+
+  it('она не ждёт выкатку прода ни через needs, ни через её шаги', () => {
+    const needs = /needs:\s*(\[[^\]]*\]|[^\n]*)/.exec(ghcr())?.[1] ?? '';
+    expect(needs, 'publish-ghcr не должна зависеть от deploy-prod').not.toMatch(/deploy-prod/);
+    expect(needs, 'зависит от публикации выпуска — образы едут вместе с вложениями').toMatch(/publish/);
+    expect(ghcr(), 'в задаче публикации не должно быть проб прода').not.toMatch(/Пробы прода|lore-host-deploy\.sh probe/);
+  });
+
+  it('образы берутся те, что прошли препрод, — без пересборки', () => {
+    expect(ghcr(), 'нет сверки образов тега (resolve)').toMatch(/lore-host-deploy\.sh resolve/);
+    expect(ghcr(), 'публикация не пересобирает образы').not.toMatch(/compose build|docker build/);
+  });
+
+  it('наружу уезжает только то, что в main', () => {
+    expect(ghcr()).toMatch(/merge-base --is-ancestor/);
   });
 });
