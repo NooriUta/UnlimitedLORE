@@ -27,6 +27,7 @@ import { applyWaitingLinks } from './waiting-links.mjs';
 import { readDecisionRefsInput, planDecisionRefs, applyDecisionRefs } from './decision-refs.mjs';
 import { readTrackInput, planTracks, applyTracks } from './tracks.mjs';
 import { readQgScopeInput, applyQgScope } from './qg-scope.mjs';
+import { readQgActionsInput, planQgActions, applyQgActions } from './qg-actions.mjs';
 import QG_SCOPE from './rules/qg-scope.json' with { type: 'json' };
 
 // Значения machine_id, которые не машина (D-2026-LORE-SESSION-MACHINE-PLACE-MODEL: «LEGION — имя пользователя Windows»).
@@ -224,6 +225,10 @@ export async function transferEdges(db, { log = console.log, at: atGiven, freshI
   // гигиены LORE (их связи с проектом снимаются), project у остальных с проектом, QG-T13-SMOKE — retired с причиной
   report.qg_scope = await applyQgScope(db, await readQgScopeInput(db), QG_SCOPE, { log });
   if (!report.qg_scope.ok) ok = false;
+  // гейт канала Actions (AP-DICT-UPSERT-DUP, решение владелицы 21.11.2026 «перевязать не к репозиторию, а к проекту, они
+  // схлопнутся», выбор владельца 23.11.2026 «а»): настройка qg.actions_projects → гейт QG-LORE-CI-ACTIONS с ребром на проект
+  report.qg_actions = await applyQgActions(db, planQgActions({ ...(await readQgActionsInput(db)), anchorOf }), { log });
+  if (!report.qg_actions.ok) ok = false;
   report.ok = ok;
   for (const [k, v] of Object.entries(report.moved)) log(`связь ${k}: ${JSON.stringify(v)}`);
   log('модель сессий: машин зарегистрировано', sm.new_machines.length, '· сессий восстановлено из версий', sm.restored_sessions, '· связи', JSON.stringify(sm.counts), '· не стали связью', JSON.stringify(sm.unresolved_counts));

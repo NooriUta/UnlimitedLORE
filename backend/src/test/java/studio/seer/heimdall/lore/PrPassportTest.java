@@ -123,6 +123,31 @@ class PrPassportTest {
         assertEquals(UID, link.get("title"), "PR без заголовка — подпись ключом");
     }
 
+    /**
+     * MD-05, «единая связь PR↔задача/релиз/спринт»: своего ребра спринт → PR в модели нет (HAS_PR снят, перенос 1.18
+     * спринт → PR не переносит), поэтому спринт PR — выводной: спринты задач, которые PR закрывает
+     * (CLOSED_BY → PART_OF). Поле только чтения, без ребра (rel нет), ссылки на паспорт спринта, без повтора.
+     */
+    @Test
+    void спринты_pr_выводятся_через_задачи_без_своего_ребра() {
+        assertTrue(LoreSlices.get("pr_by_id").baseSql().contains("in('CLOSED_BY').out('PART_OF')"),
+            "спринты PR — через задачи: " + LoreSlices.get("pr_by_id").baseSql());
+        Map<String, Object> row = new HashMap<>();
+        row.put("pr_uid", UID);
+        row.put("sprint_ids", List.of("SPRINT_LORE_MODEL_DOCS_TIDY", "SPRINT_LORE_MODEL_DOCS_TIDY", "SPRINT_QG_REBUILD"));
+        assertEquals(List.of("SPRINT_LORE_MODEL_DOCS_TIDY", "SPRINT_QG_REBUILD"), LoreRecordValues.values("pr", row).get("sprints"),
+            "две задачи одного спринта — спринт один раз");
+        row.put("sprint_ids", List.of(List.of("SPRINT_A"), List.of("SPRINT_A", "SPRINT_B")));
+        assertEquals(List.of("SPRINT_A", "SPRINT_B"), LoreRecordValues.values("pr", row).get("sprints"),
+            "вложенный список (путь в два шага) — разворачивается");
+        LoreRecordRegistry.Field f = LoreRecordRegistry.get("pr").fields().stream().filter(x -> x.key().equals("sprints")).findFirst().orElse(null);
+        assertNotNull(f, "pr.sprints не объявлено в модели");
+        assertEquals("ref", f.kind());
+        assertEquals("sprint", f.refType());
+        assertNull(f.rel(), "своего ребра спринт → PR нет — поле выводное");
+        assertTrue(LoreRecordValues.rowLinks("pr", row).isEmpty(), "выводной спринт — не ребро, во вкладки связей не идёт");
+    }
+
     /** Конец ребра PR в общих вкладках (ссылки, граф) — тот же вид и ключ, что у паспорта. */
     @Test
     void конец_ребра_pr_вид_и_ключ() {
