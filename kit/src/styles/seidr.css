@@ -7136,6 +7136,11 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-list__td[data-w='fill'] { width: 100%; max-width: 0; }
 .sk-list__ellip { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .sk-list__ellip[data-open='true'] { white-space: normal; overflow: visible; }
+/* Заголовок записи внутри многоточия — кнопка или ссылка с display: -webkit-box: у атомарного блока «…» нет, и в nowrap-обёртке
+   он вырастал до полной длины строки (смоук стенда 22.11, RFD2-K4RESET: кнопка 382–637 px в ячейке 65 px — текст рубился посреди
+   слова, кнопка торчала за край списка, и «показать, если не видно» сдвигало прокрутку на ~300 px). Не шире ячейки, режется «…». */
+.sk-list__ellip > .sk-list__title { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-list__ellip[data-open='true'] > .sk-list__title { white-space: normal; }
 @media (max-width: 1280px) {
   .sk-list__p4 { display: none; }
 }
