@@ -1702,7 +1702,9 @@ case "$m $url" in
   "POST ${DST}/releases") code=201; body='{"id":900,"assets":[]}' ;;
   "PATCH ${DST}/releases/"*) body='{"id":900}' ;;
   "POST ${DST}/releases/"*"/assets"*) code=201; body='{"id":5}' ;;
-  "GET "*"/releases/download/"*) body='bytes' ;;
+  # Прогон 10893 (23.11): скачивание с токеном прогона в заголовке давало 404 на всех вложениях —
+  # веб-адрес /releases/download/ его не принимает. Пускаем только с учёткой зеркала по basic (-u).
+  "GET "*"/releases/download/"*) case " $* " in *" -u mirror:dst "*) body='bytes' ;; *) code=404 ;; esac ;;
   *) code=599 ;;
 esac
 if [ -n "$o" ]; then printf '%s' "$body" > "$o"; else printf '%s' "$body"; fi

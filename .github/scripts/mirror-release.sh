@@ -101,7 +101,11 @@ while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
     call DELETE "$DST_API/releases/$RID/assets/$hid" "$DST_TOKEN" "$W/del.json" >/dev/null
   fi
   f="$W/asset.bin"
-  code=$(call GET "$HOST/$SRC_REPO/releases/download/$TAG/$name" "${SRC_TOKEN:-}" "$f" -L)
+  # Скачивание — веб-адресом /releases/download/, а не API (API отдаёт только описание вложения). Токен
+  # прогона этот адрес не принимает: прогон 10893 (23.11) получил 404 на всех пяти вложениях v1.19.0.
+  # Поэтому — учётка зеркала, basic-входом (пароль = токен): источник internal, читать его может любой
+  # вошедший пользователь Forgejo.
+  code=$("$CURL" -sS -L -u "mirror:$DST_TOKEN" -o "$f" -w '%{http_code}' "$HOST/$SRC_REPO/releases/download/$TAG/$name" 2>"$W/curl.err" || echo 000)
   if [ "$code" != 200 ]; then echo "::error::вложение $name не скачано из $SRC_REPO (HTTP $code)"; fail=1; continue; fi
   code=$(call POST "$DST_API/releases/$RID/assets?name=$name" "$DST_TOKEN" "$W/up.json" -F "attachment=@$f")
   case "$code" in 2*) moved=$((moved+1)); echo "вложение $name перенесено" ;;
