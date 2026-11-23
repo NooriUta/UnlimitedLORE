@@ -48,6 +48,9 @@ WITH_EXE="${WITH_EXE:-false}"
 # обещать в README то, чего в релизе нет (разбор документации 22.11.2026).
 WITH_SOURCES="${WITH_SOURCES:-true}"
 WITH_MINILORE_IMAGE="${WITH_MINILORE_IMAGE:-false}"
+# Мастер переноса lore-migrate.mjs ОТДЕЛЬНЫМ вложением (слово владельца 23.11.2026: «и дистрибутив миграции нужно
+# положить тоже»): внутри архива он был, а со страницы выпуска его отдельно не скачать.
+WITH_MIGRATE="${WITH_MIGRATE:-false}"
 TOOLS="${INSTALLER_TOOLS_DIR:-$ROOT/.installer-tools}"
 SRC_DIR="$ROOT/deploy/install"
 CREATED_JSON="${CREATED_JSON:-/tmp/created.json}"
@@ -73,6 +76,7 @@ ARCHIVE="$STAGE_NAME.tar.gz"
 WIN_ARCHIVE="$STAGE_NAME-windows.zip"
 EXE_ASSET="lore-migrate-linux-x64"
 SRC_ASSET="lore-src-$TAG.tar.gz"
+MIGRATE_ASSET="lore-migrate-$TAG.mjs"
 ASSET_DIR="$OUT/asset"
 
 warn() { echo "::warning::$*"; }
@@ -152,6 +156,11 @@ cmd_pack() {
   if [ "$WITH_EXE" = true ]; then
     [ -f "$OUT/lore-migrate" ] || die "нет $OUT/lore-migrate — исполняемый файл не собрался"
     cp "$OUT/lore-migrate" "$ASSET_DIR/$EXE_ASSET" || die "не скопирован исполняемый файл"
+  fi
+
+  # Мастер переноса (любая ОС, Node 20+) — отдельным вложением с подписью в SHA256SUMS.
+  if [ "$WITH_MIGRATE" = true ]; then
+    cp "$OUT/lore-migrate.mjs" "$ASSET_DIR/$MIGRATE_ASSET" || die "не скопирован мастер переноса $MIGRATE_ASSET"
   fi
 
   # Исходники LORE — для install.sh --build-from-source. Без них у получателя остаётся только путь
@@ -261,6 +270,7 @@ cmd_upload() {
   # и не рушим выпуск: под Linux пакет полон, а под Windows человек возьмёт tar.gz и распакует сам.
   [ -f "$ASSET_DIR/$WIN_ARCHIVE" ] && names+=("$WIN_ARCHIVE")
   [ "$WITH_EXE" = true ] && names+=("$EXE_ASSET")
+  [ "$WITH_MIGRATE" = true ] && names+=("$MIGRATE_ASSET")
   # Исходники и образ — вложениями, если их положил шаг сборки. Нет файла — не беда: загрузка пропускает
   # отсутствующее молча здесь и громко в upload_one, а релиз из-за необязательного файла не краснеет.
   [ -f "$ASSET_DIR/$SRC_ASSET" ] && names+=("$SRC_ASSET")

@@ -1413,6 +1413,35 @@ exit 0
     rmSync(d, { recursive: true, force: true });
   });
 
+  // 23.11.2026, слово владельца: «и дистрибутив миграции нужно положить тоже». Мастер переноса lore-migrate.mjs
+  // (любая ОС, Node 20+) жил только ВНУТРИ архива пакета — отдельно его со страницы выпуска не скачать.
+  // Теперь — отдельным вложением lore-migrate-<тег>.mjs со строкой в SHA256SUMS: на мажорном теге всегда, на догонке — по просьбе.
+  it('with_migrate=true: мастер переноса едет отдельным вложением lore-migrate-<тег>.mjs и подписан в SHA256SUMS', () => {
+    const d = area();
+    const r = asset('all', d, { WITH_MIGRATE: 'true' });
+    expect(r.code, r.out).toBe(0);
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-v9.9.9.mjs'))).toBe(true);
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8')).toMatch(/^[0-9a-f]{64} {2}lore-migrate-v9\.9\.9\.mjs$/m);
+    expect(names(r.curl)).toContain('lore-migrate-v9.9.9.mjs');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_migrate не задан: отдельного мастера переноса во вложениях нет', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-v9.9.9.mjs'))).toBe(false);
+    expect(names(r.curl)).not.toContain('lore-migrate-v9.9.9.mjs');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('мастер переноса в выпуске: на мажорном теге всегда, на догонке — по просьбе (вход with_migrate)', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_migrate:');
+    expect(from, 'входа with_migrate нет').toBeGreaterThan(-1);
+    const b = read(REL);
+    expect(b).toContain("WITH_MIGRATE: ${{ inputs.with_migrate || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}");
+  });
+
   it('id релиза — из ответа публикации; его нет — из уже существующего релиза', () => {
     const d = area();
     expect(asset('all', d).curl).toMatch(/releases\/77\/assets\?name=/);
