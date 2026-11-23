@@ -1771,7 +1771,7 @@ exit 0
     expect(r.code, r.out).toBe(0);
     expect(r.calls).toContain(`POST ${DST}/releases`);
     expect(r.out, 'выбранный способ скачивания назван в журнале').toMatch(/скачиваем способом att-dst/);
-    expect(r.calls.filter((c) => c.includes('/attachments/')).length, 'проба (2) + второе вложение (1)').toBe(3);
+    expect(r.calls.filter((c) => c.includes('/attachments/')).length, 'проба (3) + второе вложение (1)').toBe(4);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=a.tar.gz`);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=b.mjs`);
   });

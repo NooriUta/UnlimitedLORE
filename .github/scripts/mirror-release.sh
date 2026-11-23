@@ -98,6 +98,7 @@ fetch() {
     *)     url="$HOST/$SRC_REPO/releases/download/$TAG/$n" ;;
   esac
   case "$v" in
+    *-src-basic)  auth=(-u "x-access-token:${SRC_TOKEN:-}") ;;
     att-src)      auth=(-H "Authorization: token ${SRC_TOKEN:-}") ;;
     dl-dst-hdr)   auth=(-H "Authorization: token $DST_TOKEN") ;;
     *)            auth=(-u "mirror:$DST_TOKEN") ;;
@@ -121,7 +122,9 @@ while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
     # Способ скачивания выбирается пробой на первом вложении, и выбор пишется в журнал — не молча.
     # Прогоны 10893 и 10894 (23.11) получили 404 на /releases/download/ и с токеном прогона в заголовке,
     # и с учёткой зеркала по basic. API отдаёт только описание вложения, не сам файл — остаётся веб.
-    for v in att-src att-dst dl-dst-hdr dl-dst-basic; do
+    # Прогон 10895: att-src, att-dst, dl-dst-hdr, dl-dst-basic — все 404. Первыми идут basic-входы токеном
+    # прогона (x-access-token:<токен>) — ровно так checkout того же прогона читает этот репозиторий.
+    for v in dl-src-basic att-src-basic att-src att-dst dl-dst-hdr dl-dst-basic; do
       code=$(fetch "$v" "$name" "$uuid" "$f")
       echo "проба скачивания $v: HTTP $code"
       [ "$code" = 200 ] && { how="$v"; break; }
