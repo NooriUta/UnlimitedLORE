@@ -113,6 +113,13 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      with_migrate:
+        # Мастер переноса lore-migrate-<тег>.mjs (любая ОС, Node 20+) отдельным вложением. На мажорном теге — сам.
+        description: 'true — приложить мастер переноса lore-migrate-<тег>.mjs отдельным файлом'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
       with_sources:
         # Исходники LORE архивом (git archive, ~14 МБ). Нужны для install.sh --build-from-source: без них
         # у получателя пакета остаётся только путь «готовые образы из реестра». Разбор документации
@@ -327,7 +334,14 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_TAG: ${{ inputs.tag || '' }}
-          WITH_EXE: ${{ inputs.with_exe || 'false' }}
+          # Мажорный тег (vX.Y.0) кладёт единый файл ВСЕГДА — слово владелицы 22.11.2026: «тот установщик,
+          # визард миграции, подложи его тоже в публикацию». Это то, что человек скачивает одним файлом и
+          # запускает окно; ждать, пока кто-то вспомнит нажать флаг, для него значит не получить установщик.
+          # На догонках (vX.Y.Z, Z>0) по-прежнему не кладём: 119 МБ ради правки одной строки никому не нужны.
+          WITH_EXE: ${{ inputs.with_exe || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}
+          # Мастер переноса lore-migrate-<тег>.mjs отдельным вложением — слово владельца 23.11.2026: «и дистрибутив миграции
+          # нужно положить тоже». Правило как у единого файла: мажорный тег — всегда, догонка — по просьбе.
+          WITH_MIGRATE: ${{ inputs.with_migrate || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}
           WITH_SOURCES: ${{ inputs.with_sources || 'true' }}
           WITH_MINILORE_IMAGE: ${{ inputs.with_minilore_image || 'false' }}
           MINILORE_SOURCE_IMAGE: ${{ vars.MINILORE_SOURCE_IMAGE }}

@@ -358,6 +358,18 @@ describe('PL-04: снимок прода → база препрода (толь
     expect(s).toMatch(/FROM LoreModelSchema/);
     expect(cd()).toMatch(/^ {6}LORE_DB: system_aida_lore_preprod$/m);
   });
+
+  // 23.11.2026, run 40542: снимок прода 1.18 распакован и открыт, а сверка упала «v? ≠ v?» и оставила
+  // бэкенд препрода остановленным. С 1.18 схема модельная (schema_version «model:1»): таблицы LoreSchemaVersion
+  // нет, max(version) пуст с обеих сторон, и прежняя проверка `[ -n "$dst_ver" ]` не проходила НИКОГДА.
+  // Правило: нет номера версии ни у прода, ни у снимка — сверяем отметку модели LoreModelSchema (как local_source).
+  it('снимок прода с модельной схемой: сверка по отметке LoreModelSchema, а не по пустому номеру версии', () => {
+    const s = code(read('scripts/preprod-db-refresh.sh'));
+    const snap = s.slice(s.indexOf('dst_ver="$(query_ver "$TARGET_DB")"'));
+    expect(snap, 'ветка снимка знает модельную схему').toMatch(/model_n "\$TARGET_DB"/);
+    expect(snap).toMatch(/src_model/);
+    expect(s, 'отметка модели прода читается на lore-host').toMatch(/src_model="\$\(r /);
+  });
 });
 
 // D-2026-KC-PREPROD-REALM-DUPLICATES (14.11.2026): препрод входит через свои realm'ы-дубли
@@ -1230,7 +1242,13 @@ describe('релиз несёт готовый пакет установки в�
     expect(v!.body).toMatch(/::error::/);
   });
 
-  it('бинарь — только по явной просьбе: вход with_exe, по умолчанию false', () => {
+  // 22.11.2026, слово владелицы: «тот установщик, визард миграции, подложи его тоже в публикацию».
+  // Единый файл (119 МБ, Node внутри, окно установки) — это то, ради чего человек вообще приходит за
+  // выпуском: скачал, запустил, прошёл по шагам. Раньше он прикладывался только при явном флаге, и
+  // владелица неделю не могла его получить: флаг надо было вспомнить нажать.
+  // Правило теперь такое: мажорный тег (vX.Y.0) кладёт его ВСЕГДА, догонка (vX.Y.Z, Z>0) — только по просьбе,
+  // потому что 119 МБ ради правки одной строки никому не нужны.
+  it('единый файл: на мажорном теге всегда, на догонке — по просьбе', () => {
     const lines = read(REL).split('\n');
     const from = lines.findIndex((l) => l === '      with_exe:');
     expect(from, 'входа with_exe нет').toBeGreaterThan(-1);
@@ -1238,8 +1256,11 @@ describe('релиз несёт готовый пакет установки в�
     for (let i = from + 1; i < lines.length; i++) {
       if (/^ {0,6}\S/.test(lines[i])) { to = i; break; }
     }
-    expect(lines.slice(from, to).join('\n')).toMatch(/^ {8}default: 'false'$/m);
-    expect(assetStep()!.body).toMatch(/WITH_EXE: \$\{\{ inputs\.with_exe \|\| 'false' \}\}/);
+    expect(lines.slice(from, to).join('\n'), 'ручной вход остаётся с умолчанием false').toMatch(/^ {8}default: 'false'$/m);
+    const b = assetStep()!.body;
+    expect(b, 'явная просьба по-прежнему главнее').toMatch(/WITH_EXE: \$\{\{ inputs\.with_exe \|\|/);
+    expect(b, 'на теге, оканчивающемся на .0, файл кладётся сам').toMatch(/endsWith\(github\.ref, '\.0'\)/);
+    expect(b, 'на не-теге и на догонке остаётся false').toMatch(/\|\| 'false' \}\}/);
   });
 });
 
@@ -1390,6 +1411,35 @@ exit 0
     expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-linux-x64'))).toBe(true);
     expect(names(r.curl)).toContain('lore-migrate-linux-x64');
     rmSync(d, { recursive: true, force: true });
+  });
+
+  // 23.11.2026, слово владельца: «и дистрибутив миграции нужно положить тоже». Мастер переноса lore-migrate.mjs
+  // (любая ОС, Node 20+) жил только ВНУТРИ архива пакета — отдельно его со страницы выпуска не скачать.
+  // Теперь — отдельным вложением lore-migrate-<тег>.mjs со строкой в SHA256SUMS: на мажорном теге всегда, на догонке — по просьбе.
+  it('with_migrate=true: мастер переноса едет отдельным вложением lore-migrate-<тег>.mjs и подписан в SHA256SUMS', () => {
+    const d = area();
+    const r = asset('all', d, { WITH_MIGRATE: 'true' });
+    expect(r.code, r.out).toBe(0);
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-v9.9.9.mjs'))).toBe(true);
+    expect(readFileSync(join(d, 'build', 'asset', 'SHA256SUMS'), 'utf8')).toMatch(/^[0-9a-f]{64} {2}lore-migrate-v9\.9\.9\.mjs$/m);
+    expect(names(r.curl)).toContain('lore-migrate-v9.9.9.mjs');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('with_migrate не задан: отдельного мастера переноса во вложениях нет', () => {
+    const d = area();
+    const r = asset('all', d);
+    expect(existsSync(join(d, 'build', 'asset', 'lore-migrate-v9.9.9.mjs'))).toBe(false);
+    expect(names(r.curl)).not.toContain('lore-migrate-v9.9.9.mjs');
+    rmSync(d, { recursive: true, force: true });
+  });
+
+  it('мастер переноса в выпуске: на мажорном теге всегда, на догонке — по просьбе (вход with_migrate)', () => {
+    const lines = read(REL).split('\n');
+    const from = lines.findIndex((l) => l === '      with_migrate:');
+    expect(from, 'входа with_migrate нет').toBeGreaterThan(-1);
+    const b = read(REL);
+    expect(b).toContain("WITH_MIGRATE: ${{ inputs.with_migrate || (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref, '.0') && 'true') || 'false' }}");
   });
 
   it('id релиза — из ответа публикации; его нет — из уже существующего релиза', () => {
