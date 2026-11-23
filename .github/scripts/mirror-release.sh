@@ -15,8 +15,8 @@
 # Вход (env):
 #   TAG        — тег, напр. v1.19.0; переносятся только мажорные vX.Y.0 (как и сам пуш в зеркало)
 #   HOST       — адрес Forgejo, напр. http://forgejo:3000
-#   SRC_REPO   — источник, напр. AIDA/UnlimitedLORE;  SRC_TOKEN — чтение источника
-#   DST_REPO   — зеркало, напр. SeidrStudio/UnlimitedLORE; DST_TOKEN — запись в зеркало
+#   SRC_REPO   — источник, напр. AIDA/UnlimitedLORE;  SRC_TOKEN — чтение источника (секрет MIRROR_PULL_TOKEN)
+#   DST_REPO   — зеркало, напр. SeidrStudio/UnlimitedLORE; DST_TOKEN — запись в зеркало (секрет MIRROR_PUSH_TOKEN)
 #   WORK_DIR   — рабочая папка (по умолчанию временная); CURL_BIN — curl (тесты подменяют)
 set -u
 
@@ -35,6 +35,11 @@ fi
 
 if [ -z "${DST_TOKEN:-}" ]; then
   echo "::error::BLOCKED: выпуск $TAG в зеркало $DST_REPO НЕ перенесён — нет секрета MIRROR_PUSH_TOKEN (организация AIDA, Settings -> Actions -> Secrets). Разблокировать: токен с правом записи в $DST_REPO выпускает владелица, кладёт CICDGitHub."
+  exit 1
+fi
+
+if [ -z "${SRC_TOKEN:-}" ]; then
+  echo "::error::BLOCKED: выпуск $TAG в зеркало $DST_REPO НЕ перенесён — нет секрета MIRROR_PULL_TOKEN (чтение $SRC_REPO; организация AIDA, Settings -> Actions -> Secrets). Токен записи читать источник не может, токен прогона не отдаёт файлы вложений (прогоны 10893–10897)."
   exit 1
 fi
 
@@ -98,10 +103,8 @@ fetch() {
     *)     url="$HOST/$SRC_REPO/releases/download/$TAG/$n" ;;
   esac
   case "$v" in
-    *-src-basic)  auth=(-u "x-access-token:${SRC_TOKEN:-}") ;;
-    att-src)      auth=(-H "Authorization: token ${SRC_TOKEN:-}") ;;
-    dl-dst-hdr)   auth=(-H "Authorization: token $DST_TOKEN") ;;
-    *)            auth=(-u "mirror:$DST_TOKEN") ;;
+    *-basic) auth=(-u "mirror:$SRC_TOKEN") ;;
+    *)       auth=(-H "Authorization: token $SRC_TOKEN") ;;
   esac
   "$CURL" -sS -L "${auth[@]}" -o "$out" -w '%{http_code}' "$url" 2>"$W/curl.err" || echo 000
 }
@@ -122,9 +125,10 @@ while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
     # Способ скачивания выбирается пробой на первом вложении, и выбор пишется в журнал — не молча.
     # Прогоны 10893 и 10894 (23.11) получили 404 на /releases/download/ и с токеном прогона в заголовке,
     # и с учёткой зеркала по basic. API отдаёт только описание вложения, не сам файл — остаётся веб.
-    # Прогон 10895: att-src, att-dst, dl-dst-hdr, dl-dst-basic — все 404. Первыми идут basic-входы токеном
-    # прогона (x-access-token:<токен>) — ровно так checkout того же прогона читает этот репозиторий.
-    for v in dl-src-basic att-src-basic att-src att-dst dl-dst-hdr dl-dst-basic; do
+    # Прогон 10897 доказал корень: токен записи в зеркало для источника — 404 (доступа нет), токен прогона
+    # веб-скачивание не проходит. Поэтому источник читает отдельный MIRROR_PULL_TOKEN (решение владельца:
+    # «нельзя в одном разные права раздавать»). Какой вход примет веб-адрес — basic или заголовок — пробуем.
+    for v in dl-basic dl-hdr att-basic att-hdr; do
       code=$(fetch "$v" "$name" "$uuid" "$f")
       echo "проба скачивания $v: HTTP $code"
       [ "$code" = 200 ] && { how="$v"; break; }
@@ -132,10 +136,10 @@ while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
     if [ -n "$how" ]; then echo "скачиваем способом $how"; else
       how=none
       # Владелец 23.11: под своей учёткой в браузере файл качается, без входа — 404. Значит, дело во входе.
-      # Называем учётку токена зеркала и её права на источник — без самого токена.
-      ucode=$(call GET "$HOST/api/v1/user" "$DST_TOKEN" "$W/who.json")
-      rcode=$(call GET "$SRC_API" "$DST_TOKEN" "$W/srcrepo.json")
-      echo "::error::ни один способ скачивания не сработал. Токен зеркала — учётка $( [ "$ucode" = 200 ] && json "$W/who.json" 'j.login' || echo "? (HTTP $ucode)"); доступ к $SRC_REPO: HTTP $rcode$( [ "$rcode" = 200 ] && json "$W/srcrepo.json" '" права "+JSON.stringify(j.permissions)')"
+      # Называем учётку токена чтения и её права на источник — без самого токена.
+      ucode=$(call GET "$HOST/api/v1/user" "$SRC_TOKEN" "$W/who.json")
+      rcode=$(call GET "$SRC_API" "$SRC_TOKEN" "$W/srcrepo.json")
+      echo "::error::ни один способ скачивания не сработал. MIRROR_PULL_TOKEN — учётка $( [ "$ucode" = 200 ] && json "$W/who.json" 'j.login' || echo "? (HTTP $ucode)"); доступ к $SRC_REPO: HTTP $rcode$( [ "$rcode" = 200 ] && json "$W/srcrepo.json" '" права "+JSON.stringify(j.permissions)')"
     fi
   else
     code=$(fetch "$how" "$name" "$uuid" "$f")

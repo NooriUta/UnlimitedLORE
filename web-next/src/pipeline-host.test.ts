@@ -1655,6 +1655,17 @@ describe('выпуск в зеркале SeidrStudio: мини-труба и ш�
     expect(wf).toMatch(/secrets\.MIRROR_PUSH_TOKEN/);
   });
 
+  // Владелец 23.11: «чтение — MIRROR_PULL_TOKEN, PUSH — на запись; нельзя в одном разные права раздавать».
+  // Прогон 10897: токен записи для AIDA/UnlimitedLORE отвечал 404, токен прогона веб-скачивание не проходит.
+  it('два токена: источник читается MIRROR_PULL_TOKEN, зеркало пишется MIRROR_PUSH_TOKEN — в обеих трубах', () => {
+    const rel = steps(job(REL, 'publish')).find((s) => s.body.includes(MIRROR_REL_SH))!.body;
+    for (const t of [code(read(MIRROR_REL_WF)), rel]) {
+      expect(t).toMatch(/SRC_TOKEN: \$\{\{ secrets\.MIRROR_PULL_TOKEN \}\}/);
+      expect(t).toMatch(/DST_TOKEN: \$\{\{ secrets\.MIRROR_PUSH_TOKEN \}\}/);
+      expect(t, 'токен прогона источник не читает').not.toMatch(/SRC_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN/);
+    }
+  });
+
   it('основная труба: шаг после пуша в зеркало, не роняет релиз, но красит прогон вердиктом', () => {
     const st = steps(job(REL, 'publish'));
     const iPush = st.findIndex((s) => /Mirror main \+ tag to SeidrStudio/.test(s.name));
@@ -1705,7 +1716,7 @@ case "$m $url" in
   # Прогоны 10893/10894 (23.11): /releases/download/ отвечал 404 и с токеном прогона, и с учёткой зеркала.
   # Заглушка пускает ровно одним способом (/attachments/<uuid> + basic учёткой зеркала) — скрипт обязан
   # найти его пробой и назвать в журнале. Остальные способы — 404, как на живом Forgejo.
-  "GET http://forgejo:3000/attachments/"*) case " $* " in *" -u mirror:dst "*) body='bytes' ;; *) code=404 ;; esac ;;
+  "GET http://forgejo:3000/attachments/"*) case " $* " in *" -u mirror:src "*) body='bytes' ;; *) code=404 ;; esac ;;
   "GET "*"/releases/download/"*) code=404 ;;
   *) code=599 ;;
 esac
@@ -1746,6 +1757,13 @@ exit 0
     expect(r.calls).toEqual([]);
   });
 
+  it('нет токена чтения источника — громкий BLOCKED с именем секрета, ни одного обращения', () => {
+    const r = mirror({ SRC_TOKEN: '' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/BLOCKED.*MIRROR_PULL_TOKEN/);
+    expect(r.calls).toEqual([]);
+  });
+
   it('догонка vX.Y.Z (Z>0) не переносится — зеркала выносятся при смене x.y', () => {
     const r = mirror({ TAG: 'v9.9.1' });
     expect(r.code).toBe(0);
@@ -1770,8 +1788,8 @@ exit 0
     const r = mirror();
     expect(r.code, r.out).toBe(0);
     expect(r.calls).toContain(`POST ${DST}/releases`);
-    expect(r.out, 'выбранный способ скачивания назван в журнале').toMatch(/скачиваем способом att-dst/);
-    expect(r.calls.filter((c) => c.includes('/attachments/')).length, 'проба (3) + второе вложение (1)').toBe(4);
+    expect(r.out, 'выбранный способ скачивания назван в журнале').toMatch(/скачиваем способом att-basic/);
+    expect(r.calls.filter((c) => c.includes('/attachments/')).length, 'проба (1) + второе вложение (1)').toBe(2);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=a.tar.gz`);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=b.mjs`);
   });

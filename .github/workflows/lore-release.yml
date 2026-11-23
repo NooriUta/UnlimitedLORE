@@ -564,7 +564,7 @@ jobs:
           TAG: ${{ inputs.tag || github.ref_name }}
           HOST: ${{ github.server_url }}
           SRC_REPO: ${{ github.repository }}
-          SRC_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SRC_TOKEN: ${{ secrets.MIRROR_PULL_TOKEN }}
           DST_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
           DST_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
         run: bash .github/scripts/mirror-release.sh
