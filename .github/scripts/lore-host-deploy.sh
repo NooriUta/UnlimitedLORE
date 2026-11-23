@@ -567,7 +567,10 @@ probe() {
     got="$(r "curl -s -m 10 -H 'Host: $2' http://127.0.0.1:$3/" | grep -oE "$BUNDLE_RE" | head -1)"
     if [ "$got" = "$4" ]; then echo "ok: $1 на lore-host:$3 отдаёт $got"; else err "$1 на lore-host:$3 отдаёт ${got:-<нет>}, ждали $4"; rc=1; fi
   done
-  bash "$here/bundle-probe.sh" "v1 прод" "$BUNDLE_V1" "https://$HOST_V1/" || rc=1
+  # Публичное имя HOST_V1 после переезда прода ведёт на v2 (v1.19.0: lore.odal отдал бандл v2) — v1 живёт
+  # только на lore-host:4400 и сверен строкой выше. Какой фронт стоит за именем — LORE_PROD_V1_HOST_SERVES (v2|v1).
+  want_v1_public="$BUNDLE_V2"; [ "${LORE_PROD_V1_HOST_SERVES:-v2}" = v1 ] && want_v1_public="$BUNDLE_V1"
+  bash "$here/bundle-probe.sh" "прод по имени $HOST_V1 (${LORE_PROD_V1_HOST_SERVES:-v2})" "$want_v1_public" "https://$HOST_V1/" || rc=1
   bash "$here/bundle-probe.sh" "v2 прод" "$BUNDLE_V2" "https://$HOST_V2/" || rc=1
   # /lore/version — через nginx ОБОИХ фронтов (SPRINT_UXR_S8_SWITCH/S8-01): шаблон
   # nginx общий, но после переключения основной адрес — v2, и телефон с MCP идут
