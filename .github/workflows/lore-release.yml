@@ -541,9 +541,9 @@ jobs:
           fi
 
           HOST="${GITHUB_SERVER_URL:-http://forgejo:3000}"
-          if ! git push "${HOST%/}/${MIRROR_REPO}.git" \
-               "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG" \
-               -c http.extraheader="Authorization: token ${MIRROR_TOKEN}"; then
+          # `-c` — опция самого git, а не `git push`: стоит ДО подкоманды (v1.19.0: «unknown switch `c'»).
+          if ! git -c http.extraheader="Authorization: token ${MIRROR_TOKEN}" push "${HOST%/}/${MIRROR_REPO}.git" \
+               "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"; then
             echo "::error::зеркало SeidrStudio НЕ обновлено: git push на ${MIRROR_REPO} не прошёл. Тег $TAG и релиз на месте, зеркало отстало."
             exit 1
           fi
