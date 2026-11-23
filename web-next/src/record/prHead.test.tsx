@@ -5,6 +5,8 @@
 // общей фразой, без поля причины (поле причины заполнила бы только отдельная дотяжка — пункт «3а после 1.19»).
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
 import { prKind, PrHeadLine } from './PrHeadLine';
@@ -73,32 +75,24 @@ describe('шапка PR', () => {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
-const PR_FACADE = {
-  contract: 'lore.record/1',
-  record: { type: 'pr', id: UID, title: 'feat(forgejo): данные PR при мерже', status: null, version: null },
-  values: { title: 'feat(forgejo): данные PR при мерже', code: UID, url: 'https://h/AIDA/UnlimitedLORE/pulls/1641', state: 'merged',
-    merged_at: '2026-11-18T21:14:00Z', head_ref: 'feat/md05-merge', base_ref: 'develop', sprints: ['SPRINT_LORE_MODEL_DOCS_TIDY'] },
-  parts: [],
-  links: [],
-  perms: { can_edit: false, can_status: false, can_create: false, status_next: [], reason: null },
-  facts: {},
-  schema: {
-    type: 'pr', label: 'PR', label_key: 'pp.kind.pr', icon: 'branch-arrow',
-    fields: [
-      { key: 'title', label: 'Название', label_key: 'pp.field.title', kind: 'text', group: 'head', required: true, editable: false },
-      { key: 'sprints', label: 'Спринты', label_key: 'pp.field.sprints', kind: 'ref', group: 'props', required: false, editable: false, multi: true, ref: { type: 'sprint', rel: null, dir: null } },
-    ],
-    layout: {},
-    relations: [],
-  },
-  meta: { facade: 'server', sources: {} },
-};
+/**
+ * Фасад PR — на СНЯТОМ ответе сервера (shared/fixtures/record-task.json, сторож CT-KIT-FIXTURES): форма ответа
+ * своя у сервера, подменены только тип, ключ и значения PR (LoreRecordFrom.VALUES pr).
+ */
+function prFacade(): Record<string, unknown> {
+  const body = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'shared', 'fixtures', 'record-task.json'), 'utf8')) as Record<string, unknown> & { record: object; schema: object };
+  body.record = { ...body.record, type: 'pr', id: UID, title: 'feat(forgejo): данные PR при мерже' };
+  body.values = { title: 'feat(forgejo): данные PR при мерже', code: UID, url: 'https://h/AIDA/UnlimitedLORE/pulls/1641', state: 'merged',
+    merged_at: '2026-11-18T21:14:00Z', head_ref: 'feat/md05-merge', base_ref: 'develop', sprints: ['SPRINT_LORE_MODEL_DOCS_TIDY'] };
+  body.schema = { ...body.schema, type: 'pr' };
+  return body;
+}
 
 describe('паспорт PR собирается с шапкой веток', () => {
   it('ListPassport type=pr: строка веток над записью, спринт PR — в поле «Спринты»', async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input), 'http://lore.test');
-      if (url.pathname.startsWith('/lore/record/')) return json(PR_FACADE);
+      if (url.pathname.startsWith('/lore/record/')) return json(prFacade());
       if (url.pathname === '/lore/history') return json({ type: 'pr', id: UID, rows: [], attribution: { ok: true } });
       if (url.pathname === '/lore/me/drafts') return json({ drafts: [] });
       return json({ rows: [] });
