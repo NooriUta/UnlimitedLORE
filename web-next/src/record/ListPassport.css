@@ -1,2 +1,9 @@
 /* S6-04: блок lore-graph в тексте — что граф НЕ показывает, словами под графом. */
 .lore-graph-block-notes { margin: 6px 0 0; padding-left: 18px; font-size: var(--fs-xs); color: var(--t2); }
+
+/* MD-05: шапка паспорта PR — ветки «откуда → куда» и вид словом; плашка — sk-banner--warn kit. */
+.pr-head { display: grid; gap: 6px; margin: 0 0 8px; }
+.pr-head__branches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--t2); }
+.pr-head__branches b { color: var(--t1); font-weight: 600; overflow-wrap: anywhere; }
+.pr-head__kind { font-family: var(--font); font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.pr-head__note { margin: 0; font-size: var(--fs-sm); color: var(--t2); }
