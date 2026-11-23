@@ -29,6 +29,7 @@ import { derivePhaseStatus } from './status-unify.mjs';
 import { computeEmptyStatuses, filledSummary } from './empty-fill.mjs';
 import { structurePlan, asIsContent } from './structure-plan.mjs';
 import { mergeKeyDups } from './key-dups.mjs';
+import { splitActionsSetting } from './qg-actions.mjs';
 import { repairVersions, addFixes } from './scd2-repair.mjs';
 import { countLegacyBefore, legacyLeftovers, legacyDrop, assertLegacyDrop, LEGACY_KIND } from './legacy.mjs';
 // Справочник статуса по типу: первый объект — по справочникам базы; остальные типы — по источникам правил (17.11.2026).
@@ -228,6 +229,15 @@ export async function transfer(db, DECISIONS, { reset = false, log = console.log
       v.res.rejects = v.res.rejects.filter(x => x.field !== 'status_raw');
       merge.phase_status_from_tasks++;
     }
+  }
+  // настройка qg.actions_projects снимается (AP-DICT-UPSERT-DUP, выбор владельца 23.11.2026 «а»): что опрашивать в Actions,
+  // задаёт гейт канала Actions с ребром на проект — его заводит шаг связей (qg-actions.mjs); убыль — в остаток с причиной
+  if (calc.KnowDictEntry) {
+    const qa = splitActionsSetting(calc.KnowDictEntry);
+    calc.KnowDictEntry = qa.keep;
+    for (const x of qa.leftovers) leftovers.push({ src_type: 'KnowDictEntry', ...x });
+    report.stages.qg_actions_setting = { removed: qa.leftovers.map(x => x.src_rid), values: qa.values };
+    log('2 настройка qg.actions_projects: снято строк', qa.leftovers.length, qa.values.length ? '(' + qa.values.join(', ') + ') → гейт канала Actions' : '');
   }
   // дубли уникального ключа справочника (D-2026-MIG-SETTING-LIST-VALUE): отличаются только организацией — одна строка
   if (calc.KnowDictEntry) {
