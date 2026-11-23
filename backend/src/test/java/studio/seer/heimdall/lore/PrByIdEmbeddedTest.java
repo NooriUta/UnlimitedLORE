@@ -89,8 +89,12 @@ class PrByIdEmbeddedTest {
         // порядок задач — порядок рёбер в движке, не контракт: сравниваем набором
         List<String> links = LoreRecordValues.rowLinks("pr", row).stream()
             .map(m -> m.get("rel") + ":" + m.get("dir") + ":" + m.get("id")).sorted().toList();
-        assertEquals(List.of("CLOSED_BY:in:SPRINT_LORE_MODEL_DOCS_TIDY/MD-04", "CLOSED_BY:in:SPRINT_LORE_MODEL_DOCS_TIDY/MD-05",
-            "SHIPPED_IN:out:NooriUta/UnlimitedLORE#v1.18.0"), links);
+        assertEquals(List.of("SHIPPED_IN:out:NooriUta/UnlimitedLORE#v1.18.0"), links, "задачи — срезом pr_tasks, не строкой");
+        LoreSlices.Composed c = LoreSlices.compose("pr_tasks", Map.of("id", "NooriUta/UnlimitedLORE#1641"));
+        List<String> tasks = new ArrayList<>();
+        db.query("sql", c.sql(), c.params()).stream().forEach(r -> tasks.add(r.getProperty("task_uid") + "@" + r.getProperty("sprint_id")));
+        assertEquals(List.of("SPRINT_LORE_MODEL_DOCS_TIDY/MD-04@SPRINT_LORE_MODEL_DOCS_TIDY", "SPRINT_LORE_MODEL_DOCS_TIDY/MD-05@SPRINT_LORE_MODEL_DOCS_TIDY"),
+            tasks.stream().sorted().toList(), "задачи PR срезом, спринт задачи — по PART_OF к спринту, не к фазе");
         assertEquals(List.of("SPRINT_LORE_MODEL_DOCS_TIDY"), v.get("sprints"),
             "спринт PR — через задачи: две задачи одного спринта — один раз, фаза задачи — не спринт");
     }

@@ -23,6 +23,7 @@ import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { ProjectExportButton } from './ProjectExportButton';
 import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { PrHeadLine } from './PrHeadLine';
 import { MilestoneCharts, SprintCharts } from '../charts/TaskFlowCharts';
 import { GateCharts, ProjectCharts } from '../charts/Batch2Charts';
 import { withSprintTasksTab } from './sprintTasksTab';
@@ -463,6 +464,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       {/* PU-27: у вехи — сгорание по задачам её спринтов (строка BURN-DOWN и
           «Цель к сроку»), той же строкой, что у спринта; срок — «Когда» вехи. */}
       {/* MDA-04: у git-проекта — выгрузка в папку .md (Obsidian) zip-архивом. */}
+      {/* MD-05: шапка PR — ветки и вид, «не влит», плашка «заголовок не дотянут» (прототип md05-pr-passport). */}
+      {type === 'pr' && contract && <PrHeadLine values={contract.values} />}
       {type === 'project' && <ProjectExportButton slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'milestone' && (
         <MilestoneBurnLine

@@ -2994,6 +2994,14 @@ public final class LoreSlices {
             "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
             "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
             List.of("id"), Map.of(), "");
+        // MD-05 (прототип md05-pr-passport, «да» владельца 23.11): вкладка «Закрывает задачи» паспорта PR — задачи
+        // с названием, статусом и спринтом (не голые коды из строки pr_by_id). Спринт — PART_OF к спринту, не к фазе.
+        slice("pr_tasks",
+            "SELECT task_uid, task_id, title, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+            "out('PART_OF')[sprint_id IS NOT NULL].sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
+            "FROM KnowTask WHERE out('CLOSED_BY').pr_uid CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY task_uid");
 
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задачи релиза — через PR, который
         // их закрыл (CLOSED_BY), и релиз этого PR (SHIPPED_IN). Не разбор note_md.
@@ -3570,6 +3578,8 @@ public final class LoreSlices {
         // S9-05 A: задачи человека и агента — проект через спринт, как у прочих задач.
         Map.entry("user_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("agent_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        // MD-05: задачи PR — проект через спринт, как у прочих задач.
+        Map.entry("pr_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
