@@ -129,7 +129,14 @@ while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
       echo "проба скачивания $v: HTTP $code"
       [ "$code" = 200 ] && { how="$v"; break; }
     done
-    [ -n "$how" ] && echo "скачиваем способом $how" || how=none
+    if [ -n "$how" ]; then echo "скачиваем способом $how"; else
+      how=none
+      # Владелец 23.11: под своей учёткой в браузере файл качается, без входа — 404. Значит, дело во входе.
+      # Называем учётку токена зеркала и её права на источник — без самого токена.
+      ucode=$(call GET "$HOST/api/v1/user" "$DST_TOKEN" "$W/who.json")
+      rcode=$(call GET "$SRC_API" "$DST_TOKEN" "$W/srcrepo.json")
+      echo "::error::ни один способ скачивания не сработал. Токен зеркала — учётка $( [ "$ucode" = 200 ] && json "$W/who.json" 'j.login' || echo "? (HTTP $ucode)"); доступ к $SRC_REPO: HTTP $rcode$( [ "$rcode" = 200 ] && json "$W/srcrepo.json" '" права "+JSON.stringify(j.permissions)')"
+    fi
   else
     code=$(fetch "$how" "$name" "$uuid" "$f")
   fi
