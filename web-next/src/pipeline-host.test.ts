@@ -358,6 +358,18 @@ describe('PL-04: снимок прода → база препрода (толь
     expect(s).toMatch(/FROM LoreModelSchema/);
     expect(cd()).toMatch(/^ {6}LORE_DB: system_aida_lore_preprod$/m);
   });
+
+  // 23.11.2026, run 40542: снимок прода 1.18 распакован и открыт, а сверка упала «v? ≠ v?» и оставила
+  // бэкенд препрода остановленным. С 1.18 схема модельная (schema_version «model:1»): таблицы LoreSchemaVersion
+  // нет, max(version) пуст с обеих сторон, и прежняя проверка `[ -n "$dst_ver" ]` не проходила НИКОГДА.
+  // Правило: нет номера версии ни у прода, ни у снимка — сверяем отметку модели LoreModelSchema (как local_source).
+  it('снимок прода с модельной схемой: сверка по отметке LoreModelSchema, а не по пустому номеру версии', () => {
+    const s = code(read('scripts/preprod-db-refresh.sh'));
+    const snap = s.slice(s.indexOf('dst_ver="$(query_ver "$TARGET_DB")"'));
+    expect(snap, 'ветка снимка знает модельную схему').toMatch(/model_n "\$TARGET_DB"/);
+    expect(snap).toMatch(/src_model/);
+    expect(s, 'отметка модели прода читается на lore-host').toMatch(/src_model="\$\(r /);
+  });
 });
 
 // D-2026-KC-PREPROD-REALM-DUPLICATES (14.11.2026): препрод входит через свои realm'ы-дубли
