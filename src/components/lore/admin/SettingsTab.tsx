@@ -47,18 +47,8 @@ const KNOWN_SETTINGS: KnownSetting[] = [
       hint: t('lore.admin.settingChartLayerHint', 'Одна настройка на весь LORE, действует сразу после сохранения (после обновления страницы). Если в слое Völva графика нет, вместо пустой рамки показывается «не настроено».'),
     }),
   },
-  // SPRINT_QG_REBUILD/QG-09: читает LoreQgActionsPoller на каждом заходе
-  // (настройка → иначе LORE_QG_ACTIONS_PROJECTS → иначе пусто).
-  {
-    key: 'qg.actions_projects',
-    placeholder: 'NooriUta/UnlimitedLORE,NooriUta/AIDA',
-    text: t => ({
-      type: t('lore.admin.settingTypeProjects', 'список git-проектов через запятую'),
-      def: t('lore.admin.settingQgProjectsDef', '— (берётся из LORE_QG_ACTIONS_PROJECTS, если задан)'),
-      descr: t('lore.admin.settingQgProjectsDescr', 'Какие репозитории опрашивает канал прогонов Forgejo Actions для гейтов качества. Пусто — прогоны Actions в гейты не пишутся.'),
-      hint: t('lore.admin.settingQgProjectsHint', 'Список проектов — во вкладке «Проекты» (slug вида owner/repo). Правка подхватывается со следующего захода опроса, без рестарта.'),
-    }),
-  },
+  // qg.actions_projects снята (SPRINT_LORE_ADMIN_POLISH/AP-DICT-UPSERT-DUP): что опрашивать в Actions, задаёт гейт
+  // QG-LORE-CI-ACTIONS с ребром на проект.
   // Картинки в MD-полях (LoreAssetResource.settingBool/settingLong) — ключи заводит
   // миграция, читает бэкенд при каждой загрузке. Раньше их не было в реестре, и
   // админка показывала их «неопознанными» с обещанием «удаление ни на что не повлияет».

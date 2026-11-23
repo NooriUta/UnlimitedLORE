@@ -43,11 +43,8 @@ export const KNOWN_SETTINGS: readonly KnownSetting[] = [
     key: 'charts.layer', kind: 'choice', choices: ['echarts', 'volva'], placeholder: 'echarts',
     type: 'admin.set.type.chartLayer', def: 'admin.set.def.chartLayer', descr: 'admin.set.descr.chartLayer', hint: 'admin.set.hint.chartLayer',
   },
-  // QG-09: какие репозитории опрашивает канал прогонов Forgejo Actions.
-  {
-    key: 'qg.actions_projects', kind: 'projects', placeholder: 'NooriUta/UnlimitedLORE,NooriUta/AIDA',
-    type: 'admin.set.type.projects', def: 'admin.set.def.qgProjects', descr: 'admin.set.descr.qgProjects', hint: 'admin.set.hint.qgProjects',
-  },
+  // qg.actions_projects снята (SPRINT_LORE_ADMIN_POLISH/AP-DICT-UPSERT-DUP): что опрашивать в Actions, задаёт гейт
+  // QG-LORE-CI-ACTIONS с ребром на проект, а не строка-список в справочнике.
   // Картинки в MD-полях (LoreAssetResource) — читается при каждой загрузке.
   {
     key: 'md_images_enabled', kind: 'bool', placeholder: 'true',
