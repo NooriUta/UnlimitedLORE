@@ -22871,7 +22871,7 @@
       "requirements_block" : "schema"
     },
     "parts" : [ ],
-    "slice_links" : [ ],
+    "slice_links" : [ "SliceLink[key=tasks, slice=pr_tasks, param=id, rel=CLOSED_BY, dir=in, type=task, id=From[columns=[task_uid], transform=STR, when=null], title=From[columns=[title, task_uid], transform=FIRST_OF, when=null], status=From[columns=[status_raw], transform=PLAN_TOKEN, when=null], paged=true]" ],
     "unread" : [ ],
     "edge_links" : { },
     "defaults" : {
