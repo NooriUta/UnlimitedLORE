@@ -2989,6 +2989,8 @@ public final class LoreSlices {
         slice("pr_by_id",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
             "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
+            // MD-05: спринт PR — выводной, через задачи (своего ребра спринт → PR нет); у фазы sprint_id нет — пусто.
+            "in('CLOSED_BY').out('PART_OF').sprint_id AS sprint_ids, " +
             "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
             "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
             List.of("id"), Map.of(), "");

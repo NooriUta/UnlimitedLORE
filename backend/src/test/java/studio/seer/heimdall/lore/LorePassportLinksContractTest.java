@@ -680,14 +680,25 @@ class LorePassportLinksContractTest {
         assertEquals(List.of(), bad);
     }
 
-    /** Поле-ссылка без ребра — только унаследованные чипы (своего ребра у типа нет). */
+    /**
+     * Поле-ссылка, выводимое путём в несколько рёбер (своего ребра нет): тип.поле → путь. Только чтение, правки нет.
+     * Исключение, которое больше не объявлено в модели, — протухло и тоже красное.
+     */
+    static final Map<String, String> DERIVED_REF = Map.of(
+        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05");
+
+    /** Поле-ссылка без ребра — только унаследованные чипы (своего ребра у типа нет) или выводной путь из DERIVED_REF. */
     @Test
     void refWithoutEdgeIsOnlyAnInheritedChip() {
         List<String> bad = new ArrayList<>();
+        Set<String> seen = new java.util.HashSet<>();
         for (String t : LoreRecordRegistry.TYPES)
             for (LoreRecordRegistry.Field f : LoreRecordRegistry.get(t).fields())
-                if (f.refType() != null && f.rel() == null && !Set.of("projects", "components").contains(f.key()))
-                    bad.add(t + "." + f.key());
+                if (f.refType() != null && f.rel() == null && !Set.of("projects", "components").contains(f.key())) {
+                    if (DERIVED_REF.containsKey(t + "." + f.key())) { seen.add(t + "." + f.key()); if (f.editable()) bad.add(t + "." + f.key() + ": выводное поле не правится"); }
+                    else bad.add(t + "." + f.key());
+                }
+        for (String k : DERIVED_REF.keySet()) if (!seen.contains(k)) bad.add(k + ": исключение протухло");
         assertEquals(List.of(), bad);
     }
 

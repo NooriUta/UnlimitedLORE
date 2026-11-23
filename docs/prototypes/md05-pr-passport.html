@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Паспорт PR</title>
+<!-- Прототип SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR на объектах kit (sk-rec-*, sk-tabs--underline,
+     sk-pill, sk-rec-fields). Широкий экран 1280 и телефон 390. Самодостаточный файл, открывать через file://.
+     Только раскладка и состав — кода паспорта нет до «да» владелицы. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;600;700&family=Unbounded:wght@800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<style>
+/* Токены — копия :root kit/src/styles/seidr.css (тема amber-forest, по умолчанию). */
+:root {
+  color-scheme: dark;
+  --bg0: #141108; --bg1: #1c1810; --bg2: #252019; --bg3: #302a20;
+  --bd: #42382a; --bdh: #584c38;
+  --t1: #ede5d0; --t2: #a6997f; --t3: #9c937b;
+  --acc: #a8b860; --suc: #7dbf78; --wrn: #d4922a; --inf: #88b8a8; --dng: #cf6c5e;
+  --st-done: #5fb86a; --st-ready_for_deploy: #3fb6c4; --st-active: #4a9ce6; --st-uat: #7f8cf0;
+  --section-sprints: #7DBF78; --section-releases: #57C7D4;
+  --font: 'Manrope', sans-serif; --mono: 'IBM Plex Mono', monospace; --display: 'Unbounded', sans-serif;
+  --fs-2xs: 9px; --fs-xs: 10px; --fs-sm: 11px; --fs-base: 12px; --fs-md: 13px; --fs-lg: 14px; --fs-xl: 20px; --fs-2xl: 24px;
+  --r-pill: 999px; --gap: 4px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg0); color: var(--t1); font: var(--fs-base)/1.45 var(--font); padding: 16px; }
+h1 { font: 800 var(--fs-xl)/1.2 var(--display); margin: 0 0 4px; }
+h2 { font: 800 var(--fs-md)/1.2 var(--display); text-transform: uppercase; letter-spacing: .04em; color: var(--t2); margin: 28px 0 8px; }
+p.lead { color: var(--t2); max-width: 820px; margin: 4px 0; }
+.cap { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }
+.scroll { overflow-x: auto; }
+.frame { background: var(--bg1); border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; }
+.frame.wide { width: 1280px; }
+.frame.phone { width: 390px; max-width: 100%; }
+
+/* ── шапка записи (как sk-rec head) ── */
+.sk-rec__head { padding: 12px 16px 0; }
+.crumb { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 6px; align-items: center; }
+.crumb iconify-icon { color: var(--acc); font-size: 14px; }
+.titlerow { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-top: 4px; }
+.titlerow h3 { font: 700 var(--fs-lg)/1.3 var(--font); margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.titlerow h3.keyonly { font-family: var(--mono); color: var(--t2); }
+.sk-pill { --pill-c: var(--t2); display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--pill-c) 45%, transparent); border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--pill-c) 12%, transparent); color: var(--pill-c); font-size: var(--fs-xs);
+  line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk-pill--id { --pill-c: var(--acc); padding: 0; border-color: transparent; background: none; font-family: var(--mono); }
+.pill-merged { --pill-c: #b48ead; }
+.pill-open { --pill-c: var(--suc); }
+.pill-closed { --pill-c: var(--t3); }
+.pill-done { --pill-c: var(--st-done); } .pill-rfd { --pill-c: var(--st-ready_for_deploy); } .pill-active { --pill-c: var(--st-active); }
+.branches { margin-top: 6px; font-family: var(--mono); font-size: var(--fs-sm); color: var(--t2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.branches b { color: var(--t1); font-weight: 600; }
+.branches .kind { font-family: var(--font); font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.warn { margin: 8px 0 0; padding: 6px 10px; border: 1px solid color-mix(in srgb, var(--wrn) 45%, transparent);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent); color: var(--wrn); border-radius: 6px; font-size: var(--fs-sm); }
+
+/* ── тело: поля слева, вкладки справа на широком ── */
+.sk-rec__body { display: grid; grid-template-columns: 340px 1fr; gap: 0; border-top: 1px solid var(--bd); margin-top: 10px; }
+.phone .sk-rec__body { grid-template-columns: 1fr; }
+.sk-rec-fields { padding: 10px 16px 14px; border-right: 1px solid var(--bd); }
+.phone .sk-rec-fields { border-right: 0; border-bottom: 1px solid var(--bd); }
+.sk-rec-fields dl { display: grid; grid-template-columns: minmax(96px, max-content) 1fr; gap: 4px 12px; margin: 0; }
+.sk-rec-fields dt { color: var(--t3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; padding-top: 3px; }
+.sk-rec-fields dd { margin: 0; color: var(--t1); min-width: 0; word-break: break-word; }
+.sk-rec-fields__sechead { margin: 12px 0 6px; padding-top: 8px; border-top: 1px solid var(--bd); color: var(--t2); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.sk-rec-fields__mono { font-family: var(--mono); }
+.sk-rec-fields__none { color: var(--t3); }
+.sk-rec-fields__url { color: var(--acc); overflow-wrap: anywhere; text-decoration: none; font-family: var(--mono); font-size: var(--fs-sm); }
+.chips { display: inline-flex; flex-wrap: wrap; gap: var(--gap); }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border: 1px solid var(--bd); border-radius: var(--r-pill);
+  font-size: var(--fs-xs); line-height: 18px; color: var(--t1); font-family: var(--mono); }
+.chip--sprint { border-color: color-mix(in srgb, var(--section-sprints) 55%, transparent); }
+.chip--release { border-color: color-mix(in srgb, var(--section-releases) 55%, transparent); }
+.derived { font-size: var(--fs-2xs); color: var(--t3); margin-top: 2px; }
+
+.sk-rec__main { min-width: 0; }
+.sk-tabs--underline { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--bd); }
+.sk-tab { flex: 0 0 auto; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; min-height: 34px; padding: 0 14px;
+  border: 0; border-bottom: 2px solid transparent; background: none; color: var(--t2); font: var(--fs-md) var(--font); margin-bottom: -1px; }
+.sk-tab[aria-selected='true'] { border-bottom-color: var(--acc); color: var(--t1); font-weight: 600; }
+.sk-tab__count { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); }
+.sk-tab__count[data-unknown] { color: var(--wrn); }
+.panel { padding: 8px 12px 14px; }
+table.links { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+table.links th { text-align: left; font-size: var(--fs-xs); font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: .06em; padding: 4px 6px; border-bottom: 1px solid var(--bd); }
+table.links td { padding: 5px 6px; border-bottom: 1px solid color-mix(in srgb, var(--bd) 60%, transparent); vertical-align: top; }
+table.links td.code { font-family: var(--mono); color: var(--acc); white-space: nowrap; }
+.titlerow h3, .branches b { overflow-wrap: anywhere; }
+table.links td.ttl { color: var(--t1); }
+.cards { display: grid; gap: 6px; }
+.card { border: 1px solid var(--bd); border-radius: 6px; padding: 6px 8px; background: var(--bg2); }
+.card .code { font-family: var(--mono); color: var(--acc); font-size: var(--fs-sm); }
+.card .ttl { margin-top: 2px; }
+.card .meta { margin-top: 4px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--t3); }
+.empty { color: var(--t3); padding: 10px 0; }
+.err { color: var(--wrn); padding: 10px 0; }
+
+/* ── пояснения ── */
+table.spec { border-collapse: collapse; margin-top: 8px; font-size: var(--fs-sm); max-width: 1100px; }
+table.spec th, table.spec td { border: 1px solid var(--bd); padding: 4px 8px; text-align: left; vertical-align: top; }
+table.spec th { text-transform: uppercase; color: var(--t3); font-weight: 600; letter-spacing: .04em; font-size: var(--fs-xs); }
+.new { color: var(--suc); }
+.q { color: var(--wrn); }
+.row2 { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+.row2 > div { min-width: 0; max-width: 100%; flex: 0 1 620px; }
+</style>
+</head>
+<body>
+
+<h1>Паспорт PR</h1>
+<p class="lead">Задача SPRINT_LORE_MODEL_DOCS_TIDY/MD-05. Сейчас (с #1699) паспорт PR — общий: поля столбиком и две вкладки. Прототип показывает, что добавляется:
+ветки «откуда → куда» в шапке с видом PR (работа / промо / релиз), спринты PR (выводятся через задачи — своего ребра «спринт → PR» нет),
+честная плашка «заголовок не дотянут», и состояние «ещё не в релизе» у открытого PR. Все объекты — из kit: шапка записи, <code>sk-rec-fields</code>, <code>sk-tabs--underline</code>, <code>sk-pill</code>.</p>
+
+<h2>Что меняется против нынешнего паспорта</h2>
+<div class="scroll"><table class="spec">
+  <tr><th>Часть</th><th>Сейчас (#1699)</th><th>В прототипе</th><th>Откуда данные</th></tr>
+  <tr><td>Шапка</td><td>заголовок или ключ</td><td>заголовок, ключ <span class="sk-pill sk-pill--id">проект#номер</span>, состояние пилюлей</td><td>KnowPR.title / pr_uid / state</td></tr>
+  <tr><td>Ветки</td><td>два поля «Ветка-источник», «Ветка-цель»</td><td class="new">одна строка в шапке: <code>feat/… → develop</code> + вид PR словом</td><td>head_ref, base_ref; вид — из base_ref по ролям веток проекта <span class="q">(предложено мной)</span></td></tr>
+  <tr><td>Спринты</td><td>нет</td><td class="new">поле «Спринты» чипами с пометкой «через задачи»</td><td>CLOSED_BY → PART_OF (срез pr_by_id, этот PR)</td></tr>
+  <tr><td>Пустой заголовок</td><td>ключ вместо заголовка, молча</td><td class="new">ключ + жёлтая плашка: не дотянут / чужой репозиторий</td><td>title пуст; причина — из отчёта дотяжки (#1730), если есть</td></tr>
+  <tr><td>Открытый PR</td><td>«Влит: —», вкладка релизов «0»</td><td class="new">«не влит», вкладка «Релизы» — «ещё не в релизе» словами</td><td>state = open, merged_at пуст</td></tr>
+  <tr><td>Вкладки</td><td>«Закрывает задачи», «Вошёл в релизы»</td><td>те же + статус и спринт задачи в строке</td><td>CLOSED_BY in, SHIPPED_IN out</td></tr>
+</table></div>
+
+<h2>1280 · влитый PR</h2>
+<div class="scroll">
+<div class="frame wide">
+  <div class="sk-rec__head">
+    <div class="crumb"><iconify-icon icon="game-icons:branch-arrow"></iconify-icon>PR · NooriUta/UnlimitedLORE</div>
+    <div class="titlerow">
+      <h3>feat(forgejo): мерж записывает данные PR и ставит CLOSED_BY задача → PR (SPRINT_LORE_MODEL_DOCS_TIDY/MD-05)</h3>
+      <span class="sk-pill sk-pill--id">NooriUta/UnlimitedLORE#1641</span>
+      <span class="sk-pill pill-merged">влит</span>
+    </div>
+    <div class="branches"><span class="kind">работа</span><b>feat/md05-merge-links-tasks</b> → <b>develop</b></div>
+  </div>
+  <div class="sk-rec__body">
+    <div class="sk-rec-fields">
+      <dl>
+        <dt>Ссылка</dt><dd><a class="sk-rec-fields__url" href="#">git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/1641</a></dd>
+        <dt>Состояние</dt><dd><span class="sk-pill pill-merged">merged</span></dd>
+        <dt>Влит</dt><dd class="sk-rec-fields__mono">18.11.2026 21:14</dd>
+        <dt>Проект</dt><dd><span class="chips"><span class="chip">NooriUta/UnlimitedLORE</span></span></dd>
+      </dl>
+      <div class="sk-rec-fields__sechead">Где этот PR</div>
+      <dl>
+        <dt>Спринты</dt><dd><span class="chips"><span class="chip chip--sprint">SPRINT_LORE_MODEL_DOCS_TIDY</span></span><div class="derived">через задачи PR</div></dd>
+        <dt>Релиз</dt><dd><span class="chips"><span class="chip chip--release">v1.18.0</span></span></dd>
+      </dl>
+    </div>
+    <div class="sk-rec__main">
+      <div class="sk-tabs--underline" role="tablist">
+        <button class="sk-tab" aria-selected="true">Закрывает задачи <span class="sk-tab__count">2</span></button>
+        <button class="sk-tab">Вошёл в релизы <span class="sk-tab__count">1</span></button>
+        <button class="sk-tab">Ссылки <span class="sk-tab__count">0</span></button>
+      </div>
+      <div class="panel">
+        <table class="links">
+          <tr><th>Задача</th><th>Название</th><th>Спринт</th><th>Статус</th></tr>
+          <tr><td class="code">SPRINT_LORE_MODEL_DOCS_TIDY/MD-05</td><td class="ttl">Модель PR и мост Forgejo: KnowPR в модели и паспорте…</td><td class="code">SPRINT_LORE_MODEL_DOCS_TIDY</td><td><span class="sk-pill pill-active">в работе</span></td></tr>
+          <tr><td class="code">SPRINT_LORE_MODEL_DOCS_TIDY/MD-04</td><td class="ttl">Пример: вторая задача того же спринта</td><td class="code">SPRINT_LORE_MODEL_DOCS_TIDY</td><td><span class="sk-pill pill-rfd">ready for deploy</span></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<h2>1280 · состояния шапки и вкладок</h2>
+<div class="row2">
+  <div>
+    <div class="cap">старый PR без заголовка — дотяжка не нашла его на хосте</div>
+    <div class="frame" style="width:620px;max-width:100%">
+      <div class="sk-rec__head" style="padding-bottom:12px">
+        <div class="crumb"><iconify-icon icon="game-icons:branch-arrow"></iconify-icon>PR · NooriUta/AIDA</div>
+        <div class="titlerow"><h3 class="keyonly">NooriUta/AIDA#363</h3><span class="sk-pill pill-closed">состояние неизвестно</span></div>
+        <div class="warn">Заголовок не дотянут: репозиторий NooriUta/AIDA недоступен мосту (дотяжка 22.11.2026 — пропущен с причиной). Подпись — ключом.</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="cap">открытый PR — ещё не влит и не в релизе</div>
+    <div class="frame" style="width:620px;max-width:100%">
+      <div class="sk-rec__head">
+        <div class="crumb"><iconify-icon icon="game-icons:branch-arrow"></iconify-icon>PR · NooriUta/UnlimitedLORE</div>
+        <div class="titlerow"><h3>feat(model): спринты PR через задачи (SPRINT_LORE_MODEL_DOCS_TIDY/MD-05)</h3><span class="sk-pill pill-open">открыт</span></div>
+        <div class="branches"><span class="kind">работа</span><b>feat/md05-pr-model</b> → <b>develop</b></div>
+      </div>
+      <div class="sk-tabs--underline" style="margin-top:10px" role="tablist">
+        <button class="sk-tab">Закрывает задачи <span class="sk-tab__count">1</span></button>
+        <button class="sk-tab" aria-selected="true">Вошёл в релизы <span class="sk-tab__count">0</span></button>
+      </div>
+      <div class="panel"><div class="empty">Ещё не в релизе: PR не влит. Релиз проставит мерж (только невыпущенный релиз).</div></div>
+    </div>
+  </div>
+</div>
+<div class="row2">
+  <div>
+    <div class="cap">промо-PR — вид по ветке-цели</div>
+    <div class="frame" style="width:620px;max-width:100%">
+      <div class="sk-rec__head" style="padding-bottom:12px">
+        <div class="crumb"><iconify-icon icon="game-icons:branch-arrow"></iconify-icon>PR · NooriUta/UnlimitedLORE</div>
+        <div class="titlerow"><h3>promote: develop → preprod 2026-11-22</h3><span class="sk-pill pill-merged">влит</span></div>
+        <div class="branches"><span class="kind">промо</span><b>promote/2026-11-22-b8c2198b</b> → <b>preprod</b></div>
+        <div class="derived" style="margin-top:6px">Промо-PR с задачами не связывается (#1641) — вкладка задач пуста законно, без «?».</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="cap">вкладка не прочиталась — «?», а не ноль</div>
+    <div class="frame" style="width:620px;max-width:100%">
+      <div class="sk-tabs--underline" role="tablist">
+        <button class="sk-tab" aria-selected="true">Закрывает задачи <span class="sk-tab__count" data-unknown>?</span></button>
+        <button class="sk-tab">Вошёл в релизы <span class="sk-tab__count">1</span></button>
+      </div>
+      <div class="panel"><div class="err">Не смогли прочитать задачи PR: 403 SCOPE — нет доступа к проекту. Это не «задач нет».</div></div>
+    </div>
+  </div>
+</div>
+
+<h2>390 · телефон</h2>
+<div class="frame phone">
+  <div class="sk-rec__head">
+    <div class="crumb"><iconify-icon icon="game-icons:branch-arrow"></iconify-icon>PR</div>
+    <div class="titlerow">
+      <h3>feat(forgejo): мерж записывает данные PR и ставит CLOSED_BY задача → PR</h3>
+    </div>
+    <div class="titlerow" style="margin-top:2px"><span class="sk-pill sk-pill--id">UnlimitedLORE#1641</span><span class="sk-pill pill-merged">влит</span></div>
+    <div class="branches"><span class="kind">работа</span><b>feat/md05-merge-…</b> → <b>develop</b></div>
+  </div>
+  <div class="sk-rec__body">
+    <div class="sk-rec-fields">
+      <dl>
+        <dt>Ссылка</dt><dd><a class="sk-rec-fields__url" href="#">…/UnlimitedLORE/pulls/1641</a></dd>
+        <dt>Влит</dt><dd class="sk-rec-fields__mono">18.11.2026 21:14</dd>
+        <dt>Спринты</dt><dd><span class="chips"><span class="chip chip--sprint">SPRINT_LORE_MODEL_DOCS_TIDY</span></span><div class="derived">через задачи PR</div></dd>
+        <dt>Релиз</dt><dd><span class="chips"><span class="chip chip--release">v1.18.0</span></span></dd>
+      </dl>
+    </div>
+    <div class="sk-rec__main">
+      <div class="sk-tabs--underline" role="tablist">
+        <button class="sk-tab" aria-selected="true">Задачи <span class="sk-tab__count">2</span></button>
+        <button class="sk-tab">Релизы <span class="sk-tab__count">1</span></button>
+      </div>
+      <div class="panel">
+        <div class="cards">
+          <div class="card"><div class="code">SPRINT_LORE_MODEL_DOCS_TIDY/MD-05</div><div class="ttl">Модель PR и мост Forgejo: KnowPR в модели и паспорте…</div><div class="meta"><span class="sk-pill pill-active">в работе</span></div></div>
+          <div class="card"><div class="code">SPRINT_LORE_MODEL_DOCS_TIDY/MD-04</div><div class="ttl">Пример: вторая задача того же спринта</div><div class="meta"><span class="sk-pill pill-rfd">ready for deploy</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>Вопросы к «да»</h2>
+<div class="scroll"><table class="spec">
+  <tr><th>№</th><th>Вопрос</th><th>Варианты</th><th>Рекомендация</th></tr>
+  <tr><td>1</td><td>Вид PR (работа / промо / релиз / срочная правка) показывать в шапке?</td><td>а) да, выводить из ветки-цели по ролям веток проекта — без нового поля; б) нет, только ветки текстом</td><td>а</td></tr>
+  <tr><td>2</td><td>Спринты PR — выводом через задачи или своим ребром «спринт → PR»?</td><td>а) вывод через задачи (CLOSED_BY → PART_OF) — ничего не пишем, PR без задач остаётся без спринта; б) ребро — PR без задач можно привязать руками, но два источника правды</td><td>а (сервер уже сделан так, PR ниже)</td></tr>
+  <tr><td>3</td><td>Плашка «заголовок не дотянут» — с причиной из отчёта дотяжки?</td><td>а) да, причина хранится у PR (новое поле backfill_reason); б) общая фраза без причины — без нового поля</td><td>б сейчас, а — если причин станет много</td></tr>
+</table></div>
+
+</body>
+</html>
