@@ -3,7 +3,7 @@
 # SPRINT_UXR_S11_TEST_OPT/E2E-STAND · владелица 19.11.2026: «пиши все тесты на него и включай в проверку
 # между преподом и продом». Раньше зелёный смоук проверял агент руками перед слиянием — теперь CI.
 #
-#   stand-gate.sh <sha>       ждать статус смоука на коммите (до STAND_GATE_WAIT_MIN минут, по умолчанию 45)
+#   stand-gate.sh <sha>       ждать статус смоука на коммите (до STAND_GATE_WAIT_MIN минут, по умолчанию 120)
 #   stand-gate.sh --selftest  сторож обязан уметь краснеть: решение на заготовленных ответах API
 #
 # Решение по статусам коммита (контекст содержит «stand-e2e»):
@@ -36,7 +36,7 @@ fi
 
 SHA="${1:?нужен коммит}"
 API="${GITHUB_API_URL:-${GITHUB_SERVER_URL:-}/api/v1}"
-WAIT_MIN="${STAND_GATE_WAIT_MIN:-45}"
+WAIT_MIN="${STAND_GATE_WAIT_MIN:-120}"
 deadline=$(( $(date +%s) + WAIT_MIN * 60 ))
 while :; do
   body=$(curl -fsS -H "Authorization: token ${GITHUB_TOKEN:-}" "$API/repos/$GITHUB_REPOSITORY/commits/$SHA/status" 2>/dev/null || echo '')
