@@ -549,6 +549,26 @@ jobs:
           fi
           echo "зеркало обновлено: main + $TAG -> ${MIRROR_REPO}"
 
+      # ── Выпуск в зеркале SeidrStudio (23.11.2026) ──────────────────────────
+      # Шаг выше пушит только main и тег — объект Release (описание + вложения) в зеркало не попадал ни разу.
+      # Замечание владельца на v1.19.0: «не вижу зеркала выпуска в SeidrStudio, только зеркало репозитория».
+      # Логика — в скрипте, его же зовёт мини-труба lore-mirror-release.yml (догнать прошлый выпуск руками).
+      # Только после УДАЧНОГО пуша: без тега в зеркале выпуск не завести. continue-on-error — как у пуша:
+      # отставшее зеркало не роняет опубликованный релиз, отказ красит прогон вердиктом в конце.
+      # SPRINT_CICD_OPS_2611/CO-MIRRORS-AUTOSYNC.
+      - name: Выпуск → зеркало SeidrStudio
+        id: mirror_seidr_release
+        if: ${{ steps.mirror_seidr.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          HOST: ${{ github.server_url }}
+          SRC_REPO: ${{ github.repository }}
+          SRC_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DST_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
+          DST_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+        run: bash .github/scripts/mirror-release.sh
+
       # ── Оповещение о релизе (TG-01, хвост) ─────────────────────────────────
       # Telegram в этом файле раньше был только про здоровье GH_MIRROR_TOKEN
       # (шаг Verify mirror token выше) — про сам факт «релиз X вышел» файл
@@ -715,6 +735,15 @@ jobs:
         run: |
           echo "::error::готовый пакет установки НЕ приложен к релизу (см. шаг «Пакет установки → вложения релиза»). Релиз опубликован, но скачать установщик со страницы выпуска нельзя — придётся собирать из исходников."
           echo "::error::После починки — dispatch lore-release.yml с tag=<тег>: шаг идемпотентен, одноимённые вложения заменяются."
+          exit 1
+
+      # Выпуск не доехал до зеркала SeidrStudio — релиз опубликован, но прогон красный: иначе друг узнал бы
+      # о пропаже раньше нас. Повтор — мини-труба lore-mirror-release.yml с тем же тегом, она идемпотентна.
+      - name: Вердикт выпуска в зеркале
+        if: ${{ always() && steps.mirror_seidr_release.outcome == 'failure' }}
+        run: |
+          echo "::error::выпуск НЕ перенесён в зеркало SeidrStudio (см. шаг «Выпуск → зеркало SeidrStudio»). Main и тег в зеркале есть, а описания и вложений нет."
+          echo "::error::После починки — запустить lore-mirror-release.yml с tag=<тег>: перенос идемпотентен."
           exit 1
 
       # 04.11.2026: оповещение о релизе две недели не доходило (api.telegram.org
