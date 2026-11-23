@@ -90,7 +90,22 @@ fi
 json "$W/src.json" '(j.assets||[]).map(a=>a.name+"\t"+a.size).join("\n")' > "$W/src.assets"
 json "$W/dst.json" '(j.assets||[]).map(a=>a.name+"\t"+a.size+"\t"+a.id).join("\n")' > "$W/dst.assets"
 
-fail=0; moved=0; kept=0
+# fetch <способ> <имя> <uuid> <файл> → HTTP-код. att-* — /attachments/<uuid>, dl-* — /releases/download/<тег>/<имя>.
+fetch() {
+  local v="$1" n="$2" u="$3" out="$4" url auth
+  case "$v" in
+    att-*) [ -n "$u" ] || { echo 000; return; }; url="$HOST/attachments/$u" ;;
+    *)     url="$HOST/$SRC_REPO/releases/download/$TAG/$n" ;;
+  esac
+  case "$v" in
+    att-src)      auth=(-H "Authorization: token ${SRC_TOKEN:-}") ;;
+    dl-dst-hdr)   auth=(-H "Authorization: token $DST_TOKEN") ;;
+    *)            auth=(-u "mirror:$DST_TOKEN") ;;
+  esac
+  "$CURL" -sS -L "${auth[@]}" -o "$out" -w '%{http_code}' "$url" 2>"$W/curl.err" || echo 000
+}
+
+how=""; fail=0; moved=0; kept=0
 # `|| [ -n "$name" ]` — последняя строка без перевода строки (json() его не ставит) иначе терялась бы.
 while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
   [ -n "$name" ] || continue
@@ -101,12 +116,21 @@ while IFS="$(printf '\t')" read -r name size || [ -n "$name" ]; do
     call DELETE "$DST_API/releases/$RID/assets/$hid" "$DST_TOKEN" "$W/del.json" >/dev/null
   fi
   f="$W/asset.bin"
-  # Скачивание — веб-адресом /releases/download/, а не API (API отдаёт только описание вложения). Токен
-  # прогона этот адрес не принимает: прогон 10893 (23.11) получил 404 на всех пяти вложениях v1.19.0.
-  # Поэтому — учётка зеркала, basic-входом (пароль = токен): источник internal, читать его может любой
-  # вошедший пользователь Forgejo.
-  code=$("$CURL" -sS -L -u "mirror:$DST_TOKEN" -o "$f" -w '%{http_code}' "$HOST/$SRC_REPO/releases/download/$TAG/$name" 2>"$W/curl.err" || echo 000)
-  if [ "$code" != 200 ]; then echo "::error::вложение $name не скачано из $SRC_REPO (HTTP $code)"; fail=1; continue; fi
+  uuid=$(json "$W/src.json" "(j.assets||[]).find(a=>a.name===$(node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$name"))?.uuid")
+  if [ -z "$how" ]; then
+    # Способ скачивания выбирается пробой на первом вложении, и выбор пишется в журнал — не молча.
+    # Прогоны 10893 и 10894 (23.11) получили 404 на /releases/download/ и с токеном прогона в заголовке,
+    # и с учёткой зеркала по basic. API отдаёт только описание вложения, не сам файл — остаётся веб.
+    for v in att-src att-dst dl-dst-hdr dl-dst-basic; do
+      code=$(fetch "$v" "$name" "$uuid" "$f")
+      echo "проба скачивания $v: HTTP $code"
+      [ "$code" = 200 ] && { how="$v"; break; }
+    done
+    [ -n "$how" ] && echo "скачиваем способом $how" || how=none
+  else
+    code=$(fetch "$how" "$name" "$uuid" "$f")
+  fi
+  if [ "$code" != 200 ]; then echo "::error::вложение $name не скачано из $SRC_REPO (HTTP $code, способ $how)"; fail=1; continue; fi
   code=$(call POST "$DST_API/releases/$RID/assets?name=$name" "$DST_TOKEN" "$W/up.json" -F "attachment=@$f")
   case "$code" in 2*) moved=$((moved+1)); echo "вложение $name перенесено" ;;
     *) echo "::error::вложение $name не загружено в зеркало (HTTP $code): $(head -c 200 "$W/up.json")"; fail=1 ;; esac

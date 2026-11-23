@@ -1680,7 +1680,7 @@ describe.skipIf(!bashBin)('mirror-release.sh', { timeout: SPAWN_TIMEOUT }, () =>
   const DST = 'http://forgejo:3000/api/v1/repos/SeidrStudio/UnlimitedLORE';
   const SRC_REL = JSON.stringify({
     id: 1, tag_name: 'v9.9.0', name: 'LORE v9.9.0', body: 'описание', prerelease: false,
-    assets: [{ id: 11, name: 'a.tar.gz', size: 5 }, { id: 12, name: 'b.mjs', size: 5 }],
+    assets: [{ id: 11, name: 'a.tar.gz', size: 5, uuid: 'u-a' }, { id: 12, name: 'b.mjs', size: 5, uuid: 'u-b' }],
   });
 
   // curl: ответ по методу и адресу; журнал «МЕТОД адрес».
@@ -1702,9 +1702,11 @@ case "$m $url" in
   "POST ${DST}/releases") code=201; body='{"id":900,"assets":[]}' ;;
   "PATCH ${DST}/releases/"*) body='{"id":900}' ;;
   "POST ${DST}/releases/"*"/assets"*) code=201; body='{"id":5}' ;;
-  # Прогон 10893 (23.11): скачивание с токеном прогона в заголовке давало 404 на всех вложениях —
-  # веб-адрес /releases/download/ его не принимает. Пускаем только с учёткой зеркала по basic (-u).
-  "GET "*"/releases/download/"*) case " $* " in *" -u mirror:dst "*) body='bytes' ;; *) code=404 ;; esac ;;
+  # Прогоны 10893/10894 (23.11): /releases/download/ отвечал 404 и с токеном прогона, и с учёткой зеркала.
+  # Заглушка пускает ровно одним способом (/attachments/<uuid> + basic учёткой зеркала) — скрипт обязан
+  # найти его пробой и назвать в журнале. Остальные способы — 404, как на живом Forgejo.
+  "GET http://forgejo:3000/attachments/"*) case " $* " in *" -u mirror:dst "*) body='bytes' ;; *) code=404 ;; esac ;;
+  "GET "*"/releases/download/"*) code=404 ;;
   *) code=599 ;;
 esac
 if [ -n "$o" ]; then printf '%s' "$body" > "$o"; else printf '%s' "$body"; fi
@@ -1768,7 +1770,8 @@ exit 0
     const r = mirror();
     expect(r.code, r.out).toBe(0);
     expect(r.calls).toContain(`POST ${DST}/releases`);
-    expect(r.calls.filter((c) => c.includes('/releases/download/v9.9.0/')).length).toBe(2);
+    expect(r.out, 'выбранный способ скачивания назван в журнале').toMatch(/скачиваем способом att-dst/);
+    expect(r.calls.filter((c) => c.includes('/attachments/')).length, 'проба (2) + второе вложение (1)').toBe(3);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=a.tar.gz`);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=b.mjs`);
   });
@@ -1778,7 +1781,7 @@ exit 0
     expect(r.code, r.out).toBe(0);
     expect(r.calls).not.toContain(`POST ${DST}/releases`);
     expect(r.calls).toContain(`PATCH ${DST}/releases/900`);
-    expect(r.calls.some((c) => c.endsWith('/releases/download/v9.9.0/a.tar.gz'))).toBe(false);
+    expect(r.calls.some((c) => c.endsWith('/attachments/u-a'))).toBe(false);
     expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=b.mjs`);
   });
 });
