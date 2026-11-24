@@ -1862,7 +1862,7 @@ final class LoreSchemaMigrations {
             // автор версии истории (S2-12): у V66 список заморожен до этого типа,
             // поэтому свои changed_by KnowKindHist объявляет сам создающий шаг.
             "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING")),
 
         // SPRINT_LORE_KNOW_REGISTRY/SKILL-05 (SPEC-SKILLS-TAGS-062 §4, SPEC-MODEL-EXPORT-064 §3a):
         // супертеги — вершина KnowTag из свободного токена ≤64 становится записью класса.
