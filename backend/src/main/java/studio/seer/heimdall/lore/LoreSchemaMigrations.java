@@ -235,12 +235,42 @@ final class LoreSchemaMigrations {
 
     /**
      * RM-P13: типы *Hist, у которых {@code valid_from} и {@code valid_to}
-     * объявлены DATETIME — все двенадцать. До V56 сюда входили только
+     * объявлены DATETIME. До V56 сюда входили только
      * KnowSprintHist и KnowDictEntryHist; порядок — прежний (сначала бывшие
      * текстовые, потом два исходных), чтобы SQL среза history_hygiene,
-     * собираемый по этому списку, не переставлял ветки без нужды.
+     * собираемый по этому списку, не переставлял ветки без нужды. KnowKindHist
+     * добавлен KREG-01 (V94) — в хвост, порядок остальных не тронут.
      */
     static final List<String> HIST_VALID_FROM_TEMPORAL = List.of(
+        "KnowADRHist",
+        "KnowDecisionHist",
+        "KnowDocHist",
+        "KnowFindingHist",
+        "KnowMilestoneHist",
+        "KnowPhaseHist",
+        "KnowReleaseHist",
+        "KnowRunbookHist",
+        "KnowSpecHist",
+        "KnowTaskHist",
+        "KnowSprintHist",
+        "KnowDictEntryHist",
+        // KREG-01 (V94): SCD2-история рантайм-реестра видов KnowKind.
+        "KnowKindHist");
+
+    /**
+     * KREG-01: список шага V66 (hist_change_author) — ЗАМОРОЖЕН на тех типах, что
+     * существовали на момент его выпуска. SQL V66 собирается из этого списка, а
+     * checksum выпущенного шага неизменяем: переключить V66 на
+     * {@link #HIST_VALID_FROM_TEMPORAL} после добавления KnowKindHist — значит
+     * пересчитать checksum применённого шага, и гард старта откажет каждой
+     * существующей БД («изменён после применения»). Та же болезнь, по которой
+     * заморожен {@link #V42_HIST_VALID_FROM_TEXT} — см. v42StaysFrozenOnItsOwnList.
+     *
+     * <p>Свежая БД знает KnowKindHist до миграций (LoreSchemaInitializer, зеркало
+     * V94), поэтому V66 на ней не падает — но и не объявляет ей changed_by: это
+     * делает сам V94. Порядок — прежний (реестр на момент выпуска V66).
+     */
+    static final List<String> V66_HIST_CHANGE_AUTHOR_TYPES = List.of(
         "KnowADRHist",
         "KnowDecisionHist",
         "KnowDocHist",
@@ -1494,7 +1524,10 @@ final class LoreSchemaMigrations {
         // (ChangeAuthor). Необязательные STRING на всех двенадцати *Hist — старые
         // версии остаются без автора («неизвестно»), v1 поле не знает и не задевает.
         // Только аддитивно, major 17 (чек-лист S2-07 предусматривал ровно эту форму).
-        new Step(66, 17, "hist_change_author", HIST_VALID_FROM_TEMPORAL.stream()
+        // Список — V66_HIST_CHANGE_AUTHOR_TYPES: заморожен на исторических типах,
+        // живой реестр HIST_VALID_FROM_TEMPORAL трогать нельзя (дрейф checksum
+        // выпущенного шага, KREG-01). KnowKindHist объявляет автора сам V94.
+        new Step(66, 17, "hist_change_author", V66_HIST_CHANGE_AUTHOR_TYPES.stream()
             .flatMap(h -> java.util.stream.Stream.of(
                 "CREATE PROPERTY " + h + ".changed_by IF NOT EXISTS STRING",
                 "CREATE PROPERTY " + h + ".changed_by_kind IF NOT EXISTS STRING"))
@@ -1793,7 +1826,43 @@ final class LoreSchemaMigrations {
         // Справочник правит только человек, а база с нуля должна знать состояния сама — Java-шаг как V90: только
         // INSERT недостающих строк, существующие не переписываются; DDL нет. Разрешение владелицы менять модель
         // данных QG в спринте — 15.11.2026. Номер сверен с сессией модели (V91 — её, V92 — профиль). Аддитивно, major 17.
-        new Step(93, 17, QgStatusDictSeed.STEP, List.of())
+        new Step(93, 17, QgStatusDictSeed.STEP, List.of()),
+
+        // SPRINT_LORE_KNOW_REGISTRY/KREG-01 (SPEC-MODEL-EXPORT-064 §5, ADR-LORE-057
+        // KnowRegistry): рантайм-реестр видов для агентов/MCP — KnowKind + его
+        // SCD2-история KnowKindHist. Атрибуты в DDL, стабильные, с индексами
+        // (слово владелицы 24.11.2026): не schemaless-JSON. UNIQUE на kind — гард
+        // двойников (две записи одного вида — дефект входов, импорт падает с
+        // отчётом, а не молча мержит); source — прогоны импорта по происхождению;
+        // replaces — поиск «кто заменил этот вид» (строковая ссылка внутри записи,
+        // не графовое ребро). Форма KnowKind меняется миграцией, не записью
+        // (правило двух слоёв MDL-01 применяется и к самому реестру). Спека пишет
+        // EMBEDDEDLIST/EMBEDDEDMAP, ArcadeDB объявляет их LIST/MAP (тот же тип;
+        // LoreModelConsistency читает обе орфографии). Аддитивно,
+        // major 17, v1 не задет.
+        new Step(94, 17, "know_kind_registry", List.of(
+            "CREATE VERTEX TYPE KnowKind IF NOT EXISTS",
+            "CREATE PROPERTY KnowKind.kind      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowKind.id_field  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowKind.title     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowKind.fields    IF NOT EXISTS LIST",
+            "CREATE PROPERTY KnowKind.links     IF NOT EXISTS LIST",
+            "CREATE PROPERTY KnowKind.guards    IF NOT EXISTS LIST",
+            "CREATE PROPERTY KnowKind.roles     IF NOT EXISTS LIST",
+            "CREATE PROPERTY KnowKind.replaces  IF NOT EXISTS LIST",
+            "CREATE PROPERTY KnowKind.source    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowKind.lifecycle IF NOT EXISTS MAP",
+            "CREATE INDEX IF NOT EXISTS ON KnowKind (kind) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowKind (source) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowKind (replaces) NOTUNIQUE",
+            "CREATE VERTEX TYPE KnowKindHist IF NOT EXISTS",
+            "CREATE PROPERTY KnowKindHist.valid_from    IF NOT EXISTS DATETIME",
+            "CREATE PROPERTY KnowKindHist.valid_to      IF NOT EXISTS DATETIME",
+            "CREATE PROPERTY KnowKindHist.content_hash  IF NOT EXISTS STRING",
+            // автор версии истории (S2-12): у V66 список заморожен до этого типа,
+            // поэтому свои changed_by KnowKindHist объявляет сам создающий шаг.
+            "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING"))
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */

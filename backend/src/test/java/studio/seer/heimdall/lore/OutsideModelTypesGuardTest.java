@@ -274,8 +274,13 @@ class OutsideModelTypesGuardTest {
     @Test
     void пометка_вне_модели_нужна_коду() throws Exception {
         Map<String, Set<String>> used = codeTypes();
-        for (String t : ModelSchemaAdapter.OUTSIDE_MODEL.keySet())
+        for (String t : ModelSchemaAdapter.OUTSIDE_MODEL.keySet()) {
+            // KREG-01: цепочки *Hist читает сгенерированный SQL среза history_hygiene
+            // (LoreSlices по histChains()) — литерального имени в коде нет, но тип
+            // кодом трогается именно так; членство в histChains — и есть это чтение.
+            if (LoreSlices.histChains().contains(t)) continue;
             assertTrue(used.containsKey(t), t + ": код его не трогает — пометка «вне модели» устарела");
+        }
     }
 
     @Test

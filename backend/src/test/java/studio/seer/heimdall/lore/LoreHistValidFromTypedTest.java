@@ -147,6 +147,34 @@ class LoreHistValidFromTypedTest {
         }
     }
 
+    /**
+     * KREG-01: V66 собирает SQL из СОБСТВЕННОГО замороженного списка
+     * (V66_HIST_CHANGE_AUTHOR_TYPES), а не из живого реестра
+     * HIST_VALID_FROM_TEMPORAL: новый *Hist в живом реестре (KnowKindHist)
+     * иначе сменил бы SQL уже применённого шага — и гард дрейфа checksum
+     * отказал бы в старте каждой существующей БД. Тот же инвариант, что у V42
+     * (v42StaysFrozenOnItsOwnList): шаг, чей SQL генерился из списка, навсегда
+     * привязан к замороженной копии.
+     */
+    @Test
+    void v66StaysFrozenOnItsOwnList() {
+        LoreSchemaMigrations.Step v66 = LoreSchemaMigrations.STEPS.stream()
+            .filter(s -> s.version() == 66).findFirst().orElseThrow();
+        assertEquals(LoreSchemaMigrations.V66_HIST_CHANGE_AUTHOR_TYPES.size() * 2, v66.sql().size(),
+            "SQL V66 должен ровно соответствовать его замороженному списку");
+        for (String t : LoreSchemaMigrations.V66_HIST_CHANGE_AUTHOR_TYPES) {
+            assertTrue(v66.sql().contains("CREATE PROPERTY " + t + ".changed_by IF NOT EXISTS STRING"),
+                "V66 не объявляет " + t + ".changed_by");
+            assertTrue(v66.sql().contains("CREATE PROPERTY " + t + ".changed_by_kind IF NOT EXISTS STRING"),
+                "V66 не объявляет " + t + ".changed_by_kind");
+        }
+        // положительный контроль: реестр обязан быть шире замороженного списка,
+        // иначе проверка «V66 не следит за живым реестром» вырождается в пустое
+        assertTrue(LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL.size()
+                > LoreSchemaMigrations.V66_HIST_CHANGE_AUTHOR_TYPES.size(),
+            "живой реестр не шире замороженного — контроль дрейфа V66 бесполезен");
+    }
+
     /** V56 зарегистрирован java-шагом: SQL пуст, вся работа — в раннере. */
     @Test
     void v56IsRegisteredAsJavaStep() {
