@@ -1,0 +1,249 @@
+{
+  "about": "SPRINT_LORE_KNOW_REGISTRY/KREG-08 — вход для KREG-02/KREG-10. Категории: факта 24.11.2026.",
+  "generatedFrom": {
+    "model": "backend\\src\\main\\resources\\lore-model\\lore-model.json",
+    "schema": null
+  },
+  "summary": {
+    "modelVersion": 1,
+    "schema": "absent",
+    "fieldsWithoutLabelKey": 42,
+    "modelSchemaEdgesNotInModel": 0,
+    "listTypesWithIssues": 0,
+    "unclassified": 0,
+    "writtenWithoutSchema": 0
+  },
+  "fieldsWithoutLabelKey": [
+    {
+      "type": "sprint",
+      "field": "deps",
+      "where": "linkTabs"
+    },
+    {
+      "type": "sprint",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "deps",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "justification",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "realization",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "adr",
+      "field": "adrLinks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "adr",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "spec",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "doc",
+      "field": "children",
+      "where": "linkTabs"
+    },
+    {
+      "type": "doc",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "decision",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "question",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "milestone",
+      "field": "deps",
+      "where": "linkTabs"
+    },
+    {
+      "type": "release",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "component",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "tech",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "value",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "trace",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "ucLinks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "user",
+      "field": "tasks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "user",
+      "field": "agents",
+      "where": "linkTabs"
+    },
+    {
+      "type": "agent",
+      "field": "tasks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "agent",
+      "field": "machines",
+      "where": "linkTabs"
+    },
+    {
+      "type": "agent",
+      "field": "roles",
+      "where": "linkTabs"
+    },
+    {
+      "type": "actor",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "actor",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "pain",
+      "field": "features",
+      "where": "linkTabs"
+    },
+    {
+      "type": "pain",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "pain",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "gain",
+      "field": "features",
+      "where": "linkTabs"
+    },
+    {
+      "type": "gain",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "gain",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "job",
+      "field": "features",
+      "where": "linkTabs"
+    },
+    {
+      "type": "job",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "job",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "runbook",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "quality_gate",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "repository",
+      "field": "links",
+      "where": "linkTabs"
+    },
+    {
+      "type": "organization",
+      "field": "links",
+      "where": "linkTabs"
+    },
+    {
+      "type": "project",
+      "field": "people",
+      "where": "linkTabs"
+    }
+  ],
+  "modelSchemaEdgesNotInModel": [],
+  "listTypes": [
+    {
+      "type": "organization",
+      "issues": []
+    },
+    {
+      "type": "pr",
+      "issues": []
+    },
+    {
+      "type": "repository",
+      "issues": []
+    },
+    {
+      "type": "track",
+      "issues": []
+    }
+  ],
+  "unclassified": [],
+  "writtenWithoutSchema": []
+}
