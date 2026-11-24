@@ -1863,6 +1863,25 @@ final class LoreSchemaMigrations {
             // поэтому свои changed_by KnowKindHist объявляет сам создающий шаг.
             "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING"))
+
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-05 (SPEC-SKILLS-TAGS-062 §4, SPEC-MODEL-EXPORT-064 §3a):
+        // супертеги — вершина KnowTag из свободного токена ≤64 становится записью класса.
+        // Обязательные name/title/source; field_schema — MAP-подсказка класса (НЕ DDL
+        // полей: значения по-прежнему живут на ребре TAGGED_WITH, LoreEdgeFreeFields);
+        // synonyms — LIST бывших имён (сторож переименования, TagRename); owner —
+        // ref на kc_sub владельца, необязателен. Типы контейнеров — MAP/LIST: в Type
+        // enum ArcadeDB 26.10 EMBEDDED*-имён нет (замерено падением V94 на старте:
+        // «No enum constant Type.EMBEDDEDMAP»). Геоид-ключ — tag:<slug> (созидание
+        // пишет геоид-форму, LoreTagResource#apply; легаси-токены доживают до rename).
+        // Аддитивно, major 17; данных не трогает — обязательные поля легаси-вершин
+        // добираются лениво на записи тем же ресурсом.
+        new Step(95, 17, "knowtag_supertag_fields", List.of(
+            "CREATE PROPERTY KnowTag.name         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTag.title        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTag.source       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTag.field_schema IF NOT EXISTS MAP",
+            "CREATE PROPERTY KnowTag.synonyms     IF NOT EXISTS LIST OF STRING",
+            "CREATE PROPERTY KnowTag.owner        IF NOT EXISTS STRING"))
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */
