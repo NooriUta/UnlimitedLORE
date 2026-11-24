@@ -469,16 +469,22 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'rel="file": EDITED_IN edge to a KnowFile (ADR-018) — a repo file REFERENCE (relative path ' +
       'only), lazily created on first link; requires project. rel="adr": JUSTIFIED_BY edge to a KnowADR ' +
       '(D16) — an enb task is justified by an architectural decision; both ends are checked, a missing ' +
-      'one is a 400 rather than a silent no-op. rel="pr": CLOSED_BY edge to the KnowPR that closed the task (D-2026-MINILORE-OWNER-ANSWERS-06-11 p.3) — target_id "owner/repo#N", or "#N"/"N" with project; a release then finds its tasks via PR → SHIPPED_IN (slice release_tasks_by_tag). Use the edge, not PR numbers in note_md. Idempotent on add. Mutates system_aida_lore.',
+      'one is a 400 rather than a silent no-op. rel="pr": CLOSED_BY edge to the KnowPR that closed the task (D-2026-MINILORE-OWNER-ANSWERS-06-11 p.3) — target_id "owner/repo#N", or "#N"/"N" with project; a release then finds its tasks via PR → SHIPPED_IN (slice release_tasks_by_tag). Use the edge, not PR numbers in note_md. ' +
+      'rel="dep": DEPENDS_ON edge to ANOTHER task (target_id = the task depended on; this task_uid depends ' +
+      'on target_id) via POST /lore/task/dep — kind = blocks | waits | soft | gate | informs | relates ' +
+      '(default soft), reason REQUIRED for a new link; the server rejects edges that would create a cycle ' +
+      '(409 with the cycle path). Idempotent on add. Mutates system_aida_lore.',
     {
       task_uid:  z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
-      rel:       z.enum(['phase', 'component', 'file', 'adr', 'pr']),
-      target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java"); omit with rel="phase"+action="remove" to detach from all phases'),
+      rel:       z.enum(['phase', 'component', 'file', 'adr', 'pr', 'dep']),
+      target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java") | depended-on task_uid (rel="dep"); omit with rel="phase"+action="remove" to detach from all phases'),
       project:   z.string().optional().describe('rel="file": KnowGitProject slug the file belongs to; rel="pr": project of a bare "#N"/"N" (defaults to LORE_ACTIVE_PROJECT), e.g. "NooriUta/UnlimitedLORE"'),
       summary_md: z.string().optional().describe('rel="file" only: optional short note on what the file does'),
+      kind:      z.enum(['blocks', 'waits', 'soft', 'gate', 'informs', 'relates', 'hard']).optional().default('soft').describe('rel="dep" only; hard = old synonym of blocks (MDL-13 merged dictionary)'),
+      reason:    z.string().optional().describe('rel="dep" only: brief reason for the dependency (REQUIRED for a new link — the server answers 422 REASON_REQUIRED otherwise)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
-    async ({ task_uid, rel, target_id, project, summary_md, action }) => {
+    async ({ task_uid, rel, target_id, project, summary_md, kind, reason, action }) => {
       try {
         const act = action ?? 'add';
         if (rel === 'phase') {
@@ -496,6 +502,12 @@ export function registerLoreWrite(rawServer: McpServer): void {
         if (rel === 'adr') {
           if (!target_id) return err(new Error('target_id (adr_id) required for rel="adr"'));
           return json(await lorePost('/lore/task/adr', { task_uid, adr_id: target_id, action: act }));
+        }
+        if (rel === 'dep') {
+          if (!target_id) return err(new Error('target_id (depended-on task_uid) required for rel="dep"'));
+          return json(await lorePost('/lore/task/dep', {
+            from_task: task_uid, to_task: target_id, kind: kind ?? 'soft', reason: reason ?? null, action: act,
+          }));
         }
         if (!target_id) return err(new Error('target_id required for rel="component"'));
         return json(await lorePost('/lore/task/component', { task_uid, component_id: target_id, action: act }));

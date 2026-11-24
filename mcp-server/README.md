@@ -18,7 +18,7 @@ new/set/del/mv/get/log/search, plus `<cat>_link(rel, ...)` for edges). A represe
 | `task_new` | write | `POST /lore/task` (+ optional `phase_uid` → IN_PHASE) |
 | `task_set` | write | `POST /lore/task/edit` |
 | `sprint_phase_new` | write | `POST /lore/phase` (KnowPhase + PART_OF + hist) |
-| `task_link` | write | `POST /lore/task/phase` or `/lore/task/component` (`rel` picks the edge) |
+| `task_link` | write | `POST /lore/task/phase`, `/lore/task/component`, `/lore/task/adr`, `/lore/task/pr`, `/lore/task/file`, `/lore/task/dep` (`rel` picks the edge; `dep` = DEPENDS_ON task→task, kind/reason) |
 | `machine_acl` | read | `GET /lore/slice/machine_acl` — `machine_id` (→ `client_id` `minilore-link-<id>`) \| `client_id` \| `kc_sub` |
 | `harness_list` | read | `GET /lore/slice/dictionary?dict_type=harness` (write via `dict_set`) |
 | `machine_access_set` | write | `POST /lore/user/machine-access` — `machine_id, kc_sub, action grant\|revoke, role viewer\|actor, projects[], harnesses[], dry_run`; owner/admin only, an agent gets the server's 403 as is |

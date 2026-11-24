@@ -7714,6 +7714,12 @@
       "key" : "insights",
       "slot" : "own"
     }, {
+      "key" : "dependsOn",
+      "slot" : "own"
+    }, {
+      "key" : "blocks",
+      "slot" : "own"
+    }, {
       "key" : "prs",
       "slot" : "own"
     }, {

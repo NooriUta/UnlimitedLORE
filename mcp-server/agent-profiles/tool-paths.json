@@ -146,6 +146,7 @@
     "/lore/tag/apply",
     "/lore/task/adr",
     "/lore/task/component",
+    "/lore/task/dep",
     "/lore/task/file",
     "/lore/task/phase",
     "/lore/task/pr",
@@ -350,6 +351,7 @@
   "task_link": [
     "/lore/task/adr",
     "/lore/task/component",
+    "/lore/task/dep",
     "/lore/task/file",
     "/lore/task/phase",
     "/lore/task/pr"
