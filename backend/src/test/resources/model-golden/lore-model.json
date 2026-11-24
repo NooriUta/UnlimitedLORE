@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "8681577725f87c9a",
+  "version" : "eaf8309f5a825b70",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -13721,64 +13721,10 @@
             "label" : "ADR"
           }
         }, {
-          "key" : "prs",
-          "source" : "relation",
-          "ref" : "prs",
-          "order" : 6,
-          "slot" : "own",
-          "group" : {
-            "key" : "realization",
-            "label" : "Реализация"
-          }
-        }, {
-          "key" : "useCases",
-          "source" : "relation",
-          "ref" : "useCases",
-          "order" : 7,
-          "slot" : "own",
-          "group" : {
-            "key" : "realization",
-            "label" : "Реализация"
-          }
-        }, {
-          "key" : "questions",
-          "source" : "part",
-          "ref" : "questions",
-          "order" : 8,
-          "slot" : "own",
-          "group" : null
-        }, {
-          "key" : "refsOut",
-          "source" : "relation",
-          "ref" : "refsOut",
-          "order" : 9,
-          "slot" : "own",
-          "group" : {
-            "key" : "refs",
-            "label" : "Ссылки"
-          }
-        }, {
-          "key" : "refsIn",
-          "source" : "relation",
-          "ref" : "refsIn",
-          "order" : 10,
-          "slot" : "own",
-          "group" : {
-            "key" : "refs",
-            "label" : "Ссылки"
-          }
-        }, {
-          "key" : "publications",
-          "source" : "relation",
-          "ref" : "publications",
-          "order" : 11,
-          "slot" : "own",
-          "group" : null
-        }, {
           "key" : "dependsOn",
           "source" : "relation",
           "ref" : "dependsOn",
-          "order" : 12,
+          "order" : 6,
           "slot" : "own",
           "group" : {
             "key" : "deps",
@@ -13788,12 +13734,66 @@
           "key" : "blocks",
           "source" : "relation",
           "ref" : "blocks",
-          "order" : 13,
+          "order" : 7,
           "slot" : "own",
           "group" : {
             "key" : "deps",
             "label" : "Зависимости"
           }
+        }, {
+          "key" : "prs",
+          "source" : "relation",
+          "ref" : "prs",
+          "order" : 8,
+          "slot" : "own",
+          "group" : {
+            "key" : "realization",
+            "label" : "Реализация"
+          }
+        }, {
+          "key" : "useCases",
+          "source" : "relation",
+          "ref" : "useCases",
+          "order" : 9,
+          "slot" : "own",
+          "group" : {
+            "key" : "realization",
+            "label" : "Реализация"
+          }
+        }, {
+          "key" : "questions",
+          "source" : "part",
+          "ref" : "questions",
+          "order" : 10,
+          "slot" : "own",
+          "group" : null
+        }, {
+          "key" : "refsOut",
+          "source" : "relation",
+          "ref" : "refsOut",
+          "order" : 11,
+          "slot" : "own",
+          "group" : {
+            "key" : "refs",
+            "label" : "Ссылки"
+          }
+        }, {
+          "key" : "refsIn",
+          "source" : "relation",
+          "ref" : "refsIn",
+          "order" : 12,
+          "slot" : "own",
+          "group" : {
+            "key" : "refs",
+            "label" : "Ссылки"
+          }
+        }, {
+          "key" : "publications",
+          "source" : "relation",
+          "ref" : "publications",
+          "order" : 13,
+          "slot" : "own",
+          "group" : null
         } ]
       },
       "adr" : {

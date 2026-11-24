@@ -168,6 +168,19 @@ class LoreWritePathValidationTest {
     }
 
     @Test
+    void taskDepRejectsIllegalTaskIds() {
+        given()
+            .header("X-Seer-Role", "admin")
+            .contentType("application/json")
+            .body("{\"from_task\":\"" + ILLEGAL_ID + "\",\"to_task\":\"SPRINT_Y/T1\"}")
+        .when()
+            .post("/lore/task/dep")
+        .then()
+            .statusCode(400)
+            .body("error", equalTo("BAD_PARAMS"));
+    }
+
+    @Test
     void sprintPlanRejectsIllegalId() {
         given()
             .header("X-Seer-Role", "admin")

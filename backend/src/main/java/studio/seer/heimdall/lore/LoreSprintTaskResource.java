@@ -2003,6 +2003,36 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         return r;
     }
 
+    public record TaskDepRequest(String from_task, String to_task, String kind, String reason, String action) {}
+
+    /**
+     * KREG-11: «задача зависит от задачи» — выделенный путь по образцу {@code sprint/dep}, та же
+     * связь «зависит от» ({@link #linkDependency}): вид из справочника, причина обязательна у новой
+     * связи, цикл — 409 с путём, снятие закрывает ребро. Форма ответа сохраняет from_task / to_task.
+     */
+    @POST
+    @Path("task/dep")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkTaskDep(TaskDepRequest req,
+                                @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.from_task() == null || req.to_task() == null)
+            return badParams("from_task and to_task required");
+        if (!SAFE_ID.matcher(req.from_task()).matches() || !SAFE_ID.matcher(req.to_task()).matches())
+            return badParams("ids contain illegal characters");
+        Response r = linkDependency(new DepRequest("task", req.from_task(), "task", req.to_task(),
+            req.kind(), req.reason(), req.action()), role);
+        if (r.getStatus() == 200 && r.getEntity() instanceof Map<?, ?> body) {
+            @SuppressWarnings("unchecked") Map<String, Object> out = new LinkedHashMap<>((Map<String, Object>) body);
+            out.put("from_task", req.from_task());
+            out.put("to_task", req.to_task());
+            return noStore(Response.ok(out));
+        }
+        return r;
+    }
+
     /**
      * Зависимость между задачей, фазой, спринтом и вехой в любом сочетании: {@code from} зависит от
      * {@code to}. Тип конца не назван — ищется по ключу среди четырёх типов. Вид — из справочника

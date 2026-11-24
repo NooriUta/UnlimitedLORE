@@ -2384,8 +2384,10 @@
   "task_link": {
     "input": {
       "action": "enum(add|remove)?",
+      "kind": "enum(blocks|gate|hard|informs|relates|soft|waits)?",
       "project": "string?",
-      "rel": "enum(adr|component|file|phase|pr)",
+      "reason": "string?",
+      "rel": "enum(adr|component|dep|file|phase|pr)",
       "summary_md": "string?",
       "target_id": "string?",
       "task_uid": "string"

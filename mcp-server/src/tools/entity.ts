@@ -471,10 +471,16 @@ const LINK_DEFS = {
     },
   },
   task: {
-    rels: ['phase', 'component', 'file', 'adr', 'pr', 'depends_on'],
+    rels: ['phase', 'component', 'file', 'adr', 'pr', 'dep', 'depends_on'],
     replaces: ['task_link'],
     dispatch: (id, rel, t, action, f): LinkResult | string => {
       switch (rel) {
+        // KREG-11: dep — выделенный путь «задача зависит от задачи» по образцу sprint/dep
+        // (/lore/task/dep); depends_on — универсальная связь «зависит от» (/lore/dep, MDL-13).
+        case 'dep': {
+          if (needTarget(t, rel)) return needTarget(t, rel)!;
+          return { path: '/lore/task/dep', body: { from_task: id, to_task: t, kind: f.kind ?? 'soft', reason: f.reason ?? null, action: action ?? 'add' } };
+        }
         case 'depends_on': return dependsOn('task', id, t, action, f);
         case 'phase': return { path: '/lore/task/phase', body: { task_uid: id, phase_uid: t ?? null, action: action ?? 'add' } };
         case 'file': {
