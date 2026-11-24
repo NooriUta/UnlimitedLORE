@@ -115,7 +115,7 @@ export interface BacklinksResponse {
 /** Типы с цепочкой SCD2 = LoreSlices.HIST_PARENT (та же карта, что у history_hygiene). */
 export const HISTORY_TYPES = [
   'adr', 'decision', 'doc', 'finding', 'milestone', 'phase',
-  'release', 'runbook', 'spec', 'task', 'sprint', 'dict_entry',
+  'release', 'runbook', 'spec', 'task', 'sprint', 'dict_entry', 'kind',
 ] as const;
 export type HistoryType = typeof HISTORY_TYPES[number];
 
@@ -124,7 +124,7 @@ export const HISTORY_HIST_CLASS: Readonly<Record<HistoryType, string>> = {
   adr: 'KnowADRHist', decision: 'KnowDecisionHist', doc: 'KnowDocHist', finding: 'KnowFindingHist',
   milestone: 'KnowMilestoneHist', phase: 'KnowPhaseHist', release: 'KnowReleaseHist',
   runbook: 'KnowRunbookHist', spec: 'KnowSpecHist', task: 'KnowTaskHist', sprint: 'KnowSprintHist',
-  dict_entry: 'KnowDictEntryHist',
+  dict_entry: 'KnowDictEntryHist', kind: 'KnowKindHist',
 };
 
 export interface HistoryQuery {
