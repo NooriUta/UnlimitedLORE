@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * SPRINT_LORE_KNOW_REGISTRY/SKILL-05 (SPEC-SKILLS-TAGS-062 §4, SPEC-MODEL-EXPORT-064 §3a):
  * вершина KnowTag из свободного токена становится записью класса.
  *
- * <p>Миграция V94 «knowtag_supertag_fields» объявляет поля вершины: обязательные
+ * <p>Миграция V95 «knowtag_supertag_fields» объявляет поля вершины: обязательные
  * {@code name}/{@code title}/{@code source}, {@code field_schema} — MAP-подсказка
  * класса (НЕ DDL полей: значения по-прежнему живут на ребре TAGGED_WITH), {@code synonyms} —
  * LIST бывших имён (переименование), {@code owner} — ref на kc_sub, необязателен.
@@ -25,8 +25,8 @@ class KnowTagSupertagFieldsTest {
     }
 
     @Test
-    void v94AddsKnowTagVertexFields() {
-        LoreSchemaMigrations.Step s = step(94);
+    void v95AddsKnowTagVertexFields() {
+        LoreSchemaMigrations.Step s = step(95);
         assertEquals("knowtag_supertag_fields", s.name());
         // аддитивный шаг: ось совместимости не сдвигается (см. LoreSchemaMigrationsTest)
         assertEquals(17, s.compatMajor(), "аддитивно — делит major 17 с предыдущими шагами");
@@ -48,7 +48,7 @@ class KnowTagSupertagFieldsTest {
     }
 
     @Test
-    void v94IsRegisteredAsTheCurrentMax() {
-        assertEquals(94, LoreSchemaMigrations.codeVersion(), "V94 — последний шаг реестра");
+    void v95IsRegisteredAsTheCurrentMax() {
+        assertEquals(95, LoreSchemaMigrations.codeVersion(), "V95 — последний шаг реестра");
     }
 }

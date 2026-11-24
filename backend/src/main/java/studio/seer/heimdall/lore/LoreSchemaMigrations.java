@@ -1870,11 +1870,13 @@ final class LoreSchemaMigrations {
         // полей: значения по-прежнему живут на ребре TAGGED_WITH, LoreEdgeFreeFields);
         // synonyms — LIST бывших имён (сторож переименования, TagRename); owner —
         // ref на kc_sub владельца, необязателен. Типы контейнеров — MAP/LIST: в Type
-        // enum ArcadeDB 26.10 EMBEDDED*-имён нет (замерено падением V94 на старте:
+        // enum ArcadeDB 26.10 EMBEDDED*-имён нет (замерено падением старта на
         // «No enum constant Type.EMBEDDEDMAP»). Геоид-ключ — tag:<slug> (созидание
         // пишет геоид-форму, LoreTagResource#apply; легаси-токены доживают до rename).
         // Аддитивно, major 17; данных не трогает — обязательные поля легаси-вершин
-        // добираются лениво на записи тем же ресурсом.
+        // добираются лениво на записи тем же ресурсом. V95, не V94: V94 взял
+        // параллельный KREG-01 (KnowKind/KnowKindHist) — леджер по номеру, дубль
+        // означал бы молчаливый пропуск одного из шагов на живой БД.
         new Step(95, 17, "knowtag_supertag_fields", List.of(
             "CREATE PROPERTY KnowTag.name         IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowTag.title        IF NOT EXISTS STRING",

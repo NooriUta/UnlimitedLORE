@@ -107,7 +107,7 @@ public class LoreTagResource extends LoreResourceBase {
                 out.put("action", have.isEmpty() ? "absent" : "removed");
                 return noStore(Response.ok(out));
             }
-            // Вершина-тег. Новая — с геоид-ключом и обязательными полями (V94:
+            // Вершина-тег. Новая — с геоид-ключом и обязательными полями (V95:
             // name/title/source); легаси-вершина со свободным токеном живёт как есть,
             // обязательные поля добираются лениво — ровно те, что пусты.
             List<Map<String, Object>> tagRow = sql("SELECT @rid AS r, name, title, source FROM " + spec.vertex()
