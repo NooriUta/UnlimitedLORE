@@ -808,7 +808,36 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowSprintHist.context_md  IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowSprintHist (context_md)  FULL_TEXT",
         "CREATE PROPERTY KnowTaskHist.note_md       IF NOT EXISTS STRING",
-        "CREATE INDEX IF NOT EXISTS ON KnowTaskHist (note_md)       FULL_TEXT"
+        "CREATE INDEX IF NOT EXISTS ON KnowTaskHist (note_md)       FULL_TEXT",
+
+        // ── KREG-01 (SPRINT_LORE_KNOW_REGISTRY): KnowKind + KnowKindHist ────────
+        // Рантайм-реестр видов для агентов/MCP (SPEC-MODEL-EXPORT-064 §5). Зеркало
+        // шага V94: те же стейтменты с IF NOT EXISTS, чтобы свежая установка пришла
+        // к той же схеме ДО миграций. Зеркало обязательно, а не прихоть: V66
+        // (hist_change_author) объявляет changed_by по реестру HIST_VALID_FROM_TEMPORAL
+        // и на свежей базе бежит раньше V94 — без этих CREATE TYPE он упал бы
+        // «Type with name 'KnowKindHist' was not found».
+        "CREATE VERTEX TYPE KnowKind IF NOT EXISTS",
+        "CREATE PROPERTY KnowKind.kind      IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowKind.id_field  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowKind.title     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowKind.fields    IF NOT EXISTS LIST",
+        "CREATE PROPERTY KnowKind.links     IF NOT EXISTS LIST",
+        "CREATE PROPERTY KnowKind.guards    IF NOT EXISTS LIST",
+        "CREATE PROPERTY KnowKind.roles     IF NOT EXISTS LIST",
+        "CREATE PROPERTY KnowKind.replaces  IF NOT EXISTS LIST",
+        "CREATE PROPERTY KnowKind.source    IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowKind.lifecycle IF NOT EXISTS MAP",
+        "CREATE INDEX IF NOT EXISTS ON KnowKind (kind) UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowKind (source) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowKind (replaces) NOTUNIQUE",
+        "CREATE VERTEX TYPE KnowKindHist IF NOT EXISTS",
+        "CREATE PROPERTY KnowKindHist.valid_from    IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowKindHist.valid_to      IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowKindHist.content_hash  IF NOT EXISTS STRING",
+        // автор версии истории (S2-12) — как объявляет V94 для остальных *Hist.
+        "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING"
     );
 
     /**
