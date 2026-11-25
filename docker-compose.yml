@@ -141,6 +141,10 @@ services:
       - minio
     environment:
       - MART_ARCADE_URL=http://arcade:2480
+      # Имя базы LORE в ArcadeDB (свойство lore.db) — видимая настройка, а не скрытое умолчание Quarkus
+      # (issue SeidrStudio/UnlimitedLORE#5, SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD). Базу с этим именем
+      # нужно создать в ArcadeDB; на пустой базе ядро и схема поднимаются сами.
+      - LORE_DB=${LORE_DB:-system_aida_lore}
       # Метка версии в углу (владелица 09.11): тег релиза передаёт выкатка прода
       # (lore-host-deploy.sh, шаг up). Пусто — /lore/version отдаёт release: null.
       - LORE_RELEASE_TAG=${LORE_RELEASE_TAG:-}

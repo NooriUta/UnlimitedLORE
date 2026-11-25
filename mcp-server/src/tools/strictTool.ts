@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { NOOP_NOTE, noopAsError } from './cudOutcome.js';
+import { toolKind } from './toolKinds.js';
+
+/** Метка обёртки noopAsError на обработчике CUD-инструмента — её проверяет сторож cudNoop.test.ts. */
+export const NOOP_GUARD = Symbol.for('lore.mcp.noopGuard');
 
 // MT-09: every tool below registers a raw Zod shape ({ foo: z.string() }), which
 // the SDK wraps internally with a PLAIN z.object() — plain object schemas strip
@@ -69,6 +74,7 @@ export function withStrictTools(server: McpServer, gate?: (name: string) => bool
     }
     let description: string | undefined;
     if (typeof rest[0] === 'string') description = rest.shift() as string;
+    if (description && toolKind(name) === 'cud') description += ' ' + NOOP_NOTE;
 
     let shape: RawShape | undefined;
     let annotations: Record<string, unknown> | undefined;
@@ -82,7 +88,14 @@ export function withStrictTools(server: McpServer, gate?: (name: string) => bool
         annotations = rest.shift() as Record<string, unknown>;
       }
     }
-    const inner = rest[0];
+    const raw = rest[0];
+    // ISS-06 / D-2026-LORE-MCP-LINK-NOOP-IS-ERROR: CUD-запрос, который ничего не изменил, — ошибка для
+    // агента (cudOutcome.ts). Здесь, а не у каждого инструмента: любой инструмент с пометкой cud
+    // (toolKinds.ts), зарегистрированный через сервер, проходит этот путь сам.
+    const cud = toolKind(name) === 'cud' && typeof raw === 'function';
+    const inner = cud
+      ? async (...args: unknown[]) => noopAsError(await (raw as (...a: unknown[]) => unknown)(...args))
+      : raw;
     const handler = observe && typeof inner === 'function'
       ? async (...args: unknown[]) => {
           const result = await (inner as (...a: unknown[]) => unknown)(...args);
@@ -90,6 +103,7 @@ export function withStrictTools(server: McpServer, gate?: (name: string) => bool
           return result;
         }
       : inner;
+    if (cud) (handler as unknown as Record<symbol, unknown>)[NOOP_GUARD] = true;
 
     return registerTool(
       name,

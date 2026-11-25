@@ -121,11 +121,17 @@ public class LoreTaskShapeResource extends LoreResourceBase {
         row.put("complexity", s.complexity());
         row.put("points", s.points());
         row.put("estimate_fits", s.estimateFits());
-        row.put("recommendations", s.recommendations().stream().map(TaskShape.Recommendation::code).toList());
+        List<String> recs = s.recommendations().stream().map(TaskShape.Recommendation::code).toList();
+        row.put("recommendations", recs);
+        // MT-TASK-SHAPE-2 п.4: сборщик Völva пишет строку таблицей — массив туда не ляжет.
+        row.put("recommendations_csv", String.join(",", recs));
         row.put("days_in_status", LoreQualityFacts.Kind.daysSince(since));
+        LocalDateTime created = minDate(r.get("state_dates"));
+        LocalDateTime done = parse(since);
+        // Даты ISO-8601 UTC: одни «дни» не дают BI ни окна, ни сверки с журналом.
+        row.put("created_at", iso(created));
+        row.put("state_since", iso(done));
         if ("done".equals(row.get("status"))) {
-            LocalDateTime created = minDate(r.get("state_dates"));
-            LocalDateTime done = parse(since);
             if (created != null && done != null) {
                 double days = java.time.Duration.between(created, done).toMinutes() / 1440.0;
                 row.put("cycle_days", Math.round(days * 100) / 100.0);
@@ -244,6 +250,11 @@ public class LoreTaskShapeResource extends LoreResourceBase {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** Даты графа — UTC (срезы отдают их с Z); строка без зоны тоже читается как UTC. */
+    static String iso(LocalDateTime d) {
+        return d == null ? null : d.atOffset(java.time.ZoneOffset.UTC).toInstant().toString();
     }
 
     private static LocalDateTime minDate(Object v) {

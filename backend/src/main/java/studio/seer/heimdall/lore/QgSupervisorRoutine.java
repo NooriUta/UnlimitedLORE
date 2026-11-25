@@ -77,6 +77,6 @@ public class QgSupervisorRoutine implements QgRoutine {
     public List<LoreQgResource.QGMetricEntry> normalize(List<RawFact> raw) {
         double n = raw.isEmpty() ? 0 : ((Number) raw.get(0).value()).doubleValue();
         return List.of(new LoreQgResource.QGMetricEntry(
-            "aborted_runs", n, "count", 0.0, n == 0 ? "PASS" : "WARN", "ClRoutineRun", null, null));
+            "aborted_runs", n, "count", 0.0, n == 0 ? "PASS" : "WARN", "ClRoutineRun", null, null, null));
     }
 }

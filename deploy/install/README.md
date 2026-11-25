@@ -325,6 +325,23 @@ MCP-сервер LORE ставится вместе со стеком (серв�
 
 Файл настроек OpenCode — `opencode.json` в проекте или в `~/.config/opencode/`.
 
+### Браузерный клиент без Keycloak (Llama Chat и др.)
+
+Web UI вроде Llama Chat подключают MCP по адресу и умеют слать только постоянный Bearer. Для них у MCP-сервера есть токен шлюза и CORS. Переменные HTTP-режима:
+
+- `LORE_MCP_TRANSPORT=http` — HTTP вместо stdio. Без неё сервер работает по stdio, как раньше.
+- `LORE_MCP_HOST` — адрес, на котором слушает сервер, по умолчанию `127.0.0.1`. В образе `lore-mcp` задан `0.0.0.0`: nginx ходит к нему по сети compose, а порта наружу нет.
+- `LORE_MCP_PORT` — порт, по умолчанию `9200`.
+- `LORE_MCP_TOKEN` — токен шлюза. Если он задан, каждый запрос к `/mcp` обязан его нести: `Authorization: Bearer <токен>` или `X-Lore-Mcp-Token: <токен>`. Без токена или с чужим ответ 401. Сам токен в бэкенд не уходит, потому что это не личность. Если нужен ещё и вход Keycloak, токен шлюза кладут в `X-Lore-Mcp-Token`, а токен Keycloak — в `Authorization`.
+- `LORE_MCP_CORS_ORIGINS` — origin браузерных клиентов через запятую. С этих origin браузер пускается (preflight `OPTIONS` отвечает 204), с чужого приходит 403. Пусто — CORS выключен, как раньше.
+- `GET /health` и `GET /mcp/health` отвечают 200 без входа. Это проверка для healthcheck-ов.
+
+Если `LORE_MCP_TOKEN` не задан, а адрес не loopback, сервер при старте громко предупреждает: `/mcp` пропустит любой Bearer, и проверка останется только у бэкенда.
+
+В установке токен и origin задаются в `.env` (`LORE_MCP_TOKEN`, `LORE_MCP_CORS_ORIGINS`), затем `docker compose up -d lore-mcp`. В Llama Chat при добавлении сервера укажите адрес `https://<хост>/mcp` и токен шлюза как Bearer.
+
+Запись без Keycloak по `/mcp` закрыта намеренно (решение владельца 25.11.2026): HTTP-режим не передаёт бэкенду роль (`X-Seer-Role`), поэтому токен шлюза открывает только чтение. На попытку записи агент получает ошибку «Запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или подключите MCP через stdio на машине агента». Писать без Keycloak можно через stdio-подключение (см. «Вход выключен» выше).
+
 ## Völva — встроенные графики
 
 По выбору. Völva ставится своей поставкой, установщик настраивает только связь: LORE подписывает встройку ключом ES256, Völva проверяет подпись.
@@ -767,6 +784,7 @@ docker — для сборки из исходников. Нужно, если �
 | `LORE_VOLVA_EMBED_ES256_PUBLIC_KEY` | открытый ключ пары, отдаётся в `/lore/embed/jwks`; не секрет | окно установщика, вместе с закрытым | `.env` | если выбрана Völva | вместе с закрытым | `deploy/install/docker-compose.install.yml`, `backend/src/main/java/studio/seer/heimdall/lore/AidaLoreResource.java` |
 | `FORGEJO_API_TOKEN` | токен моста LORE в Forgejo (статусы CI, PR, мерж); пусто — `/lore/forgejo/*` отвечает 503 | вписывает владелец (Forgejo → Настройки → Приложения) | `.env` 600 | Forgejo install или own | новый токен в Forgejo, значение в `.env`, `up -d`; старый отозвать | `deploy/install/docker-compose.install.yml`, `backend/src/main/java/studio/seer/heimdall/lore/ForgejoBridge.java` |
 | `FORGEJO_MCP_TOKEN`, `FORGEJO_TOKEN` | токен forgejo-mcp в Forgejo, отдельный от моста; в контейнер идёт как `FORGEJO_TOKEN` (AIDA/forgejo-mcp, src/config.ts) | вписывает владелец | `.env` 600 | Forgejo install или own | новый токен, `.env`, `up -d forgejo-mcp`; старый отозвать | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
+| `LORE_MCP_TOKEN` | токен шлюза MCP для клиентов без Keycloak (Llama Chat и т.п.): каждый запрос к `/mcp` несёт его в `Authorization: Bearer` или `X-Lore-Mcp-Token`; пусто — проверка только у бэкенда, при не-loopback адресе громкое предупреждение | вписывает владелец (любая длинная случайная строка) | `.env` 600 | только если MCP открыт наружу | новое значение в `.env`, `docker compose up -d lore-mcp`, раздать клиентам | `deploy/install/docker-compose.install.yml`, `mcp-server/src/http.ts` |
 | `FORGEJO_MCP_API_KEY` | ключ входа агентов в forgejo-mcp (`Authorization: Bearer`); без него HTTP-вход открыт | установщик генерирует при включённом forgejo-mcp | `.env` 600; у агента — в окружении машины, строка MCP ссылается на переменную | Forgejo install или own | новое значение в `.env`, `up -d forgejo-mcp`, обновить окружение агентов | `deploy/install/docker-compose.install.yml`, `deploy/install/install.sh` |
 | `LORE_MCP_CLIENT_SECRET`, `LORE_MCP_SECRET_VAR` | секрет учётки MCP aida-lore (клиент Keycloak `lore-mcp-<роль>[_<harness>]`): по нему MCP получает токен агента. Хранится ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]` (`…_FULL`, `…_FULL_KIMI`, `…_TESTER`); `LORE_MCP_SECRET_VAR` — имя этого ключа в строке MCP, не секрет. Клиент без настройки окружения шлёт пару в заголовках X-Lore-Client-Id и X-Lore-Client-Secret | окно установщика (режим «завести за меня») или админка LORE (выпуск учётки агента); свои клиенты — владелец, LORE только проверяет токен | Infisical, если запись настроена (отдельный проект `lore-mcp-secrets`), иначе файл `~/kc-clients-<область>.env` 600; у агента — окружение машины | если включён вход через Keycloak | сменить секрет в админке LORE (без простоя — с флагом KC `client-secret-rotation` и политикой `secret-rotation`), обновить окружение harness | `mcp-server/src/backend.ts`, `scripts/model-migration/setup.mjs` |
 | `MINILORE_ARCADE_PASSWORD` | пароль, которым сервер miniLORE ходит в вашу ArcadeDB (в базы `minilore` и `minilore_archive`, их заводит установщик) | берётся из `ARCADEDB_ROOT_PASSWORD` той же установки — отдельного пароля не заводим | `.env` 600 | только с `--minilore install` | вместе с паролем root ArcadeDB | `deploy/install/docker-compose.install.yml` |

@@ -68,7 +68,7 @@ final class QgAttemptRunner {
             if (pre == null || !pre.met()) {
                 String reason = pre == null || pre.reason() == null ? "not_implemented" : pre.reason();
                 metrics = List.of(new LoreQgResource.QGMetricEntry(
-                    "precondition", null, null, null, "NOT_MEASURED", r.name(), reason, null));
+                    "precondition", null, null, null, "NOT_MEASURED", r.name(), reason, null, null));
                 status = "NOT_MEASURED";
             } else {
                 metrics = r.normalize(r.collect());
@@ -107,12 +107,12 @@ final class QgAttemptRunner {
                                                          String model) {
         double tokens = analyst.spent().total();
         if (a.ok()) {
-            return new LoreQgResource.QGMetricEntry(JUDGMENT_KEY, tokens, "tokens", null, null, routine, null, model);
+            return new LoreQgResource.QGMetricEntry(JUDGMENT_KEY, tokens, "tokens", null, null, routine, null, model, null);
         }
         String reason = analyst.refusal() != null
             ? studio.seer.heimdall.lore.llm.BudgetedModelCall.BUDGET_EXHAUSTED
             : "source_unreachable";
-        return new LoreQgResource.QGMetricEntry(JUDGMENT_KEY, tokens, "tokens", null, "NOT_MEASURED", routine, reason, model);
+        return new LoreQgResource.QGMetricEntry(JUDGMENT_KEY, tokens, "tokens", null, "NOT_MEASURED", routine, reason, model, null);
     }
 
     /** Худший статус среди измеренных; ни одной измеренной — {@code NOT_MEASURED}, не PASS. */

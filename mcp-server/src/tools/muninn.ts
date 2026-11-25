@@ -22,7 +22,8 @@ export function registerMuninn(server: McpServer): void {
     'List all available BENCHMARK (RAG-vs-Parse) experiment-mart slices with ' +
       'their required and optional parameters. Call this first to discover what ' +
       'can be queried (campaigns, hypotheses, findings, runs, trace, substrates, ' +
-      'references, biblio, …).',
+      'references, biblio, …). The bench mart is an OPTIONAL dev service, off by default: 404 MART_DISABLED = ' +
+      'BENCH_MART_ENABLED=false.',
     {},
     async () => {
       try {
@@ -38,7 +39,9 @@ export function registerMuninn(server: McpServer): void {
     'Run a named experiment-mart slice against RAGVSDL and return its rows. ' +
       'Examples: slice="hypotheses", "findings", "runs", "substrates", or ' +
       '"trace" with params {"run":"…","case_id":"…","substrate":"…"}. Use ' +
-      'bench_list_slices for the full catalog and each slice\'s required params.',
+      'bench_list_slices for the full catalog and each slice\'s required params. OPTIONAL service: ' +
+      '404 MART_DISABLED = bench off (BENCH_MART_ENABLED=false); 503 MART_UNREACHABLE = enabled but the mart is ' +
+      'not reachable (check MART_ARCADE_URL); 502 MART_UPSTREAM = the mart answered an error.',
     {
       slice: z.string().describe('slice id from bench_list_slices, e.g. "findings"'),
       params: z
@@ -59,7 +62,7 @@ export function registerMuninn(server: McpServer): void {
     'bench_status',
     'Live status of the running experiment cell (results/STATUS.json): manifest, ' +
       'done/total, current step, errors, elapsed_min, updated. Empty when no run ' +
-      'is active.',
+      'is active. OPTIONAL: reads BENCH_ROOT on the backend — 404 BENCH_ROOT_MISSING when the folder is not mounted.',
     {},
     async () => {
       try {

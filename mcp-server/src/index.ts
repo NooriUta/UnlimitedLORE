@@ -7,7 +7,7 @@ import { readBuildInfo } from './buildInfo.js';
 import { LEGACY_CRUD_TOOLS } from './tools/entity.js';
 import { createLoreServer, resolveSurface } from './server.js';
 import { readAgentOrder, subagentInstructions } from './subagents.js';
-import { startHttpServer, transportMode } from './http.js';
+import { httpConfig, httpStartupWarnings, startHttpServer, transportMode } from './http.js';
 
 // MCP server for AIDA LORE. Talks to the UnlimitedLORE backend (:9100),
 // which in turn serves system_aida_lore.
@@ -51,12 +51,11 @@ async function mainStdio(): Promise<void> {
 }
 
 async function mainHttp(): Promise<void> {
-  const port = Number(process.env.LORE_MCP_PORT ?? '9200');
-  if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    throw new Error(`LORE_MCP_PORT=${process.env.LORE_MCP_PORT}: нужен номер порта 0..65535`);
-  }
-  const { port: bound } = await startHttpServer({ port, host: process.env.LORE_MCP_HOST || '0.0.0.0' });
-  console.error(`[aida-lore-mcp] ready (http) — :${bound}/mcp, health :${bound}/mcp/health, backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, forgejo bridge ${forgejoConfigured() ? 'on' : 'off'}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
+  // ISS-04: LORE_MCP_HOST (по умолчанию 127.0.0.1), LORE_MCP_PORT, LORE_MCP_TOKEN, LORE_MCP_CORS_ORIGINS.
+  const cfg = httpConfig(process.env);
+  for (const w of httpStartupWarnings(cfg)) console.error(w);
+  const { port: bound } = await startHttpServer(cfg);
+  console.error(`[aida-lore-mcp] ready (http) — ${cfg.host}:${bound}/mcp, health /health и /mcp/health, токен шлюза ${cfg.token ? 'задан' : 'не задан'}, CORS ${cfg.corsOrigins.length ? cfg.corsOrigins.join(' ') : 'выключен'}, backend ${BACKEND_URL}${BACKEND_FALLBACK_URL ? ` (запасной ${BACKEND_FALLBACK_URL})` : ''}, forgejo bridge ${forgejoConfigured() ? 'on' : 'off'}, build ${build.commit} @ ${build.built_at || 'unknown'}`);
 }
 
 (async () => (transportMode(process.env) === 'http' ? mainHttp() : mainStdio()))().catch((e) => {

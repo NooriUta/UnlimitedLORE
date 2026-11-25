@@ -1694,7 +1694,7 @@
       "commit_sha": "string?",
       "finished_at": "string?",
       "flags": "string?",
-      "metrics": "{key:string,model:string?,not_measured_reason:enum(budget_exhausted|no_changes|no_evidence|not_implemented|script_absent|source_missing|source_unreachable|stand_absent|tool_disabled)?,source:string?,status:enum(FAIL|NOT_MEASURED|PASS|SKIP|WARN)?,target:number?,unit:string?,value:number}[]?",
+      "metrics": "{basis:string?,key:string,model:string?,not_measured_reason:enum(budget_exhausted|no_changes|no_evidence|not_implemented|script_absent|source_missing|source_unreachable|stand_absent|tool_disabled)?,source:string?,status:enum(FAIL|NOT_MEASURED|PASS|SKIP|WARN)?,target:number?,unit:string?,value:number}[]?",
       "model": "string?",
       "pr_number": "number?",
       "routine_name": "string",

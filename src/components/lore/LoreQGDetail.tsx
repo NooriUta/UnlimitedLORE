@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { describeLoreError, fetchLoreSlice, loreMutate } from '../../api/lore';
 import { LoadError } from './EmptyState';
 import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
+import { currentBasisSegment, metricChange, type MetricChange } from '../../lib/qgBasis';
 import { MartProse } from '../bench/MartProse';
 
 interface QGDetail {
@@ -51,6 +52,8 @@ interface RunMetric {
   target: number | null;
   status: string | null;
   source: string | null;
+  /** QG-07: отпечаток знаменателя; сравнение с прошлым прогоном — только при той же базе. */
+  basis?: string | null;
 }
 
 const SEV_COLOR: Record<string, string> = {
@@ -79,11 +82,22 @@ function statusColor(s: string | null): string {
 
 
 // ── Sparkline (ADR-QG-004 §2 dynamics) ───────────────────────────────────────
-function Sparkline({ hist, target }: { hist: { v: number; status: string | null }[]; target: number | null }) {
+type HistPoint = { v: number; status: string | null; basis?: string | null };
+
+// QG-07: ряд рисуется только на базе последнего прогона — точка с другим знаменателем не «падение».
+// Обрезанный ряд подписан, а не показан молча коротким.
+function Sparkline({ hist: full, target }: { hist: HistPoint[]; target: number | null }) {
   const { t } = useTranslation();
+  const { points: hist, rebased } = currentBasisSegment(full);
+  const rebasedMark = rebased
+    ? <div style={S.sparkRebased}>{t('lore.qgDetail.sparkline.rebased', 'ряд с пересчёта базы')}</div>
+    : null;
   const pres = hist.filter(h => h.v !== -1 && h.v != null);
   if (pres.length < 2) {
-    return <div style={S.sparkEmpty}>{t('lore.qgDetail.sparkline.noData', 'нет данных')}</div>;
+    return <>
+      <div style={S.sparkEmpty}>{t('lore.qgDetail.sparkline.noData', 'нет данных')}</div>
+      {rebasedMark}
+    </>;
   }
   const w = 104, h = 28, pad = 4;
   const vals = pres.map(p => p.v);
@@ -104,14 +118,17 @@ function Sparkline({ hist, target }: { hist: { v: number; status: string | null 
   const lastX = X(idxOf[idxOf.length - 1]);
   const lastY = Y(last.v);
   return (
-    <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
-      {ty != null && (
-        <line x1={pad} y1={ty.toFixed(1)} x2={w - pad} y2={ty.toFixed(1)}
-          stroke="var(--bdh)" strokeWidth={1} strokeDasharray="3 2" />
-      )}
-      <polyline points={poly} fill="none" stroke="var(--t2)" strokeWidth={1.4} />
-      <circle cx={lastX.toFixed(1)} cy={lastY.toFixed(1)} r={3} fill={statusColor(last.status)} />
-    </svg>
+    <>
+      <svg width={w} height={h} style={{ display: 'block' }} aria-hidden="true">
+        {ty != null && (
+          <line x1={pad} y1={ty.toFixed(1)} x2={w - pad} y2={ty.toFixed(1)}
+            stroke="var(--bdh)" strokeWidth={1} strokeDasharray="3 2" />
+        )}
+        <polyline points={poly} fill="none" stroke="var(--t2)" strokeWidth={1.4} />
+        <circle cx={lastX.toFixed(1)} cy={lastY.toFixed(1)} r={3} fill={statusColor(last.status)} />
+      </svg>
+      {rebasedMark}
+    </>
   );
 }
 
@@ -133,7 +150,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   const [latestMetrics, setLatestMetrics] = useState<RunMetric[]>([]);
   // metric_key -> ordered (oldest→newest) history across structured runs
   const [metricsErr, setMetricsErr]   = useState<string | null>(null);
-  const [metricHist, setMetricHist]   = useState<Record<string, { v: number; status: string | null }[]>>({});
+  const [metricHist, setMetricHist]   = useState<Record<string, HistPoint[]>>({});
   // prev structured run's metrics (for "what changed")
   const [prevMetrics, setPrevMetrics] = useState<RunMetric[]>([]);
   const [expandedSource, setExpandedSource] = useState<string | null>(null);
@@ -189,10 +206,10 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         setLatestMetrics(metricsByRun[0] ?? []);
         setPrevMetrics(metricsByRun[1] ?? []);
         // build per-key history oldest→newest
-        const hist: Record<string, { v: number; status: string | null }[]> = {};
+        const hist: Record<string, HistPoint[]> = {};
         for (let i = metricsByRun.length - 1; i >= 0; i--) {
           for (const m of metricsByRun[i]) {
-            (hist[m.metric_key] ||= []).push({ v: m.value ?? -1, status: m.status });
+            (hist[m.metric_key] ||= []).push({ v: m.value ?? -1, status: m.status, basis: m.basis });
           }
         }
         setMetricHist(hist);
@@ -267,14 +284,13 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   for (const m of gateMetrics) counts[m.status ?? 'SKIP'] = (counts[m.status ?? 'SKIP'] ?? 0) + 1;
 
   // "what changed" between latest & prev structured runs (this gate's keys)
+  // QG-07: смена базы (знаменателя) — отдельный вид изменения, а не «PASS → FAIL».
   const changes = invariants
     .map(i => {
-      const cur = metricByKey[i.key]?.status;
-      const prev = prevByKey[i.key]?.status;
-      if (cur && prev && cur !== prev) return { key: i.key, prev, cur };
-      return null;
+      const c = metricChange(prevByKey[i.key], metricByKey[i.key]);
+      return c ? { key: i.key, ...c } : null;
     })
-    .filter(Boolean) as { key: string; prev: string; cur: string }[];
+    .filter(Boolean) as ({ key: string } & MetricChange)[];
 
   const hasStructured = runs.some(r => r.run_id);
 
@@ -407,7 +423,17 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
               <div style={S.emptySection}>{t('lore.qgDetail.changes.empty', 'Без изменений статусов.')}</div>
             ) : (
               <div style={S.changeRow}>
-                {changes.map(c => (
+                {changes.map(c => c.kind === 'rebased' ? (
+                  <span key={c.key} style={S.changeChip('var(--inf)')}
+                    title={t('lore.qgDetail.changes.rebasedTitle',
+                      'Знаменатель метрики сменился ({{prev}} → {{cur}}): значение с прошлым прогоном не сравнивается',
+                      { prev: c.prevBasis ?? '—', cur: c.curBasis ?? '—' })}>
+                    <code style={S.changeKey}>{c.key}</code>
+                    <span style={{ color: 'var(--inf)', fontWeight: 700 }}>
+                      {t('lore.qgDetail.changes.rebased', 'база пересчитана')}
+                    </span>
+                  </span>
+                ) : (
                   <span key={c.key} style={S.changeChip(statusColor(c.cur))}>
                     <code style={S.changeKey}>{c.key}</code>
                     <span style={S.muted}>{c.prev}</span>
@@ -761,6 +787,7 @@ const S = {
     width: 104, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
     color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontStyle: 'italic' as const,
   },
+  sparkRebased: { fontSize: 'var(--fs-2xs)', color: 'var(--inf)', maxWidth: 104 },
 
   // recommendations
   recInline: { margin: '9px 0 1px 26px', padding: '10px 13px', borderRadius: 6, border: '1px solid var(--bd)' },

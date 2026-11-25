@@ -29,7 +29,7 @@ class LoreQgRunWriterTest {
 
     private static LoreQgResource.QGMetricEntry metric(String status, String reason) {
         return new LoreQgResource.QGMetricEntry(
-            "coverage_pct", 1.0, "pct", 100.0, status, null, reason, null);
+            "coverage_pct", 1.0, "pct", 100.0, status, null, reason, null, null);
     }
 
     @Test
