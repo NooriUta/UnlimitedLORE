@@ -40,6 +40,12 @@ import java.util.regex.Pattern;
  */
 final class KnowRegistry {
 
+    /**
+     * KREG-10: прежние имена момента создания из DDL старой схемы (ledger). В схеме 1.18 их нет — момент создания
+     * лежит в created_at, и модель называет его так же; в реестр видов они не попадают даже как «DDL-поля».
+     */
+    static final java.util.Set<String> RENAMED_IN_MODEL_SCHEMA = java.util.Set.of("date_created", "created_date");
+
     private KnowRegistry() {}
 
     static final String FORMAT = "know-registry/1";
@@ -186,6 +192,7 @@ final class KnowRegistry {
         JsonObject service = obj(model, "service_fields");
         for (Map.Entry<String, String> p : ddlProps.entrySet()) {
             if (covered.contains(p.getKey()) || names.contains(p.getKey())) continue;
+            if (RENAMED_IN_MODEL_SCHEMA.contains(p.getKey())) continue;
             names.add(p.getKey());
             Map<String, Object> fd = new LinkedHashMap<>();
             fd.put("name", p.getKey());

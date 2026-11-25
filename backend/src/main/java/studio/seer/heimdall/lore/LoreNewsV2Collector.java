@@ -56,7 +56,7 @@ final class LoreNewsV2Collector {
         "out('PART_OF').sprint_id[0] AS sprint_id FROM KnowTask";
     /** S7A-09: спринты — без context_md, приоритета, PR и плана; выражения — те же, что у среза sprints. */
     static final String SQL_SPRINTS =
-        "SELECT sprint_id, coalesce(title, name) AS name, created_date, " +
+        "SELECT sprint_id, coalesce(title, name) AS name, created_at AS created_date, " +
         "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
         "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
         LoreSlices.DONE_DATE_SQL + " AS done_date, " +
@@ -230,7 +230,7 @@ final class LoreNewsV2Collector {
         // ── спринты ──
         for (Sprint s : sprints.values()) {
             if (s.created() != null && !s.created().isBefore(from) && s.created().isBefore(t1))
-                events.add(ev("sprint", s.id(), "created", s.created(), null, s.projects(), s.components(), s.id(), s.milestones(), null, null, s.name(), "sprints.created_date"));
+                events.add(ev("sprint", s.id(), "created", s.created(), null, s.projects(), s.components(), s.id(), s.milestones(), null, null, s.name(), "sprints.created_at"));
             if (s.done() != null && !s.done().isBefore(from) && s.done().isBefore(t1))
                 events.add(ev("sprint", s.id(), "closed", s.done(), null, s.projects(), s.components(), s.id(), s.milestones(), null, null, s.name(), "sprints.done_date"));
         }
@@ -257,7 +257,7 @@ final class LoreNewsV2Collector {
             knowledge.add(new Knowledge("adr", id, str(a.get("status")), created, null, null, p));
             if (created != null && !created.isBefore(fromDay) && !created.isAfter(toDay))
                 events.add(ev("adr", id, "created", instantIfTimed(a.get("date_created")), created, p,
-                    sortedSet(a.get("components")), null, List.of(), null, str(a.get("status")), str(a.get("name")), "adrs.date_created"));
+                    sortedSet(a.get("components")), null, List.of(), null, str(a.get("status")), str(a.get("name")), "adrs.created_at"));
         }
         List<Map<String, Object>> adrHist = read("adr_history", SQL_ADR_HIST, false);
         Map<String, Instant> adrFirst = firstByOwners(adrHist, "adr_uids", "adr_id");
@@ -294,7 +294,7 @@ final class LoreNewsV2Collector {
             knowledge.add(new Knowledge("decision", id, str(d.get("status_raw")), created, parent, null, p));
             if (created != null && !created.isBefore(fromDay) && !created.isAfter(toDay))
                 events.add(ev("decision", id, "created", instantIfTimed(d.get("date_created")), created, p, c, null, List.of(), parent,
-                    str(d.get("status_raw")), str(d.get("title")), "decisions.date_created"));
+                    str(d.get("status_raw")), str(d.get("title")), "decisions.created_at"));
             Instant upd = instant(tl.get("updated_at"));
             if (upd != null && !upd.isBefore(from) && upd.isBefore(t1) && !Objects.equals(upd.atZone(zone).toLocalDate(), created))
                 events.add(ev("decision", id, "changed", upd, null, p, c, null, List.of(), parent, null, str(d.get("title")), "timeline_decisions.updated_at"));
