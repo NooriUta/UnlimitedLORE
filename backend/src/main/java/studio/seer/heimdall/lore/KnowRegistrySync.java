@@ -43,8 +43,11 @@ public class KnowRegistrySync {
 
     static final String ARTIFACT = "lore-model/know-registry.json";
 
-    /** Префиксы видов, которыми владеет этот импорт (чужие — forgejo:*, skill:* — не считаются снятыми). */
-    static final Set<String> MANAGED = Set.of("entity:", "ddl:", "slice:", "tag:", "skill:");
+    /**
+     * Префиксы видов, которыми владеет этот импорт: снятые из входа перечисляются в stale. forgejo:* — с
+     * SPRINT_FORGEJO_MINIAPP/FJ-01: виды берутся из реестра маршрутов миниаппа ({@link ForgejoRoutes#kinds()}).
+     */
+    static final Set<String> MANAGED = Set.of("entity:", "ddl:", "slice:", "tag:", "skill:", "forgejo:");
 
     static final String EXISTING_SQL = "SELECT kind, out('HAS_STATE')[valid_to IS NULL].content_hash AS h FROM KnowKind";
 
@@ -97,6 +100,7 @@ public class KnowRegistrySync {
             JsonObject model = new JsonObject(LoreModelFile.render(LoreModelFile.content()));
             desired.addAll(KnowRegistry.tagKinds(model, ingest.queryPublic(KnowRegistry.TAGS_SQL, Map.of()),
                 AgentScopeFilter.FAMILY_AGENTS));
+            desired.addAll(ForgejoRoutes.load().kinds());   // FJ-01: forgejo:* — данными реестра маршрутов
             Map<String, String> existing = new HashMap<>();
             for (Map<String, Object> r : ingest.queryPublic(EXISTING_SQL, Map.of())) {
                 Object h = r.get("h");
