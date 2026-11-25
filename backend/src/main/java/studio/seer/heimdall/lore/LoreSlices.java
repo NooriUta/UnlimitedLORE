@@ -3747,7 +3747,10 @@ public final class LoreSlices {
      */
     public static final Set<String> ADMIN_ONLY = Set.of(
         "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points",
-        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix");
+        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
+        // AP-MACHINE-PASSPORT × AP-PEOPLE-PAGE (сборка зонтика 25.11): паспорт машины живёт только в админке
+        // и отдаёт client_id агентов машины — поле уровня admin. Не-админу — 403, а не учётка в ответе.
+        "machine_by_id", "machines_graph");
 
     /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
     public static boolean adminOnlyDenied(String id, String role) {
