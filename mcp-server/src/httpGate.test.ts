@@ -30,6 +30,12 @@ function listen(s: Server): Promise<number> {
 beforeAll(async () => {
   backend = createServer((req: IncomingMessage, res) => {
     seen.push({ auth: req.headers.authorization });
+    if (req.method === 'POST') {
+      // Бэкенд без входа: роли нет (HTTP-режим X-Seer-Role не шлёт) — запись 403, как в жизни.
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'FORBIDDEN', message: 'admin role required: X-Seer-Role admin or superadmin (MCP: LORE_SEER_ROLE=admin; Keycloak realm role admin)' }));
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ commit: req.headers.authorization ?? 'none', built_at: '2026-11-25T00:00:00Z' }));
   });
@@ -141,6 +147,30 @@ describe('LORE_MCP_TOKEN: Bearer на каждом запросе (критер�
   it('токен шлюза в X-Lore-Mcp-Token — тогда Authorization (Keycloak) уходит в бэкенд как раньше', async () => {
     const c = await connect({ 'X-Lore-Mcp-Token': GATE, Authorization: 'Bearer kc-jwt' });
     expect(commitOf(await c.callTool({ name: 'lore_version', arguments: {} }))).toBe('Bearer kc-jwt');
+    await c.close();
+  });
+});
+
+describe('запись по HTTP без Keycloak — понятный отказ (владелец 25.11: «без записи keycloak отказывать»)', () => {
+  const PHRASE = 'запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или подключите MCP через stdio на машине агента';
+  const write = { name: 'status_set', arguments: { entity_type: 'task', id: 'SPRINT_X/T-1', status: 'active' } };
+
+  it('токен шлюза без Keycloak: 403 бэкенда → текст про вход Keycloak / stdio, а не голый forbidden', async () => {
+    const c = await connect({ Authorization: `Bearer ${GATE}` });
+    const r = (await c.callTool(write)) as { isError?: boolean; content: { text: string }[] };
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text.toLowerCase()).toContain(PHRASE.toLowerCase());
+    // Подсказка про LORE_SEER_ROLE в этом режиме вредна — её не должно быть впереди.
+    expect(r.content[0].text.toLowerCase().indexOf(PHRASE.toLowerCase())).toBeLessThan(r.content[0].text.indexOf('LORE_SEER_ROLE'));
+    await c.close();
+  });
+
+  it('с токеном Keycloak (JWT) 403 — это права учётки, текст про Keycloak/stdio не подставляется', async () => {
+    const c = await connect({ 'X-Lore-Mcp-Token': GATE, Authorization: 'Bearer aaa.bbb.ccc' });
+    const r = (await c.callTool(write)) as { isError?: boolean; content: { text: string }[] };
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/403/);
+    expect(r.content[0].text.toLowerCase()).not.toContain(PHRASE.toLowerCase());
     await c.close();
   });
 });

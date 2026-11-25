@@ -831,6 +831,8 @@ npm install && npm run build          # → dist/index.js`}</Pre>
                   [t('lore.mcpApi.diag4a', 'Сервер не стартует под клиентом'), t('lore.mcpApi.diag4b', 'не собран dist/'), t('lore.mcpApi.diag4c', 'npm run build в mcp-server')],
                   [t('lore.mcpApi.diag5a', '401 на /mcp (HTTP)'), t('lore.mcpApi.diag5b', 'нет или неверный LORE_MCP_TOKEN'), t('lore.mcpApi.diag5c', 'Authorization: Bearer <LORE_MCP_TOKEN> или X-Lore-Mcp-Token')],
                   [t('lore.mcpApi.diag6a', '403 из браузера (HTTP)'), t('lore.mcpApi.diag6b', 'origin не в LORE_MCP_CORS_ORIGINS'), t('lore.mcpApi.diag6c', 'добавить origin клиента в LORE_MCP_CORS_ORIGINS')],
+                  [t('lore.mcpApi.diag7a', 'Запись вернула ошибку «НЕ СДЕЛАНО» / «ИЗМЕНЕНИЙ НЕТ»'), t('lore.mcpApi.diag7b', 'бэкенд ответил outcome=noop (цели нет, отказ) или unchanged (уже такое значение, связь уже есть): любой CUD-инструмент отдаёт это ошибкой (D-2026-LORE-MCP-LINK-NOOP-IS-ERROR)'), t('lore.mcpApi.diag7c', 'первая строка — причина и что сделать (например project_new); JSON бэкенда ниже')],
+                  [t('lore.mcpApi.diag8a', 'Запись по /mcp (HTTP): «без входа Keycloak закрыта»'), t('lore.mcpApi.diag8b', 'HTTP-режим не передаёт роль; без токена Keycloak запись запрещена'), t('lore.mcpApi.diag8c', 'включить вход (OIDC) или подключить MCP через stdio на машине агента')],
                 ] as [string, string, string][]).map(([a, b, c]) => (
                   <tr key={a} style={S.tr}>
                     <Td style={{ color: 'var(--t1)' }}>{a}</Td>

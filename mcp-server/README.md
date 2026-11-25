@@ -66,8 +66,15 @@ must carry it as `Authorization: Bearer <token>` or `X-Lore-Mcp-Token: <token>`,
 the gateway token is never forwarded to the backend. `LORE_MCP_CORS_ORIGINS` — comma list
 of allowed browser origins (preflight 204, foreign origin 403; empty = CORS off).
 `GET /health` and `GET /mcp/health` answer 200 without auth. No token on a non-loopback
-host → loud warning at start. Writing without Keycloak over HTTP is not supported yet: the
-HTTP mode does not send `X-Seer-Role` (owner decision pending).
+host → loud warning at start. Writing without Keycloak over HTTP is closed by design (owner
+decision 25.11.2026): the HTTP mode does not send `X-Seer-Role`, and a 403 on a write without a
+Keycloak token comes back as «Запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или
+подключите MCP через stdio на машине агента».
+
+Every CUD tool (create/update/delete/link/status) whose backend answer says nothing changed
+(`outcome` = `noop` or `unchanged`) returns `isError: true`; the first line explains why and what
+to do, the backend JSON follows unchanged. Read tools are not affected. Each tool is marked
+read|cud in `src/tools/toolKinds.ts` (decision D-2026-LORE-MCP-LINK-NOOP-IS-ERROR, ADR-LORE-043).
 
 Full configs, the OpenCode 1.19.6 probe and error codes:
 [docs/runbooks/mcp-hosted.md](../docs/runbooks/mcp-hosted.md).

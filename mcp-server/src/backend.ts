@@ -498,6 +498,25 @@ export async function loreGet(path: string, params?: Record<string, string>): Pr
   return res.json();
 }
 
+/**
+ * ISS-04, владелец 25.11.2026 («без записи keycloak отказывать»): в HTTP-режиме роль (X-Seer-Role) не
+ * передаётся, поэтому без токена Keycloak бэкенд отвечает на запись 403 с советом «LORE_SEER_ROLE=admin»,
+ * который в этом режиме не поможет. Без токена Keycloak — пустой (шлюз LORE_MCP_TOKEN) или не JWT.
+ */
+export const HTTP_WRITE_NEEDS_KEYCLOAK =
+  'Запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или подключите MCP через stdio на машине агента.';
+
+function hostedWithoutKeycloak(): boolean {
+  if (!hostedMode()) return false;
+  const ctx = clientAuth.getStore();
+  return !!ctx && !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(ctx.token);
+}
+
+async function writeFailure(path: string, res: Response): Promise<Error> {
+  const base = `POST ${path} → ${res.status} ${await detail(res)}`;
+  return new Error(res.status === 403 && hostedWithoutKeycloak() ? `${HTTP_WRITE_NEEDS_KEYCLOAK} (бэкенд: ${base})` : base);
+}
+
 /** POST a LORE write endpoint, authenticated per writeAuthHeaders() (see A2 above). */
 export async function lorePost(path: string, body: unknown, extraHeaders?: Record<string, string>): Promise<unknown> {
   const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
@@ -505,7 +524,7 @@ export async function lorePost(path: string, body: unknown, extraHeaders?: Recor
     headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()), ...(extraHeaders ?? {}) },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
+  if (!res.ok) throw await writeFailure(path, res);
   return res.json();
 }
 
@@ -528,7 +547,7 @@ export async function loreUpload(
     headers: { ...(await writeAuthHeaders()) },
     body: form,
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
+  if (!res.ok) throw await writeFailure(path, res);
   return res.json();
 }
 
