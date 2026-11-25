@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "5d124311a26fbde1",
+  "version" : "a0e83fd1ecc4d83c",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -1086,13 +1086,17 @@
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
         },
-        "required_level" : "warn",
+        "required_level" : null,
         "required_rules" : [ {
           "level" : "warn",
           "source" : "quality",
           "code" : "component",
-          "message" : "Компонент привязан (BELONGS_TO)",
-          "when" : null
+          "message" : "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи",
+          "when" : {
+            "field" : "has_tech_tasks",
+            "eq" : "true",
+            "text" : "когда «в спринте есть технические задачи (design/dev/ops/test)» = true"
+          }
         } ],
         "visibility" : "visible",
         "display" : {
@@ -1585,16 +1589,6 @@
       }, {
         "level" : "warn",
         "source" : "quality",
-        "code" : "component",
-        "message" : "Компонент привязан (BELONGS_TO)",
-        "when" : null,
-        "targets" : [ {
-          "kind" : "field",
-          "key" : "components"
-        } ]
-      }, {
-        "level" : "warn",
-        "source" : "quality",
         "code" : "planned_dates",
         "message" : "Плановые даты заданы (начало и конец)",
         "when" : null,
@@ -1604,6 +1598,20 @@
         }, {
           "kind" : "field",
           "key" : "planned_end_date"
+        } ]
+      }, {
+        "level" : "warn",
+        "source" : "quality",
+        "code" : "component",
+        "message" : "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи",
+        "when" : {
+          "field" : "has_tech_tasks",
+          "eq" : "true",
+          "text" : "когда «в спринте есть технические задачи (design/dev/ops/test)» = true"
+        },
+        "targets" : [ {
+          "kind" : "field",
+          "key" : "components"
         } ]
       } ],
       "requirements_block" : "schema",
@@ -17697,43 +17705,55 @@
   "palettes" : {
     "source" : "settings:palette",
     "default" : "amber-forest",
+    "allowed" : [ "amber-forest", "lichen", "slate", "juniper", "warm-dark", "mono" ],
     "entries" : [ {
       "code" : "amber-forest",
       "title" : "amber-forest",
       "title_en" : null,
       "order" : 10,
-      "in_dictionary" : false
+      "in_dictionary" : false,
+      "builtin" : true
     }, {
       "code" : "lichen",
       "title" : "lichen",
       "title_en" : null,
       "order" : 20,
-      "in_dictionary" : false
+      "in_dictionary" : false,
+      "builtin" : true
     }, {
       "code" : "slate",
       "title" : "slate",
       "title_en" : null,
       "order" : 30,
-      "in_dictionary" : false
+      "in_dictionary" : false,
+      "builtin" : true
     }, {
       "code" : "juniper",
       "title" : "juniper",
       "title_en" : null,
       "order" : 40,
-      "in_dictionary" : false
+      "in_dictionary" : false,
+      "builtin" : true
     }, {
       "code" : "warm-dark",
       "title" : "warm-dark",
       "title_en" : null,
       "order" : 50,
-      "in_dictionary" : false
+      "in_dictionary" : false,
+      "builtin" : true
     }, {
       "code" : "mono",
       "title" : "приглушённая (mono)",
       "title_en" : "muted (mono)",
       "order" : 60,
-      "in_dictionary" : true
-    } ]
+      "in_dictionary" : true,
+      "builtin" : true
+    } ],
+    "fonts" : {
+      "entries" : [ "pair", "mono" ],
+      "default" : "pair",
+      "allowed" : [ "pair", "mono" ]
+    }
   },
   "dictionaries" : {
     "adr_status" : [ {
