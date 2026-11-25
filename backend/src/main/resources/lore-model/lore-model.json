@@ -5281,6 +5281,9 @@
     "relations" : [ {
       "key" : "agents",
       "label" : "Агенты машины",
+      "labelKey" : "pp.rel.machine_agents",
+      "labelEn" : "Agents on this machine",
+      "labelPl" : "Agenci maszyny",
       "rel" : "USES_MACHINE",
       "dir" : "in",
       "targetType" : "agent",

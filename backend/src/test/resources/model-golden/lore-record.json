@@ -19985,13 +19985,18 @@
       "relations" : [ {
         "key" : "agents",
         "label" : "Агенты машины",
+        "label_key" : "pp.rel.machine_agents",
+        "label_en" : "Agents on this machine",
+        "label_pl" : "Agenci maszyny",
         "relation" : "association",
         "rel" : "USES_MACHINE",
         "dir" : "in",
         "target_type" : "agent",
         "place" : "link_tab",
         "manageable" : false,
-        "inverse_label" : null
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "unknown"
@@ -20197,13 +20202,18 @@
       "relations" : [ {
         "key" : "agents",
         "label" : "Агенты машины",
+        "label_key" : "pp.rel.machine_agents",
+        "label_en" : "Agents on this machine",
+        "label_pl" : "Agenci maszyny",
         "relation" : "association",
         "rel" : "USES_MACHINE",
         "dir" : "in",
         "target_type" : "agent",
         "place" : "link_tab",
         "manageable" : false,
-        "inverse_label" : null
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema"

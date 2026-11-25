@@ -59,7 +59,7 @@ final class V1SchemaSafetyChecklist {
      * Пусто: в S2 Java-шагов нет. Добавлять строку только вместе с тестом,
      * доказывающим аддитивность именно этого шага.
      */
-    static final Map<String, String> JAVA_STEPS_REVIEWED = Map.of(
+    static final Map<String, String> JAVA_STEPS_REVIEWED = pairs(
         // S2-13, V68. Доказательство — StatusHistoryServiceTest
         // (backfill_writes_only_v67_properties_and_never_moves_version_dates):
         // UPDATE ставит только свойства V67 с условием «ещё не стоит»; INSERT
@@ -269,5 +269,14 @@ final class V1SchemaSafetyChecklist {
         out.add(at + "неаддитивная или нераспознанная форма (разрешены только CREATE TYPE/PROPERTY/INDEX "
             + "IF NOT EXISTS и посев новой строки справочника): " + q);
         return out;
+    }
+
+    /** Map.of держит не больше 10 пар; шагов уже больше (V97 реестра + V100 area, сборка зонтика 25.11). */
+    private static Map<String, String> pairs(String... kv) {
+        if (kv.length % 2 != 0) throw new IllegalArgumentException("нечётное число строк: шаг без причины");
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2)
+            if (m.put(kv[i], kv[i + 1]) != null) throw new IllegalArgumentException("шаг дважды: " + kv[i]);
+        return java.util.Collections.unmodifiableMap(m);
     }
 }

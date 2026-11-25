@@ -73,7 +73,6 @@ class LoreFindParityLiveDbTest {
         admin("/lore/sprint/create", "{\"sprint_id\":\"" + S_OPEN + "\",\"name\":\"open\",\"git_project\":\"" + P + "\"}");
         admin("/lore/status", "{\"entity_type\":\"sprint\",\"id\":\"" + S_OPEN + "\",\"status\":\"active\"}");
         admin("/lore/sprint/create", "{\"sprint_id\":\"" + S_DONE + "\",\"name\":\"done\",\"git_project\":\"" + P + "\"}");
-        admin("/lore/status", "{\"entity_type\":\"sprint\",\"id\":\"" + S_DONE + "\",\"status\":\"cancelled\"}");
         admin("/lore/sprint/create", "{\"sprint_id\":\"" + S_OTHER + "\",\"name\":\"other\",\"git_project\":\"" + P_OTHER + "\"}");
         admin("/lore/status", "{\"entity_type\":\"sprint\",\"id\":\"" + S_OTHER + "\",\"status\":\"active\"}");
         // Ребро проекта — явной дверью (как NewsDynamicsLiveDbTest), не полагаясь на git_project при создании.
@@ -86,6 +85,9 @@ class LoreFindParityLiveDbTest {
         task(S_OPEN, "F-4", "gc05live граф find", "active", false);
         task(S_DONE, "D-1", "gc05live старое", "cancelled", true);
         task(S_OTHER, "O-1", "gc05live граф чужой", "active", true);
+        // Закрыть спринт — ПОСЛЕ его задач: в закрытый спринт задача не заводится (400), подготовка обрывалась
+        // на D-1, и падали все проверки после неё (CI #1812, 25.11).
+        admin("/lore/status", "{\"entity_type\":\"sprint\",\"id\":\"" + S_DONE + "\",\"status\":\"cancelled\"}");
 
         admin("/lore/adr", "{\"adr_id\":\"" + ADR + "\",\"name\":\"gc05 find\",\"status\":\"ACCEPTED\"}");
         admin("/lore/adr/project", "{\"adr_id\":\"" + ADR + "\",\"project\":\"" + P + "\",\"action\":\"add\"}");
