@@ -21,10 +21,19 @@
 //     (AsyncLocalStorage, backend.ts), в журнал не пишется;
 //   Mcp-Session-Id — сессия ТРАНСПОРТА (меняется при каждом переподключении,
 //     проба 19.11), а не сессия агента: в бэкенд как X-Lore-Session-Id не уходит;
+//   LORE_MCP_TOKEN (ISS-04, issue #4) — токен ШЛЮЗА для клиентов без Keycloak
+//     (Llama Chat и др. web UI, которые умеют только статичный Bearer). Задан —
+//     обязателен на КАЖДОМ запросе к /mcp: Authorization: Bearer <токен> либо
+//     X-Lore-Mcp-Token: <токен> (тогда Authorization остаётся токеном Keycloak и
+//     уходит в бэкенд, как раньше). Токен шлюза в бэкенд НЕ передаётся: это не
+//     личность. Нет/не тот — 401. Не задан — поведение прежнее;
+//   LORE_MCP_CORS_ORIGINS — список origin через запятую: с них браузер пускается
+//     (preflight OPTIONS → 204), с чужого origin — 403. Пусто — CORS не включён;
+//   GET /health — то же, что /mcp/health (для healthcheck-ов UI);
 //   X-Lore-Mcp-Profile — профиль поверхности (по умолчанию full), сверяется со
 //     списком agent-profiles; неизвестный — 400. Задаётся при initialize и
 //     действует всю сессию.
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -47,6 +56,41 @@ export function transportMode(env: Record<string, string | undefined>): Transpor
   throw new Error(`LORE_MCP_TRANSPORT=${env.LORE_MCP_TRANSPORT}: допустимо stdio (по умолчанию) или http`);
 }
 
+export type HttpConfig = { host: string; port: number; token: string | null; corsOrigins: string[] };
+
+/** Настройки HTTP-режима из окружения (ISS-04). Адрес по умолчанию — loopback: наружу только явным LORE_MCP_HOST. */
+export function httpConfig(env: Record<string, string | undefined>): HttpConfig {
+  const rawPort = (env.LORE_MCP_PORT ?? '').trim();
+  const port = rawPort === '' ? 9200 : Number(rawPort);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`LORE_MCP_PORT=${env.LORE_MCP_PORT}: нужен номер порта 0..65535`);
+  }
+  const token = (env.LORE_MCP_TOKEN ?? '').trim() || null;
+  const corsOrigins = (env.LORE_MCP_CORS_ORIGINS ?? '').split(',')
+    .map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean);
+  return { host: (env.LORE_MCP_HOST ?? '').trim() || '127.0.0.1', port, token, corsOrigins };
+}
+
+/** Адрес слушает только эту машину. */
+export function isLoopbackHost(host: string): boolean {
+  const h = host.trim().toLowerCase().replace(/^\[|\]$/g, '');
+  return h === 'localhost' || h === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h);
+}
+
+/** Предупреждения при старте: без токена шлюза на адресе, видном из сети, /mcp пропускает любой Bearer. */
+export function httpStartupWarnings(c: { host: string; token: string | null }): string[] {
+  if (c.token || isLoopbackHost(c.host)) return [];
+  return [
+    `[aida-lore-mcp] ВНИМАНИЕ: MCP слушает ${c.host}, а LORE_MCP_TOKEN не задан. /mcp пропустит любой Bearer; ` +
+    'проверка остаётся только на стороне бэкенда (Keycloak). Если у бэкенда вход выключен, чтение LORE ' +
+    'открыто всей сети. Задайте LORE_MCP_TOKEN или LORE_MCP_HOST=127.0.0.1.',
+  ];
+}
+
+function sameSecret(a: string, b: string): boolean {
+  return timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest());
+}
+
 export type HttpOptions = {
   port: number;
   host?: string;
@@ -59,6 +103,10 @@ export type HttpOptions = {
   oidcIssuer?: string;
   /** Часы для кэша токенов (тесты). */
   now?: () => number;
+  /** Токен шлюза (LORE_MCP_TOKEN). null/пусто — не требуется. */
+  token?: string | null;
+  /** Разрешённые origin для CORS (LORE_MCP_CORS_ORIGINS). Пусто — CORS выключен. */
+  corsOrigins?: string[];
 };
 
 type Session = { transport: StreamableHTTPServerTransport; server: McpServer; lastSeen: number; profile: string };
@@ -126,16 +174,31 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
   const build = readBuildInfo();
   const sessions = new Map<string, Session>();
   const issuer = (opts.oidcIssuer ?? process.env.LORE_OIDC_ISSUER ?? '').trim();
+  const gateToken = (opts.token ?? '').trim() || null;
+  const corsOrigins = new Set(opts.corsOrigins ?? []);
   const broker = createTokenBroker({ tokenUrl: issuer ? oidcTokenUrl(issuer) : '', now: opts.now, log });
 
   /** Токен запроса: Bearer как есть либо (вариант «г») выданный Keycloak по паре id/секрет.
    *  null — ответ клиенту уже отправлен. */
   async function resolveToken(req: IncomingMessage, res: ServerResponse): Promise<string | null> {
-    const bearer = bearerOf(req);
+    const challenge = { 'WWW-Authenticate': 'Bearer realm="lore-mcp"' };
+    let bearer = bearerOf(req);
+    if (gateToken) {
+      const viaHeader = header(req, 'x-lore-mcp-token');
+      const presented = viaHeader || bearer || '';
+      if (!presented || !sameSecret(presented, gateToken)) {
+        jsonError(res, 401, 'Нужен токен MCP-сервера (LORE_MCP_TOKEN): заголовок Authorization: Bearer <токен> ' +
+          'или X-Lore-Mcp-Token: <токен>', challenge);
+        return null;
+      }
+      // Токен шлюза — не личность: в бэкенд он не уходит.
+      if (!viaHeader) bearer = null;
+    }
     if (bearer) return bearer;
     const id = header(req, 'x-lore-client-id');
     const secret = header(req, 'x-lore-client-secret');
-    const challenge = { 'WWW-Authenticate': 'Bearer realm="lore-mcp"' };
+    // Шлюз пройден, личности нет — в бэкенд без Authorization (бэкенд без Keycloak).
+    if (gateToken && !id && !secret) return '';
     if (!id && !secret) {
       jsonError(res, 401,
         'Нужен вход: заголовок Authorization: Bearer <токен клиента> (клиенты с headersHelper, ' +
@@ -174,7 +237,7 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
 
   async function handleMcp(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const token = await resolveToken(req, res);
-    if (!token) return;
+    if (token === null) return;
     const auth = { token, headers: forwardedHeaders(req) };
     const sid = header(req, 'mcp-session-id');
 
@@ -233,9 +296,36 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
     await runWithClientAuth(auth, () => transport.handleRequest(req, res, body));
   }
 
+  /** CORS (ISS-04). true — ответ уже отправлен (preflight или отказ чужому origin). */
+  function cors(req: IncomingMessage, res: ServerResponse): boolean {
+    if (corsOrigins.size === 0) return false;
+    const origin = header(req, 'origin');
+    if (!origin) return false;
+    if (!corsOrigins.has(origin.replace(/\/+$/, ''))) {
+      jsonError(res, 403, `Origin ${origin.slice(0, 100)} не в списке LORE_MCP_CORS_ORIGINS`);
+      return true;
+    }
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id, Mcp-Protocol-Version, WWW-Authenticate');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept, Mcp-Session-Id, Mcp-Protocol-Version, ' +
+          'Last-Event-ID, X-Lore-Mcp-Token, X-Lore-Mcp-Profile, X-Lore-Client-Id, X-Lore-Client-Secret, ' +
+          'X-Lore-Machine, X-Lore-Session-Id, X-Lore-Harness, X-Lore-Act-As',
+        'Access-Control-Max-Age': '600',
+      });
+      res.end();
+      return true;
+    }
+    return false;
+  }
+
   const http = createServer((req, res) => {
+    if (cors(req, res)) return;
     const path = (req.url ?? '/').split('?')[0].replace(/\/+$/, '') || '/';
-    if (path === '/mcp/health' && (req.method === 'GET' || req.method === 'HEAD')) {
+    if ((path === '/mcp/health' || path === '/health') && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(req.method === 'HEAD' ? undefined : JSON.stringify({
         status: 'ok', transport: 'http', commit: build.commit, built_at: build.built_at, sessions: sessions.size,
@@ -257,7 +347,7 @@ export async function startHttpServer(opts: HttpOptions): Promise<{ port: number
 
   await new Promise<void>((resolve, reject) => {
     http.once('error', reject);
-    http.listen(opts.port, opts.host ?? '0.0.0.0', () => resolve());
+    http.listen(opts.port, opts.host ?? '127.0.0.1', () => resolve());
   });
   const port = (http.address() as AddressInfo).port;
 

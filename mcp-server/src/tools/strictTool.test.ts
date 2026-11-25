@@ -41,11 +41,20 @@ describe('withStrictTools', () => {
     expect(schema.safeParse({ uc_id: 'UC-1' }).success).toBe(true);
   });
 
-  it('passes the tool name and description through unchanged', () => {
+  it('passes the tool name and description through unchanged (read tool)', () => {
+    const { server, calls } = fakeServer();
+    (server.tool as (...a: unknown[]) => unknown)('query_slice', 'read slice', { id: z.string() }, () => {});
+    expect(calls[0].name).toBe('query_slice');
+    expect(calls[0].config.description).toBe('read slice');
+  });
+
+  // ISS-06 / D-2026-LORE-MCP-LINK-NOOP-IS-ERROR: у CUD-инструмента к описанию добавляется правило noop → ошибка.
+  it('CUD tool: description keeps the original text and gains the noop-is-error rule', () => {
     const { server, calls } = fakeServer();
     (server.tool as (...a: unknown[]) => unknown)('status_set', 'set status', { id: z.string() }, () => {});
     expect(calls[0].name).toBe('status_set');
-    expect(calls[0].config.description).toBe('set status');
+    expect(calls[0].config.description).toMatch(/^set status /);
+    expect(calls[0].config.description).toMatch(/returned as an ERROR/);
   });
 
   it('handles the schema-less overload (name, description, handler) without a schema', () => {
