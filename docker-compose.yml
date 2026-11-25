@@ -244,6 +244,8 @@ services:
       # LORE_BOOTSTRAP=true — только явное принуждение. Установка с нуля —
       # deploy/install (профиль + install.sh); ранбук в LORE: doc runbook_lore_self_provision.
       - lore.bootstrap=${LORE_BOOTSTRAP:-false}
+      # AUD-DEFAULTS: в образе bench по умолчанию выключен — наш стенд включает его явно.
+      - BENCH_MART_ENABLED=${BENCH_MART_ENABLED:-true}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
       - S3_ENDPOINT=http://minio:9000
