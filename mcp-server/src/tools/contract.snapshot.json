@@ -1001,6 +1001,9 @@
       "limit": "number?",
       "links_to": "{depth:number?,dir:enum(both|in|out)?,id:string,rels:string[]?} | {depth:number?,dir:enum(both|in|out)?,id:string,rels:string[]?}[]?",
       "not_linked": "{dir:enum(both|in|out)?,rels:string[]}?",
+      "project": "string | string[]?",
+      "scope_projects": "string[]?",
+      "search": "string?",
       "sort": "{dir:enum(asc|desc)?,field:string}[]?",
       "type": "enum(adr|decision|spec|sprint|task)",
       "where": "lazy[]?"
