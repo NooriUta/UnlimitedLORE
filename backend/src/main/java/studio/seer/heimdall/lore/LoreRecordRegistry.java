@@ -54,6 +54,8 @@ final class LoreRecordRegistry {
      * обязательность читает {@link LoreFieldRequirement} из схемы БД. {@code initial} — начальное значение поля
      * для записи, которой его не назвали (правило владелицы 19.11.2026 «ставить начальный, где без статуса»);
      * читает {@link CreateDefaultStatus}, в форме хранения бэкенда.
+     * {@code audience} — AP-PEOPLE-PAGE: видимость поля тем же словарём, что у раздела (everywhere | detail | admin |
+     * hidden); admin — сервер отдаёт поле только admin/superadmin ({@link LoreFieldAudience}); null — как у записи.
      */
     record Field(String key, String label, String labelKey, String kind, String group, String dict,
                  boolean editable, Write write, boolean multi, boolean required,
@@ -61,12 +63,12 @@ final class LoreRecordRegistry {
                  String shortLabel, String definition, String description, String layer, boolean historic,
                  String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
                  String labelPl, String shortLabelPl, String definitionPl, String descriptionPl,
-                 boolean notnull, String initial) {
+                 boolean notnull, String initial, String audience) {
         Field(String key, String label, String labelKey, String kind, String group, String dict,
               boolean editable, Write write, boolean multi, boolean required,
               String refType, String rel, String dir, String relation) {
             this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
-                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null, false, null);
+                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null, false, null, null);
         }
     }
 

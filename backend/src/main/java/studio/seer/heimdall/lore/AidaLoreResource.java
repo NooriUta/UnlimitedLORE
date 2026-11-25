@@ -1308,6 +1308,8 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
                 if (outside != null) out.put("outside_scope", outside);
+                // AP-PEOPLE-PAGE: колонки полей уровня admin (учётка агента) не-админу не уходят — до страницы и fields.
+                out.put("rows", LoreFieldAudience.stripRows(id, castRows(out.get("rows")), role));
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {
@@ -1475,6 +1477,15 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
                 .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
                     + "проекта — фасеты среза " + id + " не отдаются нулями"))));
+        }
+        // AP-PEOPLE-PAGE: ось или фильтр по полю уровня admin выдали бы его значения счётом — отказ словами.
+        java.util.List<String> asked = new ArrayList<>(axes);
+        asked.addAll(filters.keySet());
+        if (groupBy != null) asked.add(groupBy);
+        String closedField = LoreFieldAudience.closedParam(id, asked, role);
+        if (closedField != null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("FIELD_ADMIN_ONLY", "поле " + closedField + " среза " + id + " — только админке: фасеты и фильтры по нему не отдаются"))));
         }
         // Срезы, подмешивающие записи без проекта вторым запросом (ScopeExemptRows), здесь
         // этого не делают — число разошлось бы со списком. Честный отказ вместо тихой недостачи.

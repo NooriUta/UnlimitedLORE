@@ -4336,7 +4336,8 @@
       "group" : "props",
       "definition" : "Откуда имя человека: manual — задано в профиле человеком или админом, сверка с Keycloak его не трогает; kc — «Имя Фамилия» из Keycloak, обновляется сверкой; пусто — подписан логином.",
       "labelEn" : "Name source",
-      "labelPl" : "Źródło imienia"
+      "labelPl" : "Źródło imienia",
+      "audience" : "admin"
     } ],
     "props" : [ {
       "fields" : [ "projects", "login", "avatar", "name_source" ]
@@ -4420,7 +4421,8 @@
       "definition" : "Учётка агента в Keycloak (клиент), под которой он ходит в LORE.",
       "layer" : "stable",
       "labelEn" : "Account",
-      "labelPl" : "Konto"
+      "labelPl" : "Konto",
+      "audience" : "admin"
     }, {
       "key" : "agent_role",
       "label" : "Профиль",
@@ -7997,7 +7999,7 @@
   "audience" : {
     "actor" : "everywhere",
     "adr" : "everywhere",
-    "agent" : "admin",
+    "agent" : "detail",
     "component" : "everywhere",
     "decision" : "everywhere",
     "doc" : "everywhere",

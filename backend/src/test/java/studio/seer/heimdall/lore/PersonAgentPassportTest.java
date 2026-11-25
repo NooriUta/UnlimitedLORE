@@ -40,6 +40,8 @@ class PersonAgentPassportTest {
         }
         assertEquals(List.of("kc_sub"), LoreSlices.get("user_tasks").required());
         assertEquals(List.of("id"), LoreSlices.get("agent_tasks").required());
+        // AP-PEOPLE-PAGE: «где работает» на вкладке «Аналитика» — проект спринта задачи колонкой среза.
+        assertTrue(LoreSlices.get("user_tasks").baseSql().contains("AS project"), LoreSlices.get("user_tasks").baseSql());
     }
 
     @Test
@@ -55,14 +57,18 @@ class PersonAgentPassportTest {
         assertTrue(LoreSlices.get("agent_by_id").baseSql().contains("kind = 'agent'"), "роль продукта (KnowActor kind≠agent) — не агент");
     }
 
-    /** MC-07: человек и агент — уровень admin; в общее меню не попадают, паспорт открывается по чипу. */
+    /**
+     * MC-07: человек — в общем меню. Агент — detail (AP-PEOPLE-PAGE, владелица 21.11.2026: «агенты вне админки тоже
+     * сделай личная карта — минимум просто чьи они»): не в меню, карточка открывается всем по ссылке; учётка агента —
+     * поле уровня admin, сервер её не-админу не отдаёт (LoreFieldAudienceTest).
+     */
     @Test
     void peopleInOrganizationMenuAgentsAdminOnly() {
         // Владелица 21.11.2026: «Организация — организации, продукты, проекты, люди» — люди в общем меню (срез users —
         // имя и проекты, без прав и ролей); агент — по-прежнему админка (MC-07, решение 13.11).
         java.util.Map<String, String> audience = LoreModelFile.content().audience();
         assertEquals("everywhere", audience.get("user"), "человек — в общем меню (группа «Организация»)");
-        assertEquals("admin", audience.get("agent"), "агент — админка (MC-07, решение 13.11)");
+        assertEquals("detail", audience.get("agent"), "агент — карточка вне админки по ссылке (AP-PEOPLE-PAGE)");
         List<String> nav = LoreModelNavTest.navSections(LoreModelGoldenTest.modelDoc());
         assertTrue(nav.contains("sprint"), "положительный контроль: меню не пустое");
         assertTrue(nav.contains("user"), "люди в общем меню: " + nav);

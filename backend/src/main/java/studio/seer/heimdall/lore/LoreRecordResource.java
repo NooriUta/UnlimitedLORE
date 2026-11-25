@@ -373,6 +373,8 @@ public class LoreRecordResource extends LoreResourceBase {
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());
+        // AP-PEOPLE-PAGE: поле уровня admin (учётка агента) не-админу не отдаётся — сервером, а не прятанием в UI.
+        LoreFieldAudience.stripRecord(type, out, role);
         return noStore(Response.ok(out));
     }
 
