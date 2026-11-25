@@ -52,6 +52,16 @@ final class LoreRecordPerms {
     /** Типы, чьи пути записи — под super-admin (создание и связи организации, как у проекта). */
     static final java.util.Set<String> SUPERADMIN_WRITES = java.util.Set.of("organization");
 
+    /**
+     * AP-PASSPORT-EDIT, решение владельца 3а (25.11.2026): «только чтение» снимается вместе с «+ Новая», ТИП ЗА ТИПОМ.
+     * У типа только-для-чтения создание из паспорта есть, только если он здесь (включён своей волной) И у него есть
+     * блок create модели. Волна 1 — продуктовый слой; организация — раньше, под super-admin.
+     */
+    static final java.util.Set<String> PASSPORT_CREATE = java.util.Set.of("organization", "pain", "gain", "job", "actor", "feature");
+
+    /** Причина у типа, где правка и создание есть, а статус в паспорте не меняется. */
+    static final String STATUS_ONLY_READ_ONLY_REASON = "статус в паспорте не меняется: правятся поля с путём записи";
+
     /** Есть ли у типа связь, которой управляют из паспорта ({@code manageable}) — путь /relation. */
     static boolean hasManageableRelation(String type) {
         LoreRecordRegistry.TypeDef d = LoreRecordRegistry.get(type);
@@ -90,9 +100,10 @@ final class LoreRecordPerms {
             ro.put("can_edit", can);
             ro.put("can_status", false);
             // Создание у типа только-чтения — если путь создания объявлен моделью (блок create) и он под super-admin.
-            ro.put("can_create", SUPERADMIN_WRITES.contains(type) && roleOk && LoreModelFile.content().create().containsKey(type));
+            boolean create = PASSPORT_CREATE.contains(type) && roleOk && LoreModelFile.content().create().containsKey(type);
+            ro.put("can_create", create);
             ro.put("status_next", List.of());
-            ro.put("reason", !writable ? READ_ONLY_REASON : can ? STATUS_READ_ONLY_REASON
+            ro.put("reason", !writable ? READ_ONLY_REASON : can ? (create ? STATUS_ONLY_READ_ONLY_REASON : STATUS_READ_ONLY_REASON)
                 : !identified ? NOT_IDENTIFIED : SUPERADMIN_WRITES.contains(type) ? NO_RIGHTS_SUPERADMIN : NO_RIGHTS);
             return ro;
         }
