@@ -1,0 +1,70 @@
+# Проба: какого типа значения свойства лежат в базе на ci-server — ТОЛЬКО ЧТЕНИЕ.
+#
+# SPRINT_LORE_KNOW_REGISTRY/KREG-10, п.3. Владелец 25.11.2026: «test the type on preprod backup»,
+# затем «write one-day ci check yaml that will return the type of attribute from ci server».
+# Повод: ADR и решения пишут date_created, а в схеме свойство не объявлено. Объявить его миграцией
+# можно STRING или DATE; какой тип выбрать, решает то, что фактически лежит в базе (строки ли там,
+# в каком формате, нет ли смеси).
+#
+# Только /api/v1/query (ArcadeDB пускает туда лишь читающие запросы) — база не меняется.
+# Имена типа и свойства проверяются шаблоном до подстановки в SQL.
+name: LORE attr type probe (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      db:
+        description: База на ci-server
+        default: system_aida_lore_preprod
+        required: true
+      targets:
+        description: Список «Тип.свойство» через запятую
+        default: KnowADR.date_created,KnowDecision.date_created,KnowSpec.date_created
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+      DB: ${{ inputs.db }}
+      TARGETS: ${{ inputs.targets }}
+    steps:
+      - name: Тип свойства — схема и фактические значения
+        run: |
+          set -u
+          [ -n "${ARCADEDB_ROOT_PASSWORD:-}" ] || { echo "::error::BLOCKED: нет секрета ARCADEDB_ROOT_PASSWORD"; exit 1; }
+          printf '%s' "$DB" | grep -Eq '^[A-Za-z0-9_]+$' || { echo "::error::имя базы «$DB» не прошло шаблон"; exit 1; }
+          # Адрес ArcadeDB 131 из контейнера джоба — шлюз по умолчанию (как в preprod-db-refresh.sh).
+          hex=$(awk '$2=="00000000" && $8=="00000000" {print $3; exit}' /proc/net/route)
+          GW="$((16#${hex:6:2})).$((16#${hex:4:2})).$((16#${hex:2:2})).$((16#${hex:0:2}))"
+          API="http://$GW:2480/api/v1"
+          q() { # q <sql> — только чтение
+            jq -n --arg c "$1" '{language:"sql",command:$c}' \
+              | curl -s -m 60 -u "root:$ARCADEDB_ROOT_PASSWORD" -H 'Content-Type: application/json' -d @- "$API/query/$DB"
+            echo
+          }
+          echo "== база $DB на $GW =="
+          q "SELECT count(*) AS n FROM LoreModelSchema"
+          IFS=',' read -ra items <<< "$TARGETS"
+          for it in "${items[@]}"; do
+            it="$(echo "$it" | tr -d ' ')"
+            printf '%s' "$it" | grep -Eq '^[A-Za-z][A-Za-z0-9_]*\.[a-z][a-z0-9_]*$' || { echo "::warning::пропуск «$it» — не «Тип.свойство»"; continue; }
+            T="${it%%.*}"; A="${it#*.}"
+            echo; echo "################ $T.$A"
+            echo "-- объявлено в схеме (properties типа):"
+            q "SELECT properties FROM schema:types WHERE name = '$T'" | jq -c --arg a "$A" '[.result[0].properties[]? | select(.name==$a)]' 2>/dev/null || true
+            echo "-- сколько записей со значением / всего:"
+            q "SELECT count(*) AS with_value FROM $T WHERE $A IS NOT NULL"
+            q "SELECT count(*) AS total FROM $T"
+            echo "-- тип значения по записям (метод type()):"
+            q "SELECT $A.type() AS value_type, count(*) AS n FROM $T WHERE $A IS NOT NULL GROUP BY value_type"
+            echo "-- формат строк: длина значения → сколько:"
+            q "SELECT $A.length() AS len, count(*) AS n FROM $T WHERE $A IS NOT NULL GROUP BY len ORDER BY n DESC"
+            echo "-- примеры (первые и последние):"
+            q "SELECT $A FROM $T WHERE $A IS NOT NULL ORDER BY $A ASC LIMIT 3"
+            q "SELECT $A FROM $T WHERE $A IS NOT NULL ORDER BY $A DESC LIMIT 3"
+          done
