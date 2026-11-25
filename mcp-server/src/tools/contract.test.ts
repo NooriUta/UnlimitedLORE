@@ -37,6 +37,8 @@ vi.mock('../backend.js', async (orig) => ({
   ...(await orig<typeof import('../backend.js')>()),
   ACTIVE_PROJECT: undefined,
   lorePost: vi.fn(async (path: string) => answer(path)),
+  // FJ-03: forgejo отвечает конвертом v=1 — снимок фиксирует, что MCP делает с конвертом (сводка + JSON)
+  loreEnvelope: vi.fn(async (path: string) => (override ? override(path) : { v: 1, kind: 'forgejo:contract', outcome: 'found', data: [], meta: { took_ms: 0, cursor: null, has_more: false, truncated: null }, error: null })),
   loreGet: vi.fn(async (path: string) => answer(path)),
   loreUpload: vi.fn(async (path: string) => answer(path)),
   loreSlices: vi.fn(async () => ({ slices: [] })),

@@ -1021,6 +1021,37 @@
       ]
     }
   },
+  "forgejo": {
+    "input": {
+      "args": "record<unknown>?",
+      "route": "string",
+      "truncate": "boolean?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": "<text>"
+        },
+        {
+          "type": "text",
+          "text": {
+            "data": [],
+            "error": "null",
+            "kind": "string",
+            "meta": {
+              "cursor": "null",
+              "has_more": "boolean",
+              "took_ms": "number",
+              "truncated": "null"
+            },
+            "outcome": "string",
+            "v": "number"
+          }
+        }
+      ]
+    }
+  },
   "forgejo_branch_protection": {
     "input": {
       "branch": "string?",
@@ -1043,6 +1074,24 @@
     "input": {
       "git_project": "string",
       "ref": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "forgejo_describe": {
+    "input": {
+      "group": "string?",
+      "route": "string?"
     },
     "output": {
       "content": [

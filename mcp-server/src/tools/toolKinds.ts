@@ -8,7 +8,7 @@ export type ToolKind = 'read' | 'cud';
 const READ = [
   'bench_list_slices', 'bench_query_slice', 'bench_status',
   'bragi_search', 'changed', 'claude_rules_diff', 'claude_rules_pull',
-  'find', 'forgejo_branch_protection', 'forgejo_ci_status', 'forgejo_pr_status',
+  'find', 'forgejo_branch_protection', 'forgejo_ci_status', 'forgejo_describe', 'forgejo_pr_status',
   'graph', 'graph_path', 'harness_list', 'list_slices', 'lore_version',
   'machine_acl', 'metric_get', 'project_export', 'quality_check', 'query_slice',
   'run_block', 'search', 'search_similar', 'task_shape', 'uc_quality', 'whoami',
@@ -25,7 +25,9 @@ const CUD = [
   'decision_link', 'decision_new', 'decision_set', 'dict_set',
   'doc_del', 'doc_link', 'doc_new',
   'entity_delete', 'entity_link', 'entity_move', 'entity_upsert',
-  'feature_link', 'feature_new', 'forgejo_pr_merge', 'forgejo_pr_new',
+  // forgejo (FJ-03) — исполнитель маршрутов миниаппа: среди них запись, поэтому cud. Конверт v=1 (found|empty|failed)
+  // обёртку noopAsError не задевает: её outcome noop/unchanged, а ответ из двух блоков она не трогает.
+  'feature_link', 'feature_new', 'forgejo', 'forgejo_pr_merge', 'forgejo_pr_new',
   'gain_new', 'insight_link', 'insight_new', 'job_new',
   'machine_access_set', 'machine_new', 'machine_owner_set', 'metric_log',
   'milestone_link', 'milestone_new', 'milestone_set', 'milestone_sprints',

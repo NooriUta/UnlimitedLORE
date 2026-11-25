@@ -255,6 +255,12 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // Отделить merge подпутём нельзя: subPathOf берёт два сегмента, и
         // forgejo/pr/{n}/merge сворачивается в forgejo/pr вместе с созданием PR.
         Map.entry("forgejo",   Set.of("full")),
+        // forgejo-app (SPRINT_FORGEJO_MINIAPP/FJ-02, ADR-LORE-060 R2): исполнитель маршрутов миниаппа. Вход открыт
+        // всем профилям, а решение принимает исполнитель по roles[] маршрута в реестре (forgejo-routes.json) —
+        // ДО разбора args и с отказом в конверте (FORBIDDEN_FOR_ROLE + роли-допуски). Строкой, а не пропуском
+        // «неизвестного семейства», чтобы решение было видно; второго списка прав здесь нет.
+        Map.entry("forgejo-app", Set.of("full", "architect", "developer", "pm", "marketer",
+                                        "analyst", "product-analyst", "tester")),
         // asset: POST /lore/asset/upload, единственный вызывающий — asset_up.
         Map.entry("asset",     Set.of("full")),
         // quality-gate: СОЗДАНИЕ гейта. В таблице был только "qg" — прогоны и
