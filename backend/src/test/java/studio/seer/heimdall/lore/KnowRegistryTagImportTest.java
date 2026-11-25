@@ -48,7 +48,6 @@ class KnowRegistryTagImportTest {
         Map<String, Object> k = KnowRegistry.tagKinds(FieldDeclaredGuardTest.model(), rows(), AgentScopeFilter.FAMILY_AGENTS)
             .stream().filter(x -> "tag:security-review".equals(x.get("kind"))).findFirst().orElseThrow();
         assertEquals(Map.of("reviewer", Map.of("type", "string"), "verdict", Map.of("type", "string")), k.get("field_schema"));
-        assertEquals(3, k.get("uses"));
         assertEquals("tag_id", k.get("id_field"));
         assertEquals(KnowRegistry.SOURCE_TAG, k.get("source"));
         // гейт MDL-05 тройки: поле тега — на ребре
@@ -59,6 +58,25 @@ class KnowRegistryTagImportTest {
         Map<String, Object> est = KnowRegistry.tagKinds(FieldDeclaredGuardTest.model(), rows(), AgentScopeFilter.FAMILY_AGENTS)
             .stream().filter(x -> "tag:estimate".equals(x.get("kind"))).findFirst().orElseThrow();
         assertEquals(Map.of("points", Map.of("type", "number")), est.get("field_schema"));
+    }
+
+    /**
+     * Приёмка KREG-03/KREG-09: хэш вида tag:* — от формы вида, а не от счётчиков применений. Иначе каждое
+     * новое применение тега давало новую SCD2-версию вида при старте (KnowRegistrySync сравнивает хэш).
+     * Два прогона: тег применён 3 и 7 раз (те же поля) — content_hash один, счётчиков в виде нет.
+     */
+    @Test
+    void contentHashDoesNotDependOnUsageCounts() {
+        List<Map<String, Object>> few = List.of(row("security-review", Map.of("reviewer", "a"), Map.of("verdict", "ok"), null));
+        Map<String, Object> r = row("security-review", Map.of("reviewer", "a"), Map.of("verdict", "ok"), null,
+            Map.of("reviewer", "b"), null, Map.of("verdict", "no"), null);
+        r.put("uses", 9); // рёбра без полей проекция не отдаёт — их число приходит отдельно
+        Map<String, Object> k1 = KnowRegistry.tagKinds(FieldDeclaredGuardTest.model(), few, AgentScopeFilter.FAMILY_AGENTS).get(0);
+        Map<String, Object> k2 = KnowRegistry.tagKinds(FieldDeclaredGuardTest.model(), List.of(r), AgentScopeFilter.FAMILY_AGENTS).get(0);
+        assertEquals(k1.get("content_hash"), k2.get("content_hash"), "число применений не меняет вид");
+        assertFalse(k1.containsKey("uses"), "счётчик применений — не часть вида");
+        for (Map<String, Object> f : KnowRegistryGeneratorTest.fields(k1))
+            assertFalse(String.valueOf(f.get("desc")).matches(".*\\d+ из \\d+.*"), "«заполнено у N из M» — не часть вида: " + f.get("desc"));
     }
 
     @Test

@@ -169,4 +169,14 @@ class SkillRulesTest {
     void sourceIsSeedAgentHuman() {
         assertEquals(List.of("seed", "agent", "human"), SkillRules.SOURCES);
     }
+
+    /** 061 §5: переход статуса вне жизненного цикла — INVALID_VALUE; прежний BAD_TRANSITION — в legacy_code. */
+    @Test
+    void outOfLifecycleMoveIsInvalidValue() {
+        Map<String, Object> e = SkillRules.invalidTransition("active", "draft", "подсказка");
+        assertEquals("INVALID_VALUE", e.get("error"));
+        assertEquals("BAD_TRANSITION", e.get("legacy_code"));
+        assertEquals(SkillRules.STATUSES, e.get("allowed"));
+        assertTrue(String.valueOf(e.get("detail")).contains("active → draft"));
+    }
 }

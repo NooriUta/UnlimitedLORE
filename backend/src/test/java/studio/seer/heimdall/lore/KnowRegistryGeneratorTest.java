@@ -186,6 +186,28 @@ class KnowRegistryGeneratorTest {
         assertEquals("dict:sprint_status", status.get("enum_ref"));
     }
 
+    /**
+     * Приёмка SKILL-04/KREG-07: вид skill:* — в реестре (до этого генератор знал только ddl:KnowSkill — KnowSkill
+     * не тип паспорта модели, а других путей в реестр у вершины не было). Поля — из DDL KnowSkill, гарды, связи,
+     * жизненный цикл и роли записи — из тех же констант, что исполняют гарды записи ({@link SkillRules}).
+     */
+    @Test
+    void skillKindIsInTheRegistry() {
+        Map<String, Object> k = run().kind("skill:*");
+        assertNotNull(k, "вида skill:* нет в реестре");
+        assertEquals("skill_id", k.get("id_field"));
+        assertTrue(names(k, "fields", "name").containsAll(List.of("skill_id", "title", "body_md", "status", "source", "version")),
+            String.valueOf(names(k, "fields", "name")));
+        assertEquals(Set.of("BELONGS_TO_PROJECT", "APPLIES_TO_ROLE", "SKILL_EXTENDS", "OWNED_BY"), names(k, "links", "rel"));
+        assertTrue(names(k, "guards", "name").containsAll(List.of("required-edges", "no-extends-cycle", "no-dangling-unlink", "status-moves")));
+        assertEquals(List.of("architect", "full"), k.get("roles"));
+        assertNotNull(k.get("lifecycle"));
+        Map<String, Object> status = fields(k).stream().filter(f -> "status".equals(f.get("name"))).findFirst().orElseThrow();
+        assertEquals("dict:skill_status", status.get("enum_ref"));
+        Map<String, Object> source = fields(k).stream().filter(f -> "source".equals(f.get("name"))).findFirst().orElseThrow();
+        assertEquals(SkillRules.SOURCES, source.get("enum"));
+    }
+
     // ── мелочи ──
 
     @SuppressWarnings("unchecked")

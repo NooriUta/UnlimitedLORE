@@ -64,9 +64,15 @@ class SkillSurfaceTest {
 
     // ── describe-карточки (форма 061 §8) ────────────────────────────────────────
 
+    /** Карточка — из реестра видов (один источник describe, KREG-07), не ручная. */
+    private static Map<String, Object> card(String kind) {
+        Map<String, Object> k = KnowDescribe.kindFor(kind, KnowRegistrySync.artifactKinds(), FieldDeclaredGuardTest.model());
+        return k == null ? null : KnowDescribe.describeFull(k, Map.of("skill_status", SkillRules.STATUSES));
+    }
+
     @Test
     void skillCardHasTheSpecShape() {
-        Map<String, Object> c = SkillDescribeCards.card("skill:*");
+        Map<String, Object> c = card("skill:*");
         assertNotNull(c);
         assertEquals("skill:*", c.get("kind"));
         for (String k : List.of("params", "enums", "identities", "links", "guards", "errors"))
@@ -74,9 +80,9 @@ class SkillSurfaceTest {
         @SuppressWarnings("unchecked") Map<String, Object> enums = (Map<String, Object>) c.get("enums");
         assertEquals(SkillRules.STATUSES, enums.get("skill_status"));
         assertEquals(SkillRules.SOURCES, enums.get("source"));
-        assertEquals(SkillRules.WRITERS, c.get("identities"));
+        assertEquals(List.of("architect", "full"), c.get("identities"));
         String errors = String.valueOf(c.get("errors"));
-        for (String code : List.of("REFUSED", "NOOP", "FORBIDDEN_FOR_ROLE"))
+        for (String code : List.of("REFUSED", "NOOP", "INVALID_VALUE", "FORBIDDEN_FOR_ROLE"))
             assertTrue(errors.contains(code), code + " в errors: " + errors);
         String links = String.valueOf(c.get("links"));
         for (String rel : List.of("BELONGS_TO_PROJECT", "APPLIES_TO_ROLE", "SKILL_EXTENDS", "OWNED_BY"))
@@ -85,13 +91,13 @@ class SkillSurfaceTest {
 
     @Test
     void skillCardIsReachableByGeoid() {
-        assertEquals("skill:release-cutover", SkillDescribeCards.card("skill:release-cutover").get("kind"),
+        assertEquals("skill:release-cutover", card("skill:release-cutover").get("kind"),
             "карточка вида отдаётся и по геоиду конкретного скилла");
     }
 
     @Test
     void tagCardHasTheSpecShape() {
-        Map<String, Object> c = SkillDescribeCards.card("tag:*");
+        Map<String, Object> c = card("tag:*");
         assertNotNull(c);
         assertEquals("tag:*", c.get("kind"));
         for (String k : List.of("params", "enums", "identities", "links", "guards", "errors"))
@@ -102,8 +108,8 @@ class SkillSurfaceTest {
 
     @Test
     void unknownKindHasNoCard() {
-        assertNull(SkillDescribeCards.card("adr:*"));
-        assertNull(SkillDescribeCards.card(null));
+        assertNull(card("adr:*"));
+        assertNull(card(null));
     }
 
     // ── RBAC §5 ──────────────────────────────────────────────────────────────────

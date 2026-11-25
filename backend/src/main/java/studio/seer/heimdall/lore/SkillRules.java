@@ -180,4 +180,15 @@ final class SkillRules {
         m.put("hint", "переложить правку на роль из allowed (full или architect)");
         return m;
     }
+
+    /** Переход статуса вне жизненного цикла §5 — INVALID_VALUE (061 §5 E2); прежний код — в legacy_code. */
+    static Map<String, Object> invalidTransition(String from, String to, String hint) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("error", "INVALID_VALUE");
+        m.put("legacy_code", "BAD_TRANSITION");
+        m.put("detail", (from == null ? "создание" : from) + " → " + to + " не по жизненному циклу скилла");
+        m.put("allowed", STATUSES);
+        m.put("hint", hint);
+        return m;
+    }
 }

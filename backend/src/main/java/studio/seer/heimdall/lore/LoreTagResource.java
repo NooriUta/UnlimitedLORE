@@ -41,6 +41,9 @@ public class LoreTagResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreTagResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash открытой версии после переписи тел rename
+
     static final String EDGE = "TAGGED_WITH";
     /** Тег — свободное слово: буквы любого алфавита, цифры, «-», «_», «.»; до 64. */
     static final Pattern TAG = Pattern.compile("[\\p{L}\\p{N}][\\p{L}\\p{N}_.\\-]{0,63}");
@@ -87,6 +90,8 @@ public class LoreTagResource extends LoreResourceBase {
         String slug = req.tag_id();
         String geoid = TagRename.geoid(slug);
         ChangeAuthor author = changeAuthor();
+        // 062 §4: происхождение — seed / agent / human; агент или человек — по типу вызывающего (как у /lore/skill)
+        String source = TagRename.sourceOf(callerAgentScope());
         String now = Instant.now().toString();
         try {
             if (sql("SELECT @rid AS r FROM " + vertex + " WHERE " + key + " = :id LIMIT 1", Map.of("id", req.id())).isEmpty())
@@ -114,13 +119,14 @@ public class LoreTagResource extends LoreResourceBase {
                 + " WHERE " + spec.key() + " = :slug OR " + spec.key() + " = :geoid", Map.of("slug", slug, "geoid", geoid));
             if (tagRow.isEmpty()) {
                 sql("UPDATE " + spec.vertex() + " SET " + spec.key() + " = :geoid, name = :slug, title = :slug, "
-                    + "source = 'tag_apply' UPSERT WHERE " + spec.key() + " = :geoid", Map.of("geoid", geoid, "slug", slug));
+                    + "source = :src UPSERT WHERE " + spec.key() + " = :geoid", Map.of("geoid", geoid, "slug", slug, "src", source));
             } else {
                 Map<String, Object> v = tagRow.get(0);
                 String vr = rid(v.get("r"));
                 if (v.get("name") == null) sql("UPDATE " + vr + " SET name = :slug", Map.of("slug", slug));
                 if (v.get("title") == null) sql("UPDATE " + vr + " SET title = :slug", Map.of("slug", slug));
-                if (v.get("source") == null) sql("UPDATE " + vr + " SET source = 'tag_apply'", null);
+                if (v.get("source") == null)
+                    sql("UPDATE " + vr + " SET source = :src", Map.of("src", source)); // словарь 062 §4: seed/agent/human
             }
             Map<String, Object> current = have.isEmpty() ? null : asMap(have.get(0).get("f"));
             Map<String, String> merged = LoreEdgeFreeFields.merge(current, patch);
@@ -221,17 +227,21 @@ public class LoreTagResource extends LoreResourceBase {
      *
      * <p>Переименование — не UPDATE ключа: тела документов несут токены
      * {@code [[GEOID#тег]]}, и после смены имени непереписанный токен — битая
-     * ссылка. Поэтому: (1) batch-перепись {@code KnowDoc.content_md_en/ru} —
-     * только токены, чей геоид резолвится в живую запись; закрытая история
-     * {@code KnowDocHist} — неизменяемый слепок и не трогается; (2) вершина
+     * ссылка. Поэтому: (1) batch-перепись по ВСЕМ телам корпуса {@link TagBodies#ALL}
+     * (доки, ADR, спеки, решения, вопросы, скиллы, сценарии, ранбуки, спринты,
+     * задачи; у типов с SCD2 — открытая версия + content_hash) — только токены,
+     * чей геоид резолвится в живую запись; закрытые строки *Hist — неизменяемый
+     * слепок и не трогаются; (2) вершина
      * переименовывается в геоид нового имени, бывшее имя дописывается в
      * {@code synonyms} — старое имя остаётся находимым. Ответ — отчёт:
      * {@code rewritten} (что переписано, сколько мест) и {@code unmatched}
      * (битый геоид, токен без геоида, голое «#тег») — каждое несопоставленное
-     * вхождение называется, а не молча пропускается.
+     * вхождение называется, а не молча пропускается; есть несопоставленные —
+     * {@code outcome: partial_failure} (062 §7; {@code ok} остаётся true — вызов
+     * дошёл, ADR-LORE-043), иначе {@code updated}.
      *
-     * <p>Занятое новое имя — 409 TAG_TAKEN: слияние двух тегов — решение
-     * владельца, не сторож (тот же класс отказа, что у V53 у вехи).
+     * <p>Занятое новое имя — 409 IDENTITY_CONFLICT (061 §5; прежний код TAG_TAKEN —
+     * в {@code legacy_code}): слияние двух тегов — решение владельца, не сторож.
      */
     @POST
     @Path("tag/rename")
@@ -261,44 +271,49 @@ public class LoreTagResource extends LoreResourceBase {
                 + " WHERE " + spec.key() + " = :g OR " + spec.key() + " = :s", Map.of("g", toGeoid, "s", to));
             if (!clash.isEmpty())
                 return noStore(Response.status(Response.Status.CONFLICT)
-                    .entity(Map.of("error", "TAG_TAKEN", "detail", "имя «" + to + "» уже занято вершиной "
-                        + clash.get(0).get("r") + " — слияние тегов решает владелец, не сторож")));
+                    .entity(TagRename.identityConflict(to, String.valueOf(clash.get(0).get("r")))));
             Map<String, Object> old = oldRows.get(0);
             String oldRid = rid(old.get("r"));
 
-            // 1) тела документов: перепись токенов [[GEOID#from]] → [[GEOID#to]].
+            // 1) тела по всему корпусу (062 §8, TagBodies.ALL): перепись токенов [[GEOID#from]] → [[GEOID#to]].
             Map<String, Boolean> geoidCache = new java.util.HashMap<>();
             TagRename.Geoids geoids = g -> geoidCache.computeIfAbsent(g, this::geoidExists);
             List<Map<String, Object>> rewritten = new ArrayList<>();
             List<Map<String, Object>> unmatched = new ArrayList<>();
-            List<Map<String, Object>> docs = sql("SELECT @rid AS r, doc_id, content_md_en, content_md_ru FROM KnowDoc"
-                + " WHERE content_md_en LIKE :p OR content_md_ru LIKE :p", Map.of("p", "%#" + from + "%"));
-            for (Map<String, Object> d : docs) {
-                for (String field : List.of("content_md_en", "content_md_ru")) {
-                    Object raw = d.get(field);
-                    if (!(raw instanceof String body) || !body.contains("#" + from)) continue;
-                    TagRename.BodyResult br = TagRename.rewriteBody(body, from, to, geoids);
-                    for (TagRename.Miss miss : br.unmatched()) {
-                        Map<String, Object> u = new LinkedHashMap<>();
-                        u.put("doc_id", d.get("doc_id"));
-                        u.put("field", field);
-                        u.put("fragment", miss.fragment());
-                        u.put("reason", miss.reason());
-                        unmatched.add(u);
-                    }
-                    if (br.places() == 0) continue;
-                    StringBuilder usql = new StringBuilder("UPDATE ").append(rid(d.get("r")))
-                        .append(" SET ").append(field).append(" = :b");
+            for (TagBodies src : TagBodies.ALL) {
+                for (Map<String, Object> d : sql(src.selectSql(), Map.of("p", "%#" + from + "%"))) {
                     Map<String, Object> up = new LinkedHashMap<>();
-                    up.put("b", br.body());
-                    LoreDocBodyDigest.appendSet(usql, up, field, br.body());
-                    WriteCount.requireHit(sql(usql.toString(), up), "doc", String.valueOf(d.get("doc_id")),
-                        "переименование тега «" + from + "»");
-                    Map<String, Object> rw = new LinkedHashMap<>();
-                    rw.put("doc_id", d.get("doc_id"));
-                    rw.put("field", field);
-                    rw.put("places", br.places());
-                    rewritten.add(rw);
+                    StringBuilder usql = new StringBuilder();
+                    List<Map<String, Object>> rowRewritten = new ArrayList<>();
+                    for (String field : src.fields()) {
+                        Object raw = d.get(field);
+                        if (!(raw instanceof String body) || !body.contains("#" + from)) continue;
+                        TagRename.BodyResult br = TagRename.rewriteBody(body, from, to, geoids);
+                        for (TagRename.Miss miss : br.unmatched()) {
+                            Map<String, Object> u = report(src, d, field);
+                            u.put("fragment", miss.fragment());
+                            u.put("reason", miss.reason());
+                            unmatched.add(u);
+                        }
+                        if (br.places() == 0) continue;
+                        usql.append(usql.length() == 0 ? "" : ", ").append(field).append(" = :b_").append(field);
+                        up.put("b_" + field, br.body());
+                        if ("KnowDoc".equals(src.from())) {
+                            // DS-3: хеш и длина тела вершины дока пишутся каждым писателем тела
+                            StringBuilder digest = new StringBuilder();
+                            LoreDocBodyDigest.appendSet(digest, up, field, br.body());
+                            usql.append(digest);
+                        }
+                        Map<String, Object> rw = report(src, d, field);
+                        rw.put("places", br.places());
+                        rowRewritten.add(rw);
+                    }
+                    if (usql.length() == 0) continue;
+                    WriteCount.requireHit(sql("UPDATE " + rid(d.get("r")) + " SET " + usql, up), src.type(),
+                        String.valueOf(d.get("id")), "переименование тега «" + from + "»");
+                    // открытая строка истории: content_hash ревизии пересчитывается по новым телам (SV-10)
+                    if (src.openHist()) hashStamper.stampOpenHist(src.stamp()[0], src.stamp()[1], src.stamp()[2], String.valueOf(d.get("id")));
+                    rewritten.addAll(rowRewritten);
                 }
             }
 
@@ -320,6 +335,7 @@ public class LoreTagResource extends LoreResourceBase {
             out.put("from", from);
             out.put("to", to);
             out.put("tag_id", patch.tagId());
+            out.put("outcome", TagRename.outcome(unmatched)); // 062 §7: несопоставленные — partial_failure
             out.put("rewritten", rewritten);
             out.put("unmatched", unmatched);
             out.put("synonyms", patch.synonyms());
@@ -333,26 +349,10 @@ public class LoreTagResource extends LoreResourceBase {
         }
     }
 
-    /** Типы-пробы для резолвера геоида: токен сопоставляется, только если хозяин — живая запись LORE. */
-    private static final List<String> GEOID_PROBES = List.of(
-        "SELECT count(*) AS n FROM KnowDoc WHERE doc_id = :g",
-        "SELECT count(*) AS n FROM KnowADR WHERE adr_id = :g",
-        "SELECT count(*) AS n FROM KnowSpec WHERE spec_id = :g",
-        "SELECT count(*) AS n FROM KnowTask WHERE task_uid = :g",
-        "SELECT count(*) AS n FROM KnowDecision WHERE decision_id = :g",
-        "SELECT count(*) AS n FROM KnowSprint WHERE sprint_id = :g",
-        "SELECT count(*) AS n FROM KnowQuestion WHERE question_id = :g",
-        "SELECT count(*) AS n FROM KnowRunbook WHERE runbook_id = :g",
-        "SELECT count(*) AS n FROM KnowUseCase WHERE uc_id = :g",
-        "SELECT count(*) AS n FROM KnowPain WHERE pain_id = :g",
-        "SELECT count(*) AS n FROM KnowGain WHERE gain_id = :g",
-        "SELECT count(*) AS n FROM KnowJob WHERE job_id = :g",
-        "SELECT count(*) AS n FROM KnowMilestone WHERE milestone_id = :g");
-
     /** Есть ли запись LORE с ключом {@code geoid}; сбой пробы — диагностика, а не отказ rename. */
     private boolean geoidExists(String geoid) {
         if (geoid == null || geoid.isBlank()) return false;
-        for (String probe : GEOID_PROBES) {
+        for (String probe : TagBodies.GEOID_PROBES) {
             List<Map<String, Object>> rows;
             try {
                 rows = sql(probe, Map.of("g", geoid));
@@ -363,6 +363,17 @@ public class LoreTagResource extends LoreResourceBase {
             if (!rows.isEmpty() && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0) return true;
         }
         return false;
+    }
+
+    /** Строка отчёта rename: тип и ключ записи-хозяина, поле, где была строка (вершина или открытая версия). */
+    private static Map<String, Object> report(TagBodies src, Map<String, Object> row, String field) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("type", src.type());
+        m.put("id", row.get("id"));
+        if ("doc".equals(src.type())) m.put("doc_id", row.get("id")); // прежний ключ отчёта — для старых читателей
+        m.put("field", field);
+        m.put("where", src.openHist() ? "open_version" : "vertex");
+        return m;
     }
 
     private static List<String> asStringList(Object o) {
