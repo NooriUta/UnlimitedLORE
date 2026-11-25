@@ -59,6 +59,16 @@ mandatory, otherwise the secret headers go to `/.well-known` and `/register`):
     "X-Lore-Session-Id": "opencode-{env:OPENCODE_PID}" } } } }
 ```
 
+HTTP-mode settings (issue #4): `LORE_MCP_HOST` (default `127.0.0.1`; the `lore-mcp`
+image sets `0.0.0.0`), `LORE_MCP_PORT` (default `9200`), `LORE_MCP_TOKEN` — gateway token
+for clients without Keycloak (Llama Chat and other web UIs): when set, every `/mcp` request
+must carry it as `Authorization: Bearer <token>` or `X-Lore-Mcp-Token: <token>`, else 401;
+the gateway token is never forwarded to the backend. `LORE_MCP_CORS_ORIGINS` — comma list
+of allowed browser origins (preflight 204, foreign origin 403; empty = CORS off).
+`GET /health` and `GET /mcp/health` answer 200 without auth. No token on a non-loopback
+host → loud warning at start. Writing without Keycloak over HTTP is not supported yet: the
+HTTP mode does not send `X-Seer-Role` (owner decision pending).
+
 Full configs, the OpenCode 1.19.6 probe and error codes:
 [docs/runbooks/mcp-hosted.md](../docs/runbooks/mcp-hosted.md).
 

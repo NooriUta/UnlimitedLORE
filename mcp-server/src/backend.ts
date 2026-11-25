@@ -336,7 +336,8 @@ function hostedMode(): boolean {
 
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   const ctx = clientAuth.getStore();
-  if (ctx) return { ...ctx.headers, Authorization: `Bearer ${ctx.token}` };
+  // Пустой токен — клиент прошёл шлюз LORE_MCP_TOKEN без личности (ISS-04): Authorization не шлётся.
+  if (ctx) return ctx.token ? { ...ctx.headers, Authorization: `Bearer ${ctx.token}` } : { ...ctx.headers };
   if (hostedMode()) {
     throw new Error('HTTP-режим MCP: обращение к бэкенду вне запроса клиента — токена нет (LORE_MCP_CLIENT_ID/SECRET в этом режиме не используются)');
   }

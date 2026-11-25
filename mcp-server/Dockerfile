@@ -23,8 +23,11 @@ RUN npm run build && npm prune --omit=dev
 
 FROM node:26-alpine
 WORKDIR /app
+# ISS-04: по умолчанию MCP слушает 127.0.0.1; в контейнере nginx ходит к нему по сети compose,
+# поэтому адрес 0.0.0.0 задан здесь явно (порт наружу всё равно не публикуется).
 ENV NODE_ENV=production \
     LORE_MCP_TRANSPORT=http \
+    LORE_MCP_HOST=0.0.0.0 \
     LORE_MCP_PORT=9200
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules

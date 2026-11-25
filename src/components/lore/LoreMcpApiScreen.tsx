@@ -429,6 +429,13 @@ const TOOLS: ToolDoc[] = [
 const ENV_ROWS: [string, string, string][] = [
   ['LORE_BACKEND_URL', 'http://localhost:9100', 'Базовый URL backend UnlimitedLORE'],
   ['LORE_SEER_ROLE',   'admin',                 'Заголовок X-Seer-Role для write-инструментов'],
+  // ISS-04 (issue #4): HTTP-режим для клиентов по URL (Llama Chat и др. web UI).
+  ['LORE_MCP_TRANSPORT',    'stdio',     'stdio (по умолчанию) или http — Streamable HTTP на /mcp'],
+  ['LORE_MCP_HOST',         '127.0.0.1', 'HTTP: адрес; в образе lore-mcp — 0.0.0.0. Не loopback без LORE_MCP_TOKEN — громкое предупреждение при старте'],
+  ['LORE_MCP_PORT',         '9200',      'HTTP: порт'],
+  ['LORE_MCP_TOKEN',        '—',         'HTTP: токен шлюза; задан — обязателен на каждом запросе (Authorization: Bearer или X-Lore-Mcp-Token), иначе 401. В бэкенд не уходит'],
+  ['LORE_MCP_CORS_ORIGINS', '—',         'HTTP: origin браузерных клиентов через запятую; preflight 204, чужой origin 403. Пусто — CORS выключен'],
+  ['GET /health',           '200',       'HTTP: проверка без входа (то же, что /mcp/health)'],
 ];
 
 const SMOKE = `cd C:/AIDA/UnlimitedLORE/mcp-server
@@ -822,6 +829,8 @@ npm install && npm run build          # → dist/index.js`}</Pre>
                   [t('lore.mcpApi.diag2a', '403 на write'), t('lore.mcpApi.diag2b', 'нет/неверный X-Seer-Role'), t('lore.mcpApi.diag2c', 'env LORE_SEER_ROLE=admin')],
                   [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 500'), t('lore.mcpApi.diag3b', 'ArcadeDB недоступен или неверный пароль'), t('lore.mcpApi.diag3c', 'проверить :2480 и ARCADEDB_ROOT_PASSWORD')],
                   [t('lore.mcpApi.diag4a', 'Сервер не стартует под клиентом'), t('lore.mcpApi.diag4b', 'не собран dist/'), t('lore.mcpApi.diag4c', 'npm run build в mcp-server')],
+                  [t('lore.mcpApi.diag5a', '401 на /mcp (HTTP)'), t('lore.mcpApi.diag5b', 'нет или неверный LORE_MCP_TOKEN'), t('lore.mcpApi.diag5c', 'Authorization: Bearer <LORE_MCP_TOKEN> или X-Lore-Mcp-Token')],
+                  [t('lore.mcpApi.diag6a', '403 из браузера (HTTP)'), t('lore.mcpApi.diag6b', 'origin не в LORE_MCP_CORS_ORIGINS'), t('lore.mcpApi.diag6c', 'добавить origin клиента в LORE_MCP_CORS_ORIGINS')],
                 ] as [string, string, string][]).map(([a, b, c]) => (
                   <tr key={a} style={S.tr}>
                     <Td style={{ color: 'var(--t1)' }}>{a}</Td>
