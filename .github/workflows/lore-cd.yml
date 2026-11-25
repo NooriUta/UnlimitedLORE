@@ -406,8 +406,8 @@ jobs:
           LORE_MIGRATE: "true"
           LORE_MIGRATE_ONLY: "true"
           LORE_MART_AUTH: basic
-        # MIG-01: на базе из модели (LoreModelSchema, 1.18) бэкенд пропускает шаги V и выходит с 0 —
-        # скрипт принимает это как законный исход; на старой базе всё как раньше.
+        # MIG-01 + 25.11.2026: на базе из модели (LoreModelSchema) шаги V не катятся, схема ДОВОДИТСЯ до кода (LoreSchemaAdditive) —
+        # скрипт подтверждает накатку строкой «доводка схемы кода»; на старой базе всё как раньше.
         run: bash .github/scripts/migrate-schema.sh
 
       # PL-04: у препрода свой MinIO (порты 19000/19001, том lore-preprod_*).

@@ -45,6 +45,25 @@ class LoreVersionSchemaTest {
         assertEquals("steps", s.get("schema_source"));
     }
 
+    /** 25.11.2026: номер схемы кода (доводка после 1.18) — отдельно от номера модели; видно, отстаёт ли база. */
+    @Test
+    void схемаКода_номерБазыИКода() {
+        Map<String, Object> s = LoreVersionResource.codeSchemaOf(List.of(Map.of("version", 1, "hash", "0123456789abcdef")));
+        assertEquals(1, s.get("code_schema_version"));
+        assertEquals(LoreSchemaAdditive.VERSION, s.get("code_schema_expected"));
+        assertEquals("0123456789abcdef", s.get("code_schema_hash"));
+        assertEquals(1 < LoreSchemaAdditive.VERSION, s.get("code_schema_behind"));
+    }
+
+    @Test
+    void схемаКода_доводкиНеБыло_номераНет_отстаёт() {
+        Map<String, Object> s = LoreVersionResource.codeSchemaOf(List.of());
+        assertTrue(s.containsKey("code_schema_version"));
+        assertNull(s.get("code_schema_version"), "доводки не было — null, а не 0");
+        assertEquals(LoreSchemaAdditive.VERSION, s.get("code_schema_expected"));
+        assertEquals(true, s.get("code_schema_behind"));
+    }
+
     @Test
     void отметкаБезХэша_неОтметка() {
         assertEquals(93, LoreVersionResource.schemaOf(93, List.of(Map.of("source", "x"))).get("schema_version"));

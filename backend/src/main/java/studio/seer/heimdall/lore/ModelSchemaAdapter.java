@@ -62,7 +62,10 @@ final class ModelSchemaAdapter {
     private static final String PLAN_BOARD = "старая доска плана снята (D-2026-LORE-PLAN-BOARD-REMOVED), установщик её не "
         + "переносит (MIG_PLAN_BOARD=drop); легаси — читается только на старой схеме или при MIG_PLAN_BOARD=keep";
 
-    private static final String SKILL_TYPES = "SKILL-01 (V96): вид skill:* (KnowSkill и его рёбра) ещё не перенесён в модель 1.18";
+    /** Типы после 1.18: их заводит доводка схемы кода (LoreSchemaAdditive) на шаге накатки CD; до доводки их в базе нет. */
+    private static final String ADDITIVE = " — заводит доводка схемы кода (LoreSchemaAdditive) на шаге накатки CD; база ещё не доведена";
+
+    private static final String SKILL_TYPES = "SKILL-01 (бывш. V96): вид skill:* (KnowSkill и его рёбра) не входит в модель 1.18" + ADDITIVE;
 
     /**
      * Типы вне модели 1.18 — тип → почему его может не быть в базе из модели. Каждый тип, который читает срез или
@@ -81,12 +84,14 @@ final class ModelSchemaAdapter {
         Map.entry("LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме"),
         // KREG-01: реестр видов появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз модели);
         // history_hygiene читает KnowKindHist — на базе из модели 1.18 его нет, срез отвечает этой причиной
-        Map.entry("KnowKindHist", "KREG-01 (V94): реестр видов KnowKind ещё не перенесён в модель 1.18"),
+        Map.entry("KnowKindHist", "KREG-01 (бывш. V94): реестр видов KnowKind не входит в модель 1.18" + ADDITIVE),
         // KREG-09 (зонтик KNOW_REGISTRY 25.11): сам KnowKind пишет KnowRegistrySync — импорт реестра за флагом
         // lore.know-registry.import (по умолчанию выкл.); стык веток: страж появился в линии скиллов, импорт — в линии реестра
-        Map.entry("KnowKind", "KREG-01/KREG-09 (V94): реестр видов ещё не перенесён в модель 1.18; пишет только импорт за флагом"),
+        Map.entry("KnowKind", "KREG-01/KREG-09 (бывш. V94): реестр видов не входит в модель 1.18; пишет только импорт за флагом" + ADDITIVE),
         // SKILL-01/02 (V96): вид skill:* появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз
         // модели); на базе из модели 1.18 этих типов нет — срезы skills/skills_full отвечают этой причиной
+        // 25.11.2026: отметка доводки схемы кода (номер и хэш LoreSchemaAdditive) — заводит сама доводка
+        Map.entry("LoreCodeSchema", "отметка доводки схемы кода (LoreSchemaAdditive), не тип модели 1.18" + ADDITIVE),
         Map.entry("KnowSkill", SKILL_TYPES),
         Map.entry("APPLIES_TO_ROLE", SKILL_TYPES),
         Map.entry("SKILL_EXTENDS", SKILL_TYPES));
