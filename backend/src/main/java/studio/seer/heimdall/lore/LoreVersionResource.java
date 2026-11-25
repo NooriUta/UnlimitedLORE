@@ -51,7 +51,30 @@ public class LoreVersionResource extends LoreResourceBase {
             markers = java.util.List.of();
         }
         out.putAll(schemaOf(LoreSchemaMigrations.codeVersion(), markers));
+        // 25.11.2026: номер схемы кода (доводка после 1.18, LoreSchemaAdditive) — база и код рядом, отставание видно.
+        java.util.List<Map<String, Object>> code;
+        try {
+            code = ingestService.queryPublic("SELECT version, hash, applied_at FROM " + LoreSchemaAdditive.MARKER_TYPE, Map.of());
+        } catch (RuntimeException e) {
+            code = java.util.List.of();
+        }
+        out.putAll(codeSchemaOf(code));
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * Схема кода: {@code code_schema_version} — до какого номера доведена база (null — доводки не было или отметка не
+     * прочитана), {@code code_schema_expected} — номер кода, {@code code_schema_behind} — база отстаёт от кода.
+     */
+    static Map<String, Object> codeSchemaOf(java.util.List<Map<String, Object>> rows) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        Map<String, Object> r = rows.isEmpty() ? Map.of() : rows.get(0);
+        Integer v = r.get("version") instanceof Number n ? n.intValue() : null;
+        m.put("code_schema_version", v);
+        m.put("code_schema_expected", LoreSchemaAdditive.VERSION);
+        m.put("code_schema_hash", r.get("hash"));
+        m.put("code_schema_behind", v == null || v < LoreSchemaAdditive.VERSION);
+        return m;
     }
 
     /**

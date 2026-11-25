@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
  *   (дрейф кода против применённой истории). Нужна правка → новый шаг.
  * - Аддитивные шаги (всё ниже) данных не трогают (ADR-023 п.5).
  * - version=4 — Java-шаг (backfill), см. LoreSchemaMigrationRunner#javaStep.
+ * - С 1.18 (база прода собрана из модели) реестр ЗАМОРОЖЕН на V100: новые изменения схемы — только
+ *   {@link LoreSchemaAdditive#CHANGES} (доводка схемы кода), см. комментарий в конце STEPS.
  */
 final class LoreSchemaMigrations {
 
@@ -1840,29 +1842,7 @@ final class LoreSchemaMigrations {
         // EMBEDDEDLIST/EMBEDDEDMAP, ArcadeDB объявляет их LIST/MAP (тот же тип;
         // LoreModelConsistency читает обе орфографии). Аддитивно,
         // major 17, v1 не задет.
-        new Step(94, 17, "know_kind_registry", List.of(
-            "CREATE VERTEX TYPE KnowKind IF NOT EXISTS",
-            "CREATE PROPERTY KnowKind.kind      IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKind.id_field  IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKind.title     IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKind.fields    IF NOT EXISTS LIST",
-            "CREATE PROPERTY KnowKind.links     IF NOT EXISTS LIST",
-            "CREATE PROPERTY KnowKind.guards    IF NOT EXISTS LIST",
-            "CREATE PROPERTY KnowKind.roles     IF NOT EXISTS LIST",
-            "CREATE PROPERTY KnowKind.replaces  IF NOT EXISTS LIST",
-            "CREATE PROPERTY KnowKind.source    IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKind.lifecycle IF NOT EXISTS MAP",
-            "CREATE INDEX IF NOT EXISTS ON KnowKind (kind) UNIQUE",
-            "CREATE INDEX IF NOT EXISTS ON KnowKind (source) NOTUNIQUE",
-            "CREATE INDEX IF NOT EXISTS ON KnowKind (replaces) NOTUNIQUE",
-            "CREATE VERTEX TYPE KnowKindHist IF NOT EXISTS",
-            "CREATE PROPERTY KnowKindHist.valid_from    IF NOT EXISTS DATETIME",
-            "CREATE PROPERTY KnowKindHist.valid_to      IF NOT EXISTS DATETIME",
-            "CREATE PROPERTY KnowKindHist.content_hash  IF NOT EXISTS STRING",
-            // автор версии истории (S2-12): у V66 список заморожен до этого типа,
-            // поэтому свои changed_by KnowKindHist объявляет сам создающий шаг.
-            "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING")),
+        new Step(94, 17, "know_kind_registry", LoreSchemaAdditive.KNOW_KIND_DDL),
 
         // SPRINT_LORE_KNOW_REGISTRY/SKILL-05 (SPEC-SKILLS-TAGS-062 §4, SPEC-MODEL-EXPORT-064 §3a):
         // супертеги — вершина KnowTag из свободного токена ≤64 становится записью класса.
@@ -1877,13 +1857,7 @@ final class LoreSchemaMigrations {
         // добираются лениво на записи тем же ресурсом. V95, не V94: V94 взял
         // параллельный KREG-01 (KnowKind/KnowKindHist) — леджер по номеру, дубль
         // означал бы молчаливый пропуск одного из шагов на живой БД.
-        new Step(95, 17, "knowtag_supertag_fields", List.of(
-            "CREATE PROPERTY KnowTag.name         IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowTag.title        IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowTag.source       IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowTag.field_schema IF NOT EXISTS MAP",
-            "CREATE PROPERTY KnowTag.synonyms     IF NOT EXISTS LIST OF STRING",
-            "CREATE PROPERTY KnowTag.owner        IF NOT EXISTS STRING")),
+        new Step(95, 17, "knowtag_supertag_fields", LoreSchemaAdditive.KNOWTAG_SUPERTAG_DDL),
 
         // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-02 (SPEC-SKILLS-TAGS-062 §5–§6, ADR-LORE-057):
         // вид skill:* — вершина KnowSkill (процедура роли: body_md, status по словарю skill_status,
@@ -1896,21 +1870,7 @@ final class LoreSchemaMigrations {
         // (CREATE TYPE … EXTENDS …), прецедент — UC_EXTENDS сценариев; в API связь зовётся rel=extends.
         // BELONGS_TO_PROJECT и OWNED_BY существуют давно (V20, V30-е) — не переобъявляются.
         // V96, не V95: V95 у SKILL-05 (PR #1797). Аддитивно, major 17.
-        new Step(96, 17, "know_skill", List.of(
-            "CREATE VERTEX TYPE KnowSkill IF NOT EXISTS",
-            "CREATE PROPERTY KnowSkill.skill_id   IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.name       IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.title      IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.body_md    IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.version    IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.status     IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.source     IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.created_at IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowSkill.updated_at IF NOT EXISTS STRING",
-            "CREATE INDEX IF NOT EXISTS ON KnowSkill (skill_id) UNIQUE",
-            "CREATE INDEX IF NOT EXISTS ON KnowSkill (status) NOTUNIQUE",
-            "CREATE EDGE TYPE APPLIES_TO_ROLE IF NOT EXISTS",
-            "CREATE EDGE TYPE SKILL_EXTENDS IF NOT EXISTS")),
+        new Step(96, 17, "know_skill", LoreSchemaAdditive.KNOW_SKILL_DDL),
 
         // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-03 (окно OQ-062-SKILL-SEED): словарь skill_status
         // (draft/active/deprecated) и три посевных скилла release-cutover, qg-triage, adr-review с
@@ -1925,6 +1885,13 @@ final class LoreSchemaMigrations {
         // реестра (umbrella/know-registry-2511), V98–V99 зарезервированы под неё же — поэтому V100.
         // Аддитивно, major 17.
         new Step(100, 17, AreaDictSeed.STEP, List.of())
+
+        // ══ ШАГИ V ЗАМОРОЖЕНЫ (владелец 25.11.2026: «подчисти версионирование, а то следующие будут тоже делать») ══
+        // С 1.18 прод — база, собранная из модели: шаги V на неё не катятся, и V94–V100 до прода молча не доехали.
+        // Новый тип/поле/индекс/ребро/посев — ТОЛЬКО запись в LoreSchemaAdditive.CHANGES (+ VERSION и PINNED):
+        // доводка схемы кода одна для базы из модели, базы шагов V и свежей установки. V94–V100 выше оставлены
+        // (выпущены, их строки лежат в журналах тестовых баз), их DDL — ссылки на те же списки доводки, а Java-часть
+        // V97/V100 зовёт её посевы. Новый new Step(…) здесь краснит LoreSchemaAdditiveGuardTest.
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */

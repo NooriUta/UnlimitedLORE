@@ -47,6 +47,8 @@ class UpdateAffectedRowsGuardTest {
 
     private static final Set<String> SKIP_FILES = Set.of(
         "LoreSchemaMigrationRunner.java", "LoreSchemaMigrations.java", "LoreSchemaInitializer.java",
+        // доводка схемы кода (25.11.2026) — тот же слой миграций; её UPDATE — отметка номера схемы (одна запись)
+        "LoreSchemaAdditive.java",
         "LoreComponentSeeder.java", "LoreIngestService.java");
 
     private static final String TODO = "TODO SPRINT_LORE_MEASURE_TRUTH/MT-MCP-TRUTH Б11";

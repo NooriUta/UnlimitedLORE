@@ -826,7 +826,7 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
   const fwd = (p: string) => p.replace(/\\/g, '/');
   const MODEL_LINE = '[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется';
 
-  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '') {
+  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '', migrateLine = '') {
     const d = mkdtempSync(join(tmpdir(), 'lore-pl-model-'));
     writeFileSync(join(d, 'lore-host-deploy.sh'), read('.github/scripts/lore-host-deploy.sh'));
     writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
@@ -840,6 +840,7 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
       '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
       '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
       '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
+      '  *"compose run"*"lore-migrate"*) printf "%s\\n" "$MIGRATE_LINE" ;;',
       'esac', '',
     ].join('\n'));
     chmodSync(join(d, 'r.sh'), 0o755);
@@ -848,18 +849,34 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
     const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
     const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
       DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.0',
-      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1',
+      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1', MIGRATE_LINE: migrateLine,
     });
     const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
     rmSync(d, { recursive: true, force: true });
     return { ...r, state, calls };
   }
 
-  it('db: схема прода «из модели» — ни бэкапа, ни накатки, шаг зелёный', () => {
-    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE);
+  // 25.11.2026 (владелец: «доделай из модели и подчисти версионирование»): на базе из модели шаги V по-прежнему не
+  // катятся, но схема ДОВОДИТСЯ до кода (LoreSchemaAdditive) — бэкап и шаг накатки на каждой выкатке. Прежде db
+  // писал «накатка не нужна», и всё, что после 1.18 делалось шагами V (KnowKind, KnowSkill, посевы), до прода не доезжало.
+  const ADDITIVE_LINE = '[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V не применяются; '
+    + 'доводка схемы кода v1 (54761523d90deed8): типов +6, свойств +27, индексов +5, посеяно 18 — записи [know_skill]; '
+    + 'процесс завершается (шаг накатки CD)';
+
+  it('db: схема прода «из модели» — бэкап и доводка схемы кода, что сделано — в выводе, шаг зелёный', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE, '', ADDITIVE_LINE);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/собрана из модели/);
-    expect(r.calls).not.toMatch(/remote-backup|lore-migrate/);
+    expect(r.out).toMatch(/доводка схемы кода v1 .*типов \+6/);
+    expect(r.calls).toMatch(/remote-backup/);
+    expect(r.calls).toMatch(/compose run .*lore-migrate/);
+  });
+
+  it('db: база из модели, а образ без доводки («шаги V пропущены») — красный', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE, '',
+      '[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)');
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/доводки схемы кода нет/);
   });
 
   it('probe: в логе нового бэкенда «схема собрана из модели» — проба зелёная', () => {
@@ -880,6 +897,22 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
     expect(r.out).not.toMatch(/::error::/);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/schema_version=model:1/);
+  });
+
+  // 25.11.2026: доводка схемы кода — после шага db база не отстаёт от кода (/lore/version: code_schema_behind)
+  it('probe на базе из модели: доводка схемы кода = код — зелёная', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], 'что-то другое',
+      '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","code_schema_version":1,"code_schema_expected":1,"code_schema_behind":false}');
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/доводка схемы кода v1 = код/);
+  });
+
+  it('probe на базе из модели: база отстаёт от схемы кода — красная', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], 'что-то другое',
+      '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","code_schema_version":null,"code_schema_expected":1,"code_schema_behind":true}');
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/база отстаёт от схемы кода/);
   });
 
   it('probe на базе из модели: версия по хэшу, а не номер модели тега — красная', () => {

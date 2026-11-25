@@ -46,8 +46,31 @@ class ModelSchemaMarkerTest {
      * шаги V пропускаются, процесс выходит с 0 и говорит об этом своей строкой. Сервер (migrate без only) — отказ как был.
      */
     @Test
-    void cdMigrateOnlyStepOnModelDatabaseSkipsVSteps() {
-        assertEquals(LoreSchemaMigrationRunner.ModelStart.SKIP_V_STEPS, LoreSchemaMigrationRunner.onModelSchema(true, true));
+    void cdMigrateOnlyStepOnModelDatabaseSkipsVStepsAndRunsAdditive() {
+        // 25.11.2026: шаги V по-прежнему не катятся, но схема ДОВОДИТСЯ до кода (LoreSchemaAdditive) — V94–V100 и
+        // всё, что после 1.18, иначе до прода не доезжало.
+        assertEquals(LoreSchemaMigrationRunner.ModelStart.ADDITIVE, LoreSchemaMigrationRunner.onModelSchema(true, true));
+    }
+
+    @Test
+    void runtimeOnModelDatabase_additiveOnlyWithSchemaRights() {
+        // рантайм под basic (установщик, стенды) доводит сам; под токеном без updateSchema (прод) — только сверяет и
+        // громко говорит, что доводка не выполнена: DDL под токеном упал бы
+        assertEquals(LoreSchemaMigrationRunner.Additive.APPLY, LoreSchemaMigrationRunner.additiveOnStart(true, true, "basic"));
+        assertEquals(LoreSchemaMigrationRunner.Additive.APPLY, LoreSchemaMigrationRunner.additiveOnStart(false, false, "basic"));
+        assertEquals(LoreSchemaMigrationRunner.Additive.CHECK, LoreSchemaMigrationRunner.additiveOnStart(false, false, "token"));
+    }
+
+    @Test
+    void additiveLineIsWhatCdStepGrepsFor() {
+        String line = LoreSchemaMigrationRunner.modelAdditiveLine(new LoreSchemaAdditive.Report(5, 21, 6, 18, List.of("know_skill")));
+        // .github/scripts/migrate-schema.sh, lore-host-deploy.sh и migrate-live-check.sh ищут «доводка схемы кода»
+        assertTrue(line.contains("lore.migrate.only=true"), line);
+        assertTrue(line.contains("LoreModelSchema"), line);
+        assertTrue(line.contains(LoreSchemaMigrationRunner.ADDITIVE_MARK), line);
+        assertTrue(line.contains("типов +5") && line.contains("свойств +21") && line.contains("индексов +6") && line.contains("посеяно 18"), line);
+        assertTrue(line.contains("v" + LoreSchemaAdditive.VERSION), line);
+        assertFalse(line.contains("накатывать нечего"), "доводка — не «нечего»: " + line);
     }
 
     @Test
@@ -58,12 +81,5 @@ class ModelSchemaMarkerTest {
     @Test
     void runtimeOnModelDatabaseEnablesReadAdapter() {
         assertEquals(LoreSchemaMigrationRunner.ModelStart.READ_ADAPTER, LoreSchemaMigrationRunner.onModelSchema(false, false));
-    }
-
-    @Test
-    void skipLineIsWhatCdStepGrepsFor() {
-        // .github/scripts/migrate-schema.sh принимает ровно эту строку как «накатка не нужна, база из модели»
-        assertTrue(LoreSchemaMigrationRunner.MODEL_SKIP_LINE.contains("шаги V пропущены"));
-        assertTrue(LoreSchemaMigrationRunner.MODEL_SKIP_LINE.contains("LoreModelSchema"));
     }
 }

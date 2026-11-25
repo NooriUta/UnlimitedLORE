@@ -78,6 +78,7 @@ def snapshot(api, db, out):
     inv = {"db": db, "types": {}, "samples": {}, "scd2": {}}
     src, ver, mhash = schema_of([t["name"] for t in types], lambda sql: q(api, db, sql))
     inv["schema_source"], inv["schema_version"], inv["model_hash"] = src, ver, mhash
+    inv["code_schema_version"] = code_schema_of([t["name"] for t in types], lambda sql: q(api, db, sql))
     for t in sorted(types, key=lambda x: x["name"]):
         name, kind = t["name"], t.get("type")
         cnt = q(api, db, f"SELECT count(*) AS c FROM `{name}`")
@@ -132,11 +133,21 @@ def schema_of(type_names, qf):
     return "steps", (rows[0].get("v") if rows else None), None
 
 
+def code_schema_of(type_names, qf):
+    """Номер доводки схемы кода (LoreSchemaAdditive, 25.11.2026): отметка LoreCodeSchema; доводки не было — None."""
+    if "LoreCodeSchema" not in type_names:
+        return None
+    rows = qf("SELECT version FROM LoreCodeSchema")
+    return rows[0].get("version") if rows else None
+
+
 def schema_label(inv):
     v = inv.get("schema_version")
+    c = inv.get("code_schema_version")
+    code = f" + код v{c}" if c is not None else " + код —"
     if inv.get("schema_source") == "model":
-        return f"model:{v if v is not None else '—'} (хэш {inv.get('model_hash')})"
-    return f"v{v}"
+        return f"model:{v if v is not None else '—'} (хэш {inv.get('model_hash')})" + code
+    return f"v{v}" + code
 
 
 def compare(before_p, after_p, mode, allow_csv, out_md):
@@ -236,8 +247,15 @@ def compare(before_p, after_p, mode, allow_csv, out_md):
             red.append(f"версия схемы не прочитана или упала (v{va} → v{vb})")
         elif vb == va:
             lines.insert(1, "Новых шагов схемы в проверяемом коде нет — сверяется, что накатка ничего не тронула.\n")
+        # доводка схемы кода: номер не убывает; рост — то, что доводка сделала (типы видны в таблице выше)
+        ca, cb = a.get("code_schema_version"), b.get("code_schema_version")
+        if ca is not None and (cb is None or cb < ca):
+            red.append(f"номер доводки схемы кода убыл: v{ca} → {'—' if cb is None else 'v' + str(cb)}")
+        elif cb is not None and ca != cb:
+            lines.insert(1, f"Доводка схемы кода: {'—' if ca is None else 'v' + str(ca)} → v{cb} (новые типы и посевы — в таблице).\n")
     else:
-        if a.get("schema_version") != b.get("schema_version") or a.get("model_hash") != b.get("model_hash"):
+        if a.get("schema_version") != b.get("schema_version") or a.get("model_hash") != b.get("model_hash") \
+                or a.get("code_schema_version") != b.get("code_schema_version"):
             red.append(f"повтор изменил версию схемы {schema_label(a)} → {schema_label(b)}")
 
     verdict = "🔴 КРАСНО" if red else ("🟡 зелёно с замечаниями" if warn else "🟢 зелёно")
@@ -301,6 +319,9 @@ def selftest():
     m_base = {**json.loads(json.dumps(base)), "schema_source": "model", "schema_version": None, "model_hash": "d7e16a827891d5e0"}
     m_one = {**json.loads(json.dumps(m_base)), "schema_version": 1}
     m_down = {**json.loads(json.dumps(m_one)), "schema_version": 0}
+    m_add = json.loads(json.dumps(m_one)); m_add["code_schema_version"] = 1
+    m_add["types"]["KnowSkill"] = {"kind": "vertex", "count": 3}; m_add["types"]["LoreCodeSchema"] = {"kind": "vertex", "count": 1}
+    m_add2 = json.loads(json.dumps(m_add)); m_add2["code_schema_version"] = 2
 
     def case_from(before, after, mode, want):
         with tempfile.TemporaryDirectory() as d:
@@ -316,6 +337,12 @@ def selftest():
         "база из модели: номер модели появился (нет → 1) — зелёно": case_from(m_base, m_one, "migrate", 0),
         "база из модели: номер модели убыл — красно": case_from(m_one, m_down, "migrate", 1),
         "база из модели: повтор без изменений — зелёно": case_from(m_one, json.loads(json.dumps(m_one)), "repeat", 0),
+        # 25.11.2026: доводка схемы кода на базе из модели — новые типы и номер доводки
+        "доводка: номер — из LoreCodeSchema": code_schema_of(["LoreCodeSchema"], lambda sql: [{"version": 1}]) == 1,
+        "доводки не было — None, а не 0": code_schema_of(["KnowTask"], no_ledger) is None,
+        "доводка: — → v1 и новые типы — зелёно": case_from(m_one, m_add, "migrate", 0),
+        "доводка: номер убыл — красно": case_from(m_add, m_one, "migrate", 1),
+        "доводка: повтор сменил номер — красно": case_from(m_add, m_add2, "repeat", 1),
     })
     bad = [k for k, v in checks.items() if not v]
     for k, v in checks.items():
