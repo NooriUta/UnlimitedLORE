@@ -38,7 +38,20 @@ for (const [w, h] of [[360, 800], [412, 915]] as const) {
     test.skip(info.project.name !== 'phone-412', 'одна телефонная проекция; размер задаём сами');
     await page.setViewportSize({ width: w, height: h });
     await stub(page);
+    // 25.11 (владелец: «внизу жирный бар … можно ли как-то его уменьшить»): в Forseti рабочий модуль один —
+    // панели нет, низ отдан списку; пустой полосы над низом окна нет.
     await page.goto('/?sec=sprint');
+    await expect(page.locator('[data-record-id], .sk-list__row, tr').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('.sk-shell__dock')).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(200);
+    const tail = await page.evaluate(() => {
+      const v = document.querySelector('.v2-version') as HTMLElement | null;
+      return v ? Math.round(innerHeight - v.getBoundingClientRect().bottom) : null;
+    });
+    expect(tail ?? 0, 'под меткой версии нет резерва под несуществующую панель').toBeLessThanOrEqual(16);
+    // Два модуля (админка: Forseti + Админка) — панель есть, и все прежние замеры к ней.
+    await page.goto('/?mod=admin&sec=adm-flags');
     await expect(page.locator('.sk-shell__dock')).toBeVisible({ timeout: 20_000 });
     const a = await measure(page);
     console.log(`MP2-15 ${w}x${h}`, JSON.stringify(a));
@@ -53,7 +66,7 @@ for (const [w, h] of [[360, 800], [412, 915]] as const) {
       return last ? Math.round(last.getBoundingClientRect().bottom) : null;
     });
     const b = await measure(page);
-    expect(lastBottom ?? 0, 'последняя строка над доком').toBeLessThanOrEqual((b.dockTop ?? 0) + 1);
+    if (lastBottom !== null) expect(lastBottom, 'последняя строка над доком').toBeLessThanOrEqual((b.dockTop ?? 0) + 1);
     // «Прячется» панель браузера: окно выше на 56 px — док по-прежнему у нижнего края.
     await page.setViewportSize({ width: w, height: h + 56 });
     await page.waitForTimeout(200);

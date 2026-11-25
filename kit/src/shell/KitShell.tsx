@@ -525,6 +525,8 @@ export function KitShell({
 
   // Кнопка модуля — одна на шапку и нижнюю панель телефона: имя, «скоро» и
   // текущий отмечаются одинаково, различается только раскладка.
+  // Нижняя панель телефона — только рабочие модули (приёмка efe20f03); при одном — панели нет (MP2-15).
+  const dockModules = config.modules.filter(m => m.status !== 'planned');
   const moduleButton = (m: KitConfig['modules'][number], where: 'top' | 'dock') => {
     const planned = m.status === 'planned';
     const current = m.id === nav.module;
@@ -559,6 +561,8 @@ export function KitShell({
       <div className={[
         'sk-shell',
         narrow ? 'sk-shell--narrow' : '',
+        // MP2-15 (владелец 25.11): один рабочий модуль — нижней панели нет, место под неё не резервируется.
+        narrow && dockModules.length < 2 ? 'sk-shell--no-dock' : '',
         !narrow && effMenuMode === 'hidden' ? 'sk-shell--menu-collapsed' : '',
         !narrow && effMenuMode === 'rail' ? 'sk-shell--menu-rail' : '',
         !narrow && statusBar ? 'sk-shell--status' : '',
@@ -681,9 +685,9 @@ export function KitShell({
             Иконка и короткая подпись под ней; текущий — aria-current.
             Только рабочие модули (приёмка efe20f03): заглушки «скоро» занимали три из четырёх мест
             в зоне пальца; в v1 в баре тоже только рабочие ипостаси. В шапке широкого экрана «скоро» остаётся. */}
-        {narrow && (
+        {narrow && dockModules.length > 1 && (
           <nav className="sk-shell__dock" aria-label={kitT(lang, 'kit.shell.modules')}>
-            {config.modules.filter(m => m.status !== 'planned').map(m => moduleButton(m, 'dock'))}
+            {dockModules.map(m => moduleButton(m, 'dock'))}
           </nav>
         )}
         {narrow && (
