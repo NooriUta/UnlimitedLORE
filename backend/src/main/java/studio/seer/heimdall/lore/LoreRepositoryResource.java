@@ -255,11 +255,13 @@ public class LoreRepositoryResource extends LoreResourceBase {
     /**
      * Роль УЖЕ существующей связи: {@code IF NOT EXISTS} существующее ребро не трогает, поэтому повторная связь с
      * ролью проставляет её отдельной правкой — иначе ребро, заведённое без роли, навсегда осталось бы с role = null.
+     * Условие по самой роли — идемпотентный переход (сторож UpdateAffectedRowsGuardTest): 0 строк = роль уже такая;
+     * настоящий промах (связь удалили) ловит перечитывание роли после записи (DBR-17).
      */
     static String setRoleSql(String rel, String key, boolean fromRepo) {
         return fromRepo
-            ? "UPDATE " + rel + " SET role = :role WHERE @out.url = :url AND @in." + key + " = :t" + LoreEdgeHistory.andCurrent(rel)
-            : "UPDATE " + rel + " SET role = :role WHERE @out." + key + " = :t AND @in.url = :url" + LoreEdgeHistory.andCurrent(rel);
+            ? "UPDATE " + rel + " SET role = :role WHERE @out.url = :url AND @in." + key + " = :t" + LoreEdgeHistory.andCurrent(rel) + " AND (role IS NULL OR role <> :role)"
+            : "UPDATE " + rel + " SET role = :role WHERE @out." + key + " = :t AND @in.url = :url" + LoreEdgeHistory.andCurrent(rel) + " AND (role IS NULL OR role <> :role)";
     }
 
     /**
