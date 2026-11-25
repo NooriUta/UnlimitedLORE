@@ -23,6 +23,7 @@ import { fetchAgents, type AgentsData } from './agents';
 import { fetchRoleMatrix, type RolesData } from './roles';
 import { fetchOwnerDelegation, type DelegationRow } from './access';
 import { ProjectLikeWizard } from './ProjectLikeWizard';
+import { NM_PARAMS, NewMachineWizard } from './NewMachineWizard';
 import { PROJECT_WIZ_PARAMS } from './projectLike';
 import { teaLoginHint, useGitHost } from './gitHost';
 import {
@@ -32,17 +33,19 @@ import {
 } from './wizards';
 import type { RoleChange } from './roles';
 
-export type WizardKind = 'person' | 'agent' | 'machine' | 'project' | 'secret';
+export type WizardKind = 'person' | 'agent' | 'machine' | 'newmachine' | 'project' | 'secret';
 // UC-5 «проект как у похожего» (S7B-18) — ProjectLikeWizard.tsx.
 // PU-13: «Сменить секрет агента» (S7B-19, UC-6) — SecretWizard ниже.
-const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine', 'project', 'secret'];
+// AP-MACHINE-PASSPORT (решение 5в): «Новая машина» — машина в графе (machine_new), рядом с UC-7 «Новый ноутбук»
+// (учётка агента). Тот же мастер открывает кнопка «Новая машина» в «Доступе к машинам».
+const KINDS: readonly WizardKind[] = ['person', 'agent', 'machine', 'newmachine', 'project', 'secret'];
 const STEP_KEY = 'adm-step';
 /**
  * Параметры адреса, которые принадлежат мастеру, а не экрану. Шаг общий у всех
  * трёх мастеров (S7B-29): без сброса при смене мастера новый открывался на
  * шаге прежнего — или с заметкой «шага нет», если такого ключа у него нет.
  */
-const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile', 'adm-secret-client', ...PROJECT_WIZ_PARAMS] as const;
+const WIZ_PARAMS = [STEP_KEY, 'adm-login', 'adm-like', 'adm-owner', 'adm-machine', 'adm-profile', 'adm-secret-client', ...PROJECT_WIZ_PARAMS, ...NM_PARAMS] as const;
 
 export interface WizardsEnv { backend: string; issuer: string }
 
@@ -132,6 +135,7 @@ export function WizardsScreen({ fetchImpl = loreFetch, meSub, env }: WizardsScre
       {wiz === 'person' && <PersonWizard key="person" fetchImpl={fetchImpl} onDone={() => finish('person')} />}
       {wiz === 'agent' && <AgentWizard key="agent" mode="agent" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('agent')} />}
       {wiz === 'machine' && <AgentWizard key="machine" mode="machine" fetchImpl={fetchImpl} meSub={meSub} env={cfg} onDone={() => finish('machine')} />}
+      {wiz === 'newmachine' && <NewMachineWizard key="newmachine" fetchImpl={fetchImpl} meSub={meSub} onDone={() => finish('newmachine')} />}
       {wiz === 'project' && <ProjectLikeWizard key="project" fetchImpl={fetchImpl} onDone={() => finish('project')} />}
       {wiz === 'secret' && <SecretWizard key="secret" fetchImpl={fetchImpl} />}
     </section>
