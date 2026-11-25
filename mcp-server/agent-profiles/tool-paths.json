@@ -140,6 +140,7 @@
     "/lore/repository/link",
     "/lore/runbook/adr",
     "/lore/runbook/project",
+    "/lore/skill/link",
     "/lore/sprint/component",
     "/lore/sprint/dep",
     "/lore/sprint/project",
@@ -189,6 +190,7 @@
     "/lore/repository",
     "/lore/runbook",
     "/lore/runbook/project",
+    "/lore/skill",
     "/lore/spec",
     "/lore/spec/link",
     "/lore/sprint/create",
@@ -309,6 +311,15 @@
   "runbook_new": [
     "/lore/runbook",
     "/lore/runbook/project"
+  ],
+  "skill_link": [
+    "/lore/skill/link"
+  ],
+  "skill_new": [
+    "/lore/skill"
+  ],
+  "skill_set": [
+    "/lore/skill"
   ],
   "spec_del": [
     "/lore/spec/delete"

@@ -114,7 +114,13 @@ final class V1SchemaSafetyChecklist {
         // SPRINT_QG_REBUILD/QG-09, V93. Доказательство — QgStatusDictSeedTest (существующие не трогаются,
         // план через тот же StatusDictCoreSeed.plan): только INSERT строк НОВОГО справочника qg_status, v1 его не знает.
         "java__qg_status_dict_seed",
-        "посев недостающих строк qg_status (новый справочник, v1 о нём не знает); существующие не переписываются");
+        "посев недостающих строк qg_status (новый справочник, v1 о нём не знает); существующие не переписываются",
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-03, V97. Доказательство — KnowSkillSchemaTest
+        // (skillStatusDictIsTheLifecycle: существующие строки справочника не трогаются; seedPlanSkipsExistingSkills:
+        // существующие скиллы не трогаются): только INSERT строк НОВОГО справочника skill_status и вершин НОВОГО
+        // типа KnowSkill (V96) с рёбрами от них; v1 не знает ни справочника, ни типа.
+        "java__skill_seed",
+        "посев skill_status и трёх скиллов нового типа KnowSkill (V96); существующее не переписывается");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");

@@ -48,7 +48,10 @@ class KnowTagSupertagFieldsTest {
     }
 
     @Test
-    void v95IsRegisteredAsTheCurrentMax() {
-        assertEquals(95, LoreSchemaMigrations.codeVersion(), "V95 — последний шаг реестра");
+    void v95IsRegistered() {
+        // Зонтик KNOW_REGISTRY (25.11.2026): после V95 идут V96/V97 (KnowSkill, SKILL-01..03) — «последний»
+        // больше не про V95. Смысл теста — шаг V95 есть в реестре и код не ниже него.
+        assertTrue(LoreSchemaMigrations.STEPS.stream().anyMatch(st -> st.version() == 95 && "knowtag_supertag_fields".equals(st.name())), "V95 knowtag_supertag_fields есть в реестре");
+        assertTrue(LoreSchemaMigrations.codeVersion() >= 95, "код не ниже V95");
     }
 }
