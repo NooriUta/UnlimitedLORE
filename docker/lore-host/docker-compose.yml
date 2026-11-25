@@ -30,7 +30,7 @@ services:
       # LINKS-VIEW-HOLDER: сервер miniLORE в общей сети lore-ygg-net (проба 16.11: /q/health 200 из бэкенда).
       - lore.minilore.url=${LORE_MINILORE_URL:-http://minilore-srv:8080}
       # Умолчание переехало из кода сюда (SELF-PROVISION-STANDALONE): в образе нашего Keycloak нет, адрес — у среды.
-      - lore.minilore.token-url=${LORE_MINILORE_TOKEN_URL:-https://odal.seidrstudio.pro/kc/realms/omilore/protocol/openid-connect/token}
+      - lore.minilore.token-url=${LORE_MINILORE_TOKEN_URL:?LORE_MINILORE_TOKEN_URL не задан — адрес выдачи токена нашего Keycloak задаётся явно в .env рядом (AUD-DEFAULTS)}
       - LORE_VOLVA_EMBED_SECRET=${LORE_VOLVA_EMBED_SECRET:-}
       - kc.admin.url=https://odal.seidrstudio.pro/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
@@ -52,6 +52,8 @@ services:
       - lore.mart.auth=token
       - lore.scope.enforce=${LORE_SCOPE_ENFORCE:-false}
       - lore.bootstrap=${LORE_BOOTSTRAP:-false}
+      # AUD-DEFAULTS: в образе bench по умолчанию выключен — наш хост включает его явно.
+      - BENCH_MART_ENABLED=true
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
       - S3_ENDPOINT=http://minio:9000
@@ -114,9 +116,9 @@ services:
     image: unlimitedlore-lore-app:a2dc70bc
     restart: unless-stopped
     environment:
-      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-https://lore.odal.seidrstudio.pro}
-      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-https://odal.seidrstudio.pro}
-      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-https://volva.odal.seidrstudio.pro}
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:?LORE_PUBLIC_URL не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:?LORE_OIDC_ORIGIN не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:?LORE_VOLVA_ORIGIN не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
     ports:
       - "4400:80"
     depends_on:
