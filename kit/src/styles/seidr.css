@@ -1827,6 +1827,9 @@ code, pre, kbd, samp { font-family: var(--mono); }
   z-index: 2;
 }
 .sk-shell--narrow { --sk-dock-h: 48px; }
+/* MP2-15 (слово владельца 25.11.2026): один рабочий модуль — переключать нечего, панели нет,
+   и низ экрана отдан содержимому (остаётся только полоса жестов). */
+.sk-shell--narrow.sk-shell--no-dock { --sk-dock-h: 0px; }
 /* Содержимое не уходит под нижнюю панель модулей (и под полосу жестов). */
 .sk-shell--narrow .sk-shell__body {
   grid-template-columns: minmax(0, 1fr);
