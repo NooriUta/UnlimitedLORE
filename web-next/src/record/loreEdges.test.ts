@@ -57,6 +57,27 @@ describe('S5-10 · подписи рёбер графа на обоих язык
     expect(missing).toEqual([]);
   });
 
+  // SPRINT_LORE_KNOW_REGISTRY/KREG-10 (владелец 25.11.2026, «а»): подписи — на трёх языках, ru/en/pl.
+  it('у каждого ребра словаря есть ru, en и pl', () => {
+    const missing = Object.entries(LORE_EDGE_TYPES)
+      .filter(([, e]) => !e.ru?.trim() || !e.en?.trim() || !e.pl?.trim())
+      .map(([t]) => t);
+    expect(missing).toEqual([]);
+  });
+
+  it('loreEdgeLabel: pl отдаёт польскую подпись, без неё — английскую', () => {
+    expect(loreEdgeLabel('pl', 'DEPENDS_ON')).toBe(LORE_EDGE_TYPES.DEPENDS_ON.pl);
+    expect(loreEdgeLabel('pl', 'DEPENDS_ON')).toBe('zależy od');
+    const saved = LORE_EDGE_TYPES.BLOCKS;
+    LORE_EDGE_TYPES.BLOCKS = { ...saved, pl: undefined };
+    try {
+      expect(loreEdgeLabel('pl', 'BLOCKS')).toBe(saved.en);
+    } finally {
+      LORE_EDGE_TYPES.BLOCKS = saved;
+    }
+    expect(loreEdgeLabel('pl', 'NO_SUCH_EDGE')).toBe('NO_SUCH_EDGE');
+  });
+
   it('подпись — слова, а не код; ru кириллицей', () => {
     for (const [t, e] of Object.entries(LORE_EDGE_TYPES)) {
       expect(e.ru, t).not.toBe(t);
