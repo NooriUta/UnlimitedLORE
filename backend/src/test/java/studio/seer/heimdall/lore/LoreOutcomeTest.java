@@ -46,6 +46,21 @@ class LoreOutcomeTest {
         assertEquals("deleted", LoreOutcome.unlink(BASE, true).get("outcome"));
     }
 
+    /**
+     * ISS-06: исход по факту ребра до/после — пустой конец (ребра не было и не появилось) это noop с причиной,
+     * а не безусловное «added» (стенд-e2e RFD3: sprint rel=project на незарегистрированный проект).
+     */
+    @Test
+    void factOfEdgeDecidesOutcome() {
+        Map<String, Object> missing = LoreOutcome.fact(BASE, false, false, false, "спринт S или проект P");
+        assertEquals("noop", missing.get("outcome"));
+        assertTrue(String.valueOf(missing.get("reason")).contains("проект P"), "причина называет конец: " + missing);
+        assertEquals("created", LoreOutcome.fact(BASE, false, false, true, "x").get("outcome"));
+        assertEquals("unchanged", LoreOutcome.fact(BASE, false, true, true, "x").get("outcome"));
+        assertEquals("deleted", LoreOutcome.fact(BASE, true, true, false, "x").get("outcome"));
+        assertEquals("unchanged", LoreOutcome.fact(BASE, true, false, false, "x").get("outcome"));
+    }
+
     /** Старые ключи остаются: outcome добавляется рядом, а не вместо. */
     @Test
     void existingKeysSurvive() {
