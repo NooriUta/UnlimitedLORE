@@ -92,8 +92,7 @@ public class LoreUserProfileResource extends LoreResourceBase {
                 .build();
         } catch (Exception e) {
             LOG.warnf("[LORE PROFILE] аватар %s: %s", sub, e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("S3_UPSTREAM", "аватар не прочитан из хранилища: " + e.getMessage())));
+            return OptionalUpstream.failure(OptionalUpstream.Service.S3, e, "аватар не прочитан из хранилища");
         }
     }
 
@@ -149,8 +148,7 @@ public class LoreUserProfileResource extends LoreResourceBase {
             return noStore(Response.ok(profileOf(sub)));
         } catch (Exception e) {
             LOG.warnf("[LORE PROFILE] загрузка аватара %s: %s", sub, e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("S3_UPSTREAM", "аватар не сохранён: " + e.getMessage())));
+            return OptionalUpstream.failure(OptionalUpstream.Service.S3, e, "аватар не сохранён");
         }
     }
 

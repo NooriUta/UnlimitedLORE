@@ -2626,7 +2626,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
     'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
       'file_url ("/lore/bragi/asset/file/..."). This is the ONLY way to get a real, browser-loadable file_url — ' +
       'there is no separate "presign" step. Call this FIRST, then pass its file_url into bragi_asset_attach ' +
-      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself.',
+      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself. ' +
+      'S3 is an OPTIONAL service of the installation: 503 FILES_NOT_CONFIGURED = no S3 set (install without files); ' +
+      '503 S3_UNREACHABLE = S3 set but not reachable (check S3_ENDPOINT, keys); 502 S3_UPSTREAM = S3 answered an ' +
+      'error. Without S3 use bragi_asset_attach with an external https URL instead.',
     {
       filename:     z.string().describe('original filename, e.g. "cover.png" — extension is preserved'),
       base64_data:  z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),

@@ -820,7 +820,10 @@ npm install && npm run build          # → dist/index.js`}</Pre>
                 {([
                   [t('lore.mcpApi.diag1a', 'Инструменты есть, любой вызов = ошибка'), t('lore.mcpApi.diag1b', 'backend :9100 не поднят'), t('lore.mcpApi.diag1c', 'поднять backend')],
                   [t('lore.mcpApi.diag2a', '403 на write'), t('lore.mcpApi.diag2b', 'нет/неверный X-Seer-Role'), t('lore.mcpApi.diag2c', 'env LORE_SEER_ROLE=admin')],
-                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 500'), t('lore.mcpApi.diag3b', 'ArcadeDB недоступен или неверный пароль'), t('lore.mcpApi.diag3c', 'проверить :2480 и ARCADEDB_ROOT_PASSWORD')],
+                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 502'), t('lore.mcpApi.diag3b', 'ArcadeDB витрины bench ответила ошибкой (неверный пароль, нет базы RAGVSDL)'), t('lore.mcpApi.diag3c', 'проверить ARCADEDB_ROOT_PASSWORD и базу RAGVSDL')],
+                  [t('lore.mcpApi.diag5a', 'MART_UNREACHABLE / 503 (bench_query_slice)'), t('lore.mcpApi.diag5b', 'витрина bench включена, но недоступна — сервис не поднят или адрес не тот'), t('lore.mcpApi.diag5c', 'проверить MART_ARCADE_URL; bench не нужен — BENCH_MART_ENABLED=false')],
+                  [t('lore.mcpApi.diag6a', 'S3_UNREACHABLE / 503 (bragi_asset_up, asset_up)'), t('lore.mcpApi.diag6b', 'S3 задан, но недоступен — сервис не поднят или адрес не виден из контейнера бэкенда'), t('lore.mcpApi.diag6c', 'проверить S3_ENDPOINT (не localhost), S3_ACCESS_KEY, S3_SECRET_KEY; без файлов — оставить S3_ENDPOINT пустым')],
+                  [t('lore.mcpApi.diag7a', 'S3_UPSTREAM / 502'), t('lore.mcpApi.diag7b', 'S3 ответил ошибкой (ключи, права, бакет)'), t('lore.mcpApi.diag7c', 'текст ошибки S3 — в detail ответа')],
                   [t('lore.mcpApi.diag4a', 'Сервер не стартует под клиентом'), t('lore.mcpApi.diag4b', 'не собран dist/'), t('lore.mcpApi.diag4c', 'npm run build в mcp-server')],
                 ] as [string, string, string][]).map(([a, b, c]) => (
                   <tr key={a} style={S.tr}>

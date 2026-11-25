@@ -171,8 +171,8 @@ public class LoreAssetResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ASSET] upload %s/%s: %s", type, id, e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("S3_UPSTREAM", e.getMessage())));
+            // ISS-03: S3 задан, но не поднят — 503 S3_UNREACHABLE с переменной; ошибка самого S3 — 502.
+            return OptionalUpstream.failure(OptionalUpstream.Service.S3, e, "файл не загружен");
         }
     }
 
@@ -196,6 +196,8 @@ public class LoreAssetResource extends LoreResourceBase {
                 .header("Cache-Control", "public, max-age=31536000, immutable") // контент-адрес: содержимое не меняется
                 .build();
         } catch (Exception e) {
+            // ISS-03: недоступное хранилище — не «файла нет», а 503 с причиной.
+            if (OptionalUpstream.unreachable(e)) return OptionalUpstream.failure(OptionalUpstream.Service.S3, e, "файл не прочитан");
             return noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("NOT_FOUND", "asset not found")));
         }
