@@ -1961,6 +1961,64 @@ export function registerLoreWrite(rawServer: McpServer): void {
     },
   );
 
+  // ── SPRINT_LORE_KNOW_REGISTRY/SKILL-01/02: вид skill:* (SPEC-SKILLS-TAGS-062 §5–§7) ─────
+  // Навык роли — процедура «как делать» (KnowSkill). На текущем MCP, не дожидаясь MCP2: те же пути, что у
+  // entity_upsert type=skill / entity_link type=skill. Гарды — у бэкенда (REFUSED / NOOP / FORBIDDEN_FOR_ROLE).
+  const skillShape = {
+    skill_id: z.string().describe('"skill:<slug>" (kebab-case latin) — a bare slug is accepted and prefixed'),
+    title: z.string().optional().describe('human-readable title — REQUIRED on create'),
+    body_md: z.string().optional().describe('the procedure: steps, limits, examples, links (Markdown) — REQUIRED on create'),
+    name: z.string().optional().describe('short name; defaults to the slug'),
+    version: z.string().optional().describe('semver of the procedure'),
+    status: z.enum(['draft', 'active', 'deprecated']).optional()
+      .describe('lifecycle: create → draft; draft → active|deprecated; active → deprecated; deprecated → active by the OWNER only (else NOOP)'),
+    source: z.enum(['seed', 'agent', 'human']).optional().describe('origin; default agent for an agent caller'),
+    projects: z.array(z.string()).optional().describe('git project slugs → BELONGS_TO_PROJECT; ≥1 REQUIRED on create'),
+    roles: z.array(z.string()).optional().describe('agent_profile codes (full, architect, developer, …) → APPLIES_TO_ROLE; ≥1 REQUIRED on create'),
+    owner: z.string().optional().describe('KnowUser kc_sub or login → OWNED_BY (one owner; replaces the previous)'),
+    extends: z.array(z.string()).optional().describe('skill ids this skill extends → SKILL_EXTENDS (acyclic; a cycle is REFUSED with the chain)'),
+  };
+  const skillBody = (a: { [k: string]: unknown; extends?: string[] }) => {
+    const { extends: ext, ...rest } = a;
+    return { ...rest, ...(ext === undefined ? {} : { extends_ids: ext }) };
+  };
+  const SKILL_GUARDS = 'Create needs BOTH projects (≥1, BELONGS_TO_PROJECT) and roles (≥1, APPLIES_TO_ROLE) — ' +
+    'without them the backend answers 422 REFUSED listing the missing edges; a new skill is born draft. ' +
+    'Writing skill:* is for the full and architect profiles only (403 FORBIDDEN_FOR_ROLE, allowed=[full, architect]). ' +
+    'Read with query_slice skills (no body) / skills_full (with body_md), params project, role, status; ' +
+    'the kind card (params, enums, guards, errors) — GET /lore/skill/describe?kind=skill:*. Mutates system_aida_lore.';
+  definePostTool(server, {
+    name: 'skill_new',
+    description: 'Create a role SKILL (KnowSkill, kind skill:*) — a procedure an agent role follows (SPEC-SKILLS-TAGS-062). ' + SKILL_GUARDS,
+    schema: skillShape,
+    path: '/lore/skill',
+    body: skillBody,
+  });
+  definePostTool(server, {
+    name: 'skill_set',
+    description: 'Update a role SKILL (KnowSkill) — fields patch, status by the lifecycle, listed projects/roles/extends ADDED ' +
+      '(removal: skill_link action=remove). deprecated → active only by the skill OWNER (OWNED_BY) — anyone else gets 409 NOOP ' +
+      'with the owner to ask. ' + SKILL_GUARDS,
+    schema: skillShape,
+    path: '/lore/skill',
+    body: skillBody,
+  });
+  definePostTool(server, {
+    name: 'skill_link',
+    description: 'Link (or unlink) a role SKILL: rel="role" → APPLIES_TO_ROLE (agent_profile code), rel="project" → ' +
+      'BELONGS_TO_PROJECT (slug), rel="extends" → SKILL_EXTENDS (skill id; a cycle is 422 REFUSED with the inheritance ' +
+      'chain), rel="owner" → OWNED_BY (KnowUser kc_sub or login; one owner, replaced). Removing the LAST project or role ' +
+      'is 422 REFUSED — a skill without them is a dangling record nobody sees. Writing: full and architect only. Mutates system_aida_lore.',
+    schema: {
+      skill_id: z.string().describe('"skill:<slug>"'),
+      rel: z.enum(['role', 'project', 'extends', 'owner']),
+      target_id: z.string().describe('agent_profile code | project slug | skill id | KnowUser kc_sub or login'),
+      action: z.enum(['add', 'remove']).optional().default('add'),
+    },
+    path: '/lore/skill/link',
+    body: ({ skill_id, rel, target_id, action }) => ({ skill_id, rel, target_id, action: action ?? 'add' }),
+  });
+
   definePostTool(server, {
     name: 'component_new',
     description: 'Create a new LoreComponent vertex (upsert by component_id). ' +

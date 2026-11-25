@@ -19,12 +19,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class QgMetricBasisTest {
 
+    /**
+     * Шаг V101: V95–V97 заняты реестром (V97 — посев скиллов), V98/V99 зарезервированы под реестр,
+     * V100 — посев area в зонтике очереди. Леджер по номеру: дубль = молчаливый пропуск шага на живой БД.
+     */
     @Test
     void schemaDeclaresBasisOnRunMetric() {
-        assertTrue(LoreSchemaMigrations.STEPS.stream()
-                .flatMap(s -> s.sql().stream())
+        var step = LoreSchemaMigrations.STEPS.stream().filter(s -> s.name().equals("qg_metric_basis")).findFirst();
+        assertTrue(step.isPresent(), "шаг qg_metric_basis должен быть");
+        assertEquals(101, step.get().version());
+        assertTrue(step.get().sql().stream()
                 .anyMatch(q -> q.replaceAll("\\s+", " ").contains("CREATE PROPERTY ClRoutineMetric.basis IF NOT EXISTS STRING")),
             "поле basis должно быть объявлено шагом миграции");
+        assertEquals(1, LoreSchemaMigrations.STEPS.stream().filter(s -> s.version() == 101).count(), "номер 101 — единственный");
     }
 
     @Test

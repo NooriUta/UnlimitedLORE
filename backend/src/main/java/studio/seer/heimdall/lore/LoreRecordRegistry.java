@@ -126,7 +126,7 @@ final class LoreRecordRegistry {
     /** Ребро во вкладке связей; {@code edgeProps} — свойства самого ребра (kind, reason). */
     record TabRel(String rel, String dir, String label, String relation, List<String> edgeProps) {}
 
-    record LinkTab(String key, String label, List<TabRel> rels) {}
+    record LinkTab(String key, String label, String labelKey, String labelEn, String labelPl, List<TabRel> rels) {}
 
     /** Узел дерева раскрытия: часть, группировка детей по полю, колонки. */
     record TreeNode(String part, String label, String groupBy, List<String> columns,
@@ -339,6 +339,10 @@ final class LoreRecordRegistry {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("key", t.key());
             m.put("label", t.label());
+            // KREG-10: ключ локализации и переводы вкладки — как у полей (label_key / label_en / label_pl).
+            m.put("label_key", t.labelKey());
+            m.put("label_en", t.labelEn());
+            m.put("label_pl", t.labelPl());
             List<Map<String, Object>> rels = new ArrayList<>();
             for (TabRel r : t.rels()) {
                 Map<String, Object> rm = new LinkedHashMap<>();

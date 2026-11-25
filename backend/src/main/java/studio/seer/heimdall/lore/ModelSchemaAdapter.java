@@ -62,24 +62,35 @@ final class ModelSchemaAdapter {
     private static final String PLAN_BOARD = "старая доска плана снята (D-2026-LORE-PLAN-BOARD-REMOVED), установщик её не "
         + "переносит (MIG_PLAN_BOARD=drop); легаси — читается только на старой схеме или при MIG_PLAN_BOARD=keep";
 
+    private static final String SKILL_TYPES = "SKILL-01 (V96): вид skill:* (KnowSkill и его рёбра) ещё не перенесён в модель 1.18";
+
     /**
      * Типы вне модели 1.18 — тип → почему его может не быть в базе из модели. Каждый тип, который читает срез или
      * раздел гигиены, либо входит в модель (схема установщика, карта связей, ряды раздела series модели), либо записан здесь — сторож
      * {@code OutsideModelTypesGuardTest}. На базе из модели, где типа нет, чтение отвечает этой причиной, а не 502.
      */
-    static final Map<String, String> OUTSIDE_MODEL = Map.of(
-        "PlanConfig", PLAN_BOARD,
-        "PlanTrack", PLAN_BOARD,
-        "PlanSection", PLAN_BOARD,
-        "PlanCheckpoint", PLAN_BOARD,
-        "PlanVersion", PLAN_BOARD,
+    static final Map<String, String> OUTSIDE_MODEL = Map.ofEntries(
+        Map.entry("PlanConfig", PLAN_BOARD),
+        Map.entry("PlanTrack", PLAN_BOARD),
+        Map.entry("PlanSection", PLAN_BOARD),
+        Map.entry("PlanCheckpoint", PLAN_BOARD),
+        Map.entry("PlanVersion", PLAN_BOARD),
         // MD-02 8а: типы, которые трогает только накатка шагов V на старой схеме — на базе из модели шаги V не идут
-        "KnowFeature", "легаси: читает только шаг V13 накатки на старой схеме (KnowFeature растворён в KnowUseCase, PL-28)",
-        "LoreTag", "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)",
-        "LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме",
+        Map.entry("KnowFeature", "легаси: читает только шаг V13 накатки на старой схеме (KnowFeature растворён в KnowUseCase, PL-28)"),
+        Map.entry("LoreTag", "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)"),
+        Map.entry("LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме"),
         // KREG-01: реестр видов появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз модели);
         // history_hygiene читает KnowKindHist — на базе из модели 1.18 его нет, срез отвечает этой причиной
-        "KnowKindHist", "KREG-01 (V94): реестр видов KnowKind ещё не перенесён в модель 1.18");
+        Map.entry("KnowKindHist", "KREG-01 (V94): реестр видов KnowKind ещё не перенесён в модель 1.18"),
+        // KREG-09 (зонтик KNOW_REGISTRY 25.11): сам KnowKind пишет KnowRegistrySync — импорт реестра за флагом
+        // lore.know-registry.import (по умолчанию выкл.); стык веток: страж появился в линии скиллов, импорт — в линии реестра
+        Map.entry("KnowKind", "KREG-01/KREG-09 (V94): реестр видов ещё не перенесён в модель 1.18; пишет только импорт за флагом"),
+        // SKILL-01/02 (V96): вид skill:* появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз
+        // модели); на базе из модели 1.18 этих типов нет — срезы skills/skills_full отвечают этой причиной
+        Map.entry("KnowSkill", SKILL_TYPES),
+        Map.entry("APPLIES_TO_ROLE", SKILL_TYPES),
+        Map.entry("SKILL_EXTENDS", SKILL_TYPES));
+
 
     /**
      * SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 · типы модели 1.18, у которых на старой схеме (до переноса) другое имя с теми
