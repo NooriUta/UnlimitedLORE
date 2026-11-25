@@ -117,6 +117,38 @@ class LoreFieldAudienceTest {
     }
 
     /**
+     * Решение владельца 25.11.2026 (развилка 1б, «1 вопрос агента согласовано рекомендация»): учётку агента в срезе
+     * agent_owners видят только admin/superadmin и служебный читатель miniLORE. Связка miniLORE MachineOwners /
+     * WriterGate читает из строки client_id (машина ли это: префикс minilore-link-), machine_id и owner_kc_sub —
+     * служебному читателю они должны дойти как есть, иначе машинам закроется запись.
+     */
+    @Test
+    void agentOwnersClientIdOnlyForAdminAndMiniloreServiceReader() {
+        assertFalse(LoreFieldAudience.EXEMPT_SLICES.containsKey("agent_owners"), "больше не открытая дыра");
+        assertEquals("agent", LoreFieldAudience.typeOfSlice("agent_owners"));
+        assertTrue(LoreFieldAudience.SERVICE_READER_SLICES.contains("agent_owners"));
+        java.util.function.Supplier<Map<String, Object>> machine = () -> new LinkedHashMap<>(Map.of(
+            "actor_id", "minilore-link-LEGION", "client_id", "minilore-link-LEGION", "machine_id", "LEGION",
+            "owner_kc_sub", List.of("sub-ann"), "name", "LEGION"));
+        Map<String, Object> viewer = LoreFieldAudience.stripRows("agent_owners", List.of(machine.get()), "viewer", false).get(0);
+        assertFalse(viewer.containsKey("client_id"), "обычному вошедшему учётка не уходит");
+        assertEquals("LEGION", viewer.get("machine_id"));
+        // Служебный читатель miniLORE (роль viewer, но клиент из lore.scope.read-all-clients): контракт MachineOwners цел.
+        Map<String, Object> svc = LoreFieldAudience.stripRows("agent_owners", List.of(machine.get()), "viewer", true).get(0);
+        assertEquals("minilore-link-LEGION", svc.get("client_id"), "MachineOwners отличает машину по префиксу client_id");
+        assertEquals("LEGION", svc.get("machine_id"));
+        assertEquals(List.of("sub-ann"), svc.get("owner_kc_sub"));
+        assertEquals("minilore-link-LEGION",
+            LoreFieldAudience.stripRows("agent_owners", List.of(machine.get()), "admin", false).get(0).get("client_id"));
+        // Служебный читатель не открывает учётку на поверхностях записи — только в своих служебных срезах.
+        assertFalse(LoreFieldAudience.stripRows("agents", List.of(agentRow()), "viewer", true).get(0).containsKey("client_id"));
+        // Опознание — тем же списком, что у AL-91 (служебный читатель всего корпуса), точным совпадением.
+        assertTrue(LoreFieldAudience.serviceReader("lore-reader-minilore", "lore-reader-minilore"));
+        assertFalse(LoreFieldAudience.serviceReader("lore-reader-minilore-x", "lore-reader-minilore"));
+        assertFalse(LoreFieldAudience.serviceReader(null, "lore-reader-minilore"));
+    }
+
+    /**
      * Сторож CI: каждый срез, который ОТДАЁТ колонкой поле уровня admin, либо отнесён к типу этого поля (и тогда
      * колонку срезает {@link LoreFieldAudience#stripRows}), либо сам админский (ADMIN_ONLY), либо в явном списке
      * исключений с причиной. Новый срез с client_id мимо фильтра здесь не пройдёт.

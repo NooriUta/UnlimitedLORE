@@ -2,6 +2,8 @@
 // согласован владелицей 21.11.2026): его задачи сейчас по статусам и где он работает — по проектам. Данные — строки
 // среза user_tasks (задачи, где у него открытая роль: автор, исполнитель, приёмщик).
 import { planStatusOf } from '../sprints/taskStatus';
+import { cycleTimes, taskTimelines, type CyclePoint, type StatusVersionRow } from './flowModel';
+import { firstDates, lastWeeks, type TaskRow } from '../analytics/analyticsModel';
 
 /** Корзины жизненного цикла: столбиков столько, сколько различает человек, а не словарь статусов. */
 export const USER_BUCKETS = ['todo', 'work', 'waiting', 'review', 'done', 'closed'] as const;
@@ -41,5 +43,61 @@ export function userProjectBars(rows: readonly UserTaskRow[], top = 5): Bars[] {
   for (const [, v] of sorted.slice(top)) other += v;
   const out: Bars[] = sorted.slice(0, top).map(([category, t]) => ({ category, values: { t } }));
   if (other > 0) out.push({ category: 'other', values: { t: other } });
+  return out;
+}
+
+// ── Решение владельца 25.11.2026 (3а): цифры шапки и время цикла по истории статусов человека/агента ──────────
+const DAY = 864e5;
+
+/** Чья страница: человек (ключ kc_sub) или агент (actor_id; решение 25.11, 2а — те же вкладки, что у человека). */
+export interface PersonSubject { kind: 'user' | 'agent'; id: string }
+
+/** Срезы страницы: задачи с открытой ролью и история их статусов (3а) — свои у человека и у агента. */
+export function personSources(s: PersonSubject) {
+  const param = s.kind === 'user' ? { kc_sub: s.id } : { id: s.id };
+  return {
+    tasks: { slice: s.kind === 'user' ? 'user_tasks' : 'agent_tasks', params: param },
+    history: { slice: s.kind === 'user' ? 'user_task_status_versions' : 'agent_task_status_versions', params: param },
+  };
+}
+
+const median = (xs: readonly number[]): number | null => {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round(((s[m - 1] + s[m]) / 2) * 10) / 10;
+};
+
+export interface PersonStatsInput { tasks: readonly UserTaskRow[]; done: readonly TaskRow[]; history: readonly StatusVersionRow[]; today: number }
+export interface PersonStatsOut { work: number; review: number; closed30: number; medianCycleDays: number | null }
+
+const mineOf = (tasks: readonly UserTaskRow[]) => new Set(tasks.map(r => (typeof r.task_uid === 'string' ? r.task_uid : '')).filter(Boolean));
+
+/** Шапка: в работе и на приёмке — сейчас; закрыто и медиана цикла — за 30 дней, только по его задачам. */
+export function personStats({ tasks, done, history, today }: PersonStatsInput): PersonStatsOut {
+  const st = Object.fromEntries(userStatusBars(tasks).map(b => [b.category, b.values.t])) as Record<string, number>;
+  const mine = mineOf(tasks);
+  const since = today - 30 * DAY;
+  let closed30 = 0;
+  for (const [uid, at] of firstDates(done)) if (mine.has(uid) && at >= since && at <= today) closed30 += 1;
+  const cyc = personCycle(tasks, history, since).filter(p => p.x <= today);
+  return { work: st.work ?? 0, review: st.review ?? 0, closed30, medianCycleDays: median(cyc.map(p => p.y)) };
+}
+
+/** Точки времени цикла его задач (от первого «в работе» до готовности), закрытых не раньше {@code from}. */
+export function personCycle(tasks: readonly UserTaskRow[], history: readonly StatusVersionRow[], from = -Infinity): CyclePoint[] {
+  const mine = mineOf(tasks);
+  return cycleTimes(taskTimelines(history, uid => mine.has(uid)), from).points;
+}
+
+/** Время цикла — медиана по неделям закрытия (понедельник недели); неделя без закрытых — пропуск, а не ноль. */
+export function weeklyMedianCycle(points: readonly CyclePoint[], today: number, weeks = 12): { x: number; y: number }[] {
+  const ws = lastWeeks(weeks, today);
+  const out: { x: number; y: number }[] = [];
+  ws.forEach((w, i) => {
+    const end = i + 1 < ws.length ? ws[i + 1] : w + 7 * DAY;
+    const m = median(points.filter(p => p.x >= w && p.x < end).map(p => p.y));
+    if (m !== null) out.push({ x: w, y: m });
+  });
   return out;
 }

@@ -34,10 +34,27 @@ final class LoreFieldAudience {
      * дыра, видимая в коде (тот же приём, что SCOPE_PENDING): закрывать — решением, а не молча.
      */
     static final Map<String, String> EXEMPT_SLICES = Map.of(
-        "agent_owners", "служебный срез сервера miniLORE: пара «машина → человек» по client_id (MachineOwners, WriterGate);"
-            + " роль служебного читателя — не admin, вырезать колонку значит закрыть машинам запись. Решение — у владелицы",
         "machine_acl", "машины (актор minilore-link-*) — свой тип machine, не агент; срез решает видимость машин в miniLORE",
         "actor_identity_orphans", "отдаёт только акторов БЕЗ учётки (WHERE client_id пуст) — значения в колонке нет");
+
+    /**
+     * Служебные срезы, в которых поле уровня admin видит ещё и служебный читатель miniLORE (решение владельца
+     * 25.11.2026, развилка 1б). agent_owners: сервер miniLORE (MachineOwners, WriterGate) отличает машину по префиксу
+     * client_id «minilore-link-» и по ней решает, кому машина пишет. Его учётка — не admin, поэтому без этого
+     * исключения машинам закрылась бы запись. Остальным вошедшим колонка не уходит.
+     */
+    static final Set<String> SERVICE_READER_SLICES = Set.of("agent_owners");
+
+    /** Срез-поверхность типа сверх выведенных из модели: служебный срез агентов. */
+    private static final Map<String, String> EXTRA_SLICE_TYPES = Map.of("agent_owners", "agent");
+
+    /**
+     * Служебный читатель miniLORE — клиент из {@code lore.scope.read-all-clients} (AL-91, тот же список и то же точное
+     * совпадение, что дают ему чтение всего корпуса). Опознание по проверенному токену, не по заголовку.
+     */
+    static boolean serviceReader(String clientId, String readAllClients) {
+        return AidaLoreResource.readsWholeCorpus(clientId, readAllClients);
+    }
 
     static boolean isAdmin(String role) {
         return "admin".equals(role) || "superadmin".equals(role);
@@ -100,7 +117,7 @@ final class LoreFieldAudience {
     static String typeOfSlice(String slice) {
         Map<String, String> m = sliceTypes;
         if (m == null) {
-            m = new LinkedHashMap<>();
+            m = new LinkedHashMap<>(EXTRA_SLICE_TYPES);
             for (String t : LoreRecordRegistry.TYPES) {
                 LoreRecordResource.Source s = LoreRecordResource.sourceOf(t);
                 if (s != null) m.putIfAbsent(s.slice(), t);
@@ -116,7 +133,13 @@ final class LoreFieldAudience {
 
     /** Строки среза без закрытых от роли колонок; срез не поверхность типа или закрывать нечего — как есть. */
     static List<Map<String, Object>> stripRows(String slice, List<Map<String, Object>> rows, String role) {
+        return stripRows(slice, rows, role, false);
+    }
+
+    /** То же; {@code serviceReader} — вызывающий служебный читатель miniLORE: служебные срезы ему отдаются целиком. */
+    static List<Map<String, Object>> stripRows(String slice, List<Map<String, Object>> rows, String role, boolean serviceReader) {
         if (rows == null) return null;
+        if (serviceReader && SERVICE_READER_SLICES.contains(slice)) return rows;
         Set<String> cols = closedColumns(typeOfSlice(slice), role);
         if (cols.isEmpty()) return rows;
         List<Map<String, Object>> out = new ArrayList<>(rows.size());

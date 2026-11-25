@@ -2620,5 +2620,14 @@
   "userCharts.bucket.waiting": "ждёт",
   "userCharts.bucket.review": "на приёмке",
   "userCharts.bucket.done": "сделано",
-  "userCharts.bucket.closed": "снято"
+  "userCharts.bucket.closed": "снято",
+  "personStats.label": "Сводка по задачам",
+  "personStats.work": "в работе",
+  "personStats.review": "на приёмке (UAT)",
+  "personStats.closed30": "закрыто за 30 дней",
+  "personStats.cycle": "медиана цикла за 30 дней",
+  "personStats.daysShort": "д",
+  "personStats.error": "сводку не смогли загрузить",
+  "userCharts.cycle": "Время цикла (дни, медиана по неделям)",
+  "userCharts.cycleMedian": "медиана"
 }

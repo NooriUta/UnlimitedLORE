@@ -75,6 +75,7 @@ class PersonAgentPassportLiveDbTest {
         List<Map<String, Object>> st = now.getList("meta.data_state");
         assertTrue(st.stream().anyMatch(e -> String.valueOf(e.get("source")).contains("agent_tasks") && "ok".equals(e.get("state"))),
             "вкладка «Задачи» прочитана срезом agent_tasks: " + st);
+        agentStatusHistoryAndAccountVisibility();
     }
 
     @Test
@@ -84,6 +85,28 @@ class PersonAgentPassportLiveDbTest {
         assertEquals(List.of(), errors(p), "паспорт человека без сбоев: пустые дети — проверенный ноль");
         assertEquals("S9-05 Person", p.getString("values.title"));
         assertEquals(List.of(), taskIds(p));
+    }
+
+    /**
+     * AP-PEOPLE-PAGE (3а, решение владельца 25.11.2026): история статусов по агенту читается на живой базе — путь
+     * KnowTaskHist ← HAS_STATE ← задача → открытая роль; сменённый исполнитель истории задачи не получает.
+     * (1, поле уровня admin): viewer не получает учётку агента ни в срезе, ни в паспорте; admin — получает.
+     */
+    private static void agentStatusHistoryAndAccountVisibility() {
+        List<Map<String, Object>> now = given().header("X-Seer-Role", "admin").get("/lore/slice/agent_task_status_versions?id=" + AGENT_NEW)
+            .then().statusCode(200).extract().jsonPath().getList("rows");
+        assertTrue(now.stream().anyMatch(r -> TASK.equals(r.get("task_uid"))), "история задачи нынешнего исполнителя: " + now);
+        List<Map<String, Object>> was = given().header("X-Seer-Role", "admin").get("/lore/slice/agent_task_status_versions?id=" + AGENT_OLD)
+            .then().statusCode(200).extract().jsonPath().getList("rows");
+        assertTrue(was.stream().noneMatch(r -> TASK.equals(r.get("task_uid"))), "сменённый исполнитель историю задачи не держит: " + was);
+
+        List<Map<String, Object>> viewer = given().header("X-Seer-Role", "viewer").get("/lore/slice/agent_by_id?id=" + AGENT_NEW)
+            .then().statusCode(200).extract().jsonPath().getList("rows");
+        assertFalse(viewer.isEmpty(), "положительный контроль: агент найден");
+        assertFalse(viewer.get(0).containsKey("client_id"), "viewer колонку учётки не получает вовсе: " + viewer);
+        Map<String, Object> values = given().header("X-Seer-Role", "viewer").get("/lore/record/agent/" + AGENT_NEW)
+            .then().statusCode(200).extract().jsonPath().getMap("values");
+        assertFalse(values.containsKey("client_id"), "паспорт viewer — без поля учётки: " + values);
     }
 
     @Test

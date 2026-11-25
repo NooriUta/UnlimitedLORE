@@ -2316,9 +2316,29 @@ public final class LoreSlices {
         slice("agent_tasks",
             "SELECT task_uid, task_id, title, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
-            "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id",
+            "out('PART_OF').sprint_id[0] AS sprint_id, " + "out('PART_OF').out('BELONGS_TO_PROJECT').slug[0] AS project, " + CHILD_TASK_COLS + " " +
+            // AP-PEOPLE-PAGE: карточка агента открывается и по учётке (из ленты) — задачи находятся по любому ключу.
+            "FROM KnowTask WHERE (outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id " +
+            "OR outE('ROLE_HELD_BY')[valid_to IS NULL].inV().client_id CONTAINS :id)",
             List.of("id"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
+        // AP-PEOPLE-PAGE (3а, решение владельца 25.11.2026): история статусов задач человека и агента — для цифр шапки
+        // личной страницы и графика времени цикла. Форма строки — как у task_status_versions (её читает flowModel);
+        // задачи — те же, что во вкладке «Задачи» (открытая роль), без выгрузки всей истории корпуса.
+        slice("user_task_status_versions",
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "status_raw, valid_from, valid_to, version_kind " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL " +
+            "AND in('HAS_STATE').outE('ROLE_HELD_BY')[valid_to IS NULL].inV().kc_sub CONTAINS :kc_sub",
+            List.of("kc_sub"), Map.of(), "");
+        slice("agent_task_status_versions",
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "status_raw, valid_from, valid_to, version_kind " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL " +
+            "AND (in('HAS_STATE').outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id " +
+            "OR in('HAS_STATE').outE('ROLE_HELD_BY')[valid_to IS NULL].inV().client_id CONTAINS :id)",
+            List.of("id"), Map.of(), "");
         slice("project_people",
             "SELECT @out.kc_sub AS kc_sub, @out.display_name AS display_name, role " +
             "FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :project",
@@ -3623,6 +3643,8 @@ public final class LoreSlices {
         Map.entry("task_created_dates", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_starts", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("user_task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("agent_task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("phases_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // Спринты мимо sprints.
         Map.entry("timeline_sprints", "out('BELONGS_TO_PROJECT').slug"),
