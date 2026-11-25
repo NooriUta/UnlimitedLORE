@@ -40,6 +40,8 @@ class PersonAgentPassportTest {
         }
         assertEquals(List.of("kc_sub"), LoreSlices.get("user_tasks").required());
         assertEquals(List.of("id"), LoreSlices.get("agent_tasks").required());
+        // AP-PEOPLE-PAGE: «где работает» на вкладке «Аналитика» — проект спринта задачи колонкой среза.
+        assertTrue(LoreSlices.get("user_tasks").baseSql().contains("AS project"), LoreSlices.get("user_tasks").baseSql());
     }
 
     @Test

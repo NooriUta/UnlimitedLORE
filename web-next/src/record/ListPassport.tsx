@@ -28,6 +28,9 @@ import { MilestoneCharts, SprintCharts } from '../charts/TaskFlowCharts';
 import { GateCharts, ProjectCharts } from '../charts/Batch2Charts';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { withDocHtmlTab } from './docHtmlTab';
+import { withUserFeedTab } from './userFeedTab';
+import { AgentHeadLine } from './AgentHeadLine';
+import { UserCharts } from '../charts/UserCharts';
 import { useAppT } from '../i18n';
 import { type PassportType } from './passportAdapters';
 import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
@@ -427,7 +430,9 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     ))
     : view.config;
   // Документ: HTML-тело (content_html) — отдельной вкладкой «HTML», рендер только в песочнице (MDL-08 ч.2).
-  const baseConfig = type === 'doc' ? withDocHtmlTab(sprintConfig, view.record.kind, t('docHtml.tab'), contract?.values.content_html) : sprintConfig;
+  const docConfig = type === 'doc' ? withDocHtmlTab(sprintConfig, view.record.kind, t('docHtml.tab'), contract?.values.content_html) : sprintConfig;
+  // AP-PEOPLE-PAGE: личная страница человека — вкладка «Лента» (новости с фильтром по автору, ось who = kc_sub).
+  const baseConfig = type === 'user' ? withUserFeedTab(docConfig, view.record.kind, t('userFeed.tab'), view.record.id) : docConfig;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;
@@ -466,6 +471,8 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       {/* MDA-04: у git-проекта — выгрузка в папку .md (Obsidian) zip-архивом. */}
       {/* MD-05: шапка PR — ветки и вид, «не влит», плашка «заголовок не дотянут» (прототип md05-pr-passport). */}
       {type === 'pr' && contract && <PrHeadLine values={contract.values} />}
+      {/* AP-PEOPLE-PAGE: карточка агента вне админки — значок harness, профиль, машина и «чей он» ссылкой на владельца. */}
+      {type === 'agent' && contract && <AgentHeadLine values={contract.values} links={contract.links} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'project' && <ProjectExportButton slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'milestone' && (
         <MilestoneBurnLine
@@ -522,5 +529,7 @@ export function passportCharts(type: string, id: string, fetchImpl?: typeof fetc
   if (type === 'sprint') return <SprintCharts sprintId={id} {...f} />;
   if (type === 'project') return <ProjectCharts slug={id} {...f} />;
   if (type === 'quality_gate') return <GateCharts qgId={id} {...f} />;
+  // AP-PEOPLE-PAGE: личная страница человека — закрыто по неделям, задачи по статусам и по проектам.
+  if (type === 'user') return <UserCharts kcSub={id} {...f} />;
   return undefined;
 }

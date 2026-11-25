@@ -2306,7 +2306,9 @@ public final class LoreSlices {
         slice("user_tasks",
             "SELECT task_uid, task_id, title, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            // AP-PEOPLE-PAGE: «где работает» (вкладка «Аналитика» личной страницы) — проект спринта задачи.
+            "out('PART_OF').out('BELONGS_TO_PROJECT').slug[0] AS project, " + CHILD_TASK_COLS + " " +
             "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().kc_sub CONTAINS :kc_sub",
             List.of("kc_sub"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
         slice("agent_tasks",

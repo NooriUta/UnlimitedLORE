@@ -7,3 +7,13 @@
 .pr-head__branches b { color: var(--t1); font-weight: 600; overflow-wrap: anywhere; }
 .pr-head__kind { font-family: var(--font); font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
 .pr-head__note { margin: 0; font-size: var(--fs-sm); color: var(--t2); }
+
+/* AP-PEOPLE-PAGE: шапка карточки агента вне админки — «оболочка · профиль · машина» и «чей он». */
+.agent-head { display: grid; gap: 4px; margin: 0 0 8px; }
+.agent-head__who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: var(--fs-sm); color: var(--t1); }
+.agent-head__who b { font-weight: 600; overflow-wrap: anywhere; }
+.agent-head__owner { margin: 0; font-size: var(--fs-sm); color: var(--t2); }
+.agent-head__owner a { color: var(--acc); }
+.agent-head__k { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.agent-head__muted { color: var(--t3); }
+.agent-head__err { color: var(--dng); }
