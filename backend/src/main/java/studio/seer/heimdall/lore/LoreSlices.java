@@ -70,6 +70,19 @@ public final class LoreSlices {
         throw new IllegalStateException("unknown param kind: " + kind);
     }
 
+    /** SKILL-04: связи скилла колонками среза — роли, проекты, кого расширяет, владелец. */
+    private static final String SKILL_LINK_COLS =
+        "out('APPLIES_TO_ROLE').code AS roles, out('BELONGS_TO_PROJECT').slug AS projects, "
+        + "out('SKILL_EXTENDS').skill_id AS extends_ids, out('OWNED_BY').kc_sub[0] AS owner";
+
+    /** SKILL-04: фильтры срезов skills/skills_full — порядок вставки = порядок условий в SQL. */
+    private static final Map<String, String> SKILL_FILTERS = new LinkedHashMap<>(Map.of(
+        "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project"));
+    static {
+        SKILL_FILTERS.put("role", " WHERE out('APPLIES_TO_ROLE').code CONTAINS :role");
+        SKILL_FILTERS.put("status", " WHERE status = :status");
+    }
+
     /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */
     static final String ENB_RULE_SINCE = "2026-08-01";
 
@@ -3309,6 +3322,22 @@ public final class LoreSlices {
         slice("tag_entities",
             LoreEdgeFreeFields.entitiesSql("TAGGED_WITH"),
             List.of("tag"), Map.of(), " ORDER BY tagged_at DESC");
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-04 (SPEC-SKILLS-TAGS-062 §9): скиллы роли в проекте. skills — short,
+        // без body_md (каталог); skills_full — то же с телом процедуры. Фильтры project/role/status складываются
+        // (одно WHERE, дальше AND — compose). Роли — коды agent_profile на конце APPLIES_TO_ROLE, проекты — slug
+        // на конце BELONGS_TO_PROJECT, extends — skill_id на конце SKILL_EXTENDS, owner — kc_sub владельца.
+        slice("skills",
+            "SELECT skill_id, name, title, status, version, source, " + SKILL_LINK_COLS + ", updated_at FROM KnowSkill",
+            List.of(), SKILL_FILTERS, " ORDER BY skill_id");
+        slice("skills_full",
+            "SELECT skill_id, name, title, status, version, source, body_md, " + SKILL_LINK_COLS + ", updated_at FROM KnowSkill",
+            List.of(), SKILL_FILTERS, " ORDER BY skill_id");
+        // KREG-06 (§10 инвариант 1): скилл-висяк — без проекта или без роли. Читает рутина qg-lore-skill-tag;
+        // общий срез, а не скоупный: висяк без проекта под скоупом по проекту не был бы виден никому.
+        slice("skills_dangling",
+            "SELECT skill_id, status, out('BELONGS_TO_PROJECT').size() AS projects, out('APPLIES_TO_ROLE').size() AS roles "
+            + "FROM KnowSkill WHERE out('BELONGS_TO_PROJECT').size() = 0 OR out('APPLIES_TO_ROLE').size() = 0",
+            List.of(), Map.of(), " ORDER BY skill_id");
         // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
         // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 
@@ -3532,6 +3561,9 @@ public final class LoreSlices {
         Map.entry("docs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("runbooks",  "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("specs",     "out('BELONGS_TO_PROJECT').slug"),
+        // SKILL-04: скилл виден по проекту (BELONGS_TO_PROJECT, §5 «чтение — по скоупам проекта»)
+        Map.entry("skills",      "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("skills_full", "out('BELONGS_TO_PROJECT').slug"),
         // Решение: своё ребро ИЛИ проект родительского ADR (DECIDED_IN).
         Map.entry("decisions",
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
@@ -3699,6 +3731,7 @@ public final class LoreSlices {
         Map.entry("projects_without_role", "сторож ролей — служебный"),
         Map.entry("project_role_events", "журнал смены ролей — служебный"),
         Map.entry("entities_without_project", "сторож сирот — по определению сущности БЕЗ проекта"),
+        Map.entry("skills_dangling", "сторож висяков (KREG-06) — по определению скилл без проекта или без роли"),
         Map.entry("scope_orphans", "сторож сирот скоупа — по определению без проекта"),
         Map.entry("history_hygiene", "сторож истории — служебный"),
         Map.entry("asset_orphans", "сторож ассетов — служебный"),

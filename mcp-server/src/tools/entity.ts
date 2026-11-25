@@ -167,6 +167,16 @@ const UPSERT_DEFS = {
     idField: 'runbook_id', path: '/lore/runbook', project: 'runbook', stripProject: true, guardProject: true,
     replaces: ['runbook_new'],
   },
+  // SPRINT_LORE_KNOW_REGISTRY/SKILL-01: навык роли (KnowSkill). Проект — список projects (BELONGS_TO_PROJECT
+  // ставит бэкенд вместе с записью, гард обязательных рёбер — тоже он), поэтому project-guard MCP не нужен.
+  // fields.extends → extends_ids тела (паритет skill_new).
+  skill: {
+    idField: 'skill_id', path: '/lore/skill', replaces: ['skill_new', 'skill_set'],
+    build: (id, f) => {
+      const { extends: ext, ...rest } = f;
+      return { ...rest, skill_id: id, ...(ext === undefined ? {} : { extends_ids: ext }) };
+    },
+  },
   spec: {
     idField: 'spec_id', path: '/lore/spec', project: 'spec', stripProject: true, guardProject: true,
     replaces: ['spec_new', 'spec_set'],
@@ -440,6 +450,15 @@ const LINK_DEFS = {
         : { path: '/lore/runbook/adr', body: { runbook_id: id, adr_id: t, action: action ?? 'add' } };
     },
   },
+  // SKILL-02: рёбра навыка — роль, проект, наследование (ацикличность — гард бэкенда), владелец.
+  skill: {
+    rels: ['role', 'project', 'extends', 'owner'],
+    replaces: ['skill_link'],
+    dispatch: (id, rel, t, action): LinkResult | string => {
+      if (needTarget(t, rel)) return needTarget(t, rel)!;
+      return { path: '/lore/skill/link', body: { skill_id: id, rel, target_id: t, action: action ?? 'add' } };
+    },
+  },
   spec: {
     rels: ['component', 'project'],
     replaces: ['spec_link'],
@@ -537,6 +556,8 @@ const LINK_RELS = [
   'blocks', 'success_of', 'serves',
   // связи реестра репозиториев (22.11.2026)
   'uses', 'mirror',
+  // SKILL-02: связи навыка (project, extends — уже выше)
+  'role', 'owner',
 ] as const;
 
 // ── entity_delete / entity_move ─────────────────────────────────────────────

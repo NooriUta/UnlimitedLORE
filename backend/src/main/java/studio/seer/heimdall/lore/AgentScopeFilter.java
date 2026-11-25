@@ -178,6 +178,10 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("canvas",    Set.of("full", "architect", "pm", "product-analyst", "analyst")),
         // ── Прочее из README, чего тоже не было ──────────────────────────────
         Map.entry("component", Set.of("full", "architect")),
+        // skill — SPRINT_LORE_KNOW_REGISTRY/SKILL-01 (SPEC-SKILLS-TAGS-062 §5): навыки ролей (skill:*) создают и
+        // меняют только full и architect, по образцу RBAC ADR-LORE-060. Отказ — кодом FORBIDDEN_FOR_ROLE
+        // конверта SPEC-AGENT-SURFACE-061 §5 (denialEntity), список — SkillRules.WRITERS.
+        Map.entry("skill",     Set.copyOf(SkillRules.WRITERS)),
         // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
         // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-..."), не заводит
         // отдельного /lore/tech — семейство "spec" уже покрывает этот путь.
@@ -578,9 +582,21 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         LOG.warnf("[agent-scope] отказ: профиль '%s' → семейство '%s' (%s)", scope, family, why);
         ctx.abortWith(Response.status(Response.Status.FORBIDDEN)
             .type(MediaType.APPLICATION_JSON)
-            .entity(new LoreResourceBase.LoreError("AGENT_SCOPE_FORBIDDEN",
-                "профиль agent-" + scope + " не пишет в '" + family + "': " + why))
+            .entity(denialEntity(scope, family, why))
             .build());
+    }
+
+    /** Семейства, чей отказ говорит кодом конверта SPEC-AGENT-SURFACE-061 §5 (FORBIDDEN_FOR_ROLE + allowed). */
+    private static final Set<String> SPEC_061_FAMILIES = Set.of("skill");
+
+    /**
+     * Тело отказа. Семейства 061 (skill:* — SKILL-01) — {@code FORBIDDEN_FOR_ROLE} с {@code allowed}; прочие —
+     * прежний {@code AGENT_SCOPE_FORBIDDEN}: его клиенты уже разбирают, менять код им незачем.
+     */
+    static Object denialEntity(String scope, String family, String why) {
+        if (SPEC_061_FAMILIES.contains(family)) return SkillRules.forbiddenForRole(scope);
+        return new LoreResourceBase.LoreError("AGENT_SCOPE_FORBIDDEN",
+            "профиль agent-" + scope + " не пишет в '" + family + "': " + why);
     }
 
     /** Заголовок заявки профиля на действии (AO-07, путь «full заявляет роль»). */
