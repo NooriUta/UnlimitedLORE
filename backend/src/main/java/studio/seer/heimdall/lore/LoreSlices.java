@@ -2722,9 +2722,10 @@ public final class LoreSlices {
             "FROM ClRoutineMetric WHERE routine_name LIKE 'qg-%' ORDER BY routine_name, metric_key",
             List.of(), Map.of(), "");
 
-        // All metrics for a specific run (detail panel).
+        // All metrics for a specific run (detail panel). basis (QG-07) — отпечаток знаменателя:
+        // экран сравнивает с прошлым прогоном только метрики с той же базой.
         slice("qg_run_metrics",
-            "SELECT metric_id, metric_key, value, unit, target, status, source " +
+            "SELECT metric_id, metric_key, value, unit, target, status, source, basis " +
             "FROM ClRoutineMetric WHERE run_id = :run_id ORDER BY metric_key",
             List.of("run_id"), Map.of(), "");
 

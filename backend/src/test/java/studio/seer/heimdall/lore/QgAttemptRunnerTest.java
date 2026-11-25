@@ -46,7 +46,7 @@ class QgAttemptRunnerTest {
     }
 
     private static LoreQgResource.QGMetricEntry m(String key, String status) {
-        return new LoreQgResource.QGMetricEntry(key, 1.0, "count", 0.0, status, "test", null, null);
+        return new LoreQgResource.QGMetricEntry(key, 1.0, "count", 0.0, status, "test", null, null, null);
     }
 
     @Test
@@ -67,7 +67,7 @@ class QgAttemptRunnerTest {
     void notMeasuredMetricsDoNotSoftenTheVerdict() {
         Sink s = new Sink();
         LoreQgResource.QGMetricEntry nm = new LoreQgResource.QGMetricEntry(
-            "x", null, null, null, "NOT_MEASURED", "test", "source_missing", null);
+            "x", null, null, null, "NOT_MEASURED", "test", "source_missing", null, null);
         String st = QgAttemptRunner.run(routine(QgRoutine.Precondition.ok(), List.of(),
             List.of(m("a", "FAIL"), nm), null), s, NOW);
         assertEquals("FAIL", st, "худший среди ИЗМЕРЕННЫХ");

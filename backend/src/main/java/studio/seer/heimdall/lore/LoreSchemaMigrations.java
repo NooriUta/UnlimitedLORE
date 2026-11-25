@@ -1862,7 +1862,17 @@ final class LoreSchemaMigrations {
             // автор версии истории (S2-12): у V66 список заморожен до этого типа,
             // поэтому свои changed_by KnowKindHist объявляет сам создающий шаг.
             "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING")),
+
+        // SPRINT_QG_REBUILD/QG-07: «база» метрики прогона — отпечаток её знаменателя (состав
+        // выборки, фильтр, LIMIT). task_done_pct_avg «упала» 99.1% → 78.1% без регресса: было
+        // LIMIT 15 спринтов, стало 357 групп, а признака смены выборки у значения не было — сравнение
+        // молча сопоставило несопоставимое. Сравнивать с прошлым прогоном честно только при той же
+        // базе; смена базы — разрыв ряда с пометкой (src/lib/qgBasis.ts). Аддитивно, major 17,
+        // данных не трогает. V97, не V95/V96: их взяли параллельные ветки (knowtag_supertag_fields,
+        // know_skill) — леджер по номеру, дубль означал бы молчаливый пропуск одного из шагов.
+        new Step(97, 17, "qg_metric_basis", List.of(
+            "CREATE PROPERTY ClRoutineMetric.basis IF NOT EXISTS STRING"))
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */

@@ -1254,7 +1254,8 @@
     },
     "qgDetail": {
       "sparkline": {
-        "noData": "no data"
+        "noData": "no data",
+        "rebased": "series since basis change"
       },
       "loading": "Loading…",
       "notFound": "QG \"{{qgId}}\" not found.",
@@ -1291,7 +1292,9 @@
       },
       "changes": {
         "title": "Changed since last run",
-        "empty": "No status changes."
+        "empty": "No status changes.",
+        "rebased": "basis recomputed",
+        "rebasedTitle": "The metric denominator changed ({{prev}} → {{cur}}): the value is not compared with the previous run"
       },
       "invariants": {
         "title": "Invariants",

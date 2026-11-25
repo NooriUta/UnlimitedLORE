@@ -132,8 +132,10 @@ public class LoreQgResource extends LoreResourceBase {
     // записью, и первая же правка проверок разошлась бы молча. Роль ⑥
     // «Регистратор» из §11.2 — единственная точка записи, в одном экземпляре.
 
+    // basis (QG-07): отпечаток знаменателя метрики — состав выборки, фильтр, LIMIT. Сравнение с прошлым
+    // прогоном честно только при той же базе; смена базы — разрыв ряда, а не «падение».
     public record QGMetricEntry(String key, Double value, String unit, Double target, String status, String source,
-                                String not_measured_reason, String model) {}
+                                String not_measured_reason, String model, String basis) {}
     public record QGRunRequest(
         String run_id, String routine_name, String run_date, String status,
         String started_at, String finished_at, String flags,

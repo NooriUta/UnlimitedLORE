@@ -2171,6 +2171,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
           'script_absent', 'not_implemented', 'budget_exhausted', 'no_changes', 'no_evidence',
         ]).optional().describe('REQUIRED when status is NOT_MEASURED or SKIP — why the measurement did not happen'),
         model:  z.string().optional().describe('Model that judged this particular metric; defaults to the run-level model. Metrics collected by deterministic code have none'),
+        // QG-07: task_done_pct_avg "fell" 99.1% → 78.1% with no regression — the sample went
+        // from LIMIT 15 sprints to all 357 groups. A value is comparable with the previous run
+        // only on the same basis; a changed basis breaks the series instead of raising an alarm.
+        basis:  z.string().optional().describe('Fingerprint of the metric denominator — what was counted: sample size, filter, LIMIT, e.g. "groups=357" or "sprints:LIMIT 15". The QG screen compares a value with the previous run ONLY when the basis is the same; a changed basis is shown as "basis recomputed", not as a drop. Omit for absolute counts that have no denominator'),
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
     async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id,
