@@ -138,4 +138,27 @@ final class TagRename {
         if (t.isEmpty() || t.equals(oldSlug) || t.equals(geoid(oldSlug))) return newSlug;
         return curTitle;
     }
+
+    // ── исход и отказы (конверт 061 §4–§5, 062 §7) ─────────────────────────
+
+    /** Исход переименования: несопоставленные есть — partial_failure (ok остаётся true: вызов дошёл, ADR-LORE-043). */
+    static String outcome(List<?> unmatched) {
+        return unmatched == null || unmatched.isEmpty() ? LoreOutcome.UPDATED : LoreOutcome.PARTIAL_FAILURE;
+    }
+
+    /** Новое имя занято — 409 IDENTITY_CONFLICT (061 §5 upsert-guard); прежний код — в legacy_code. */
+    static java.util.Map<String, Object> identityConflict(String to, String rid) {
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("error", "IDENTITY_CONFLICT");
+        m.put("legacy_code", "TAG_TAKEN");
+        m.put("detail", "имя «" + to + "» уже занято вершиной " + rid + " — слияние тегов решает владелец, не сторож");
+        m.put("allowed", java.util.List.of("другое новое имя"));
+        m.put("hint", "выбрать другое имя; слить два тега — решение владельца");
+        return m;
+    }
+
+    /** source вершины тега по словарю 062 §4 (seed/agent/human): агент или человек — по типу вызывающего. */
+    static String sourceOf(String callerAgentScope) {
+        return callerAgentScope != null ? "agent" : "human";
+    }
 }

@@ -30,8 +30,9 @@ import java.util.Map;
  *   <li>{@code POST /lore/skill/link} — рёбра скилла: {@code role}, {@code project}, {@code extends} (ацикличность:
  *       цикл → 422 REFUSED с цепочкой), {@code owner} (один владелец — замена). Снятие последнего проекта/роли —
  *       422 REFUSED: висяка не оставляем;</li>
- *   <li>{@code GET /lore/skill/describe?kind=skill:*|tag:*} — карточка вида по форме SPEC-AGENT-SURFACE-061 §8
- *       ({@link SkillDescribeCards}).</li>
+ *   <li>{@code GET /lore/skill/describe?kind=skill:*|skill:<slug>|tag:*|tag:<slug>} — карточка вида по форме
+ *       SPEC-AGENT-SURFACE-061 §8 из реестра видов ({@link KnowDescribe}: skill:* — know-registry.json, tag:<slug> —
+ *       вид тега по его строке в графе). Один источник карточек — реестр (окно OQ-056-DESCRIBE-SOURCE).</li>
  * </ul>
  * Запись skill:* — только профилям full и architect (§5): матрица {@link AgentScopeFilter} (семейство
  * {@code skill}) и второй эшелон здесь же — 403 FORBIDDEN_FOR_ROLE с {@code allowed}.
@@ -187,7 +188,7 @@ public class LoreSkillResource extends LoreResourceBase {
                 if (req.title() == null || req.title().isBlank() || req.body_md() == null || req.body_md().isBlank())
                     return badParams("title и body_md обязательны при создании скилла");
                 if (req.status() != null && !"draft".equals(req.status()))
-                    return refuse(Response.Status.CONFLICT, transitionError(null, req.status(),
+                    return refuse(Response.Status.CONFLICT, SkillRules.invalidTransition(null, req.status(),
                         "создание → draft (§5); публикация — следующим вызовом со status=active"));
                 if (extIds.contains(id)) return refuse(Response.Status.fromStatusCode(422), SkillRules.refusedCycle(List.of(id, id)));
                 String miss = firstMissing(edges);
@@ -214,7 +215,7 @@ public class LoreSkillResource extends LoreResourceBase {
                     case SAME -> { }
                     case NOOP_OWNER_ONLY -> { return refuse(Response.Status.CONFLICT, SkillRules.noopOwnerOnly(id, ownerSub)); }
                     case BAD_STATUS -> { return badParams("status: " + SkillRules.STATUSES); }
-                    case BAD_TRANSITION -> { return refuse(Response.Status.CONFLICT, transitionError(cur, req.status(),
+                    case BAD_TRANSITION -> { return refuse(Response.Status.CONFLICT, SkillRules.invalidTransition(cur, req.status(),
                         "допустимо: draft→active, draft→deprecated, active→deprecated, deprecated→active (владелец)")); }
                 }
             }
@@ -263,15 +264,6 @@ public class LoreSkillResource extends LoreResourceBase {
             LOG.warnf("[LORE SKILL] %s: %s", id, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
-    }
-
-    private static Map<String, Object> transitionError(String from, String to, String hint) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("error", "BAD_TRANSITION");
-        m.put("detail", (from == null ? "создание" : from) + " → " + to + " не по жизненному циклу скилла");
-        m.put("allowed", SkillRules.STATUSES);
-        m.put("hint", hint);
-        return m;
     }
 
     @POST
@@ -340,8 +332,48 @@ public class LoreSkillResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response describe(@QueryParam("kind") String kind) {
         if (!enabled) return disabled();
-        Map<String, Object> card = SkillDescribeCards.card(kind);
-        if (card == null) return badParams("kind: " + SkillDescribeCards.KINDS);
-        return noStore(Response.ok(card));
+        if (kind == null || kind.isBlank()) return badParams("kind: skill:* | skill:<slug> | tag:* | tag:<slug>");
+        String k = kind.strip();
+        io.vertx.core.json.JsonObject model = new io.vertx.core.json.JsonObject(LoreModelFile.render(LoreModelFile.content()));
+        Map<String, Object> rec;
+        try {
+            rec = KnowDescribe.kindFor(k, KnowRegistrySync.artifactKinds(), model);
+            if (rec == null && k.startsWith("tag:") && LoreTagResource.TAG.matcher(TagRename.slugOf(k)).matches()) {
+                String slug = TagRename.slugOf(k);
+                List<Map<String, Object>> rows = sql(KnowRegistry.TAG_ROW_SQL, Map.of("s", slug, "g", TagRename.geoid(slug)));
+                if (!rows.isEmpty()) rec = KnowRegistry.tagKinds(model, rows.subList(0, 1), AgentScopeFilter.FAMILY_AGENTS).get(0);
+            }
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE SKILL DESCRIBE] %s: %s", k, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+        if (rec == null) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("error", "UNKNOWN_KIND");
+            m.put("detail", "вида «" + k + "» нет в реестре");
+            m.put("allowed", List.of("skill:*", "skill:<slug>", "tag:*", "tag:<slug>"));
+            return refuse(Response.Status.NOT_FOUND, m);
+        }
+        return noStore(Response.ok(KnowDescribe.describeFull(rec, dictsOf(rec))));
+    }
+
+    /** Словари enum_ref вида из графа; не прочитались — null (карточка покажет «не смогли», а не пусто). */
+    private Map<String, List<String>> dictsOf(Map<String, Object> rec) {
+        Map<String, List<String>> out = new HashMap<>();
+        try {
+            for (Map<String, Object> p : KnowDescribe.params(rec)) {
+                Object ref = p.get("enum_ref");
+                if (ref == null) continue;
+                String dict = String.valueOf(ref).startsWith("dict:") ? String.valueOf(ref).substring(5) : String.valueOf(ref);
+                List<String> codes = new ArrayList<>();
+                for (Map<String, Object> r : sql("SELECT code FROM KnowDictEntry WHERE dict_type = :d ORDER BY sort_order, code",
+                    Map.of("d", dict))) if (r.get("code") != null) codes.add(String.valueOf(r.get("code")));
+                out.put(dict, codes);
+            }
+            return out;
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE SKILL DESCRIBE] словари не прочитаны: %s", e.getMessage());
+            return null;
+        }
     }
 }

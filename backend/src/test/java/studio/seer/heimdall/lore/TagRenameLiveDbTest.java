@@ -46,7 +46,9 @@ class TagRenameLiveDbTest {
     @Test
     @Order(1)
     void tagApplyCreatesVertexWithGeoid() {
-        admin().body(Map.of("adr_id", ADR, "name", "проба SKILL-05")).when().post("/lore/adr")
+        // тело ADR (открытая версия истории) тоже несёт токен — перепись идёт по всем телам (062 §8)
+        admin().body(Map.of("adr_id", ADR, "name", "проба SKILL-05", "context_md", "Контекст: [[" + ADR + "#sec-review]]."))
+            .when().post("/lore/adr")
             .then().statusCode(200).body("ok", equalTo(true));
         admin().body(Map.of("type", "adr", "id", ADR, "tag_id", "sec-review")).when().post("/lore/tag/apply")
             .then().statusCode(200).body("ok", equalTo(true));
@@ -70,11 +72,14 @@ class TagRenameLiveDbTest {
             .body("from", equalTo("sec-review"))
             .body("to", equalTo("security-review"))
             .body("tag_id", equalTo("tag:security-review"))
-            .body("rewritten", hasSize(1))
-            .body("rewritten[0].doc_id", equalTo(DOC))
-            .body("rewritten[0].field", equalTo("content_md_ru"))
-            .body("rewritten[0].places", equalTo(1))
-            .body("unmatched", hasSize(2))
+            // 062 §7: несопоставленные есть — outcome partial_failure, ok остаётся true (вызов дошёл)
+            .body("outcome", equalTo("partial_failure"))
+            .body("rewritten.findAll { it.field == 'content_md_ru' }", hasSize(1))
+            .body("rewritten.find { it.field == 'content_md_ru' }.doc_id", equalTo(DOC))
+            .body("rewritten.find { it.field == 'content_md_ru' }.places", equalTo(1))
+            // перепись — не только доки: токен в теле ADR (открытая версия) переписан
+            .body("rewritten.findAll { it.type == 'adr' && it.field == 'context_md' }", hasSize(1))
+            .body("unmatched.findAll { it.field == 'content_md_ru' }", hasSize(2))
             .body("unmatched.fragment", hasItem(containsString("GHOST-1")))
             .body("unmatched.fragment", hasItem(containsString("#sec-review")))
             .body("synonyms", hasItem("sec-review"));
@@ -93,8 +98,20 @@ class TagRenameLiveDbTest {
             .body("rows[0].id", equalTo(ADR));
     }
 
+    /** 061 §5: занятое имя — 409 IDENTITY_CONFLICT, прежний код — в legacy_code. */
     @Test
     @Order(3)
+    void takenNameIsIdentityConflict() {
+        admin().body(Map.of("type", "adr", "id", ADR, "tag_id", "taken-name")).when().post("/lore/tag/apply")
+            .then().statusCode(200).body("ok", equalTo(true));
+        admin().body(Map.of("from", "security-review", "to", "taken-name")).when().post("/lore/tag/rename")
+            .then().statusCode(409)
+            .body("error", equalTo("IDENTITY_CONFLICT"))
+            .body("legacy_code", equalTo("TAG_TAKEN"));
+    }
+
+    @Test
+    @Order(4)
     void unknownTagRenamesTo404() {
         admin().body(Map.of("from", "no-such-tag", "to", "never")).when().post("/lore/tag/rename")
             .then().statusCode(404).body("error", equalTo("NOT_FOUND"));

@@ -102,6 +102,10 @@ final class KnowRegistry {
             Map<String, Object> k = ddlKind(vertex, in.ddl().get(vertex));
             out.put((String) k.get("kind"), k);
         }
+        if (in.ddl().containsKey(SKILL_VERTEX)) {
+            Map<String, Object> k = skillKind(in);
+            out.put((String) k.get("kind"), k);
+        }
         for (Map.Entry<String, LoreSlices.SliceDef> s : new TreeMap<>(in.slices()).entrySet()) {
             Map<String, Object> k = sliceKind(s.getKey(), s.getValue(), allProfiles(model));
             out.put((String) k.get("kind"), k);
@@ -420,6 +424,77 @@ final class KnowRegistry {
         return List.copyOf(out);
     }
 
+    // ── Навыки (SKILL-04 / KREG-07) ───────────────────────────────────────
+
+    static final String SKILL_VERTEX = "KnowSkill";
+    static final String SOURCE_SKILL = "ddl+skill-rules";
+
+    /**
+     * Вид {@code skill:*} — вершина KnowSkill вне паспорта модели (типа skill в модели нет), поэтому вид не
+     * выводится из {@code types}, как entity:*. Поля — из DDL KnowSkill (гейт MDL-05: только объявленное);
+     * обязательность, словари, связи, гарды, жизненный цикл и роли записи — из {@link SkillRules}: тех же
+     * констант, что исполняют гарды записи {@code /lore/skill}, так что карточка describe и поведение не
+     * расходятся. ddl:KnowSkill остаётся как был (импорт не удаляет виды, KnowKindImport.stale).
+     */
+    static Map<String, Object> skillKind(Inputs in) {
+        Map<String, String> props = in.ddl().getOrDefault(SKILL_VERTEX, Map.of());
+        Set<String> required = Set.of("skill_id", "title", "body_md");
+        List<Map<String, Object>> fields = new ArrayList<>();
+        for (Map.Entry<String, String> p : new TreeMap<>(props).entrySet()) {
+            Map<String, Object> fd = new LinkedHashMap<>();
+            fd.put("name", p.getKey());
+            fd.put("type", "body_md".equals(p.getKey()) ? "md" : "status".equals(p.getKey()) || "source".equals(p.getKey())
+                ? "enum" : ddlType(p.getValue()));
+            fd.put("required", required.contains(p.getKey()));
+            fd.put("enum_ref", "status".equals(p.getKey()) ? "dict:skill_status" : null);
+            if ("source".equals(p.getKey())) fd.put("enum", SkillRules.SOURCES);
+            fd.put("pattern", "skill_id".equals(p.getKey()) ? "skill:[a-z0-9][a-z0-9-]{0,62}" : null);
+            fd.put("desc", null);
+            fd.put("layer", "ddl");
+            fd.put("property", p.getKey());
+            fields.add(fd);
+        }
+        List<Map<String, Object>> links = new ArrayList<>();
+        links.add(skillLink("BELONGS_TO_PROJECT", "entity:project", "project", 1));
+        links.add(skillLink("APPLIES_TO_ROLE", "dict:agent_profile", "role", 1));
+        links.add(skillLink("SKILL_EXTENDS", "skill:*", "extends", null));
+        links.add(skillLink("OWNED_BY", "entity:user", "owner", null));
+        List<Map<String, Object>> guards = new ArrayList<>();
+        guards.add(guard("required-edges", SkillRules.REQUIRED_EDGES));
+        guards.add(guard("no-extends-cycle", List.of()));
+        guards.add(guard("no-dangling-unlink", SkillRules.REQUIRED_EDGES));
+        guards.add(guard("status-moves", List.of("создание → draft", "draft → active", "draft → deprecated",
+            "active → deprecated", "deprecated → active: owner only")));
+        Map<String, Object> lifecycle = new LinkedHashMap<>();
+        lifecycle.put("draft", List.of("active", "deprecated"));
+        lifecycle.put("active", List.of("deprecated"));
+        lifecycle.put("deprecated", List.of("active"));
+        Map<String, Object> k = new LinkedHashMap<>();
+        k.put("kind", SkillRules.PREFIX + "*");
+        k.put("id_field", "skill_id");
+        k.put("title", "Навык роли: процедура «как делать» (KnowSkill)");
+        k.put("fields", fields);
+        k.put("links", links);
+        k.put("guards", guards);
+        k.put("roles", rolesOf(in.familyRoles(), "skill"));
+        k.put("replaces", List.of());
+        k.put("source", SOURCE_SKILL);
+        k.put("lifecycle", lifecycle);
+        k.put("vertex", SKILL_VERTEX);
+        return withHash(k);
+    }
+
+    private static Map<String, Object> skillLink(String rel, String target, String apiRel, Integer min) {
+        Map<String, Object> l = new LinkedHashMap<>();
+        l.put("rel", rel);
+        l.put("dir", "out");
+        l.put("target_kind", target);
+        l.put("keys", List.of(apiRel));
+        l.put("edge_fields", List.of("linked_at", "linked_by"));
+        if (min != null) l.put("min", min);
+        return l;
+    }
+
     // ── Супертеги (KREG-03) ───────────────────────────────────────────────
 
     /**
@@ -435,10 +510,11 @@ final class KnowRegistry {
                                        Map<String, Set<String>> familyRoles) {
         String slug = tagId.startsWith("tag:") ? tagId.substring(4) : tagId;
         JsonObject spec = obj(obj(model, "edge_free_fields"), LoreTagResource.EDGE);
+        // Счётчики применений («сколько рёбер», «заполнено у N из M») в вид НЕ входят: вид — форма тега, а не
+        // статистика; иначе каждое применение меняло content_hash и давало новую SCD2-версию при старте
+        // (приёмка KREG-03/KREG-09). Статистика применений — срезы tags_usage / tag_entities.
         Map<String, List<Object>> values = new TreeMap<>();
-        int uses = 0;
         for (Map<String, Object> m : edgeFields) {
-            uses++;
             if (m == null) continue;
             m.forEach((key, v) -> values.computeIfAbsent(key, x -> new ArrayList<>()).add(v));
         }
@@ -452,7 +528,7 @@ final class KnowRegistry {
             fd.put("required", false);
             fd.put("enum_ref", null);
             fd.put("pattern", null);
-            fd.put("desc", "поле на ребре " + LoreTagResource.EDGE + ": заполнено у " + e.getValue().size() + " из " + uses);
+            fd.put("desc", "поле на ребре " + LoreTagResource.EDGE);
             fd.put("layer", "edge");
             fd.put("property", null);
             fd.put("rel", LoreTagResource.EDGE);
@@ -474,6 +550,7 @@ final class KnowRegistry {
         List<Map<String, Object>> guards = new ArrayList<>();
         guards.add(guard("tag-token", List.of(LoreTagResource.TAG.pattern())));
         guards.add(guard("rename-guard", List.of("synonyms", "broken-link-invariant")));
+        guards.add(guard("rename-identity", List.of("новое имя не занято")));
         guards.add(guard("edge-free-fields", List.of("patch: value overwrites, empty removes, no history")));
         Map<String, Object> k = new LinkedHashMap<>();
         k.put("kind", "tag:" + slug);
@@ -486,7 +563,6 @@ final class KnowRegistry {
         k.put("roles", rolesOf(familyRoles, "tag"));
         k.put("replaces", List.of());
         k.put("source", SOURCE_TAG);
-        k.put("uses", uses);
         return withHash(k);
     }
 
@@ -517,6 +593,9 @@ final class KnowRegistry {
 
     /** Чтение справочника тегов для импорта: тег и поля на всех его рёбрах TAGGED_WITH. */
     static final String TAGS_SQL = "SELECT tag_id, in('TAGGED_WITH').size() AS uses, inE('TAGGED_WITH').fields AS fl FROM KnowTag WHERE tag_id IS NOT NULL ORDER BY tag_id";
+
+    /** Одна строка справочника тегов по имени (легаси-токен или геоид) — для карточки describe tag:<slug>. */
+    static final String TAG_ROW_SQL = "SELECT tag_id, in('TAGGED_WITH').size() AS uses, inE('TAGGED_WITH').fields AS fl FROM KnowTag WHERE tag_id = :s OR tag_id = :g";
 
     static String inferType(List<Object> vs) {
         boolean num = true, bool = true;

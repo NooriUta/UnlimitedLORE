@@ -53,6 +53,7 @@ final class KnowDescribe {
         d.put("params", params);
         Map<String, Object> enums = new TreeMap<>();
         for (Map<String, Object> p : params) {
+            if (p.get("enum") instanceof List<?> inline) { enums.put(String.valueOf(p.get("name")), inline); continue; }
             Object ref = p.get("enum_ref");
             if (ref == null) continue;
             String dict = String.valueOf(ref).startsWith("dict:") ? String.valueOf(ref).substring(5) : String.valueOf(ref);
@@ -105,6 +106,7 @@ final class KnowDescribe {
             x.put("type", f.get("type"));
             x.put("required", Boolean.TRUE.equals(f.get("required")));
             if (f.get("enum_ref") != null) x.put("enum_ref", f.get("enum_ref"));
+            if (f.get("enum") != null) x.put("enum", f.get("enum"));
             if (f.get("layer") != null) x.put("layer", f.get("layer"));
             out.add(x);
         }
@@ -122,13 +124,16 @@ final class KnowDescribe {
                 case "required-params" -> add(byCode, "BAD_PARAMS", "нет обязательного параметра: " + params, "describe_full " + kind.get("kind"), null);
                 case "value-whitelist", "tag-token" -> add(byCode, "BAD_PARAMS", "значение вне белого списка", "убрать кавычки, скобки, «;»", null);
                 case "status-moves" -> {
+                    // 061 §5 E2: переход вне жизненного цикла — INVALID_VALUE; переход «только через owner» — NOOP
+                    add(byCode, "INVALID_VALUE", "переход статуса вне moves (" + params + ")", "взять разрешённый переход из workflow.moves", null);
                     if (params.stream().anyMatch(p -> String.valueOf(p).contains("owner")))
-                        add(byCode, "NOOP", "переход только через owner: " + params, "запросить активацию у owner", null);
-                    else add(byCode, "INVALID_VALUE", "переход статуса вне moves (" + params + ")", "взять разрешённый переход из workflow.moves", null);
+                        add(byCode, "NOOP", "переход только через owner", "запросить активацию у owner", null);
                 }
-                case "required-edges", "no-extends-cycle" -> add(byCode, "REFUSED",
-                    "required-edges".equals(name) ? "нет обязательных рёбер " + params : "цикл EXTENDS",
-                    "required-edges".equals(name) ? "добавить рёбра" : "разорвать цикл", null);
+                case "required-edges" -> add(byCode, "REFUSED", "нет обязательных рёбер " + params, "добавить рёбра", null);
+                case "no-extends-cycle" -> add(byCode, "REFUSED", "цикл EXTENDS", "разорвать цикл", null);
+                case "no-dangling-unlink" -> add(byCode, "REFUSED", "снятие последнего обязательного ребра " + params,
+                    "сначала добавить замену", null);
+                case "rename-identity" -> add(byCode, "IDENTITY_CONFLICT", "новое имя уже занято", "другое имя; слияние — решение владельца", null);
                 case "rename-guard" -> add(byCode, "partial_failure", "rename тега с несопоставленными телами",
                     "добавить синоним в KnowTag или переписать тело", null);
                 case "read-only-surface" -> add(byCode, "REFUSED", "тип только для чтения в UI-поверхности", "писать через свой write-тул", null);
@@ -162,5 +167,27 @@ final class KnowDescribe {
         List<Map<String, Object>> out = new ArrayList<>();
         if (v instanceof List<?> l) for (Object o : l) if (o instanceof Map<?, ?> m) out.add((Map<String, Object>) m);
         return out;
+    }
+
+    /**
+     * Запись вида для запроса карточки describe (SKILL-04, один источник — реестр):
+     * {@code skill:*} и геоид {@code skill:<slug>} — вид skill:* из выдачи генератора (know-registry.json);
+     * {@code tag:*} — вид тега без полей (генератор {@link KnowRegistry#tagKind}); чужое — {@code null}.
+     * Конкретный {@code tag:<slug>} несёт field_schema из графа — его вид собирает вызывающий по строке тега.
+     */
+    static Map<String, Object> kindFor(String kind, List<Map<String, Object>> artifact, io.vertx.core.json.JsonObject model) {
+        if (kind == null) return null;
+        String k = kind.strip();
+        if (k.equals(SkillRules.PREFIX + "*") || (k.startsWith(SkillRules.PREFIX) && SkillRules.geoid(k) != null)) {
+            for (Map<String, Object> a : artifact)
+                if ((SkillRules.PREFIX + "*").equals(a.get("kind"))) {
+                    Map<String, Object> copy = new LinkedHashMap<>(a);
+                    copy.put("kind", k);
+                    return copy;
+                }
+            return null;
+        }
+        if (k.equals("tag:*")) return KnowRegistry.tagKind(model, "*", List.of(), AgentScopeFilter.FAMILY_AGENTS);
+        return null;
     }
 }

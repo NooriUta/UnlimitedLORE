@@ -5,6 +5,7 @@
   "counts" : {
     "ddl" : 51,
     "entity" : 28,
+    "skill" : 1,
     "slice" : 225
   },
   "kinds" : [ {
@@ -8153,6 +8154,118 @@
     "source" : "model+ddl",
     "vertex" : "KnowUser",
     "content_hash" : "sha256:a910c86c3d2b0f9a8094c2d0bbc8485d354e63bc6f6b9a3c349e1ba15c04f947"
+  }, {
+    "kind" : "skill:*",
+    "id_field" : "skill_id",
+    "title" : "Навык роли: процедура «как делать» (KnowSkill)",
+    "fields" : [ {
+      "name" : "body_md",
+      "type" : "md",
+      "required" : true,
+      "layer" : "ddl",
+      "property" : "body_md"
+    }, {
+      "name" : "created_at",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "created_at"
+    }, {
+      "name" : "name",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "name"
+    }, {
+      "name" : "skill_id",
+      "type" : "string",
+      "required" : true,
+      "pattern" : "skill:[a-z0-9][a-z0-9-]{0,62}",
+      "layer" : "ddl",
+      "property" : "skill_id"
+    }, {
+      "name" : "source",
+      "type" : "enum",
+      "required" : false,
+      "enum" : [ "seed", "agent", "human" ],
+      "layer" : "ddl",
+      "property" : "source"
+    }, {
+      "name" : "status",
+      "type" : "enum",
+      "required" : false,
+      "enum_ref" : "dict:skill_status",
+      "layer" : "ddl",
+      "property" : "status"
+    }, {
+      "name" : "title",
+      "type" : "string",
+      "required" : true,
+      "layer" : "ddl",
+      "property" : "title"
+    }, {
+      "name" : "updated_at",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "updated_at"
+    }, {
+      "name" : "version",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "version"
+    } ],
+    "links" : [ {
+      "rel" : "BELONGS_TO_PROJECT",
+      "dir" : "out",
+      "target_kind" : "entity:project",
+      "keys" : [ "project" ],
+      "edge_fields" : [ "linked_at", "linked_by" ],
+      "min" : 1
+    }, {
+      "rel" : "APPLIES_TO_ROLE",
+      "dir" : "out",
+      "target_kind" : "dict:agent_profile",
+      "keys" : [ "role" ],
+      "edge_fields" : [ "linked_at", "linked_by" ],
+      "min" : 1
+    }, {
+      "rel" : "SKILL_EXTENDS",
+      "dir" : "out",
+      "target_kind" : "skill:*",
+      "keys" : [ "extends" ],
+      "edge_fields" : [ "linked_at", "linked_by" ]
+    }, {
+      "rel" : "OWNED_BY",
+      "dir" : "out",
+      "target_kind" : "entity:user",
+      "keys" : [ "owner" ],
+      "edge_fields" : [ "linked_at", "linked_by" ]
+    } ],
+    "guards" : [ {
+      "name" : "required-edges",
+      "params" : [ "BELONGS_TO_PROJECT", "APPLIES_TO_ROLE" ]
+    }, {
+      "name" : "no-extends-cycle",
+      "params" : [ ]
+    }, {
+      "name" : "no-dangling-unlink",
+      "params" : [ "BELONGS_TO_PROJECT", "APPLIES_TO_ROLE" ]
+    }, {
+      "name" : "status-moves",
+      "params" : [ "создание → draft", "draft → active", "draft → deprecated", "active → deprecated", "deprecated → active: owner only" ]
+    } ],
+    "roles" : [ "architect", "full" ],
+    "replaces" : [ ],
+    "source" : "ddl+skill-rules",
+    "lifecycle" : {
+      "draft" : [ "active", "deprecated" ],
+      "active" : [ "deprecated" ],
+      "deprecated" : [ "active" ]
+    },
+    "vertex" : "KnowSkill",
+    "content_hash" : "sha256:e0c11b1aee10d1085e5ad7e35f44d0cdd09e291edb77225b30d9d53ba88c80c3"
   }, {
     "kind" : "slice:actor_by_id",
     "id_field" : null,

@@ -44,7 +44,7 @@ public class KnowRegistrySync {
     static final String ARTIFACT = "lore-model/know-registry.json";
 
     /** Префиксы видов, которыми владеет этот импорт (чужие — forgejo:*, skill:* — не считаются снятыми). */
-    static final Set<String> MANAGED = Set.of("entity:", "ddl:", "slice:", "tag:");
+    static final Set<String> MANAGED = Set.of("entity:", "ddl:", "slice:", "tag:", "skill:");
 
     static final String EXISTING_SQL = "SELECT kind, out('HAS_STATE')[valid_to IS NULL].content_hash AS h FROM KnowKind";
 

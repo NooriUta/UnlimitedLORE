@@ -85,8 +85,8 @@ class KnowDescribeTest {
             Map.of("name", "no-extends-cycle"),
             Map.of("name", "status-moves", "params", List.of("deprecated→active: owner only"))), card.get("guards"));
         assertEquals(List.of("draft", "active", "deprecated"), ((Map<?, ?>) card.get("enums")).get("skill_status"));
-        assertEquals(List.of("REFUSED", "NOOP", "FORBIDDEN_FOR_ROLE"), codes(card));
-        Map<String, Object> forbidden = errors(card).get(2);
+        assertEquals(List.of("REFUSED", "INVALID_VALUE", "NOOP", "FORBIDDEN_FOR_ROLE"), codes(card));
+        Map<String, Object> forbidden = errors(card).get(3);
         assertEquals(List.of("full", "architect"), forbidden.get("allowed"));
         assertNotNull(card.get("lifecycle"));
     }
@@ -102,6 +102,37 @@ class KnowDescribeTest {
         assertTrue(codes(card).contains("partial_failure"), String.valueOf(card.get("errors")));
         Object edge = ((List<?>) card.get("links")).get(0);
         assertTrue(((List<?>) ((Map<?, ?>) edge).get("edge_fields")).contains("fields{*}"), String.valueOf(edge));
+    }
+
+    /**
+     * Приёмка SKILL-04/KREG-07 + 061 §5: карточка skill:* — из реестра (один источник describe), коды — словаря
+     * 061 §5: переход вне жизненного цикла — INVALID_VALUE (не BAD_TRANSITION), deprecated→active не владельцем — NOOP.
+     */
+    @Test
+    void skillCardComesFromTheRegistryWithSpec061Codes() {
+        Map<String, List<String>> d = new TreeMap<>(dicts());
+        d.put("skill_status", List.of("draft", "active", "deprecated"));
+        Map<String, Object> card = KnowDescribe.describeFull(KnowDescribe.kindFor("skill:*", KnowRegistrySync.artifactKinds(),
+            FieldDeclaredGuardTest.model()), d);
+        assertEquals("skill:*", card.get("kind"));
+        assertEquals(List.of("REFUSED", "INVALID_VALUE", "NOOP", "FORBIDDEN_FOR_ROLE"), codes(card));
+        assertEquals(List.of("architect", "full"), card.get("identities"));
+        assertEquals(SkillRules.SOURCES, ((Map<?, ?>) card.get("enums")).get("source"));
+        assertEquals(List.of("draft", "active", "deprecated"), ((Map<?, ?>) card.get("enums")).get("skill_status"));
+        assertEquals("skill:release-cutover", KnowDescribe.kindFor("skill:release-cutover", KnowRegistrySync.artifactKinds(),
+            FieldDeclaredGuardTest.model()).get("kind"), "карточка вида — и по геоиду конкретного скилла");
+    }
+
+    /** Карточка tag:* — генератор вида тега; rename на занятое имя — IDENTITY_CONFLICT (061 §5), не TAG_TAKEN. */
+    @Test
+    void tagCardCarriesSpec061Codes() {
+        Map<String, Object> card = KnowDescribe.describeFull(KnowDescribe.kindFor("tag:*", KnowRegistrySync.artifactKinds(),
+            FieldDeclaredGuardTest.model()), dicts());
+        assertEquals("tag:*", card.get("kind"));
+        assertTrue(codes(card).containsAll(List.of("partial_failure", "IDENTITY_CONFLICT", "FORBIDDEN_FOR_ROLE")), codes(card).toString());
+        assertFalse(String.valueOf(card).contains("TAG_TAKEN") || String.valueOf(card).contains("BAD_TRANSITION"), String.valueOf(card));
+        assertNull(KnowDescribe.kindFor("adr:*", KnowRegistrySync.artifactKinds(), FieldDeclaredGuardTest.model()));
+        assertNull(KnowDescribe.kindFor(null, KnowRegistrySync.artifactKinds(), FieldDeclaredGuardTest.model()));
     }
 
     @Test
