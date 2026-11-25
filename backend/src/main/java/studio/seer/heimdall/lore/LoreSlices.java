@@ -2911,6 +2911,11 @@ public final class LoreSlices {
             "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw",
                 "in_progress", "partial", "uat", "ready_for_deploy") + "].size() AS work_versions, " +
             "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "review") + "].size() AS review_versions, " +
+            // Начало работы — только 🔄/🟡: 🚀/🧪 — приёмка, дату начала они не дают (замер 25.11:
+            // «с работой» 94%, но цель задачи — дата начала у ≥80% закрытых). Порядок рёбер —
+            // порядок вставки, поэтому [0] — первая версия в работе.
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "in_progress", "partial") + "].size() AS start_versions, " +
+            "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "in_progress", "partial") + "].valid_from[0] AS started_at, " +
             "bookkeeping " +
             "FROM KnowTask WHERE out('HAS_STATE')[valid_to IS NULL][" + DONE_STATUS_SQL + "].size() > 0",
             List.of(),
