@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "eaf8309f5a825b70",
+  "version" : "789030f33001a753",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -15775,7 +15775,7 @@
   "audience" : {
     "actor" : "everywhere",
     "adr" : "everywhere",
-    "agent" : "admin",
+    "agent" : "detail",
     "component" : "everywhere",
     "decision" : "everywhere",
     "doc" : "everywhere",
