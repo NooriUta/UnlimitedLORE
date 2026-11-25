@@ -80,7 +80,9 @@ public final class LoreSlices {
         "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project"));
     static {
         SKILL_FILTERS.put("role", " WHERE out('APPLIES_TO_ROLE').code CONTAINS :role");
-        SKILL_FILTERS.put("status", " WHERE status = :status");
+        // код словаря skill_status — строчными; toLowerCase() — строки, которые дверь записи до правки SKILL-04
+        // успела поднять переходником до DRAFT/ACTIVE (стенд), тоже попадают под фильтр
+        SKILL_FILTERS.put("status", " WHERE status.toLowerCase() = :status");
     }
 
     /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */

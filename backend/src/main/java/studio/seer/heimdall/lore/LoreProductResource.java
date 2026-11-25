@@ -1317,7 +1317,10 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("rel", req.rel());
             out.put("target_id", req.target_id());
             out.put("linked", linked);
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи); снятие — было ли открытое ребро роли
+            boolean hadRole = current != null && !current.isEmpty();
+            return linkFact(out, remove, remove ? hadRole : same, linked,
+                "агент " + req.actor_id() + " или роль " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR LINK] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);

@@ -288,9 +288,19 @@ final class ModelSchemaAdapter {
         "QGRecommendation", "QGJobTask", "ClRoutineRun", "ClRoutineMetric", "BragiIntegration", "BragiVariant");
     private static final Pattern FROM_TYPE = Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE)\\s+(\\w+)");
 
+    /**
+     * SPRINT_LORE_KNOW_REGISTRY/SKILL-04 · типы доводки схемы кода (вне модели 1.18), у которых status — код СВОЕГО
+     * словаря строчными (KnowSkill — skill_status: draft/active/deprecated), а не код справочника модели. Их посев
+     * идёт до включения переходника и пишет код как есть; поднимать регистр фильтра или литерала записи для них —
+     * значит промахнуться мимо данных (стенд-e2e RFD3: skills?status=active → 0 при трёх active). Каждый тип доводки
+     * с полем status обязан быть здесь — сторож {@code SkillStatusFilterEngineTest#всеТипыДоводкиСоStatus_…}.
+     */
+    static final java.util.Set<String> OWN_DICT_STATUS_TYPES = java.util.Set.of("KnowSkill");
+
+    /** Регистр status в этом SQL не трогается: текстовый статус или код своего словаря типа доводки. */
     private static boolean touchesTextStatus(String sql) {
         Matcher m = FROM_TYPE.matcher(sql);
-        while (m.find()) if (TEXT_STATUS_TYPES.contains(m.group(1))) return true;
+        while (m.find()) if (TEXT_STATUS_TYPES.contains(m.group(1)) || OWN_DICT_STATUS_TYPES.contains(m.group(1))) return true;
         return false;
     }
 

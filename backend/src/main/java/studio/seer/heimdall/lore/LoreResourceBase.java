@@ -673,6 +673,11 @@ public abstract class LoreResourceBase {
      * бессмысленна, ребра нет в обоих случаях, и «снято» стало бы утверждением
      * без факта.
      */
+    /** ISS-06: исход связи по факту ребра до/после записи (путь со своей пробой графа) — {@link LoreOutcome#fact}. */
+    Response linkFact(Map<String, Object> base, boolean remove, boolean hadBefore, boolean hasAfter, String what) {
+        return noStore(Response.ok(LoreOutcome.fact(base, remove, hadBefore, hasAfter, what)));
+    }
+
     Response unlinkOutcome(Map<String, Object> base, boolean had) {
         return noStore(Response.ok(LoreOutcome.unlink(base, had)));
     }
