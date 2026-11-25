@@ -1145,6 +1145,8 @@ public class AidaLoreResource extends LoreResourceBase {
             new java.util.concurrent.atomic.AtomicReference<>();
         // S7B-ACL-3: machine_acl — проекты, harness и can_write машины. Вызывающий снимается здесь,
         // до асинхронной цепочки (личность — request-scoped); не прочитался — can_write: null.
+        // AP-PEOPLE-PAGE (1б): служебный читатель miniLORE опознаётся по токену до асинхронной цепочки (личность — request-scoped).
+        final boolean svcReader = LoreFieldAudience.serviceReader(callerClientId(), readAllClients);
         final boolean machineAcl = MACHINE_ACL.equals(id);
         final MachineAccess.Caller aclCaller = machineAcl ? machineAclCaller(role) : null;
         final java.util.concurrent.atomic.AtomicReference<Map<String, List<String>>> aclOwnerProjects =
@@ -1309,7 +1311,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
                 if (outside != null) out.put("outside_scope", outside);
                 // AP-PEOPLE-PAGE: колонки полей уровня admin (учётка агента) не-админу не уходят — до страницы и fields.
-                out.put("rows", LoreFieldAudience.stripRows(id, castRows(out.get("rows")), role));
+                out.put("rows", LoreFieldAudience.stripRows(id, castRows(out.get("rows")), role, svcReader));
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {

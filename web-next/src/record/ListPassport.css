@@ -17,3 +17,11 @@
 .agent-head__k { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
 .agent-head__muted { color: var(--t3); }
 .agent-head__err { color: var(--dng); }
+
+/* AP-PEOPLE-PAGE (3а): цифры шапки человека и агента — в работе, на приёмке, закрыто за 30 дней, медиана цикла. */
+.person-stats { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; }
+.person-stats__cell { display: flex; flex-direction: column-reverse; gap: 0; margin: 0; }
+.person-stats__v { margin: 0; font-family: var(--mono); font-size: var(--fs-lg); color: var(--t1); font-weight: 600; }
+.person-stats__k { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.person-stats--err { color: var(--dng); font-size: var(--fs-sm); }
+.person-stats--loading { color: var(--t3); font-size: var(--fs-sm); }

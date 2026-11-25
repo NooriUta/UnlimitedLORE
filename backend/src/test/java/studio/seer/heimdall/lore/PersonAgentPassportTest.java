@@ -42,6 +42,30 @@ class PersonAgentPassportTest {
         assertEquals(List.of("id"), LoreSlices.get("agent_tasks").required());
         // AP-PEOPLE-PAGE: «где работает» на вкладке «Аналитика» — проект спринта задачи колонкой среза.
         assertTrue(LoreSlices.get("user_tasks").baseSql().contains("AS project"), LoreSlices.get("user_tasks").baseSql());
+        // Решение владельца 25.11.2026 (2а): у агента та же «Аналитика» — и тот же разрез по проектам.
+        assertTrue(LoreSlices.get("agent_tasks").baseSql().contains("AS project"), LoreSlices.get("agent_tasks").baseSql());
+    }
+
+    /**
+     * Решение владельца 25.11.2026 (3а): серверный срез истории статусов по человеку (и по агенту) — для цифр шапки
+     * и графика времени цикла. Форма строки та же, что у task_status_versions (её читает flowModel), роль — только
+     * открытая, задачи — под проектным скоупом, как у user_tasks.
+     */
+    @Test
+    void statusHistoryByPersonAndAgent() {
+        Map<String, String> param = Map.of("user_task_status_versions", "kc_sub", "agent_task_status_versions", "id");
+        for (Map.Entry<String, String> e : param.entrySet()) {
+            LoreSlices.SliceDef d = LoreSlices.get(e.getKey());
+            assertNotNull(d, e.getKey());
+            assertEquals(List.of(e.getValue()), d.required(), e.getKey());
+            String sql = d.baseSql();
+            for (String col : List.of("AS task_uid", "status_raw", "valid_from", "valid_to", "version_kind"))
+                assertTrue(sql.contains(col), e.getKey() + ": колонка " + col + " — форма task_status_versions: " + sql);
+            assertTrue(sql.contains("FROM KnowTaskHist"), sql);
+            assertTrue(sql.contains("ROLE_HELD_BY')[valid_to IS NULL]"), e.getKey() + ": только открытые роли — " + sql);
+            assertEquals(LoreSlices.PROJECT_SCOPED.get("task_status_versions"), LoreSlices.PROJECT_SCOPED.get(e.getKey()),
+                e.getKey() + ": тот же проектный скоуп, что у task_status_versions");
+        }
     }
 
     @Test

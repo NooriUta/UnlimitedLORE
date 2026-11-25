@@ -2506,5 +2506,14 @@
   "userCharts.bucket.waiting": "waiting",
   "userCharts.bucket.review": "in review",
   "userCharts.bucket.done": "done",
-  "userCharts.bucket.closed": "dropped"
+  "userCharts.bucket.closed": "dropped",
+  "personStats.label": "Task summary",
+  "personStats.work": "in progress",
+  "personStats.review": "in review (UAT)",
+  "personStats.closed30": "closed in 30 days",
+  "personStats.cycle": "median cycle, 30 days",
+  "personStats.daysShort": "d",
+  "personStats.error": "could not load the summary",
+  "userCharts.cycle": "Cycle time (days, weekly median)",
+  "userCharts.cycleMedian": "median"
 }

@@ -10,10 +10,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons, type KitConfig } from '@seidr/kit';
 import { AgentHeadLine } from './AgentHeadLine';
-import { USER_FEED_TAB, withUserFeedTab } from './userFeedTab';
+import { PERSON_FEED_TAB, withPersonFeedTab } from './userFeedTab';
+import { PersonStats } from './PersonStats';
 import { passportCharts } from './ListPassport';
-import { UserCharts } from '../charts/UserCharts';
-import { userProjectBars, userStatusBars } from '../charts/userModel';
+import { PersonCharts, UserCharts } from '../charts/UserCharts';
+import { personStats, userProjectBars, userStatusBars, weeklyMedianCycle } from '../charts/userModel';
 import { NEWS_FIXTURE, type NewsSource } from '../news/feed';
 import ru from '../i18n/ru.json';
 import en from '../i18n/en.json';
@@ -75,28 +76,57 @@ describe('карточка агента вне админки', () => {
   });
 });
 
-describe('страница человека: «Лента» — новости с фильтром по автору', () => {
-  const cfg = { kinds: { user: { tabs: [{ key: 'tasks', title: 'Задачи' }] } } } as unknown as KitConfig;
-
-  it('вкладка добавляется только человеку и только с ключом', () => {
-    const next = withUserFeedTab(cfg, 'user', 'Лента', 'sub-ann');
-    expect(next.kinds.user.tabs?.map(t => t.key)).toEqual(['tasks', USER_FEED_TAB]);
-    expect(withUserFeedTab(cfg, 'user', 'Лента', null)).toBe(cfg);
-    expect(withUserFeedTab(cfg, 'agent', 'Лента', 'x')).toBe(cfg);
-  });
-
-  it('лента зовёт /lore/news/v2 с who = kc_sub человека — тот же фильтр, что в «Новостях»', async () => {
+describe('«Лента» человека и агента — новости с фильтром по автору', () => {
+  const cfg = { kinds: { user: { tabs: [{ key: 'tasks', title: 'Задачи' }] }, agent: { tabs: [{ key: 'tasks', title: 'Задачи' }] }, sprint: { tabs: [] } } } as unknown as KitConfig;
+  const capture = () => {
     const seen: string[] = [];
     const source: NewsSource = { kind: 'live', load: async p => { seen.push(p.toString()); return NEWS_FIXTURE; }, setReadMark: async () => ({ state: 'ok', at: null }) };
-    const next = withUserFeedTab(cfg, 'user', 'Лента', 'sub-ann', source);
-    const tab = next.kinds.user.tabs!.find(t => t.key === USER_FEED_TAB)!;
+    return { seen, source };
+  };
+
+  it('вкладка добавляется человеку и агенту и только с ключом', () => {
+    expect(withPersonFeedTab(cfg, 'user', 'Лента', 'sub-ann').kinds.user.tabs?.map(t => t.key)).toEqual(['tasks', PERSON_FEED_TAB]);
+    expect(withPersonFeedTab(cfg, 'agent', 'Лента', 'AGENT-FULL-x').kinds.agent.tabs?.map(t => t.key)).toEqual(['tasks', PERSON_FEED_TAB]);
+    expect(withPersonFeedTab(cfg, 'user', 'Лента', null)).toBe(cfg);
+    expect(withPersonFeedTab(cfg, 'sprint', 'Лента', 'x')).toBe(cfg);
+  });
+
+  it('человек: /lore/news/v2 с who = kc_sub — тот же фильтр, что в «Новостях»', async () => {
+    const { seen, source } = capture();
+    const tab = withPersonFeedTab(cfg, 'user', 'Лента', 'sub-ann', source).kinds.user.tabs!.find(t => t.key === PERSON_FEED_TAB)!;
     wrap(<>{tab.render!({ id: 'sub-ann', title: 'Ann So' } as never)}</>);
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
     expect(new URLSearchParams(seen[0]).get('who')).toBe('sub-ann');
+    expect(new URLSearchParams(seen[0]).get('actor')).toBeNull();
+  });
+
+  it('агент: actor = actor_id, учётку клиент не подставляет — её переводит сервер (решение 25.11, 2а)', async () => {
+    const { seen, source } = capture();
+    const tab = withPersonFeedTab(cfg, 'agent', 'Лента', 'AGENT-FULL-x', source).kinds.agent.tabs!.find(t => t.key === PERSON_FEED_TAB)!;
+    wrap(<>{tab.render!({ id: 'AGENT-FULL-x', title: 'Claude Code (full)' } as never)}</>);
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    const p = new URLSearchParams(seen[0]);
+    expect(p.get('actor')).toBe('AGENT-FULL-x');
+    expect(p.get('who')).toBeNull();
   });
 });
 
-describe('страница человека: «Аналитика» — графики по его задачам', () => {
+const DAY = 86400000;
+const iso = (ms: number) => new Date(ms).toISOString();
+/** Задача S/A: в работе 4 дня назад → сделано 1 день назад (цикл 3 д); S/B — в работе; S/C — на приёмке. */
+const HIST = [
+  { task_uid: 'S/A', status_raw: '⬜ TODO', valid_from: iso(NOW - 10 * DAY), valid_to: iso(NOW - 4 * DAY) },
+  { task_uid: 'S/A', status_raw: '🔄 IN PROGRESS', valid_from: iso(NOW - 4 * DAY), valid_to: iso(NOW - DAY) },
+  { task_uid: 'S/A', status_raw: '✅ DONE', valid_from: iso(NOW - DAY), valid_to: null },
+  { task_uid: 'S/B', status_raw: '🔄 IN PROGRESS', valid_from: iso(NOW - 2 * DAY), valid_to: null },
+];
+const TASKS = [
+  { task_uid: 'S/A', status_raw: '✅ DONE', project: 'P' }, { task_uid: 'S/B', status_raw: 'active', project: 'P' },
+  { task_uid: 'S/C', status_raw: '🧪 UAT', project: 'Q' },
+];
+const DONE = [{ task_uid: 'S/A', valid_from: iso(NOW - DAY) }, { task_uid: 'S/OTHER', valid_from: iso(NOW - DAY) }];
+
+describe('«Аналитика» человека и агента — графики по его задачам', () => {
   it('статусы корзинами жизненного цикла, проекты — пять крупных и «прочие»', () => {
     const rows = [
       { status_raw: '🔄 IN PROGRESS', project: 'A' }, { status_raw: 'active', project: 'A' },
@@ -112,17 +142,43 @@ describe('страница человека: «Аналитика» — граф
     expect(pr).toHaveLength(6);
   });
 
-  it('паспорт человека получает графики; закрытое считается только по его задачам', async () => {
+  it('цифры шапки: в работе, на приёмке, закрыто за 30 дней, медиана цикла — по его задачам (3а)', () => {
+    const s = personStats({ tasks: TASKS, done: DONE, history: HIST, today: NOW });
+    expect(s).toEqual({ work: 1, review: 1, closed30: 1, medianCycleDays: 3 });
+    // Закрытых с циклом нет — медианы нет (null), а не ноль.
+    expect(personStats({ tasks: [], done: [], history: [], today: NOW }).medianCycleDays).toBeNull();
+  });
+
+  it('время цикла — медиана по неделям; неделя без закрытых — пропуск, не ноль', () => {
+    const m = weeklyMedianCycle([{ id: 'a', x: NOW - DAY, y: 3 }, { id: 'b', x: NOW - DAY, y: 5 }, { id: 'c', x: NOW - 15 * DAY, y: 2 }], NOW, 4);
+    expect(m.map(p => p.y)).toEqual([2, 4]);
+  });
+
+  it('человек: свои срезы, четыре графика; закрытое — только по его задачам', async () => {
     expect(passportCharts('user', 'sub-ann')).toBeTruthy();
     const asked: string[] = [];
     wrap(<UserCharts kcSub="sub-ann" now={NOW} narrow={false} load={async (s, p) => {
-      asked.push(`${s}:${p.kc_sub ?? ''}`);
-      if (s === 'user_tasks') return { rows: [{ task_uid: 'S/A', status_raw: '✅ DONE', project: 'P' }, { task_uid: 'S/B', status_raw: 'active', project: 'P' }] };
-      return { rows: [{ task_uid: 'S/A', valid_from: '2026-11-20T10:00:00Z' }, { task_uid: 'S/OTHER', valid_from: '2026-11-20T10:00:00Z' }] };
+      asked.push(`${s}:${p.kc_sub ?? p.id ?? ''}`);
+      if (s === 'user_tasks') return { rows: TASKS };
+      if (s === 'user_task_status_versions') return { rows: HIST };
+      return { rows: DONE };
     }} />);
-    await waitFor(() => expect(document.querySelectorAll('[data-testid="kit-chart"]').length).toBe(3));
-    expect(asked.sort()).toEqual(['task_done_dates:', 'user_tasks:sub-ann']);
+    await waitFor(() => expect(document.querySelectorAll('[data-testid="kit-chart"]').length).toBe(4));
+    expect(asked.sort()).toEqual(['task_done_dates:', 'user_task_status_versions:sub-ann', 'user_tasks:sub-ann']);
     expect(screen.getByTestId('user-charts').getAttribute('data-closed')).toBe('1');
+  });
+
+  it('агент: те же графики по его срезам (решение 25.11, 2а)', async () => {
+    expect(passportCharts('agent', 'AGENT-FULL-x')).toBeTruthy();
+    const asked: string[] = [];
+    wrap(<PersonCharts subject={{ kind: 'agent', id: 'AGENT-FULL-x' }} now={NOW} narrow={false} load={async (s, p) => {
+      asked.push(`${s}:${p.kc_sub ?? p.id ?? ''}`);
+      if (s === 'agent_tasks') return { rows: TASKS };
+      if (s === 'agent_task_status_versions') return { rows: HIST };
+      return { rows: DONE };
+    }} />);
+    await waitFor(() => expect(document.querySelectorAll('[data-testid="kit-chart"]').length).toBe(4));
+    expect(asked.sort()).toEqual(['agent_task_status_versions:AGENT-FULL-x', 'agent_tasks:AGENT-FULL-x', 'task_done_dates:']);
   });
 
   it('срез не прочитан — причина словами, а не пустые графики', async () => {
@@ -131,9 +187,27 @@ describe('страница человека: «Аналитика» — граф
   });
 });
 
+describe('цифры в шапке личной страницы и карточки агента (3а)', () => {
+  it('четыре числа из его задач и истории', async () => {
+    wrap(<PersonStats subject={{ kind: 'user', id: 'sub-ann' }} now={NOW} load={async s => (
+      s === 'user_tasks' ? { rows: TASKS } : s === 'user_task_status_versions' ? { rows: HIST } : { rows: DONE })} />);
+    await waitFor(() => expect(screen.getByTestId('person-stat-work').textContent).toContain('1'));
+    expect(screen.getByTestId('person-stat-review').textContent).toContain('1');
+    expect(screen.getByTestId('person-stat-closed30').textContent).toContain('1');
+    expect(screen.getByTestId('person-stat-cycle').textContent).toContain('3');
+  });
+
+  it('не прочитали — так и сказано, нули не рисуются', async () => {
+    wrap(<PersonStats subject={{ kind: 'agent', id: 'A' }} now={NOW} load={async () => { throw new Error('502 упало'); }} />);
+    const err = await screen.findByTestId('person-stats-error');
+    expect(err.textContent).toContain('502 упало');
+    expect(screen.queryByTestId('person-stat-work')).toBeNull();
+  });
+});
+
 describe('i18n: новые ключи — в обеих локалях', () => {
   it('agentHead.* и userCharts.* есть в ru и en', () => {
-    const keys = Object.keys(ru).filter(k => k.startsWith('agentHead.') || k.startsWith('userCharts.') || k === 'userFeed.tab' || k === 'charts.hint.user');
+    const keys = Object.keys(ru).filter(k => k.startsWith('agentHead.') || k.startsWith('userCharts.') || k.startsWith('personStats.') || k === 'userFeed.tab' || k === 'charts.hint.user');
     expect(keys.length).toBeGreaterThan(8);
     for (const k of keys) expect((en as Record<string, string>)[k], k).toBeTruthy();
   });
