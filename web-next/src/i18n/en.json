@@ -459,6 +459,7 @@
   "lists.edge.ANSWERS": "answers question",
   "lists.edge.RAISED_IN": "raised in",
   "lists.noPassport.head": "Records in “{{section}}” have no passport yet",
+  "lists.feedPassport.failed": "Could not load the passport",
   "lists.noPassport.note": "The list, filters and search work — only the record card is missing.",
   "lists.noPassport.back": "Back to the list",
   "lists.field.effortTotal": "Estimate, d",

@@ -73,7 +73,8 @@ function blocksFor(type: string, id: string, lang: KitLang): LiveBlocks {
   }
   return b;
 }
-const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} type={type} id={id} />;
+/** Чтение md записи: тот же рендер у паспорта и у паспорта в ленте (BP-01). */
+export const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} type={type} id={id} />;
 
 export interface ListPassportProps {
   type: PassportType;
