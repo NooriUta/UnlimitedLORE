@@ -1,0 +1,653 @@
+{
+  "about": "SPRINT_LORE_KNOW_REGISTRY/KREG-08 — вход для KREG-02/KREG-10. Категории: факта 24.11.2026.",
+  "generatedFrom": {
+    "model": "backend\\src\\main\\resources\\lore-model\\lore-model.json",
+    "schema": "docs\\reports\\.tmp-kreg10-schema.json"
+  },
+  "summary": {
+    "modelVersion": 1,
+    "schema": "provided",
+    "fieldsWithoutLabelKey": 42,
+    "modelSchemaEdgesNotInModel": 0,
+    "listTypesWithIssues": 0,
+    "unclassified": 60,
+    "writtenWithoutSchema": 17
+  },
+  "fieldsWithoutLabelKey": [
+    {
+      "type": "sprint",
+      "field": "deps",
+      "where": "linkTabs"
+    },
+    {
+      "type": "sprint",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "deps",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "justification",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "realization",
+      "where": "linkTabs"
+    },
+    {
+      "type": "task",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "adr",
+      "field": "adrLinks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "adr",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "spec",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "doc",
+      "field": "children",
+      "where": "linkTabs"
+    },
+    {
+      "type": "doc",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "decision",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "question",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "milestone",
+      "field": "deps",
+      "where": "linkTabs"
+    },
+    {
+      "type": "release",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "component",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "tech",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "value",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "trace",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "ucLinks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "feature",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "user",
+      "field": "tasks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "user",
+      "field": "agents",
+      "where": "linkTabs"
+    },
+    {
+      "type": "agent",
+      "field": "tasks",
+      "where": "linkTabs"
+    },
+    {
+      "type": "agent",
+      "field": "machines",
+      "where": "linkTabs"
+    },
+    {
+      "type": "agent",
+      "field": "roles",
+      "where": "linkTabs"
+    },
+    {
+      "type": "actor",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "actor",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "pain",
+      "field": "features",
+      "where": "linkTabs"
+    },
+    {
+      "type": "pain",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "pain",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "gain",
+      "field": "features",
+      "where": "linkTabs"
+    },
+    {
+      "type": "gain",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "gain",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "job",
+      "field": "features",
+      "where": "linkTabs"
+    },
+    {
+      "type": "job",
+      "field": "profile",
+      "where": "linkTabs"
+    },
+    {
+      "type": "job",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "runbook",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "quality_gate",
+      "field": "refs",
+      "where": "linkTabs"
+    },
+    {
+      "type": "repository",
+      "field": "links",
+      "where": "linkTabs"
+    },
+    {
+      "type": "organization",
+      "field": "links",
+      "where": "linkTabs"
+    },
+    {
+      "type": "project",
+      "field": "people",
+      "where": "linkTabs"
+    }
+  ],
+  "modelSchemaEdgesNotInModel": [],
+  "listTypes": [
+    {
+      "type": "organization",
+      "issues": []
+    },
+    {
+      "type": "pr",
+      "issues": []
+    },
+    {
+      "type": "repository",
+      "issues": []
+    },
+    {
+      "type": "track",
+      "issues": []
+    }
+  ],
+  "unclassified": [
+    {
+      "type": "sprint",
+      "vertex": "KnowSprint",
+      "property": "created_at"
+    },
+    {
+      "type": "sprint",
+      "vertex": "KnowSprint",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "sprint",
+      "vertex": "KnowSprint",
+      "property": "updated_at"
+    },
+    {
+      "type": "sprint",
+      "vertex": "KnowSprint",
+      "property": "version"
+    },
+    {
+      "type": "task",
+      "vertex": "KnowTask",
+      "property": "bookkeeping"
+    },
+    {
+      "type": "task",
+      "vertex": "KnowTask",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "task",
+      "vertex": "KnowTask",
+      "property": "src"
+    },
+    {
+      "type": "task",
+      "vertex": "KnowTask",
+      "property": "updated_at"
+    },
+    {
+      "type": "adr",
+      "vertex": "KnowADR",
+      "property": "created_at"
+    },
+    {
+      "type": "adr",
+      "vertex": "KnowADR",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "adr",
+      "vertex": "KnowADR",
+      "property": "updated_at"
+    },
+    {
+      "type": "spec",
+      "vertex": "KnowSpec",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "spec",
+      "vertex": "KnowSpec",
+      "property": "updated_at"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "content_html_bytes"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "content_html_sha256"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "content_md_en_bytes"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "content_md_en_sha256"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "content_md_ru_bytes"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "content_md_ru_sha256"
+    },
+    {
+      "type": "doc",
+      "vertex": "KnowDoc",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "decision",
+      "vertex": "KnowDecision",
+      "property": "created_at"
+    },
+    {
+      "type": "decision",
+      "vertex": "KnowDecision",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "decision",
+      "vertex": "KnowDecision",
+      "property": "updated_at"
+    },
+    {
+      "type": "question",
+      "vertex": "KnowQuestion",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "question",
+      "vertex": "KnowQuestion",
+      "property": "updated_at"
+    },
+    {
+      "type": "milestone",
+      "vertex": "KnowMilestone",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "milestone",
+      "vertex": "KnowMilestone",
+      "property": "updated_at"
+    },
+    {
+      "type": "release",
+      "vertex": "KnowRelease",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "release",
+      "vertex": "KnowRelease",
+      "property": "updated_at"
+    },
+    {
+      "type": "release",
+      "vertex": "KnowRelease",
+      "property": "version"
+    },
+    {
+      "type": "component",
+      "vertex": "LoreComponent",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "component",
+      "vertex": "LoreComponent",
+      "property": "updated_at"
+    },
+    {
+      "type": "tech",
+      "vertex": "KnowSpec",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "tech",
+      "vertex": "KnowSpec",
+      "property": "updated_at"
+    },
+    {
+      "type": "feature",
+      "vertex": "KnowUseCase",
+      "property": "created_at"
+    },
+    {
+      "type": "feature",
+      "vertex": "KnowUseCase",
+      "property": "feature_id"
+    },
+    {
+      "type": "feature",
+      "vertex": "KnowUseCase",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "feature",
+      "vertex": "KnowUseCase",
+      "property": "updated_at"
+    },
+    {
+      "type": "product",
+      "vertex": "KnowDictEntry",
+      "property": "dict_type"
+    },
+    {
+      "type": "product",
+      "vertex": "KnowDictEntry",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "user",
+      "vertex": "KnowUser",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "body_md"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "kind"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "machine_id"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "session_id"
+    },
+    {
+      "type": "actor",
+      "vertex": "KnowProjectActor",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "pain",
+      "vertex": "KnowPain",
+      "property": "created_at"
+    },
+    {
+      "type": "pain",
+      "vertex": "KnowPain",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "gain",
+      "vertex": "KnowGain",
+      "property": "created_at"
+    },
+    {
+      "type": "gain",
+      "vertex": "KnowGain",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "job",
+      "vertex": "KnowJob",
+      "property": "created_at"
+    },
+    {
+      "type": "job",
+      "vertex": "KnowJob",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "runbook",
+      "vertex": "KnowRunbook",
+      "property": "created_at"
+    },
+    {
+      "type": "runbook",
+      "vertex": "KnowRunbook",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "quality_gate",
+      "vertex": "QualityGate",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "project",
+      "vertex": "KnowGitProject",
+      "property": "full_name"
+    },
+    {
+      "type": "project",
+      "vertex": "KnowGitProject",
+      "property": "mig_src_rid"
+    },
+    {
+      "type": "project",
+      "vertex": "KnowGitProject",
+      "property": "regroup"
+    },
+    {
+      "type": "project",
+      "vertex": "KnowGitProject",
+      "property": "repo_url"
+    }
+  ],
+  "writtenWithoutSchema": [
+    {
+      "type": "sprint",
+      "field": "title",
+      "writeField": "name",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "sprint",
+      "field": "status",
+      "writeField": "status",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "sprint",
+      "field": "priority",
+      "writeField": "priority",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "sprint",
+      "field": "planned_start",
+      "writeField": "planned_start_date",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "sprint",
+      "field": "planned_end_date",
+      "writeField": "planned_end_date",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "sprint",
+      "field": "context_md",
+      "writeField": "context_md",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "sprint",
+      "field": "outcome_md",
+      "writeField": "outcome_md",
+      "vertex": "KnowSprint"
+    },
+    {
+      "type": "task",
+      "field": "status",
+      "writeField": "status",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "task",
+      "field": "author",
+      "writeField": "author_agent",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "task",
+      "field": "executor",
+      "writeField": "executor_agent",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "task",
+      "field": "reviewer",
+      "writeField": "reviewer_agent",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "task",
+      "field": "effort",
+      "writeField": "effort_days",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "task",
+      "field": "realizes_uc",
+      "writeField": "uc_id",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "task",
+      "field": "note_md",
+      "writeField": "note_md",
+      "vertex": "KnowTask"
+    },
+    {
+      "type": "adr",
+      "field": "date",
+      "writeField": "date_created",
+      "vertex": "KnowADR"
+    },
+    {
+      "type": "spec",
+      "field": "summary",
+      "writeField": "summary",
+      "vertex": "KnowSpec"
+    },
+    {
+      "type": "doc",
+      "field": "parent",
+      "writeField": "parent_doc_id",
+      "vertex": "KnowDoc"
+    }
+  ]
+}
