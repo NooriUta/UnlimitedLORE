@@ -33,7 +33,7 @@ describe('qg_run_log: база метрики доходит до сервера
   it('схема не срезает basis', () => {
     const r = z.object(qgRunLog().schema).safeParse(args);
     expect(r.success).toBe(true);
-    expect((r as { data: typeof args }).data.metrics[0].basis).toBe('groups=357');
+    expect((r as unknown as { data: typeof args }).data.metrics[0].basis).toBe('groups=357');
   });
 
   it('basis уходит телом в /lore/qg/run', async () => {
@@ -46,6 +46,6 @@ describe('qg_run_log: база метрики доходит до сервера
   it('описание объясняет, зачем база', () => {
     const metrics = qgRunLog().schema.metrics as z.ZodOptional<z.ZodArray<z.ZodObject<z.ZodRawShape>>>;
     const shape = metrics.unwrap().element.shape;
-    expect(shape.basis.description).toMatch(/denominator/i);
+    expect((shape.basis as unknown as { description?: string }).description).toMatch(/denominator/i);
   });
 });
