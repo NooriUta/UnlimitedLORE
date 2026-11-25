@@ -643,6 +643,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 90) seedCoreStatuses();
         if (version == 93) seedQgStatuses();
         if (version == 97) seedSkills();
+        if (version == 100) seedAreas();
     }
 
     /**
@@ -682,6 +683,17 @@ public class LoreSchemaMigrationRunner {
         }
         LOG.infof("[V97] skill_status: вставлено %d строк; скиллов посеяно %d (было %d); концов рёбер не нашлось: %d; владелец %s",
             dictPlan.size(), plan.size(), have.size(), missingEnds, owner ? SkillSeed.OWNER_LOGIN : "не найден — OWNED_BY не ставится");
+        return plan.size();
+    }
+
+    /** V100: статьи словаря area для областей компонентов — только недостающие (как V90/V93). */
+    int seedAreas() {
+        Map<String, java.util.Set<String>> existing = new java.util.LinkedHashMap<>();
+        for (String dict : AreaDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(dict));
+        List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(AreaDictSeed.SEEDS, existing);
+        for (StatusDictCoreSeed.Insert i : plan)
+            sqlRows(AreaDictSeed.INSERT_SQL, AreaDictSeed.params(i));
+        LOG.infof("[V100] словарь area: вставлено %d строк (было %d)", plan.size(), existing.get("area").size());
         return plan.size();
     }
 

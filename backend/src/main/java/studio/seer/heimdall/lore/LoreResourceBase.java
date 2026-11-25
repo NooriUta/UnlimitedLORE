@@ -124,17 +124,25 @@ public abstract class LoreResourceBase {
     // Throws LoreExceptions.Forbidden (→ 403 JSON via LoreExceptionMapper) when the
     // caller is not admin/superadmin. Call as a guard: `requireAdmin(role);`.
     void requireAdmin(String role) {
-        if (!"admin".equals(role) && !"superadmin".equals(role)) {
-            throw new LoreExceptions.Forbidden("admin role required");
+        String r = SeerRoleFromTokenFilter.normalizeRole(role);
+        if (!"admin".equals(r) && !SeerRoleFromTokenFilter.SUPERADMIN.equals(r)) {
+            throw new LoreExceptions.Forbidden(ADMIN_REQUIRED);
         }
     }
 
+    /** Текст отказа называет то значение роли, которое пропускает (AUD-SUPERADMIN, issue SeidrStudio#8). */
+    static final String ADMIN_REQUIRED =
+        "admin role required: X-Seer-Role admin or superadmin (MCP: LORE_SEER_ROLE=admin; Keycloak realm role admin)";
+    static final String SUPERADMIN_REQUIRED =
+        "superadmin role required: X-Seer-Role superadmin (MCP: LORE_SEER_ROLE=superadmin; Keycloak realm role super-admin)";
+
     // AL-84/ADR-LORE-025-D17: создание проекта — единица изоляции всей модели
     // (кто-то становится владельцем, получает право делегировать роли), поэтому
-    // строже обычного requireAdmin — только super-admin, не admin.
+    // строже обычного requireAdmin — только superadmin, не admin.
+    // AUD-SUPERADMIN: написание «super-admin» принимается синонимом (normalizeRole).
     void requireSuperAdmin(String role) {
-        if (!"superadmin".equals(role)) {
-            throw new LoreExceptions.Forbidden("super-admin role required");
+        if (!SeerRoleFromTokenFilter.SUPERADMIN.equals(SeerRoleFromTokenFilter.normalizeRole(role))) {
+            throw new LoreExceptions.Forbidden(SUPERADMIN_REQUIRED);
         }
     }
 

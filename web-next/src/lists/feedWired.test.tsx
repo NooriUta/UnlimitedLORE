@@ -250,3 +250,35 @@ describe('лента паспортов: голова — один раздел 
     expect(pickSection(['context_md'], {})).toEqual({ index: -1, paragraphs: [] });
   });
 });
+
+// Лента паспортов (SPRINT_LORE_BOARD_PASSPORTS/BP-01-FULL-PASSPORT-FEED, прототип принят
+// владельцем 25.11.2026): переключатель «Контекст / Полные паспорта», режим — в адресе (lfm).
+describe('BP-01 · лента паспортов в разделе', () => {
+  it('у раздела с паспортом — переключатель; «Контекст» паспорта не грузит', async () => {
+    const { fn, paths } = net(TASKS);
+    const { container } = render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lv=feed')} />);
+    await waitFor(() => expect(item(container, 'S1/T-1')).toBeTruthy());
+    const group = screen.getByRole('group', { name: 'Что показывать в ленте' });
+    expect(within(group).getByRole('button', { name: 'Контекст' }).getAttribute('aria-pressed')).toBe('true');
+    expect(paths.filter(p => p.startsWith('/lore/record/'))).toEqual([]);
+  });
+
+  it('?lfm=full — каждая видимая запись паспортом: зоны паспорта, тело целиком', async () => {
+    const { fn, paths } = net(TASKS);
+    const { container } = render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lv=feed&lfm=full')} />);
+    await waitFor(() => expect(item(container, 'S1/T-1')?.querySelector('[data-zone="body"]')).toBeTruthy(), { timeout: 8000 });
+    await waitFor(() => expect(item(container, 'S1/T-1').textContent).toMatch(/заметка: абзац 5/));
+    expect(paths.filter(p => p.startsWith('/lore/record/')).sort()).toEqual(['/lore/record/task/S1/T-1', '/lore/record/task/S1/T-2']);
+    // История — только по раскрытию.
+    expect(paths.filter(p => p === '/lore/history')).toEqual([]);
+  }, 15000);
+
+  it('«Открыть паспорт целиком» у карточки контекста грузит паспорт ОДНОЙ записи', async () => {
+    const { fn, paths } = net(TASKS);
+    const { container } = render(<ListScreen screen="tasks" fetchImpl={fn} urlState={win('?lv=feed')} />);
+    await waitFor(() => expect(item(container, 'S1/T-2')).toBeTruthy());
+    fireEvent.click(within(item(container, 'S1/T-2')).getByRole('button', { name: 'Открыть паспорт целиком' }));
+    await waitFor(() => expect(item(container, 'S1/T-2').querySelector('[data-zone="links"]')).toBeTruthy(), { timeout: 8000 });
+    expect(paths.filter(p => p.startsWith('/lore/record/'))).toEqual(['/lore/record/task/S1/T-2']);
+  }, 15000);
+});

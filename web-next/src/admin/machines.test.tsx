@@ -192,12 +192,14 @@ describe('S7B-ACL-3 · модель', () => {
 describe('S7B-ACL-3 · экран', () => {
   it('список машин — kit ListView: машины, владелец; строка открывает паспорт, выбор в адресе', async () => {
     const { f } = fake();
-    wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" />);
+    wrap(<MachinesScreen fetchImpl={f} meSub="u-ar" machineRecord={id => <div>{id}</div>} />);
     const row = await screen.findByRole('button', { name: 'ar-matebook' });
     expect(document.querySelector('[data-record-id="li-ws"]')).toBeTruthy();
     fireEvent.click(row);
-    expect(new URLSearchParams(window.location.search).get('adm-macl-m')).toBe('ar-matebook');
-    expect(await screen.findByTestId('adm-macl-passport-ar-matebook')).toBeTruthy();
+    // AP-MACHINE-PASSPORT (прототип, экран А): строка открывает полный паспорт машины своим адресом;
+    // допуски (Drawer) — по adm-macl-m, из паспорта «Открыть допуски машины» (machinePassport.test.tsx).
+    expect(new URLSearchParams(window.location.search).get('adm-macl-open')).toBe('ar-matebook');
+    expect(await screen.findByTestId('adm-mpass-ar-matebook')).toBeTruthy();
   });
 
   it('machine_acl отдал 403 — «нет прав» явно, а не «машин нет»', async () => {

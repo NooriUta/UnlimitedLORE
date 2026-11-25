@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Поиск по связям</title>
+<!--
+  SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05 · прототип UI поиска, редакция 2 (владелец 25.11: «пока не очень поняла дополни
+  прототип и присылай в светло голубом стиле»). Светлая голубая тема — только для этого прототипа.
+  Данные — живой снимок LORE 25.11.2026 через MCP: find (задачи LORE со словом «граф»), graph (окрестность ADR-LORE-057),
+  graph_path (GC-05 → KREG-11). Внешних загрузок нет, кроме шрифтов Google Fonts. Режим — в адресе: ?mode=text|links|path.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#f3f8fd;--bg1:#ffffff;--bg2:#e8f2fb;--bg3:#d6e8f7;
+  --bd:#c9dcee;--bdh:#9cc2e4;
+  --t1:#10243a;--t2:#3f5973;--t3:#647d96;
+  --acc:#1f6fb8;--acc-strong:#155a99;--acc-bg:#e1eefa;--acc-on:#ffffff;
+  --suc:#1d7a4a;--suc-bg:#e3f4ea;--wrn:#8a5a00;--wrn-bg:#fdf1d8;--inf:#1f6fb8;
+  --fs-2xs:11px;--fs-xs:12px;--fs-sm:13px;--fs-md:14px;--fs-lg:16px;--fs-xl:19px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --head:'Unbounded','Manrope',system-ui,sans-serif;
+  --r:10px;--pill:999px;--shadow:0 1px 2px rgba(16,36,58,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--sans);font-size:var(--fs-sm);line-height:1.5}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.page{max-width:1100px;margin:0 auto;padding:14px 16px 56px}
+h1{font-family:var(--head);font-weight:800;font-size:var(--fs-xl);margin:0;letter-spacing:.01em}
+h2{font-family:var(--head);font-weight:800;font-size:var(--fs-md);margin:0 0 8px}
+h3{font-size:var(--fs-sm);font-weight:800;margin:0 0 6px}
+p{margin:0 0 8px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tag{font-size:var(--fs-2xs);font-weight:700;color:var(--wrn);background:var(--wrn-bg);border-radius:var(--pill);padding:2px 10px}
+.card{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);margin-bottom:14px;min-width:0}
+.why p{color:var(--t2);font-size:var(--fs-md)}
+.why p b{color:var(--t1)}
+.why .ex{background:var(--acc-bg);border-radius:8px;padding:8px 10px;color:var(--t1);font-size:var(--fs-sm)}
+
+/* режимы */
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.tabs button{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:8px 6px;cursor:pointer;text-align:left;min-width:0}
+.tabs button b{display:block;font-size:var(--fs-md)}
+.tabs button span{display:block;font-size:var(--fs-2xs);color:var(--t3)}
+.tabs button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:var(--acc-on)}
+.tabs button[aria-pressed="true"] span{color:var(--acc-on)}
+.when{background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:var(--fs-sm)}
+.when b{color:var(--acc-strong)}
+
+/* что ввели */
+.step{display:flex;align-items:center;gap:8px;margin:12px 0 6px;font-size:var(--fs-xs);font-weight:800;color:var(--acc-strong);text-transform:uppercase;letter-spacing:.06em}
+.step i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--acc);color:var(--acc-on);font-size:var(--fs-2xs)}
+.input{background:var(--bg0);border:1px solid var(--bdh);border-radius:var(--r);padding:10px}
+.say{font-size:var(--fs-md);font-weight:700;margin-bottom:8px}
+.fields{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:4px 10px;font-size:var(--fs-sm)}
+.fields dt{color:var(--t3)}
+.fields dd{margin:0;min-width:0}
+.chip{display:inline-block;background:var(--acc-bg);color:var(--acc-strong);border-radius:var(--pill);padding:1px 9px;font-size:var(--fs-xs);font-weight:700;margin:0 3px 3px 0;border:1px solid transparent;cursor:pointer}
+.chip[aria-pressed="false"]{background:var(--bg1);border-color:var(--bd);color:var(--t3);text-decoration:line-through}
+.q{display:flex;gap:6px;align-items:center;background:var(--bg1);border:1px solid var(--bdh);border-radius:8px;padding:0 10px;height:36px;margin-bottom:8px}
+.q input{flex:1;min-width:0;border:0;outline:none;background:none;font-size:var(--fs-md)}
+.tech{margin-top:8px}
+.tech summary{cursor:pointer;color:var(--t3);font-size:var(--fs-xs)}
+.tech pre{margin:6px 0 0;padding:8px;background:var(--bg2);border-radius:8px;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2);white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* что получили */
+.status{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.ok{background:var(--suc-bg);color:var(--suc);border-radius:var(--pill);padding:2px 10px;font-size:var(--fs-xs);font-weight:700}
+.note{background:var(--bg2);color:var(--t2);border-radius:var(--pill);padding:2px 10px;font-size:var(--fs-xs)}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{border:1px solid var(--bd);border-radius:8px;padding:8px 10px;background:var(--bg1);min-width:0}
+.item .id{font-family:var(--mono);font-size:var(--fs-xs);color:var(--acc-strong);overflow-wrap:anywhere}
+.item .t{font-size:var(--fs-sm);font-weight:600}
+.item .m{font-size:var(--fs-xs);color:var(--t3)}
+.st{display:inline-block;border-radius:var(--pill);padding:0 8px;font-size:var(--fs-2xs);font-weight:700;background:var(--acc-bg);color:var(--acc-strong)}
+.st.in_force{background:var(--suc-bg);color:var(--suc)}
+.st.not_started{background:var(--bg2);color:var(--t2)}
+.grp{margin-top:10px}
+.grp>h3{display:flex;gap:6px;align-items:baseline}
+.grp>h3 small{color:var(--t3);font-weight:600}
+.more{font-size:var(--fs-xs);color:var(--acc-strong);background:none;border:0;padding:4px 0;cursor:pointer;font-weight:700}
+@media (min-width:760px){.list.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* путь */
+.chain{display:flex;flex-direction:column;gap:0}
+.link{display:flex;align-items:center;gap:8px;padding:4px 0 4px 18px;color:var(--t2);font-size:var(--fs-xs)}
+.link .ln{width:2px;height:26px;background:var(--bdh)}
+.node.end{border-color:var(--acc);border-width:2px}
+@media (min-width:760px){
+  .chain{flex-direction:row;align-items:stretch}
+  .chain .item{flex:1 1 0}
+  .link{flex-direction:column;justify-content:center;padding:0 8px;width:150px;text-align:center}
+  .link .ln{width:100%;height:2px}
+}
+
+/* варианты */
+.vars{display:flex;flex-direction:column;gap:12px}
+.fork h3{font-size:var(--fs-md)}
+.fork .ctx{color:var(--t2);font-size:var(--fs-xs);margin-bottom:8px}
+.ab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt{border:2px solid var(--bd);border-radius:var(--r);padding:8px;background:var(--bg0);cursor:pointer;text-align:left;min-width:0;display:flex;flex-direction:column;gap:6px}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:var(--acc-bg)}
+.opt .lbl{font-weight:800;font-size:var(--fs-sm)}
+.opt .cost{font-size:var(--fs-2xs);color:var(--t2)}
+.opt .rec{font-size:var(--fs-2xs);font-weight:800;color:var(--suc)}
+.mock{background:var(--bg1);border:1px solid var(--bd);border-radius:6px;padding:6px;font-size:var(--fs-2xs);color:var(--t2);min-height:78px;overflow:hidden}
+.mock .bar{height:8px;border-radius:4px;background:var(--bg3);margin:3px 0}
+.mock .bar.acc{background:var(--acc)}
+.mock .row{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.mock .pill{background:var(--acc-bg);color:var(--acc-strong);border-radius:var(--pill);padding:0 5px;font-weight:700}
+.mock .box{border:1px solid var(--bd);border-radius:4px;padding:2px 4px;background:var(--bg0)}
+.mock svg{width:100%;height:60px;display:block}
+.mock svg .n{fill:var(--acc-bg);stroke:var(--acc)}
+.mock svg .e{stroke:var(--bdh);stroke-width:2}
+.choice{margin-top:12px;font-size:var(--fs-sm);background:var(--bg2);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere}
+.choice b{font-weight:800;color:var(--acc-strong)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Поиск по связям</h1>
+    <span class="tag">Прототип · кода ещё нет</span>
+  </div>
+
+  <section class="card why" aria-labelledby="why-h">
+    <h2 id="why-h">Что это и зачем</h2>
+    <p>Сейчас, чтобы понять, <b>что с чем связано</b>, приходится открывать записи по одной: решение → его задачи → их спринты. Агенты делают так же — цепочкой из 3–5 запросов.</p>
+    <p>Поиск по связям отвечает на такой вопрос <b>одним запросом</b> и показывает, через что записи связаны.</p>
+    <p class="ex">Например: «найти все задачи, которые опираются на ADR-LORE-057, и показать, через что они с ним связаны» — ниже это открыто во вкладке «Связи».</p>
+  </section>
+
+  <section class="card" aria-labelledby="modes-h">
+    <h2 id="modes-h">Три способа искать</h2>
+    <div class="tabs" role="group" aria-label="Способ поиска">
+      <button type="button" data-mode="text"><b>Текст</b><span>по словам</span></button>
+      <button type="button" data-mode="links"><b>Связи</b><span>что вокруг</span></button>
+      <button type="button" data-mode="path"><b>Путь</b><span>как связаны двое</span></button>
+    </div>
+
+    <!-- ТЕКСТ -->
+    <div id="m-text">
+      <div class="when"><b>Когда пользоваться:</b> знаете слово из названия и хотите сразу сузить — только открытые, только этот проект, только этот компонент.</div>
+      <div class="step"><i>1</i>Что ввели</div>
+      <div class="input">
+        <div class="say">«Открытые задачи проекта LORE, где в названии есть слово „граф“»</div>
+        <label class="q"><span aria-hidden="true">🔍</span><input id="q" value="граф" aria-label="Слова для поиска"></label>
+        <dl class="fields">
+          <dt>Что ищем</dt><dd><span class="chip">задачи</span></dd>
+          <dt>Состояние</dt><dd><span class="chip">не закрытые</span></dd>
+          <dt>Проект</dt><dd><span class="chip">LORE</span></dd>
+          <dt>Компонент</dt><dd><span class="note">любой</span></dd>
+        </dl>
+        <details class="tech"><summary>Как это выглядит для агента (MCP)</summary><pre id="text-json"></pre></details>
+      </div>
+      <div class="step"><i>2</i>Что получили</div>
+      <div class="status" id="text-status"></div>
+      <ul class="list cols" id="text-list"></ul>
+    </div>
+
+    <!-- СВЯЗИ -->
+    <div id="m-links" hidden>
+      <div class="when"><b>Когда пользоваться:</b> есть одна запись (решение, задача, спринт) и нужно увидеть всё, что от неё зависит или на что она опирается, — «что заденет, если её поменять».</div>
+      <div class="step"><i>1</i>Что ввели</div>
+      <div class="input">
+        <div class="say">«Что связано с ADR-LORE-057 „KnowRegistry: мета-модель LORE“ — на два шага»</div>
+        <dl class="fields">
+          <dt>От записи</dt><dd><span class="chip">ADR-LORE-057</span></dd>
+          <dt>Каким связям идти</dt><dd id="f-rels"></dd>
+          <dt>Что показать</dt><dd id="f-ret"></dd>
+          <dt>Направление</dt><dd><span class="chip">в обе стороны</span></dd>
+        </dl>
+        <p class="m" style="margin:8px 0 0;font-size:var(--fs-xs);color:var(--t3)">Нажмите на метку, чтобы убрать её из поиска, — список ниже пересчитается.</p>
+      </div>
+      <div class="step"><i>2</i>Что получили</div>
+      <div class="status" id="links-status"></div>
+      <div id="groups"></div>
+    </div>
+
+    <!-- ПУТЬ -->
+    <div id="m-path" hidden>
+      <div class="when"><b>Когда пользоваться:</b> есть две записи и непонятно, почему они «рядом», — путь показывает цепочку связей между ними.</div>
+      <div class="step"><i>1</i>Что ввели</div>
+      <div class="input">
+        <div class="say">«Как связаны задача GC-05 (поиск по графу) и задача KREG-11 (зависимости задач)?»</div>
+        <dl class="fields">
+          <dt>От</dt><dd><span class="chip">GC-05</span></dd>
+          <dt>До</dt><dd><span class="chip">KREG-11</span></dd>
+          <dt>Не длиннее</dt><dd><span class="chip">4 шагов</span></dd>
+        </dl>
+      </div>
+      <div class="step"><i>2</i>Что получили</div>
+      <div class="status"><span class="ok">Путь найден: 2 шага</span><span class="note">другого такого же короткого нет</span></div>
+      <div class="chain" id="chain"></div>
+      <p style="margin-top:10px;font-size:var(--fs-xs);color:var(--t2)">Если пути нет, экран говорит почему: «есть, но длиннее 4 шагов», «только через записи чужих проектов», «нет совсем» или «не успели проверить всё».</p>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="vars-h">
+    <h2 id="vars-h">Что выбрать: пять развилок</h2>
+    <p style="color:var(--t2)">Нажмите на понравившийся вариант — внизу соберётся ответ, который можно переслать.</p>
+    <div class="vars" id="vars"></div>
+    <div class="choice" id="choice"></div>
+  </section>
+</div>
+
+<script>
+// ── снимок LORE 25.11.2026 (MCP find / graph / graph_path) ──
+const CAT = {in_progress:'в работе',not_started:'не начата',in_force:'действует'};
+const TEXT_ROWS = [
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05',t:'Поиск по графу в UI и MCP: «нашёл и контекст», влияние, путь, find',c:'in_progress',s:'Спринт SEIDRKIT_GRAPH_CANVAS',d:'25.11'},
+  {id:'SPRINT_UXR_S7C_WHY_CANVAS/S7C-05',t:'Стрелки между стикерами — типизированные рёбра графа',c:'in_progress',s:'Спринт UXR_S7C_WHY_CANVAS',d:'23.11'},
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-02',t:'Договор kit на графовые виды: «узлы + рёбра» на входе, три отрисовщика',c:'in_progress',s:'Спринт SEIDRKIT_GRAPH_CANVAS',d:'20.11'},
+  {id:'SPRINT_LORE_UNIVERSAL_WORKFLOW/UW-02',t:'Подключить LangGraph4j для дерева исполнения workflow (гарды записи — нодами графа)',c:'not_started',s:'Спринт LORE_UNIVERSAL_WORKFLOW',d:'24.11'}
+];
+const REL_RU = {JUSTIFIED_BY:'обосновано этим решением',DECIDED_IN:'частное решение внутри',DEPENDS_ON:'зависит от',IMPLEMENTED_IN:'делается в спринте'};
+const TYPE_RU = {task:'Задачи',decision:'Частные решения',adr:'Другие ADR',sprint:'Спринты'};
+const kreg = [['KREG-01','Миграция схемы: KnowKind + KnowKindHist'],['KREG-02','Генератор KnowRegistry из DDL'],['KREG-03','Обратный импорт tag:*'],
+  ['KREG-04','Обратный импорт slice:*'],['KREG-05','R-сущности ADR-LORE-057'],['KREG-06','QG-инварианты skill/tag'],['KREG-07','Describe-генератор карточек'],
+  ['KREG-08','Fallback модели на проде — громким'],['KREG-09','Экспорт модели (JSON)'],['KREG-10','Дозаполнить модель: labelKey ×85'],
+  ['KREG-11','DEPENDS_ON задача→задача'],['SKILL-01','KnowSkill: DDL + skill_new'],['SKILL-02','Рёбра скиллов'],['SKILL-03','Три первых скилла'],
+  ['SKILL-04','Срез skills + карточки'],['SKILL-05','Супертеги KnowTag']];
+const NB = [
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05',type:'task',t:'Поиск по графу в UI и MCP',c:'in_progress',rel:'JUSTIFIED_BY'},
+  ...kreg.map(([k,t])=>({id:'SPRINT_LORE_KNOW_REGISTRY/'+k,type:'task',t,c:'in_progress',rel:'JUSTIFIED_BY'})),
+  {id:'ADR-LORE-057-R1',type:'decision',t:'R1: форма KnowKind — поля с индексами, история версий',c:'in_progress',rel:'DECIDED_IN'},
+  {id:'ADR-LORE-057-R2',type:'decision',t:'R2: производные генерируются из реестра',c:'in_progress',rel:'DECIDED_IN'},
+  {id:'ADR-LORE-057-R3',type:'decision',t:'R3: обратный импорт живых видов',c:'in_progress',rel:'DECIDED_IN'},
+  {id:'ADR-LORE-057-R4',type:'decision',t:'R4: перевод диспетчеров entity_* на реестр',c:'in_progress',rel:'DECIDED_IN'},
+  {id:'D-2026-GRAPH-SEARCH-ENTITY-DESCRIBE',type:'decision',t:'MCP описывает сущности и связи из модели',c:'in_force',rel:'DECIDED_IN'},
+  {id:'D-2026-GRAPH-SEARCH-ENTITY-UNIFIED',type:'decision',t:'Поиск унифицирован по сущности',c:'in_force',rel:'DECIDED_IN'},
+  {id:'D-2026-GRAPH-SEARCH-VECTOR-PROBE',type:'decision',t:'Поиск по смыслу — сначала проба на копии',c:'in_force',rel:'DECIDED_IN'},
+  {id:'ADR-LORE-056',type:'adr',t:'Поверхность MCP: search + execute + describe',c:'in_progress',rel:'DEPENDS_ON'},
+  {id:'SPRINT_LORE_KNOW_REGISTRY',type:'sprint',t:'KnowRegistry: реестр видов в графе',c:'in_progress',rel:'IMPLEMENTED_IN'}
+];
+const PATH = [
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05',t:'Поиск по графу в UI и MCP',c:'in_progress',kind:'задача'},
+  {link:'обосновано решением →'},
+  {id:'ADR-LORE-057',t:'KnowRegistry: мета-модель LORE как данные графа',c:'in_progress',kind:'ADR'},
+  {link:'← им же обоснована'},
+  {id:'SPRINT_LORE_KNOW_REGISTRY/KREG-11',t:'Зависимости задача → задача (DEPENDS_ON)',c:'in_progress',kind:'задача'}
+];
+const FORKS = [
+  {q:'Где живёт поиск',ctx:'Куда нажать, чтобы искать по связям.',
+   a:{l:'Отдельный экран «Поиск»',cost:'Ещё один пункт меню, зато много места под фильтры.',m:'<div class="row"><span class="box">☰ Задачи</span><span class="box">ADR</span><span class="pill">Поиск</span></div><div class="bar acc"></div><div class="bar"></div><div class="bar"></div>'},
+   b:{l:'Режимы в строке поиска наверху',cost:'Ничего нового в меню; фильтров видно меньше.',rec:true,m:'<div class="row"><span class="box">🔍 граф</span><span class="pill">Текст</span><span class="box">Связи</span><span class="box">Путь</span></div><div class="bar"></div><div class="bar"></div>'}},
+  {q:'Как показывать путь',ctx:'Ответ во вкладке «Путь».',
+   a:{l:'Цепочка карточек (как выше)',cost:'Дёшево, хорошо читается на телефоне.',rec:true,m:'<div class="box">GC-05</div><div style="padding-left:8px">↓ обосновано</div><div class="box">ADR-LORE-057</div><div style="padding-left:8px">↑ обосновано</div><div class="box">KREG-11</div>'},
+   b:{l:'Схема на холсте',cost:'Нагляднее для больших путей, на телефоне мелко.',m:'<svg viewBox="0 0 120 60" aria-hidden="true"><line class="e" x1="20" y1="30" x2="60" y2="14"/><line class="e" x1="60" y1="14" x2="100" y2="30"/><line class="e" x1="60" y1="14" x2="60" y2="48"/><circle class="n" cx="20" cy="30" r="9"/><circle class="n" cx="60" cy="14" r="9"/><circle class="n" cx="100" cy="30" r="9"/><circle class="n" cx="60" cy="48" r="7"/></svg>'}},
+  {q:'Фильтры «каким связям идти / что показать»',ctx:'Метки во вкладке «Связи».',
+   a:{l:'Всегда на виду',cost:'Понятно сразу, но экран плотнее.',m:'<div class="row"><span class="pill">задачи</span><span class="pill">решения</span><span class="pill">спринты</span></div><div class="row"><span class="pill">обосновано</span><span class="pill">внутри</span></div><div class="bar"></div>'},
+   b:{l:'Под кнопкой «Ещё фильтры»',cost:'Чище, но про фильтры можно не узнать.',rec:true,m:'<div class="row"><span class="box">Ещё фильтры ▾</span></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>'}},
+  {q:'Сохранённый поиск',ctx:'Кнопка «Сохранить» запоминает запрос целиком.',
+   a:{l:'Только для себя',cost:'Просто: никто не видит чужих.',rec:true,m:'<div><b>Мои поиски</b></div><div class="box">Открытые задачи LORE</div><div class="box">Задачи про граф</div>'},
+   b:{l:'Общий для проекта',cost:'Видят все в проекте; нужны права на правку.',m:'<div><b>Поиски проекта LORE</b></div><div class="box">Открытые задачи · Аня</div><div class="box">Что на ревью · Ник</div>'}},
+  {q:'Как интерфейс передаёт проект',ctx:'Сервер теперь понимает одно название фильтра проекта; веб-интерфейс пока шлёт старое и получает предупреждение.',
+   a:{l:'Перевести интерфейс на новое',cost:'Небольшая правка интерфейса; предупреждения исчезнут.',rec:true,m:'<div class="row"><span class="pill">проект = LORE</span></div><div style="color:var(--suc)">✓ без предупреждений</div>'},
+   b:{l:'Пока оставить как есть',cost:'Работает, но каждый ответ несёт предупреждение.',m:'<div class="row"><span class="box">старое имя</span></div><div style="color:var(--wrn)">⚠ «прежнее имя параметра»</div>'}}
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const st = c => `<span class="st ${c}">${CAT[c]||c}</span>`;
+const short = id => id.includes('/') ? id.split('/').pop() : id;
+
+function renderText(){
+  const words = $('#q').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = TEXT_ROWS.filter(r => words.every(w => (r.id+' '+r.t).toLowerCase().includes(w)));
+  $('#text-status').innerHTML = `<span class="ok">Найдено: ${rows.length}</span><span class="note">ничего не скрыто правами</span>`;
+  $('#text-list').innerHTML = rows.map(r=>`<li class="item"><div class="id">${esc(short(r.id))}</div><div class="t">${esc(r.t)}</div><div class="m">${st(r.c)} · ${esc(r.s)} · изменена ${r.d}</div></li>`).join('')
+    || '<li class="item">По этим словам ничего нет — это именно «нет», а не «не смогли проверить».</li>';
+  const body = {type:'task', search:$('#q').value.trim(), project:'LORE', where:[{field:'status_category',op:'!=',value:['finished','withdrawn']}]};
+  $('#text-json').textContent = 'find ' + JSON.stringify(body, null, 1);
+}
+
+const on = {rels:new Set(Object.keys(REL_RU)), ret:new Set(Object.keys(TYPE_RU))};
+function toggles(el, keys, set, label){
+  el.innerHTML = keys.map(k=>`<button type="button" class="chip" data-k="${k}" aria-pressed="${set.has(k)}">${esc(label(k))}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{set.has(b.dataset.k)?set.delete(b.dataset.k):set.add(b.dataset.k);renderLinks();});
+}
+const openGroups = new Set();
+function renderLinks(){
+  toggles($('#f-rels'), Object.keys(REL_RU), on.rels, k=>REL_RU[k]);
+  toggles($('#f-ret'), Object.keys(TYPE_RU), on.ret, k=>TYPE_RU[k].toLowerCase());
+  const rows = NB.filter(n => on.rels.has(n.rel) && on.ret.has(n.type));
+  $('#links-status').innerHTML = `<span class="ok">Найдено: ${rows.length}</span><span class="note">окрестность полная · ничего не скрыто правами</span>`;
+  $('#groups').innerHTML = Object.keys(TYPE_RU).filter(t=>on.ret.has(t)).map(t=>{
+    const g = rows.filter(n=>n.type===t); if (!g.length) return '';
+    const show = openGroups.has(t) ? g : g.slice(0,4);
+    return `<div class="grp"><h3>${TYPE_RU[t]} <small>${g.length}</small></h3><ul class="list cols">${show.map(n=>
+      `<li class="item"><div class="id">${esc(short(n.id))}</div><div class="t">${esc(n.t)}</div><div class="m">${st(n.c)} · связь: ${esc(REL_RU[n.rel])}</div></li>`).join('')}</ul>${
+      g.length>4?`<button type="button" class="more" data-g="${t}">${openGroups.has(t)?'Свернуть':'Показать все '+g.length}</button>`:''}</div>`;
+  }).join('') || '<p>Под выбранными метками ничего нет — верните метку.</p>';
+  document.querySelectorAll('.more').forEach(b=>b.onclick=()=>{const g=b.dataset.g;openGroups.has(g)?openGroups.delete(g):openGroups.add(g);renderLinks();});
+}
+
+function renderPath(){
+  $('#chain').innerHTML = PATH.map((p,i)=> p.link
+    ? `<div class="link"><span class="ln" aria-hidden="true"></span><span>${esc(p.link)}</span></div>`
+    : `<div class="item node${i===0||i===PATH.length-1?' end':''}"><div class="m">${p.kind}</div><div class="id">${esc(short(p.id))}</div><div class="t">${esc(p.t)}</div><div class="m">${st(p.c)}</div></div>`).join('');
+}
+
+const picks = {};
+function renderForks(){
+  $('#vars').innerHTML = FORKS.map((f,i)=>`<div class="fork"><h3>${i+1}. ${esc(f.q)}</h3><div class="ctx">${esc(f.ctx)}</div><div class="ab">${
+    ['a','b'].map(k=>{const o=f[k];return `<button type="button" class="opt" data-f="${i}" data-o="${k}" aria-pressed="${picks[i]===k}"><span class="lbl">${k==='a'?'а':'б'}) ${esc(o.l)}</span><div class="mock" aria-hidden="true">${o.m}</div><span class="cost">${esc(o.cost)}</span>${o.rec?'<span class="rec">рекомендую</span>':''}</button>`;}).join('')}</div></div>`).join('');
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{picks[b.dataset.f]=b.dataset.o;renderForks();});
+  const ans = FORKS.map((f,i)=>picks[i]?`${i+1}${picks[i]==='a'?'а':'б'}`:null).filter(Boolean);
+  $('#choice').innerHTML = ans.length ? `Ваш ответ: <b>${ans.join(', ')}</b>` : 'Пока ничего не выбрано. Ответ можно прислать коротко, например: «1б, 2а, 3б, 4а, 5а».';
+}
+
+function setMode(m){
+  if (!['text','links','path'].includes(m)) m = 'text';
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.mode===m));
+  $('#m-text').hidden = m!=='text'; $('#m-links').hidden = m!=='links'; $('#m-path').hidden = m!=='path';
+  try { const u = new URL(location.href); u.searchParams.set('mode', m); history.replaceState(null,'',u); } catch(e) {}
+  if (m==='text') renderText(); else if (m==='links') renderLinks(); else renderPath();
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$('#q').addEventListener('input', renderText);
+renderForks();
+let initial = 'text'; try { initial = new URL(location.href).searchParams.get('mode') || 'text'; } catch(e) {}
+setMode(initial);
+</script>
+</body>
+</html>

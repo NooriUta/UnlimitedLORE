@@ -202,11 +202,12 @@
   pointer-events: none;
 }
 /* Узко: на телефоне «Модули» — нижняя панель (.sk-shell__dock, 48px + полоса
-   жестов), метка не должна лежать поверх неё: поднимаем на высоту дока. */
+   жестов). Место под неё уже резервирует тело оболочки (kit: .sk-shell--narrow .sk-shell__body),
+   метка лежит внутри тела — второй резерв давал пустую полосу над панелью (MP2-15, 25.11). */
 @media (max-width: 720px), (pointer: coarse) and (max-height: 500px) {
   /* Приёмка на телефоне 14.11.2026: «наезд версии продукта» — плавающая метка лежала поверх карточек.
      На узком экране метка в потоке, в конце страницы, и ничего не перекрывает. */
-  .v2-version { position: static; justify-content: flex-end; padding: 8px 8px calc(var(--sk-dock-h, 48px) + env(safe-area-inset-bottom, 0px) + 8px); pointer-events: auto; }
+  .v2-version { position: static; justify-content: flex-end; padding: 8px; pointer-events: auto; }
 }
 /* MP2-04: подпись метки — просто текст (тапы проходят сквозь контейнер),
    копия — отдельная кнопка-иконка с минимальной зоной перехвата. */

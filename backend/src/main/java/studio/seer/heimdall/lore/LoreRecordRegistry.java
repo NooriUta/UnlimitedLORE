@@ -54,6 +54,8 @@ final class LoreRecordRegistry {
      * обязательность читает {@link LoreFieldRequirement} из схемы БД. {@code initial} — начальное значение поля
      * для записи, которой его не назвали (правило владелицы 19.11.2026 «ставить начальный, где без статуса»);
      * читает {@link CreateDefaultStatus}, в форме хранения бэкенда.
+     * {@code audience} — AP-PEOPLE-PAGE: видимость поля тем же словарём, что у раздела (everywhere | detail | admin |
+     * hidden); admin — сервер отдаёт поле только admin/superadmin ({@link LoreFieldAudience}); null — как у записи.
      */
     record Field(String key, String label, String labelKey, String kind, String group, String dict,
                  boolean editable, Write write, boolean multi, boolean required,
@@ -61,12 +63,12 @@ final class LoreRecordRegistry {
                  String shortLabel, String definition, String description, String layer, boolean historic,
                  String labelEn, String shortLabelEn, String definitionEn, String descriptionEn,
                  String labelPl, String shortLabelPl, String definitionPl, String descriptionPl,
-                 boolean notnull, String initial) {
+                 boolean notnull, String initial, String audience) {
         Field(String key, String label, String labelKey, String kind, String group, String dict,
               boolean editable, Write write, boolean multi, boolean required,
               String refType, String rel, String dir, String relation) {
             this(key, label, labelKey, kind, group, dict, editable, write, multi, required,
-                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null, false, null);
+                refType, rel, dir, relation, null, null, null, null, null, false, null, null, null, null, null, null, null, null, false, null, null);
         }
     }
 
@@ -139,19 +141,24 @@ final class LoreRecordRegistry {
      * {@code inverseLabel} — подпись связи с ДРУГОГО конца («Зависит от» ↔ «Блокирует»), K5-MODEL-NAV-EDGE-LABELS,
      * решение владелицы 20.11.2026 (вариант «а»); в ответе — {@code inverse_label}, {@code null} — не задана.
      */
-    record Relation(String key, String label, String rel, String dir, String targetType,
+    record Relation(String key, String label,
+                    /* KREG-10: ключ локализации pp.rel.* и переводы подписи — как у полей (labelKey / labelEn / labelPl) */
+                    String labelKey, String labelEn, String labelPl,
+                    String rel, String dir, String targetType,
                     String relation, String place, boolean manageable, List<EdgeProp> props,
                     /* MDL-13: привязка требует причины — kit открывает ReasonDialog, причина уходит в запись связи */
                     boolean reasonRequired,
                     /* MDL-13: типы другого конца у связи с targetType any — откуда клиенту брать варианты выбора */
                     List<String> targetTypes,
-                    String inverseLabel) {}
+                    String inverseLabel,
+                    /* KREG-10: переводы обратной подписи */
+                    String inverseLabelEn, String inverseLabelPl) {}
 
     /**
      * MDL-13: свойство самого ребра, которое паспорт показывает колонкой связи (у DEPENDS_ON — вид и причина).
      * {@code dict} — справочник значений (вид зависимости — {@code dependency_kind}); нет — свободный текст.
      */
-    record EdgeProp(String key, String label, String dict) {}
+    record EdgeProp(String key, String label, String dict, String labelEn, String labelPl) {}
 
     record TypeDef(String type, String label, String labelKey, String icon,
                    List<Field> fields, List<Body> body, List<PropSection> props,
@@ -229,6 +236,10 @@ final class LoreRecordRegistry {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("key", r.key());
             m.put("label", r.label());
+            // KREG-10: ключ локализации и переводы связи — как у полей и вкладок (label_key / label_en / label_pl).
+            m.put("label_key", r.labelKey());
+            m.put("label_en", r.labelEn());
+            m.put("label_pl", r.labelPl());
             m.put("relation", r.relation());
             m.put("rel", r.rel());
             m.put("dir", r.dir());
@@ -237,12 +248,16 @@ final class LoreRecordRegistry {
             m.put("manageable", r.manageable());
             // K5-MODEL-NAV-EDGE-LABELS: ключ есть всегда; null — обратной подписи в модели нет.
             m.put("inverse_label", r.inverseLabel());
+            m.put("inverse_label_en", r.inverseLabelEn());
+            m.put("inverse_label_pl", r.inverseLabelPl());
             if (!r.props().isEmpty()) {
                 List<Map<String, Object>> edgeProps = new ArrayList<>();
                 for (EdgeProp p : r.props()) {
                     Map<String, Object> pm = new LinkedHashMap<>();
                     pm.put("key", p.key());
                     pm.put("label", p.label());
+                    pm.put("label_en", p.labelEn());
+                    pm.put("label_pl", p.labelPl());
                     if (p.dict() != null) pm.put("dict", p.dict());
                     edgeProps.add(pm);
                 }

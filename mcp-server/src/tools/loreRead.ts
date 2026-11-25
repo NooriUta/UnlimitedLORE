@@ -554,7 +554,14 @@ export function registerLoreRead(server: McpServer): void {
       'links_to:{id:"component:FORSETI", rels:["TAGGED_WITH"]}}; tasks of a repository = {type:"task", links_to:{id:' +
       '"repository:https://…"}}. READ meta FIRST: complete:false / truncated:true + capped_at:N + total — not the whole ' +
       'answer; hidden_by_scope = matching rows outside your projects; an EMPTY answer carries empty_reason: hidden_by_scope ' +
-      '(found, but not yours) or no_match. neighbors / edge_fields / neighbor / view are not executed yet (400 NOT_IMPLEMENTED).',
+      '(found, but not yours) or no_match. neighbors / edge_fields / neighbor / view are not executed yet (400 NOT_IMPLEMENTED). ' +
+      'GC-05 (21.11): project = the ONE project param of find and of every project slice — a project key (short code like ' +
+      '"LORE", case-insensitive, or the former "owner/repo" via aliases) or a list (= any of them); unknown → 404, outside ' +
+      'your projects → 403. scope_projects is the former name: still accepted, the answer carries _warning. search = text ' +
+      'over the record key + title (every word must occur, case-insensitive) combined with where/project/links_to in ONE ' +
+      'call — e.g. {type:"task", search:"граф", project:"LORE", where:[{field:"status_category", op:"=", value:["in_progress"]}, ' +
+      '{field:"component", op:"=", value:["SEIDRKIT_GRAPH"]}, {field:"changed_at", op:">=", value:"2026-11-01"}]}; ranked ' +
+      'full-text over bodies stays in search.',
     {
       type: z.enum(['task', 'sprint', 'adr', 'decision', 'spec']).describe('record type to find'),
       where: z.array(findCond).optional().describe('conditions, AND at top level'),
@@ -568,6 +575,12 @@ export function registerLoreRead(server: McpServer): void {
       fields: z.array(z.string()).optional().describe('fields to return besides id/type/title'),
       sort: z.array(z.object({ field: z.string(), dir: z.enum(['asc', 'desc']).optional() })).optional(),
       limit: z.number().int().min(1).max(2000).optional().describe('row cap, default 500'),
+      search: z.string().min(1).max(160).optional()
+        .describe('text: every word must occur in the record key or title (case-insensitive); combine with where/project'),
+      project: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]).optional()
+        .describe('project key — short code ("LORE") or former "owner/repo"; a list = any of them. Same name as in slices'),
+      scope_projects: z.array(z.string().min(1)).min(1).optional()
+        .describe('FORMER name of project — accepted, the answer carries _warning; use project'),
     },
     async (args) => {
       try {

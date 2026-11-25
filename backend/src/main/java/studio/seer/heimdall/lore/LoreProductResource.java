@@ -1099,12 +1099,13 @@ public class LoreProductResource extends LoreResourceBase {
             List<MachineEnroll.Neighbour> ns = new java.util.ArrayList<>();
             for (Map<String, Object> r : ingest.queryPublic(
                     "SELECT actor_id, client_id, out('OWNED_BY').kc_sub AS owners, "
-                    + "out('OWNED_BY').display_name AS owner_names FROM KnowActor WHERE kind = 'agent' AND machine_id = :m",
+                    + "out('OWNED_BY').display_name AS owner_names, out('USES_MACHINE').machine_id AS machines "
+                    + "FROM KnowActor WHERE kind = 'agent' AND machine_id = :m",
                     Map.of("m", req.machine_id()))) {
                 if (ex != null && ex.actorId().equals(String.valueOf(r.get("actor_id")))) continue;
                 ns.add(new MachineEnroll.Neighbour(String.valueOf(r.get("actor_id")),
                     r.get("client_id") == null ? null : String.valueOf(r.get("client_id")),
-                    strings(r.get("owners")), firstString(r.get("owner_names"))));
+                    strings(r.get("owners")), firstString(r.get("owner_names")), strings(r.get("machines"))));
             }
             boolean admin = agentScope == null && ("admin".equals(role) || "superadmin".equals(role));
             String conflict = MachineEnroll.conflict(req.machine_id(), sub, ex, ns, admin);
@@ -1120,6 +1121,8 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("kc_sub", sub);
             out.put("plan", plan);
             out.put("agents_to_link", link);
+            // AP-MACHINE-PASSPORT, находка 3: у кого ребро к машине уже есть — отдельно («уже привязан»).
+            out.put("agents_linked", MachineEnroll.alreadyLinked(ns, req.machine_id(), sub));
             if (Boolean.TRUE.equals(req.dry_run())) {
                 out.put("dry_run", true);
                 out.put("applied", 0);
