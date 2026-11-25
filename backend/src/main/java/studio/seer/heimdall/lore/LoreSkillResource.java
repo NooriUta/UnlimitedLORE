@@ -56,8 +56,13 @@ public class LoreSkillResource extends LoreResourceBase {
         return r instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
     }
 
-    private static Response refuse(Response.Status status, Map<String, Object> body) {
+    /** Код — числом: поиск 422 в enum JAX-RS даёт null (422 там нет) → NPE → 502. Сторож — StatusFromCodeGuardTest. */
+    static Response refuse(int status, Map<String, Object> body) {
         return noStore(Response.status(status).entity(body));
+    }
+
+    private static Response refuse(Response.Status status, Map<String, Object> body) {
+        return refuse(status.getStatusCode(), body);
     }
 
     /** Второй эшелон RBAC §5 (фильтр уже отсекает на проде; здесь — dev/тесты без OIDC и прямой код ответа 061). */
@@ -184,13 +189,13 @@ public class LoreSkillResource extends LoreResourceBase {
             out.put("skill_id", id);
             if (have.isEmpty()) {
                 List<String> missing = SkillRules.missingRequiredEdges(projects, roles);
-                if (!missing.isEmpty()) return refuse(Response.Status.fromStatusCode(422), SkillRules.refusedMissingEdges(missing));
+                if (!missing.isEmpty()) return refuse(422, SkillRules.refusedMissingEdges(missing));
                 if (req.title() == null || req.title().isBlank() || req.body_md() == null || req.body_md().isBlank())
                     return badParams("title и body_md обязательны при создании скилла");
                 if (req.status() != null && !"draft".equals(req.status()))
                     return refuse(Response.Status.CONFLICT, SkillRules.invalidTransition(null, req.status(),
                         "создание → draft (§5); публикация — следующим вызовом со status=active"));
-                if (extIds.contains(id)) return refuse(Response.Status.fromStatusCode(422), SkillRules.refusedCycle(List.of(id, id)));
+                if (extIds.contains(id)) return refuse(422, SkillRules.refusedCycle(List.of(id, id)));
                 String miss = firstMissing(edges);
                 if (miss != null) return targetNotFound(miss + " не найден");
                 String source = req.source() != null ? req.source() : callerAgentScope() != null ? "agent" : "human";
@@ -225,7 +230,7 @@ public class LoreSkillResource extends LoreResourceBase {
                 Map<String, List<String>> g = extendsGraph();
                 for (String t : extIds) {
                     List<String> cyc = SkillRules.extendsCycle(g, id, t);
-                    if (cyc != null) return refuse(Response.Status.fromStatusCode(422), SkillRules.refusedCycle(cyc));
+                    if (cyc != null) return refuse(422, SkillRules.refusedCycle(cyc));
                 }
             }
             List<String> sets = new ArrayList<>();
@@ -300,7 +305,7 @@ public class LoreSkillResource extends LoreResourceBase {
             if (action.equals("remove")) {
                 if (!have.contains(t) && !"owner".equals(rel)) return unlinkOutcome(base, false);
                 if (SkillRules.removalLeavesDangling(rel, have.size()))
-                    return refuse(Response.Status.fromStatusCode(422), SkillRules.refusedDangling(id, rel));
+                    return refuse(422, SkillRules.refusedDangling(id, rel));
                 int n = deleteEdges(edge, "@out.skill_id = :id AND " + inCondition(rel), Map.of("id", id, "t", t));
                 if (n > 0) touchUpdatedAt("KnowSkill", "skill_id", id);
                 return unlinkOutcome(base, n > 0);
@@ -308,7 +313,7 @@ public class LoreSkillResource extends LoreResourceBase {
             if (!targetExists(rel, t)) return targetNotFound(rel + " «" + t + "» не найден");
             if ("extends".equals(rel)) {
                 List<String> cyc = SkillRules.extendsCycle(extendsGraph(), id, t);
-                if (cyc != null) return refuse(Response.Status.fromStatusCode(422), SkillRules.refusedCycle(cyc));
+                if (cyc != null) return refuse(422, SkillRules.refusedCycle(cyc));
             }
             if ("owner".equals(rel)) {
                 // владелец один: прежнее ребро снимается
