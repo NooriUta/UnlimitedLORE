@@ -94,7 +94,7 @@ describe('«Лента» человека и агента — новости с 
   it('человек: /lore/news/v2 с who = kc_sub — тот же фильтр, что в «Новостях»', async () => {
     const { seen, source } = capture();
     const tab = withPersonFeedTab(cfg, 'user', 'Лента', 'sub-ann', source).kinds.user.tabs!.find(t => t.key === PERSON_FEED_TAB)!;
-    wrap(<>{tab.render!({ id: 'sub-ann', title: 'Ann So' } as never)}</>);
+    wrap(<>{tab.render!({ id: 'sub-ann', title: 'Ann So' } as never, {} as never)}</>);
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
     expect(new URLSearchParams(seen[0]).get('who')).toBe('sub-ann');
     expect(new URLSearchParams(seen[0]).get('actor')).toBeNull();
@@ -103,7 +103,7 @@ describe('«Лента» человека и агента — новости с 
   it('агент: actor = actor_id, учётку клиент не подставляет — её переводит сервер (решение 25.11, 2а)', async () => {
     const { seen, source } = capture();
     const tab = withPersonFeedTab(cfg, 'agent', 'Лента', 'AGENT-FULL-x', source).kinds.agent.tabs!.find(t => t.key === PERSON_FEED_TAB)!;
-    wrap(<>{tab.render!({ id: 'AGENT-FULL-x', title: 'Claude Code (full)' } as never)}</>);
+    wrap(<>{tab.render!({ id: 'AGENT-FULL-x', title: 'Claude Code (full)' } as never, {} as never)}</>);
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
     const p = new URLSearchParams(seen[0]);
     expect(p.get('actor')).toBe('AGENT-FULL-x');

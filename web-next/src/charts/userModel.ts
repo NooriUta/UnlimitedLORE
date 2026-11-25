@@ -54,7 +54,7 @@ export interface PersonSubject { kind: 'user' | 'agent'; id: string }
 
 /** Срезы страницы: задачи с открытой ролью и история их статусов (3а) — свои у человека и у агента. */
 export function personSources(s: PersonSubject) {
-  const param = s.kind === 'user' ? { kc_sub: s.id } : { id: s.id };
+  const param: Record<string, string> = s.kind === 'user' ? { kc_sub: s.id } : { id: s.id };
   return {
     tasks: { slice: s.kind === 'user' ? 'user_tasks' : 'agent_tasks', params: param },
     history: { slice: s.kind === 'user' ? 'user_task_status_versions' : 'agent_task_status_versions', params: param },
