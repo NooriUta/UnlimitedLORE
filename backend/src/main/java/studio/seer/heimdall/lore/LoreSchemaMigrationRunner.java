@@ -642,6 +642,18 @@ public class LoreSchemaMigrationRunner {
         if (version == 89) retireLegacyStatusTypes();
         if (version == 90) seedCoreStatuses();
         if (version == 93) seedQgStatuses();
+        if (version == 100) seedAreas();
+    }
+
+    /** V100: статьи словаря area для областей компонентов — только недостающие (как V90/V93). */
+    int seedAreas() {
+        Map<String, java.util.Set<String>> existing = new java.util.LinkedHashMap<>();
+        for (String dict : AreaDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(dict));
+        List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(AreaDictSeed.SEEDS, existing);
+        for (StatusDictCoreSeed.Insert i : plan)
+            sqlRows(AreaDictSeed.INSERT_SQL, AreaDictSeed.params(i));
+        LOG.infof("[V100] словарь area: вставлено %d строк (было %d)", plan.size(), existing.get("area").size());
+        return plan.size();
     }
 
     /**
