@@ -4544,6 +4544,99 @@
     "labelEn" : "Agent",
     "labelPl" : "Agent"
   }, {
+    "type" : "machine",
+    "label" : "Машина",
+    "labelKey" : "pp.kind.machine",
+    "icon" : "laptop",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Имя",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Имя машины — machine_id вершины KnowMachine: имя компьютера в нижнем регистре или LORE_MACHINE_ID агента.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Imię"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Ключ машины — machine_id; по нему открывается паспорт и связываются агенты.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец",
+      "labelKey" : "pp.field.owner",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "user",
+      "definition" : "Владелец машины — ребро OWNED_BY у её шлюза minilore-link-<имя> (ADR-MINILORE-007 В4). Нет шлюза — нет и владельца.",
+      "layer" : "stable",
+      "labelEn" : "Owner",
+      "labelPl" : "Właściciel"
+    }, {
+      "key" : "gateway",
+      "label" : "Шлюз miniLORE",
+      "labelKey" : "pp.field.gateway",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "agent",
+      "definition" : "Учётка шлюза miniLORE — актор с client_id minilore-link-<имя>. Пусто — шлюза нет: машина появилась сама по записи агента.",
+      "layer" : "stable",
+      "labelEn" : "miniLORE gateway",
+      "labelPl" : "Bramka miniLORE"
+    }, {
+      "key" : "harness",
+      "label" : "Оболочка",
+      "labelKey" : "pp.field.harness",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Оболочка шлюза машины (harness актора-шлюза) из справочника harness; у агентов машины — своя.",
+      "layer" : "optional",
+      "labelEn" : "Harness",
+      "labelPl" : "Powłoka"
+    }, {
+      "key" : "last_seen_at",
+      "label" : "Отметка машины",
+      "labelKey" : "pp.field.machineSeen",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Когда агент с этой машины последний раз писал в LORE — KnowMachine.last_seen_at, ставит сервер после записи агента. Последнее действие в журнале (agent_actions) — отдельная цифра.",
+      "layer" : "stable",
+      "labelEn" : "Machine mark",
+      "labelPl" : "Znacznik maszyny"
+    }, {
+      "key" : "first_seen_at",
+      "label" : "Впервые",
+      "labelKey" : "pp.field.firstSeen",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "KnowMachine.first_seen_at — первая запись агента с машины или заведение через machine_new.",
+      "layer" : "stable",
+      "labelEn" : "First seen",
+      "labelPl" : "Pierwszy raz"
+    } ],
+    "props" : [ {
+      "fields" : [ "owner", "gateway", "harness", "last_seen_at", "first_seen_at" ]
+    } ],
+    "relations" : [ {
+      "key" : "agents",
+      "label" : "Агенты машины",
+      "rel" : "USES_MACHINE",
+      "dir" : "in",
+      "targetType" : "agent",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "Machine",
+    "labelPl" : "Maszyna"
+  }, {
     "type" : "actor",
     "label" : "Роль продукта",
     "labelKey" : "pp.kind.actor",
@@ -6432,7 +6525,7 @@
     "labelEn" : "Gate metric",
     "labelPl" : "Metryka bramki"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "machine", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -6471,6 +6564,10 @@
     "job" : {
       "vertex" : "KnowJob",
       "key" : "job_id"
+    },
+    "machine" : {
+      "vertex" : "KnowMachine",
+      "key" : "machine_id"
     },
     "milestone" : {
       "vertex" : "KnowMilestone",
@@ -6585,6 +6682,10 @@
     "job" : {
       "date" : "date_created"
     },
+    "machine" : {
+      "code" : "machine_id",
+      "title" : "machine_id"
+    },
     "milestone" : {
       "code" : "milestone_id",
       "date" : "date_display",
@@ -6674,7 +6775,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
+  "no_type_color" : [ "agent", "doc", "machine", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
   "precision" : {
     "adr.date" : "datetime",
     "decision.date" : "datetime",
@@ -6682,6 +6783,8 @@
     "feature.shipped_at" : "date",
     "gain.date" : "date",
     "job.date" : "date",
+    "machine.first_seen_at" : "datetime",
+    "machine.last_seen_at" : "datetime",
     "pain.date" : "date",
     "pr.merged_at" : "datetime",
     "quality_gate.date" : "date",
@@ -6812,6 +6915,11 @@
         "source" : "date_created",
         "precision" : "date"
       } ]
+    },
+    "machine" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "milestone" : {
       "history" : "scd2",
@@ -7431,6 +7539,10 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "machine" : [ {
+      "key" : "agents",
       "slot" : "own"
     } ],
     "milestone" : [ {

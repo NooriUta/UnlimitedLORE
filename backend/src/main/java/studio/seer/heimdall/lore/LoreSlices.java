@@ -1735,8 +1735,10 @@ public final class LoreSlices {
             "out('LOGGED_BY').actor_id AS actor_ids " +
             "FROM KnowAgentSession",
             List.of(),
+            // AP-MACHINE-PASSPORT (решение 2б): сессии одной машины — блок «были сессией» паспорта машины.
             new LinkedHashMap<>(Map.of("actor_id",
-                " WHERE out('LOGGED_BY').actor_id CONTAINS :actor_id")),
+                " WHERE out('LOGGED_BY').actor_id CONTAINS :actor_id",
+                "machine", " WHERE machine_id = :machine")),
             " ORDER BY last_activity_at DESC LIMIT 200");
 
         slice("actor_load",
@@ -2988,6 +2990,21 @@ public final class LoreSlices {
         // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — одна строка KnowPR по pr_uid «проект#номер».
         // Задачи — по ребру CLOSED_BY (задача → PR), релизы — по SHIPPED_IN (PR → релиз): те же рёбра,
         // что пишут мерж (forgejo_pr_merge), task_link rel=pr и release_link rel=pr.
+        // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: паспорт машины — строка KnowMachine. Шлюз, его harness и владелец —
+        // у актора-шлюза minilore-link-<имя> (ADR-MINILORE-007 В4: права и владелец — у шлюза, KnowMachine — наблюдение),
+        // поэтому подзапросом по client_id, а не ребром вершины. Агенты — рёбра USES_MACHINE. Нет шлюза — поля пустые.
+        String machineCols = "SELECT machine_id, first_seen_at, last_seen_at, " +
+            "$gw.client_id[0] AS gateway, $gw.name[0] AS gateway_name, $gw.harness[0] AS harness, " +
+            "$gw.owner[0] AS owner, $gw.owner_name[0] AS owner_name, " +
+            "in('USES_MACHINE').actor_id AS agent_ids, in('USES_MACHINE').client_id AS agent_clients " +
+            "FROM KnowMachine LET $gw = (SELECT client_id, name, harness, " +
+            "out('OWNED_BY').kc_sub[0] AS owner, out('OWNED_BY').display_name[0] AS owner_name FROM KnowActor " +
+            "WHERE kind = 'agent' AND client_id = ('" + MachineAccess.PREFIX + "' + $parent.$current.machine_id))";
+        slice("machine_by_id", machineCols + " WHERE machine_id = :id", List.of("id"), Map.of(), "");
+        // Решение владельца 3б: машины графа целиком — и без шлюза (появились сами по записи агента), чтобы админка
+        // показала их группой «Без шлюза», а не теряла (machine_acl берёт только акторов minilore-link-*).
+        slice("machines_graph", machineCols, List.of(), Map.of(), " ORDER BY machine_id");
+
         slice("pr_by_id",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
             "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
@@ -3757,6 +3774,8 @@ public final class LoreSlices {
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
+        Map.entry("machine_by_id", "паспорт машины (AP-MACHINE-PASSPORT) — служебный, как machine_acl: машины видны в админке"),
+        Map.entry("machines_graph", "машины графа (AP-MACHINE-PASSPORT, 3б) — служебный, как machine_acl"),
         Map.entry("pr_by_id", "паспорт PR (MD-05): KnowPR — путь через релиз или задачу, как release_prs"),
         Map.entry("pr_ship_lag", "KnowPR — путь через релиз (графики 19.11, №9)"),
         Map.entry("findings", "находки — решение владелицы"),

@@ -41,6 +41,9 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   'product',
   // S9-05 A: человек и агент — только чтение (правят в админке); порядок — как у фасада.
   'user', 'agent',
+  // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: машина — только чтение, только в админке (решение 1 владельца):
+  // паспорт открывается в «Доступе к машинам» своим адресом (ADMIN_PASSPORT в loreRoutes).
+  'machine',
   // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта, боль, выгода, работа (были только списки)
   // и ранбук — только чтение; пишутся своими путями MCP (actor_new, pain_new… runbook_new).
   'actor', 'pain', 'gain', 'job', 'runbook',
@@ -124,6 +127,8 @@ export async function listOf(type: PassportType, slice: Slice): Promise<{ id: st
   // MD-05: перечень PR — выпущенные PR (pr_ship_lag — единственный срез PR без параметра; заголовка в нём нет —
   // подпись ключом «проект#номер»). Остальные PR открываются из задачи, релиза и проекта.
   if (type === 'pr') return (await slice<Row>('pr_ship_lag', { fields: 'pr_uid', limit: '1000' })).rows.map(r => ({ id: str(r.pr_uid), title: str(r.pr_uid) }));
+  // AP-MACHINE-PASSPORT: перечень машин — машины графа (machines_graph), ключ machine_id.
+  if (type === 'machine') return (await slice<Row>('machines_graph', { fields: 'machine_id', limit: '1000' })).rows.map(r => ({ id: str(r.machine_id), title: str(r.machine_id) }));
   if (type === 'runbook') return (await slice<Row>('runbooks', { fields: 'runbook_id,name', limit: '1000' })).rows.map(r => ({ id: str(r.runbook_id), title: str(r.name) || str(r.runbook_id) }));
   if (type === 'product') return (await slice<Row>('products', { fields: 'code,label_ru', limit: '1000' })).rows.map(r => ({ id: str(r.code), title: str(r.label_ru) || str(r.code) }));
   return (await slice<Row>('open_tasks', { fields: 'task_uid,title', limit: '300' })).rows.map(r => ({ id: str(r.task_uid), title: str(r.title) || str(r.task_uid) }));

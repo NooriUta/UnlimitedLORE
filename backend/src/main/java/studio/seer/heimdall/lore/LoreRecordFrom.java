@@ -428,6 +428,16 @@ final class LoreRecordFrom {
             s("harness", "harness"),
             s("owner", "owner"),
             list("projects", "projects"))),
+        // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: машина — имя и обе отметки вершины; владелец, шлюз и harness —
+        // у актора-шлюза (срез machine_by_id). Нет шлюза — поля пустые, а не подставленные.
+        Map.entry("machine", List.of(
+            v("title", Transform.FIRST_OF, "machine_id"),
+            s("code", "machine_id"),
+            s("owner", "owner"),
+            s("gateway", "gateway"),
+            s("harness", "harness"),
+            s("last_seen_at", "last_seen_at"),
+            s("first_seen_at", "first_seen_at"))),
         Map.entry("decision", List.of(
             v("title", Transform.FIRST_OF, "title", "decision_id"),
             v("status", Transform.DOC_TOKEN, "status_raw"),
