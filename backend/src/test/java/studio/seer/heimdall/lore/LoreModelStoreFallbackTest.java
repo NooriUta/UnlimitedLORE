@@ -97,4 +97,15 @@ class LoreModelStoreFallbackTest {
         assertEquals("file", store.source());
         assertNotNull(store.warning());
     }
+
+    @Test
+    void migrateOnlySkipsThePoint() {
+        List<LoreCommandClient.LoreCommand> commands = new ArrayList<>();
+        LoreModelStore store = storeWithFailingRead(capturingClient(commands, null));
+        store.migrateOnly = true;
+        store.load();
+        assertEquals("file", store.source(), "fallback по файлу при отказе — по-прежнему работает");
+        assertTrue(commands.stream().noneMatch(c -> c.command() != null && c.command().contains("INSERT INTO MetricSnapshot")),
+            "в режиме lore.migrate.only точка не пишется: одноразовый раннер не должен менять данные (migrate-live-check: повторная сверка инвентаря)");
+    }
 }
