@@ -723,7 +723,7 @@
       }
     },
     "task_type": {
-      "_about": "SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD: вид задачи по ADR-LORE-015; UI (v1-чипы, web-next taskDicts) читает словарь. Решение владельца 25.11.2026: «словари сеять каких нет». Подписи, иконки и цвета — как на проде; те же статьи сеет доводка схемы кода (UiDictSeed.java).",
+      "_about": "SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD: вид задачи по ADR-LORE-015; UI (v1-чипы, web-next taskDicts) читает словарь. Решение владельца 25.11.2026: «словари сеять каких нет». Подписи и иконки — как на проде, цвета — токены темы (AUD-AREA-COLORS 6а); те же статьи сеет доводка схемы кода (UiDictSeed.java).",
       "kind": "other",
       "codes": [
         {
@@ -734,7 +734,7 @@
             "pl": "Planowanie"
           },
           "icon": "compass",
-          "color": "#7c869c"
+          "color": "var(--t2)"
         },
         {
           "code": "design",
@@ -744,7 +744,7 @@
             "pl": "Projektowanie"
           },
           "icon": "scroll-quill",
-          "color": "#9b7ad9"
+          "color": "color-mix(in srgb,var(--inf) 50%,var(--dng))"
         },
         {
           "code": "dev",
@@ -754,7 +754,7 @@
             "pl": "Programowanie"
           },
           "icon": "gears",
-          "color": "#4caf72"
+          "color": "var(--suc)"
         },
         {
           "code": "test",
@@ -764,7 +764,7 @@
             "pl": "Testowanie"
           },
           "icon": "checkered-flag",
-          "color": "#d9a441"
+          "color": "var(--wrn)"
         },
         {
           "code": "ops",
@@ -774,7 +774,7 @@
             "pl": "Wydanie/Ops"
           },
           "icon": "cog",
-          "color": "#d76b6b"
+          "color": "var(--dng)"
         },
         {
           "code": "research",
@@ -784,7 +784,7 @@
             "pl": "Badania"
           },
           "icon": "magnifying-glass",
-          "color": "#5b9bd5"
+          "color": "var(--inf)"
         },
         {
           "code": "analytics",
@@ -794,7 +794,7 @@
             "pl": "Analityka"
           },
           "icon": "pie-chart",
-          "color": "#b06bd7"
+          "color": "color-mix(in srgb,var(--dng) 55%,var(--inf))"
         },
         {
           "code": "docs",
@@ -804,7 +804,7 @@
             "pl": "Dokumentacja"
           },
           "icon": "spell-book",
-          "color": "#5bc8c8"
+          "color": "color-mix(in srgb,var(--inf) 55%,var(--suc))"
         },
         {
           "code": "content",
@@ -814,7 +814,7 @@
             "pl": "Treści"
           },
           "icon": "quill-ink",
-          "color": "#e0a03a"
+          "color": "var(--acc)"
         }
       ]
     },
@@ -893,6 +893,66 @@
             "pl": "analityk produktowy"
           },
           "color": "var(--t3)"
+        }
+      ]
+    },
+    "palette": {
+      "_about": "SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (решение владельца 25.11.2026, 5а): подписи шести наших палитр (kit/src/tokens/prefs.ts PALETTES) — без статьи экран настроек показывает код. Цвет — образец палитры токеном --swatch-*. Справочник расширяемый: в нём же свои стили установки own-… (SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE). Те же статьи сеет доводка схемы кода (PaletteDictSeed.java).",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "amber-forest",
+          "labels": {
+            "ru": "янтарный лес",
+            "en": "amber forest",
+            "pl": "bursztynowy las"
+          },
+          "color": "var(--swatch-amber-forest)"
+        },
+        {
+          "code": "lichen",
+          "labels": {
+            "ru": "лишайник",
+            "en": "lichen",
+            "pl": "porost"
+          },
+          "color": "var(--swatch-lichen)"
+        },
+        {
+          "code": "slate",
+          "labels": {
+            "ru": "сланец",
+            "en": "slate",
+            "pl": "łupek"
+          },
+          "color": "var(--swatch-slate)"
+        },
+        {
+          "code": "juniper",
+          "labels": {
+            "ru": "можжевельник",
+            "en": "juniper",
+            "pl": "jałowiec"
+          },
+          "color": "var(--swatch-juniper)"
+        },
+        {
+          "code": "warm-dark",
+          "labels": {
+            "ru": "тёплая тёмная",
+            "en": "warm dark",
+            "pl": "ciepła ciemna"
+          },
+          "color": "var(--swatch-warm-dark)"
+        },
+        {
+          "code": "mono",
+          "labels": {
+            "ru": "приглушённая (mono)",
+            "en": "muted (mono)",
+            "pl": "stonowana (mono)"
+          },
+          "color": "var(--swatch-mono)"
         }
       ]
     }

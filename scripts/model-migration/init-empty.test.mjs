@@ -92,3 +92,22 @@ test('свежая установка сеет словари, которые ч
   assert.equal(rows.find(r => r.dict_type === 'priority' && r.code === 'critical').color, 'var(--dng)');
   assert.equal(rows.find(r => r.dict_type === 'task_type' && r.code === 'dev').icon, 'gears');
 });
+
+// SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (решение владельца 25.11.2026): 5а — подписи шести палитр на свежей установке
+// (экран настроек больше не пишет «без статьи — показан код»); 6а — цвет статьи справочника — токен темы, не hex.
+// Те же статьи и цвета — у доводки схемы кода (PaletteDictSeed.java, UiDictSeed.java).
+test('свежая установка сеет подписи шести палитр, цвета словарей — токены темы', () => {
+  const rows = dictEntriesFromRules();
+  const pal = rows.filter(r => r.dict_type === 'palette');
+  assert.deepEqual(pal.map(r => r.code), ['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark', 'mono']);
+  for (const r of pal) {
+    assert.ok(r.label_en, 'palette.' + r.code + ': нет подписи en');
+    assert.equal(r.color, 'var(--swatch-' + r.code + ')');
+  }
+  assert.equal(pal.find(r => r.code === 'mono').label_ru, 'приглушённая (mono)', 'подпись mono — как на проде');
+  const ARG = String.raw`\s*(?:var\(--[a-z0-9_-]+\)|transparent)(?:\s+\d{1,3}%)?\s*`;
+  const TOKEN = new RegExp(String.raw`^(?:var\(--[a-z0-9_-]+\)|color-mix\(\s*in\s+[a-z-]+\s*,` + ARG + ',' + ARG + String.raw`\))$`);
+  const raw = rows.filter(r => r.color && !TOKEN.test(r.color)).map(r => r.dict_type + '/' + r.code + '=' + r.color);
+  assert.deepEqual(raw, [], 'сырой цвет в правилах установщика');
+  assert.equal(rows.find(r => r.dict_type === 'task_type' && r.code === 'dev').color, 'var(--suc)');
+});

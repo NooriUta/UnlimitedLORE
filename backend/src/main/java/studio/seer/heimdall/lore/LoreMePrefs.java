@@ -89,6 +89,10 @@ final class LoreMePrefs {
         m.put("density", oneOf("roomy", "roomy", "compact", "comfortable"));
         // палитра темы — коды kit/tokens/prefs.ts PALETTES (те же, что cookie seer-prefs v1)
         m.put("palette", oneOf("amber-forest", "amber-forest", "lichen", "slate", "juniper", "warm-dark", "mono"));
+        // AP-APPEARANCE (2в): палитра принимает и свой стиль установки own-… (OWN_CODE, см. validateSettingsPatch);
+        // входит ли выбор в набор установки, решает LoreAppearance при чтении и записи, а не белый список.
+        // пара шрифтов — наши пары бандла (4а): pair = Unbounded + Manrope + Plex Mono, mono = всё Plex Mono
+        m.put("font_pair", oneOf("pair", "pair", "mono"));
         m.put("single_key_shortcuts", bool(false));                          // однобуквенные клавиши
         m.put("stripes", bool(false));                                       // полоски в таблицах
         m.put("peek_hover", bool(true));                                    // карточки Peek по наведению (S9-10)
@@ -131,7 +135,8 @@ final class LoreMePrefs {
             if (v == null) return;
             if (s.kind() == Kind.BOOL && !(v instanceof Boolean))
                 errs.add(k + ": ожидается true/false, пришло " + v);
-            if (s.kind() == Kind.ENUM && !(v instanceof String str && s.values().contains(str)))
+            if (s.kind() == Kind.ENUM && !(v instanceof String str && (s.values().contains(str)
+                    || ("palette".equals(k) && LoreAppearance.isOwn(str)))))
                 errs.add(k + ": допустимо " + s.values() + ", пришло " + v);
             if (s.kind() == Kind.NUMBER && !(v instanceof Number n && Double.isFinite(n.doubleValue())))
                 errs.add(k + ": ожидается число, пришло " + v);

@@ -35,7 +35,46 @@ public class LoreDictResource extends LoreResourceBase {
     public record DictEntryRequest(String dict_type, String code, String label_ru,
                                    String label_en, String color, String icon,
                                    Integer sort_order, Boolean is_active, Boolean is_extensible,
-                                   Object kind, String reason) {}
+                                   Object kind, String reason, String tokens_json) {}
+
+    /**
+     * Оформление и цвет статьи ([[task:SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE]] 1а/3б,
+     * [[task:SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS]] 6а). Отказ словами или null:
+     * <ul>
+     *   <li>цвет статьи — токен темы ({@link DictColorToken}), не сырой hex;</li>
+     *   <li>tokens_json — только у своего стиля: статья palette с кодом own-…; исходник (JSON или CSS-переменные)
+     *       проходит {@link LoreAppearance#checkStyle}, неизвестное — отказ со словами;</li>
+     *   <li>новый свой стиль без токенов — отказ (рисовать было бы нечего);</li>
+     *   <li>наши палитры обязательные: выключить нельзя, токены у них свои — в приложении;</li>
+     *   <li>ключи установки appearance.* в app_setting — коды наших палитр/пар или own-….</li>
+     * </ul>
+     */
+    static String appearanceRefusal(DictEntryRequest req, boolean existed) {
+        String colorBad = DictColorToken.refusal(req.dict_type(), req.code(), req.color());
+        if (colorBad != null) return colorBad;
+        String dt = req.dict_type(), code = req.code();
+        boolean tokens = req.tokens_json() != null && !req.tokens_json().isBlank();
+        if ("app_setting".equals(dt)) return LoreAppearance.installSettingRefusal(code, req.label_ru());
+        if (!"palette".equals(dt)) return tokens ? "tokens_json бывает только у статьи palette со своим стилем (own-…), не у " + dt : null;
+        if (LoreAppearance.isBuiltin(code)) {
+            if (Boolean.FALSE.equals(req.is_active()))
+                return "наши палитры обязательные: «" + code + "» нельзя выключить — сузьте разрешённый набор установки (appearance.palettes_allowed)";
+            if (tokens) return "токены наших палитр живут в приложении (seidr.css) — свой цвет загружайте своим стилем own-…";
+            return null;
+        }
+        if (!LoreAppearance.isOwn(code))
+            return "код своего стиля — own-… (латиница, цифры, дефис): «" + code + "» не годится";
+        if (!tokens) return existed ? null : "свой стиль " + code + " без токенов: пришлите tokens_json (JSON или CSS-переменные)";
+        LoreAppearance.StyleCheck c = LoreAppearance.checkStyle(req.tokens_json());
+        if (!c.ok()) return "свой стиль " + code + " не принят: " + String.join("; ", c.errors());
+        return null;
+    }
+
+    /** Хранимая форма токенов (нормализованный JSON) или null — токены не присланы. Вызывать после проверки. */
+    static String storedTokens(DictEntryRequest req) {
+        if (req.tokens_json() == null || req.tokens_json().isBlank()) return null;
+        return LoreAppearance.checkStyle(req.tokens_json()).json();
+    }
 
     /**
      * SPRINT_LORE_WORK_ANY_KIND/WK-01 (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE): вид статьи — набор
@@ -135,15 +174,20 @@ public class LoreDictResource extends LoreResourceBase {
             return badParams("dict_type and code required");
         String kindBad = kindRefusal(req.dict_type(), req.kind());
         if (kindBad != null) return badParams(kindBad);
+        // проверка исходника своего стиля до чтения базы (3б): отказ словами не требует похода в БД
+        if (req.tokens_json() != null && req.tokens_json().length() > LoreAppearance.SOURCE_MAX * 2)
+            return badParams("tokens_json больше " + (LoreAppearance.SOURCE_MAX / 1024) + " КБ");
         try {
             // DBR-17: исход из факта. Прежнее состояние читаем ДО записи: повтор
             // тех же значений — unchanged, и он не плодит ревизию истории, а
             // раньше каждый такой вызов открывал новую Hist-строку без изменений.
             Map<String, Object> key0 = Map.of("dt", req.dict_type(), "code", req.code());
             List<Map<String, Object>> prev = ingestService.queryPublic(
-                "SELECT label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind " +
+                "SELECT label_ru, label_en, color, icon, sort_order, is_active, is_extensible, kind, tokens_json " +
                 "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code", key0);
             boolean existed = !prev.isEmpty();
+            String looksBad = appearanceRefusal(req, existed);
+            if (looksBad != null) return badParams(looksBad);
             String reasonBad = reasonRefusal(req, existed ? prev.get(0) : null);
             if (reasonBad != null) return badParams(reasonBad);
             Map<String, Object> base = Map.of("ok", true, "dict_type", req.dict_type(), "code", req.code());
@@ -169,6 +213,8 @@ public class LoreDictResource extends LoreResourceBase {
             if (req.icon()       != null) { sql.append(", icon=:icon");     p.put("icon", req.icon()); }
             if (req.sort_order() != null) { sql.append(", sort_order=:so"); p.put("so", req.sort_order()); }
             if (req.kind()       != null) { sql.append(", kind=:kind");     p.put("kind", normalizeKind(req.dict_type(), req.kind())); }
+            String tokens = storedTokens(req);
+            if (tokens != null)            { sql.append(", tokens_json=:tj"); p.put("tj", tokens); }
             sql.append(" UPSERT WHERE dict_type=:dt AND code=:code");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
@@ -211,6 +257,7 @@ public class LoreDictResource extends LoreResourceBase {
             && same(req.sort_order(), stored.get("sort_order"))
             && same(req.is_active(), stored.get("is_active"))
             && same(req.is_extensible(), stored.get("is_extensible"))
+            && same(storedTokens(req), stored.get("tokens_json"))
             && (req.kind() == null || java.util.Objects.equals(
                     normalizeKind(req.dict_type(), req.kind()), storedKind(req.dict_type(), stored.get("kind"))));
     }
@@ -241,13 +288,13 @@ public class LoreDictResource extends LoreResourceBase {
         "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
         "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
         "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
-        "is_active=:is_active, is_extensible=:is_extensible, kind=:kind, change_reason=:reason" + ChangeAuthor.SET_SQL + ";" +
+        "is_active=:is_active, is_extensible=:is_extensible, kind=:kind, tokens_json=:tokens_json, change_reason=:reason" + ChangeAuthor.SET_SQL + ";" +
         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
         "TO (SELECT FROM KnowDictEntryHist WHERE state_uid = :nsid AND in('HAS_STATE').size() = 0);";
 
     private void writeDictHist(String dictType, String code, String reason) {
         List<Map<String, Object>> rows = ingestService.queryPublic(
-            "SELECT label_ru, label_en, color, icon, sort_order, kind, " +
+            "SELECT label_ru, label_en, color, icon, sort_order, kind, tokens_json, " +
             "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible " +
             "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code",
             Map.of("dt", dictType, "code", code));
@@ -258,6 +305,7 @@ public class LoreDictResource extends LoreResourceBase {
         hp.put("nsid", UUID.randomUUID().toString());
         hp.put("now", Instant.now().toString());
         hp.put("reason", reason);
+        hp.putIfAbsent("tokens_json", null); // поле своего стиля (AP-APPEARANCE) у прочих статей пусто
         changeAuthor().bind(hp); // S2-12: автор версии — из токена (справочник правит человек)
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
             HIST_INSERT, hp)).await().indefinitely();
