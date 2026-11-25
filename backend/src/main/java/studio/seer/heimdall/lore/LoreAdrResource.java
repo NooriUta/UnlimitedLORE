@@ -42,7 +42,14 @@ public class LoreAdrResource extends LoreResourceBase {
         // ADR-LORE-047 A3 / S5-08: версия записи паспорта (record.version); не совпала —
         // 409 VERSION_CONFLICT. Тело ADR — три раздела, каждый своим запросом, поэтому
         // одновременная правка двух разделов — самый вероятный конфликт.
-        String expected_version) {}
+        String expected_version,
+        // KREG-10: дата создания — свойство created_at (канон 1.18). date_created выше — прежнее имя поля
+        // запроса: его шлют MCP adr_new/adr_set и старые клиенты, читается как запасное.
+        String created_at) {
+
+        /** Присланная дата создания: created_at, иначе прежнее имя поля запроса. */
+        String createdGiven() { return created_at != null ? created_at : this.date_created(); }
+    }
 
     // ── Write-path: create / upsert KnowADR ──────────────────────────────────
 
@@ -91,21 +98,13 @@ public class LoreAdrResource extends LoreResourceBase {
             // context_md/decision_md/consequences_md bug fixed above, 2026-07-02.
             StringBuilder upsertSql = new StringBuilder("UPDATE KnowADR SET adr_id=:adr_id, name=:name");
             Map<String, Object> upsertP = mapOfNullable("adr_id", req.adr_id(), "name", req.name());
-            // S2-10: у НОВОГО ADR рядом с датой — полный ISO-момент создания, если он
-            // известен (CreationMoment.resolve); правка существующего его не трогает.
-            if (isNewAdr) {
-                CreationMoment.Resolved cm = CreationMoment.resolve(req.date_created(), Instant.parse(now));
-                upsertSql.append(", date_created=:date_created");
-                upsertP.put("date_created", cm.date());
-                if (cm.moment() != null) {
-                    upsertSql.append(", created_at=:created_at");
-                    upsertP.put("created_at", cm.moment());
-                }
-            } else {
-                if (req.date_created() != null) {
-                    upsertSql.append(", date_created=:date_created");
-                    upsertP.put("date_created", req.date_created());
-                }
+            // KREG-10: дата и момент — одно свойство created_at (CreationMoment.creationSet).
+            CreationMoment.Set created = CreationMoment.creationSet(isNewAdr, req.createdGiven(), Instant.parse(now));
+            if (created != null) {
+                upsertSql.append(created.sql());
+                upsertP.put("created_at", created.value());
+            }
+            if (!isNewAdr) {
                 // Аудит времени 10.11 (класс S4-04): правка существующего ADR без checkpoint
                 // пишет тело в открытую версию на месте — момент правки на вершине; changed_at
                 // среза adrs — максимум с открытой версией. У нового ADR первая версия и есть

@@ -63,12 +63,18 @@ final class LoreEntityHistory {
         return switch (type) {
             case "task", "phase" -> VIA_SPRINT;
             case "dict_entry"    -> null;
+            // AP-PASSPORT-EDIT: профиль клиента и роли продукта — общие вершины (AL-106, AL-113), как их срезы
+            // pains/gains/jobs/actors и паспорта *_by_id (SHARED_SLICES): история скоупом не режется.
+            case "pain", "gain", "job", "actor" -> null;
             default              -> DIRECT;
         };
     }
 
     private static String projectsViaExpr(String type) {
-        return "decision".equals(type) ? "in('HAS_STATE').out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug" : null;
+        if ("decision".equals(type)) return "in('HAS_STATE').out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug";
+        // AP-PASSPORT-EDIT: сценарий своего проекта не несёт — наследует от родителя (UC_INHERITED_SCOPE паспорта uc_by_id).
+        if ("feature".equals(type)) return "in('HAS_STATE').in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug";
+        return null;
     }
 
     static boolean isGlobal(String type) { return projectsExpr(type) == null; }
@@ -304,13 +310,21 @@ final class LoreEntityHistory {
     }
 
     /** Поля тела версии по классу истории — то, что дифф обязан показать (HistoryBodyFieldsTest). */
-    static final Map<String, List<String>> BODY_FIELDS = Map.of(
-        "KnowTaskHist", List.of("note_md"),
-        "KnowSprintHist", List.of("context_md", "outcome_md"),
-        "KnowADRHist", List.of("context_md", "decision_md", "consequences_md"),
-        "KnowSpecHist", List.of("content_md"),
-        "KnowDocHist", List.of("content_md"),
-        "KnowRunbookHist", List.of("content_md"));
+    static final Map<String, List<String>> BODY_FIELDS = bodyFields();
+
+    private static Map<String, List<String>> bodyFields() {
+        Map<String, List<String>> m = new java.util.LinkedHashMap<>(Map.of(
+            "KnowTaskHist", List.of("note_md"),
+            "KnowSprintHist", List.of("context_md", "outcome_md"),
+            "KnowADRHist", List.of("context_md", "decision_md", "consequences_md"),
+            "KnowSpecHist", List.of("content_md"),
+            "KnowDocHist", List.of("content_md"),
+            "KnowRunbookHist", List.of("content_md")));
+        // AP-PASSPORT-EDIT (доводка v5): у боли, выгоды, работы, роли и фичи версия — снимок полей паспорта
+        // (ProductHistory.SPECS): без них дифф истории видел бы только смену хэша.
+        m.putAll(ProductHistory.bodyFields());
+        return java.util.Collections.unmodifiableMap(m);
+    }
 
     static final Map<String, String> CHANGE_FIELDS = Map.of("status", "status_raw", "content", "content_hash");
 

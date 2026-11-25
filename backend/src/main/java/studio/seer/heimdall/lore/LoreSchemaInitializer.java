@@ -818,7 +818,12 @@ public class LoreSchemaInitializer {
      * «Type with name KnowKindHist was not found». Новое изменение схемы сюда НЕ добавляется — только в
      * LoreSchemaAdditive.CHANGES (сторож LoreSchemaAdditiveGuardTest: стейтментов вне доводки здесь не прибавляется).
      */
-    static final List<String> DDL = java.util.stream.Stream.concat(BASE_DDL.stream(), LoreSchemaAdditive.KNOW_KIND_DDL.stream()).toList();
+    static final List<String> DDL = java.util.stream.Stream.of(BASE_DDL, LoreSchemaAdditive.KNOW_KIND_DDL,
+            // AP-PASSPORT-EDIT (доводка v5): цепочки истории боли/выгоды/работы/роли/фичи — тоже ССЫЛКА на доводку, по той
+            // же причине, что KnowKindHist: V77 (splitSharedStates) читает каждую цепочку LoreSlices.HIST_PARENT и на свежей
+            // базе шагов V бежит раньше доводки — без типов здесь он упал бы «Type with name KnowPainHist was not found».
+            LoreSchemaAdditive.PRODUCT_HIST_DDL)
+        .flatMap(List::stream).toList();
 
     /**
      * RM-P12: объявления {@code valid_from} для *Hist с текстовым ISO-8601 UTC.

@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "a0e83fd1ecc4d83c",
+  "version" : "4581f0f63695aa19",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -585,7 +585,7 @@
       "time" : {
         "history" : "scd2",
         "created" : [ {
-          "source" : "created_date",
+          "source" : "created_at",
           "precision" : "date",
           "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
         } ],
@@ -597,7 +597,7 @@
           "precision" : "datetime",
           "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
         }, {
-          "source" : "created_date",
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },
@@ -837,10 +837,10 @@
           "width" : "s",
           "overflow" : "none"
         },
-        "property" : "created_date",
-        "property_type" : "STRING",
+        "property" : null,
+        "property_type" : null,
         "precision" : "date",
-        "source" : "CONFIRMS"
+        "source" : "SUPPLIES"
       }, {
         "key" : "milestones",
         "label" : "Вехи",
@@ -1652,7 +1652,7 @@
           "overflow" : "none"
         }
       } ],
-      "unclassified" : [ ],
+      "unclassified" : [ "created_date" ],
       "internal" : [ "valid_from" ]
     },
     "task" : {
@@ -3081,10 +3081,7 @@
         "created" : [ {
           "source" : "created_at",
           "precision" : "datetime",
-          "note" : "момент — у ADR, заведённых после S2-10"
-        }, {
-          "source" : "date_created",
-          "precision" : "date"
+          "note" : "момент создания; у ADR до S2-10 — полночь дня прежней даты (перенос 1.18)"
         } ],
         "changed" : [ {
           "source" : "version.valid_from",
@@ -3096,9 +3093,6 @@
         }, {
           "source" : "created_at",
           "precision" : "datetime"
-        }, {
-          "source" : "date_created",
-          "precision" : "date"
         } ]
       },
       "fields" : [ {
@@ -3203,7 +3197,7 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
-          "field" : "date_created"
+          "field" : "created_at"
         },
         "required_level" : null,
         "required_rules" : [ ],
@@ -5092,10 +5086,7 @@
         "created" : [ {
           "source" : "created_at",
           "precision" : "datetime",
-          "note" : "момент — у решений, заведённых после S2-10"
-        }, {
-          "source" : "date_created",
-          "precision" : "date"
+          "note" : "момент создания; у решений до S2-10 — полночь дня прежней даты (перенос 1.18)"
         } ],
         "changed" : [ {
           "source" : "version.valid_from",
@@ -5108,9 +5099,6 @@
         }, {
           "source" : "created_at",
           "precision" : "datetime"
-        }, {
-          "source" : "date_created",
-          "precision" : "date"
         } ]
       },
       "fields" : [ {
@@ -8958,14 +8946,18 @@
       "color" : "section-features",
       "key" : "uc_id",
       "vertex" : "KnowUseCase",
-      "hist" : null,
+      "hist" : "KnowUseCaseHist",
       "time" : {
-        "history" : "none",
+        "history" : "scd2",
         "created" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ],
         "changed" : [ {
+          "source" : "version.valid_from",
+          "precision" : "datetime",
+          "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+        }, {
           "source" : "updated_at",
           "precision" : "datetime",
           "note" : "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник"
@@ -8973,7 +8965,7 @@
           "source" : "shipped_at",
           "precision" : "date"
         }, {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },
@@ -9209,10 +9201,10 @@
           "width" : "s",
           "overflow" : "none"
         },
-        "property" : "date_created",
-        "property_type" : "STRING",
+        "property" : null,
+        "property_type" : null,
         "precision" : "date",
-        "source" : "CONFIRMS"
+        "source" : "SUPPLIES"
       }, {
         "key" : "shipped_at",
         "label" : "Выпущен",
@@ -9932,11 +9924,26 @@
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "label_key" : "pp.rel.history",
+        "label_en" : "History",
+        "label_pl" : "Historia",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
       "computed" : [ ],
-      "unclassified" : [ ],
+      "unclassified" : [ "date_created" ],
       "internal" : [ "feature_id" ]
     },
     "product" : {
@@ -11437,11 +11444,15 @@
       "color" : "section-actors",
       "key" : "actor_id",
       "vertex" : "KnowProjectActor",
-      "hist" : null,
+      "hist" : "KnowProjectActorHist",
       "time" : {
-        "history" : "none",
+        "history" : "scd2",
         "created" : [ ],
-        "changed" : [ ]
+        "changed" : [ {
+          "source" : "version.valid_from",
+          "precision" : "datetime",
+          "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+        } ]
       },
       "fields" : [ {
         "key" : "title",
@@ -11712,6 +11723,21 @@
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "label_key" : "pp.rel.history",
+        "label_en" : "History",
+        "label_pl" : "Historia",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
@@ -11729,15 +11755,19 @@
       "color" : "section-rbjg",
       "key" : "pain_id",
       "vertex" : "KnowPain",
-      "hist" : null,
+      "hist" : "KnowPainHist",
       "time" : {
-        "history" : "none",
+        "history" : "scd2",
         "created" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ],
         "changed" : [ {
-          "source" : "date_created",
+          "source" : "version.valid_from",
+          "precision" : "datetime",
+          "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+        }, {
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },
@@ -11843,10 +11873,10 @@
           "width" : "s",
           "overflow" : "none"
         },
-        "property" : "date_created",
-        "property_type" : "STRING",
+        "property" : null,
+        "property_type" : null,
         "precision" : "date",
-        "source" : "CONFIRMS"
+        "source" : "SUPPLIES"
       }, {
         "key" : "body_md",
         "label" : "Описание",
@@ -11974,11 +12004,26 @@
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "label_key" : "pp.rel.history",
+        "label_en" : "History",
+        "label_pl" : "Historia",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
       "computed" : [ ],
-      "unclassified" : [ ],
+      "unclassified" : [ "date_created" ],
       "internal" : [ ]
     },
     "gain" : {
@@ -11991,15 +12036,19 @@
       "color" : "section-rbjg",
       "key" : "gain_id",
       "vertex" : "KnowGain",
-      "hist" : null,
+      "hist" : "KnowGainHist",
       "time" : {
-        "history" : "none",
+        "history" : "scd2",
         "created" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ],
         "changed" : [ {
-          "source" : "date_created",
+          "source" : "version.valid_from",
+          "precision" : "datetime",
+          "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+        }, {
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },
@@ -12105,10 +12154,10 @@
           "width" : "s",
           "overflow" : "none"
         },
-        "property" : "date_created",
-        "property_type" : "STRING",
+        "property" : null,
+        "property_type" : null,
         "precision" : "date",
-        "source" : "CONFIRMS"
+        "source" : "SUPPLIES"
       }, {
         "key" : "body_md",
         "label" : "Описание",
@@ -12272,11 +12321,26 @@
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "label_key" : "pp.rel.history",
+        "label_en" : "History",
+        "label_pl" : "Historia",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
       "computed" : [ ],
-      "unclassified" : [ ],
+      "unclassified" : [ "date_created" ],
       "internal" : [ ]
     },
     "job" : {
@@ -12289,15 +12353,19 @@
       "color" : "section-rbjg",
       "key" : "job_id",
       "vertex" : "KnowJob",
-      "hist" : null,
+      "hist" : "KnowJobHist",
       "time" : {
-        "history" : "none",
+        "history" : "scd2",
         "created" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ],
         "changed" : [ {
-          "source" : "date_created",
+          "source" : "version.valid_from",
+          "precision" : "datetime",
+          "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+        }, {
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },
@@ -12439,10 +12507,10 @@
           "width" : "s",
           "overflow" : "none"
         },
-        "property" : "date_created",
-        "property_type" : "STRING",
+        "property" : null,
+        "property_type" : null,
         "precision" : "date",
-        "source" : "CONFIRMS"
+        "source" : "SUPPLIES"
       }, {
         "key" : "body_md",
         "label" : "Описание",
@@ -12585,11 +12653,26 @@
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
+      }, {
+        "key" : "history",
+        "label" : "История",
+        "label_key" : "pp.rel.history",
+        "label_en" : "History",
+        "label_pl" : "Historia",
+        "relation" : "composition",
+        "rel" : "HAS_STATE",
+        "dir" : "out",
+        "target_type" : "hist",
+        "place" : "history",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
       } ],
       "requirements" : [ ],
       "requirements_block" : "schema",
       "computed" : [ ],
-      "unclassified" : [ ],
+      "unclassified" : [ "date_created" ],
       "internal" : [ ]
     },
     "runbook" : {
@@ -12606,7 +12689,7 @@
       "time" : {
         "history" : "scd2",
         "created" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ],
         "changed" : [ {
@@ -12614,7 +12697,7 @@
           "precision" : "datetime",
           "note" : "версию открывает первая запись тела; правка тела идёт в открытую версию на месте"
         }, {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },
@@ -12891,11 +12974,11 @@
       "time" : {
         "history" : "none",
         "created" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ],
         "changed" : [ {
-          "source" : "date_created",
+          "source" : "created_at",
           "precision" : "date"
         } ]
       },

@@ -129,7 +129,7 @@ public class LoreIngestService {
                     + ChangeAuthor.SET_SQL + ";" +
                 "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
                 "TO (SELECT FROM KnowSprintHist WHERE state_uid = :su AND in('HAS_STATE').size() = 0);" +
-                "UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp;",
+                "UPDATE KnowSprint SET created_at=:now WHERE sprint_id=:sp;",
                 hp);
         }
 
@@ -232,7 +232,7 @@ public class LoreIngestService {
         params.put("adr_id",       adr.adrId());
         params.put("name",         nullToEmpty(adr.name()));
         params.put("status",       nullToEmpty(adr.status()));
-        params.put("date_created", nullToEmpty(adr.dateCreated()));
+        params.put("created_at", nullToEmpty(adr.dateCreated()));
         params.put("component_id", nullToEmpty(adr.componentId()));
         params.put("file_path",    nullToEmpty(adr.filePath()));
         params.put("context_md",   nullToEmpty(adr.contextMd()));
@@ -240,7 +240,7 @@ public class LoreIngestService {
         params.put("consequences_md", nullToEmpty(adr.consequencesMd()));
 
         exec("UPDATE KnowADR SET " +
-                "adr_id=:adr_id, name=:name, status=:status, date_created=:date_created, " +
+                "adr_id=:adr_id, name=:name, status=:status, created_at=:created_at, " +
                 "component_id=:component_id, file_path=:file_path, " +
                 "context_md=:context_md, decision_md=:decision_md, " +
                 "consequences_md=:consequences_md " +
@@ -319,13 +319,13 @@ public class LoreIngestService {
         params.put("name",         nullToEmpty(s.name()));
         params.put("status_raw",   nullToEmpty(s.statusRaw()));
         params.put("priority",     nullToEmpty(s.priority()));
-        params.put("date_created", nullToEmpty(s.dateCreated()));
+        params.put("created_at", nullToEmpty(s.dateCreated()));
         params.put("plan_id",      nullToEmpty(s.planId()));
         params.put("outcome_md",   nullToEmpty(s.outcomeMd()));
 
         exec("UPDATE KnowSprint SET " +
                 "sprint_id=:sprint_id, " + ModelSchemaAdapter.titleSet("name") + ", status_raw=:status_raw, " +
-                "priority=:priority, date_created=:date_created, " +
+                "priority=:priority, created_at=:created_at, " +
                 "plan_id=:plan_id, outcome_md=:outcome_md " +
                 "UPSERT WHERE sprint_id=:sprint_id", params);
     }
@@ -424,7 +424,7 @@ public class LoreIngestService {
         params.put("runbook_id",  rb.runbookId());
         params.put("name",        nullToEmpty(rb.name()));
         params.put("area",        nullToEmpty(rb.area()));
-        params.put("date_created", nullToEmpty(rb.dateCreated()));
+        params.put("created_at", nullToEmpty(rb.dateCreated()));
         params.put("content_md",  nullToEmpty(rb.contentMd()));
 
         exec(runbookVertexSql(), params);
@@ -452,7 +452,7 @@ public class LoreIngestService {
 
     /** Запись ранбука при инжесте md: на базе из модели — без тела (оно в версии), в старой схеме — как раньше. */
     static String runbookVertexSql() {
-        return "UPDATE KnowRunbook SET runbook_id=:runbook_id, name=:name, area=:area, date_created=:date_created"
+        return "UPDATE KnowRunbook SET runbook_id=:runbook_id, name=:name, area=:area, created_at=:created_at"
             + (ModelSchemaAdapter.enabled() ? "" : ", content_md=:content_md")
             + " UPSERT WHERE runbook_id=:runbook_id";
     }
@@ -496,13 +496,13 @@ public class LoreIngestService {
         params.put("description",  nullToEmpty(qg.description()));
         params.put("component_id", nullToEmpty(qg.componentId()));
         params.put("status",       nullToEmpty(qg.status()));
-        params.put("date_created", nullToEmpty(qg.dateCreated()));
+        params.put("created_at", nullToEmpty(qg.dateCreated()));
         params.put("content_md",   nullToEmpty(qg.contentMd()));
 
         exec("UPDATE QualityGate SET " +
                 "qg_id=:qg_id, name=:name, description=:description, " +
                 "component_id=:component_id, status=:status, " +
-                "date_created=:date_created, content_md=:content_md " +
+                "created_at=:created_at, content_md=:content_md " +
                 "UPSERT WHERE qg_id=:qg_id", params);
     }
 

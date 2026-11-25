@@ -186,9 +186,12 @@ class LoreSchemaAdditiveEmbeddedTest {
         LoreSchemaAdditive.Report r = LoreSchemaAdditive.apply(exec);
         // DDL шагов V совпадает с доводкой: новыми остаются только конец ребра посева, отметка и то, что пришло
         // после заморозки шагов V (доводка v2: ClRoutineMetric.basis, QG-07)
-        assertEquals(1, r.types(), "после шагов V нового — только конец ребра OWNED_BY: " + r);
-        assertEquals(3, r.properties(), "свойства шагов V и доводки совпадают; новое после V100 — ClRoutineMetric.basis и tokens_json словаря и его истории: " + r);
-        assertEquals(0, r.indexes(), "индексы шагов V и доводки совпадают: " + r);
+        // доводка v5 (AP-PASSPORT-EDIT): пять цепочек истории боли/выгоды/работы/роли/фичи — 11 служебных полей у каждой
+        // (время, ключ, версия, хэш, автор) + поля снимка (22) и по три индекса
+        int histProps = ProductHistory.SPECS.size() * 11 + ProductHistory.SPECS.stream().mapToInt(s -> s.fields().size()).sum();
+        assertEquals(1 + ProductHistory.SPECS.size(), r.types(), "после шагов V нового — конец ребра OWNED_BY и цепочки доводки v5: " + r);
+        assertEquals(3 + histProps, r.properties(), "свойства шагов V и доводки совпадают; новое после V100 — ClRoutineMetric.basis, tokens_json словаря и его истории, поля цепочек v5: " + r);
+        assertEquals(3 * ProductHistory.SPECS.size(), r.indexes(), "индексы шагов V и доводки совпадают; новые — у цепочек v5: " + r);
         assertEquals(LoreSchemaAdditive.VERSION, ((Number) marker().get("version")).intValue());
         assertFalse(LoreSchemaAdditive.apply(exec).changed(), "повтор — 0 изменений");
     }

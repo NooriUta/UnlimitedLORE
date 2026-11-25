@@ -309,7 +309,7 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
         url: '/lore/adr?mode=create',
         body: strip({
           adr_id: text(values.id), name: text(values.title), status: opt(values.status),
-          date_created: opt(values.date), context_md: opt(values.context_md),
+          created_at: opt(values.date), context_md: opt(values.context_md),
           decision_md: opt(values.decision_md), consequences_md: opt(values.consequences_md),
         }),
       };

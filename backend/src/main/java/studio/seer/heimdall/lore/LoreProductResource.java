@@ -171,14 +171,16 @@ public class LoreProductResource extends LoreResourceBase {
             // и сценарии sea-level: правка их названия этим путём опускала бы их на уровень фичи).
             sql.append(", ").append(featureGoalLevelSql(req.goal_level()));
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
-            // S4-MODEL-TYPES (свежесть): истории у фичи нет — момент заведения/правки на вершине.
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
             sql.append(", updated_at=:upd");
             p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response featureConflict = versionHistory("feature", req.feature_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (featureConflict != null) return featureConflict;
             // NM-03 (ADR-LORE-041): фича писала component_id полем, а слайсы
             // продуктового слоя читают out('BELONGS_TO') — связь, записанная
             // здесь, не доезжала ни до одного экрана.
@@ -191,6 +193,24 @@ public class LoreProductResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
+        }
+    }
+
+    /**
+     * AP-PASSPORT-EDIT (владелец 25.11.2026 «историчность доделываем»): после записи вершины — версия SCD2 по снимку
+     * её полей ({@link ProductHistory#version}): снимок тот же — ничего; другой — закрыть прежнюю, открыть новую;
+     * версии нет — первая. Автор — из проверенного токена. Соседняя запись закрыла открытую версию — 409 (ничего не
+     * записано в историю, повтор безопасен), иначе null.
+     */
+    @SuppressWarnings("unchecked")
+    private Response versionHistory(String type, String id) {
+        ChangeAuthor author = changeAuthor();
+        try {
+            ProductHistory.version((lang, command, params) -> (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand(lang, command, params)).await().indefinitely().result(), type, id, author);
+            return null;
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response();
         }
     }
 
@@ -280,14 +300,17 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
-            // S4-MODEL-TYPES (свежесть): истории у сценария нет — момент заведения/правки на вершине.
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
             sql.append(", updated_at=:upd");
             p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            // AP-PASSPORT-EDIT: сценарий — та же вершина KnowUseCase, что фича, и та же цепочка истории
+            Response ucConflict = versionHistory("feature", req.uc_id());
+            if (ucConflict != null) return ucConflict;
 
             // parent_uc_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
             // (класс багов «поле есть — ребра нет», relinkParentEdge/SpecComponentEdge).
@@ -655,6 +678,8 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response actorConflict = versionHistory("actor", req.actor_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (actorConflict != null) return actorConflict;
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
@@ -1292,7 +1317,10 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("rel", req.rel());
             out.put("target_id", req.target_id());
             out.put("linked", linked);
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи); снятие — было ли открытое ребро роли
+            boolean hadRole = current != null && !current.isEmpty();
+            return linkFact(out, remove, remove ? hadRole : same, linked,
+                "агент " + req.actor_id() + " или роль " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR LINK] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
@@ -1336,11 +1364,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)    { sql.append(", body_md=:b");    p.put("b", req.body_md()); }
             if (req.kind() != null)       { sql.append(", kind=:k");       p.put("k", req.kind()); }
             if (req.importance() != null) { sql.append(", importance=:i"); p.put("i", req.importance()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE job_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response jobConflict = versionHistory("job", req.job_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (jobConflict != null) return jobConflict;
             return noStore(Response.ok(Map.of("ok", true, "job_id", req.job_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE JOB] %s: %s", req.job_id(), e.getMessage());
@@ -1373,11 +1403,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.title() != null)    { sql.append(", title=:t");    p.put("t", req.title()); }
             if (req.body_md() != null)  { sql.append(", body_md=:b");  p.put("b", req.body_md()); }
             if (req.severity() != null) { sql.append(", severity=:s"); p.put("s", req.severity()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE pain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response painConflict = versionHistory("pain", req.pain_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (painConflict != null) return painConflict;
             return noStore(Response.ok(Map.of("ok", true, "pain_id", req.pain_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE PAIN] %s: %s", req.pain_id(), e.getMessage());
@@ -1413,11 +1445,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)   { sql.append(", body_md=:b");   p.put("b", req.body_md()); }
             if (req.metric_md() != null) { sql.append(", metric_md=:m"); p.put("m", req.metric_md()); }
             if (req.rank() != null)      { sql.append(", rank=:r");      p.put("r", req.rank()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE gain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response gainConflict = versionHistory("gain", req.gain_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (gainConflict != null) return gainConflict;
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("gain_id", req.gain_id());
@@ -2018,7 +2052,7 @@ public class LoreProductResource extends LoreResourceBase {
      */
     private List<Map<String, Object>> computeUcQualityRows() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+            "SELECT uc_id, title, rigor, goal_level, created_at AS date_created, scenario_md, acceptance_md, " +
             "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
             "out('TRACED_TO').size() AS traced " +
             "FROM KnowUseCase ORDER BY uc_id", Map.of());
