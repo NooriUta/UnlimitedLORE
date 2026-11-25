@@ -311,6 +311,38 @@ public class LoreDictResource extends LoreResourceBase {
             HIST_INSERT, hp)).await().indefinitely();
     }
 
+    public record StyleCheckRequest(String source) {}
+
+    /** Ответ проверки своего стиля: годен ли, причины отказа, предупреждения, принятые токены и хранимая форма. */
+    static Map<String, Object> styleCheckBody(String source) {
+        LoreAppearance.StyleCheck c = LoreAppearance.checkStyle(source);
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("ok", c.ok());
+        out.put("errors", c.errors());
+        out.put("warnings", c.warnings());
+        Map<String, Object> tokens = new java.util.LinkedHashMap<>();
+        tokens.put("root", new java.util.TreeMap<>(c.root()));
+        if (!c.light().isEmpty()) tokens.put("light", new java.util.TreeMap<>(c.light()));
+        out.put("tokens", tokens);
+        out.put("tokens_json", c.ok() ? c.json() : null);
+        return out;
+    }
+
+    /**
+     * AP-APPEARANCE (3б): проверить свой стиль до сохранения — тем же правилом, что запись статьи palette. Ничего не
+     * пишет; отказ — в теле ответа словами (200), чтобы админка показала все причины разом, а не первую.
+     */
+    @POST
+    @Path("dict/style-check")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response styleCheck(StyleCheckRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null) return badParams("source required");
+        return noStore(Response.ok(styleCheckBody(req.source())));
+    }
+
     // One-time (idempotent) backfill of IN_AREA edges from existing area strings —
     // the schema initializer's DDL is gated off in prod, so this ensures the edge
     // type exists and links every component that has an area. Safe to re-run.

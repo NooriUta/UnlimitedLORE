@@ -85,4 +85,15 @@ class LoreDictAppearanceTest {
         stored.put("tokens_json", "{\"root\":{\"--acc\":\"#000000\"}}");
         assertFalse(LoreDictResource.sameAsStored(r, stored));
     }
+
+    @Test
+    void проверка_стиля_до_сохранения_отдаёт_все_причины_и_токены() {
+        Map<String, Object> bad = LoreDictResource.styleCheckBody(":root { --brand: #fff; --acc: tomato; }");
+        assertEquals(false, bad.get("ok"));
+        assertEquals(2, ((java.util.List<?>) bad.get("errors")).size(), "все причины разом, не первая");
+        assertNull(bad.get("tokens_json"));
+        Map<String, Object> good = LoreDictResource.styleCheckBody(GOOD);
+        assertEquals(true, good.get("ok"));
+        assertEquals(Map.of("root", Map.of("--acc", "#3a8fd8", "--bg0", "#0d1117")), good.get("tokens"));
+    }
 }

@@ -6,6 +6,7 @@ import { useMemo, useRef, type ComponentType } from 'react';
 import { setUrlParams, useKitShell } from '@seidr/kit';
 import { v2Auth } from '../auth/session';
 import { ActionsScreen } from './ActionsScreen';
+import { AppearanceScreen } from './AppearanceScreen';
 import { AgentsScreen } from './AgentsScreen';
 import { DictsScreen } from './DictsScreen';
 import { FlagsScreen } from './FlagsScreen';
@@ -39,6 +40,8 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   'adm-orgs': () => <ListScreen screen="organizations" manage />,
   'adm-roles': () => <RolesScreen />,
   'adm-dicts': () => <DictsScreen />,
+  // AP-APPEARANCE: наши стили обязательные, свои — загрузкой; умолчание и набор палитр и шрифтов установки.
+  'adm-appearance': () => <AppearanceScreen />,
   // MC-06: модель LORE — типы, поля, меню и видимость; правка версией с dry_run и откатом.
   'adm-model': () => <ModelScreen />,
   'adm-rules': () => <RulesScreen />,
