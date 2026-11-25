@@ -366,7 +366,14 @@ public abstract class LoreResourceBase {
         "adr", "SELECT adr_id FROM KnowADR WHERE adr_id = :id LIMIT 1",
         "spec", "SELECT spec_id FROM KnowSpec WHERE spec_id = :id LIMIT 1",
         "decision", "SELECT decision_id FROM KnowDecision WHERE decision_id = :id LIMIT 1",
-        "task", "SELECT task_uid FROM KnowTask WHERE task_uid = :id LIMIT 1");
+        "task", "SELECT task_uid FROM KnowTask WHERE task_uid = :id LIMIT 1",
+        // AP-PASSPORT-EDIT, волна 1: «+ Новая» продуктового слоя. Пути pain/gain/job/project-actor/feature — UPSERT,
+        // на занятый код он переписал бы чужую запись; паспорт создания шлёт mode=create.
+        "pain", "SELECT pain_id FROM KnowPain WHERE pain_id = :id LIMIT 1",
+        "gain", "SELECT gain_id FROM KnowGain WHERE gain_id = :id LIMIT 1",
+        "job", "SELECT job_id FROM KnowJob WHERE job_id = :id LIMIT 1",
+        "actor", "SELECT actor_id FROM KnowProjectActor WHERE actor_id = :id LIMIT 1",
+        "feature", "SELECT uc_id FROM KnowUseCase WHERE uc_id = :id LIMIT 1");
 
     /** Режим записи: пусто или {@code upsert} — прежнее поведение, {@code create} — строгий; прочее — 400. */
     Response modeError(String mode) {

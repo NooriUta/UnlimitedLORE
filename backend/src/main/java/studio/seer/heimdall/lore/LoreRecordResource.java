@@ -53,6 +53,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
     @Inject LoreOrganizationResource organizationResource;
+    @Inject LoreProductResource productResource; // AP-PASSPORT-EDIT: ценность фичи и профиль клиента
     @Inject LoreStatusResource statusResource;   // MDL-13: трек спринта — тот же путь, что sprint/plan
 
     /** Главный срез записи типа и имя его параметра. */
@@ -703,6 +704,11 @@ public class LoreRecordResource extends LoreResourceBase {
                 a, null, null, null, "remove".equals(action) ? "" : b), role).await().indefinitely();
             case ORG_LINK -> organizationResource.linkOrganization(
                 new LoreOrganizationResource.OrgLinkRequest(a, r.rel(), b, action), role);
+            // a — фича (у боли/выгоды/работы reversed), b — цель; a — источник профиля (боль/выгода/работа).
+            case FEATURE_VALUE -> productResource.linkFeature(new LoreProductResource.FeatureLinkRequest(
+                a, LoreRecordRelationRoutes.featureRel(r.rel()), b, action), role);
+            case VP_LINK -> productResource.linkVp(new LoreProductResource.VpLinkRequest(
+                a, LoreRecordRelationRoutes.vpRel(r.rel()), b, action), role);
         };
     }
 }

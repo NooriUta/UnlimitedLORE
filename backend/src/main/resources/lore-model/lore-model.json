@@ -4041,6 +4041,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/feature",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название фичи: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -4192,6 +4197,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/feature",
+        "field" : "body_md"
+      },
       "definition" : "Текст фичи в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -4200,6 +4210,11 @@
       "key" : "context_md",
       "label" : "Контекст",
       "labelKey" : "pp.adr.context",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/feature",
+        "field" : "context_md"
+      },
       "definition" : "Контекст фичи: зачем она, кому и в какой ситуации.",
       "layer" : "stable",
       "labelEn" : "Context",
@@ -4412,7 +4427,8 @@
       "dir" : "out",
       "targetType" : "pain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "gains",
       "label" : "Выгоды",
@@ -4423,7 +4439,8 @@
       "dir" : "out",
       "targetType" : "gain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Работы",
@@ -4434,7 +4451,8 @@
       "dir" : "out",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "relieves",
       "label" : "Снимает боли",
@@ -5303,6 +5321,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/project-actor",
+        "field" : "name"
+      },
       "required" : true,
       "definition" : "Название роли: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5314,6 +5337,11 @@
       "labelKey" : "pp.field.roleKind",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/project-actor",
+        "field" : "kind"
+      },
       "definition" : "Вид роли: человек, автоматизация или система.",
       "layer" : "stable",
       "labelEn" : "Role kind",
@@ -5337,6 +5365,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/project-actor",
+        "field" : "body_md"
+      },
       "definition" : "Текст роли в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5417,7 +5450,8 @@
       "dir" : "in",
       "targetType" : "pain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "gains",
       "label" : "Выгоды",
@@ -5428,7 +5462,8 @@
       "dir" : "in",
       "targetType" : "gain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Работы",
@@ -5439,7 +5474,8 @@
       "dir" : "in",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "agents",
       "label" : "Агенты",
@@ -5487,6 +5523,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/pain",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название боли: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5498,6 +5539,11 @@
       "labelKey" : "pp.field.severity",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/pain",
+        "field" : "severity"
+      },
       "definition" : "Острота боли: насколько сильно она мешает клиенту — высокая или обычная.",
       "layer" : "stable",
       "labelEn" : "Severity",
@@ -5517,6 +5563,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/pain",
+        "field" : "body_md"
+      },
       "definition" : "Текст боли в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5587,7 +5638,8 @@
       "dir" : "in",
       "targetType" : "feature",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "relievedBy",
       "label" : "Снимают сценарии",
@@ -5609,7 +5661,8 @@
       "dir" : "out",
       "targetType" : "actor",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Мешает работам",
@@ -5620,7 +5673,8 @@
       "dir" : "out",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -5657,6 +5711,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название выгоды: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5668,6 +5727,11 @@
       "labelKey" : "pp.field.rank",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "rank"
+      },
       "definition" : "Ранг выгоды по канве ценности: обязательная, ожидаемая, желательная или неожиданная для клиента.",
       "layer" : "stable",
       "labelEn" : "Rank",
@@ -5687,6 +5751,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "body_md"
+      },
       "definition" : "Текст выгоды в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5695,6 +5764,11 @@
       "key" : "metric_md",
       "label" : "Метрика",
       "labelKey" : "pp.field.metric",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "metric_md"
+      },
       "definition" : "Как измеряется выгода: метрика и порог.",
       "layer" : "stable",
       "labelEn" : "Metric",
@@ -5765,7 +5839,8 @@
       "dir" : "in",
       "targetType" : "feature",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "deliveredBy",
       "label" : "Дают сценарии",
@@ -5787,7 +5862,8 @@
       "dir" : "out",
       "targetType" : "actor",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Успех в работах",
@@ -5798,7 +5874,8 @@
       "dir" : "out",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -5835,6 +5912,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название работы: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5846,6 +5928,11 @@
       "labelKey" : "pp.field.jobKind",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "kind"
+      },
       "definition" : "Вид работы клиента: функциональная, социальная или поддерживающая.",
       "layer" : "stable",
       "labelEn" : "Job kind",
@@ -5856,6 +5943,11 @@
       "labelKey" : "pp.field.importance",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "importance"
+      },
       "definition" : "Важность работы для клиента — высокая или обычная.",
       "layer" : "stable",
       "labelEn" : "Importance",
@@ -5875,6 +5967,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "body_md"
+      },
       "definition" : "Текст работы в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5950,7 +6047,8 @@
       "dir" : "in",
       "targetType" : "feature",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "performedBy",
       "label" : "Выполняют сценарии",
@@ -5972,7 +6070,8 @@
       "dir" : "out",
       "targetType" : "actor",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "pains",
       "label" : "Мешают боли",
@@ -5983,7 +6082,8 @@
       "dir" : "in",
       "targetType" : "pain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "gains",
       "label" : "Успех — выгоды",
@@ -5994,7 +6094,8 @@
       "dir" : "in",
       "targetType" : "gain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -8962,6 +9063,14 @@
     "user" : "everywhere"
   },
   "create" : {
+    "actor" : {
+      "endpoint" : "/lore/project-actor",
+      "id_field" : "actor_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "name"
+      } ]
+    },
     "decision" : {
       "endpoint" : "/lore/decision",
       "id_field" : "decision_id",
@@ -8977,12 +9086,44 @@
       } ],
       "require_one_of" : [ "projects", "adr" ]
     },
+    "feature" : {
+      "endpoint" : "/lore/feature",
+      "id_field" : "feature_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      } ]
+    },
+    "gain" : {
+      "endpoint" : "/lore/gain",
+      "id_field" : "gain_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      } ]
+    },
+    "job" : {
+      "endpoint" : "/lore/job",
+      "id_field" : "job_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      } ]
+    },
     "organization" : {
       "endpoint" : "/lore/organization",
       "id_field" : "org_id",
       "fields" : [ {
         "key" : "title",
         "body" : "name"
+      } ]
+    },
+    "pain" : {
+      "endpoint" : "/lore/pain",
+      "id_field" : "pain_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
       } ]
     },
     "spec" : {

@@ -26,6 +26,13 @@ const SOURCES: Record<string, Source> = {
   milestone: { slice: 'milestones', id: 'milestone_id', title: 'label' },
   // MDL-13 «треки б»: трек спринта — ребро ON_TRACK к записи трека; варианты — срез треков {code, title}.
   track: { slice: 'track_options', id: 'code', title: 'title' },
+  // AP-PASSPORT-EDIT (волна 1): ценность фичи и профиль клиента — привязка существующих боли, выгоды, работы,
+  // роли и фичи (сценария) из вкладок «Ценность» и «Профиль клиента».
+  pain: { slice: 'pains', id: 'pain_id', title: 'title' },
+  gain: { slice: 'gains', id: 'gain_id', title: 'title' },
+  job: { slice: 'jobs', id: 'job_id', title: 'title' },
+  actor: { slice: 'actors', id: 'actor_id', title: 'name' },
+  feature: { slice: 'use_cases', id: 'uc_id', title: 'title' },
 };
 
 type SliceFn = (name: string, params?: Record<string, string>) => Promise<{ rows?: Record<string, unknown>[] } | null | undefined>;

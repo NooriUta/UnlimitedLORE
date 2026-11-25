@@ -10,7 +10,7 @@ import { KIT_NEW_ID, RecordView, useKitLang, type KitCtx } from '@seidr/kit';
 import { TipTapField } from '@seidr/kit/content';
 import { useAppT, type AppKey } from '../i18n';
 import { fetchTypeStatuses } from './passportStatuses';
-import { createFields, fetchAdrOptions, fetchComponentOptions, fetchProjectOptions, fetchSprintOptions, saveCreate, type CreateType, type StatusOption } from './recordCreate';
+import { CODE_PREFIX, checkCodeFree, createFields, fetchAdrOptions, fetchComponentOptions, fetchProjectOptions, fetchSprintOptions, saveCreate, suggestCode, type CreateLink, type CreateType, type StatusOption } from './recordCreate';
 
 export interface RecordCreateProps {
   type: CreateType;
@@ -18,14 +18,17 @@ export interface RecordCreateProps {
   /** Запись заведена — открыть её полную запись (то, что открывает «Читать целиком»). */
   onCreated: (id: string) => void;
   onCancel: () => void;
+  /** 1б: запись заводится из вкладки связей другой записи — после создания связь ставится сама. */
+  link?: CreateLink;
 }
 
 const KIND_KEY: Record<CreateType, AppKey> = {
   sprint: 'create.kind.sprint', adr: 'create.kind.adr', task: 'create.kind.task',
   decision: 'create.kind.decision', spec: 'create.kind.spec', organization: 'create.kind.organization',
+  pain: 'create.kind.pain', gain: 'create.kind.gain', job: 'create.kind.job', actor: 'create.kind.actor', feature: 'create.kind.feature',
 };
 
-export function RecordCreate({ type, fetchImpl, onCreated, onCancel }: RecordCreateProps) {
+export function RecordCreate({ type, fetchImpl, onCreated, onCancel, link }: RecordCreateProps) {
   const lang = useKitLang();
   const t = useAppT();
   const [statusOptions, setStatusOptions] = useState<StatusOption[]>([]);
@@ -74,7 +77,7 @@ export function RecordCreate({ type, fetchImpl, onCreated, onCancel }: RecordCre
       hooks: {
         // Отказ — словами (Error): kit покажет причину, набранное останется.
         onCreate: async ({ values }) => {
-          const r = await saveCreate(type, values, { fetchImpl, lang });
+          const r = await saveCreate(type, values, { fetchImpl, lang, ...(link ? { link } : {}) });
           if (!r.ok) throw new Error(r.reason);
           return { id: r.id };
         },
@@ -82,13 +85,18 @@ export function RecordCreate({ type, fetchImpl, onCreated, onCancel }: RecordCre
     },
     data: { records: [], edges: [], journal: [], meta: { generated_at: new Date().toISOString() } },
     role: 'editor', href: (x: string) => '#' + encodeURIComponent(x), esc: (s: string) => s, md: (s: string) => s,
-  }), [type, t, fetchImpl, lang]);
+  }), [type, t, fetchImpl, lang, link]);
+  // 2б: код — из названия (транслит + префикс типа), поправить можно; свободен ли — проверяется ДО записи.
+  const coded = !!CODE_PREFIX[type];
+  const suggest = useMemo(() => (coded ? (v: Record<string, unknown>) => ({ id: suggestCode(type, typeof v.title === 'string' ? v.title : '') }) : undefined), [coded, type]);
+  const check = useMemo(() => (coded ? { key: 'id', run: (v: unknown) => checkCodeFree(type, String(v ?? ''), { fetchImpl, lang }) } : undefined), [coded, type, fetchImpl, lang]);
 
   return (
     <RecordView record={{ id: KIT_NEW_ID, kind: type, title: '', status: '', fields: {} }} ctx={ctx} tab="" onTab={() => {}}
       create={{
         fields, onCreated, onCancel,
-        note: <>{t('create.note')}{sprintNote && <><br /><span data-testid="create-sprints-note">{sprintNote}</span></>}</>,
+        note: <>{t('create.note')}{coded && <><br />{t('create.code.hint')}</>}{link && <><br /><span data-testid="create-linked-note">{t('create.linked.note', { id: link.id })}</span></>}{sprintNote && <><br /><span data-testid="create-sprints-note">{sprintNote}</span></>}</>,
+        ...(suggest ? { suggest } : {}), ...(check ? { check } : {}),
         mdEditor: ({ value, onChange, label }) => <TipTapField value={value} onChange={onChange} ariaLabel={label} minHeight={80} />,
       }} />
   );

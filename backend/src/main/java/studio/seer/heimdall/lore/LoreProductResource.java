@@ -131,13 +131,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("feature")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertFeature(FeatureRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertFeature(FeatureRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.feature_id() == null || req.feature_id().isBlank())
             return badParams("feature_id required");
         if (!SAFE_ID.matcher(req.feature_id()).matches())
             return badParams("feature_id contains illegal characters");
+        Response featureTaken = createOnly("feature", req.feature_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (featureTaken != null) return featureTaken;
         // D4/D17: у корня рукой ставятся только намерения — как и у любого другого
         // сценария (тип-то один). Прежняя редакция запрещала лишь shipped, и
         // «active» проезжал: корень можно было объявить работающим при нулевой работе.
@@ -164,7 +167,9 @@ public class LoreProductResource extends LoreResourceBase {
             // Уровень обязателен по существу: слайс «Фичи» отбирает корни именно
             // по goal_level, и корень без него был бы невидим в своём же разделе.
             // Умолчание ☁ cloud — самый верхний уровень шкалы.
-            sql.append(", goal_level=:gl");
+            // AP-PASSPORT-EDIT: уровень не задан — у существующей записи он НЕ трогается (паспорт фичи открывает
+            // и сценарии sea-level: правка их названия этим путём опускала бы их на уровень фичи).
+            sql.append(", ").append(featureGoalLevelSql(req.goal_level()));
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
@@ -187,6 +192,11 @@ public class LoreProductResource extends LoreResourceBase {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /** SQL уровня цели фичи: задан — пишется; не задан — умолчание cloud только записи без уровня. */
+    static String featureGoalLevelSql(String given) {
+        return given != null ? "goal_level=:gl" : "goal_level = ifnull(goal_level, :gl)";
     }
 
     /**
@@ -614,7 +624,8 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("project-actor")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertProjectActor(ProjectActorRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertProjectActor(ProjectActorRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.actor_id() == null || req.actor_id().isBlank())
@@ -623,6 +634,8 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("actor_id contains illegal characters");
         if (req.kind() != null && !PROJECT_ACTOR_KINDS.contains(req.kind()))
             return badParams(projectActorKindError(req.kind()));
+        Response actorTaken = createOnly("actor", req.actor_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (actorTaken != null) return actorTaken;
         // Столкновение с личностью ловим ЗДЕСЬ, а не оставляем на потом: один и
         // тот же actor_id в двух реестрах — это ровно та двойная правда, ради
         // разведения которой заведён отдельный тип. Молчаливый upsert создал бы
@@ -1300,13 +1313,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("job")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertJob(JobRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertJob(JobRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.job_id() == null || req.job_id().isBlank())
             return badParams("job_id required");
         if (!SAFE_ID.matcher(req.job_id()).matches())
             return badParams("job_id contains illegal characters");
+        Response jobTaken = createOnly("job", req.job_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (jobTaken != null) return jobTaken;
         if (req.kind() != null && !JOB_KINDS.contains(req.kind()))
             return badParams("kind must be one of: " + JOB_KINDS
                 + " (Остервальдер: функциональная | социальная | эмоциональная | вспомогательная)");
@@ -1338,13 +1354,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("pain")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertPain(PainRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertPain(PainRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.pain_id() == null || req.pain_id().isBlank())
             return badParams("pain_id required");
         if (!SAFE_ID.matcher(req.pain_id()).matches())
             return badParams("pain_id contains illegal characters");
+        Response painTaken = createOnly("pain", req.pain_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (painTaken != null) return painTaken;
         if (req.severity() != null && !List.of("high", "normal", "low").contains(req.severity()))
             return badParams("severity must be high|normal|low");
         try {
@@ -1372,13 +1391,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("gain")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertGain(GainRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertGain(GainRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.gain_id() == null || req.gain_id().isBlank())
             return badParams("gain_id required");
         if (!SAFE_ID.matcher(req.gain_id()).matches())
             return badParams("gain_id contains illegal characters");
+        Response gainTaken = createOnly("gain", req.gain_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (gainTaken != null) return gainTaken;
         // Остервальдер ранжирует выгоды — essential не равна unexpected при отборе UC.
         if (req.rank() != null && !GAIN_RANKS.contains(req.rank()))
             return badParams("rank must be one of: " + GAIN_RANKS
@@ -1476,8 +1498,9 @@ public class LoreProductResource extends LoreResourceBase {
             boolean had = edgeExists(edge, outField, req.source_id(), inField, req.target_id());
 
             if (remove) {
+                // AP-PASSPORT-EDIT: прежде условие было только на источник — отвязка одной роли стирала ВСЕ рёбра вида.
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM " + edge + " WHERE @out.pain_id=:sid OR @out.gain_id=:sid OR @out.job_id=:sid", p))
+                    vpUnlinkSql(edge, outField, inField), p))
                     .await().indefinitely();
                 return unlinkOutcome(Map.of("ok", true, "source_id", req.source_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
@@ -1495,6 +1518,11 @@ public class LoreProductResource extends LoreResourceBase {
             LOG.warnf("[LORE VP LINK] %s: %s", req.source_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /** Снять ОДНО ребро профиля клиента: источник И цель (а не все рёбра вида у источника). */
+    static String vpUnlinkSql(String edge, String outField, String inField) {
+        return "DELETE FROM " + edge + " WHERE @out." + outField + " = :sid AND @in." + inField + " = :tid";
     }
 
     // ── Feature links: VP-профиль (pain/gain), стратегическая цель, компонент ──

@@ -246,9 +246,10 @@ class LoreRecordRegistryTest {
         Map<String, Object> viewer = LoreRecordPerms.of("decision", "viewer", true, null, 0);
         assertEquals(false, viewer.get("can_edit"));
         assertEquals(LoreRecordPerms.NO_RIGHTS, viewer.get("reason"), "без роли — «нет прав», а не «только чтение»");
-        Map<String, Object> feature = LoreRecordPerms.of("feature", "admin", true, null, 0);
-        assertEquals(false, feature.get("can_edit"), "у фичи правимых полей нет");
-        assertEquals(LoreRecordPerms.READ_ONLY_REASON, feature.get("reason"));
+        // AP-PASSPORT-EDIT (волна 1): фича теперь правится; тип без правимых полей — технология.
+        Map<String, Object> tech = LoreRecordPerms.of("tech", "admin", true, null, 0);
+        assertEquals(false, tech.get("can_edit"), "у технологии правимых полей нет");
+        assertEquals(LoreRecordPerms.READ_ONLY_REASON, tech.get("reason"));
     }
 
     /**
