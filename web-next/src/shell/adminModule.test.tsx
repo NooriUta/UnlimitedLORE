@@ -62,9 +62,9 @@ describe('S7B-01 · конфиг модуля admin', () => {
     // S7B-17: мастера UC-1/UC-2/UC-7 — во «Начале», рядом с Главной: это вход «хочу сделать».
     expect(groups.find(g => g.id === 'adm-start')!.items.map(i => i.id)).toEqual(['adm-home', 'adm-wiz']);
     // S7B-31 п.1 (решение 1а): «Словари» — в «Языке графа», рядом с правилами CLAUDE:
-    // правка справочника меняет подписи и цвета на каждом экране — это язык системы,
+    // правка справочника меняет подписи и цвета на каждом экране — это язык системы; рядом «Оформление» (AP-APPEARANCE),
     // а группа получает тон риска, как «Доступ» (раньше — нейтральный успех).
-    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration']);
+    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-appearance', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration']);
     expect(groups.find(g => g.id === 'adm-lang')!.tone).toBe('var(--wrn)');
     // Личные «Мои виды» и «Недавние» — про записи Forseti, в админке их нет.
     expect(cfg.menu.myViews).toBeFalsy();

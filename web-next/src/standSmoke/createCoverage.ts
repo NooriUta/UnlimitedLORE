@@ -13,7 +13,9 @@ import type { Outcome } from './summary.ts';
  * Типы с формой «+ Новая» — копия CREATE_TYPES (src/record/recordCreate.ts). Копия, а не импорт: сценарий
  * стенда грузится в Node, а recordCreate тянет модули приложения (вход, i18n). Совпадение сторожит vitest.
  */
-export const STAND_CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization'] as const;
+// AP-PASSPORT-EDIT, волна 1: продуктовый слой — боль, выгода, работа, роль, фича.
+export const STAND_CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization',
+  'pain', 'gain', 'job', 'actor', 'feature'] as const;
 
 export interface CreateCoverage {
   /** Типы модели, у которых в v2 есть форма «+ Новая». */

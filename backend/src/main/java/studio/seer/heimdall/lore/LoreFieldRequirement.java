@@ -104,13 +104,25 @@ final class LoreFieldRequirement {
     /** Условие пробы: поле записи и значение, при котором линтер требует больше. */
     private record Cond(String field, String eq) {}
 
+    /**
+     * Вычисляемое условие (не поле записи): в спринте есть задача технического типа
+     * ({@link WorkQuality#TECHNICAL_TASK_TYPES}). RM-P3, слово владельца 25.11.2026.
+     */
+    static final String HAS_TECH_TASKS = "has_tech_tasks";
+
+    /** Подписи вычисляемых условий — у них нет поля схемы, откуда взять label. */
+    private static final Map<String, String> COND_LABELS = Map.of(
+        HAS_TECH_TASKS, "в спринте есть технические задачи (" + String.join("/", new java.util.TreeSet<>(WorkQuality.TECHNICAL_TASK_TYPES)) + ")");
+
     /** Тип → проба линтера (условие: поле → значение) и условия, которые стоит пробовать. */
     private record Probe(Function<Map<String, String>, WorkQuality.Result> eval, List<Cond> conditions) {}
 
     private static final Map<String, Probe> PROBES = Map.ofEntries(
         Map.entry("task", new Probe(c -> WorkQuality.evaluateTask(null, null, c.get("work_class"), null, null, null, null),
             List.of(new Cond("work_class", "uc"), new Cond("work_class", "jtd"), new Cond("work_class", "enb")))),
-        Map.entry("sprint", new Probe(c -> WorkQuality.evaluateSprint(null, null, null, null, null, null), List.of())),
+        // RM-P3: компонент спринта — условное правило, при технических задачах.
+        Map.entry("sprint", new Probe(c -> WorkQuality.evaluateSprint(null, null, null, null, null, null,
+                "true".equals(c.get(HAS_TECH_TASKS))), List.of(new Cond(HAS_TECH_TASKS, "true")))),
         Map.entry("release", new Probe(c -> WorkQuality.evaluateRelease(null, null, null, null, null), List.of())),
         Map.entry("adr", new Probe(c -> WorkQuality.evaluateAdr(c.get("status"), null, null, false, null, null, null, false),
             List.of(new Cond("status", "ACCEPTED"), new Cond("status", "SUPERSEDED")))),
@@ -186,6 +198,7 @@ final class LoreFieldRequirement {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("field", c.field());
         m.put("eq", c.eq());
+        if (label == null) label = COND_LABELS.get(c.field());
         m.put("text", "когда «" + (label == null ? c.field() : label) + "» = " + c.eq());
         return m;
     }

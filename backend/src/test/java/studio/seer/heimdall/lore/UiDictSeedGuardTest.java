@@ -131,7 +131,8 @@ class UiDictSeedGuardTest {
         // Посевы доводки схемы кода (шаги V заморожены на V100, новое — только LoreSchemaAdditive.CHANGES):
         // считаются, только если их запись доводки есть и несёт посев.
         record AdditiveSeed(String change, Map<String, List<StatusDictCoreSeed.Entry>> seeds) {}
-        for (AdditiveSeed as : List.of(new AdditiveSeed("ui_dict_seed", UiDictSeed.SEEDS))) {
+        for (AdditiveSeed as : List.of(new AdditiveSeed("ui_dict_seed", UiDictSeed.SEEDS),
+                new AdditiveSeed("appearance", PaletteDictSeed.SEEDS))) {
             LoreSchemaAdditive.Change c = LoreSchemaAdditive.change(as.change());
             if (c == null || c.seed() == null) continue;
             as.seeds().forEach((type, entries) -> entries.forEach(e ->

@@ -36,7 +36,11 @@ import { saveRelation } from './relationSave';
 
 // S4-24 (14.11): решения и спеки — та же форма; кнопка появится, когда сервер отдаст паспорт `_new` с can_create.
 // Организация (решение владелицы 19.11.2026): код и название; заводит только super-admin — кнопку решает can_create.
-export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization'] as const;
+// AP-PASSPORT-EDIT, волна 1 (решения владельца 25.11.2026: 1б, 2б, 3а, 4а): продуктовый слой — боль, выгода, работа,
+// роль продукта, фича. Код предлагается из названия (suggestCode), занятость — до записи (checkCodeFree), запись —
+// строгим mode=create. Кнопку по-прежнему решает can_create сервера.
+export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization',
+  'pain', 'gain', 'job', 'actor', 'feature'] as const;
 export type CreateType = (typeof CREATE_TYPES)[number];
 
 export const isCreateType = (t: string | undefined | null): t is CreateType =>
@@ -102,7 +106,98 @@ const SPECS: Record<CreateType, FieldSpec[]> = {
     { key: 'id', label: 'create.field.orgId', kind: 'text', required: true },
     { key: 'title', label: 'create.field.title', kind: 'text', required: true },
   ],
+  // AP-PASSPORT-EDIT, волна 1: название первым — из него предлагается код (2б); свойства — в паспорте после записи.
+  pain: [
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'id', label: 'create.field.code', kind: 'text', required: true },
+    { key: 'body_md', label: 'create.field.body', kind: 'md' },
+  ],
+  gain: [
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'id', label: 'create.field.code', kind: 'text', required: true },
+    { key: 'body_md', label: 'create.field.body', kind: 'md' },
+    { key: 'metric_md', label: 'create.field.metric', kind: 'md' },
+  ],
+  job: [
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'id', label: 'create.field.code', kind: 'text', required: true },
+    { key: 'body_md', label: 'create.field.body', kind: 'md' },
+  ],
+  actor: [
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'id', label: 'create.field.code', kind: 'text', required: true },
+    { key: 'body_md', label: 'create.field.body', kind: 'md' },
+  ],
+  feature: [
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'id', label: 'create.field.code', kind: 'text', required: true },
+    { key: 'body_md', label: 'create.field.body', kind: 'md' },
+    { key: 'context_md', label: 'create.field.context', kind: 'md' },
+  ],
 };
+
+/**
+ * Продуктовый слой (волна 1): путь записи, поле кода и поле названия в теле — те же, что в блоке create модели
+ * (`shared/model/lore-model.json`). Роль продукта — KnowProjectActor (путь project-actor, название — `name`).
+ */
+const PRODUCT_WRITE: Partial<Record<CreateType, { url: string; id: string; title: string }>> = {
+  pain: { url: '/lore/pain', id: 'pain_id', title: 'title' },
+  gain: { url: '/lore/gain', id: 'gain_id', title: 'title' },
+  job: { url: '/lore/job', id: 'job_id', title: 'title' },
+  actor: { url: '/lore/project-actor', id: 'actor_id', title: 'name' },
+  feature: { url: '/lore/feature', id: 'feature_id', title: 'title' },
+};
+
+/** Префикс кода типа (2б, прототип v2gap-create-types): проектную часть человек допишет сам, если нужна. */
+export const CODE_PREFIX: Partial<Record<CreateType, string>> = {
+  pain: 'PAIN-', gain: 'GAIN-', job: 'JOB-', actor: 'ACT-', feature: 'FEAT-',
+};
+
+const TRANSLIT: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm',
+  н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch',
+  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+/** Длина кода — с запасом под предел сервера (SAFE_ID: 100 знаков). */
+const CODE_MAX = 64;
+
+/**
+ * Код из названия (2б): транслит кириллицы, латиница и цифры, слова через дефис, верхний регистр,
+ * префикс типа. Пустое название — пустой код (человек вводит сам). Тип без префикса — без подсказки.
+ */
+export function suggestCode(type: CreateType, title: string): string {
+  const prefix = CODE_PREFIX[type];
+  if (!prefix) return '';
+  const latin = [...title.toLowerCase()].map(ch => TRANSLIT[ch] ?? ch).join('');
+  const words = latin.replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!words) return '';
+  let code = prefix + words.replace(/ /g, '-').toUpperCase();
+  if (code.length > CODE_MAX) code = code.slice(0, CODE_MAX).replace(/-+$/, '');
+  return code;
+}
+
+/** Код, который сервер примет (SAFE_ID): латиница, цифры, точка, подчёркивание, дефис, слэш. */
+const SAFE_CODE = /^[A-Za-z0-9_./-]{1,100}$/;
+
+/**
+ * Свободен ли код — ДО записи (2б): пути продуктового слоя — UPSERT и перезаписали бы существующую запись.
+ * Чтение паспорта: 404 — свободен, 200 — занят, иное — «не смогли проверить» (`ok: null`, это НЕ «свободен»).
+ */
+export async function checkCodeFree(type: CreateType, id: string, opts: { fetchImpl?: typeof fetch; lang: KitLang }): Promise<{ ok: boolean | null; message: string }> {
+  const t = (k: AppKey, vars?: Record<string, string | number>) => appT(opts.lang, k, vars);
+  const code = id.trim();
+  if (!SAFE_CODE.test(code)) return { ok: false, message: t('create.code.bad') };
+  const http = opts.fetchImpl ?? loreFetch;
+  try {
+    const probe = await http(`/lore/record/${type}/${recordPath(code)}`);
+    if (probe.ok) return { ok: false, message: t('create.code.taken', { id: code }) };
+    if (probe.status === 404) return { ok: true, message: t('create.code.free') };
+    return { ok: null, message: t('create.code.unchecked', { reason: await reasonOf(probe) }) };
+  } catch (e) {
+    return { ok: null, message: t('create.code.unchecked', { reason: e instanceof Error ? e.message : String(e) }) };
+  }
+}
 
 /** require_one_of блока create: хотя бы одно из полей заполнено (у решения — проект ИЛИ ADR-родитель). */
 const ONE_OF: Partial<Record<CreateType, readonly string[]>> = {
@@ -235,7 +330,36 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
       return { url: '/lore/spec?mode=create', body: strip({ spec_id: text(values.id), title: text(values.title), project: opt(values.projects), summary: opt(values.summary) }) };
     case 'organization':
       return { url: '/lore/organization', body: { org_id: text(values.id), name: text(values.title) } };
+    // Продуктовый слой: строгий mode=create — на занятый код сервер отвечает 409 ID_TAKEN, а не перезаписывает.
+    case 'pain': case 'gain': case 'job': case 'actor': case 'feature': {
+      const w = PRODUCT_WRITE[type]!;
+      return {
+        url: `${w.url}?mode=create`,
+        body: strip({
+          [w.id]: text(values.id), [w.title]: text(values.title),
+          body_md: opt(values.body_md), metric_md: opt(values.metric_md), context_md: opt(values.context_md),
+        }),
+      };
+    }
   }
+}
+
+/** Связь, которую ставить после создания (1б: «+ боль» во вкладке фичи или роли) — со стороны записи-источника. */
+export interface CreateLink { type: string; id: string; rel: string; dir: 'out' | 'in' }
+
+/**
+ * 1б: где во вкладках паспорта есть «+ боль / + выгода / + работа» — «тип источника · ребро · направление» → тип
+ * новой записи. Фича: вкладка «Ценность» (ADDRESSES / PROMISES / HELPS_WITH); роль: «Профиль клиента»
+ * (FELT_BY / DESIRED_BY / PERFORMED_BY, со стороны роли — входящие). Маршруты /relation есть на сервере для обоих концов.
+ */
+const LINKED_CREATE: Record<string, CreateType> = {
+  'feature|ADDRESSES|out': 'pain', 'feature|PROMISES|out': 'gain', 'feature|HELPS_WITH|out': 'job',
+  'actor|FELT_BY|in': 'pain', 'actor|DESIRED_BY|in': 'gain', 'actor|PERFORMED_BY|in': 'job',
+};
+
+/** Тип записи, которую можно завести прямо из вкладки связи; null — у этой связи «+ …» нет. */
+export function linkedCreateOf(type: string, rel: string, dir: 'out' | 'in'): CreateType | null {
+  return LINKED_CREATE[`${type}|${rel}|${dir}`] ?? null;
 }
 
 export type CreateResult =
@@ -260,7 +384,7 @@ async function reasonOf(res: Response): Promise<string> {
  * неудача возвращается словами (`reason`), набранное остаётся в форме у
  * вызывающего: тихий откат съел бы работу человека.
  */
-export async function saveCreate(type: CreateType, values: CreateValues, opts: { fetchImpl?: typeof fetch; lang: KitLang }): Promise<CreateResult> {
+export async function saveCreate(type: CreateType, values: CreateValues, opts: { fetchImpl?: typeof fetch; lang: KitLang; link?: CreateLink }): Promise<CreateResult> {
   const http = opts.fetchImpl ?? loreFetch;
   const t = (k: AppKey, vars?: Record<string, string | number>) => appT(opts.lang, k, vars);
   const missing = missingRequired(type, values);
@@ -284,6 +408,8 @@ export async function saveCreate(type: CreateType, values: CreateValues, opts: {
     const { url, body } = createRequest(type, values);
     const res = await http(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (res.status === 403) return { ok: false, kind: 'forbidden', reason: t('create.err.forbidden', { reason: await reasonOf(res) }) };
+    // Строгий режим (mode=create): код заняли между пробой и записью — «уже есть», а не «сервер не принял».
+    if (res.status === 409) return { ok: false, kind: 'exists', reason: t('create.err.exists', { id }) };
     if (!res.ok) return { ok: false, kind: 'refused', reason: t('create.err.refused', { reason: await reasonOf(res) }) };
     let out: Record<string, unknown> = {};
     try { out = await res.json() as Record<string, unknown>; } catch { /* ответ без тела — успех по коду */ }
@@ -296,6 +422,15 @@ export async function saveCreate(type: CreateType, values: CreateValues, opts: {
         await saveRelation({ type, id, rel: 'BELONGS_TO', dir: 'out', target: component, action: 'add' }, http);
       } catch (e) {
         return { ok: false, kind: 'linkFailed', id, reason: t('create.err.linkFailed', { id, reason: e instanceof Error ? e.message : String(e) }) };
+      }
+    }
+    // 1б: «+ боль» из вкладки фичи или роли — связь со стороны источника тем же путём /relation, что у привязки.
+    if (opts.link) {
+      const l = opts.link;
+      try {
+        await saveRelation({ type: l.type, id: l.id, rel: l.rel, dir: l.dir, target: id, action: 'add' }, http);
+      } catch (e) {
+        return { ok: false, kind: 'linkFailed', id, reason: t('create.err.linkedFailed', { id, to: l.id, reason: e instanceof Error ? e.message : String(e) }) };
       }
     }
     return { ok: true, id };

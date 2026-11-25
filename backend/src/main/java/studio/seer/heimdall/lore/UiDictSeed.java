@@ -14,7 +14,8 @@ import java.util.Set;
  * 25.11.2026 «словари сеять каких нет»).
  *
  * <ul>
- *   <li>{@code task_type} — ADR-LORE-015 (девять видов); подписи, цвета и иконки — как на проде;</li>
+ *   <li>{@code task_type} — ADR-LORE-015 (девять видов); подписи и иконки — как на проде, цвета — токены темы
+ *       (решение владельца 25.11.2026, 6а: сырой hex прода не следует палитре; перевод прода — правкой через dict_set);</li>
  *   <li>{@code priority} — шкала модели и установщика (critical/high/normal/low, правила переноса
  *       {@code status-unification.json}); цвета и иконка — с прода, где те же ступени лежат кодами P0–P3. P0–P3 —
  *       синонимы: база, где шкала уже заведена P-кодами (прод), второй шкалы не получает;</li>
@@ -34,15 +35,15 @@ final class UiDictSeed {
     }
 
     static final List<StatusDictCoreSeed.Entry> TASK_TYPE = List.of(
-        e("planning", "Планирование", "Planning", "compass", "#7c869c", 1),
-        e("design", "Дизайн", "Design", "scroll-quill", "#9b7ad9", 2),
-        e("dev", "Разработка", "Development", "gears", "#4caf72", 3),
-        e("test", "Тестирование", "Testing", "checkered-flag", "#d9a441", 4),
-        e("ops", "Релиз/Ops", "Release/Ops", "cog", "#d76b6b", 5),
-        e("research", "Исследование", "Research", "magnifying-glass", "#5b9bd5", 10),
-        e("analytics", "Аналитика", "Analytics", "pie-chart", "#b06bd7", 11),
-        e("docs", "Документация", "Docs", "spell-book", "#5bc8c8", 12),
-        e("content", "Контент", "Content", "quill-ink", "#e0a03a", 13));
+        e("planning", "Планирование", "Planning", "compass", "var(--t2)", 1),
+        e("design", "Дизайн", "Design", "scroll-quill", "color-mix(in srgb,var(--inf) 50%,var(--dng))", 2),
+        e("dev", "Разработка", "Development", "gears", "var(--suc)", 3),
+        e("test", "Тестирование", "Testing", "checkered-flag", "var(--wrn)", 4),
+        e("ops", "Релиз/Ops", "Release/Ops", "cog", "var(--dng)", 5),
+        e("research", "Исследование", "Research", "magnifying-glass", "var(--inf)", 10),
+        e("analytics", "Аналитика", "Analytics", "pie-chart", "color-mix(in srgb,var(--dng) 55%,var(--inf))", 11),
+        e("docs", "Документация", "Docs", "spell-book", "color-mix(in srgb,var(--inf) 55%,var(--suc))", 12),
+        e("content", "Контент", "Content", "quill-ink", "var(--acc)", 13));
 
     static final List<StatusDictCoreSeed.Entry> PRIORITY = List.of(
         e("critical", "Критический", "Critical", "dice-fire", "var(--dng)", 0),

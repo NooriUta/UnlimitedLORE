@@ -34,8 +34,10 @@ class ComponentTechFeaturePassportTest {
             assertTrue(LoreRecordRegistry.READ_ONLY.contains(t), t + " — только чтение");
             Map<String, Object> s = LoreRecordRegistry.schemaJson(t);
             assertNotNull(s, t + ": тип не заведён в реестре");
-            for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields"))
-                assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
+            // AP-PASSPORT-EDIT волна 1 (#1829): у фичи правятся поля с путём записи (название и др.); статус — нет.
+            if (!"feature".equals(t))
+                for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields"))
+                    assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
             LoreRecordResource.Source src = LoreRecordResource.sourceOf(t);
             assertNotNull(src, t + ": нет главного среза");
             assertEquals(e.getValue()[0], src.slice(), t);

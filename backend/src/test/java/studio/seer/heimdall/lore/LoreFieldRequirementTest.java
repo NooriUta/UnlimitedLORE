@@ -148,6 +148,20 @@ class LoreFieldRequirementTest {
     // ── Условные правила: только при своём условии ─────────────────────────
 
     @Test
+    void sprintComponentOnlyWhenSprintHasTechnicalTasks() {
+        // RM-P3, слово владельца 25.11.2026: компонент спринта обязателен только при
+        // технических задачах — паспорт и форма говорят то же, что линтер записи.
+        assertFalse(LoreFieldRequirement.missingCodes("sprint", Map.of()).contains("component"));
+        assertTrue(LoreFieldRequirement.missingCodes("sprint", Map.of("has_tech_tasks", "true")).contains("component"));
+
+        Map<String, Object> s = LoreRecordRegistry.schemaJson("sprint");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> reqs = (List<Map<String, Object>>) s.get("requirements");
+        Map<String, Object> comp = reqs.stream().filter(r -> "component".equals(r.get("code"))).findFirst().orElseThrow();
+        assertNotNull(comp.get("when"), "компонент спринта — условное правило, не безусловное");
+    }
+
+    @Test
     void conditionalRuleOnlyUnderItsCondition() {
         assertFalse(LoreFieldRequirement.missingCodes("task", Map.of()).contains("justified_by"));
         assertFalse(LoreFieldRequirement.missingCodes("task", Map.of("work_class", "jtd")).contains("justified_by"));

@@ -214,7 +214,8 @@ class LoreRecordContractUnitTest {
     void unknownRelationListsAllowedOnesForType() {
         List<String> allowed = LoreRecordRelationRoutes.allowed("adr");
         assertTrue(allowed.contains("DEPENDS_ON:out") && allowed.contains("SUPERSEDES:in"), allowed.toString());
-        assertEquals(List.of(), LoreRecordRelationRoutes.allowed("feature"));
+        // AP-PASSPORT-EDIT: у фичи появились пути ценности (feature/link); без путей — технология.
+        assertEquals(List.of(), LoreRecordRelationRoutes.allowed("tech"));
     }
 
     /**

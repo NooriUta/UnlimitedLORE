@@ -5194,6 +5194,14 @@
       "property" : "state_uid",
       "service" : true
     }, {
+      "name" : "tokens_json",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Токены своего стиля установки (JSON «токен → цвет», SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE): только у статьи справочника palette с кодом own-…, у прочих статей (и у продукта) пусто. Служебное оформления, в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "tokens_json",
+      "service" : true
+    }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
@@ -5301,7 +5309,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowDictEntry",
     "hist" : "KnowDictEntryHist",
-    "content_hash" : "sha256:15f6c958015ececfcc6b77d5981749ca4d99ce0ed07419bf5e0fae8f61d132e2"
+    "content_hash" : "sha256:a964356ff007ff6b1a0e029ac85e0e4747ab03aec6d77d5e71bad6de42de0b6c"
   }, {
     "kind" : "entity:project",
     "id_field" : "slug",
@@ -11676,6 +11684,10 @@
       "name" : "kind",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "tokens_json",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -11685,7 +11697,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:620d0d87b42f314966c4077aac7bd292cf0d8591ad4557c6390752144403870a"
+    "content_hash" : "sha256:7fc38d879bede16d129cc7b198fe17c7cf29c6bb156310e8c698dadc59fc4361"
   }, {
     "kind" : "slice:doc_by_id",
     "id_field" : null,
