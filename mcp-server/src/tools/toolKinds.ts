@@ -35,6 +35,7 @@ const CUD = [
   'rec_new', 'rec_promote',
   'release_link', 'release_mv', 'release_new', 'release_set', 'release_unlink',
   'runbook_link', 'runbook_new',
+  'skill_link', 'skill_new', 'skill_set',
   'spec_del', 'spec_link', 'spec_new', 'spec_set',
   'sprint_link', 'sprint_new', 'sprint_phase_new', 'sprint_plan_set', 'sprint_set',
   'status_set', 'status_set_batch',
