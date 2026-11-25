@@ -56,8 +56,8 @@ final class QgSliceCounts {
     static LoreQgResource.QGMetricEntry count(String key, Object value, String source, String overStatus) {
         if (!(value instanceof Number n))
             return new LoreQgResource.QGMetricEntry(key, null, "count", 0.0, "NOT_MEASURED",
-                source, "source_unreachable", null);
+                source, "source_unreachable", null, null);
         double v = n.doubleValue();
-        return new LoreQgResource.QGMetricEntry(key, v, "count", 0.0, v == 0 ? "PASS" : overStatus, source, null, null);
+        return new LoreQgResource.QGMetricEntry(key, v, "count", 0.0, v == 0 ? "PASS" : overStatus, source, null, null, null);
     }
 }

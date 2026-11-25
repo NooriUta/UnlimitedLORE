@@ -916,12 +916,33 @@
       "diag2a": "403 on write",
       "diag2b": "missing/incorrect X-Seer-Role",
       "diag2c": "env LORE_SEER_ROLE=admin",
-      "diag3a": "MART_UPSTREAM / 500",
-      "diag3b": "ArcadeDB is unreachable or the password is wrong",
-      "diag3c": "check :2480 and ARCADEDB_ROOT_PASSWORD",
+      "diag3a": "MART_UPSTREAM / 502",
+      "diag3b": "the bench mart ArcadeDB answered with an error (wrong password, no RAGVSDL database)",
+      "diag3c": "check ARCADEDB_ROOT_PASSWORD and the RAGVSDL database",
       "diag4a": "Server doesn't start under the client",
       "diag4b": "dist/ not built",
       "diag4c": "npm run build in mcp-server",
+      "diag5a": "MART_UNREACHABLE / 503 (bench_query_slice)",
+      "diag5b": "the bench mart is enabled but unreachable — the service is not up or the address is wrong",
+      "diag5c": "check MART_ARCADE_URL; bench not needed — BENCH_MART_ENABLED=false",
+      "diag6a": "S3_UNREACHABLE / 503 (bragi_asset_up, asset_up)",
+      "diag6b": "S3 is set but unreachable — the service is not up or the address is not visible from the backend container",
+      "diag6c": "check S3_ENDPOINT (not localhost), S3_ACCESS_KEY, S3_SECRET_KEY; no files — leave S3_ENDPOINT empty",
+      "diag7a": "S3_UPSTREAM / 502",
+      "diag7b": "S3 answered with an error (keys, permissions, bucket)",
+      "diag7c": "the S3 error text is in the response detail",
+      "diag5a": "401 on /mcp (HTTP)",
+      "diag5b": "missing or wrong LORE_MCP_TOKEN",
+      "diag5c": "Authorization: Bearer <LORE_MCP_TOKEN> or X-Lore-Mcp-Token",
+      "diag6a": "403 from a browser (HTTP)",
+      "diag6b": "origin not in LORE_MCP_CORS_ORIGINS",
+      "diag6c": "add the client origin to LORE_MCP_CORS_ORIGINS",
+      "diag7a": "A write returned an error «НЕ СДЕЛАНО» / «ИЗМЕНЕНИЙ НЕТ» (not done / no change)",
+      "diag7b": "backend answered outcome=noop (target missing, refused) or unchanged (already that value, already linked): every CUD tool returns that as an error (D-2026-LORE-MCP-LINK-NOOP-IS-ERROR)",
+      "diag7c": "first line is the reason and what to do (e.g. project_new); backend JSON below",
+      "diag8a": "Write over /mcp (HTTP): «closed without Keycloak sign-in»",
+      "diag8b": "HTTP mode does not pass a role; without a Keycloak token writes are refused",
+      "diag8c": "enable sign-in (OIDC) or connect the MCP over stdio on the agent machine",
       "footRunbook": "Full runbook:",
       "footCode": "code:",
       "hintRequired": "required: {{list}}",
@@ -1254,7 +1275,8 @@
     },
     "qgDetail": {
       "sparkline": {
-        "noData": "no data"
+        "noData": "no data",
+        "rebased": "series since basis change"
       },
       "loading": "Loading…",
       "notFound": "QG \"{{qgId}}\" not found.",
@@ -1291,7 +1313,9 @@
       },
       "changes": {
         "title": "Changed since last run",
-        "empty": "No status changes."
+        "empty": "No status changes.",
+        "rebased": "basis recomputed",
+        "rebasedTitle": "The metric denominator changed ({{prev}} → {{cur}}): the value is not compared with the previous run"
       },
       "invariants": {
         "title": "Invariants",

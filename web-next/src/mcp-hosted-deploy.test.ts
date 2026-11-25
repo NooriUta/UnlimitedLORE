@@ -60,6 +60,9 @@ describe('mcp-server/Dockerfile', () => {
     expect(d()).toMatch(/agent-profiles/);
     expect(d()).toMatch(/ARG LORE_BUILD_COMMIT/);
   });
+  it('ISS-04: в контейнере адрес 0.0.0.0 задан явно — умолчание сервера теперь 127.0.0.1, nginx иначе не достучится', () => {
+    expect(d()).toMatch(/LORE_MCP_HOST=0\.0\.0\.0/);
+  });
 });
 
 describe('nginx: /mcp → lore-mcp, поток не буферизуется', () => {
@@ -105,6 +108,12 @@ describe('пакет установки: lore-mcp', () => {
     expect(s()).not.toMatch(/\bports:/);
     expect(s()).not.toMatch(/LORE_MCP_CLIENT_(ID|SECRET)/);
     expect(s()).toMatch(/LORE_OIDC_ISSUER=\$\{LORE_OIDC_ISSUER:-\}/);
+  });
+  it('ISS-04: токен шлюза и CORS — из .env, по умолчанию пусто', () => {
+    expect(s()).toMatch(/LORE_MCP_TOKEN=\$\{LORE_MCP_TOKEN:-\}/);
+    expect(s()).toMatch(/LORE_MCP_CORS_ORIGINS=\$\{LORE_MCP_CORS_ORIGINS:-\}/);
+    expect(read('deploy/install/.env.example')).toMatch(/^LORE_MCP_TOKEN=$/m);
+    expect(read('deploy/install/.env.example')).toMatch(/^LORE_MCP_CORS_ORIGINS=$/m);
   });
   it('сеть общая с бэкендом и вебом v2: ни у кого из трёх нет своей networks (все в сети compose по умолчанию)', () => {
     for (const n of ['lore-mcp', 'lore-backend', 'lore-app-next']) expect(service(C, n)).not.toMatch(/\bnetworks:/);

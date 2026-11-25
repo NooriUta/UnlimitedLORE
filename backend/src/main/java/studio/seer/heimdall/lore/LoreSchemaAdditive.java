@@ -53,11 +53,12 @@ final class LoreSchemaAdditive {
      * Номер схемы кода. Поднимать при КАЖДОМ изменении {@link #CHANGES} и закреплять новый хэш в {@link #PINNED}
      * (сторож хэша — как у номера модели: «схема сменилась, а номер тот же» — красный).
      */
-    static final int VERSION = 1;
+    static final int VERSION = 2;
 
     /** Номер → хэш доводки. Прежние номера не правятся: их отметка уже лежит в базах. */
     static final Map<Integer, String> PINNED = Map.of(
-        1, "54761523d90deed8");
+        1, "54761523d90deed8",
+        2, "1fb90ce03ae56244");
 
     /** Последний шаг V. Реестр шагов заморожен: новое — только в {@link #CHANGES}. */
     static final int LAST_V_STEP = 100;
@@ -139,6 +140,14 @@ final class LoreSchemaAdditive {
         "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS",
         "CREATE EDGE TYPE OWNED_BY IF NOT EXISTS");
 
+    // ── v2 · SPRINT_QG_REBUILD/QG-07: «база» метрики прогона — отпечаток знаменателя (выборка, фильтр, LIMIT). ─────
+    // task_done_pct_avg «упала» 99.1% → 78.1% без регресса: было LIMIT 15 спринтов, стало 357 групп. Сравнение с прошлым
+    // прогоном честно только при той же базе (src/lib/qgBasis.ts); пишет LoreQgRunWriter, читает срез qg_run_metrics.
+    // Тип ClRoutineMetric в модели есть; IF NOT EXISTS — чтобы доводка не полагалась на это (как концы рёбер посева).
+    static final List<String> QG_METRIC_BASIS_DDL = List.of(
+        "CREATE VERTEX TYPE ClRoutineMetric IF NOT EXISTS",
+        "CREATE PROPERTY ClRoutineMetric.basis IF NOT EXISTS STRING");
+
     /** Записи доводки по порядку применения. Новое изменение схемы — сюда (и VERSION + PINNED). */
     static final List<Change> CHANGES = List.of(
         new Change("know_kind_registry", "SPRINT_LORE_KNOW_REGISTRY/KREG-01 (бывш. V94): реестр видов KnowKind + KnowKindHist",
@@ -151,7 +160,9 @@ final class LoreSchemaAdditive {
             SKILL_SEED_EDGES_DDL, fingerprint(SkillSeed.DICT_SEEDS) + "|" + SkillSeed.SKILLS + "|" + SkillSeed.OWNER_LOGIN,
             LoreSchemaAdditive::seedSkills),
         new Change("area_dict_seed", "SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (бывш. V100): статьи словаря area",
-            List.of(), fingerprint(AreaDictSeed.SEEDS), LoreSchemaAdditive::seedAreas));
+            List.of(), fingerprint(AreaDictSeed.SEEDS), LoreSchemaAdditive::seedAreas),
+        new Change("qg_metric_basis", "SPRINT_QG_REBUILD/QG-07 (доводка v2): ClRoutineMetric.basis — отпечаток знаменателя метрики прогона",
+            QG_METRIC_BASIS_DDL, null, null));
 
     /** Шаги V после модели 1.18 → запись доводки, которая несёт то же самое на базу из модели. */
     static final Map<Integer, String> FROM_V_STEPS = Map.of(

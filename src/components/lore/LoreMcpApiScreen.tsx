@@ -265,7 +265,7 @@ const TOOLS: ToolDoc[] = [
   // ── QG-рутина: прогон → job-task → рекомендация → задача ──────────────────
   { name: 'qg_run_log', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/run',
     params: 'routine_name, run_date, status, metrics[]?, started_at?, finished_at?, flags?, run_id?',
-    desc: 'ClRoutineRun + ClRoutineMetric: записать результат завершённого прогона QG-рутины. Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики по ADR-QG-002: каждая несёт key/value/unit/target/status/source (source — команда-репродьюсер + file:line evidence, на неё опирается rec_new).' },
+    desc: 'ClRoutineRun + ClRoutineMetric: записать результат завершённого прогона QG-рутины. Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики по ADR-QG-002: каждая несёт key/value/unit/target/status/source (source — команда-репродьюсер + file:line evidence, на неё опирается rec_new) и необязательный basis — отпечаток знаменателя (что считали: размер выборки, фильтр, LIMIT, например «groups=357»). Экран гейта сравнивает значение с прошлым прогоном только при той же базе; сменилась база — «база пересчитана», а не падение (QG-07).' },
   { name: 'qg_job_new', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/job-task',
     params: 'job_id, qg_id, inv_id?, run_date?, severity?, status?, note_md?',
     desc: 'QGJobTask: upsert + ребро YIELDED от родительской QualityGate. Вызывать, когда конкретный инвариант провалился (FAIL). Если позже приходит PASS по тому же qg_id+inv_id — открытые job-task для этой пары автоматически закрываются как resolved.' },
@@ -439,6 +439,13 @@ const TOOLS: ToolDoc[] = [
 const ENV_ROWS: [string, string, string][] = [
   ['LORE_BACKEND_URL', 'http://localhost:9100', 'Базовый URL backend UnlimitedLORE'],
   ['LORE_SEER_ROLE',   'admin',                 'Заголовок X-Seer-Role для write-инструментов'],
+  // ISS-04 (issue #4): HTTP-режим для клиентов по URL (Llama Chat и др. web UI).
+  ['LORE_MCP_TRANSPORT',    'stdio',     'stdio (по умолчанию) или http — Streamable HTTP на /mcp'],
+  ['LORE_MCP_HOST',         '127.0.0.1', 'HTTP: адрес; в образе lore-mcp — 0.0.0.0. Не loopback без LORE_MCP_TOKEN — громкое предупреждение при старте'],
+  ['LORE_MCP_PORT',         '9200',      'HTTP: порт'],
+  ['LORE_MCP_TOKEN',        '—',         'HTTP: токен шлюза; задан — обязателен на каждом запросе (Authorization: Bearer или X-Lore-Mcp-Token), иначе 401. В бэкенд не уходит'],
+  ['LORE_MCP_CORS_ORIGINS', '—',         'HTTP: origin браузерных клиентов через запятую; preflight 204, чужой origin 403. Пусто — CORS выключен'],
+  ['GET /health',           '200',       'HTTP: проверка без входа (то же, что /mcp/health)'],
 ];
 
 const SMOKE = `cd C:/AIDA/UnlimitedLORE/mcp-server
@@ -830,8 +837,15 @@ npm install && npm run build          # → dist/index.js`}</Pre>
                 {([
                   [t('lore.mcpApi.diag1a', 'Инструменты есть, любой вызов = ошибка'), t('lore.mcpApi.diag1b', 'backend :9100 не поднят'), t('lore.mcpApi.diag1c', 'поднять backend')],
                   [t('lore.mcpApi.diag2a', '403 на write'), t('lore.mcpApi.diag2b', 'нет/неверный X-Seer-Role'), t('lore.mcpApi.diag2c', 'env LORE_SEER_ROLE=admin')],
-                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 500'), t('lore.mcpApi.diag3b', 'ArcadeDB недоступен или неверный пароль'), t('lore.mcpApi.diag3c', 'проверить :2480 и ARCADEDB_ROOT_PASSWORD')],
+                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 502'), t('lore.mcpApi.diag3b', 'ArcadeDB витрины bench ответила ошибкой (неверный пароль, нет базы RAGVSDL)'), t('lore.mcpApi.diag3c', 'проверить ARCADEDB_ROOT_PASSWORD и базу RAGVSDL')],
+                  [t('lore.mcpApi.diag5a', 'MART_UNREACHABLE / 503 (bench_query_slice)'), t('lore.mcpApi.diag5b', 'витрина bench включена, но недоступна — сервис не поднят или адрес не тот'), t('lore.mcpApi.diag5c', 'проверить MART_ARCADE_URL; bench не нужен — BENCH_MART_ENABLED=false')],
+                  [t('lore.mcpApi.diag6a', 'S3_UNREACHABLE / 503 (bragi_asset_up, asset_up)'), t('lore.mcpApi.diag6b', 'S3 задан, но недоступен — сервис не поднят или адрес не виден из контейнера бэкенда'), t('lore.mcpApi.diag6c', 'проверить S3_ENDPOINT (не localhost), S3_ACCESS_KEY, S3_SECRET_KEY; без файлов — оставить S3_ENDPOINT пустым')],
+                  [t('lore.mcpApi.diag7a', 'S3_UPSTREAM / 502'), t('lore.mcpApi.diag7b', 'S3 ответил ошибкой (ключи, права, бакет)'), t('lore.mcpApi.diag7c', 'текст ошибки S3 — в detail ответа')],
                   [t('lore.mcpApi.diag4a', 'Сервер не стартует под клиентом'), t('lore.mcpApi.diag4b', 'не собран dist/'), t('lore.mcpApi.diag4c', 'npm run build в mcp-server')],
+                  [t('lore.mcpApi.diag5a', '401 на /mcp (HTTP)'), t('lore.mcpApi.diag5b', 'нет или неверный LORE_MCP_TOKEN'), t('lore.mcpApi.diag5c', 'Authorization: Bearer <LORE_MCP_TOKEN> или X-Lore-Mcp-Token')],
+                  [t('lore.mcpApi.diag6a', '403 из браузера (HTTP)'), t('lore.mcpApi.diag6b', 'origin не в LORE_MCP_CORS_ORIGINS'), t('lore.mcpApi.diag6c', 'добавить origin клиента в LORE_MCP_CORS_ORIGINS')],
+                  [t('lore.mcpApi.diag7a', 'Запись вернула ошибку «НЕ СДЕЛАНО» / «ИЗМЕНЕНИЙ НЕТ»'), t('lore.mcpApi.diag7b', 'бэкенд ответил outcome=noop (цели нет, отказ) или unchanged (уже такое значение, связь уже есть): любой CUD-инструмент отдаёт это ошибкой (D-2026-LORE-MCP-LINK-NOOP-IS-ERROR)'), t('lore.mcpApi.diag7c', 'первая строка — причина и что сделать (например project_new); JSON бэкенда ниже')],
+                  [t('lore.mcpApi.diag8a', 'Запись по /mcp (HTTP): «без входа Keycloak закрыта»'), t('lore.mcpApi.diag8b', 'HTTP-режим не передаёт роль; без токена Keycloak запись запрещена'), t('lore.mcpApi.diag8c', 'включить вход (OIDC) или подключить MCP через stdio на машине агента')],
                 ] as [string, string, string][]).map(([a, b, c]) => (
                   <tr key={a} style={S.tr}>
                     <Td style={{ color: 'var(--t1)' }}>{a}</Td>

@@ -2229,6 +2229,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
           'script_absent', 'not_implemented', 'budget_exhausted', 'no_changes', 'no_evidence',
         ]).optional().describe('REQUIRED when status is NOT_MEASURED or SKIP — why the measurement did not happen'),
         model:  z.string().optional().describe('Model that judged this particular metric; defaults to the run-level model. Metrics collected by deterministic code have none'),
+        // QG-07: task_done_pct_avg "fell" 99.1% → 78.1% with no regression — the sample went
+        // from LIMIT 15 sprints to all 357 groups. A value is comparable with the previous run
+        // only on the same basis; a changed basis breaks the series instead of raising an alarm.
+        basis:  z.string().optional().describe('Fingerprint of the metric denominator — what was counted: sample size, filter, LIMIT, e.g. "groups=357" or "sprints:LIMIT 15". The QG screen compares a value with the previous run ONLY when the basis is the same; a changed basis is shown as "basis recomputed", not as a drop. Omit for absolute counts that have no denominator'),
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
     async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id,
@@ -2684,7 +2688,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
     'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
       'file_url ("/lore/bragi/asset/file/..."). This is the ONLY way to get a real, browser-loadable file_url — ' +
       'there is no separate "presign" step. Call this FIRST, then pass its file_url into bragi_asset_attach ' +
-      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself.',
+      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself. ' +
+      'S3 is an OPTIONAL service of the installation: 503 FILES_NOT_CONFIGURED = no S3 set (install without files); ' +
+      '503 S3_UNREACHABLE = S3 set but not reachable (check S3_ENDPOINT, keys); 502 S3_UPSTREAM = S3 answered an ' +
+      'error. Without S3 use bragi_asset_attach with an external https URL instead.',
     {
       filename:     z.string().describe('original filename, e.g. "cover.png" — extension is preserved'),
       base64_data:  z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),

@@ -119,21 +119,8 @@ public class LoreQgRunWriter {
         if (req.metrics() != null) {
             for (LoreQgResource.QGMetricEntry m : req.metrics()) {
                 if (m.key() == null) continue;
-                String mId = runId + "_" + m.key();
                 writeClient.command(db, auth, new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE ClRoutineMetric SET metric_id=:mid, run_id=:rid, " +
-                    "routine_name=:rn, run_date=:rd, metric_key=:mk, value=:val, " +
-                    "unit=:unit, target=:tgt, status=:st, source=:src, " +
-                    "not_measured_reason=:nmr, model=:mdl " +
-                    "UPSERT WHERE metric_id=:mid",
-                    LoreResourceBase.mapOfNullable("mid", mId, "rid", runId, "rn", req.routine_name(),
-                        "rd", req.run_date(), "mk", m.key(), "val", m.value(),
-                        "unit", m.unit(), "tgt", m.target(), "st", m.status(),
-                        "src", m.source(),
-                        "nmr", m.not_measured_reason(),
-                        // модель метрики может отличаться от модели прогона: часть
-                        // метрик собирается кодом и модели не имеет вовсе (§4.4)
-                        "mdl", m.model() != null ? m.model() : req.model())))
+                    METRIC_UPSERT_SQL, metricParams(runId, req.routine_name(), req.run_date(), m, req.model())))
                     .await().indefinitely();
                 written++;
             }
@@ -141,6 +128,33 @@ public class LoreQgRunWriter {
         LOG.debugf("[LORE QG RUN] %s: %d метрик", runId, written);
         refreshGateMetrics(req.routine_name(), auth);
         return Result.written(runId, written);
+    }
+
+    /**
+     * Запись одной метрики прогона. {@code basis} — «база» метрики, отпечаток её знаменателя
+     * (состав выборки, фильтр, LIMIT; SPRINT_QG_REBUILD/QG-07): сравнивать значение с прошлым
+     * прогоном честно только при той же базе. Повод — {@code task_done_pct_avg} «упала» 99.1% → 78.1%:
+     * было {@code LIMIT 15} спринтов, стало 357 групп, а признака смены выборки у значения не было.
+     */
+    static final String METRIC_UPSERT_SQL =
+        "UPDATE ClRoutineMetric SET metric_id=:mid, run_id=:rid, " +
+        "routine_name=:rn, run_date=:rd, metric_key=:mk, value=:val, " +
+        "unit=:unit, target=:tgt, status=:st, source=:src, " +
+        "not_measured_reason=:nmr, model=:mdl, basis=:basis " +
+        "UPSERT WHERE metric_id=:mid";
+
+    static Map<String, Object> metricParams(String runId, String routineName, String runDate,
+            LoreQgResource.QGMetricEntry m, String runModel) {
+        return LoreResourceBase.mapOfNullable("mid", runId + "_" + m.key(), "rid", runId, "rn", routineName,
+            "rd", runDate, "mk", m.key(), "val", m.value(),
+            "unit", m.unit(), "tgt", m.target(), "st", m.status(),
+            "src", m.source(),
+            "nmr", m.not_measured_reason(),
+            // модель метрики может отличаться от модели прогона: часть
+            // метрик собирается кодом и модели не имеет вовсе (§4.4)
+            "mdl", m.model() != null ? m.model() : runModel,
+            // пустая строка — не база: иначе «   » и null разошлись бы и дали ложный разрыв ряда
+            "basis", m.basis() == null || m.basis().isBlank() ? null : m.basis().strip());
     }
 
     @SuppressWarnings("unchecked")
@@ -189,6 +203,6 @@ public class LoreQgRunWriter {
             null,
             List.of(new LoreQgResource.QGMetricEntry(
                 "build_result", buildValue, "bool", 1.0, metricStatus,
-                sourceUrl, notMeasuredReason, null)));
+                sourceUrl, notMeasuredReason, null, null)));
     }
 }

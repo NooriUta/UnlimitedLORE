@@ -85,12 +85,12 @@ public class QgKnowHygieneRoutine implements QgRoutine {
             String key = "know_" + f.key();
             if (!(f.value() instanceof Number n)) {
                 out.add(new LoreQgResource.QGMetricEntry(key, null, "count", 0.0, "NOT_MEASURED",
-                    f.source(), "source_unreachable", null));
+                    f.source(), "source_unreachable", null, null));
                 continue;
             }
             double v = n.doubleValue();
             out.add(new LoreQgResource.QGMetricEntry(key, v, "count", 0.0, v == 0 ? "PASS" : "WARN",
-                f.source(), null, null));
+                f.source(), null, null, null));
         }
         return out;
     }

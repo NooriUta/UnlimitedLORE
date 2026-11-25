@@ -652,6 +652,12 @@
     "id_field" : null,
     "title" : "ClRoutineMetric",
     "fields" : [ {
+      "name" : "basis",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "basis"
+    }, {
       "name" : "metric_id",
       "type" : "string",
       "required" : false,
@@ -733,7 +739,7 @@
     "replaces" : [ ],
     "source" : "ddl",
     "vertex" : "ClRoutineMetric",
-    "content_hash" : "sha256:80536063040e3371c61aa1855220af704ec30cc2677753ceae47d19cc82d1ace"
+    "content_hash" : "sha256:befbc197c5b5c02ad049df4683ab504cfcb2c633525a4066a5a681edaa612e5c"
   }, {
     "kind" : "ddl:ClRoutineOutput",
     "id_field" : null,
@@ -17168,6 +17174,10 @@
       "name" : "source",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "basis",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -17180,7 +17190,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7b02aacb445928724f21dee5cad33ea152f724e74f998b443652eba895d64445"
+    "content_hash" : "sha256:8dddd3ddf3a5b7a895b3ae436494ae7ea104b4f7592e63b4a6cc97b9a0aa18d8"
   }, {
     "kind" : "slice:qg_run_outcomes",
     "id_field" : null,
@@ -21133,6 +21143,14 @@
       "required" : false,
       "layer" : "slice"
     }, {
+      "name" : "start_versions",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "started_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
       "name" : "bookkeeping",
       "required" : false,
       "layer" : "slice"
@@ -21145,7 +21163,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:9f2f6d0d13f2976080b40be8613aaca53e739eaa0558a7c9d602608829405808"
+    "content_hash" : "sha256:4345e81593f4473b9cf5daf560a3d4745f6b3b2bcf33b1a985079e6c4ce2ed06"
   }, {
     "kind" : "slice:task_created_dates",
     "id_field" : null,

@@ -3,6 +3,7 @@ package studio.seer.heimdall.bench;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import studio.seer.heimdall.lore.MartCredentials;
+import studio.seer.heimdall.lore.OptionalUpstream;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -99,8 +100,8 @@ public class MuninnMartResource {
                 res.result() == null ? List.of() : res.result()))))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[MART FAILED] slice=%s: %s", id, ex.getMessage());
-                return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new MartError("MART_UPSTREAM", String.valueOf(ex.getMessage()))));
+                // ISS-03: MART задан, но не поднят — 503 MART_UNREACHABLE с переменной; ошибка базы — 502.
+                return OptionalUpstream.failure(OptionalUpstream.Service.MART, ex, "срез " + id + " не прочитан");
             });
     }
 
