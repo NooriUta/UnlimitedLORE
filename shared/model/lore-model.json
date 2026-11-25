@@ -329,6 +329,9 @@
     "linkTabs" : [ {
       "key" : "deps",
       "label" : "Связи",
+      "labelKey" : "pp.tab.links",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -345,6 +348,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -966,6 +972,9 @@
     "linkTabs" : [ {
       "key" : "deps",
       "label" : "Зависимости",
+      "labelKey" : "pp.tab.deps",
+      "labelEn" : "Dependencies",
+      "labelPl" : "Zależności",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -982,6 +991,9 @@
     }, {
       "key" : "justification",
       "label" : "ADR",
+      "labelKey" : "pp.tab.justification",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rels" : [ {
         "rel" : "JUSTIFIED_BY",
         "dir" : "out",
@@ -1001,6 +1013,9 @@
     }, {
       "key" : "realization",
       "label" : "Реализация",
+      "labelKey" : "pp.tab.realization",
+      "labelEn" : "Realization",
+      "labelPl" : "Realizacja",
       "rels" : [ {
         "rel" : "CLOSED_BY",
         "dir" : "out",
@@ -1015,6 +1030,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -1413,6 +1431,9 @@
     "linkTabs" : [ {
       "key" : "adrLinks",
       "label" : "Связи ADR",
+      "labelKey" : "pp.tab.adrLinks",
+      "labelEn" : "ADR links",
+      "labelPl" : "Powiązania ADR",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -1437,6 +1458,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -1767,6 +1791,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2028,6 +2055,9 @@
     "linkTabs" : [ {
       "key" : "children",
       "label" : "Вложенные документы",
+      "labelKey" : "pp.tab.children",
+      "labelEn" : "Nested documents",
+      "labelPl" : "Dokumenty zagnieżdżone",
       "rels" : [ {
         "rel" : "DOC_CHILD_OF",
         "dir" : "in",
@@ -2037,6 +2067,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2262,6 +2295,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2523,6 +2559,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2715,6 +2754,9 @@
     "linkTabs" : [ {
       "key" : "deps",
       "label" : "Зависимости",
+      "labelKey" : "pp.tab.deps",
+      "labelEn" : "Dependencies",
+      "labelPl" : "Zależności",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -2992,6 +3034,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3236,6 +3281,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3494,6 +3542,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3741,6 +3792,9 @@
     "linkTabs" : [ {
       "key" : "value",
       "label" : "Ценность",
+      "labelKey" : "pp.tab.value",
+      "labelEn" : "Value",
+      "labelPl" : "Wartość",
       "rels" : [ {
         "rel" : "HAS_ACTOR",
         "dir" : "out",
@@ -3780,6 +3834,9 @@
     }, {
       "key" : "trace",
       "label" : "Обоснование",
+      "labelKey" : "pp.tab.trace",
+      "labelEn" : "Rationale",
+      "labelPl" : "Uzasadnienie",
       "rels" : [ {
         "rel" : "TRACED_TO",
         "dir" : "out",
@@ -3789,6 +3846,9 @@
     }, {
       "key" : "ucLinks",
       "label" : "Связи сценариев",
+      "labelKey" : "pp.tab.ucLinks",
+      "labelEn" : "Use case links",
+      "labelPl" : "Powiązania scenariuszy",
       "rels" : [ {
         "rel" : "BUILDS_ON",
         "dir" : "out",
@@ -3823,6 +3883,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -4344,6 +4407,9 @@
     "linkTabs" : [ {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.tab.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rels" : [ {
         "rel" : "ROLE_HELD_BY",
         "dir" : "in",
@@ -4353,6 +4419,9 @@
     }, {
       "key" : "agents",
       "label" : "Агенты",
+      "labelKey" : "pp.tab.agents",
+      "labelEn" : "Agents",
+      "labelPl" : "Agenci",
       "rels" : [ {
         "rel" : "OWNED_BY",
         "dir" : "in",
@@ -4475,6 +4544,9 @@
     "linkTabs" : [ {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.tab.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rels" : [ {
         "rel" : "ROLE_HELD_BY",
         "dir" : "in",
@@ -4484,6 +4556,9 @@
     }, {
       "key" : "machines",
       "label" : "Машины",
+      "labelKey" : "pp.tab.machines",
+      "labelEn" : "Machines",
+      "labelPl" : "Maszyny",
       "rels" : [ {
         "rel" : "USES_MACHINE",
         "dir" : "out",
@@ -4493,6 +4568,9 @@
     }, {
       "key" : "roles",
       "label" : "Роли продукта",
+      "labelKey" : "pp.tab.productRoles",
+      "labelEn" : "Product roles",
+      "labelPl" : "Role produktu",
       "rels" : [ {
         "rel" : "FILLS_ROLE",
         "dir" : "out",
@@ -4599,6 +4677,9 @@
     "linkTabs" : [ {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "FELT_BY",
         "dir" : "in",
@@ -4618,6 +4699,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -4749,6 +4833,9 @@
     "linkTabs" : [ {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.tab.features",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rels" : [ {
         "rel" : "ADDRESSES",
         "dir" : "in",
@@ -4763,6 +4850,9 @@
     }, {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "FELT_BY",
         "dir" : "out",
@@ -4777,6 +4867,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -4900,6 +4993,9 @@
     "linkTabs" : [ {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.tab.features",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rels" : [ {
         "rel" : "PROMISES",
         "dir" : "in",
@@ -4914,6 +5010,9 @@
     }, {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "DESIRED_BY",
         "dir" : "out",
@@ -4928,6 +5027,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5053,6 +5155,9 @@
     "linkTabs" : [ {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.tab.features",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rels" : [ {
         "rel" : "HELPS_WITH",
         "dir" : "in",
@@ -5067,6 +5172,9 @@
     }, {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "PERFORMED_BY",
         "dir" : "out",
@@ -5086,6 +5194,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5229,6 +5340,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5449,6 +5563,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5525,7 +5642,7 @@
       "labelKey" : "pp.field.fullPath",
       "kind" : "text",
       "group" : "props",
-      "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+      "definition" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
       "layer" : "stable",
       "labelEn" : "Full path",
       "labelPl" : "Pełna ścieżka"
@@ -5574,6 +5691,9 @@
     "linkTabs" : [ {
       "key" : "links",
       "label" : "Связи",
+      "labelKey" : "pp.tab.links",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania",
       "rels" : [ {
         "rel" : "HAS_REPOSITORY",
         "dir" : "in",
@@ -5693,6 +5813,9 @@
     "linkTabs" : [ {
       "key" : "links",
       "label" : "Связи",
+      "labelKey" : "pp.tab.links",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania",
       "rels" : [ {
         "rel" : "ORG_HAS_PROJECT",
         "dir" : "out",
@@ -6072,6 +6195,9 @@
     "linkTabs" : [ {
       "key" : "people",
       "label" : "Люди и агенты",
+      "labelKey" : "pp.tab.people",
+      "labelEn" : "People and agents",
+      "labelPl" : "Ludzie i agenci",
       "rels" : [ {
         "rel" : "HAS_PROJECT_ROLE",
         "dir" : "in",
@@ -7150,17 +7276,41 @@
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
   "service_fields" : {
+    "bookkeeping" : "Признак задачи-учёта уже сделанной работы: такая задача не входит в аналитику оценок и пропускной способности (task_set bookkeeping). Служебное аналитики.",
+    "change_reason" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_harness" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_harness_note" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_kind" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_machine" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_session" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "content_hash" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
     "content_html_bytes" : "Размер тела HTML в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54) для контроля целостности. Служебное хранения.",
     "content_html_sha256" : "Хэш тела HTML: пишет сверка тела документа (LoreDocBodyDigest:51-54) для контроля целостности. Служебное хранения.",
     "content_md_en_bytes" : "Размер тела MD (en) в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "content_md_en_sha256" : "Хэш тела MD (en): пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "content_md_ru_bytes" : "Размер тела MD (ru) в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "content_md_ru_sha256" : "Хэш тела MD (ru): пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
+    "created_at" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
     "dict_type" : "Вид справочника у статьи KnowDictEntry (у продукта — product): по нему статья относится к справочнику; служебное хранения, в паспорте не показывается.",
     "feature_id" : "Прежний код фичи до слияния KnowFeature в KnowUseCase: код его не пишет и не читает (фича пишется по uc_id, LoreProductResource:154). Служебное переноса.",
+    "hist_for" : "Ссылка версии на запись, к которой она относится. Служебное истории (SCD2), в паспорте не показывается.",
+    "kc_sub" : "Идентификатор учётной записи Keycloak (sub): по нему вход человека связывается с его записью. Служебное входа.",
     "mig_src_rid" : "Адрес записи в базе-источнике переноса 1.18: по нему перенос сверяет «до и после» и повторяется без дублей; служебное переноса, в паспорте не показывается.",
+    "origin" : "Откуда появилась связь (например, canvas — нарисована на холсте). Служебное хранения.",
+    "pr_id" : "Внутренний ключ PR в мосте git-хоста; людям показываются номер и адрес PR. Служебное хранения.",
     "regroup" : "Код группы перегруппировки проектов 1.18 (продукт верхнего уровня), в которую слит проект; служебное переноса, в паспорте не показывается.",
-    "src" : "Откуда запись задачи (manual — создана путём записи, иначе — источник разбора): пишет создание задачи (LoreSprintTaskResource:360); читателя в коде нет. Служебное происхождения."
+    "row_version" : "Счётчик версии строки холста для защиты от одновременной правки. Служебное хранения.",
+    "source_commit" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
+    "src" : "Откуда запись задачи (manual — создана путём записи, иначе — источник разбора): пишет создание задачи (LoreSprintTaskResource:360); читателя в коде нет. Служебное происхождения.",
+    "state_uid" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "status_backfilled" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
+    "status_category" : "Категория статуса (не начато, в работе, закрыто…), вычисляется из статуса для поиска и отбора. Служебное поиска.",
+    "status_known_from" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
+    "updated_at" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
+    "valid_from" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "valid_to" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+    "version" : "Номер версии записи паспорта для защиты от одновременной правки: не совпал — 409 VERSION_CONFLICT (ADR-LORE-047 A3). Служебное хранения."
   },
   "passport" : {
     "actor" : [ {

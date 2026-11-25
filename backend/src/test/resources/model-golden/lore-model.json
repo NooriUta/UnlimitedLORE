@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "eaf8309f5a825b70",
+  "version" : "b7fa303df2e0a540",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -5329,8 +5329,8 @@
       } ],
       "requirements_block" : "schema",
       "computed" : [ ],
-      "unclassified" : [ "updated_at" ],
-      "internal" : [ "valid_from" ]
+      "unclassified" : [ ],
+      "internal" : [ "updated_at", "valid_from" ]
     },
     "question" : {
       "type" : "question",
@@ -12123,7 +12123,7 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+        "definition" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
         "description" : null,
         "layer" : "stable",
         "historic" : false,

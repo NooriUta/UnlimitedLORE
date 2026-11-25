@@ -67,11 +67,11 @@ final class LoreModelTypes {
     /** Internal: для MCP и админки, на поверхности не выводится. */
     static boolean isInternal(String prop, String key) {
         if (prop.equals(key)) return false;
-        // service_fields модели — служебное переноса и хранения (mig_src_rid, regroup, dict_type)
+        // KREG-10 (владелец 25.11.2026, «отдельно shared tech columns»): служебные колонки — один список,
+        // service_fields модели, с причиной у каждой. Свой перечень здесь разошёлся с LoreRecordUnmodeled.SERVICE
+        // (без created_at/updated_at), и админка «Модель» показывала их у 19 типов как неописанные.
         if (LoreModelFile.content().serviceFields().containsKey(prop)) return true;
-        return prop.endsWith("_uid") || Set.of("bookkeeping", "kc_sub", "pr_id", "changed_by", "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine", "change_reason",
-            "status_backfilled", "status_known_from", "status_category", "valid_from", "source_commit",
-            "row_version").contains(prop);
+        return prop.endsWith("_uid");
     }
 
     /**

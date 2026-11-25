@@ -48,7 +48,14 @@ class LoreRecordUnmodeledTest {
         // у каждой записи. По решению служебные поля в блок не попадают.
         Map<String, Object> props = vertex("sprint_id", "SPRINT_X", "branch_ref", "feature/x");
         for (String s : LoreRecordUnmodeled.SERVICE) props.put(s, "2026-11-16T00:00:00Z");
-        assertEquals(19, LoreRecordUnmodeled.SERVICE.size(), "перечень служебных полей: четырнадцать утверждённых 15.11 + сессия, harness с пометкой сверки и машина правки (16.11) + причина правки (WK-01, 20.11)");
+        // KREG-10 (владелец 25.11.2026): перечень теперь — service_fields модели, единый список служебных колонок;
+        // утверждённые 19 (четырнадцать 15.11 + сессия, harness с пометкой сверки и машина правки 16.11 + причина
+        // правки WK-01 20.11) обязаны в нём остаться — размер больше не закрепляется.
+        for (String approved : List.of("valid_from", "valid_to", "state_uid", "content_hash", "changed_by", "changed_by_kind",
+                "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine", "change_reason",
+                "status_category", "status_known_from", "status_backfilled", "source_commit", "hist_for", "created_at",
+                "updated_at", "origin"))
+            assertTrue(LoreRecordUnmodeled.SERVICE.contains(approved), "утверждённое служебное поле выпало из списка: " + approved);
         assertEquals(List.of("branch_ref"), List.copyOf(LoreRecordUnmodeled.of("sprint", props).keySet()));
     }
 

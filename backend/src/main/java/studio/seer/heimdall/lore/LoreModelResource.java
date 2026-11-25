@@ -98,6 +98,10 @@ public class LoreModelResource extends LoreResourceBase {
             ws.add("config: " + store.warning());
             doc.put("warnings", ws);
         }
+        // KREG-09 (SPEC-MODEL-EXPORT-064 §4): meta model/1 — release деплоя, model_etag артефакта релиза,
+        // warnings (потолок 50), источник. Аддитивно и вне отпечатка версии, как config/server.
+        doc.put("meta", LoreModelMeta.meta(System.getenv("LORE_RELEASE_TAG"),
+            doc.get("warnings") instanceof List<?> w ? w : List.of(), store.source(), store.seedDrift()));
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
         // KREG-08: fallback громкий и для условного запроса — 304 тела не несёт, а заголовок несёт.
