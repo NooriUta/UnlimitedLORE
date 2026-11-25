@@ -33,11 +33,14 @@ final class LoreRecordUnmodeled {
      * Служебные поля по перечню, утверждённому владелицей 15.11.2026 (+ changed_by_session, changed_by_harness, changed_by_machine — сессия, harness и машина правки, 16.11.2026,
      * SPRINT_LORE_AGENT_OBSERVABILITY/AO-SESSION-LOG): в блок не попадают
      * (D-2026-LORE-FREE-FIELDS-SHOWN). Часть из них уже отсекают isSystem и isInternal модели;
-     * здесь перечень назван целиком, чтобы правило не зависело от чужих списков.
+     * KREG-10 (владелец 25.11.2026): перечень больше не держится здесь — это живое представление service_fields
+     * модели, единого списка служебных колонок (с причиной у каждой). Два списка в коде разошлись и спорили с админкой.
      */
-    static final Set<String> SERVICE = Set.of("valid_from", "valid_to", "state_uid", "content_hash", "changed_by",
-        "changed_by_kind", "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine", "change_reason", "status_category", "status_known_from", "status_backfilled", "source_commit", "hist_for",
-        "created_at", "updated_at", "origin");
+    static final Set<String> SERVICE = new java.util.AbstractSet<>() {
+        @Override public java.util.Iterator<String> iterator() { return LoreModelFile.content().serviceFields().keySet().iterator(); }
+        @Override public int size() { return LoreModelFile.content().serviceFields().size(); }
+        @Override public boolean contains(Object o) { return LoreModelFile.content().serviceFields().containsKey(o); }
+    };
 
     static boolean reads(String type) {
         return type != null && !PEOPLE.contains(type) && LoreModelTypes.GRAPH.containsKey(type);
