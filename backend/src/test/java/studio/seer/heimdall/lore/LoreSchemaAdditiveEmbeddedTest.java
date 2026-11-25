@@ -35,7 +35,7 @@ class LoreSchemaAdditiveEmbeddedTest {
     private Database db;
 
     /** Типы, которые установщик заводит из модели 1.18 (подмножество, нужное доводке), с данными. */
-    private static final List<String> MODEL_TYPES = List.of("KnowTag", "KnowDictEntry", "KnowGitProject", "KnowUser", "KnowTask", "ClRoutineMetric");
+    private static final List<String> MODEL_TYPES = List.of("KnowTag", "KnowDictEntry", "KnowDictEntryHist", "KnowGitProject", "KnowUser", "KnowTask", "ClRoutineMetric");
 
     @BeforeEach
     void open() throws Exception {
@@ -142,14 +142,18 @@ class LoreSchemaAdditiveEmbeddedTest {
         assertEquals(4, ((Number) sql("SELECT count(*) AS n FROM KnowDictEntry WHERE dict_type = 'priority'", Map.of()).get(0).get("n")).intValue());
         assertEquals(8, ((Number) sql("SELECT count(*) AS n FROM KnowDictEntry WHERE dict_type = 'agent_profile'", Map.of()).get(0).get("n")).intValue(),
             "профили не задвоены");
-        assertEquals(dictBefore + 3 + 12 + 18, count("KnowDictEntry"), "словарь: +3 skill_status, +12 областей (platform уже была), +18 словарей UI");
+        // доводка v4 (AP-APPEARANCE, AUD-AREA-COLORS 5а): подписи шести палитр и поле своего стиля tokens_json
+        assertEquals(6, ((Number) sql("SELECT count(*) AS n FROM KnowDictEntry WHERE dict_type = 'palette'", Map.of()).get(0).get("n")).intValue());
+        assertTrue(db.getSchema().getType("KnowDictEntry").existsProperty("tokens_json"), "KnowDictEntry.tokens_json");
+        assertTrue(db.getSchema().getType("KnowDictEntryHist").existsProperty("tokens_json"), "KnowDictEntryHist.tokens_json");
+        assertEquals(dictBefore + 3 + 12 + 18 + 6, count("KnowDictEntry"), "словарь: +3 skill_status, +12 областей (platform уже была), +18 словарей UI, +6 палитр");
 
         // отчёт доводки — что она сделала
         assertTrue(first.changed(), "первая доводка что-то сделала: " + first);
         assertTrue(first.types() >= 6, "типов заведено: " + first);
         assertTrue(first.properties() >= 6, "свойств заведено: " + first);
         assertTrue(first.indexes() >= 4, "индексов заведено: " + first);
-        assertEquals(3 + 3 + 12 + 18, first.seeded(), "посеяно: skill_status 3 + скиллы 3 + области 12 + словари UI 18: " + first);
+        assertEquals(3 + 3 + 12 + 18 + 6, first.seeded(), "посеяно: skill_status 3 + скиллы 3 + области 12 + словари UI 18 + палитры 6: " + first);
 
         // отметка схемы кода: номер и хэш кода
         Map<String, Object> m1 = marker();
@@ -183,7 +187,7 @@ class LoreSchemaAdditiveEmbeddedTest {
         // DDL шагов V совпадает с доводкой: новыми остаются только конец ребра посева, отметка и то, что пришло
         // после заморозки шагов V (доводка v2: ClRoutineMetric.basis, QG-07)
         assertEquals(1, r.types(), "после шагов V нового — только конец ребра OWNED_BY: " + r);
-        assertEquals(1, r.properties(), "свойства шагов V и доводки совпадают; новое после V100 — только ClRoutineMetric.basis: " + r);
+        assertEquals(3, r.properties(), "свойства шагов V и доводки совпадают; новое после V100 — ClRoutineMetric.basis и tokens_json словаря и его истории: " + r);
         assertEquals(0, r.indexes(), "индексы шагов V и доводки совпадают: " + r);
         assertEquals(LoreSchemaAdditive.VERSION, ((Number) marker().get("version")).intValue());
         assertFalse(LoreSchemaAdditive.apply(exec).changed(), "повтор — 0 изменений");

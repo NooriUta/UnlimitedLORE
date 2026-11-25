@@ -244,4 +244,20 @@ class LoreMePrefsTest {
         assertNotNull(me, "семейство me обязано быть в матрице явно");
         assertEquals(AgentScopeFilter.FAMILY_AGENTS.get("quality"), me);
     }
+
+    /**
+     * [[task:SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE]] (2в): личная палитра принимает и свой стиль установки (own-…),
+     * пара шрифтов — личная настройка; набор установки сторожит LoreAppearance, а не белый список.
+     */
+    @Test
+    void палитра_принимает_свой_стиль_и_пара_шрифтов_личная() {
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("palette", "own-corp")));
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("palette", "own-")).size());
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("palette", "Corp")).size());
+        assertEquals("pair", LoreMePrefs.defaults().get("font_pair"));
+        assertEquals(List.of(), LoreMePrefs.validateSettingsPatch(Map.of("font_pair", "mono")));
+        assertEquals(1, LoreMePrefs.validateSettingsPatch(Map.of("font_pair", "comic")).size());
+        assertEquals("own-corp", LoreMePrefs.effective(Map.of("palette", "own-corp")).get("palette"),
+            "сохранённый свой стиль не теряется при чтении");
+    }
 }

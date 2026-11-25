@@ -296,3 +296,48 @@
 
 /* Вид «Журнал · Аналитика» админских журналов (графики — не над журналом, 21.11.2026). */
 .adm-viewswitch { display: flex; margin: 4px 0 8px; }
+
+/* «Оформление» (AP-APPEARANCE, прототип docs/prototypes/admin-appearance.html): только токены kit. */
+.ap-grid { display: grid; gap: 12px; }
+.ap-col { display: grid; gap: 12px; min-width: 0; align-content: start; }
+@media (min-width: 900px) {
+  .ap-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .ap-sticky { position: sticky; top: 8px; }
+}
+.ap-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 4px; font-family: var(--display); font-weight: 800; font-size: var(--fs-md); }
+.ap-th { margin: 10px 0 4px; color: var(--t3); font: 700 var(--fs-2xs) var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+.ap-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-top: 1px solid var(--bd); min-width: 0; }
+.ap-row:first-of-type { border-top: 0; }
+.ap-row__main { flex: 1; min-width: 0; }
+.ap-row__name { font-weight: 700; overflow-wrap: anywhere; }
+.ap-row__meta { color: var(--t3); font-family: var(--mono); font-size: var(--fs-2xs); overflow-wrap: anywhere; }
+.ap-sw { width: 20px; height: 20px; flex: none; border-radius: 999px; border: 1px solid var(--bdh); }
+.ap-sw4 { display: inline-flex; flex: none; border-radius: 4px; overflow: hidden; border: 1px solid var(--bdh); }
+.ap-sw4 i { display: block; width: 8px; height: 20px; }
+.ap-lock { display: inline-flex; flex: none; color: var(--wrn); }
+.ap-aa { flex: none; border: 1px solid var(--bd); border-radius: 999px; padding: 0 8px; font-family: var(--display); color: var(--t2); }
+.ap-drop { display: grid; gap: 8px; border: 1px dashed var(--bdh); border-radius: 8px; padding: 8px; }
+.ap-ta { min-height: 120px; resize: vertical; font-family: var(--mono); font-size: var(--fs-touch-input, var(--fs-sm)); }
+.ap-check { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.ap-check li[data-tone='suc'] { color: var(--suc); }
+.ap-check li[data-tone='dng'] { color: var(--dng); }
+.ap-check li[data-tone='wrn'] { color: var(--wrn); }
+.ap-toggle { accent-color: var(--suc); flex: none; }
+.ap-acts { margin-top: 8px; }
+.adm-btn[data-tone='acc'] { border-color: var(--acc); color: var(--acc); }
+
+/* предпросмотр: кусочек интерфейса в выбранной палитре — блоки темы kit работают и на вложенном узле */
+.ap-pv { margin-top: 8px; background: var(--bg0); color: var(--t1); border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; font-family: var(--font); min-width: 0; }
+.ap-pv__bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg1); border-bottom: 1px solid var(--bd); }
+.ap-pv__logo { font-family: var(--display); font-weight: 800; font-size: var(--fs-md); color: var(--acc); letter-spacing: .04em; }
+.ap-pv__nav { color: var(--t2); font-size: var(--fs-sm); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ap-pv__body { display: grid; gap: 8px; padding: 10px; }
+.ap-pv__h { font-family: var(--display); font-weight: 800; font-size: var(--fs-lg); }
+.ap-pv__p { color: var(--t2); font-size: var(--fs-sm); }
+.ap-pv__tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.ap-pv__tbl td { padding: 4px; border-bottom: 1px solid var(--bd); }
+.ap-pv__tbl tr:nth-child(even) td { background: var(--bg1); }
+.ap-pv__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); }
+.ap-pv__st { border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; font-family: var(--mono); font-size: var(--fs-2xs); }
+.ap-pv__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.ap-pv__code { font-family: var(--mono); font-size: var(--fs-xs); background: var(--bg2); border: 1px solid var(--bd); border-radius: 4px; padding: 6px 8px; overflow-x: auto; white-space: pre; }

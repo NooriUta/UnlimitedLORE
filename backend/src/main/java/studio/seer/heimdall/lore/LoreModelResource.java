@@ -33,7 +33,7 @@ public class LoreModelResource extends LoreResourceBase {
     LoreModelStore store;
 
     static final String DICT_SQL =
-        "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, " +
+        "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, tokens_json, " +
         "ifnull(is_active, true) AS is_active FROM KnowDictEntry ORDER BY dict_type, sort_order";
 
     @GET

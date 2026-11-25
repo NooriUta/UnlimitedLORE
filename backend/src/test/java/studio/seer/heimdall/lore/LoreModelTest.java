@@ -254,4 +254,44 @@ class LoreModelTest {
             for (Object x : list) assertNoAtKeys(x);
         }
     }
+
+    /**
+     * [[task:SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE]]: блок palettes несёт наши палитры (builtin, обязательные), включённые
+     * свои стили с токенами и набор установки (умолчание и разрешённые) — палитр и пар шрифтов. Выключенный свой стиль
+     * в выбор не попадает; битые настройки установки — в warnings словами.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void palettesCarryOwnStylesAndInstallSet() {
+        List<Map<String, Object>> rows = new ArrayList<>(taskDict());
+        Map<String, Object> own = dict("palette", "own-corp", "Корпоративный", null, null, 100);
+        own.put("tokens_json", "{\"root\":{\"--acc\":\"#3a8fd8\"}}");
+        rows.add(own);
+        Map<String, Object> off = dict("palette", "own-off", "Выключенный", null, null, 110);
+        off.put("tokens_json", "{\"root\":{\"--acc\":\"#000\"}}");
+        off.put("is_active", false);
+        rows.add(off);
+        rows.add(dict("app_setting", "appearance.palettes_allowed", "slate,own-corp,own-off", null, null, 0));
+        rows.add(dict("app_setting", "appearance.palette_default", "own-corp", null, null, 0));
+        rows.add(dict("app_setting", "appearance.fonts_allowed", "pair", null, null, 0));
+        Map<String, Object> m = LoreModel.build(rows);
+
+        Map<String, Object> p = (Map<String, Object>) m.get("palettes");
+        assertEquals("own-corp", p.get("default"), "умолчание — установки, не кода");
+        assertEquals(List.of("slate", "own-corp"), p.get("allowed"));
+        List<Map<String, Object>> entries = (List<Map<String, Object>>) p.get("entries");
+        assertEquals(List.of("amber-forest", "lichen", "slate", "juniper", "warm-dark", "mono", "own-corp"),
+            entries.stream().map(e -> e.get("code")).toList(), "наши все (обязательные), свои — только включённые");
+        assertEquals(true, entries.get(0).get("builtin"));
+        Map<String, Object> corp = entries.get(6);
+        assertEquals(false, corp.get("builtin"));
+        assertEquals("Корпоративный", corp.get("title"));
+        assertEquals(Map.of("root", Map.of("--acc", "#3a8fd8")), corp.get("tokens"));
+
+        Map<String, Object> fonts = (Map<String, Object>) p.get("fonts");
+        assertEquals(List.of("pair", "mono"), fonts.get("entries"));
+        assertEquals(List.of("pair"), fonts.get("allowed"));
+        assertEquals("pair", fonts.get("default"));
+        assertTrue(String.valueOf(m.get("warnings")).contains("[own-off] пропущены"), String.valueOf(m.get("warnings")));
+    }
 }
