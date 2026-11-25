@@ -106,6 +106,15 @@ public class BragiS3Service {
         }
     }
 
+    /**
+     * Проба при старте (ISS-03): строит клиента и спрашивает бакет. Недоступен — бросает (SdkClientException с
+     * отказом соединения), клиент не кешируется — следующий вызов попробует снова.
+     */
+    void probe() {
+        S3Client c = client();
+        c.headBucket(HeadBucketRequest.builder().bucket(bucket()).build());
+    }
+
     public void put(String key, InputStream data, long length, String contentType) {
         client().putObject(PutObjectRequest.builder()
             .bucket(bucket()).key(key)
