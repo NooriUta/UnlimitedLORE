@@ -596,6 +596,9 @@
         "link_tabs" : [ {
           "key" : "deps",
           "label" : "Связи",
+          "label_key" : "pp.tab.links",
+          "label_en" : "Links",
+          "label_pl" : "Powiązania",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -612,6 +615,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -1481,6 +1487,9 @@
         "link_tabs" : [ {
           "key" : "deps",
           "label" : "Связи",
+          "label_key" : "pp.tab.links",
+          "label_en" : "Links",
+          "label_pl" : "Powiązania",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -1497,6 +1506,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -2683,6 +2695,9 @@
         "link_tabs" : [ {
           "key" : "deps",
           "label" : "Зависимости",
+          "label_key" : "pp.tab.deps",
+          "label_en" : "Dependencies",
+          "label_pl" : "Zależności",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -2699,6 +2714,9 @@
         }, {
           "key" : "justification",
           "label" : "ADR",
+          "label_key" : "pp.tab.justification",
+          "label_en" : "ADR",
+          "label_pl" : "ADR",
           "rels" : [ {
             "rel" : "JUSTIFIED_BY",
             "dir" : "out",
@@ -2721,6 +2739,9 @@
         }, {
           "key" : "realization",
           "label" : "Реализация",
+          "label_key" : "pp.tab.realization",
+          "label_en" : "Realization",
+          "label_pl" : "Realizacja",
           "rels" : [ {
             "rel" : "CLOSED_BY",
             "dir" : "out",
@@ -2737,6 +2758,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -3851,6 +3875,9 @@
         "link_tabs" : [ {
           "key" : "deps",
           "label" : "Зависимости",
+          "label_key" : "pp.tab.deps",
+          "label_en" : "Dependencies",
+          "label_pl" : "Zależności",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -3867,6 +3894,9 @@
         }, {
           "key" : "justification",
           "label" : "ADR",
+          "label_key" : "pp.tab.justification",
+          "label_en" : "ADR",
+          "label_pl" : "ADR",
           "rels" : [ {
             "rel" : "JUSTIFIED_BY",
             "dir" : "out",
@@ -3889,6 +3919,9 @@
         }, {
           "key" : "realization",
           "label" : "Реализация",
+          "label_key" : "pp.tab.realization",
+          "label_en" : "Realization",
+          "label_pl" : "Realizacja",
           "rels" : [ {
             "rel" : "CLOSED_BY",
             "dir" : "out",
@@ -3905,6 +3938,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -4730,6 +4766,9 @@
         "link_tabs" : [ {
           "key" : "adrLinks",
           "label" : "Связи ADR",
+          "label_key" : "pp.tab.adrLinks",
+          "label_en" : "ADR links",
+          "label_pl" : "Powiązania ADR",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -4758,6 +4797,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -5538,6 +5580,9 @@
         "link_tabs" : [ {
           "key" : "adrLinks",
           "label" : "Связи ADR",
+          "label_key" : "pp.tab.adrLinks",
+          "label_en" : "ADR links",
+          "label_pl" : "Powiązania ADR",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -5566,6 +5611,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -6340,6 +6388,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -6752,6 +6803,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -7296,6 +7350,9 @@
         "link_tabs" : [ {
           "key" : "children",
           "label" : "Вложенные документы",
+          "label_key" : "pp.tab.children",
+          "label_en" : "Nested documents",
+          "label_pl" : "Dokumenty zagnieżdżone",
           "rels" : [ {
             "rel" : "DOC_CHILD_OF",
             "dir" : "in",
@@ -7306,6 +7363,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -7780,6 +7840,9 @@
         "link_tabs" : [ {
           "key" : "children",
           "label" : "Вложенные документы",
+          "label_key" : "pp.tab.children",
+          "label_en" : "Nested documents",
+          "label_pl" : "Dokumenty zagnieżdżone",
           "rels" : [ {
             "rel" : "DOC_CHILD_OF",
             "dir" : "in",
@@ -7790,6 +7853,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -8259,6 +8325,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -8794,6 +8863,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -9404,6 +9476,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -9907,6 +9982,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -10401,6 +10479,9 @@
         "link_tabs" : [ {
           "key" : "deps",
           "label" : "Зависимости",
+          "label_key" : "pp.tab.deps",
+          "label_en" : "Dependencies",
+          "label_pl" : "Zależności",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -10834,6 +10915,9 @@
         "link_tabs" : [ {
           "key" : "deps",
           "label" : "Зависимости",
+          "label_key" : "pp.tab.deps",
+          "label_en" : "Dependencies",
+          "label_pl" : "Zależności",
           "rels" : [ {
             "rel" : "DEPENDS_ON",
             "dir" : "out",
@@ -11574,6 +11658,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -12069,6 +12156,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -12661,6 +12751,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -13274,6 +13367,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -13807,6 +13903,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -14090,6 +14189,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -14673,6 +14775,9 @@
         "link_tabs" : [ {
           "key" : "value",
           "label" : "Ценность",
+          "label_key" : "pp.tab.value",
+          "label_en" : "Value",
+          "label_pl" : "Wartość",
           "rels" : [ {
             "rel" : "HAS_ACTOR",
             "dir" : "out",
@@ -14719,6 +14824,9 @@
         }, {
           "key" : "trace",
           "label" : "Обоснование",
+          "label_key" : "pp.tab.trace",
+          "label_en" : "Rationale",
+          "label_pl" : "Uzasadnienie",
           "rels" : [ {
             "rel" : "TRACED_TO",
             "dir" : "out",
@@ -14729,6 +14837,9 @@
         }, {
           "key" : "ucLinks",
           "label" : "Связи сценариев",
+          "label_key" : "pp.tab.ucLinks",
+          "label_en" : "Use case links",
+          "label_pl" : "Powiązania scenariuszy",
           "rels" : [ {
             "rel" : "BUILDS_ON",
             "dir" : "out",
@@ -14769,6 +14880,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -15507,6 +15621,9 @@
         "link_tabs" : [ {
           "key" : "value",
           "label" : "Ценность",
+          "label_key" : "pp.tab.value",
+          "label_en" : "Value",
+          "label_pl" : "Wartość",
           "rels" : [ {
             "rel" : "HAS_ACTOR",
             "dir" : "out",
@@ -15553,6 +15670,9 @@
         }, {
           "key" : "trace",
           "label" : "Обоснование",
+          "label_key" : "pp.tab.trace",
+          "label_en" : "Rationale",
+          "label_pl" : "Uzasadnienie",
           "rels" : [ {
             "rel" : "TRACED_TO",
             "dir" : "out",
@@ -15563,6 +15683,9 @@
         }, {
           "key" : "ucLinks",
           "label" : "Связи сценариев",
+          "label_key" : "pp.tab.ucLinks",
+          "label_en" : "Use case links",
+          "label_pl" : "Powiązania scenariuszy",
           "rels" : [ {
             "rel" : "BUILDS_ON",
             "dir" : "out",
@@ -15603,6 +15726,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -17045,6 +17171,9 @@
         "link_tabs" : [ {
           "key" : "tasks",
           "label" : "Задачи",
+          "label_key" : "pp.tab.tasks",
+          "label_en" : "Tasks",
+          "label_pl" : "Zadania",
           "rels" : [ {
             "rel" : "ROLE_HELD_BY",
             "dir" : "in",
@@ -17055,6 +17184,9 @@
         }, {
           "key" : "agents",
           "label" : "Агенты",
+          "label_key" : "pp.tab.agents",
+          "label_en" : "Agents",
+          "label_pl" : "Agenci",
           "rels" : [ {
             "rel" : "OWNED_BY",
             "dir" : "in",
@@ -17256,6 +17388,9 @@
         "link_tabs" : [ {
           "key" : "tasks",
           "label" : "Задачи",
+          "label_key" : "pp.tab.tasks",
+          "label_en" : "Tasks",
+          "label_pl" : "Zadania",
           "rels" : [ {
             "rel" : "ROLE_HELD_BY",
             "dir" : "in",
@@ -17266,6 +17401,9 @@
         }, {
           "key" : "agents",
           "label" : "Агенты",
+          "label_key" : "pp.tab.agents",
+          "label_en" : "Agents",
+          "label_pl" : "Agenci",
           "rels" : [ {
             "rel" : "OWNED_BY",
             "dir" : "in",
@@ -17510,6 +17648,9 @@
         "link_tabs" : [ {
           "key" : "tasks",
           "label" : "Задачи",
+          "label_key" : "pp.tab.tasks",
+          "label_en" : "Tasks",
+          "label_pl" : "Zadania",
           "rels" : [ {
             "rel" : "ROLE_HELD_BY",
             "dir" : "in",
@@ -17520,6 +17661,9 @@
         }, {
           "key" : "machines",
           "label" : "Машины",
+          "label_key" : "pp.tab.machines",
+          "label_en" : "Machines",
+          "label_pl" : "Maszyny",
           "rels" : [ {
             "rel" : "USES_MACHINE",
             "dir" : "out",
@@ -17530,6 +17674,9 @@
         }, {
           "key" : "roles",
           "label" : "Роли продукта",
+          "label_key" : "pp.tab.productRoles",
+          "label_en" : "Product roles",
+          "label_pl" : "Role produktu",
           "rels" : [ {
             "rel" : "FILLS_ROLE",
             "dir" : "out",
@@ -17771,6 +17918,9 @@
         "link_tabs" : [ {
           "key" : "tasks",
           "label" : "Задачи",
+          "label_key" : "pp.tab.tasks",
+          "label_en" : "Tasks",
+          "label_pl" : "Zadania",
           "rels" : [ {
             "rel" : "ROLE_HELD_BY",
             "dir" : "in",
@@ -17781,6 +17931,9 @@
         }, {
           "key" : "machines",
           "label" : "Машины",
+          "label_key" : "pp.tab.machines",
+          "label_en" : "Machines",
+          "label_pl" : "Maszyny",
           "rels" : [ {
             "rel" : "USES_MACHINE",
             "dir" : "out",
@@ -17791,6 +17944,9 @@
         }, {
           "key" : "roles",
           "label" : "Роли продукта",
+          "label_key" : "pp.tab.productRoles",
+          "label_en" : "Product roles",
+          "label_pl" : "Role produktu",
           "rels" : [ {
             "rel" : "FILLS_ROLE",
             "dir" : "out",
@@ -17996,6 +18152,9 @@
         "link_tabs" : [ {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "FELT_BY",
             "dir" : "in",
@@ -18018,6 +18177,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -18246,6 +18408,9 @@
         "link_tabs" : [ {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "FELT_BY",
             "dir" : "in",
@@ -18268,6 +18433,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -18507,6 +18675,9 @@
         "link_tabs" : [ {
           "key" : "features",
           "label" : "Фичи и сценарии",
+          "label_key" : "pp.tab.features",
+          "label_en" : "Features and use cases",
+          "label_pl" : "Funkcje i scenariusze",
           "rels" : [ {
             "rel" : "ADDRESSES",
             "dir" : "in",
@@ -18523,6 +18694,9 @@
         }, {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "FELT_BY",
             "dir" : "out",
@@ -18539,6 +18713,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -18740,6 +18917,9 @@
         "link_tabs" : [ {
           "key" : "features",
           "label" : "Фичи и сценарии",
+          "label_key" : "pp.tab.features",
+          "label_en" : "Features and use cases",
+          "label_pl" : "Funkcje i scenariusze",
           "rels" : [ {
             "rel" : "ADDRESSES",
             "dir" : "in",
@@ -18756,6 +18936,9 @@
         }, {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "FELT_BY",
             "dir" : "out",
@@ -18772,6 +18955,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -19019,6 +19205,9 @@
         "link_tabs" : [ {
           "key" : "features",
           "label" : "Фичи и сценарии",
+          "label_key" : "pp.tab.features",
+          "label_en" : "Features and use cases",
+          "label_pl" : "Funkcje i scenariusze",
           "rels" : [ {
             "rel" : "PROMISES",
             "dir" : "in",
@@ -19035,6 +19224,9 @@
         }, {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "DESIRED_BY",
             "dir" : "out",
@@ -19051,6 +19243,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -19281,6 +19476,9 @@
         "link_tabs" : [ {
           "key" : "features",
           "label" : "Фичи и сценарии",
+          "label_key" : "pp.tab.features",
+          "label_en" : "Features and use cases",
+          "label_pl" : "Funkcje i scenariusze",
           "rels" : [ {
             "rel" : "PROMISES",
             "dir" : "in",
@@ -19297,6 +19495,9 @@
         }, {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "DESIRED_BY",
             "dir" : "out",
@@ -19313,6 +19514,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -19555,6 +19759,9 @@
         "link_tabs" : [ {
           "key" : "features",
           "label" : "Фичи и сценарии",
+          "label_key" : "pp.tab.features",
+          "label_en" : "Features and use cases",
+          "label_pl" : "Funkcje i scenariusze",
           "rels" : [ {
             "rel" : "HELPS_WITH",
             "dir" : "in",
@@ -19571,6 +19778,9 @@
         }, {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "PERFORMED_BY",
             "dir" : "out",
@@ -19593,6 +19803,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -19828,6 +20041,9 @@
         "link_tabs" : [ {
           "key" : "features",
           "label" : "Фичи и сценарии",
+          "label_key" : "pp.tab.features",
+          "label_en" : "Features and use cases",
+          "label_pl" : "Funkcje i scenariusze",
           "rels" : [ {
             "rel" : "HELPS_WITH",
             "dir" : "in",
@@ -19844,6 +20060,9 @@
         }, {
           "key" : "profile",
           "label" : "Профиль клиента",
+          "label_key" : "pp.tab.profile",
+          "label_en" : "Customer profile",
+          "label_pl" : "Profil klienta",
           "rels" : [ {
             "rel" : "PERFORMED_BY",
             "dir" : "out",
@@ -19866,6 +20085,9 @@
         }, {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -20129,6 +20351,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -20354,6 +20579,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -20835,6 +21063,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -21302,6 +21533,9 @@
         "link_tabs" : [ {
           "key" : "refs",
           "label" : "Ссылки",
+          "label_key" : "pp.tab.refs",
+          "label_en" : "References",
+          "label_pl" : "Odnośniki",
           "rels" : [ {
             "rel" : "REFERENCES",
             "dir" : "out",
@@ -21447,7 +21681,7 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+        "definition" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
         "description" : null,
         "layer" : "stable",
         "historic" : false,
@@ -21561,6 +21795,9 @@
         "link_tabs" : [ {
           "key" : "links",
           "label" : "Связи",
+          "label_key" : "pp.tab.links",
+          "label_en" : "Links",
+          "label_pl" : "Powiązania",
           "rels" : [ {
             "rel" : "HAS_REPOSITORY",
             "dir" : "in",
@@ -21725,7 +21962,7 @@
         "definition_pl" : null,
         "description_pl" : null,
         "short_label" : null,
-        "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+        "definition" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
         "description" : null,
         "layer" : "stable",
         "historic" : false,
@@ -21839,6 +22076,9 @@
         "link_tabs" : [ {
           "key" : "links",
           "label" : "Связи",
+          "label_key" : "pp.tab.links",
+          "label_en" : "Links",
+          "label_pl" : "Powiązania",
           "rels" : [ {
             "rel" : "HAS_REPOSITORY",
             "dir" : "in",
@@ -22030,6 +22270,9 @@
         "link_tabs" : [ {
           "key" : "links",
           "label" : "Связи",
+          "label_key" : "pp.tab.links",
+          "label_en" : "Links",
+          "label_pl" : "Powiązania",
           "rels" : [ {
             "rel" : "ORG_HAS_PROJECT",
             "dir" : "out",
@@ -22167,6 +22410,9 @@
         "link_tabs" : [ {
           "key" : "links",
           "label" : "Связи",
+          "label_key" : "pp.tab.links",
+          "label_en" : "Links",
+          "label_pl" : "Powiązania",
           "rels" : [ {
             "rel" : "ORG_HAS_PROJECT",
             "dir" : "out",
@@ -23264,6 +23510,9 @@
         "link_tabs" : [ {
           "key" : "people",
           "label" : "Люди и агенты",
+          "label_key" : "pp.tab.people",
+          "label_en" : "People and agents",
+          "label_pl" : "Ludzie i agenci",
           "rels" : [ {
             "rel" : "HAS_PROJECT_ROLE",
             "dir" : "in",
@@ -23844,6 +24093,9 @@
         "link_tabs" : [ {
           "key" : "people",
           "label" : "Люди и агенты",
+          "label_key" : "pp.tab.people",
+          "label_en" : "People and agents",
+          "label_pl" : "Ludzie i agenci",
           "rels" : [ {
             "rel" : "HAS_PROJECT_ROLE",
             "dir" : "in",
