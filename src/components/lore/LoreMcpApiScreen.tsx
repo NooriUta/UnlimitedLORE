@@ -265,7 +265,7 @@ const TOOLS: ToolDoc[] = [
   // ── QG-рутина: прогон → job-task → рекомендация → задача ──────────────────
   { name: 'qg_run_log', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/run',
     params: 'routine_name, run_date, status, metrics[]?, started_at?, finished_at?, flags?, run_id?',
-    desc: 'ClRoutineRun + ClRoutineMetric: записать результат завершённого прогона QG-рутины. Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики по ADR-QG-002: каждая несёт key/value/unit/target/status/source (source — команда-репродьюсер + file:line evidence, на неё опирается rec_new).' },
+    desc: 'ClRoutineRun + ClRoutineMetric: записать результат завершённого прогона QG-рутины. Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики по ADR-QG-002: каждая несёт key/value/unit/target/status/source (source — команда-репродьюсер + file:line evidence, на неё опирается rec_new) и необязательный basis — отпечаток знаменателя (что считали: размер выборки, фильтр, LIMIT, например «groups=357»). Экран гейта сравнивает значение с прошлым прогоном только при той же базе; сменилась база — «база пересчитана», а не падение (QG-07).' },
   { name: 'qg_job_new', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/job-task',
     params: 'job_id, qg_id, inv_id?, run_date?, severity?, status?, note_md?',
     desc: 'QGJobTask: upsert + ребро YIELDED от родительской QualityGate. Вызывать, когда конкретный инвариант провалился (FAIL). Если позже приходит PASS по тому же qg_id+inv_id — открытые job-task для этой пары автоматически закрываются как resolved.' },

@@ -35,7 +35,7 @@ class LoreSchemaAdditiveEmbeddedTest {
     private Database db;
 
     /** Типы, которые установщик заводит из модели 1.18 (подмножество, нужное доводке), с данными. */
-    private static final List<String> MODEL_TYPES = List.of("KnowTag", "KnowDictEntry", "KnowGitProject", "KnowUser", "KnowTask");
+    private static final List<String> MODEL_TYPES = List.of("KnowTag", "KnowDictEntry", "KnowGitProject", "KnowUser", "KnowTask", "ClRoutineMetric");
 
     @BeforeEach
     void open() throws Exception {
@@ -175,12 +175,34 @@ class LoreSchemaAdditiveEmbeddedTest {
         for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS)
             if (LoreSchemaAdditive.FROM_V_STEPS.containsKey(s.version())) for (String q : s.sql()) sql(q, Map.of());
         LoreSchemaAdditive.Report r = LoreSchemaAdditive.apply(exec);
-        // DDL шагов V совпадает с доводкой: новыми остаются только конец ребра посева и отметка
+        // DDL шагов V совпадает с доводкой: новыми остаются только конец ребра посева, отметка и то, что пришло
+        // после заморозки шагов V (доводка v2: ClRoutineMetric.basis, QG-07)
         assertEquals(1, r.types(), "после шагов V нового — только конец ребра OWNED_BY: " + r);
-        assertEquals(0, r.properties(), "свойства шагов V и доводки совпадают: " + r);
+        assertEquals(1, r.properties(), "свойства шагов V и доводки совпадают; новое после V100 — только ClRoutineMetric.basis: " + r);
         assertEquals(0, r.indexes(), "индексы шагов V и доводки совпадают: " + r);
         assertEquals(LoreSchemaAdditive.VERSION, ((Number) marker().get("version")).intValue());
         assertFalse(LoreSchemaAdditive.apply(exec).changed(), "повтор — 0 изменений");
+    }
+
+    /**
+     * SPRINT_QG_REBUILD/QG-07, доводка v2: «база» метрики прогона (отпечаток знаменателя). На базе из модели после
+     * доводки поле есть, существующие замеры не тронуты, повтор — 0 изменений.
+     */
+    @Test
+    void базаИзМодели_доводкаV2_заводитBasisМетрикиПрогона_повторНоль() {
+        modelDatabase();
+        sql("INSERT INTO ClRoutineMetric SET metric_id = 'r1_k', value = 78.1, mig_src_rid = '#6:1'", Map.of());
+        assertFalse(db.getSchema().getType("ClRoutineMetric").existsProperty("basis"), "до доводки поля нет");
+
+        LoreSchemaAdditive.Report first = LoreSchemaAdditive.apply(exec);
+        assertTrue(first.changes().contains("qg_metric_basis"), "запись доводки qg_metric_basis применена: " + first);
+        assertTrue(db.getSchema().getType("ClRoutineMetric").existsProperty("basis"), "ClRoutineMetric.basis после доводки v2");
+        assertEquals(2, ((Number) marker().get("version")).intValue(), "отметка схемы кода — v2");
+        assertEquals(1, count("ClRoutineMetric"), "замеры не тронуты");
+
+        LoreSchemaAdditive.Report second = LoreSchemaAdditive.apply(exec);
+        assertFalse(second.changed(), "повтор — 0 изменений: " + second);
+        assertTrue(second.changes().isEmpty(), String.valueOf(second));
     }
 
     @Test
