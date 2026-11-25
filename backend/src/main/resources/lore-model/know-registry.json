@@ -3,9 +3,9 @@
   "about" : "KnowRegistry — записи KnowKind, сгенерированные из модели, DDL и реестра срезов (SPRINT_LORE_KNOW_REGISTRY/KREG-02, ADR-LORE-057, SPEC-MODEL-EXPORT-064 §5). Не править руками: KNOW_REGISTRY_REGEN=1 и KnowRegistryGeneratorTest перепишут файл.",
   "model_version" : 1,
   "counts" : {
-    "ddl" : 50,
+    "ddl" : 51,
     "entity" : 28,
-    "slice" : 222
+    "slice" : 225
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -1751,15 +1751,120 @@
     "vertex" : "KnowSavedView",
     "content_hash" : "sha256:333caf116bf084cfb3ed386894c6f7220c3f0755052addfce06874cf0195195b"
   }, {
+    "kind" : "ddl:KnowSkill",
+    "id_field" : null,
+    "title" : "KnowSkill",
+    "fields" : [ {
+      "name" : "body_md",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "body_md"
+    }, {
+      "name" : "created_at",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "created_at"
+    }, {
+      "name" : "name",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "name"
+    }, {
+      "name" : "skill_id",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "skill_id"
+    }, {
+      "name" : "source",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "source"
+    }, {
+      "name" : "status",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "status"
+    }, {
+      "name" : "title",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "title"
+    }, {
+      "name" : "updated_at",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "updated_at"
+    }, {
+      "name" : "version",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "version"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "outside-passport",
+      "params" : [ ]
+    } ],
+    "roles" : [ ],
+    "replaces" : [ ],
+    "source" : "ddl",
+    "vertex" : "KnowSkill",
+    "content_hash" : "sha256:b6ff3202d9847679808b17355cdf905e863b5df06e366cf6c08f86ec81eeda40"
+  }, {
     "kind" : "ddl:KnowTag",
     "id_field" : null,
     "title" : "KnowTag",
     "fields" : [ {
+      "name" : "field_schema",
+      "type" : "map",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "field_schema"
+    }, {
+      "name" : "name",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "name"
+    }, {
+      "name" : "owner",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "owner"
+    }, {
+      "name" : "source",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "source"
+    }, {
+      "name" : "synonyms",
+      "type" : "list",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "synonyms"
+    }, {
       "name" : "tag_id",
       "type" : "string",
       "required" : false,
       "layer" : "ddl",
       "property" : "tag_id"
+    }, {
+      "name" : "title",
+      "type" : "string",
+      "required" : false,
+      "layer" : "ddl",
+      "property" : "title"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -1770,7 +1875,7 @@
     "replaces" : [ ],
     "source" : "ddl",
     "vertex" : "KnowTag",
-    "content_hash" : "sha256:38307a803dded67cda1442f99c54ed49095fd052da7aea22908977ca4b20c0b6"
+    "content_hash" : "sha256:46434a50cec1599228c5b6e87a3ce7dcafb0e6eca8afb5ea4f19d80a426275ac"
   }, {
     "kind" : "ddl:KnowUserDraft",
     "id_field" : null,
@@ -2627,98 +2732,130 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "created_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status_backfilled",
       "type" : "bool",
       "required" : false,
+      "desc" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_backfilled"
+      "property" : "status_backfilled",
+      "service" : true
     }, {
       "name" : "status_known_from",
       "type" : "date",
       "required" : false,
+      "desc" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_known_from"
+      "property" : "status_known_from",
+      "service" : true
     }, {
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ATTACHED_TO",
@@ -2847,7 +2984,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowADR",
     "hist" : "KnowADRHist",
-    "content_hash" : "sha256:769a6733816886cad469ea8671415296bc12c887cf7ecb333c75ac263ad947b9"
+    "content_hash" : "sha256:48af03aab11dca1f4ce3712d7ed2fdb35f954de66b3197aeb41655310f621ecb"
   }, {
     "kind" : "entity:agent",
     "id_field" : "actor_id",
@@ -3093,8 +3230,10 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BELONGS_TO",
@@ -3216,7 +3355,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "LoreComponent",
-    "content_hash" : "sha256:0b1518d68d8b6a56f41ec4b37ea5ed8d550d044386204ba34ee6e8f05ff1d772"
+    "content_hash" : "sha256:4ac5daf38563590f571b04d2ad9fd4d509d4916fb72f666d9e47d34174d95e79"
   }, {
     "kind" : "entity:decision",
     "id_field" : "decision_id",
@@ -3311,44 +3450,58 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "component_id",
       "type" : "string",
@@ -3359,56 +3512,74 @@
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "created_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status_backfilled",
       "type" : "bool",
       "required" : false,
+      "desc" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_backfilled"
+      "property" : "status_backfilled",
+      "service" : true
     }, {
       "name" : "status_known_from",
       "type" : "date",
       "required" : false,
+      "desc" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_known_from"
+      "property" : "status_known_from",
+      "service" : true
     }, {
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ANSWERS",
@@ -3495,7 +3666,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowDecision",
     "hist" : "KnowDecisionHist",
-    "content_hash" : "sha256:034ce8df0e6465d7f0c67355a99dbcb4f493533fffaf91ade5f7074834b0e9d1"
+    "content_hash" : "sha256:86ef07c31711f179be8535ee795086f3b1254012f873b855864b0e26fb6c8e5c"
   }, {
     "kind" : "entity:doc",
     "id_field" : "doc_id",
@@ -3846,8 +4017,10 @@
       "name" : "created_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "feature_id",
       "type" : "string",
@@ -3860,8 +4033,10 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ADDRESSES",
@@ -4013,7 +4188,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowUseCase",
-    "content_hash" : "sha256:b1fc5c807c36d0e48ccb526f2a0e7b5fe1b3f74810d0b53538867c4d28db456e"
+    "content_hash" : "sha256:4efcd95b0e1160de4aa2c6c21b932572de278ba0173f834fa6dfe55874ff40a0"
   }, {
     "kind" : "entity:gain",
     "id_field" : "gain_id",
@@ -4057,8 +4232,10 @@
       "name" : "created_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "gain_id",
       "type" : "string",
@@ -4114,7 +4291,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowGain",
-    "content_hash" : "sha256:8c9079c4b8a5985f8f129648a624c31eaf3c5864d67ef151688e6df2f82a289f"
+    "content_hash" : "sha256:7e2c91596a2dfcd2dc527b8b641b97377bdbc677dd05e3abaa6de61e491e801c"
   }, {
     "kind" : "entity:job",
     "id_field" : "job_id",
@@ -4158,8 +4335,10 @@
       "name" : "created_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "job_id",
       "type" : "string",
@@ -4221,7 +4400,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowJob",
-    "content_hash" : "sha256:f7151d10f6a55b7e583038042aeb461fc87884c075751047e83a1719c32c8c06"
+    "content_hash" : "sha256:d2c77c7c63b010dd1ca552c30d8ec4edc916cc1160d50690e1a3eb4fc3655025"
   }, {
     "kind" : "entity:milestone",
     "id_field" : "milestone_id",
@@ -4310,62 +4489,82 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status",
       "type" : "string",
@@ -4382,20 +4581,26 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "DEPENDS_ON",
@@ -4494,7 +4699,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowMilestone",
     "hist" : "KnowMilestoneHist",
-    "content_hash" : "sha256:b00aea320f60a97cda592cb23e0deee095345ab977d70562e17b4fc1ce6764a7"
+    "content_hash" : "sha256:7a3d29b1076504a1cfc53a1bffca3f8f4ded662962017355ae32c08d981bf37e"
   }, {
     "kind" : "entity:organization",
     "id_field" : "org_id",
@@ -4585,8 +4790,10 @@
       "name" : "created_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "pain_id",
       "type" : "string",
@@ -4642,7 +4849,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowPain",
-    "content_hash" : "sha256:822e75cd0787e61af4d8ca428ed40d9312a09c5330353b00e244b7544843f2f7"
+    "content_hash" : "sha256:f6d59217aeb3e0480cec3259bcbabc12c40d7cf7406741561b7c79c6e62d40dd"
   }, {
     "kind" : "entity:phase",
     "id_field" : null,
@@ -4776,8 +4983,10 @@
       "name" : "pr_id",
       "type" : "string",
       "required" : false,
+      "desc" : "Внутренний ключ PR в мосте git-хоста; людям показываются номер и адрес PR. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "pr_id"
+      "property" : "pr_id",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BELONGS_TO_PROJECT",
@@ -4809,7 +5018,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowPR",
-    "content_hash" : "sha256:a8283b0cd736430eb0c6c33735c53f320bedecbbe62e6dfee311435adbd294ca"
+    "content_hash" : "sha256:8803210fdd5c1ab6a2467f46711c8210626200cabd0dbec44d92049854168ff3"
   }, {
     "kind" : "entity:product",
     "id_field" : "code",
@@ -4915,44 +5124,58 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "dict_type",
       "type" : "string",
@@ -4965,20 +5188,26 @@
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ADDRESSES",
@@ -5071,7 +5300,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowDictEntry",
     "hist" : "KnowDictEntryHist",
-    "content_hash" : "sha256:d120947ab34203b8951298ec8eda8c5d4d1abb73705a4d7a32b845cef051eaa6"
+    "content_hash" : "sha256:15f6c958015ececfcc6b77d5981749ca4d99ce0ed07419bf5e0fae8f61d132e2"
   }, {
     "kind" : "entity:project",
     "id_field" : "slug",
@@ -5640,8 +5869,10 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ANSWERABLE_BY",
@@ -5706,7 +5937,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowQuestion",
-    "content_hash" : "sha256:7a4637149a451f757c6e231367e1aa358fe33081b36d34b2cc6ef765bdc6f2d1"
+    "content_hash" : "sha256:7b2f34b96d029d9f104c59cd14f82590f8acc3ac9d40d1324ea9b5b7834ed6df"
   }, {
     "kind" : "entity:release",
     "id_field" : "release_uid",
@@ -5816,50 +6047,66 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "release_uid",
       "type" : "string",
@@ -5870,32 +6117,42 @@
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "updated_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BELONGS_TO_PROJECT",
@@ -5958,7 +6215,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowRelease",
     "hist" : "KnowReleaseHist",
-    "content_hash" : "sha256:8d1350d15019be7c613f14dfb45cf8d26372b9663998391afc8a46cb209c82f2"
+    "content_hash" : "sha256:2810c6302316167d6e9006cdb431cf632086e97c2ac8e52b4229d327965dce28"
   }, {
     "kind" : "entity:repository",
     "id_field" : "url",
@@ -6104,56 +6361,74 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "created_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "runbook_id",
       "type" : "string",
@@ -6164,20 +6439,26 @@
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BELONGS_TO_PROJECT",
@@ -6222,7 +6503,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowRunbook",
     "hist" : "KnowRunbookHist",
-    "content_hash" : "sha256:4b7419749209f8fb236013bdf7e6382f870aed44204b1111986cfce0e673ada1"
+    "content_hash" : "sha256:83345369bfc94a253a78ab3dc7a3ea62a342e5a79d101f541497fcabda29507b"
   }, {
     "kind" : "entity:spec",
     "id_field" : "spec_id",
@@ -6295,56 +6576,74 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "spec_id",
       "type" : "string",
@@ -6355,38 +6654,50 @@
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status_backfilled",
       "type" : "bool",
       "required" : false,
+      "desc" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_backfilled"
+      "property" : "status_backfilled",
+      "service" : true
     }, {
       "name" : "status_known_from",
       "type" : "date",
       "required" : false,
+      "desc" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_known_from"
+      "property" : "status_known_from",
+      "service" : true
     }, {
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ATTACHED_TO",
@@ -6443,7 +6754,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowSpec",
     "hist" : "KnowSpecHist",
-    "content_hash" : "sha256:6c00f2667e8d897cf089111fc9964677e39332e544cc5f33d7e4ccb8a08ff6d6"
+    "content_hash" : "sha256:11d2d2287acb600397d16c55e86cfd452191d0d5dd295589e2edd372f7c318e8"
   }, {
     "kind" : "entity:sprint",
     "id_field" : "sprint_id",
@@ -6612,56 +6923,74 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "created_at",
       "type" : "date",
       "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
       "layer" : "ddl",
-      "property" : "created_at"
+      "property" : "created_at",
+      "service" : true
     }, {
       "name" : "note_md",
       "type" : "string",
@@ -6684,8 +7013,10 @@
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "sprint_id",
       "type" : "string",
@@ -6704,14 +7035,18 @@
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status_known_from",
       "type" : "date",
       "required" : false,
+      "desc" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_known_from"
+      "property" : "status_known_from",
+      "service" : true
     }, {
       "name" : "status_note",
       "type" : "string",
@@ -6722,20 +7057,26 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     }, {
       "name" : "version_kind",
       "type" : "string",
@@ -6906,7 +7247,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowSprint",
     "hist" : "KnowSprintHist",
-    "content_hash" : "sha256:b1d7c1e082f0043a9f39c1310232ce1d10d457e24c88f16ccf0c04028cea503f"
+    "content_hash" : "sha256:fc91cc23d66f7322c5cefbad811a23d7f80f2032a283860d22ddd5ab5bcda8fd"
   }, {
     "kind" : "entity:task",
     "id_field" : "task_uid",
@@ -7108,56 +7449,74 @@
       "name" : "bookkeeping",
       "type" : "bool",
       "required" : false,
+      "desc" : "Признак задачи-учёта уже сделанной работы: такая задача не входит в аналитику оценок и пропускной способности (task_set bookkeeping). Служебное аналитики.",
       "layer" : "ddl",
-      "property" : "bookkeeping"
+      "property" : "bookkeeping",
+      "service" : true
     }, {
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "evidence_ref",
       "type" : "string",
@@ -7174,8 +7533,10 @@
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "src",
       "type" : "string",
@@ -7194,14 +7555,18 @@
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status_known_from",
       "type" : "date",
       "required" : false,
+      "desc" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_known_from"
+      "property" : "status_known_from",
+      "service" : true
     }, {
       "name" : "status_note",
       "type" : "string",
@@ -7218,14 +7583,18 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_from_source",
       "type" : "string",
@@ -7236,8 +7605,10 @@
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     }, {
       "name" : "version_kind",
       "type" : "string",
@@ -7420,7 +7791,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowTask",
     "hist" : "KnowTaskHist",
-    "content_hash" : "sha256:bb8a0c4b6864a76fe8e2deca08bf5754149fe4849905142e5b9b67403a1c3e86"
+    "content_hash" : "sha256:0d118401b35870a60f34c044296ec6e6623b1458668198d25fd5892f01c188ea"
   }, {
     "kind" : "entity:tech",
     "id_field" : "spec_id",
@@ -7489,74 +7860,98 @@
       "name" : "change_reason",
       "type" : "string",
       "required" : false,
+      "desc" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "change_reason"
+      "property" : "change_reason",
+      "service" : true
     }, {
       "name" : "changed_by",
       "type" : "string",
       "required" : false,
+      "desc" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by"
+      "property" : "changed_by",
+      "service" : true
     }, {
       "name" : "changed_by_harness",
       "type" : "string",
       "required" : false,
+      "desc" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness"
+      "property" : "changed_by_harness",
+      "service" : true
     }, {
       "name" : "changed_by_harness_note",
       "type" : "string",
       "required" : false,
+      "desc" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_harness_note"
+      "property" : "changed_by_harness_note",
+      "service" : true
     }, {
       "name" : "changed_by_kind",
       "type" : "string",
       "required" : false,
+      "desc" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_kind"
+      "property" : "changed_by_kind",
+      "service" : true
     }, {
       "name" : "changed_by_machine",
       "type" : "string",
       "required" : false,
+      "desc" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_machine"
+      "property" : "changed_by_machine",
+      "service" : true
     }, {
       "name" : "changed_by_session",
       "type" : "string",
       "required" : false,
+      "desc" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "changed_by_session"
+      "property" : "changed_by_session",
+      "service" : true
     }, {
       "name" : "content_hash",
       "type" : "string",
       "required" : false,
+      "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "content_hash"
+      "property" : "content_hash",
+      "service" : true
     }, {
       "name" : "source_commit",
       "type" : "string",
       "required" : false,
+      "desc" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "source_commit"
+      "property" : "source_commit",
+      "service" : true
     }, {
       "name" : "state_uid",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "state_uid"
+      "property" : "state_uid",
+      "service" : true
     }, {
       "name" : "status_backfilled",
       "type" : "bool",
       "required" : false,
+      "desc" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_backfilled"
+      "property" : "status_backfilled",
+      "service" : true
     }, {
       "name" : "status_known_from",
       "type" : "date",
       "required" : false,
+      "desc" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "status_known_from"
+      "property" : "status_known_from",
+      "service" : true
     }, {
       "name" : "summary",
       "type" : "string",
@@ -7567,20 +7962,26 @@
       "name" : "updated_at",
       "type" : "string",
       "required" : false,
+      "desc" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
       "layer" : "ddl",
-      "property" : "updated_at"
+      "property" : "updated_at",
+      "service" : true
     }, {
       "name" : "valid_from",
       "type" : "date",
       "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_from"
+      "property" : "valid_from",
+      "service" : true
     }, {
       "name" : "valid_to",
       "type" : "date",
       "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
-      "property" : "valid_to"
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BELONGS_TO",
@@ -7619,7 +8020,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowSpec",
     "hist" : "KnowSpecHist",
-    "content_hash" : "sha256:fd12025a686ae05dbd044cb2616d8d310f566dd564b5bf241d384b6fd42b9938"
+    "content_hash" : "sha256:41074c3c3eb526aa2eb3135ffd2045d798a9189df0d4cfe9d0b02c7abc742c9e"
   }, {
     "kind" : "entity:track",
     "id_field" : "track_id",
@@ -7710,8 +8111,10 @@
       "name" : "kc_sub",
       "type" : "string",
       "required" : false,
+      "desc" : "Идентификатор учётной записи Keycloak (sub): по нему вход человека связывается с его записью. Служебное входа.",
       "layer" : "ddl",
-      "property" : "kc_sub"
+      "property" : "kc_sub",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "HAS_PROJECT_ROLE",
@@ -7749,7 +8152,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowUser",
-    "content_hash" : "sha256:4d0d88aadaee66c2305159767b36051840f4bd774290dfed1c723588638a9309"
+    "content_hash" : "sha256:a910c86c3d2b0f9a8094c2d0bbc8485d354e63bc6f6b9a3c349e1ba15c04f947"
   }, {
     "kind" : "slice:actor_by_id",
     "id_field" : null,
@@ -19215,6 +19618,234 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:f9b561d6ee9d31e8b96aee8269e247f029e744310a1fad67b0612bae9f12a3e5"
+  }, {
+    "kind" : "slice:skills",
+    "id_field" : null,
+    "title" : "skills",
+    "params" : [ {
+      "name" : "project",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "role",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "status",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "skill_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "status",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "version",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "roles",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "projects",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "extends_ids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "updated_at",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:48de8cb6dc02132ad19cfbc41ed5ce7c423f07c3971acb903a60b78db463ffc9"
+  }, {
+    "kind" : "slice:skills_dangling",
+    "id_field" : null,
+    "title" : "skills_dangling",
+    "params" : [ {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "skill_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "status",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "projects",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "roles",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:862577a84387d2765cb4bcef15e476f540feb480e4183755640faf20e33e7f60"
+  }, {
+    "kind" : "slice:skills_full",
+    "id_field" : null,
+    "title" : "skills_full",
+    "params" : [ {
+      "name" : "project",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "role",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "status",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "skill_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "status",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "version",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "body_md",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "roles",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "projects",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "extends_ids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "updated_at",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:cab7ead8706dcdc40d81a852c9f19198806fbd885d95081968fee15c2db5efa3"
   }, {
     "kind" : "slice:spec_by_id",
     "id_field" : null,
