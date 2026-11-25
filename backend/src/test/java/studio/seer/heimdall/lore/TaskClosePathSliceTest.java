@@ -54,6 +54,29 @@ class TaskClosePathSliceTest {
         assertTrue(s.contains("bookkeeping"), "запись задним числом видна потребителю: " + s);
     }
 
+    /**
+     * Замер 25.11: 94% закрытий «с работой», но work_versions считает и 🚀/🧪 — версии ПРИЁМКИ.
+     * Задача, прошедшая planned → ready_for_deploy → uat → done, даты начала не даёт, а цель
+     * задачи — «у новых закрытых есть дата начала в ≥80%». Начало работы — первая версия
+     * в 🔄/🟡 (in_progress/partial), отдельным счётчиком и моментом.
+     */
+    @Test
+    void startIsTheFirstInProgressOrPartialVersionNotAcceptance() {
+        String s = sql();
+        int at = s.indexOf("AS start_versions");
+        assertTrue(at > 0, "счётчик версий начала работы: " + s);
+        String expr = s.substring(s.lastIndexOf("out('HAS_STATE')[", at), at);
+        for (String canon : new String[]{"in_progress", "partial"})
+            for (String p : LoreStatusVocabulary.prefixesOf(canon))
+                assertTrue(expr.contains("LIKE '" + p + "%'"), canon + " (" + p + ") — начало работы: " + expr);
+        for (String canon : new String[]{"uat", "ready_for_deploy", "review", "planned", "done"})
+            assertFalse(expr.contains("LIKE '" + LoreStatusVocabulary.prefixesOf(canon).get(0) + "%'"),
+                canon + " — приёмка/план, не начало работы: " + expr);
+        String inWork = "out('HAS_STATE')[" + LoreStatusVocabulary.anySql("status_raw", "in_progress", "partial") + "]";
+        assertTrue(s.contains(inWork + ".valid_from[0] AS started_at"),
+            "started_at — момент ПЕРВОЙ версии в работе (порядок рёбер — порядок вставки): " + s);
+    }
+
     @Test
     void sliceIsScopedByProject() {
         String s = LoreSlices.compose("task_close_path", Map.of("project", "NooriUta/UnlimitedLORE")).sql();

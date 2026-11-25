@@ -39,6 +39,32 @@ class TaskShapeReportTest {
         assertFalse(row.toString().contains("секретный"), "текст заметки наружу не отдаётся");
     }
 
+    /**
+     * MT-TASK-SHAPE-2 п.4 (согласовано с сессией Völva 06.11): сборщик в app-db пишет строку
+     * таблицей. Имена колонок — контракт: переименование молча ломает таблицу BI, поэтому
+     * набор закреплён тестом. Плоская {@code recommendations_csv} (в таблицу массив не ляжет)
+     * и даты ISO-8601 UTC {@code created_at} / {@code state_since} (одни «дни» не дают окна).
+     */
+    @Test
+    void rowColumnsAreABiContract() {
+        var row = LoreTaskShapeResource.toRow(raw("SPRINT_X/T1", "✅ DONE", 0.5, "x",
+            "2026-10-03 10:00:00", List.of("2026-10-01 09:30:00", "2026-10-03 10:00:00")));
+        assertEquals(List.of("task_uid", "sprint_id", "project", "status", "task_type", "work_class",
+                "effort_days", "note_chars", "steps", "has_why", "has_verify", "has_test", "complexity",
+                "points", "estimate_fits", "recommendations", "recommendations_csv", "days_in_status",
+                "created_at", "state_since", "cycle_days", "created_done"),
+            List.copyOf(row.keySet()), "колонки строки task-shape — контракт с таблицей Völva");
+        assertEquals("2026-10-01T09:30:00Z", row.get("created_at"));
+        assertEquals("2026-10-03T10:00:00Z", row.get("state_since"));
+        assertEquals(String.join(",", ((List<?>) row.get("recommendations")).stream().map(String::valueOf).toList()),
+            row.get("recommendations_csv"));
+        var zoned = LoreTaskShapeResource.toRow(raw("SPRINT_X/T2", "📋 PLANNED", null, "1. a\n2. b",
+            "2026-11-20T14:13:32.340Z", List.of("2026-11-20T14:13:32.340Z")));
+        assertEquals("2026-11-20T14:13:32.340Z", zoned.get("state_since"), "миллисекунды и Z сохраняются");
+        assertFalse(zoned.containsKey("cycle_days"), "у незакрытой цикла нет");
+        assertTrue(zoned.containsKey("recommendations_csv"));
+    }
+
     /** Заведена уже сделанной — помечена и не попадает в медиану цикла. */
     @Test
     void retroLoggedTasksAreExcludedFromCycleMedian() {
