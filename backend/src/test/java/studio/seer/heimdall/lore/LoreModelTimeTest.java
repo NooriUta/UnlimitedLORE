@@ -46,7 +46,10 @@ class LoreModelTimeTest {
             // S4-PRODUCTS-NODE: продукт — статья словаря, её цепочка SCD2 — KnowDictEntryHist (history_dict).
             Map.entry("product", "KnowDictEntryHist"),
             // MD-04: ранбук — тело в открытой версии KnowRunbookHist (runbook_new пишет SCD2-цепочку).
-            Map.entry("runbook", "KnowRunbookHist"));
+            Map.entry("runbook", "KnowRunbookHist"),
+            // AP-PASSPORT-EDIT (доводка v5): боль, выгода, работа, роль продукта, фича — своя цепочка SCD2.
+            Map.entry("pain", "KnowPainHist"), Map.entry("gain", "KnowGainHist"), Map.entry("job", "KnowJobHist"),
+            Map.entry("actor", "KnowProjectActorHist"), Map.entry("feature", "KnowUseCaseHist"));
         for (String t : LoreRecordRegistry.TYPES) {
             String hist = LoreModelTypes.GRAPH.get(t).hist();
             if (want.containsKey(t)) assertEquals(want.get(t), hist, t + ": цепочка SCD2 есть в графе");
@@ -84,7 +87,8 @@ class LoreModelTimeTest {
         // фичи только день. Поручение владелицы «свежесть = последняя дата изменения»:
         // пути записи этих типов ставят updated_at (ISO-момент) — он первый источник
         // правки, точность datetime; прежние дни остаются запасными (бэкфилла нет).
-        for (String t : List.of("question", "feature", "component")) {
+        // AP-PASSPORT-EDIT: у фичи с доводки v5 есть SCD2 — первый источник правки у неё версия (проверка выше), updated_at второй.
+        for (String t : List.of("question", "component")) {
             List<Map<String, Object>> changed = (List<Map<String, Object>>) ((Map<String, Object>) type(t).get("time")).get("changed");
             assertFalse(changed.isEmpty(), t + ": у правки есть источник");
             assertEquals("updated_at", changed.get(0).get("source"), t + ": первый источник правки — отметка updated_at");

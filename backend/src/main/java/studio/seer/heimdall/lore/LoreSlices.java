@@ -357,7 +357,13 @@ public final class LoreSlices {
         Map.entry("KnowSprintHist",    new HistParent("sprint",     "sprint_id")),
         Map.entry("KnowDictEntryHist", new HistParent("dict_entry", "code")),
         // KREG-01 (V94): SCD2-история рантайм-реестра видов — родитель KnowKind, id = kind.
-        Map.entry("KnowKindHist",      new HistParent("kind",       "kind")));
+        Map.entry("KnowKindHist",      new HistParent("kind",       "kind")),
+        // AP-PASSPORT-EDIT (доводка v5): история боли, выгоды, работы, роли продукта и фичи (ProductHistory.SPECS).
+        Map.entry("KnowPainHist",      new HistParent("pain",       "pain_id")),
+        Map.entry("KnowGainHist",      new HistParent("gain",       "gain_id")),
+        Map.entry("KnowJobHist",       new HistParent("job",        "job_id")),
+        Map.entry("KnowProjectActorHist", new HistParent("actor",   "actor_id")),
+        Map.entry("KnowUseCaseHist",   new HistParent("feature",    "uc_id")));
 
     /** Все цепочки SCD2 корпуса в устойчивом порядке — иначе SQL среза плывёт между прогонами. */
     static List<String> histChains() {

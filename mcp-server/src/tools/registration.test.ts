@@ -205,14 +205,15 @@ describe('registerLoreWrite', () => {
 });
 
 // FJ-04 (ADR-LORE-024): forgejo_* — условная регистрация. Обе моды под тестом:
-// мост заявлен env'ом → ровно 5 инструментов; не заявлен → ноль (а не 5 вечных 503).
+// мост заявлен env'ом → ровно 7 инструментов (FJ-03: + forgejo и forgejo_describe миниаппа); не заявлен → ноль.
 describe('registerForgejo', () => {
   const FORGEJO_TOOLS = [
+    'forgejo', 'forgejo_describe',
     'forgejo_pr_new', 'forgejo_pr_status', 'forgejo_pr_merge',
     'forgejo_ci_status', 'forgejo_branch_protection',
   ];
 
-  it('registers all 5 tools when LORE_FORGEJO=true', () => {
+  it('registers all 7 tools when LORE_FORGEJO=true', () => {
     const { server, names } = fakeServer();
     registerForgejo(server, { LORE_FORGEJO: 'true' } as NodeJS.ProcessEnv);
     expect(names).toEqual(FORGEJO_TOOLS);

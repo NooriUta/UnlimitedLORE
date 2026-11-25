@@ -173,12 +173,14 @@ public class LoreProductResource extends LoreResourceBase {
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
             sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
-            // S4-MODEL-TYPES (свежесть): истории у фичи нет — момент заведения/правки на вершине.
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
             sql.append(", updated_at=:upd");
             p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response featureConflict = versionHistory("feature", req.feature_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (featureConflict != null) return featureConflict;
             // NM-03 (ADR-LORE-041): фича писала component_id полем, а слайсы
             // продуктового слоя читают out('BELONGS_TO') — связь, записанная
             // здесь, не доезжала ни до одного экрана.
@@ -191,6 +193,24 @@ public class LoreProductResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
+        }
+    }
+
+    /**
+     * AP-PASSPORT-EDIT (владелец 25.11.2026 «историчность доделываем»): после записи вершины — версия SCD2 по снимку
+     * её полей ({@link ProductHistory#version}): снимок тот же — ничего; другой — закрыть прежнюю, открыть новую;
+     * версии нет — первая. Автор — из проверенного токена. Соседняя запись закрыла открытую версию — 409 (ничего не
+     * записано в историю, повтор безопасен), иначе null.
+     */
+    @SuppressWarnings("unchecked")
+    private Response versionHistory(String type, String id) {
+        ChangeAuthor author = changeAuthor();
+        try {
+            ProductHistory.version((lang, command, params) -> (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand(lang, command, params)).await().indefinitely().result(), type, id, author);
+            return null;
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response();
         }
     }
 
@@ -282,12 +302,15 @@ public class LoreProductResource extends LoreResourceBase {
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
             sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
-            // S4-MODEL-TYPES (свежесть): истории у сценария нет — момент заведения/правки на вершине.
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
             sql.append(", updated_at=:upd");
             p.put("upd", java.time.Instant.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            // AP-PASSPORT-EDIT: сценарий — та же вершина KnowUseCase, что фича, и та же цепочка истории
+            Response ucConflict = versionHistory("feature", req.uc_id());
+            if (ucConflict != null) return ucConflict;
 
             // parent_uc_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
             // (класс багов «поле есть — ребра нет», relinkParentEdge/SpecComponentEdge).
@@ -655,6 +678,8 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response actorConflict = versionHistory("actor", req.actor_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (actorConflict != null) return actorConflict;
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
@@ -1341,6 +1366,8 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE job_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response jobConflict = versionHistory("job", req.job_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (jobConflict != null) return jobConflict;
             return noStore(Response.ok(Map.of("ok", true, "job_id", req.job_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE JOB] %s: %s", req.job_id(), e.getMessage());
@@ -1378,6 +1405,8 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE pain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response painConflict = versionHistory("pain", req.pain_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (painConflict != null) return painConflict;
             return noStore(Response.ok(Map.of("ok", true, "pain_id", req.pain_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE PAIN] %s: %s", req.pain_id(), e.getMessage());
@@ -1418,6 +1447,8 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE gain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response gainConflict = versionHistory("gain", req.gain_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (gainConflict != null) return gainConflict;
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("gain_id", req.gain_id());
