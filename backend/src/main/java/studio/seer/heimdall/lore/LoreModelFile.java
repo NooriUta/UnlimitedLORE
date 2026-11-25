@@ -209,6 +209,7 @@ final class LoreModelFile {
                 bad.add("edge_fields: нет поля " + k);
         }
         bad.addAll(LoreModelNav.problems(c.nav(), c.audience()));
+        bad.addAll(LoreFieldAudience.problems(c.typeDefs())); // AP-PEOPLE-PAGE: уровень видимости поля
         bad.addAll(LoreModelCreate.problems(c.create(), c.typeDefs()));
         bad.addAll(LoreModelWorkflow.problems(c.workflow()));
         bad.addAll(LoreEdgeHistory.problems(c.edgeHistory(), c.typeDefs()));

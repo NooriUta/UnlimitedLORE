@@ -324,7 +324,9 @@ jobs:
       - name: SSH до lore-host — для снимка прода (только если базы препрода нет)
         if: steps.gates.outputs.db_missing == 'true'
         env:
-          LORE_HOST: lore-host.seidrstudio.pro
+          # Адрес прод-хоста — переменная Actions репозитория LORE_HOST_ADDR (не в файлах: ни в дистрибутив, ни в зеркала).
+          # Нет переменной — прежнее имя. 25.11.2026: CoreDNS на 131 не поднялся после перезагрузки, имя не резолвилось.
+          LORE_HOST: ${{ vars.LORE_HOST_ADDR || 'lore-host.seidrstudio.pro' }}
           LORE_HOST_USER: nooriuta
           LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
           LORE_HOST_SSH_KEY: ${{ secrets.LORE_HOST_SSH_KEY }}
@@ -404,8 +406,8 @@ jobs:
           LORE_MIGRATE: "true"
           LORE_MIGRATE_ONLY: "true"
           LORE_MART_AUTH: basic
-        # MIG-01: на базе из модели (LoreModelSchema, 1.18) бэкенд пропускает шаги V и выходит с 0 —
-        # скрипт принимает это как законный исход; на старой базе всё как раньше.
+        # MIG-01 + 25.11.2026: на базе из модели (LoreModelSchema) шаги V не катятся, схема ДОВОДИТСЯ до кода (LoreSchemaAdditive) —
+        # скрипт подтверждает накатку строкой «доводка схемы кода»; на старой базе всё как раньше.
         run: bash .github/scripts/migrate-schema.sh
 
       # PL-04: у препрода свой MinIO (порты 19000/19001, том lore-preprod_*).

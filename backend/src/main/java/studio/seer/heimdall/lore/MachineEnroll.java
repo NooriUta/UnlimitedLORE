@@ -98,9 +98,14 @@ final class MachineEnroll {
     }
 
     /** Агент, у которого {@code machine_id} — это имя (кроме самой машины). */
-    record Neighbour(String actorId, String clientId, List<String> ownerSubs, String ownerName) {
+    record Neighbour(String actorId, String clientId, List<String> ownerSubs, String ownerName, List<String> machines) {
         Neighbour {
             ownerSubs = ownerSubs == null ? List.of() : List.copyOf(ownerSubs);
+            machines = machines == null ? List.of() : List.copyOf(machines);
+        }
+
+        Neighbour(String actorId, String clientId, List<String> ownerSubs, String ownerName) {
+            this(actorId, clientId, ownerSubs, ownerName, List.of());
         }
     }
 
@@ -136,7 +141,21 @@ final class MachineEnroll {
         List<String> out = new ArrayList<>();
         for (Neighbour n : neighbours == null ? List.<Neighbour>of() : neighbours) {
             if (n.clientId() != null && n.clientId().startsWith(MachineAccess.PREFIX)) continue;
-            if (n.ownerSubs().contains(owner)) out.add(n.actorId());
+            // Находка 3: ребро уже есть — агент не «будет привязан» (alreadyLinked).
+            if (n.ownerSubs().contains(owner) && !n.machines().contains(machineId)) out.add(n.actorId());
+        }
+        return out;
+    }
+
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT, находка 3: агенты владельца, у которых ребро USES_MACHINE к этой
+     * машине уже есть. План говорит о них «уже привязан», а не «будет привязан» (запись всё равно идёт с IF NOT EXISTS).
+     */
+    static List<String> alreadyLinked(List<Neighbour> neighbours, String machineId, String owner) {
+        List<String> out = new ArrayList<>();
+        for (Neighbour n : neighbours == null ? List.<Neighbour>of() : neighbours) {
+            if (n.clientId() != null && n.clientId().startsWith(MachineAccess.PREFIX)) continue;
+            if (n.ownerSubs().contains(owner) && n.machines().contains(machineId)) out.add(n.actorId());
         }
         return out;
     }

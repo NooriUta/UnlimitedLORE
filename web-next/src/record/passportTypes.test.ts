@@ -29,7 +29,7 @@ describe('типы с паспортом', () => {
   it('перечень совпадает с типами фасада', () => {
     expect([...PASSPORT_TYPES]).toEqual([
       'sprint', 'task', 'adr', 'spec', 'doc', 'decision', 'question', 'milestone', 'track', 'release',
-      'component', 'tech', 'feature', 'product', 'user', 'agent',
+      'component', 'tech', 'feature', 'product', 'user', 'agent', 'machine',
       'actor', 'pain', 'gain', 'job', 'runbook', 'quality_gate', 'repository', 'organization', 'pr', 'project',
     ]);
   });

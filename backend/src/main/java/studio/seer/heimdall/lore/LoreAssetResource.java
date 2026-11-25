@@ -97,8 +97,6 @@ public class LoreAssetResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(id).matches())
             return badParams("entity_id contains illegal characters");
 
-        // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота.
-        if (!s3.configured()) return BragiS3Service.notConfigured();
         if (!settingBool("md_images_enabled", true))
             return noStore(Response.status(Response.Status.CONFLICT)
                 .entity(new LoreError("MD_IMAGES_DISABLED",
@@ -123,6 +121,10 @@ public class LoreAssetResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.NOT_FOUND)
                     .entity(new LoreError("ENTITY_NOT_FOUND", target[0] + " '" + id + "' не существует")));
 
+            // MIG-04: установка «без файлов» (S3 не задан) — 503 словами, а не 500/пустота. После проверки
+            // запроса (mime, размер, существование записи): ошибка клиента — 400/404 и без S3, ДО записи (25.11,
+            // стык #1804 × LoreAssetEndpointsTest).
+            if (!s3.configured()) return BragiS3Service.notConfigured();
             byte[] bytes = java.nio.file.Files.readAllBytes(form.file.uploadedFile());
             String hash = HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(bytes)).substring(0, 16);

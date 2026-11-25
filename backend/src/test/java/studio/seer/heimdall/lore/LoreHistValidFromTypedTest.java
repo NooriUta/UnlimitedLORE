@@ -340,7 +340,8 @@ class LoreHistValidFromTypedTest {
     private static String sources() {
         Path dir = Path.of("src/main/java/studio/seer/heimdall/lore");
         StringBuilder sb = new StringBuilder();
-        for (String f : List.of("LoreSchemaInitializer.java", "LoreSchemaMigrations.java")) {
+        // LoreSchemaAdditive.java — доводка схемы кода (25.11.2026): с ней *Hist после 1.18 объявляются там (KnowKindHist)
+        for (String f : List.of("LoreSchemaInitializer.java", "LoreSchemaMigrations.java", "LoreSchemaAdditive.java")) {
             try {
                 sb.append(Files.readString(dir.resolve(f), StandardCharsets.UTF_8)).append('\n');
             } catch (IOException e) {

@@ -113,6 +113,8 @@ class LoreRecordRowLinksTest {
             Map.entry("organization", Map.of()),
             // MDL-13: у трека вкладки — срезами (track_sprints, track_history), из строки ничего.
             Map.entry("track", Map.of()),
+            // AP-MACHINE-PASSPORT: агенты машины — по ребру USES_MACHINE из модели (READ_BY_EDGE), из строки ничего.
+            Map.entry("machine", Map.of()),
             // MD-05: задачи и релизы PR — из строки pr_by_id (CLOSED_BY, SHIPPED_IN).
             Map.entry("pr", Map.of("task_uids", x, "release_uids", x)),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.

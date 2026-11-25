@@ -289,21 +289,42 @@ public class LoreSchemaMigrationRunner {
 
     /**
      * MIG-01 · что делать на базе, собранной из модели (1.18). Шаг CD «Migrate schema» (lore.migrate=true +
-     * lore.migrate.only=true) на ней ничего не пишет: шаги V пропускаются, процесс выходит с 0 строкой
-     * {@link #MODEL_SKIP_LINE} — иначе CD краснел бы на каждой выкатке на новую базу. Сервер с lore.migrate=true
-     * (без only) по-прежнему отказывает: он остался бы работать на базе, куда хотел накатывать старую схему.
+     * lore.migrate.only=true): шаги V не катятся (они писали бы старую схему поверх новой), а схема ДОВОДИТСЯ до кода
+     * ({@link LoreSchemaAdditive}, 25.11.2026) — процесс выходит с 0 строкой {@link #modelAdditiveLine}. Прежде шаг
+     * писал «накатывать нечего», и всё, что после 1.18 делалось шагами V (V94–V100), до прода молча не доезжало.
+     * Сервер с lore.migrate=true (без only) по-прежнему отказывает: он остался бы работать на базе, куда хотел
+     * накатывать старую схему.
      */
-    enum ModelStart { REFUSE, SKIP_V_STEPS, READ_ADAPTER }
+    enum ModelStart { REFUSE, ADDITIVE, READ_ADAPTER }
 
     static ModelStart onModelSchema(boolean migrate, boolean migrateOnly) {
-        if (migrate && migrateOnly) return ModelStart.SKIP_V_STEPS;
+        if (migrate && migrateOnly) return ModelStart.ADDITIVE;
         if (migrate) return ModelStart.REFUSE;
         return ModelStart.READ_ADAPTER;
     }
 
-    /** Строка шага накатки CD на базе из модели; .github/scripts/migrate-schema.sh ищет «шаги V пропущены». */
-    static final String MODEL_SKIP_LINE = "[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), "
-        + "шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)";
+    /**
+     * Доводка схемы кода на старте: APPLY — есть права на схему (basic: шаг накатки, установщик, стенды); CHECK — рантайм
+     * под API-токеном без updateSchema (прод, D-DB-ACCESS-SPLIT): DDL упал бы, поэтому только сверка номера и громкое
+     * предупреждение — доводит шаг накатки CD.
+     */
+    enum Additive { APPLY, CHECK }
+
+    static Additive additiveOnStart(boolean migrate, boolean migrateOnly, String authMode) {
+        return "token".equals(authMode) ? Additive.CHECK : Additive.APPLY;
+    }
+
+    /** Метка строки доводки: .github/scripts/migrate-schema.sh, lore-host-deploy.sh и migrate-live-check.sh ищут её. */
+    static final String ADDITIVE_MARK = "доводка схемы кода";
+
+    /** Строка шага накатки CD на базе из модели: что доводка сделала (нули — база уже на схеме кода). */
+    static String modelAdditiveLine(LoreSchemaAdditive.Report r) {
+        return "[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V не применяются; "
+            + ADDITIVE_MARK + " v" + LoreSchemaAdditive.VERSION + " (" + LoreSchemaAdditive.hash() + "): "
+            + "типов +" + r.types() + ", свойств +" + r.properties() + ", индексов +" + r.indexes() + ", посеяно " + r.seeded()
+            + (r.changes().isEmpty() ? " — база уже на схеме кода" : " — записи " + r.changes())
+            + "; процесс завершается (шаг накатки CD)";
+    }
 
     /** Отказ старта: lore.migrate=true на базе, собранной из модели. */
     static String modelMigrateRefusal() {
@@ -381,8 +402,8 @@ public class LoreSchemaMigrationRunner {
         return null;
     }
 
-    /** База из модели и шаг накатки CD: шаги V пропущены (см. {@link #onModelSchema}). */
-    private boolean modelSkipped;
+    /** База из модели и шаг накатки CD: итог доводки (см. {@link #onModelSchema}); null — не этот путь. */
+    private LoreSchemaAdditive.Report modelAdditive;
 
     @PostConstruct
     void run() {
@@ -393,8 +414,8 @@ public class LoreSchemaMigrationRunner {
             if (problem != null) throw new IllegalStateException("[LORE MIGRATE] Отказ старта: " + problem);
         }
         runSchema();
-        if (enabled && migrateOnly && modelSkipped) {
-            LOG.info(MODEL_SKIP_LINE);
+        if (enabled && migrateOnly && modelAdditive != null) {
+            LOG.info(modelAdditiveLine(modelAdditive));
             io.quarkus.runtime.Quarkus.asyncExit(0);
             return;
         }
@@ -416,8 +437,19 @@ public class LoreSchemaMigrationRunner {
             if (start != ModelStart.REFUSE) backfillModelVersion();
             switch (start) {
                 case REFUSE -> throw new IllegalStateException(modelMigrateRefusal());
-                case SKIP_V_STEPS -> { modelSkipped = true; return; }
+                case ADDITIVE -> { modelAdditive = applyAdditive(); return; }
                 case READ_ADAPTER -> { /* ниже */ }
+            }
+            // Старт рантайма: с правами на схему — доводит сам (установщик, стенды); под токеном — только сверяет.
+            if (additiveOnStart(migrate, migrateOnly, mart.authMode()) == Additive.APPLY) {
+                try {
+                    applyAdditive();
+                } catch (RuntimeException e) {
+                    LOG.errorf("[LORE MIGRATE] %s НЕ выполнена на старте: %s — типы после 1.18 отвечают «нет данных» до шага накатки CD",
+                        ADDITIVE_MARK, e.getMessage());
+                }
+            } else {
+                checkAdditive();
             }
             ModelSchemaAdapter.enable(true);
             LOG.info("[LORE MIGRATE] схема собрана из модели — шаги V не применяются, переходник чтения включён (status_raw → status)");
@@ -429,7 +461,7 @@ public class LoreSchemaMigrationRunner {
             // нельзя. Сверяем версию и падаем при рассинхроне — единственная
             // альтернатива этому «работать на старой схеме и не сказать».
             LOG.info("[LORE MIGRATE] накатка выключена (lore.migrate=false)");
-            if (verifySchema) verifySchemaOrFail();
+            if (verifySchema) { verifySchemaOrFail(); checkAdditive(); }
             else LOG.warn("[LORE MIGRATE] сверка версии схемы ТОЖЕ выключена "
                 + "(lore.schema.verify=false) — приложение стартует на любой схеме");
             return;
@@ -496,6 +528,7 @@ public class LoreSchemaMigrationRunner {
         if (pending.isEmpty()) {
             LOG.info("[LORE MIGRATE] схема актуальна, шагов нет");
             retireLegacyFullTextIndexes();
+            applyAdditive();
             return;
         }
 
@@ -535,6 +568,45 @@ public class LoreSchemaMigrationRunner {
         }
         LOG.infof("[LORE MIGRATE] готово: схема на версии %s (ordinal v%d)", LoreSchemaMigrations.codeHuman(), codeVersion);
         retireLegacyFullTextIndexes();
+        applyAdditive();
+    }
+
+    /**
+     * Доводка схемы кода ({@link LoreSchemaAdditive}): единый путь изменений схемы после 1.18 — на базе из модели и на
+     * базе шагов V (после шагов). Только CREATE … IF NOT EXISTS и посевы «только недостающее»; повтор — нули.
+     * Упавший стейтмент — исключение с контекстом: на шаге накатки CD он валит шаг (код ≠ 0).
+     */
+    private LoreSchemaAdditive.Report applyAdditive() {
+        LoreSchemaAdditive.Report r = withRetry(ADDITIVE_MARK, () -> LoreSchemaAdditive.apply(this::additiveSql));
+        LOG.infof("[LORE MIGRATE] %s v%d (%s): типов +%d, свойств +%d, индексов +%d, посеяно %d%s",
+            ADDITIVE_MARK, LoreSchemaAdditive.VERSION, LoreSchemaAdditive.hash(), r.types(), r.properties(), r.indexes(), r.seeded(),
+            r.changes().isEmpty() ? " — база уже на схеме кода" : " — записи " + r.changes());
+        return r;
+    }
+
+    /** Рантайм без прав на схему: сверить номер доводки в базе с кодом и сказать громко, если база отстаёт. */
+    private void checkAdditive() {
+        try {
+            Integer at = LoreSchemaAdditive.appliedVersion(this::additiveSql);
+            if (at == null || at < LoreSchemaAdditive.VERSION)
+                LOG.warnf("[LORE MIGRATE] %s: база %s, код v%d — доводку выполняет шаг накатки CD (lore.migrate.only, root); "
+                    + "до неё типы после 1.18 отвечают «нет данных»", ADDITIVE_MARK, at == null ? "не доводилась" : "v" + at, LoreSchemaAdditive.VERSION);
+            else LOG.infof("[LORE MIGRATE] %s: база v%d = код v%d", ADDITIVE_MARK, at, LoreSchemaAdditive.VERSION);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE MIGRATE] %s: номер в базе не прочитан (%s) — не смогли проверить", ADDITIVE_MARK, e.getMessage());
+        }
+    }
+
+    /** SQL доводки поверх REST ArcadeDB; тело ответа ArcadeDB — в тексте ошибки (там настоящая причина 500). */
+    private List<Map<String, Object>> additiveSql(String sql, Map<String, Object> params) {
+        try {
+            return sqlRows(sql, params);
+        } catch (jakarta.ws.rs.WebApplicationException e) {
+            String detail;
+            try { detail = e.getResponse().readEntity(String.class); }
+            catch (Exception ignored) { detail = e.getMessage(); }
+            throw new IllegalStateException("SQL «" + sql + "» → " + detail, e);
+        }
     }
 
     /**
@@ -643,46 +715,24 @@ public class LoreSchemaMigrationRunner {
         if (version == 90) seedCoreStatuses();
         if (version == 93) seedQgStatuses();
         if (version == 97) seedSkills();
+        if (version == 100) seedAreas();
     }
 
     /**
-     * V97 (SKILL-01 + SKILL-03): словарь skill_status и посевные скиллы — только недостающее.
-     * Ребро ставится, лишь когда его конец есть в базе: на свежей базе без проекта или роли
-     * скилл остаётся висяком, и это видит QG-инвариант «висяк = 0» (KREG-06), а не молчание.
+     * V97 (SKILL-01 + SKILL-03) на базе шагов V: тот же посев, что у доводки ({@link LoreSchemaAdditive#seedSkills}) —
+     * один источник правды; на базе из модели его делает доводка. Только недостающее.
      */
     int seedSkills() {
-        Map<String, java.util.Set<String>> existing = new java.util.LinkedHashMap<>();
-        for (String dict : SkillSeed.DICT_SEEDS.keySet()) existing.put(dict, codesOf(dict));
-        List<StatusDictCoreSeed.Insert> dictPlan = StatusDictCoreSeed.plan(SkillSeed.DICT_SEEDS, existing);
-        for (StatusDictCoreSeed.Insert i : dictPlan) sqlRows(StatusDictCoreSeed.INSERT_SQL, i.params());
-        java.util.Set<String> have = new java.util.HashSet<>();
-        for (Map<String, Object> r : sqlRows(SkillSeed.EXISTING_SQL, Map.of()))
-            if (r.get("skill_id") != null) have.add(String.valueOf(r.get("skill_id")));
-        List<SkillSeed.Skill> plan = SkillSeed.plan(have);
-        String now = Instant.now().toString();
-        boolean owner = !sqlRows("SELECT @rid FROM KnowUser WHERE login = :login LIMIT 1",
-            Map.of("login", SkillSeed.OWNER_LOGIN)).isEmpty();
-        int missingEnds = 0;
-        for (SkillSeed.Skill s : plan) {
-            Map<String, Object> p = new java.util.LinkedHashMap<>();
-            p.put("skill_id", s.skillId()); p.put("name", s.name()); p.put("title", s.title());
-            p.put("version", s.version()); p.put("status", s.status()); p.put("source", s.source());
-            p.put("body_md", s.bodyMd()); p.put("now", now);
-            sqlRows(SkillSeed.INSERT_SQL, p);
-            for (String slug : s.projects()) {
-                if (sqlRows("SELECT @rid FROM KnowGitProject WHERE slug = :slug LIMIT 1", Map.of("slug", slug)).isEmpty()) { missingEnds++; continue; }
-                sqlRows(SkillSeed.PROJECT_EDGE_SQL, Map.of("skill_id", s.skillId(), "slug", slug));
-            }
-            for (String code : s.roles()) {
-                if (sqlRows("SELECT @rid FROM KnowDictEntry WHERE dict_type = 'agent_profile' AND code = :code LIMIT 1",
-                    Map.of("code", code)).isEmpty()) { missingEnds++; continue; }
-                sqlRows(SkillSeed.ROLE_EDGE_SQL, Map.of("skill_id", s.skillId(), "code", code));
-            }
-            if (owner) sqlRows(SkillSeed.OWNER_EDGE_SQL, Map.of("skill_id", s.skillId(), "login", SkillSeed.OWNER_LOGIN));
-        }
-        LOG.infof("[V97] skill_status: вставлено %d строк; скиллов посеяно %d (было %d); концов рёбер не нашлось: %d; владелец %s",
-            dictPlan.size(), plan.size(), have.size(), missingEnds, owner ? SkillSeed.OWNER_LOGIN : "не найден — OWNED_BY не ставится");
-        return plan.size();
+        int n = LoreSchemaAdditive.seedSkills(this::additiveSql);
+        LOG.infof("[V97] посев скиллов (LoreSchemaAdditive.seedSkills): вставлено %d записей (словарь skill_status + скиллы)", n);
+        return n;
+    }
+
+    /** V100 на базе шагов V: тот же посев областей, что у доводки ({@link LoreSchemaAdditive#seedAreas}). */
+    int seedAreas() {
+        int n = LoreSchemaAdditive.seedAreas(this::additiveSql);
+        LOG.infof("[V100] словарь area (LoreSchemaAdditive.seedAreas): вставлено %d строк", n);
+        return n;
     }
 
     /**

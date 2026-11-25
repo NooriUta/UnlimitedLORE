@@ -19,6 +19,7 @@ import java.util.TreeSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,8 +54,9 @@ class LoreFindEmbeddedTest {
                 "TARGETS_MILESTONE", "REALIZES", "RAISED_IN", "GATES"))
             db.command("sql", "CREATE EDGE TYPE " + e);
         db.transaction(() -> {
-            cmd("INSERT INTO KnowGitProject SET slug = 'o/p1', name = 'P1'");
-            cmd("INSERT INTO KnowGitProject SET slug = 'o/p2', name = 'P2'");
+            // GC-05 (21.11): ключ проекта — короткий код; прежнее «владелец/репо» — в aliases.
+            cmd("INSERT INTO KnowGitProject SET slug = 'o/p1', name = 'P1', short_code = 'P1'");
+            cmd("INSERT INTO KnowGitProject SET slug = 'o/p2', name = 'P2', short_code = 'P2', aliases = ['old/p2']");
             cmd("INSERT INTO LoreComponent SET component_id = 'COMP1', full_name = 'Компонент 1'");
             cmd("INSERT INTO LoreComponent SET component_id = 'COMP2', full_name = 'Компонент 2'");
             cmd("INSERT INTO KnowRepository SET url = 'https://git.x/o/c1', full_path = 'o/c1'");
@@ -242,6 +244,69 @@ class LoreFindEmbeddedTest {
         // Основной репозиторий проекта (HAS_REPOSITORY): задачи проекта.
         Map<String, Object> proj = find(req("type", "task", "links_to", req("id", "repository:https://git.x/o/p2")));
         assertEquals(List.of("SP_C/C-1", "SP_C/C-2"), ids(proj));
+    }
+
+    // ── GC-05, 21.11: один параметр проекта и поиск с мультифильтром ─────────
+
+    /** {@code project} у find — тот же фильтр, что links_to project (и что open_tasks?project=), по ключу проекта. */
+    @Test
+    void projectParamEqualsLinksToProject_byShortCodeAndAlias() {
+        Map<String, Object> viaLink = find(req("type", "task", "where", List.of(cond("status_category", "!=", CLOSED)),
+            "links_to", req("id", "project:o/p1")));
+        Map<String, Object> byCode = find(req("type", "task", "where", List.of(cond("status_category", "!=", CLOSED)),
+            "project", "p1"));
+        assertEquals(ids(viaLink), ids(byCode));
+        assertEquals(slice("open_tasks", Map.of("project", "o/p1"), "task_uid"), new TreeSet<>(ids(byCode)),
+            "паритет со срезом open_tasks?project=");
+        // Прежнее «владелец/репо» из aliases и список проектов (= любой из них).
+        assertEquals(List.of("SP_C/C-1", "SP_C/C-2"), ids(find(req("type", "task", "project", "old/p2"))));
+        assertEquals(7, ids(find(req("type", "task", "project", List.of("P1", "P2")))).size());
+        // links_to по короткому коду и where по короткому коду — тот же ключ.
+        assertEquals(ids(viaLink), ids(find(req("type", "task", "where", List.of(cond("status_category", "!=", CLOSED)),
+            "links_to", req("id", "project:P1")))));
+        assertEquals(ids(viaLink), ids(find(req("type", "task", "where", List.of(cond("status_category", "!=", CLOSED),
+            cond("project", "=", List.of("P1")))))));
+        assertNull(find(req("type", "task", "project", "P1")).get("_warning"));
+    }
+
+    /** Прежнее имя scope_projects принимается, но ответ говорит, что оно прежнее. */
+    @Test
+    void legacyScopeProjectsAcceptedWithWarning() {
+        Map<String, Object> res = find(req("type", "sprint", "scope_projects", List.of("o/p1")));
+        assertEquals(List.of("SP_A", "SP_B"), ids(res));
+        assertNotNull(res.get("_warning"));
+        assertTrue(String.valueOf(res.get("_warning")).contains("project"));
+        // Оба имени — пересечение.
+        assertTrue(ids(find(req("type", "sprint", "project", "P2", "scope_projects", "o/p1"))).isEmpty());
+    }
+
+    @Test
+    void projectParamOutsideScopeIs403_unknownIs404() {
+        LoreGraphBuilder.GraphException out = assertThrows(LoreGraphBuilder.GraphException.class,
+            () -> find(req("type", "task", "project", "P2"), Set.of("o/p1")));
+        assertEquals(403, out.status());
+        LoreGraphBuilder.GraphException unknown = assertThrows(LoreGraphBuilder.GraphException.class,
+            () -> find(req("type", "task", "project", "NOPE")));
+        assertEquals(404, unknown.status());
+    }
+
+    /** Приёмка §12.4 «поиск с мультифильтром»: текст + тип + статус + проект + компонент + дата — одним вызовом. */
+    @Test
+    void searchWithMultiFilterInOneCall() {
+        Map<String, Object> res = find(req("type", "task", "search", "ГРАФ",
+            "project", "P1",
+            "where", List.of(cond("status_category", "=", List.of("in_progress")),
+                cond("component", "=", List.of("COMP2")),
+                cond("changed_at", ">=", "2026-11-10"))));
+        assertEquals(List.of("SP_A/A-4"), ids(res));
+        // Несколько слов — все обязаны встретиться (в коде или названии), порядок не важен.
+        assertEquals(List.of("SP_A/A-1"), ids(find(req("type", "task", "search", "окрестность граф"))));
+        // По коду записи тоже ищется.
+        assertEquals(List.of("SP_C/C-2"), ids(find(req("type", "task", "search", "c-2"))));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> s = (Map<String, Object>) meta(res).get("search");
+        assertEquals("substring", s.get("mode"));
+        assertThrows(LoreGraphBuilder.GraphException.class, () -> find(req("type", "task", "search", "  ")));
     }
 
     // ── скоуп: пустое ≠ «нет данных» ─────────────────────────────────────────

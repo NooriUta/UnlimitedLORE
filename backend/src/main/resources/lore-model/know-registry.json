@@ -3,10 +3,10 @@
   "about" : "KnowRegistry — записи KnowKind, сгенерированные из модели, DDL и реестра срезов (SPRINT_LORE_KNOW_REGISTRY/KREG-02, ADR-LORE-057, SPEC-MODEL-EXPORT-064 §5). Не править руками: KNOW_REGISTRY_REGEN=1 и KnowRegistryGeneratorTest перепишут файл.",
   "model_version" : 1,
   "counts" : {
-    "ddl" : 51,
-    "entity" : 28,
+    "ddl" : 50,
+    "entity" : 29,
     "skill" : 1,
-    "slice" : 225
+    "slice" : 229
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -1484,39 +1484,6 @@
     "source" : "ddl",
     "vertex" : "KnowKind",
     "content_hash" : "sha256:5c7fe0c7fc4a7e4980fd18cc99627b6d54a781b077c5f7f5ac97a7d2e5125b3c"
-  }, {
-    "kind" : "ddl:KnowMachine",
-    "id_field" : null,
-    "title" : "KnowMachine",
-    "fields" : [ {
-      "name" : "first_seen_at",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "first_seen_at"
-    }, {
-      "name" : "last_seen_at",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "last_seen_at"
-    }, {
-      "name" : "machine_id",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "machine_id"
-    } ],
-    "links" : [ ],
-    "guards" : [ {
-      "name" : "outside-passport",
-      "params" : [ ]
-    } ],
-    "roles" : [ ],
-    "replaces" : [ ],
-    "source" : "ddl",
-    "vertex" : "KnowMachine",
-    "content_hash" : "sha256:1936c4bb513ee142d6878ed818936ccaf435533bc6cf8342d1d4d7cfcb34af45"
   }, {
     "kind" : "ddl:KnowModelConfig",
     "id_field" : null,
@@ -4402,6 +4369,81 @@
     "source" : "model+ddl",
     "vertex" : "KnowJob",
     "content_hash" : "sha256:d2c77c7c63b010dd1ca552c30d8ec4edc916cc1160d50690e1a3eb4fc3655025"
+  }, {
+    "kind" : "entity:machine",
+    "id_field" : "machine_id",
+    "title" : "Машина",
+    "fields" : [ {
+      "name" : "title",
+      "type" : "string",
+      "required" : true,
+      "desc" : "Имя машины — machine_id вершины KnowMachine: имя компьютера в нижнем регистре или LORE_MACHINE_ID агента.",
+      "layer" : "ddl",
+      "property" : "machine_id"
+    }, {
+      "name" : "code",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Ключ машины — machine_id; по нему открывается паспорт и связываются агенты.",
+      "layer" : "ddl",
+      "property" : "machine_id"
+    }, {
+      "name" : "owner",
+      "type" : "ref",
+      "required" : false,
+      "desc" : "Владелец машины — ребро OWNED_BY у её шлюза minilore-link-<имя> (ADR-MINILORE-007 В4). Нет шлюза — нет и владельца.",
+      "layer" : "model",
+      "property" : "owner",
+      "ref_kind" : "entity:user"
+    }, {
+      "name" : "gateway",
+      "type" : "ref",
+      "required" : false,
+      "desc" : "Учётка шлюза miniLORE — актор с client_id minilore-link-<имя>. Пусто — шлюза нет: машина появилась сама по записи агента.",
+      "layer" : "model",
+      "property" : "gateway",
+      "ref_kind" : "entity:agent"
+    }, {
+      "name" : "harness",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Оболочка шлюза машины (harness актора-шлюза) из справочника harness; у агентов машины — своя.",
+      "layer" : "model",
+      "property" : "harness"
+    }, {
+      "name" : "last_seen_at",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Когда агент с этой машины последний раз писал в LORE — KnowMachine.last_seen_at, ставит сервер после записи агента. Последнее действие в журнале (agent_actions) — отдельная цифра.",
+      "layer" : "ddl",
+      "property" : "last_seen_at"
+    }, {
+      "name" : "first_seen_at",
+      "type" : "date",
+      "required" : false,
+      "desc" : "KnowMachine.first_seen_at — первая запись агента с машины или заведение через machine_new.",
+      "layer" : "ddl",
+      "property" : "first_seen_at"
+    } ],
+    "links" : [ {
+      "rel" : "USES_MACHINE",
+      "dir" : "in",
+      "target_kind" : "entity:agent",
+      "keys" : [ "agents" ],
+      "edge_fields" : [ ]
+    } ],
+    "guards" : [ {
+      "name" : "required-fields",
+      "params" : [ "title" ]
+    }, {
+      "name" : "read-only-surface",
+      "params" : [ ]
+    } ],
+    "roles" : [ ],
+    "replaces" : [ ],
+    "source" : "model+ddl",
+    "vertex" : "KnowMachine",
+    "content_hash" : "sha256:e6fbf5da7ab44be75d02a740076383af00750fe7a45e3fe844a1d4c74c9ada4a"
   }, {
     "kind" : "entity:milestone",
     "id_field" : "milestone_id",
@@ -9329,6 +9371,11 @@
       "required" : false,
       "role" : "filter"
     }, {
+      "name" : "machine",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
       "name" : "limit",
       "type" : "number",
       "required" : false,
@@ -9385,7 +9432,69 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:42de90ddf64768440a880a911a4fcc7b428d89a5d776e92807f416beecb697da"
+    "content_hash" : "sha256:b512c43a3bb55e9affe1f1930d16f31989ec54a70afa06acd4ffcfe4b8cea729"
+  }, {
+    "kind" : "slice:agent_task_status_versions",
+    "id_field" : null,
+    "title" : "agent_task_status_versions",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "task_uid",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "sprint_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "status_raw",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "valid_from",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "valid_to",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "version_kind",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:d47a6c2ba9d351661aeea991d846f6dff9136b03fe85ef0f78206a1061ef4922"
   }, {
     "kind" : "slice:agent_tasks",
     "id_field" : null,
@@ -9432,6 +9541,10 @@
       "required" : false,
       "layer" : "slice"
     }, {
+      "name" : "project",
+      "required" : false,
+      "layer" : "slice"
+    }, {
       "name" : "executor_agent",
       "required" : false,
       "layer" : "slice"
@@ -9455,7 +9568,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:88d3039fe5f5cb724160fc3bdfd32082ace90333a5da2776846a2a9c397c02af"
+    "content_hash" : "sha256:91071e51bd65289edf75a48eec87a4c4d7c339d46c38995c5f4a24ed1016da0e"
   }, {
     "kind" : "slice:agents",
     "id_field" : null,
@@ -13237,6 +13350,154 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:4cc65d27eb933e5c2b5e343b57e1cb6b1fa3b3628ccf88d4a9ca942a772425b3"
+  }, {
+    "kind" : "slice:machine_by_id",
+    "id_field" : null,
+    "title" : "machine_by_id",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "machine_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "first_seen_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "last_seen_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "gateway",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "gateway_name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "harness",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner_name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "agent_ids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "agent_clients",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:0da78325c81333306cb22713a7f46639826b913c36ab4f7c5ecd9905977bb586"
+  }, {
+    "kind" : "slice:machines_graph",
+    "id_field" : null,
+    "title" : "machines_graph",
+    "params" : [ {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "machine_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "first_seen_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "last_seen_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "gateway",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "gateway_name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "harness",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner_name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "agent_ids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "agent_clients",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:fbacb04194db7b5ba3f83b18029f6108cd46eaeb0a0b09706b305d7a610db88d"
   }, {
     "kind" : "slice:mcp_connections",
     "id_field" : null,
@@ -23300,6 +23561,68 @@
     "source" : "slice-registry",
     "content_hash" : "sha256:6353a845818678f512f5aa0ad7425cdf6b61657a3f241b9e0d9efe4d186761ac"
   }, {
+    "kind" : "slice:user_task_status_versions",
+    "id_field" : null,
+    "title" : "user_task_status_versions",
+    "params" : [ {
+      "name" : "kc_sub",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "task_uid",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "sprint_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "status_raw",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "valid_from",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "valid_to",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "version_kind",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "kc_sub" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:b20596d945ab39eeb55e5b2b30a4af2387be81e580f968e9da047c7189dae536"
+  }, {
     "kind" : "slice:user_tasks",
     "id_field" : null,
     "title" : "user_tasks",
@@ -23345,6 +23668,10 @@
       "required" : false,
       "layer" : "slice"
     }, {
+      "name" : "project",
+      "required" : false,
+      "layer" : "slice"
+    }, {
       "name" : "executor_agent",
       "required" : false,
       "layer" : "slice"
@@ -23368,7 +23695,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ddfc1dc2ba4cff93037b64536b7daae9047b17d4d11f5a445141d89aaffc249a"
+    "content_hash" : "sha256:5516a1726cbafff5b6100b64d28d643ee5abb388c7f4f00c26ffc74ffbac1f7d"
   }, {
     "kind" : "slice:users",
     "id_field" : null,

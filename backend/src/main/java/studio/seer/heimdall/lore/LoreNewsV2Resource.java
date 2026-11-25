@@ -81,10 +81,31 @@ public class LoreNewsV2Resource extends LoreResourceBase {
                            @QueryParam("who") String who,
                            @QueryParam("group_by") String groupBy, @QueryParam("sub") String sub,
                            @QueryParam("matrix") Integer matrix, @QueryParam("limit") Integer limit,
+                           @QueryParam("actor") String actor,
                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Built b = build(from, to, days, tz, type, project, component, sprint, milestone, author, kind, els, who, groupBy, sub, matrix, limit, role);
+        // AP-PEOPLE-PAGE (2а, решение владельца 25.11.2026): лента агента по actor_id — сервер сам переводит его в
+        // значения оси who (учётку карточка не знает: это поле уровня admin). Не нашёлся — назван в meta.actor.
+        List<String> actors = csvList(actor);
+        NewsActorFilter.Resolved byActor = null;
+        if (!actors.isEmpty()) {
+            try {
+                byActor = NewsActorFilter.resolve(actors, ingestService.queryPublic(NewsActorFilter.SQL, Map.of("ids", actors)));
+            } catch (RuntimeException e) {
+                LOG.warnf("[LORE NEWS v2] actor: %s", e.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+            }
+        }
+        String whoQ = byActor == null ? who : NewsActorFilter.mergeWho(who, byActor.whos());
+        Built b = build(from, to, days, tz, type, project, component, sprint, milestone, author, kind, els, whoQ, groupBy, sub, matrix, limit, role);
         if (b.error != null) return b.error;
+        if (byActor != null) {
+            @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) b.response.get("meta");
+            Map<String, Object> am = new LinkedHashMap<>();
+            am.put("requested", actors);
+            am.put("unknown", byActor.unknown());
+            if (meta != null) meta.put("actor", am);
+        }
         return noStore(Response.ok(b.response));
     }
 
@@ -337,6 +358,12 @@ public class LoreNewsV2Resource extends LoreResourceBase {
         Set<String> out = new LinkedHashSet<>();
         for (String p : s.split(",")) if (!p.isBlank()) out.add(p.trim());
         return out.isEmpty() ? null : out;
+    }
+
+    /** csv → список (порядок запроса); пусто — пустой список. */
+    static List<String> csvList(String s) {
+        Set<String> c = csv(s);
+        return c == null ? List.of() : List.copyOf(c);
     }
 
     private LoreNewsReadMarkStore store() {
