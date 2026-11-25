@@ -1862,7 +1862,15 @@ final class LoreSchemaMigrations {
             // автор версии истории (S2-12): у V66 список заморожен до этого типа,
             // поэтому свои changed_by KnowKindHist объявляет сам создающий шаг.
             "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
-            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING")),
+
+        // SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (issue SeidrStudio/UnlimitedLORE#2): статьи словаря
+        // area для областей компонентов — на чистой базе были только research/business (V89), цвет рисовался
+        // из констант фронта, правка в админке ни на что не влияла. Java-шаг как V90/V93: только INSERT
+        // недостающих строк, правленные людьми не переписываются; DDL нет. Номер: V95–V97 заняты веткой
+        // реестра (umbrella/know-registry-2511), V98–V99 зарезервированы под неё же — поэтому V100.
+        // Аддитивно, major 17.
+        new Step(100, 17, AreaDictSeed.STEP, List.of())
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */
