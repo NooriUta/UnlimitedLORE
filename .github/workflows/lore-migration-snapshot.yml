@@ -74,7 +74,9 @@ jobs:
     if: inputs.action == 'snapshot'
     runs-on: ubuntu-latest
     env:
-      LORE_HOST: lore-host.seidrstudio.pro
+      # Адрес прод-хоста — переменная Actions репозитория LORE_HOST_ADDR (не в файлах: ни в дистрибутив, ни в зеркала).
+      # Нет переменной — прежнее имя. 25.11.2026: CoreDNS на 131 не поднялся после перезагрузки, имя не резолвилось.
+      LORE_HOST: ${{ vars.LORE_HOST_ADDR || 'lore-host.seidrstudio.pro' }}
       LORE_HOST_USER: nooriuta
       LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
       NAME: ${{ inputs.name }}
