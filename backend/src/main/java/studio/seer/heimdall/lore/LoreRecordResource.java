@@ -117,6 +117,8 @@ public class LoreRecordResource extends LoreResourceBase {
             // и агент (actor_id, как у вкладки «Агенты») — паспорта, на которые проект уже ссылался.
             case "user" -> new Source("user_by_id", "kc_sub", false);
             case "agent" -> new Source("agent_by_id", "id", false);
+            // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: машина — строка KnowMachine по machine_id; шлюз и владелец — у шлюза.
+            case "machine" -> new Source("machine_by_id", "id", false);
             // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта и профиль клиента (были только списки),
             // ранбук (не было ни раздела, ни паспорта). Ключи — те же, что у их списков и связей.
             case "actor" -> new Source("actor_by_id", "id", false);

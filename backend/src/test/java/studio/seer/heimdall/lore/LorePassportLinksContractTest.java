@@ -666,7 +666,10 @@ class LorePassportLinksContractTest {
         Map.entry("track|projects", "трек — справочник студии, проекта нет (MDL-13)"),
         Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"),
         // MD-05: у PR компонентов нет — ни ребра, ни наследования; работа PR видна через задачи (вкладка «Закрывает задачи»).
-        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"));
+        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"),
+        // AP-MACHINE-PASSPORT: машина — вершина-наблюдение, проектов и компонентов у неё нет; проекты — у допусков шлюза.
+        Map.entry("machine|projects", "у машины проектов нет: проекты — у допусков её шлюза (MACHINE_ACCESS, админка)"),
+        Map.entry("machine|components", "у машины компонентов нет: ни ребра, ни наследования"));
 
     @Test
     void chipValuesHaveADeclaredField() {
@@ -685,7 +688,10 @@ class LorePassportLinksContractTest {
      * Исключение, которое больше не объявлено в модели, — протухло и тоже красное.
      */
     static final Map<String, String> DERIVED_REF = Map.of(
-        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05");
+        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05",
+        // AP-MACHINE-PASSPORT: владелец и шлюз — у актора-шлюза minilore-link-<имя> (ADR-MINILORE-007 В4), не ребро KnowMachine.
+        "machine.owner", "владелец машины — OWNED_BY её шлюза minilore-link-<имя> (срез machine_by_id)",
+        "machine.gateway", "шлюз машины — актор с client_id minilore-link-<имя> (срез machine_by_id)");
 
     /** Поле-ссылка без ребра — только унаследованные чипы (своего ребра у типа нет) или выводной путь из DERIVED_REF. */
     @Test
