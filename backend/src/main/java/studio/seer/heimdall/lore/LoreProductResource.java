@@ -171,7 +171,7 @@ public class LoreProductResource extends LoreResourceBase {
             // и сценарии sea-level: правка их названия этим путём опускала бы их на уровень фичи).
             sql.append(", ").append(featureGoalLevelSql(req.goal_level()));
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
             sql.append(", updated_at=:upd");
@@ -300,7 +300,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
             sql.append(", updated_at=:upd");
@@ -1364,7 +1364,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)    { sql.append(", body_md=:b");    p.put("b", req.body_md()); }
             if (req.kind() != null)       { sql.append(", kind=:k");       p.put("k", req.kind()); }
             if (req.importance() != null) { sql.append(", importance=:i"); p.put("i", req.importance()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE job_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
@@ -1403,7 +1403,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.title() != null)    { sql.append(", title=:t");    p.put("t", req.title()); }
             if (req.body_md() != null)  { sql.append(", body_md=:b");  p.put("b", req.body_md()); }
             if (req.severity() != null) { sql.append(", severity=:s"); p.put("s", req.severity()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE pain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
@@ -1445,7 +1445,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)   { sql.append(", body_md=:b");   p.put("b", req.body_md()); }
             if (req.metric_md() != null) { sql.append(", metric_md=:m"); p.put("m", req.metric_md()); }
             if (req.rank() != null)      { sql.append(", rank=:r");      p.put("r", req.rank()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE gain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
@@ -2052,7 +2052,7 @@ public class LoreProductResource extends LoreResourceBase {
      */
     private List<Map<String, Object>> computeUcQualityRows() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+            "SELECT uc_id, title, rigor, goal_level, created_at AS date_created, scenario_md, acceptance_md, " +
             "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
             "out('TRACED_TO').size() AS traced " +
             "FROM KnowUseCase ORDER BY uc_id", Map.of());

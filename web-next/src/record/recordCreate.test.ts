@@ -60,6 +60,9 @@ describe('S4-24 · поля черновика — инвентаризация 
       .toEqual({ url: '/lore/sprint/create', body: { sprint_id: 'S_X', name: 'Икс' } });
     expect(createRequest('adr', { id: 'ADR-X', title: 'A', decision_md: 'd' }))
       .toEqual({ url: '/lore/adr?mode=create', body: { adr_id: 'ADR-X', name: 'A', decision_md: 'd' } });
+    // KREG-10: дата создания — свойство created_at (канон 1.18), не прежнее date_created
+    expect(createRequest('adr', { id: 'ADR-X', title: 'A', date: '2026-04-11' }).body)
+      .toEqual({ adr_id: 'ADR-X', name: 'A', created_at: '2026-04-11' });
   });
 });
 

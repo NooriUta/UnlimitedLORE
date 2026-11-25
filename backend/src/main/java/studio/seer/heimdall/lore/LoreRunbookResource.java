@@ -151,12 +151,12 @@ public class LoreRunbookResource extends LoreResourceBase {
             upsertP.put("id", req.runbook_id());
             upsertP.put("name", req.name());
             if (req.area() != null)         { rbsql.append(", area=:area");         upsertP.put("area", req.area()); }
-            if (req.date_created() != null) { rbsql.append(", date_created=:date"); upsertP.put("date", req.date_created()); }
+            if (req.date_created() != null) { rbsql.append(", created_at=:date"); upsertP.put("date", req.date_created()); }
             rbsql.append(" UPSERT WHERE runbook_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 rbsql.toString(), upsertP)).await().indefinitely();
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowRunbook SET date_created=:d WHERE runbook_id=:id AND date_created IS NULL",
+                "UPDATE KnowRunbook SET created_at=:d WHERE runbook_id=:id AND created_at IS NULL",
                 Map.of("d", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "id", req.runbook_id())))
                 .await().indefinitely();
 
