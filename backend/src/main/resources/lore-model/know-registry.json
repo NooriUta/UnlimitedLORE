@@ -2550,6 +2550,22 @@
       "required" : false,
       "layer" : "ddl",
       "property" : "actor_id"
+    }, {
+      "name" : "valid_from",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_from",
+      "service" : true
+    }, {
+      "name" : "valid_to",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BELONGS_TO_PROJECT",
@@ -2582,6 +2598,12 @@
       "keys" : [ "features" ],
       "edge_fields" : [ "role" ]
     }, {
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "target_kind" : "entity:hist",
+      "keys" : [ "history" ],
+      "edge_fields" : [ ]
+    }, {
       "rel" : "PERFORMED_BY",
       "dir" : "in",
       "target_kind" : "entity:job",
@@ -2611,7 +2633,8 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowProjectActor",
-    "content_hash" : "sha256:086e1fdbc8922fa6f0a9c2625ea48d6a92a829ff5673d2af93a4812c29493cee"
+    "hist" : "KnowProjectActorHist",
+    "content_hash" : "sha256:504403c619675fd793fb4caebfbb64bfdeaef52e61bb88d985d817f0cad0fecb"
   }, {
     "kind" : "entity:adr",
     "id_field" : "adr_id",
@@ -4011,6 +4034,22 @@
       "layer" : "ddl",
       "property" : "updated_at",
       "service" : true
+    }, {
+      "name" : "valid_from",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_from",
+      "service" : true
+    }, {
+      "name" : "valid_to",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ADDRESSES",
@@ -4066,6 +4105,12 @@
       "target_kind" : "entity:actor",
       "keys" : [ "actors", "value" ],
       "edge_fields" : [ "role" ]
+    }, {
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "target_kind" : "entity:hist",
+      "keys" : [ "history" ],
+      "edge_fields" : [ ]
     }, {
       "rel" : "HELPS_WITH",
       "dir" : "out",
@@ -4162,7 +4207,8 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowUseCase",
-    "content_hash" : "sha256:4efcd95b0e1160de4aa2c6c21b932572de278ba0173f834fa6dfe55874ff40a0"
+    "hist" : "KnowUseCaseHist",
+    "content_hash" : "sha256:ee90b2778e9e67e2e589790f4047f3204432ab24e67ca9ae26cfd7d4e2cee31c"
   }, {
     "kind" : "entity:gain",
     "id_field" : "gain_id",
@@ -4216,6 +4262,22 @@
       "required" : false,
       "layer" : "ddl",
       "property" : "gain_id"
+    }, {
+      "name" : "valid_from",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_from",
+      "service" : true
+    }, {
+      "name" : "valid_to",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "DELIVERS",
@@ -4228,6 +4290,12 @@
       "dir" : "out",
       "target_kind" : "entity:actor",
       "keys" : [ "actors", "profile" ],
+      "edge_fields" : [ ]
+    }, {
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "target_kind" : "entity:hist",
+      "keys" : [ "history" ],
       "edge_fields" : [ ]
     }, {
       "rel" : "PROMISES",
@@ -4265,7 +4333,8 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowGain",
-    "content_hash" : "sha256:7e2c91596a2dfcd2dc527b8b641b97377bdbc677dd05e3abaa6de61e491e801c"
+    "hist" : "KnowGainHist",
+    "content_hash" : "sha256:a457ea30a6cbbd5a4aad7b15c6fc6af4af637377be2f81883ac44adaaa54947d"
   }, {
     "kind" : "entity:job",
     "id_field" : "job_id",
@@ -4319,12 +4388,34 @@
       "required" : false,
       "layer" : "ddl",
       "property" : "job_id"
+    }, {
+      "name" : "valid_from",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_from",
+      "service" : true
+    }, {
+      "name" : "valid_to",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "BLOCKS",
       "dir" : "in",
       "target_kind" : "entity:pain",
       "keys" : [ "pains", "profile" ],
+      "edge_fields" : [ ]
+    }, {
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "target_kind" : "entity:hist",
+      "keys" : [ "history" ],
       "edge_fields" : [ ]
     }, {
       "rel" : "HELPS_WITH",
@@ -4374,7 +4465,8 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowJob",
-    "content_hash" : "sha256:d2c77c7c63b010dd1ca552c30d8ec4edc916cc1160d50690e1a3eb4fc3655025"
+    "hist" : "KnowJobHist",
+    "content_hash" : "sha256:509ddf72fee87343a21394f6d1fe647b4d5b03e022fb83b41178d2f050fb77ad"
   }, {
     "kind" : "entity:machine",
     "id_field" : "machine_id",
@@ -4849,6 +4941,22 @@
       "required" : false,
       "layer" : "ddl",
       "property" : "pain_id"
+    }, {
+      "name" : "valid_from",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_from",
+      "service" : true
+    }, {
+      "name" : "valid_to",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+      "layer" : "ddl",
+      "property" : "valid_to",
+      "service" : true
     } ],
     "links" : [ {
       "rel" : "ADDRESSES",
@@ -4867,6 +4975,12 @@
       "dir" : "out",
       "target_kind" : "entity:actor",
       "keys" : [ "actors", "profile" ],
+      "edge_fields" : [ ]
+    }, {
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "target_kind" : "entity:hist",
+      "keys" : [ "history" ],
       "edge_fields" : [ ]
     }, {
       "rel" : "REFERENCES",
@@ -4898,7 +5012,8 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowPain",
-    "content_hash" : "sha256:f6d59217aeb3e0480cec3259bcbabc12c40d7cf7406741561b7c79c6e62d40dd"
+    "hist" : "KnowPainHist",
+    "content_hash" : "sha256:98e40303e070575d19fbf07bc87a765e8acf3e98f6f7e17dac064d5b1a174bab"
   }, {
     "kind" : "entity:phase",
     "id_field" : null,

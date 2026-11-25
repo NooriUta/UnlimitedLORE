@@ -125,7 +125,14 @@ class HistInsertCarriesAuthorTest {
         LoreSchemaMigrations.Step v94 = LoreSchemaMigrations.STEPS.stream()
             .filter(x -> "know_kind_registry".equals(x.name())).findFirst()
             .orElseThrow(() -> new AssertionError("нет шага схемы know_kind_registry (KREG-01)"));
+        // AP-PASSPORT-EDIT: цепочки после заморозки шагов V объявляет доводка схемы кода (LoreSchemaAdditive, v5).
+        List<String> additive = LoreSchemaAdditive.change("product_history").ddl();
         for (String hist : LoreSlices.HIST_PARENT.keySet()) {
+            if (ProductHistory.specOfHist(hist) != null) {
+                assertTrue(additive.contains("CREATE PROPERTY " + hist + ".changed_by IF NOT EXISTS STRING"), hist + " у доводки v5");
+                assertTrue(additive.contains("CREATE PROPERTY " + hist + ".changed_by_kind IF NOT EXISTS STRING"), hist + " у доводки v5");
+                continue;
+            }
             LoreSchemaMigrations.Step owner = "KnowKindHist".equals(hist) ? v94 : v66;
             assertTrue(owner.sql().contains("CREATE PROPERTY " + hist + ".changed_by IF NOT EXISTS STRING"),
                 hist + " у " + owner.name());

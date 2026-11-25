@@ -257,7 +257,13 @@ final class LoreSchemaMigrations {
         "KnowSprintHist",
         "KnowDictEntryHist",
         // KREG-01 (V94): SCD2-история рантайм-реестра видов KnowKind.
-        "KnowKindHist");
+        "KnowKindHist",
+        // AP-PASSPORT-EDIT (доводка v5, LoreSchemaAdditive.PRODUCT_HIST_DDL): боль, выгода, работа, роль продукта, фича — в хвост.
+        "KnowPainHist",
+        "KnowGainHist",
+        "KnowJobHist",
+        "KnowProjectActorHist",
+        "KnowUseCaseHist");
 
     /**
      * KREG-01: список шага V66 (hist_change_author) — ЗАМОРОЖЕН на тех типах, что
