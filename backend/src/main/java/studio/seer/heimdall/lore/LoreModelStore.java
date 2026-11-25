@@ -80,6 +80,12 @@ public class LoreModelStore {
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
     String db;
 
+    /** KREG-08 (follow-up, разбор migrate-live-check #1797): в режиме одноразовой накатки
+        сигнальная точка fallback не пишется — иначе каждый старт миграционного раннера
+        даёт MetricSnapshot +1 и ломает повторную сверку инвентаря (проверка на снимке прода). */
+    @ConfigProperty(name = "lore.migrate.only", defaultValue = "false")
+    boolean migrateOnly;
+
     @Inject
     MartCredentials mart;
 
@@ -144,6 +150,10 @@ public class LoreModelStore {
      * значит и писать, вероятно, некуда), поэтому её сбой ловится и уходит в лог, не роняя старт.
      */
     private void recordFallback(RuntimeException e) {
+        if (migrateOnly) {
+            LOG.warnf("[LORE MODEL] fallback-метрика пропущена: режим lore.migrate.only (одноразовая накатка, наблюдателю нечего смотреть)");
+            return;
+        }
         try {
             client.command(db, mart.basicAuth(), new LoreCommandClient.LoreCommand("sql", FALLBACK_METRIC_SQL,
                 Map.of("ts", System.currentTimeMillis(),
