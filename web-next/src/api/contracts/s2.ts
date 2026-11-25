@@ -116,6 +116,8 @@ export interface BacklinksResponse {
 export const HISTORY_TYPES = [
   'adr', 'decision', 'doc', 'finding', 'milestone', 'phase',
   'release', 'runbook', 'spec', 'task', 'sprint', 'dict_entry', 'kind',
+  // AP-PASSPORT-EDIT (доводка v5): история боли, выгоды, работы, роли продукта и фичи
+  'pain', 'gain', 'job', 'actor', 'feature',
 ] as const;
 export type HistoryType = typeof HISTORY_TYPES[number];
 
@@ -125,6 +127,7 @@ export const HISTORY_HIST_CLASS: Readonly<Record<HistoryType, string>> = {
   milestone: 'KnowMilestoneHist', phase: 'KnowPhaseHist', release: 'KnowReleaseHist',
   runbook: 'KnowRunbookHist', spec: 'KnowSpecHist', task: 'KnowTaskHist', sprint: 'KnowSprintHist',
   dict_entry: 'KnowDictEntryHist', kind: 'KnowKindHist',
+  pain: 'KnowPainHist', gain: 'KnowGainHist', job: 'KnowJobHist', actor: 'KnowProjectActorHist', feature: 'KnowUseCaseHist',
 };
 
 export interface HistoryQuery {

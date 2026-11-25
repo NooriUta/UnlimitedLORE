@@ -4607,6 +4607,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Feature",
     "labelPl" : "Funkcja"
@@ -5509,6 +5520,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Product role",
     "labelPl" : "Rola produktu"
@@ -5697,6 +5719,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Pain",
     "labelPl" : "Ból"
@@ -5898,6 +5931,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Gain",
     "labelPl" : "Korzyść"
@@ -6118,6 +6162,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Job",
     "labelPl" : "Praca"
@@ -7541,6 +7596,7 @@
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
+      "hist" : "KnowProjectActorHist",
       "key" : "actor_id"
     },
     "adr" : {
@@ -7567,14 +7623,17 @@
     },
     "feature" : {
       "vertex" : "KnowUseCase",
+      "hist" : "KnowUseCaseHist",
       "key" : "uc_id"
     },
     "gain" : {
       "vertex" : "KnowGain",
+      "hist" : "KnowGainHist",
       "key" : "gain_id"
     },
     "job" : {
       "vertex" : "KnowJob",
+      "hist" : "KnowJobHist",
       "key" : "job_id"
     },
     "machine" : {
@@ -7592,6 +7651,7 @@
     },
     "pain" : {
       "vertex" : "KnowPain",
+      "hist" : "KnowPainHist",
       "key" : "pain_id"
     },
     "pr" : {
@@ -7814,9 +7874,13 @@
   },
   "time" : {
     "actor" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ ],
-      "changed" : [ ]
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      } ]
     },
     "adr" : {
       "history" : "scd2",
@@ -7889,12 +7953,16 @@
       "changed" : [ ]
     },
     "feature" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
         "source" : "date_created",
         "precision" : "date"
       } ],
       "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
         "source" : "updated_at",
         "precision" : "datetime",
         "note" : "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник"
@@ -7907,23 +7975,31 @@
       } ]
     },
     "gain" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
         "source" : "date_created",
         "precision" : "date"
       } ],
       "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
         "source" : "date_created",
         "precision" : "date"
       } ]
     },
     "job" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
         "source" : "date_created",
         "precision" : "date"
       } ],
       "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
         "source" : "date_created",
         "precision" : "date"
       } ]
@@ -7952,12 +8028,16 @@
       "changed" : [ ]
     },
     "pain" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
         "source" : "date_created",
         "precision" : "date"
       } ],
       "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
         "source" : "date_created",
         "precision" : "date"
       } ]
