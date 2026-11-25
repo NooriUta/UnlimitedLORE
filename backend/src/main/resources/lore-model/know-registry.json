@@ -2637,7 +2637,7 @@
       "required" : false,
       "desc" : "Дата, когда ADR заведён.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "components",
       "type" : "ref",
@@ -2765,14 +2765,6 @@
       "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
       "property" : "content_hash",
-      "service" : true
-    }, {
-      "name" : "created_at",
-      "type" : "string",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
       "service" : true
     }, {
       "name" : "source_commit",
@@ -2958,7 +2950,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowADR",
     "hist" : "KnowADRHist",
-    "content_hash" : "sha256:48af03aab11dca1f4ce3712d7ed2fdb35f954de66b3197aeb41655310f621ecb"
+    "content_hash" : "sha256:c6a71ec29acb7e440d2c1e12bbf2f8630e02158841096dbd8360574c609bc0c6"
   }, {
     "kind" : "entity:agent",
     "id_field" : "actor_id",
@@ -3363,7 +3355,7 @@
       "required" : false,
       "desc" : "Дата, когда решение записано.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "adr",
       "type" : "ref",
@@ -3489,14 +3481,6 @@
       "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
       "property" : "content_hash",
-      "service" : true
-    }, {
-      "name" : "created_at",
-      "type" : "string",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
       "service" : true
     }, {
       "name" : "source_commit",
@@ -3640,7 +3624,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowDecision",
     "hist" : "KnowDecisionHist",
-    "content_hash" : "sha256:86ef07c31711f179be8535ee795086f3b1254012f873b855864b0e26fb6c8e5c"
+    "content_hash" : "sha256:ef4dc7bacd8d7471253666f28c9f38bd1daeacd0e70f71ba1e4097ec80addc4f"
   }, {
     "kind" : "entity:doc",
     "id_field" : "doc_id",
@@ -3907,7 +3891,7 @@
       "required" : false,
       "desc" : "Когда запись фичи заведена в LORE.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "shipped_at",
       "type" : "date",
@@ -3987,14 +3971,6 @@
       "desc" : "Критерии приёмки: по чему видно, что фича готова.",
       "layer" : "ddl",
       "property" : "acceptance_md"
-    }, {
-      "name" : "created_at",
-      "type" : "date",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
-      "service" : true
     }, {
       "name" : "feature_id",
       "type" : "string",
@@ -4162,7 +4138,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowUseCase",
-    "content_hash" : "sha256:4efcd95b0e1160de4aa2c6c21b932572de278ba0173f834fa6dfe55874ff40a0"
+    "content_hash" : "sha256:8fc424837c26cc8b91e35494647b8687d520bbe3562afd9dc016b4220441bafe"
   }, {
     "kind" : "entity:gain",
     "id_field" : "gain_id",
@@ -4187,7 +4163,7 @@
       "required" : false,
       "desc" : "Когда запись выгоды заведена в LORE.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "body_md",
       "type" : "string",
@@ -4202,14 +4178,6 @@
       "desc" : "Как измеряется выгода: метрика и порог.",
       "layer" : "ddl",
       "property" : "metric_md"
-    }, {
-      "name" : "created_at",
-      "type" : "date",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
-      "service" : true
     }, {
       "name" : "gain_id",
       "type" : "string",
@@ -4265,7 +4233,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowGain",
-    "content_hash" : "sha256:7e2c91596a2dfcd2dc527b8b641b97377bdbc677dd05e3abaa6de61e491e801c"
+    "content_hash" : "sha256:43f649830846a4858fae59a1f9c561fa487fc72ccac30472e8efdc71d747ac6b"
   }, {
     "kind" : "entity:job",
     "id_field" : "job_id",
@@ -4297,7 +4265,7 @@
       "required" : false,
       "desc" : "Когда запись работы заведена в LORE.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "body_md",
       "type" : "string",
@@ -4305,14 +4273,6 @@
       "desc" : "Текст работы в Markdown — основное содержание записи.",
       "layer" : "ddl",
       "property" : "body_md"
-    }, {
-      "name" : "created_at",
-      "type" : "date",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
-      "service" : true
     }, {
       "name" : "job_id",
       "type" : "string",
@@ -4374,7 +4334,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowJob",
-    "content_hash" : "sha256:d2c77c7c63b010dd1ca552c30d8ec4edc916cc1160d50690e1a3eb4fc3655025"
+    "content_hash" : "sha256:cfd456c92f5dfd9f1ea7b60000ed2a6c0ac6800735066759f0bc267ebea0df41"
   }, {
     "kind" : "entity:machine",
     "id_field" : "machine_id",
@@ -4827,7 +4787,7 @@
       "required" : false,
       "desc" : "Когда запись боли заведена в LORE.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "body_md",
       "type" : "string",
@@ -4835,14 +4795,6 @@
       "desc" : "Текст боли в Markdown — основное содержание записи.",
       "layer" : "ddl",
       "property" : "body_md"
-    }, {
-      "name" : "created_at",
-      "type" : "date",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
-      "service" : true
     }, {
       "name" : "pain_id",
       "type" : "string",
@@ -4898,7 +4850,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowPain",
-    "content_hash" : "sha256:f6d59217aeb3e0480cec3259bcbabc12c40d7cf7406741561b7c79c6e62d40dd"
+    "content_hash" : "sha256:2f675f68e7ab08e74a224b71852b488f8da39c36c7c0cb7a20e705ccfe0b3dd2"
   }, {
     "kind" : "entity:phase",
     "id_field" : null,
@@ -5719,7 +5671,7 @@
       "required" : false,
       "desc" : "Когда запись гейта качества заведена в LORE.",
       "layer" : "model",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "retired_at",
       "type" : "date",
@@ -5807,7 +5759,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "QualityGate",
-    "content_hash" : "sha256:4a7dee2b597e1fda2b9741f459a01ad6271352dea4d29441308a074fe164862a"
+    "content_hash" : "sha256:cf09ec1e2623c0084186a878e5cd755102e575d851ae9db9bfce197c7c3c00cd"
   }, {
     "kind" : "entity:question",
     "id_field" : "question_id",
@@ -6388,7 +6340,7 @@
       "required" : false,
       "desc" : "Когда запись ранбука заведена в LORE.",
       "layer" : "ddl",
-      "property" : "date_created"
+      "property" : "created_at"
     }, {
       "name" : "projects",
       "type" : "ref",
@@ -6471,14 +6423,6 @@
       "property" : "content_hash",
       "service" : true
     }, {
-      "name" : "created_at",
-      "type" : "date",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
-      "service" : true
-    }, {
       "name" : "runbook_id",
       "type" : "string",
       "required" : false,
@@ -6552,7 +6496,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowRunbook",
     "hist" : "KnowRunbookHist",
-    "content_hash" : "sha256:83345369bfc94a253a78ab3dc7a3ea62a342e5a79d101f541497fcabda29507b"
+    "content_hash" : "sha256:3e7dd0958c1f709f4b594fe4f0fb2a93eefb665d003f4fd9f18589c6663f7c56"
   }, {
     "kind" : "entity:spec",
     "id_field" : "spec_id",
@@ -6857,7 +6801,7 @@
       "required" : false,
       "desc" : "Когда спринт заведён в LORE. У спринтов, заведённых до введения отметки, пусто или стоит момент массовой загрузки.",
       "layer" : "ddl",
-      "property" : "created_date"
+      "property" : "created_at"
     }, {
       "name" : "milestones",
       "type" : "ref",
@@ -7031,14 +6975,6 @@
       "desc" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
       "layer" : "ddl",
       "property" : "content_hash",
-      "service" : true
-    }, {
-      "name" : "created_at",
-      "type" : "date",
-      "required" : false,
-      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
-      "layer" : "ddl",
-      "property" : "created_at",
       "service" : true
     }, {
       "name" : "note_md",
@@ -7296,7 +7232,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowSprint",
     "hist" : "KnowSprintHist",
-    "content_hash" : "sha256:fc91cc23d66f7322c5cefbad811a23d7f80f2032a283860d22ddd5ab5bcda8fd"
+    "content_hash" : "sha256:01adf0384c5c5591b338e492d6c8033adf41b90e2ecfe07d8a5e367d7b3e1c7b"
   }, {
     "kind" : "entity:task",
     "id_field" : "task_uid",

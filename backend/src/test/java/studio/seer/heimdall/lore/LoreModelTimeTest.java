@@ -115,7 +115,7 @@ class LoreModelTimeTest {
     /** Объявленный тип свойства — из схемы графа; не объявлено (schemaless) — null, а не выдумка. */
     @Test
     void propertyTypeComesFromTheDeclaredSchema() {
-        Map<String, List<String>> schema = Map.of("KnowDecision", List.of("decision_id", "date_created", "updated_at"),
+        Map<String, List<String>> schema = Map.of("KnowDecision", List.of("decision_id", "created_at", "updated_at"),
             "KnowDecisionHist", List.of("valid_from", "status_raw"));
         Map<String, Map<String, String>> declared = Map.of("KnowDecision", Map.of("updated_at", "STRING"),
             "KnowDecisionHist", Map.of("valid_from", "DATETIME"));
@@ -123,9 +123,9 @@ class LoreModelTimeTest {
         List<Map<String, Object>> fs = (List<Map<String, Object>>)
             ((Map<String, Object>) LoreModelTypes.build(schema, declared).get("decision")).get("fields");
         Map<String, Object> date = fs.stream().filter(f -> "date".equals(f.get("key"))).findFirst().orElseThrow();
-        assertEquals("date_created", date.get("property"));
+        assertEquals("created_at", date.get("property"));
         assertTrue(date.containsKey("property_type"), "ключ есть всегда");
-        assertNull(date.get("property_type"), "date_created в схеме не объявлен — тип неизвестен, null");
+        assertNull(date.get("property_type"), "created_at без объявленного типа — тип неизвестен, null");
         Map<String, Object> status = fs.stream().filter(f -> "status".equals(f.get("key"))).findFirst().orElseThrow();
         assertEquals("status_raw", status.get("property"), "Hist решения входит в свойства типа");
     }

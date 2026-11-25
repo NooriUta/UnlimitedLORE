@@ -1425,7 +1425,7 @@
       "editable" : true,
       "write" : {
         "endpoint" : "/lore/adr",
-        "field" : "date_created"
+        "field" : "created_at"
       },
       "definition" : "Дата, когда ADR заведён.",
       "layer" : "stable",
@@ -7562,6 +7562,7 @@
       "title" : "name"
     },
     "adr" : {
+      "date" : "created_at",
       "status" : "status",
       "title" : "name"
     },
@@ -7576,7 +7577,7 @@
     },
     "decision" : {
       "code" : "decision_id",
-      "date" : "date_created",
+      "date" : "created_at",
       "status" : "status_raw"
     },
     "doc" : {
@@ -7584,14 +7585,14 @@
     },
     "feature" : {
       "code" : "uc_id",
-      "date" : "date_created",
+      "date" : "created_at",
       "parent" : "parent_uc_id"
     },
     "gain" : {
-      "date" : "date_created"
+      "date" : "created_at"
     },
     "job" : {
-      "date" : "date_created"
+      "date" : "created_at"
     },
     "machine" : {
       "code" : "machine_id",
@@ -7607,7 +7608,7 @@
       "title" : "name"
     },
     "pain" : {
-      "date" : "date_created"
+      "date" : "created_at"
     },
     "pr" : {
       "code" : "pr_uid"
@@ -7620,7 +7621,7 @@
       "title" : "name"
     },
     "quality_gate" : {
-      "date" : "date_created",
+      "date" : "created_at",
       "sprint" : "sprint_id",
       "title" : "name"
     },
@@ -7638,7 +7639,7 @@
       "title" : "name"
     },
     "runbook" : {
-      "date" : "date_created",
+      "date" : "created_at",
       "title" : "name"
     },
     "spec" : {
@@ -7646,7 +7647,7 @@
       "status" : "status"
     },
     "sprint" : {
-      "created" : "created_date",
+      "created" : "created_at",
       "no_release" : "no_release_required",
       "planned_start" : "planned_start_date",
       "status" : "status_raw",
@@ -7722,10 +7723,7 @@
       "created" : [ {
         "source" : "created_at",
         "precision" : "datetime",
-        "note" : "момент — у ADR, заведённых после S2-10"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
+        "note" : "момент создания; у ADR до S2-10 — полночь дня прежней даты (перенос 1.18)"
       } ],
       "changed" : [ {
         "source" : "version.valid_from",
@@ -7737,9 +7735,6 @@
       }, {
         "source" : "created_at",
         "precision" : "datetime"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
       } ]
     },
     "agent" : {
@@ -7761,10 +7756,7 @@
       "created" : [ {
         "source" : "created_at",
         "precision" : "datetime",
-        "note" : "момент — у решений, заведённых после S2-10"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
+        "note" : "момент создания; у решений до S2-10 — полночь дня прежней даты (перенос 1.18)"
       } ],
       "changed" : [ {
         "source" : "version.valid_from",
@@ -7777,9 +7769,6 @@
       }, {
         "source" : "created_at",
         "precision" : "datetime"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
       } ]
     },
     "doc" : {
@@ -7790,7 +7779,7 @@
     "feature" : {
       "history" : "none",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
@@ -7801,29 +7790,29 @@
         "source" : "shipped_at",
         "precision" : "date"
       }, {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
     "gain" : {
       "history" : "none",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
     "job" : {
       "history" : "none",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7853,11 +7842,11 @@
     "pain" : {
       "history" : "none",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7883,11 +7872,11 @@
     "quality_gate" : {
       "history" : "none",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7942,7 +7931,7 @@
     "runbook" : {
       "history" : "scd2",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
@@ -7950,7 +7939,7 @@
         "precision" : "datetime",
         "note" : "версию открывает первая запись тела; правка тела идёт в открытую версию на месте"
       }, {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7972,7 +7961,7 @@
     "sprint" : {
       "history" : "scd2",
       "created" : [ {
-        "source" : "created_date",
+        "source" : "created_at",
         "precision" : "date",
         "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
       } ],
@@ -7984,7 +7973,7 @@
         "precision" : "datetime",
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       }, {
-        "source" : "created_date",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },

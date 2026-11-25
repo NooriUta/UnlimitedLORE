@@ -171,11 +171,11 @@ final class ModelSchemaAdapter {
      * имя живёт в других типах) — не здесь: их правит код по типу.
      */
     static final Map<String, String> RENAMES = Map.of(
-        "status_raw", "status",
-        "date_created", "created_at",
-        "created_date", "created_at");
+        "status_raw", "status");
+    // KREG-10: date_created / created_date → created_at сняты — код обращается к created_at сам (сторож
+    // LegacyCreationNamesCodeGuardTest), прежние имена остались только ключами ответа (… AS date_created).
 
-    private static final Pattern WORD = Pattern.compile("(?<![\\w])(status_raw|date_created|created_date)(?![\\w])");
+    private static final Pattern WORD = Pattern.compile("(?<![\\w])(status_raw)(?![\\w])");
 
     /** SQL под новую схему; текст внутри кавычек остаётся как есть. */
     static String rewriteSql(String sql) {

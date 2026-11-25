@@ -58,10 +58,10 @@ class LoreWriteKindsTest {
     @Test
     void momentFieldAcceptsIsoAndDateButNotText() throws Exception {
         // adr.date — момент (DATETIME в схеме переноса); дата без времени — полночь UTC, как в переносе
-        assertTrue(check("/lore/adr", "{\"adr_id\":\"ADR-X\",\"name\":\"x\",\"date_created\":\"2026-11-19T10:00:00Z\"}").isEmpty());
-        assertTrue(check("/lore/adr", "{\"adr_id\":\"ADR-X\",\"name\":\"x\",\"date_created\":\"2026-11-19\"}").isEmpty());
-        var w = check("/lore/adr", "{\"adr_id\":\"ADR-X\",\"name\":\"x\",\"date_created\":\"вчера\"}");
-        assertEquals(List.of("date_created"), fields(w));
+        assertTrue(check("/lore/adr", "{\"adr_id\":\"ADR-X\",\"name\":\"x\",\"created_at\":\"2026-11-19T10:00:00Z\"}").isEmpty());
+        assertTrue(check("/lore/adr", "{\"adr_id\":\"ADR-X\",\"name\":\"x\",\"created_at\":\"2026-11-19\"}").isEmpty());
+        var w = check("/lore/adr", "{\"adr_id\":\"ADR-X\",\"name\":\"x\",\"created_at\":\"вчера\"}");
+        assertEquals(List.of("created_at"), fields(w));
         assertEquals("datetime", w.get(0).get("precision"));
     }
 

@@ -4821,7 +4821,7 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
-          "field" : "date_created"
+          "field" : "created_at"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -5730,7 +5730,7 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/adr",
-          "field" : "date_created"
+          "field" : "created_at"
         },
         "required_level" : null,
         "required_rules" : [ ]
