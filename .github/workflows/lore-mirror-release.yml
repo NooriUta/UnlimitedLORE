@@ -1,0 +1,35 @@
+# Перенос выпуска в зеркало SeidrStudio — кнопкой, по тегу.
+# SPRINT_CICD_OPS_2611/CO-MIRRORS-AUTOSYNC; решение владельца 23.11.2026: «отдельный мини-cd.yaml на перенос
+# выпуска в соседний репозиторий, и добавь в основную трубу».
+#
+# Основная труба (lore-release.yml) зовёт тот же скрипт сразу после пуша тега в зеркало. Эта — чтобы догнать
+# выпуск, который вышел раньше (v1.19.0 ушёл в зеркало без объекта Release), или повторить упавший перенос.
+# Перенос идемпотентен: выпуск не дублируется, совпавшие вложения не перекачиваются.
+name: LORE mirror release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Тег выпуска (vX.Y.0)
+        required: true
+
+concurrency:
+  group: lore-mirror-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  mirror-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Выпуск → зеркало SeidrStudio
+        env:
+          TAG: ${{ inputs.tag }}
+          HOST: ${{ github.server_url }}
+          SRC_REPO: ${{ github.repository }}
+          SRC_TOKEN: ${{ secrets.MIRROR_PULL_TOKEN }}
+          DST_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
+          DST_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+        run: bash .github/scripts/mirror-release.sh

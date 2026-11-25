@@ -329,6 +329,9 @@
     "linkTabs" : [ {
       "key" : "deps",
       "label" : "Связи",
+      "labelKey" : "pp.tab.links",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -345,6 +348,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -378,24 +384,37 @@
     "relations" : [ {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.rel.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rel" : "PART_OF",
       "dir" : "in",
       "targetType" : "task",
       "relation" : "composition",
       "place" : "part",
-      "inverseLabel" : "Спринт"
+      "inverseLabel" : "Спринт",
+      "inverseLabelEn" : "Sprint",
+      "inverseLabelPl" : "Sprint"
     }, {
       "key" : "phases",
       "label" : "Фазы",
+      "labelKey" : "pp.rel.phases",
+      "labelEn" : "Phases",
+      "labelPl" : "Fazy",
       "rel" : "PART_OF",
       "dir" : "in",
       "targetType" : "phase",
       "relation" : "composition",
       "place" : "part",
-      "inverseLabel" : "Спринт"
+      "inverseLabel" : "Спринт",
+      "inverseLabelEn" : "Sprint",
+      "inverseLabelPl" : "Sprint"
     }, {
       "key" : "dependsOn",
       "label" : "Зависит от",
+      "labelKey" : "pp.rel.depends_on",
+      "labelEn" : "Depends on",
+      "labelPl" : "Zależy od",
       "rel" : "DEPENDS_ON",
       "dir" : "out",
       "targetType" : "any",
@@ -405,17 +424,26 @@
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
-        "dict" : "dependency_kind"
+        "dict" : "dependency_kind",
+        "labelEn" : "Kind",
+        "labelPl" : "Rodzaj"
       }, {
         "key" : "reason",
-        "label" : "Причина"
+        "label" : "Причина",
+        "labelEn" : "Reason",
+        "labelPl" : "Powód"
       } ],
       "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
-      "inverseLabel" : "От неё зависят"
+      "inverseLabel" : "От неё зависят",
+      "inverseLabelEn" : "Dependents",
+      "inverseLabelPl" : "Zależne"
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
+      "labelKey" : "pp.rel.dependents",
+      "labelEn" : "Dependents",
+      "labelPl" : "Zależne",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "any",
@@ -425,17 +453,26 @@
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
-        "dict" : "dependency_kind"
+        "dict" : "dependency_kind",
+        "labelEn" : "Kind",
+        "labelPl" : "Rodzaj"
       }, {
         "key" : "reason",
-        "label" : "Причина"
+        "label" : "Причина",
+        "labelEn" : "Reason",
+        "labelPl" : "Powód"
       } ],
       "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
-      "inverseLabel" : "Зависит от"
+      "inverseLabel" : "Зависит от",
+      "inverseLabelEn" : "Depends on",
+      "inverseLabelPl" : "Zależy od"
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -445,6 +482,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -454,6 +494,9 @@
     }, {
       "key" : "releases",
       "label" : "Релизы",
+      "labelKey" : "pp.rel.releases",
+      "labelEn" : "Releases",
+      "labelPl" : "Wydania",
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "out",
       "targetType" : "release",
@@ -462,6 +505,9 @@
     }, {
       "key" : "milestones",
       "label" : "Вехи",
+      "labelKey" : "pp.rel.milestones",
+      "labelEn" : "Milestones",
+      "labelPl" : "Kamienie milowe",
       "rel" : "TARGETS_MILESTONE",
       "dir" : "out",
       "targetType" : "milestone",
@@ -471,6 +517,9 @@
     }, {
       "key" : "track",
       "label" : "Трек",
+      "labelKey" : "pp.rel.track",
+      "labelEn" : "Track",
+      "labelPl" : "Ścieżka",
       "rel" : "ON_TRACK",
       "dir" : "out",
       "targetType" : "track",
@@ -480,16 +529,24 @@
     }, {
       "key" : "adrs",
       "label" : "Реализует ADR",
+      "labelKey" : "pp.rel.implements_adr",
+      "labelEn" : "Implements ADR",
+      "labelPl" : "Realizuje ADR",
       "rel" : "IMPLEMENTED_IN",
       "dir" : "in",
       "targetType" : "adr",
       "relation" : "realization",
       "place" : "link_tab",
       "manageable" : true,
-      "inverseLabel" : "Спринты"
+      "inverseLabel" : "Спринты",
+      "inverseLabelEn" : "Sprints",
+      "inverseLabelPl" : "Sprinty"
     }, {
       "key" : "questions",
       "label" : "Вопросы",
+      "labelKey" : "pp.rel.questions",
+      "labelEn" : "Questions",
+      "labelPl" : "Pytania",
       "rel" : "RAISED_IN",
       "dir" : "in",
       "targetType" : "question",
@@ -499,15 +556,23 @@
     }, {
       "key" : "docs",
       "label" : "Знания",
+      "labelKey" : "pp.rel.knowledge",
+      "labelEn" : "Knowledge",
+      "labelPl" : "Wiedza",
       "rel" : "IMPLEMENTED_IN",
       "dir" : "in",
       "targetType" : "doc",
       "relation" : "realization",
       "place" : "link_tab",
-      "inverseLabel" : "Спринты"
+      "inverseLabel" : "Спринты",
+      "inverseLabelEn" : "Sprints",
+      "inverseLabelPl" : "Sprinty"
     }, {
       "key" : "publications",
       "label" : "Публикации",
+      "labelKey" : "pp.rel.publications",
+      "labelEn" : "Publications",
+      "labelPl" : "Publikacje",
       "rel" : "PRODUCED_BY",
       "dir" : "in",
       "targetType" : "publication",
@@ -516,6 +581,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -524,6 +592,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -532,6 +603,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -540,6 +614,9 @@
     }, {
       "key" : "assets",
       "label" : "Вложения",
+      "labelKey" : "pp.rel.attachments",
+      "labelEn" : "Attachments",
+      "labelPl" : "Załączniki",
       "rel" : "ATTACHED_TO",
       "dir" : "out",
       "targetType" : "asset",
@@ -966,6 +1043,9 @@
     "linkTabs" : [ {
       "key" : "deps",
       "label" : "Зависимости",
+      "labelKey" : "pp.tab.deps",
+      "labelEn" : "Dependencies",
+      "labelPl" : "Zależności",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -982,6 +1062,9 @@
     }, {
       "key" : "justification",
       "label" : "ADR",
+      "labelKey" : "pp.tab.justification",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rels" : [ {
         "rel" : "JUSTIFIED_BY",
         "dir" : "out",
@@ -1001,6 +1084,9 @@
     }, {
       "key" : "realization",
       "label" : "Реализация",
+      "labelKey" : "pp.tab.realization",
+      "labelEn" : "Realization",
+      "labelPl" : "Realizacja",
       "rels" : [ {
         "rel" : "CLOSED_BY",
         "dir" : "out",
@@ -1015,6 +1101,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -1030,15 +1119,23 @@
     "relations" : [ {
       "key" : "sprint",
       "label" : "Спринт",
+      "labelKey" : "pp.rel.sprint",
+      "labelEn" : "Sprint",
+      "labelPl" : "Sprint",
       "rel" : "PART_OF",
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "composition",
       "place" : "head",
-      "inverseLabel" : "Задачи"
+      "inverseLabel" : "Задачи",
+      "inverseLabelEn" : "Tasks",
+      "inverseLabelPl" : "Zadania"
     }, {
       "key" : "phase",
       "label" : "Фаза",
+      "labelKey" : "pp.rel.phase",
+      "labelEn" : "Phase",
+      "labelPl" : "Faza",
       "rel" : "IN_PHASE",
       "dir" : "out",
       "targetType" : "phase",
@@ -1048,6 +1145,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "TAGGED_WITH",
       "dir" : "out",
       "targetType" : "component",
@@ -1057,6 +1157,9 @@
     }, {
       "key" : "roles",
       "label" : "Роли",
+      "labelKey" : "pp.rel.roles",
+      "labelEn" : "Roles",
+      "labelPl" : "Role",
       "rel" : "ROLE_HELD_BY",
       "dir" : "out",
       "targetType" : "actor",
@@ -1065,6 +1168,9 @@
     }, {
       "key" : "files",
       "label" : "Файлы",
+      "labelKey" : "pp.rel.files",
+      "labelEn" : "Files",
+      "labelPl" : "Pliki",
       "rel" : "EDITED_IN",
       "dir" : "in",
       "targetType" : "file",
@@ -1073,16 +1179,24 @@
     }, {
       "key" : "prs",
       "label" : "PR",
+      "labelKey" : "pp.rel.prs",
+      "labelEn" : "PRs",
+      "labelPl" : "PR",
       "rel" : "CLOSED_BY",
       "dir" : "out",
       "targetType" : "pr",
       "relation" : "realization",
       "place" : "link_tab",
       "manageable" : true,
-      "inverseLabel" : "Закрывает задачи"
+      "inverseLabel" : "Закрывает задачи",
+      "inverseLabelEn" : "Closes tasks",
+      "inverseLabelPl" : "Zamyka zadania"
     }, {
       "key" : "useCases",
       "label" : "Сценарии",
+      "labelKey" : "pp.rel.use_cases",
+      "labelEn" : "Use cases",
+      "labelPl" : "Scenariusze",
       "rel" : "REALIZES",
       "dir" : "out",
       "targetType" : "use_case",
@@ -1091,6 +1205,9 @@
     }, {
       "key" : "adrs",
       "label" : "Обоснована ADR",
+      "labelKey" : "pp.rel.justified_by_adr",
+      "labelEn" : "Justified by ADR",
+      "labelPl" : "Uzasadnione przez ADR",
       "rel" : "JUSTIFIED_BY",
       "dir" : "out",
       "targetType" : "adr",
@@ -1100,6 +1217,9 @@
     }, {
       "key" : "qgRecs",
       "label" : "Рекомендации QG",
+      "labelKey" : "pp.rel.qg_recommendations",
+      "labelEn" : "QG recommendations",
+      "labelPl" : "Rekomendacje QG",
       "rel" : "PROMOTED_TO",
       "dir" : "in",
       "targetType" : "qg_recommendation",
@@ -1108,6 +1228,9 @@
     }, {
       "key" : "insights",
       "label" : "Инсайты BRAGI",
+      "labelKey" : "pp.rel.bragi_insights",
+      "labelEn" : "BRAGI insights",
+      "labelPl" : "Wnioski BRAGI",
       "rel" : "LED_TO",
       "dir" : "in",
       "targetType" : "insight",
@@ -1116,16 +1239,24 @@
     }, {
       "key" : "gates",
       "label" : "Блокирующие вопросы",
+      "labelKey" : "pp.rel.blocking_questions",
+      "labelEn" : "Blocking questions",
+      "labelPl" : "Pytania blokujące",
       "rel" : "GATES",
       "dir" : "in",
       "targetType" : "question",
       "relation" : "association",
       "place" : "link_tab",
       "manageable" : true,
-      "inverseLabel" : "Блокирует задачи"
+      "inverseLabel" : "Блокирует задачи",
+      "inverseLabelEn" : "Blocks tasks",
+      "inverseLabelPl" : "Blokuje zadania"
     }, {
       "key" : "dependsOn",
       "label" : "Зависит от",
+      "labelKey" : "pp.rel.depends_on",
+      "labelEn" : "Depends on",
+      "labelPl" : "Zależy od",
       "rel" : "DEPENDS_ON",
       "dir" : "out",
       "targetType" : "any",
@@ -1135,17 +1266,26 @@
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
-        "dict" : "dependency_kind"
+        "dict" : "dependency_kind",
+        "labelEn" : "Kind",
+        "labelPl" : "Rodzaj"
       }, {
         "key" : "reason",
-        "label" : "Причина"
+        "label" : "Причина",
+        "labelEn" : "Reason",
+        "labelPl" : "Powód"
       } ],
       "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
-      "inverseLabel" : "От неё зависят"
+      "inverseLabel" : "От неё зависят",
+      "inverseLabelEn" : "Dependents",
+      "inverseLabelPl" : "Zależne"
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
+      "labelKey" : "pp.rel.dependents",
+      "labelEn" : "Dependents",
+      "labelPl" : "Zależne",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "any",
@@ -1155,17 +1295,26 @@
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
-        "dict" : "dependency_kind"
+        "dict" : "dependency_kind",
+        "labelEn" : "Kind",
+        "labelPl" : "Rodzaj"
       }, {
         "key" : "reason",
-        "label" : "Причина"
+        "label" : "Причина",
+        "labelEn" : "Reason",
+        "labelPl" : "Powód"
       } ],
       "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
-      "inverseLabel" : "Зависит от"
+      "inverseLabel" : "Зависит от",
+      "inverseLabelEn" : "Depends on",
+      "inverseLabelPl" : "Zależy od"
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -1174,6 +1323,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -1182,6 +1334,9 @@
     }, {
       "key" : "publications",
       "label" : "Публикации",
+      "labelKey" : "pp.rel.publications",
+      "labelEn" : "Publications",
+      "labelPl" : "Publikacje",
       "rel" : "PRODUCED_BY",
       "dir" : "in",
       "targetType" : "publication",
@@ -1190,6 +1345,9 @@
     }, {
       "key" : "questions",
       "label" : "Вопросы",
+      "labelKey" : "pp.rel.questions",
+      "labelEn" : "Questions",
+      "labelPl" : "Pytania",
       "rel" : "RAISED_IN",
       "dir" : "in",
       "targetType" : "question",
@@ -1199,6 +1357,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -1207,6 +1368,9 @@
     }, {
       "key" : "assets",
       "label" : "Вложения",
+      "labelKey" : "pp.rel.attachments",
+      "labelEn" : "Attachments",
+      "labelPl" : "Załączniki",
       "rel" : "ATTACHED_TO",
       "dir" : "out",
       "targetType" : "asset",
@@ -1413,6 +1577,9 @@
     "linkTabs" : [ {
       "key" : "adrLinks",
       "label" : "Связи ADR",
+      "labelKey" : "pp.tab.adrLinks",
+      "labelEn" : "ADR links",
+      "labelPl" : "Powiązania ADR",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -1437,6 +1604,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -1457,6 +1627,9 @@
     "relations" : [ {
       "key" : "decisions",
       "label" : "Решения",
+      "labelKey" : "pp.rel.decisions",
+      "labelEn" : "Decisions",
+      "labelPl" : "Decyzje",
       "rel" : "DECIDED_IN",
       "dir" : "in",
       "targetType" : "decision",
@@ -1465,6 +1638,9 @@
     }, {
       "key" : "questions",
       "label" : "Вопросы",
+      "labelKey" : "pp.rel.questions",
+      "labelEn" : "Questions",
+      "labelPl" : "Pytania",
       "rel" : "RAISED_IN",
       "dir" : "in",
       "targetType" : "question",
@@ -1474,26 +1650,39 @@
     }, {
       "key" : "dependsOn",
       "label" : "Зависит от",
+      "labelKey" : "pp.rel.depends_on",
+      "labelEn" : "Depends on",
+      "labelPl" : "Zależy od",
       "rel" : "DEPENDS_ON",
       "dir" : "out",
       "targetType" : "adr",
       "relation" : "association",
       "place" : "link_tab",
       "manageable" : true,
-      "inverseLabel" : "Блокирует"
+      "inverseLabel" : "Блокирует",
+      "inverseLabelEn" : "Blocks",
+      "inverseLabelPl" : "Blokuje"
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
+      "labelKey" : "pp.rel.dependents",
+      "labelEn" : "Dependents",
+      "labelPl" : "Zależne",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "adr",
       "relation" : "association",
       "place" : "link_tab",
       "manageable" : true,
-      "inverseLabel" : "Зависит от"
+      "inverseLabel" : "Зависит от",
+      "inverseLabelEn" : "Depends on",
+      "inverseLabelPl" : "Zależy od"
     }, {
       "key" : "supersedes",
       "label" : "Заменяет",
+      "labelKey" : "pp.rel.supersedes",
+      "labelEn" : "Supersedes",
+      "labelPl" : "Zastępuje",
       "rel" : "SUPERSEDES",
       "dir" : "out",
       "targetType" : "adr",
@@ -1503,6 +1692,9 @@
     }, {
       "key" : "supersededBy",
       "label" : "Заменён",
+      "labelKey" : "pp.rel.superseded_by",
+      "labelEn" : "Superseded by",
+      "labelPl" : "Zastąpiony przez",
       "rel" : "SUPERSEDES",
       "dir" : "in",
       "targetType" : "adr",
@@ -1512,6 +1704,9 @@
     }, {
       "key" : "runbooks",
       "label" : "Ранбуки",
+      "labelKey" : "pp.rel.runbooks",
+      "labelEn" : "Runbooks",
+      "labelPl" : "Runbooki",
       "rel" : "REFERENCES_ADR",
       "dir" : "in",
       "targetType" : "runbook",
@@ -1520,6 +1715,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -1528,6 +1726,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -1536,6 +1737,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -1545,6 +1749,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -1554,6 +1761,9 @@
     }, {
       "key" : "tags",
       "label" : "Теги",
+      "labelKey" : "pp.rel.tags",
+      "labelEn" : "Tags",
+      "labelPl" : "Tagi",
       "rel" : "TAGGED_WITH",
       "dir" : "out",
       "targetType" : "tag",
@@ -1563,16 +1773,24 @@
     }, {
       "key" : "sprints",
       "label" : "Спринты",
+      "labelKey" : "pp.rel.sprints",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty",
       "rel" : "IMPLEMENTED_IN",
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "realization",
       "place" : "link_tab",
       "manageable" : true,
-      "inverseLabel" : "Реализует ADR"
+      "inverseLabel" : "Реализует ADR",
+      "inverseLabelEn" : "Implements ADR",
+      "inverseLabelPl" : "Realizuje ADR"
     }, {
       "key" : "releases",
       "label" : "Релизы",
+      "labelKey" : "pp.rel.releases",
+      "labelEn" : "Releases",
+      "labelPl" : "Wydania",
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "out",
       "targetType" : "release",
@@ -1581,6 +1799,9 @@
     }, {
       "key" : "justifies",
       "label" : "Обосновывает задачи",
+      "labelKey" : "pp.rel.justifies_tasks",
+      "labelEn" : "Justifies tasks",
+      "labelPl" : "Uzasadnia zadania",
       "rel" : "JUSTIFIED_BY",
       "dir" : "in",
       "targetType" : "task",
@@ -1590,6 +1811,9 @@
     }, {
       "key" : "useCases",
       "label" : "Сценарии",
+      "labelKey" : "pp.rel.use_cases",
+      "labelEn" : "Use cases",
+      "labelPl" : "Scenariusze",
       "rel" : "TRACED_TO",
       "dir" : "in",
       "targetType" : "use_case",
@@ -1598,6 +1822,9 @@
     }, {
       "key" : "insights",
       "label" : "Инсайты BRAGI",
+      "labelKey" : "pp.rel.bragi_insights",
+      "labelEn" : "BRAGI insights",
+      "labelPl" : "Wnioski BRAGI",
       "rel" : "LED_TO",
       "dir" : "in",
       "targetType" : "insight",
@@ -1606,6 +1833,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -1614,6 +1844,9 @@
     }, {
       "key" : "assets",
       "label" : "Вложения",
+      "labelKey" : "pp.rel.attachments",
+      "labelEn" : "Attachments",
+      "labelPl" : "Załączniki",
       "rel" : "ATTACHED_TO",
       "dir" : "out",
       "targetType" : "asset",
@@ -1767,6 +2000,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -1782,6 +2018,9 @@
     "relations" : [ {
       "key" : "documentedFor",
       "label" : "Компонент",
+      "labelKey" : "pp.rel.component",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent",
       "rel" : "DOCUMENTED_IN",
       "dir" : "in",
       "targetType" : "component",
@@ -1790,6 +2029,9 @@
     }, {
       "key" : "components",
       "label" : "Компонент",
+      "labelKey" : "pp.rel.component",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -1799,6 +2041,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -1808,6 +2053,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -1816,6 +2064,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -1824,6 +2075,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -1832,6 +2086,9 @@
     }, {
       "key" : "assets",
       "label" : "Вложения",
+      "labelKey" : "pp.rel.attachments",
+      "labelEn" : "Attachments",
+      "labelPl" : "Załączniki",
       "rel" : "ATTACHED_TO",
       "dir" : "out",
       "targetType" : "asset",
@@ -2028,6 +2285,9 @@
     "linkTabs" : [ {
       "key" : "children",
       "label" : "Вложенные документы",
+      "labelKey" : "pp.tab.children",
+      "labelEn" : "Nested documents",
+      "labelPl" : "Dokumenty zagnieżdżone",
       "rels" : [ {
         "rel" : "DOC_CHILD_OF",
         "dir" : "in",
@@ -2037,6 +2297,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2052,6 +2315,9 @@
     "relations" : [ {
       "key" : "components",
       "label" : "Компонент",
+      "labelKey" : "pp.rel.component",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -2061,6 +2327,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -2070,6 +2339,9 @@
     }, {
       "key" : "parentDoc",
       "label" : "Родительский документ",
+      "labelKey" : "pp.rel.parent_document",
+      "labelEn" : "Parent document",
+      "labelPl" : "Dokument nadrzędny",
       "rel" : "DOC_CHILD_OF",
       "dir" : "out",
       "targetType" : "doc",
@@ -2078,15 +2350,23 @@
     }, {
       "key" : "sprints",
       "label" : "Спринты",
+      "labelKey" : "pp.rel.sprints",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty",
       "rel" : "IMPLEMENTED_IN",
       "dir" : "out",
       "targetType" : "sprint",
       "relation" : "attribute",
       "place" : "prop",
-      "inverseLabel" : "Знания"
+      "inverseLabel" : "Знания",
+      "inverseLabelEn" : "Knowledge",
+      "inverseLabelPl" : "Wiedza"
     }, {
       "key" : "children",
       "label" : "Вложенные документы",
+      "labelKey" : "pp.rel.nested_documents",
+      "labelEn" : "Nested documents",
+      "labelPl" : "Dokumenty zagnieżdżone",
       "rel" : "DOC_CHILD_OF",
       "dir" : "in",
       "targetType" : "doc",
@@ -2095,6 +2375,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -2103,6 +2386,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -2111,6 +2397,9 @@
     }, {
       "key" : "assets",
       "label" : "Вложения",
+      "labelKey" : "pp.rel.attachments",
+      "labelEn" : "Attachments",
+      "labelPl" : "Załączniki",
       "rel" : "ATTACHED_TO",
       "dir" : "out",
       "targetType" : "asset",
@@ -2262,6 +2551,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2277,6 +2569,9 @@
     "relations" : [ {
       "key" : "adr",
       "label" : "ADR",
+      "labelKey" : "pp.rel.adr",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rel" : "DECIDED_IN",
       "dir" : "out",
       "targetType" : "adr",
@@ -2285,6 +2580,9 @@
     }, {
       "key" : "supersedes",
       "label" : "Заменяет",
+      "labelKey" : "pp.rel.supersedes",
+      "labelEn" : "Supersedes",
+      "labelPl" : "Zastępuje",
       "rel" : "SUPERSEDES",
       "dir" : "out",
       "targetType" : "decision",
@@ -2293,6 +2591,9 @@
     }, {
       "key" : "answers",
       "label" : "Отвечает на вопросы",
+      "labelKey" : "pp.rel.answers_questions",
+      "labelEn" : "Answers questions",
+      "labelPl" : "Odpowiada na pytania",
       "rel" : "ANSWERS",
       "dir" : "out",
       "targetType" : "question",
@@ -2301,6 +2602,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -2309,6 +2613,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -2318,6 +2625,9 @@
     }, {
       "key" : "tags",
       "label" : "Теги",
+      "labelKey" : "pp.rel.tags",
+      "labelEn" : "Tags",
+      "labelPl" : "Tagi",
       "rel" : "TAGGED_WITH",
       "dir" : "out",
       "targetType" : "tag",
@@ -2326,6 +2636,9 @@
     }, {
       "key" : "supersededBy",
       "label" : "Заменено",
+      "labelKey" : "pp.rel.superseded_by_n",
+      "labelEn" : "Superseded by",
+      "labelPl" : "Zastąpione przez",
       "rel" : "SUPERSEDES",
       "dir" : "in",
       "targetType" : "decision",
@@ -2334,6 +2647,9 @@
     }, {
       "key" : "useCases",
       "label" : "Сценарии",
+      "labelKey" : "pp.rel.use_cases",
+      "labelEn" : "Use cases",
+      "labelPl" : "Scenariusze",
       "rel" : "TRACED_TO",
       "dir" : "in",
       "targetType" : "feature",
@@ -2342,6 +2658,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -2350,6 +2669,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -2358,6 +2680,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -2523,6 +2848,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -2538,6 +2866,9 @@
     "relations" : [ {
       "key" : "raisedIn",
       "label" : "Поднят в",
+      "labelKey" : "pp.rel.raised_in",
+      "labelEn" : "Raised in",
+      "labelPl" : "Zgłoszone w",
       "rel" : "RAISED_IN",
       "dir" : "out",
       "targetType" : "any",
@@ -2546,15 +2877,23 @@
     }, {
       "key" : "gates",
       "label" : "Блокирует задачи",
+      "labelKey" : "pp.rel.blocks_tasks",
+      "labelEn" : "Blocks tasks",
+      "labelPl" : "Blokuje zadania",
       "rel" : "GATES",
       "dir" : "out",
       "targetType" : "task",
       "relation" : "association",
       "place" : "link_tab",
-      "inverseLabel" : "Блокирующие вопросы"
+      "inverseLabel" : "Блокирующие вопросы",
+      "inverseLabelEn" : "Blocking questions",
+      "inverseLabelPl" : "Pytania blokujące"
     }, {
       "key" : "answeredBy",
       "label" : "Ответ — решения",
+      "labelKey" : "pp.rel.answered_by_decisions",
+      "labelEn" : "Answered by decisions",
+      "labelPl" : "Odpowiedź — decyzje",
       "rel" : "ANSWERS",
       "dir" : "in",
       "targetType" : "decision",
@@ -2563,6 +2902,9 @@
     }, {
       "key" : "responsible",
       "label" : "Ответственный",
+      "labelKey" : "pp.rel.responsible",
+      "labelEn" : "Responsible",
+      "labelPl" : "Odpowiedzialny",
       "rel" : "ANSWERABLE_BY",
       "dir" : "out",
       "targetType" : "any",
@@ -2571,6 +2913,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -2579,6 +2924,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -2588,6 +2936,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -2596,6 +2947,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -2715,6 +3069,9 @@
     "linkTabs" : [ {
       "key" : "deps",
       "label" : "Зависимости",
+      "labelKey" : "pp.tab.deps",
+      "labelEn" : "Dependencies",
+      "labelPl" : "Zależności",
       "rels" : [ {
         "rel" : "DEPENDS_ON",
         "dir" : "out",
@@ -2732,6 +3089,9 @@
     "relations" : [ {
       "key" : "sprints",
       "label" : "Спринты",
+      "labelKey" : "pp.rel.sprints",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty",
       "rel" : "TARGETS_MILESTONE",
       "dir" : "in",
       "targetType" : "sprint",
@@ -2740,6 +3100,9 @@
     }, {
       "key" : "features",
       "label" : "Фичи",
+      "labelKey" : "pp.rel.features",
+      "labelEn" : "Features",
+      "labelPl" : "Funkcje",
       "rel" : "TARGETS_MILESTONE",
       "dir" : "in",
       "targetType" : "feature",
@@ -2748,6 +3111,9 @@
     }, {
       "key" : "dependsOn",
       "label" : "Зависит от",
+      "labelKey" : "pp.rel.depends_on",
+      "labelEn" : "Depends on",
+      "labelPl" : "Zależy od",
       "rel" : "DEPENDS_ON",
       "dir" : "out",
       "targetType" : "any",
@@ -2757,17 +3123,26 @@
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
-        "dict" : "dependency_kind"
+        "dict" : "dependency_kind",
+        "labelEn" : "Kind",
+        "labelPl" : "Rodzaj"
       }, {
         "key" : "reason",
-        "label" : "Причина"
+        "label" : "Причина",
+        "labelEn" : "Reason",
+        "labelPl" : "Powód"
       } ],
       "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
-      "inverseLabel" : "От неё зависят"
+      "inverseLabel" : "От неё зависят",
+      "inverseLabelEn" : "Dependents",
+      "inverseLabelPl" : "Zależne"
     }, {
       "key" : "blocks",
       "label" : "От неё зависят",
+      "labelKey" : "pp.rel.dependents",
+      "labelEn" : "Dependents",
+      "labelPl" : "Zależne",
       "rel" : "DEPENDS_ON",
       "dir" : "in",
       "targetType" : "any",
@@ -2777,17 +3152,26 @@
       "props" : [ {
         "key" : "kind",
         "label" : "Вид",
-        "dict" : "dependency_kind"
+        "dict" : "dependency_kind",
+        "labelEn" : "Kind",
+        "labelPl" : "Rodzaj"
       }, {
         "key" : "reason",
-        "label" : "Причина"
+        "label" : "Причина",
+        "labelEn" : "Reason",
+        "labelPl" : "Powód"
       } ],
       "reasonRequired" : true,
       "targetTypes" : [ "task", "phase", "sprint", "milestone" ],
-      "inverseLabel" : "Зависит от"
+      "inverseLabel" : "Зависит от",
+      "inverseLabelEn" : "Depends on",
+      "inverseLabelPl" : "Zależy od"
     }, {
       "key" : "products",
       "label" : "Продукты",
+      "labelKey" : "pp.rel.products",
+      "labelEn" : "Products",
+      "labelPl" : "Produkty",
       "rel" : "TARGETS_PRODUCT",
       "dir" : "out",
       "targetType" : "product",
@@ -2796,6 +3180,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -2847,6 +3234,9 @@
     "relations" : [ {
       "key" : "sprints",
       "label" : "Спринты на треке",
+      "labelKey" : "pp.rel.sprints_on_track",
+      "labelEn" : "Sprints on track",
+      "labelPl" : "Sprinty na ścieżce",
       "rel" : "ON_TRACK",
       "dir" : "in",
       "targetType" : "sprint",
@@ -2992,6 +3382,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3007,6 +3400,9 @@
     "relations" : [ {
       "key" : "sprints",
       "label" : "Спринты",
+      "labelKey" : "pp.rel.sprints",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty",
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "in",
       "targetType" : "sprint",
@@ -3015,6 +3411,9 @@
     }, {
       "key" : "prs",
       "label" : "PR",
+      "labelKey" : "pp.rel.prs",
+      "labelEn" : "PRs",
+      "labelPl" : "PR",
       "rel" : "SHIPPED_IN",
       "dir" : "in",
       "targetType" : "pr",
@@ -3023,6 +3422,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -3031,6 +3433,9 @@
     }, {
       "key" : "adrs",
       "label" : "ADR",
+      "labelKey" : "pp.rel.adr",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rel" : "IMPLEMENTED_IN_RELEASE",
       "dir" : "in",
       "targetType" : "adr",
@@ -3039,6 +3444,9 @@
     }, {
       "key" : "publications",
       "label" : "Публикации",
+      "labelKey" : "pp.rel.publications",
+      "labelEn" : "Publications",
+      "labelPl" : "Publikacje",
       "rel" : "SHIPPED_IN",
       "dir" : "in",
       "targetType" : "publication",
@@ -3047,6 +3455,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -3055,6 +3466,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -3063,6 +3477,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -3236,6 +3653,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3251,6 +3671,9 @@
     "relations" : [ {
       "key" : "parent",
       "label" : "Родитель",
+      "labelKey" : "pp.rel.parent",
+      "labelEn" : "Parent",
+      "labelPl" : "Nadrzędny",
       "rel" : "PARENT_OF",
       "dir" : "out",
       "targetType" : "component",
@@ -3259,6 +3682,9 @@
     }, {
       "key" : "products",
       "label" : "Продукты",
+      "labelKey" : "pp.rel.products",
+      "labelEn" : "Products",
+      "labelPl" : "Produkty",
       "rel" : "IN_PRODUCT",
       "dir" : "out",
       "targetType" : "product",
@@ -3267,6 +3693,9 @@
     }, {
       "key" : "children",
       "label" : "Подкомпоненты",
+      "labelKey" : "pp.rel.subcomponents",
+      "labelEn" : "Subcomponents",
+      "labelPl" : "Podkomponenty",
       "rel" : "PARENT_OF",
       "dir" : "in",
       "targetType" : "component",
@@ -3275,6 +3704,9 @@
     }, {
       "key" : "stack",
       "label" : "Стек",
+      "labelKey" : "pp.rel.stack",
+      "labelEn" : "Stack",
+      "labelPl" : "Stos",
       "rel" : "USES",
       "dir" : "out",
       "targetType" : "tech_ref",
@@ -3283,6 +3715,9 @@
     }, {
       "key" : "tech",
       "label" : "Технологии",
+      "labelKey" : "pp.rel.technologies",
+      "labelEn" : "Technologies",
+      "labelPl" : "Technologie",
       "rel" : "DOCUMENTED_IN",
       "dir" : "out",
       "targetType" : "tech",
@@ -3291,6 +3726,9 @@
     }, {
       "key" : "repositories",
       "label" : "Репозитории",
+      "labelKey" : "pp.rel.repositories",
+      "labelEn" : "Repositories",
+      "labelPl" : "Repozytoria",
       "rel" : "COMPONENT_REPOSITORY",
       "dir" : "out",
       "targetType" : "repository",
@@ -3299,6 +3737,9 @@
     }, {
       "key" : "adrs",
       "label" : "ADR",
+      "labelKey" : "pp.rel.adr",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "adr",
@@ -3307,6 +3748,9 @@
     }, {
       "key" : "specs",
       "label" : "Спеки",
+      "labelKey" : "pp.rel.specs",
+      "labelEn" : "Specs",
+      "labelPl" : "Specyfikacje",
       "rel" : "DOCUMENTED_IN",
       "dir" : "out",
       "targetType" : "spec",
@@ -3315,6 +3759,9 @@
     }, {
       "key" : "decisions",
       "label" : "Решения",
+      "labelKey" : "pp.rel.decisions",
+      "labelEn" : "Decisions",
+      "labelPl" : "Decyzje",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "decision",
@@ -3323,6 +3770,9 @@
     }, {
       "key" : "questions",
       "label" : "Вопросы",
+      "labelKey" : "pp.rel.questions",
+      "labelEn" : "Questions",
+      "labelPl" : "Pytania",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "question",
@@ -3331,6 +3781,9 @@
     }, {
       "key" : "features",
       "label" : "Сценарии",
+      "labelKey" : "pp.rel.use_cases",
+      "labelEn" : "Use cases",
+      "labelPl" : "Scenariusze",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "feature",
@@ -3339,6 +3792,9 @@
     }, {
       "key" : "docs",
       "label" : "Знания",
+      "labelKey" : "pp.rel.knowledge",
+      "labelEn" : "Knowledge",
+      "labelPl" : "Wiedza",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "doc",
@@ -3347,6 +3803,9 @@
     }, {
       "key" : "qgs",
       "label" : "Гейты качества",
+      "labelKey" : "pp.rel.quality_gates",
+      "labelEn" : "Quality gates",
+      "labelPl" : "Bramki jakości",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "qg",
@@ -3355,6 +3814,9 @@
     }, {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.rel.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rel" : "TAGGED_WITH",
       "dir" : "in",
       "targetType" : "task",
@@ -3363,6 +3825,9 @@
     }, {
       "key" : "sprints",
       "label" : "Спринты",
+      "labelKey" : "pp.rel.sprints",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty",
       "rel" : "BELONGS_TO",
       "dir" : "in",
       "targetType" : "sprint",
@@ -3371,6 +3836,9 @@
     }, {
       "key" : "area",
       "label" : "Область",
+      "labelKey" : "pp.rel.area",
+      "labelEn" : "Area",
+      "labelPl" : "Obszar",
       "rel" : "IN_AREA",
       "dir" : "out",
       "targetType" : "area",
@@ -3379,6 +3847,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -3387,6 +3858,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -3494,6 +3968,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3509,6 +3986,9 @@
     "relations" : [ {
       "key" : "documentedFor",
       "label" : "Компонент",
+      "labelKey" : "pp.rel.component",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent",
       "rel" : "DOCUMENTED_IN",
       "dir" : "in",
       "targetType" : "component",
@@ -3517,6 +3997,9 @@
     }, {
       "key" : "component",
       "label" : "Компонент",
+      "labelKey" : "pp.rel.component",
+      "labelEn" : "Component",
+      "labelPl" : "Komponent",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -3525,6 +4008,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -3533,6 +4019,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -3741,6 +4230,9 @@
     "linkTabs" : [ {
       "key" : "value",
       "label" : "Ценность",
+      "labelKey" : "pp.tab.value",
+      "labelEn" : "Value",
+      "labelPl" : "Wartość",
       "rels" : [ {
         "rel" : "HAS_ACTOR",
         "dir" : "out",
@@ -3780,6 +4272,9 @@
     }, {
       "key" : "trace",
       "label" : "Обоснование",
+      "labelKey" : "pp.tab.trace",
+      "labelEn" : "Rationale",
+      "labelPl" : "Uzasadnienie",
       "rels" : [ {
         "rel" : "TRACED_TO",
         "dir" : "out",
@@ -3789,6 +4284,9 @@
     }, {
       "key" : "ucLinks",
       "label" : "Связи сценариев",
+      "labelKey" : "pp.tab.ucLinks",
+      "labelEn" : "Use case links",
+      "labelPl" : "Powiązania scenariuszy",
       "rels" : [ {
         "rel" : "BUILDS_ON",
         "dir" : "out",
@@ -3823,6 +4321,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -3838,6 +4339,9 @@
     "relations" : [ {
       "key" : "parent",
       "label" : "Родитель",
+      "labelKey" : "pp.rel.parent",
+      "labelEn" : "Parent",
+      "labelPl" : "Nadrzędny",
       "rel" : "DECOMPOSES_INTO",
       "dir" : "in",
       "targetType" : "feature",
@@ -3846,6 +4350,9 @@
     }, {
       "key" : "children",
       "label" : "Сценарии",
+      "labelKey" : "pp.rel.use_cases",
+      "labelEn" : "Use cases",
+      "labelPl" : "Scenariusze",
       "rel" : "DECOMPOSES_INTO",
       "dir" : "out",
       "targetType" : "feature",
@@ -3854,6 +4361,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -3862,6 +4372,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -3870,6 +4383,9 @@
     }, {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.rel.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rel" : "REALIZES",
       "dir" : "in",
       "targetType" : "task",
@@ -3878,6 +4394,9 @@
     }, {
       "key" : "actors",
       "label" : "Акторы",
+      "labelKey" : "pp.rel.actors",
+      "labelEn" : "Actors",
+      "labelPl" : "Aktorzy",
       "rel" : "HAS_ACTOR",
       "dir" : "out",
       "targetType" : "actor",
@@ -3886,6 +4405,9 @@
     }, {
       "key" : "pains",
       "label" : "Боли",
+      "labelKey" : "pp.rel.pains",
+      "labelEn" : "Pains",
+      "labelPl" : "Bóle",
       "rel" : "ADDRESSES",
       "dir" : "out",
       "targetType" : "pain",
@@ -3894,6 +4416,9 @@
     }, {
       "key" : "gains",
       "label" : "Выгоды",
+      "labelKey" : "pp.rel.gains",
+      "labelEn" : "Gains",
+      "labelPl" : "Korzyści",
       "rel" : "PROMISES",
       "dir" : "out",
       "targetType" : "gain",
@@ -3902,6 +4427,9 @@
     }, {
       "key" : "jobs",
       "label" : "Работы",
+      "labelKey" : "pp.rel.jobs",
+      "labelEn" : "Jobs",
+      "labelPl" : "Prace",
       "rel" : "HELPS_WITH",
       "dir" : "out",
       "targetType" : "job",
@@ -3910,6 +4438,9 @@
     }, {
       "key" : "relieves",
       "label" : "Снимает боли",
+      "labelKey" : "pp.rel.relieves_pains",
+      "labelEn" : "Relieves pains",
+      "labelPl" : "Łagodzi bóle",
       "rel" : "RELIEVES",
       "dir" : "out",
       "targetType" : "pain",
@@ -3918,6 +4449,9 @@
     }, {
       "key" : "delivers",
       "label" : "Создаёт выгоды",
+      "labelKey" : "pp.rel.creates_gains",
+      "labelEn" : "Creates gains",
+      "labelPl" : "Tworzy korzyści",
       "rel" : "DELIVERS",
       "dir" : "out",
       "targetType" : "gain",
@@ -3926,6 +4460,9 @@
     }, {
       "key" : "performs",
       "label" : "Выполняет работы",
+      "labelKey" : "pp.rel.performs_jobs",
+      "labelEn" : "Performs jobs",
+      "labelPl" : "Wykonuje prace",
       "rel" : "PERFORMS",
       "dir" : "out",
       "targetType" : "job",
@@ -3934,6 +4471,9 @@
     }, {
       "key" : "adrs",
       "label" : "ADR",
+      "labelKey" : "pp.rel.adr",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rel" : "TRACED_TO",
       "dir" : "out",
       "targetType" : "adr",
@@ -3942,6 +4482,9 @@
     }, {
       "key" : "decisions",
       "label" : "Решения",
+      "labelKey" : "pp.rel.decisions",
+      "labelEn" : "Decisions",
+      "labelPl" : "Decyzje",
       "rel" : "TRACED_TO",
       "dir" : "out",
       "targetType" : "decision",
@@ -3950,6 +4493,9 @@
     }, {
       "key" : "milestones",
       "label" : "Вехи",
+      "labelKey" : "pp.rel.milestones",
+      "labelEn" : "Milestones",
+      "labelPl" : "Kamienie milowe",
       "rel" : "TARGETS_MILESTONE",
       "dir" : "out",
       "targetType" : "milestone",
@@ -3958,6 +4504,9 @@
     }, {
       "key" : "buildsOn",
       "label" : "Опирается на",
+      "labelKey" : "pp.rel.builds_on",
+      "labelEn" : "Builds on",
+      "labelPl" : "Opiera się na",
       "rel" : "BUILDS_ON",
       "dir" : "out",
       "targetType" : "feature",
@@ -3966,6 +4515,9 @@
     }, {
       "key" : "builtOnBy",
       "label" : "На неё опираются",
+      "labelKey" : "pp.rel.built_on_by",
+      "labelEn" : "Built on by",
+      "labelPl" : "Opierają się na niej",
       "rel" : "BUILDS_ON",
       "dir" : "in",
       "targetType" : "feature",
@@ -3974,6 +4526,9 @@
     }, {
       "key" : "includes",
       "label" : "Включает",
+      "labelKey" : "pp.rel.includes",
+      "labelEn" : "Includes",
+      "labelPl" : "Zawiera",
       "rel" : "UC_INCLUDES",
       "dir" : "out",
       "targetType" : "feature",
@@ -3982,6 +4537,9 @@
     }, {
       "key" : "includedBy",
       "label" : "Включена в",
+      "labelKey" : "pp.rel.included_in",
+      "labelEn" : "Included in",
+      "labelPl" : "Zawarta w",
       "rel" : "UC_INCLUDES",
       "dir" : "in",
       "targetType" : "feature",
@@ -3990,6 +4548,9 @@
     }, {
       "key" : "extends",
       "label" : "Расширяет",
+      "labelKey" : "pp.rel.extends",
+      "labelEn" : "Extends",
+      "labelPl" : "Rozszerza",
       "rel" : "UC_EXTENDS",
       "dir" : "out",
       "targetType" : "feature",
@@ -3998,6 +4559,9 @@
     }, {
       "key" : "extendedBy",
       "label" : "Расширена",
+      "labelKey" : "pp.rel.extended_by",
+      "labelEn" : "Extended by",
+      "labelPl" : "Rozszerzona przez",
       "rel" : "UC_EXTENDS",
       "dir" : "in",
       "targetType" : "feature",
@@ -4006,6 +4570,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -4014,6 +4581,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -4174,6 +4744,9 @@
     "relations" : [ {
       "key" : "parent",
       "label" : "Родитель",
+      "labelKey" : "pp.rel.parent",
+      "labelEn" : "Parent",
+      "labelPl" : "Nadrzędny",
       "rel" : "PARENT_PRODUCT",
       "dir" : "out",
       "targetType" : "product",
@@ -4182,6 +4755,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -4190,6 +4766,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "IN_PRODUCT",
       "dir" : "in",
       "targetType" : "component",
@@ -4198,6 +4777,9 @@
     }, {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.rel.features_and_use_cases",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rel" : "IN_PRODUCT",
       "dir" : "in",
       "targetType" : "feature",
@@ -4206,6 +4788,9 @@
     }, {
       "key" : "pains",
       "label" : "Боли",
+      "labelKey" : "pp.rel.pains",
+      "labelEn" : "Pains",
+      "labelPl" : "Bóle",
       "rel" : "ADDRESSES",
       "dir" : "out",
       "targetType" : "pain",
@@ -4214,6 +4799,9 @@
     }, {
       "key" : "gains",
       "label" : "Выгоды",
+      "labelKey" : "pp.rel.gains",
+      "labelEn" : "Gains",
+      "labelPl" : "Korzyści",
       "rel" : "PROMISES",
       "dir" : "out",
       "targetType" : "gain",
@@ -4222,6 +4810,9 @@
     }, {
       "key" : "jobs",
       "label" : "Работы",
+      "labelKey" : "pp.rel.jobs",
+      "labelEn" : "Jobs",
+      "labelPl" : "Prace",
       "rel" : "HELPS_WITH",
       "dir" : "out",
       "targetType" : "job",
@@ -4230,6 +4821,9 @@
     }, {
       "key" : "actors",
       "label" : "Роли",
+      "labelKey" : "pp.rel.roles",
+      "labelEn" : "Roles",
+      "labelPl" : "Role",
       "rel" : "HAS_ACTOR",
       "dir" : "out",
       "targetType" : "actor",
@@ -4238,6 +4832,9 @@
     }, {
       "key" : "children",
       "label" : "Подпродукты",
+      "labelKey" : "pp.rel.subproducts",
+      "labelEn" : "Subproducts",
+      "labelPl" : "Podprodukty",
       "rel" : "PARENT_PRODUCT",
       "dir" : "in",
       "targetType" : "product",
@@ -4246,6 +4843,9 @@
     }, {
       "key" : "serves",
       "label" : "Обслуживает",
+      "labelKey" : "pp.rel.serves",
+      "labelEn" : "Serves",
+      "labelPl" : "Obsługuje",
       "rel" : "SERVES",
       "dir" : "out",
       "targetType" : "product",
@@ -4254,6 +4854,9 @@
     }, {
       "key" : "servedBy",
       "label" : "Обслуживается",
+      "labelKey" : "pp.rel.served_by",
+      "labelEn" : "Served by",
+      "labelPl" : "Obsługiwany przez",
       "rel" : "SERVES",
       "dir" : "in",
       "targetType" : "product",
@@ -4262,6 +4865,9 @@
     }, {
       "key" : "milestones",
       "label" : "Вехи",
+      "labelKey" : "pp.rel.milestones",
+      "labelEn" : "Milestones",
+      "labelPl" : "Kamienie milowe",
       "rel" : "TARGETS_PRODUCT",
       "dir" : "in",
       "targetType" : "milestone",
@@ -4270,6 +4876,9 @@
     }, {
       "key" : "organizations",
       "label" : "Организации",
+      "labelKey" : "pp.rel.organizations",
+      "labelEn" : "Organizations",
+      "labelPl" : "Organizacje",
       "rel" : "ORG_HAS_PRODUCT",
       "dir" : "in",
       "targetType" : "organization",
@@ -4336,7 +4945,8 @@
       "group" : "props",
       "definition" : "Откуда имя человека: manual — задано в профиле человеком или админом, сверка с Keycloak его не трогает; kc — «Имя Фамилия» из Keycloak, обновляется сверкой; пусто — подписан логином.",
       "labelEn" : "Name source",
-      "labelPl" : "Źródło imienia"
+      "labelPl" : "Źródło imienia",
+      "audience" : "admin"
     } ],
     "props" : [ {
       "fields" : [ "projects", "login", "avatar", "name_source" ]
@@ -4344,6 +4954,9 @@
     "linkTabs" : [ {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.tab.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rels" : [ {
         "rel" : "ROLE_HELD_BY",
         "dir" : "in",
@@ -4353,6 +4966,9 @@
     }, {
       "key" : "agents",
       "label" : "Агенты",
+      "labelKey" : "pp.tab.agents",
+      "labelEn" : "Agents",
+      "labelPl" : "Agenci",
       "rels" : [ {
         "rel" : "OWNED_BY",
         "dir" : "in",
@@ -4363,6 +4979,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "out",
       "targetType" : "project",
@@ -4371,6 +4990,9 @@
     }, {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.rel.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rel" : "ROLE_HELD_BY",
       "dir" : "in",
       "targetType" : "task",
@@ -4379,6 +5001,9 @@
     }, {
       "key" : "agents",
       "label" : "Агенты",
+      "labelKey" : "pp.rel.agents",
+      "labelEn" : "Agents",
+      "labelPl" : "Agenci",
       "rel" : "OWNED_BY",
       "dir" : "in",
       "targetType" : "agent",
@@ -4387,6 +5012,9 @@
     }, {
       "key" : "organizations",
       "label" : "Организации",
+      "labelKey" : "pp.rel.organizations",
+      "labelEn" : "Organizations",
+      "labelPl" : "Organizacje",
       "rel" : "ORG_MEMBER",
       "dir" : "in",
       "targetType" : "organization",
@@ -4420,7 +5048,8 @@
       "definition" : "Учётка агента в Keycloak (клиент), под которой он ходит в LORE.",
       "layer" : "stable",
       "labelEn" : "Account",
-      "labelPl" : "Konto"
+      "labelPl" : "Konto",
+      "audience" : "admin"
     }, {
       "key" : "agent_role",
       "label" : "Профиль",
@@ -4475,6 +5104,9 @@
     "linkTabs" : [ {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.tab.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rels" : [ {
         "rel" : "ROLE_HELD_BY",
         "dir" : "in",
@@ -4484,6 +5116,9 @@
     }, {
       "key" : "machines",
       "label" : "Машины",
+      "labelKey" : "pp.tab.machines",
+      "labelEn" : "Machines",
+      "labelPl" : "Maszyny",
       "rels" : [ {
         "rel" : "USES_MACHINE",
         "dir" : "out",
@@ -4493,6 +5128,9 @@
     }, {
       "key" : "roles",
       "label" : "Роли продукта",
+      "labelKey" : "pp.tab.productRoles",
+      "labelEn" : "Product roles",
+      "labelPl" : "Role produktu",
       "rels" : [ {
         "rel" : "FILLS_ROLE",
         "dir" : "out",
@@ -4503,6 +5141,9 @@
     "relations" : [ {
       "key" : "owner",
       "label" : "Владелец",
+      "labelKey" : "pp.rel.owner",
+      "labelEn" : "Owner",
+      "labelPl" : "Właściciel",
       "rel" : "OWNED_BY",
       "dir" : "out",
       "targetType" : "user",
@@ -4511,6 +5152,9 @@
     }, {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -4519,6 +5163,9 @@
     }, {
       "key" : "tasks",
       "label" : "Задачи",
+      "labelKey" : "pp.rel.tasks",
+      "labelEn" : "Tasks",
+      "labelPl" : "Zadania",
       "rel" : "ROLE_HELD_BY",
       "dir" : "in",
       "targetType" : "task",
@@ -4527,6 +5174,9 @@
     }, {
       "key" : "machines",
       "label" : "Машины",
+      "labelKey" : "pp.rel.machines",
+      "labelEn" : "Machines",
+      "labelPl" : "Maszyny",
       "rel" : "USES_MACHINE",
       "dir" : "out",
       "targetType" : "machine",
@@ -4535,6 +5185,9 @@
     }, {
       "key" : "roles",
       "label" : "Роли продукта",
+      "labelKey" : "pp.rel.product_roles",
+      "labelEn" : "Product roles",
+      "labelPl" : "Role produktu",
       "rel" : "FILLS_ROLE",
       "dir" : "out",
       "targetType" : "actor",
@@ -4543,6 +5196,102 @@
     } ],
     "labelEn" : "Agent",
     "labelPl" : "Agent"
+  }, {
+    "type" : "machine",
+    "label" : "Машина",
+    "labelKey" : "pp.kind.machine",
+    "icon" : "laptop",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Имя",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Имя машины — machine_id вершины KnowMachine: имя компьютера в нижнем регистре или LORE_MACHINE_ID агента.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Imię"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Ключ машины — machine_id; по нему открывается паспорт и связываются агенты.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец",
+      "labelKey" : "pp.field.owner",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "user",
+      "definition" : "Владелец машины — ребро OWNED_BY у её шлюза minilore-link-<имя> (ADR-MINILORE-007 В4). Нет шлюза — нет и владельца.",
+      "layer" : "stable",
+      "labelEn" : "Owner",
+      "labelPl" : "Właściciel"
+    }, {
+      "key" : "gateway",
+      "label" : "Шлюз miniLORE",
+      "labelKey" : "pp.field.gateway",
+      "kind" : "ref",
+      "group" : "props",
+      "refType" : "agent",
+      "definition" : "Учётка шлюза miniLORE — актор с client_id minilore-link-<имя>. Пусто — шлюза нет: машина появилась сама по записи агента.",
+      "layer" : "stable",
+      "labelEn" : "miniLORE gateway",
+      "labelPl" : "Bramka miniLORE"
+    }, {
+      "key" : "harness",
+      "label" : "Оболочка",
+      "labelKey" : "pp.field.harness",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Оболочка шлюза машины (harness актора-шлюза) из справочника harness; у агентов машины — своя.",
+      "layer" : "optional",
+      "labelEn" : "Harness",
+      "labelPl" : "Powłoka"
+    }, {
+      "key" : "last_seen_at",
+      "label" : "Отметка машины",
+      "labelKey" : "pp.field.machineSeen",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Когда агент с этой машины последний раз писал в LORE — KnowMachine.last_seen_at, ставит сервер после записи агента. Последнее действие в журнале (agent_actions) — отдельная цифра.",
+      "layer" : "stable",
+      "labelEn" : "Machine mark",
+      "labelPl" : "Znacznik maszyny"
+    }, {
+      "key" : "first_seen_at",
+      "label" : "Впервые",
+      "labelKey" : "pp.field.firstSeen",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "KnowMachine.first_seen_at — первая запись агента с машины или заведение через machine_new.",
+      "layer" : "stable",
+      "labelEn" : "First seen",
+      "labelPl" : "Pierwszy raz"
+    } ],
+    "props" : [ {
+      "fields" : [ "owner", "gateway", "harness", "last_seen_at", "first_seen_at" ]
+    } ],
+    "relations" : [ {
+      "key" : "agents",
+      "label" : "Агенты машины",
+      "labelKey" : "pp.rel.machine_agents",
+      "labelEn" : "Agents on this machine",
+      "labelPl" : "Agenci maszyny",
+      "rel" : "USES_MACHINE",
+      "dir" : "in",
+      "targetType" : "agent",
+      "relation" : "association",
+      "place" : "link_tab"
+    } ],
+    "labelEn" : "Machine",
+    "labelPl" : "Maszyna"
   }, {
     "type" : "actor",
     "label" : "Роль продукта",
@@ -4599,6 +5348,9 @@
     "linkTabs" : [ {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "FELT_BY",
         "dir" : "in",
@@ -4618,6 +5370,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -4633,6 +5388,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -4641,6 +5399,9 @@
     }, {
       "key" : "features",
       "label" : "Сценарии",
+      "labelKey" : "pp.rel.use_cases",
+      "labelEn" : "Use cases",
+      "labelPl" : "Scenariusze",
       "rel" : "HAS_ACTOR",
       "dir" : "in",
       "targetType" : "feature",
@@ -4649,6 +5410,9 @@
     }, {
       "key" : "pains",
       "label" : "Боли",
+      "labelKey" : "pp.rel.pains",
+      "labelEn" : "Pains",
+      "labelPl" : "Bóle",
       "rel" : "FELT_BY",
       "dir" : "in",
       "targetType" : "pain",
@@ -4657,6 +5421,9 @@
     }, {
       "key" : "gains",
       "label" : "Выгоды",
+      "labelKey" : "pp.rel.gains",
+      "labelEn" : "Gains",
+      "labelPl" : "Korzyści",
       "rel" : "DESIRED_BY",
       "dir" : "in",
       "targetType" : "gain",
@@ -4665,6 +5432,9 @@
     }, {
       "key" : "jobs",
       "label" : "Работы",
+      "labelKey" : "pp.rel.jobs",
+      "labelEn" : "Jobs",
+      "labelPl" : "Prace",
       "rel" : "PERFORMED_BY",
       "dir" : "in",
       "targetType" : "job",
@@ -4673,6 +5443,9 @@
     }, {
       "key" : "agents",
       "label" : "Агенты",
+      "labelKey" : "pp.rel.agents",
+      "labelEn" : "Agents",
+      "labelPl" : "Agenci",
       "rel" : "FILLS_ROLE",
       "dir" : "in",
       "targetType" : "agent",
@@ -4681,6 +5454,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -4689,6 +5465,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -4749,6 +5528,9 @@
     "linkTabs" : [ {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.tab.features",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rels" : [ {
         "rel" : "ADDRESSES",
         "dir" : "in",
@@ -4763,6 +5545,9 @@
     }, {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "FELT_BY",
         "dir" : "out",
@@ -4777,6 +5562,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -4792,6 +5580,9 @@
     "relations" : [ {
       "key" : "claimedBy",
       "label" : "Заявлена фичами",
+      "labelKey" : "pp.rel.claimed_by_features",
+      "labelEn" : "Claimed by features",
+      "labelPl" : "Deklarowany przez funkcje",
       "rel" : "ADDRESSES",
       "dir" : "in",
       "targetType" : "feature",
@@ -4800,6 +5591,9 @@
     }, {
       "key" : "relievedBy",
       "label" : "Снимают сценарии",
+      "labelKey" : "pp.rel.relieved_by_use_cases",
+      "labelEn" : "Relieved by use cases",
+      "labelPl" : "Łagodzony przez scenariusze",
       "rel" : "RELIEVES",
       "dir" : "in",
       "targetType" : "feature",
@@ -4808,6 +5602,9 @@
     }, {
       "key" : "actors",
       "label" : "Роли",
+      "labelKey" : "pp.rel.roles",
+      "labelEn" : "Roles",
+      "labelPl" : "Role",
       "rel" : "FELT_BY",
       "dir" : "out",
       "targetType" : "actor",
@@ -4816,6 +5613,9 @@
     }, {
       "key" : "jobs",
       "label" : "Мешает работам",
+      "labelKey" : "pp.rel.hinders_jobs",
+      "labelEn" : "Hinders jobs",
+      "labelPl" : "Utrudnia prace",
       "rel" : "BLOCKS",
       "dir" : "out",
       "targetType" : "job",
@@ -4824,6 +5624,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -4832,6 +5635,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -4900,6 +5706,9 @@
     "linkTabs" : [ {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.tab.features",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rels" : [ {
         "rel" : "PROMISES",
         "dir" : "in",
@@ -4914,6 +5723,9 @@
     }, {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "DESIRED_BY",
         "dir" : "out",
@@ -4928,6 +5740,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -4943,6 +5758,9 @@
     "relations" : [ {
       "key" : "promisedBy",
       "label" : "Обещана фичами",
+      "labelKey" : "pp.rel.promised_by_features",
+      "labelEn" : "Promised by features",
+      "labelPl" : "Obiecana przez funkcje",
       "rel" : "PROMISES",
       "dir" : "in",
       "targetType" : "feature",
@@ -4951,6 +5769,9 @@
     }, {
       "key" : "deliveredBy",
       "label" : "Дают сценарии",
+      "labelKey" : "pp.rel.delivered_by_use_cases",
+      "labelEn" : "Delivered by use cases",
+      "labelPl" : "Dostarczana przez scenariusze",
       "rel" : "DELIVERS",
       "dir" : "in",
       "targetType" : "feature",
@@ -4959,6 +5780,9 @@
     }, {
       "key" : "actors",
       "label" : "Роли",
+      "labelKey" : "pp.rel.roles",
+      "labelEn" : "Roles",
+      "labelPl" : "Role",
       "rel" : "DESIRED_BY",
       "dir" : "out",
       "targetType" : "actor",
@@ -4967,6 +5791,9 @@
     }, {
       "key" : "jobs",
       "label" : "Успех в работах",
+      "labelKey" : "pp.rel.success_in_jobs",
+      "labelEn" : "Success in jobs",
+      "labelPl" : "Sukces w pracach",
       "rel" : "SUCCESS_OF",
       "dir" : "out",
       "targetType" : "job",
@@ -4975,6 +5802,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -4983,6 +5813,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -5053,6 +5886,9 @@
     "linkTabs" : [ {
       "key" : "features",
       "label" : "Фичи и сценарии",
+      "labelKey" : "pp.tab.features",
+      "labelEn" : "Features and use cases",
+      "labelPl" : "Funkcje i scenariusze",
       "rels" : [ {
         "rel" : "HELPS_WITH",
         "dir" : "in",
@@ -5067,6 +5903,9 @@
     }, {
       "key" : "profile",
       "label" : "Профиль клиента",
+      "labelKey" : "pp.tab.profile",
+      "labelEn" : "Customer profile",
+      "labelPl" : "Profil klienta",
       "rels" : [ {
         "rel" : "PERFORMED_BY",
         "dir" : "out",
@@ -5086,6 +5925,9 @@
     }, {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5101,6 +5943,9 @@
     "relations" : [ {
       "key" : "helpedBy",
       "label" : "Помогают фичи",
+      "labelKey" : "pp.rel.helped_by_features",
+      "labelEn" : "Helped by features",
+      "labelPl" : "Wspierana przez funkcje",
       "rel" : "HELPS_WITH",
       "dir" : "in",
       "targetType" : "feature",
@@ -5109,6 +5954,9 @@
     }, {
       "key" : "performedBy",
       "label" : "Выполняют сценарии",
+      "labelKey" : "pp.rel.performed_by_use_cases",
+      "labelEn" : "Performed by use cases",
+      "labelPl" : "Wykonywana przez scenariusze",
       "rel" : "PERFORMS",
       "dir" : "in",
       "targetType" : "feature",
@@ -5117,6 +5965,9 @@
     }, {
       "key" : "actors",
       "label" : "Роли",
+      "labelKey" : "pp.rel.roles",
+      "labelEn" : "Roles",
+      "labelPl" : "Role",
       "rel" : "PERFORMED_BY",
       "dir" : "out",
       "targetType" : "actor",
@@ -5125,6 +5976,9 @@
     }, {
       "key" : "pains",
       "label" : "Мешают боли",
+      "labelKey" : "pp.rel.hindered_by_pains",
+      "labelEn" : "Hindered by pains",
+      "labelPl" : "Utrudniana przez bóle",
       "rel" : "BLOCKS",
       "dir" : "in",
       "targetType" : "pain",
@@ -5133,6 +5987,9 @@
     }, {
       "key" : "gains",
       "label" : "Успех — выгоды",
+      "labelKey" : "pp.rel.success_gains",
+      "labelEn" : "Success gains",
+      "labelPl" : "Sukces — korzyści",
       "rel" : "SUCCESS_OF",
       "dir" : "in",
       "targetType" : "gain",
@@ -5141,6 +5998,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -5149,6 +6009,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На неё ссылаются",
+      "labelKey" : "pp.rel.referenced_by_f",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niej",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -5229,6 +6092,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5244,6 +6110,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -5253,6 +6122,9 @@
     }, {
       "key" : "adrs",
       "label" : "ADR",
+      "labelKey" : "pp.rel.adr",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rel" : "REFERENCES_ADR",
       "dir" : "out",
       "targetType" : "adr",
@@ -5261,6 +6133,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -5269,6 +6144,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -5277,6 +6155,9 @@
     }, {
       "key" : "history",
       "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
       "rel" : "HAS_STATE",
       "dir" : "out",
       "targetType" : "hist",
@@ -5449,6 +6330,9 @@
     "linkTabs" : [ {
       "key" : "refs",
       "label" : "Ссылки",
+      "labelKey" : "pp.tab.refs",
+      "labelEn" : "References",
+      "labelPl" : "Odnośniki",
       "rels" : [ {
         "rel" : "REFERENCES",
         "dir" : "out",
@@ -5464,6 +6348,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Проект-владелец",
+      "labelKey" : "pp.rel.owning_project",
+      "labelEn" : "Owning project",
+      "labelPl" : "Projekt właściciel",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -5472,6 +6359,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO",
       "dir" : "out",
       "targetType" : "component",
@@ -5480,6 +6370,9 @@
     }, {
       "key" : "metrics",
       "label" : "Метрики",
+      "labelKey" : "pp.rel.metrics",
+      "labelEn" : "Metrics",
+      "labelPl" : "Metryki",
       "rel" : "MEASURED_BY",
       "dir" : "out",
       "targetType" : "qg_metric",
@@ -5488,6 +6381,9 @@
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
+      "labelKey" : "pp.rel.references",
+      "labelEn" : "References",
+      "labelPl" : "Odwołuje się do",
       "rel" : "REFERENCES",
       "dir" : "out",
       "targetType" : "any",
@@ -5496,6 +6392,9 @@
     }, {
       "key" : "refsIn",
       "label" : "На него ссылаются",
+      "labelKey" : "pp.rel.referenced_by",
+      "labelEn" : "Referenced by",
+      "labelPl" : "Odwołują się do niego",
       "rel" : "REFERENCES",
       "dir" : "in",
       "targetType" : "any",
@@ -5525,7 +6424,7 @@
       "labelKey" : "pp.field.fullPath",
       "kind" : "text",
       "group" : "props",
-      "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+      "definition" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
       "layer" : "stable",
       "labelEn" : "Full path",
       "labelPl" : "Pełna ścieżka"
@@ -5574,6 +6473,9 @@
     "linkTabs" : [ {
       "key" : "links",
       "label" : "Связи",
+      "labelKey" : "pp.tab.links",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania",
       "rels" : [ {
         "rel" : "HAS_REPOSITORY",
         "dir" : "in",
@@ -5609,6 +6511,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Основной у проекта",
+      "labelKey" : "pp.rel.primary_for_project",
+      "labelEn" : "Primary for project",
+      "labelPl" : "Główne repozytorium projektu",
       "rel" : "HAS_REPOSITORY",
       "dir" : "in",
       "targetType" : "project",
@@ -5617,6 +6522,9 @@
     }, {
       "key" : "components",
       "label" : "Репозиторий компонента",
+      "labelKey" : "pp.rel.component_repository",
+      "labelEn" : "Component repository",
+      "labelPl" : "Repozytorium komponentu",
       "rel" : "COMPONENT_REPOSITORY",
       "dir" : "in",
       "targetType" : "component",
@@ -5625,6 +6533,9 @@
     }, {
       "key" : "mirrors",
       "label" : "Зеркала",
+      "labelKey" : "pp.rel.mirrors",
+      "labelEn" : "Mirrors",
+      "labelPl" : "Kopie lustrzane",
       "rel" : "MIRRORED_TO",
       "dir" : "out",
       "targetType" : "repository",
@@ -5633,6 +6544,9 @@
     }, {
       "key" : "mirrorOf",
       "label" : "Зеркало репозитория",
+      "labelKey" : "pp.rel.mirror_of",
+      "labelEn" : "Mirror of",
+      "labelPl" : "Kopia lustrzana repozytorium",
       "rel" : "MIRRORED_TO",
       "dir" : "in",
       "targetType" : "repository",
@@ -5641,6 +6555,9 @@
     }, {
       "key" : "uses",
       "label" : "Использует",
+      "labelKey" : "pp.rel.uses",
+      "labelEn" : "Uses",
+      "labelPl" : "Używa",
       "rel" : "USES_REPOSITORY",
       "dir" : "out",
       "targetType" : "repository",
@@ -5649,6 +6566,9 @@
     }, {
       "key" : "usedBy",
       "label" : "Используется в",
+      "labelKey" : "pp.rel.used_in",
+      "labelEn" : "Used in",
+      "labelPl" : "Używane w",
       "rel" : "USES_REPOSITORY",
       "dir" : "in",
       "targetType" : "repository",
@@ -5657,6 +6577,9 @@
     }, {
       "key" : "organizations",
       "label" : "Организации",
+      "labelKey" : "pp.rel.organizations",
+      "labelEn" : "Organizations",
+      "labelPl" : "Organizacje",
       "rel" : "ORG_HAS_REPOSITORY",
       "dir" : "in",
       "targetType" : "organization",
@@ -5693,6 +6616,9 @@
     "linkTabs" : [ {
       "key" : "links",
       "label" : "Связи",
+      "labelKey" : "pp.tab.links",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania",
       "rels" : [ {
         "rel" : "ORG_HAS_PROJECT",
         "dir" : "out",
@@ -5718,6 +6644,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "ORG_HAS_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -5727,6 +6656,9 @@
     }, {
       "key" : "products",
       "label" : "Продукты",
+      "labelKey" : "pp.rel.products",
+      "labelEn" : "Products",
+      "labelPl" : "Produkty",
       "rel" : "ORG_HAS_PRODUCT",
       "dir" : "out",
       "targetType" : "product",
@@ -5736,6 +6668,9 @@
     }, {
       "key" : "members",
       "label" : "Люди",
+      "labelKey" : "pp.rel.people",
+      "labelEn" : "People",
+      "labelPl" : "Ludzie",
       "rel" : "ORG_MEMBER",
       "dir" : "out",
       "targetType" : "user",
@@ -5745,6 +6680,9 @@
     }, {
       "key" : "repositories",
       "label" : "Репозитории",
+      "labelKey" : "pp.rel.repositories",
+      "labelEn" : "Repositories",
+      "labelPl" : "Repozytoria",
       "rel" : "ORG_HAS_REPOSITORY",
       "dir" : "out",
       "targetType" : "repository",
@@ -5874,6 +6812,9 @@
     "relations" : [ {
       "key" : "projects",
       "label" : "Проекты",
+      "labelKey" : "pp.rel.projects",
+      "labelEn" : "Projects",
+      "labelPl" : "Projekty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "out",
       "targetType" : "project",
@@ -5882,6 +6823,9 @@
     }, {
       "key" : "tasks",
       "label" : "Закрывает задачи",
+      "labelKey" : "pp.rel.closes_tasks",
+      "labelEn" : "Closes tasks",
+      "labelPl" : "Zamyka zadania",
       "rel" : "CLOSED_BY",
       "dir" : "in",
       "targetType" : "task",
@@ -5890,6 +6834,9 @@
     }, {
       "key" : "releases",
       "label" : "Вошёл в релизы",
+      "labelKey" : "pp.rel.shipped_in_releases",
+      "labelEn" : "Shipped in releases",
+      "labelPl" : "Weszło do wydań",
       "rel" : "SHIPPED_IN",
       "dir" : "out",
       "targetType" : "release",
@@ -6072,6 +7019,9 @@
     "linkTabs" : [ {
       "key" : "people",
       "label" : "Люди и агенты",
+      "labelKey" : "pp.tab.people",
+      "labelEn" : "People and agents",
+      "labelPl" : "Ludzie i agenci",
       "rels" : [ {
         "rel" : "HAS_PROJECT_ROLE",
         "dir" : "in",
@@ -6083,6 +7033,9 @@
     "relations" : [ {
       "key" : "sprints",
       "label" : "Спринты",
+      "labelKey" : "pp.rel.sprints",
+      "labelEn" : "Sprints",
+      "labelPl" : "Sprinty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "sprint",
@@ -6091,6 +7044,9 @@
     }, {
       "key" : "components",
       "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "component",
@@ -6099,6 +7055,9 @@
     }, {
       "key" : "repositories",
       "label" : "Репозитории",
+      "labelKey" : "pp.rel.repositories",
+      "labelEn" : "Repositories",
+      "labelPl" : "Repozytoria",
       "rel" : "HAS_REPOSITORY",
       "dir" : "out",
       "targetType" : "repository",
@@ -6107,6 +7066,9 @@
     }, {
       "key" : "adrs",
       "label" : "ADR",
+      "labelKey" : "pp.rel.adr",
+      "labelEn" : "ADR",
+      "labelPl" : "ADR",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "adr",
@@ -6115,6 +7077,9 @@
     }, {
       "key" : "releases",
       "label" : "Релизы",
+      "labelKey" : "pp.rel.releases",
+      "labelEn" : "Releases",
+      "labelPl" : "Wydania",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "release",
@@ -6123,6 +7088,9 @@
     }, {
       "key" : "people",
       "label" : "Люди",
+      "labelKey" : "pp.rel.people",
+      "labelEn" : "People",
+      "labelPl" : "Ludzie",
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "in",
       "targetType" : "user",
@@ -6131,6 +7099,9 @@
     }, {
       "key" : "agents",
       "label" : "Агенты",
+      "labelKey" : "pp.rel.agents",
+      "labelEn" : "Agents",
+      "labelPl" : "Agenci",
       "rel" : "HAS_PROJECT_ROLE",
       "dir" : "in",
       "targetType" : "agent",
@@ -6139,6 +7110,9 @@
     }, {
       "key" : "specs",
       "label" : "Спеки",
+      "labelKey" : "pp.rel.specs",
+      "labelEn" : "Specs",
+      "labelPl" : "Specyfikacje",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "spec",
@@ -6147,6 +7121,9 @@
     }, {
       "key" : "decisions",
       "label" : "Решения",
+      "labelKey" : "pp.rel.decisions",
+      "labelEn" : "Decisions",
+      "labelPl" : "Decyzje",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "decision",
@@ -6155,6 +7132,9 @@
     }, {
       "key" : "questions",
       "label" : "Вопросы",
+      "labelKey" : "pp.rel.questions",
+      "labelEn" : "Questions",
+      "labelPl" : "Pytania",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "question",
@@ -6163,6 +7143,9 @@
     }, {
       "key" : "features",
       "label" : "Фичи",
+      "labelKey" : "pp.rel.features",
+      "labelEn" : "Features",
+      "labelPl" : "Funkcje",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "feature",
@@ -6171,6 +7154,9 @@
     }, {
       "key" : "docs",
       "label" : "Знания",
+      "labelKey" : "pp.rel.knowledge",
+      "labelEn" : "Knowledge",
+      "labelPl" : "Wiedza",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "doc",
@@ -6179,6 +7165,9 @@
     }, {
       "key" : "runbooks",
       "label" : "Ранбуки",
+      "labelKey" : "pp.rel.runbooks",
+      "labelEn" : "Runbooks",
+      "labelPl" : "Runbooki",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "runbook",
@@ -6187,6 +7176,9 @@
     }, {
       "key" : "actors",
       "label" : "Роли продукта",
+      "labelKey" : "pp.rel.product_roles",
+      "labelEn" : "Product roles",
+      "labelPl" : "Role produktu",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "actor",
@@ -6195,6 +7187,9 @@
     }, {
       "key" : "boundAgents",
       "label" : "Агенты проекта",
+      "labelKey" : "pp.rel.project_agents",
+      "labelEn" : "Project agents",
+      "labelPl" : "Agenci projektu",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "agent",
@@ -6203,6 +7198,9 @@
     }, {
       "key" : "files",
       "label" : "Файлы",
+      "labelKey" : "pp.rel.files",
+      "labelEn" : "Files",
+      "labelPl" : "Pliki",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "file",
@@ -6211,6 +7209,9 @@
     }, {
       "key" : "prs",
       "label" : "PR",
+      "labelKey" : "pp.rel.prs",
+      "labelEn" : "PRs",
+      "labelPl" : "PR",
       "rel" : "BELONGS_TO_PROJECT",
       "dir" : "in",
       "targetType" : "pr",
@@ -6219,6 +7220,9 @@
     }, {
       "key" : "organizations",
       "label" : "Организации",
+      "labelKey" : "pp.rel.organizations",
+      "labelEn" : "Organizations",
+      "labelPl" : "Organizacje",
       "rel" : "ORG_HAS_PROJECT",
       "dir" : "in",
       "targetType" : "organization",
@@ -6432,7 +7436,7 @@
     "labelEn" : "Gate metric",
     "labelPl" : "Metryka bramki"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
+  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "machine", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -6471,6 +7475,10 @@
     "job" : {
       "vertex" : "KnowJob",
       "key" : "job_id"
+    },
+    "machine" : {
+      "vertex" : "KnowMachine",
+      "key" : "machine_id"
     },
     "milestone" : {
       "vertex" : "KnowMilestone",
@@ -6585,6 +7593,10 @@
     "job" : {
       "date" : "date_created"
     },
+    "machine" : {
+      "code" : "machine_id",
+      "title" : "machine_id"
+    },
     "milestone" : {
       "code" : "milestone_id",
       "date" : "date_display",
@@ -6674,7 +7686,7 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
+  "no_type_color" : [ "agent", "doc", "machine", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
   "precision" : {
     "adr.date" : "datetime",
     "decision.date" : "datetime",
@@ -6682,6 +7694,8 @@
     "feature.shipped_at" : "date",
     "gain.date" : "date",
     "job.date" : "date",
+    "machine.first_seen_at" : "datetime",
+    "machine.last_seen_at" : "datetime",
     "pain.date" : "date",
     "pr.merged_at" : "datetime",
     "quality_gate.date" : "date",
@@ -6812,6 +7826,11 @@
         "source" : "date_created",
         "precision" : "date"
       } ]
+    },
+    "machine" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "milestone" : {
       "history" : "scd2",
@@ -7150,17 +8169,41 @@
   },
   "legacy_role_strings" : [ "author_agent", "executor_agent", "reviewer_agent" ],
   "service_fields" : {
+    "bookkeeping" : "Признак задачи-учёта уже сделанной работы: такая задача не входит в аналитику оценок и пропускной способности (task_set bookkeeping). Служебное аналитики.",
+    "change_reason" : "Причина изменения версии записи (слово человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by" : "Кто изменил версию записи (учётка человека или агента). Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_harness" : "Harness агента, изменившего версию записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_harness_note" : "Пояснение к harness изменившего (например, вариант сборки). Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_kind" : "Кем был изменивший версию: человек или агент. Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_machine" : "Машина, с которой изменили версию записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "changed_by_session" : "Сессия агента, изменившая версию записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "content_hash" : "Хэш содержимого версии: повтор записи без изменений не создаёт новую версию. Служебное истории (SCD2), в паспорте не показывается.",
     "content_html_bytes" : "Размер тела HTML в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54) для контроля целостности. Служебное хранения.",
     "content_html_sha256" : "Хэш тела HTML: пишет сверка тела документа (LoreDocBodyDigest:51-54) для контроля целостности. Служебное хранения.",
     "content_md_en_bytes" : "Размер тела MD (en) в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "content_md_en_sha256" : "Хэш тела MD (en): пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "content_md_ru_bytes" : "Размер тела MD (ru) в байтах: пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
     "content_md_ru_sha256" : "Хэш тела MD (ru): пишет сверка тела документа (LoreDocBodyDigest:51-54). Служебное хранения.",
+    "created_at" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
     "dict_type" : "Вид справочника у статьи KnowDictEntry (у продукта — product): по нему статья относится к справочнику; служебное хранения, в паспорте не показывается.",
     "feature_id" : "Прежний код фичи до слияния KnowFeature в KnowUseCase: код его не пишет и не читает (фича пишется по uc_id, LoreProductResource:154). Служебное переноса.",
+    "hist_for" : "Ссылка версии на запись, к которой она относится. Служебное истории (SCD2), в паспорте не показывается.",
+    "kc_sub" : "Идентификатор учётной записи Keycloak (sub): по нему вход человека связывается с его записью. Служебное входа.",
     "mig_src_rid" : "Адрес записи в базе-источнике переноса 1.18: по нему перенос сверяет «до и после» и повторяется без дублей; служебное переноса, в паспорте не показывается.",
+    "origin" : "Откуда появилась связь (например, canvas — нарисована на холсте). Служебное хранения.",
+    "pr_id" : "Внутренний ключ PR в мосте git-хоста; людям показываются номер и адрес PR. Служебное хранения.",
     "regroup" : "Код группы перегруппировки проектов 1.18 (продукт верхнего уровня), в которую слит проект; служебное переноса, в паспорте не показывается.",
-    "src" : "Откуда запись задачи (manual — создана путём записи, иначе — источник разбора): пишет создание задачи (LoreSprintTaskResource:360); читателя в коде нет. Служебное происхождения."
+    "row_version" : "Счётчик версии строки холста для защиты от одновременной правки. Служебное хранения.",
+    "source_commit" : "Коммит, из которого пришла версия записи при синхронизации. Служебное истории (SCD2), в паспорте не показывается.",
+    "src" : "Откуда запись задачи (manual — создана путём записи, иначе — источник разбора): пишет создание задачи (LoreSprintTaskResource:360); читателя в коде нет. Служебное происхождения.",
+    "state_uid" : "Идентификатор версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "status_backfilled" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
+    "status_category" : "Категория статуса (не начато, в работе, закрыто…), вычисляется из статуса для поиска и отбора. Служебное поиска.",
+    "status_known_from" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
+    "updated_at" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
+    "valid_from" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
+    "valid_to" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
+    "version" : "Номер версии записи паспорта для защиты от одновременной правки: не совпал — 409 VERSION_CONFLICT (ADR-LORE-047 A3). Служебное хранения."
   },
   "passport" : {
     "actor" : [ {
@@ -7431,6 +8474,10 @@
       "slot" : "own"
     }, {
       "key" : "refsIn",
+      "slot" : "own"
+    } ],
+    "machine" : [ {
+      "key" : "agents",
       "slot" : "own"
     } ],
     "milestone" : [ {
@@ -7714,6 +8761,12 @@
       "key" : "insights",
       "slot" : "own"
     }, {
+      "key" : "dependsOn",
+      "slot" : "own"
+    }, {
+      "key" : "blocks",
+      "slot" : "own"
+    }, {
       "key" : "prs",
       "slot" : "own"
     }, {
@@ -7879,7 +8932,7 @@
   "audience" : {
     "actor" : "everywhere",
     "adr" : "everywhere",
-    "agent" : "admin",
+    "agent" : "detail",
     "component" : "everywhere",
     "decision" : "everywhere",
     "doc" : "everywhere",

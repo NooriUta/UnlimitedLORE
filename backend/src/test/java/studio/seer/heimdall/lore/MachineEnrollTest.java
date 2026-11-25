@@ -146,6 +146,22 @@ class MachineEnrollTest {
         assertEquals(List.of("a1"), MachineEnroll.linkable(List.of(mine, foreign, self), "x", ME));
     }
 
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT, находка 3 прототипа: dry_run возвращал в agents_to_link и агента,
+     * у которого ребро USES_MACHINE к этой машине уже есть (прод 23.11: AGENT-FULL_ARHARAGA на arharaga). Запись шла
+     * с IF NOT EXISTS, лишнего ребра не было, но план врал «будет привязан». Уже привязанные — отдельным списком.
+     */
+    @Test
+    void linkable_skipsAgentsAlreadyBoundByEdge() {
+        var bound = new MachineEnroll.Neighbour("a1", "lore-mcp-full_x", List.of(ME), "Я", List.of("x", "y"));
+        var fresh = new MachineEnroll.Neighbour("a2", "lore-mcp-developer_x", List.of(ME), "Я", List.of("y"));
+        var foreign = new MachineEnroll.Neighbour("a3", "lore-mcp-full_x3", List.of(OTHER), "Он", List.of("x"));
+        assertEquals(List.of("a2"), MachineEnroll.linkable(List.of(bound, fresh, foreign), "x", ME),
+            "ребро уже есть — не «будет привязан»");
+        assertEquals(List.of("a1"), MachineEnroll.alreadyLinked(List.of(bound, fresh, foreign), "x", ME),
+            "уже привязанные называются отдельно — экран пишет «уже привязан»");
+    }
+
     // ── права агентного фильтра: подпуть сужен до full ────────────────────
 
     @Test

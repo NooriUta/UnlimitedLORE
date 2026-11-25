@@ -59,7 +59,7 @@ final class V1SchemaSafetyChecklist {
      * Пусто: в S2 Java-шагов нет. Добавлять строку только вместе с тестом,
      * доказывающим аддитивность именно этого шага.
      */
-    static final Map<String, String> JAVA_STEPS_REVIEWED = Map.of(
+    static final Map<String, String> JAVA_STEPS_REVIEWED = pairs(
         // S2-13, V68. Доказательство — StatusHistoryServiceTest
         // (backfill_writes_only_v67_properties_and_never_moves_version_dates):
         // UPDATE ставит только свойства V67 с условием «ещё не стоит»; INSERT
@@ -114,7 +114,19 @@ final class V1SchemaSafetyChecklist {
         // SPRINT_QG_REBUILD/QG-09, V93. Доказательство — QgStatusDictSeedTest (существующие не трогаются,
         // план через тот же StatusDictCoreSeed.plan): только INSERT строк НОВОГО справочника qg_status, v1 его не знает.
         "java__qg_status_dict_seed",
-        "посев недостающих строк qg_status (новый справочник, v1 о нём не знает); существующие не переписываются");
+        "посев недостающих строк qg_status (новый справочник, v1 о нём не знает); существующие не переписываются",
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-03, V97. Доказательство — KnowSkillSchemaTest
+        // (skillStatusDictIsTheLifecycle: существующие строки справочника не трогаются; seedPlanSkipsExistingSkills:
+        // существующие скиллы не трогаются): только INSERT строк НОВОГО справочника skill_status и вершин НОВОГО
+        // типа KnowSkill (V96) с рёбрами от них; v1 не знает ни справочника, ни типа.
+        "java__skill_seed",
+        "посев skill_status и трёх скиллов нового типа KnowSkill (V96); существующее не переписывается",
+
+        // SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS, V100. Доказательство — AreaDictSeedTest (существующие
+        // не трогаются, план через тот же StatusDictCoreSeed.plan, вставка — INSERT, не UPSERT): только INSERT
+        // недостающих строк area в KnowDictEntry. v1 читает area из словаря (dictColor) — новые строки он и ждёт.
+        AreaDictSeed.STEP,
+        "посев недостающих строк area (коды сида компонентов, прежние цвета фронта); существующие не переписываются");
 
     private static final Pattern CREATE_TYPE = Pattern.compile(
         "(?is)^\\s*CREATE\\s+(VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+`?(\\w+)`?\\s+IF\\s+NOT\\s+EXISTS(\\s+EXTENDS\\s+`?\\w+`?)?\\s*$");
@@ -257,5 +269,14 @@ final class V1SchemaSafetyChecklist {
         out.add(at + "неаддитивная или нераспознанная форма (разрешены только CREATE TYPE/PROPERTY/INDEX "
             + "IF NOT EXISTS и посев новой строки справочника): " + q);
         return out;
+    }
+
+    /** Map.of держит не больше 10 пар; шагов уже больше (V97 реестра + V100 area, сборка зонтика 25.11). */
+    private static Map<String, String> pairs(String... kv) {
+        if (kv.length % 2 != 0) throw new IllegalArgumentException("нечётное число строк: шаг без причины");
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2)
+            if (m.put(kv[i], kv[i + 1]) != null) throw new IllegalArgumentException("шаг дважды: " + kv[i]);
+        return java.util.Collections.unmodifiableMap(m);
     }
 }

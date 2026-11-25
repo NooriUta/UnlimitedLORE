@@ -41,8 +41,10 @@ class LoreModelNavTest {
         Map<String, Object> doc = LoreModelGoldenTest.modelDoc();
         Map<String, String> audience = (Map<String, String>) doc.get("audience");
         assertNotNull(audience, "в /lore/model есть audience");
-        for (String admin : List.of("people", "agent", "machine"))
+        for (String admin : List.of("people", "machine"))
             assertEquals("admin", audience.get(admin), admin + " — админка (решение 13.11)");
+        // AP-PEOPLE-PAGE (владелица 21.11.2026): карточка агента вне админки — detail; учётка — поле уровня admin.
+        assertEquals("detail", audience.get("agent"), "агент — карточка по ссылке, не в меню");
         for (String ba : List.of("product", "feature", "actor", "pain", "gain", "job"))
             assertEquals("everywhere", audience.get(ba), ba + " — бизнес-анализ, везде («везде не страшно»)");
         List<String> nav = navSections(doc);

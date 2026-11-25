@@ -70,6 +70,19 @@ public final class LoreSlices {
         throw new IllegalStateException("unknown param kind: " + kind);
     }
 
+    /** SKILL-04: связи скилла колонками среза — роли, проекты, кого расширяет, владелец. */
+    private static final String SKILL_LINK_COLS =
+        "out('APPLIES_TO_ROLE').code AS roles, out('BELONGS_TO_PROJECT').slug AS projects, "
+        + "out('SKILL_EXTENDS').skill_id AS extends_ids, out('OWNED_BY').kc_sub[0] AS owner";
+
+    /** SKILL-04: фильтры срезов skills/skills_full — порядок вставки = порядок условий в SQL. */
+    private static final Map<String, String> SKILL_FILTERS = new LinkedHashMap<>(Map.of(
+        "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project"));
+    static {
+        SKILL_FILTERS.put("role", " WHERE out('APPLIES_TO_ROLE').code CONTAINS :role");
+        SKILL_FILTERS.put("status", " WHERE status = :status");
+    }
+
     /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */
     static final String ENB_RULE_SINCE = "2026-08-01";
 
@@ -342,7 +355,9 @@ public final class LoreSlices {
         Map.entry("KnowSpecHist",      new HistParent("spec",       "spec_id")),
         Map.entry("KnowTaskHist",      new HistParent("task",       "task_uid")),
         Map.entry("KnowSprintHist",    new HistParent("sprint",     "sprint_id")),
-        Map.entry("KnowDictEntryHist", new HistParent("dict_entry", "code")));
+        Map.entry("KnowDictEntryHist", new HistParent("dict_entry", "code")),
+        // KREG-01 (V94): SCD2-история рантайм-реестра видов — родитель KnowKind, id = kind.
+        Map.entry("KnowKindHist",      new HistParent("kind",       "kind")));
 
     /** Все цепочки SCD2 корпуса в устойчивом порядке — иначе SQL среза плывёт между прогонами. */
     static List<String> histChains() {
@@ -1733,8 +1748,10 @@ public final class LoreSlices {
             "out('LOGGED_BY').actor_id AS actor_ids " +
             "FROM KnowAgentSession",
             List.of(),
+            // AP-MACHINE-PASSPORT (решение 2б): сессии одной машины — блок «были сессией» паспорта машины.
             new LinkedHashMap<>(Map.of("actor_id",
-                " WHERE out('LOGGED_BY').actor_id CONTAINS :actor_id")),
+                " WHERE out('LOGGED_BY').actor_id CONTAINS :actor_id",
+                "machine", " WHERE machine_id = :machine")),
             " ORDER BY last_activity_at DESC LIMIT 200");
 
         slice("actor_load",
@@ -2304,15 +2321,37 @@ public final class LoreSlices {
         slice("user_tasks",
             "SELECT task_uid, task_id, title, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            // AP-PEOPLE-PAGE: «где работает» (вкладка «Аналитика» личной страницы) — проект спринта задачи.
+            "out('PART_OF').out('BELONGS_TO_PROJECT').slug[0] AS project, " + CHILD_TASK_COLS + " " +
             "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().kc_sub CONTAINS :kc_sub",
             List.of("kc_sub"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
         slice("agent_tasks",
             "SELECT task_uid, task_id, title, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
-            "FROM KnowTask WHERE outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id",
+            "out('PART_OF').sprint_id[0] AS sprint_id, " + "out('PART_OF').out('BELONGS_TO_PROJECT').slug[0] AS project, " + CHILD_TASK_COLS + " " +
+            // AP-PEOPLE-PAGE: карточка агента открывается и по учётке (из ленты) — задачи находятся по любому ключу.
+            "FROM KnowTask WHERE (outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id " +
+            "OR outE('ROLE_HELD_BY')[valid_to IS NULL].inV().client_id CONTAINS :id)",
             List.of("id"), Map.of(), " ORDER BY sprint_id DESC, task_uid");
+        // AP-PEOPLE-PAGE (3а, решение владельца 25.11.2026): история статусов задач человека и агента — для цифр шапки
+        // личной страницы и графика времени цикла. Форма строки — как у task_status_versions (её читает flowModel);
+        // задачи — те же, что во вкладке «Задачи» (открытая роль), без выгрузки всей истории корпуса.
+        slice("user_task_status_versions",
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "status_raw, valid_from, valid_to, version_kind " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL " +
+            "AND in('HAS_STATE').outE('ROLE_HELD_BY')[valid_to IS NULL].inV().kc_sub CONTAINS :kc_sub",
+            List.of("kc_sub"), Map.of(), "");
+        slice("agent_task_status_versions",
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "status_raw, valid_from, valid_to, version_kind " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL " +
+            "AND (in('HAS_STATE').outE('ROLE_HELD_BY')[valid_to IS NULL].inV().actor_id CONTAINS :id " +
+            "OR in('HAS_STATE').outE('ROLE_HELD_BY')[valid_to IS NULL].inV().client_id CONTAINS :id)",
+            List.of("id"), Map.of(), "");
         slice("project_people",
             "SELECT @out.kc_sub AS kc_sub, @out.display_name AS display_name, role " +
             "FROM HAS_PROJECT_ROLE WHERE valid_to IS NULL AND @in.slug = :project",
@@ -2986,6 +3025,21 @@ public final class LoreSlices {
         // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — одна строка KnowPR по pr_uid «проект#номер».
         // Задачи — по ребру CLOSED_BY (задача → PR), релизы — по SHIPPED_IN (PR → релиз): те же рёбра,
         // что пишут мерж (forgejo_pr_merge), task_link rel=pr и release_link rel=pr.
+        // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: паспорт машины — строка KnowMachine. Шлюз, его harness и владелец —
+        // у актора-шлюза minilore-link-<имя> (ADR-MINILORE-007 В4: права и владелец — у шлюза, KnowMachine — наблюдение),
+        // поэтому подзапросом по client_id, а не ребром вершины. Агенты — рёбра USES_MACHINE. Нет шлюза — поля пустые.
+        String machineCols = "SELECT machine_id, first_seen_at, last_seen_at, " +
+            "$gw.client_id[0] AS gateway, $gw.name[0] AS gateway_name, $gw.harness[0] AS harness, " +
+            "$gw.owner[0] AS owner, $gw.owner_name[0] AS owner_name, " +
+            "in('USES_MACHINE').actor_id AS agent_ids, in('USES_MACHINE').client_id AS agent_clients " +
+            "FROM KnowMachine LET $gw = (SELECT client_id, name, harness, " +
+            "out('OWNED_BY').kc_sub[0] AS owner, out('OWNED_BY').display_name[0] AS owner_name FROM KnowActor " +
+            "WHERE kind = 'agent' AND client_id = ('" + MachineAccess.PREFIX + "' + $parent.$current.machine_id))";
+        slice("machine_by_id", machineCols + " WHERE machine_id = :id", List.of("id"), Map.of(), "");
+        // Решение владельца 3б: машины графа целиком — и без шлюза (появились сами по записи агента), чтобы админка
+        // показала их группой «Без шлюза», а не теряла (machine_acl берёт только акторов minilore-link-*).
+        slice("machines_graph", machineCols, List.of(), Map.of(), " ORDER BY machine_id");
+
         slice("pr_by_id",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
             "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
@@ -2994,6 +3048,14 @@ public final class LoreSlices {
             "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
             "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
             List.of("id"), Map.of(), "");
+        // MD-05 (прототип md05-pr-passport, «да» владельца 23.11): вкладка «Закрывает задачи» паспорта PR — задачи
+        // с названием, статусом и спринтом (не голые коды из строки pr_by_id). Спринт — PART_OF к спринту, не к фазе.
+        slice("pr_tasks",
+            "SELECT task_uid, task_id, title, " +
+            "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
+            "out('PART_OF')[sprint_id IS NOT NULL].sprint_id[0] AS sprint_id, " + CHILD_TASK_COLS + " " +
+            "FROM KnowTask WHERE out('CLOSED_BY').pr_uid CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY task_uid");
 
         // D-2026-MINILORE-OWNER-ANSWERS-06-11 п.3: задачи релиза — через PR, который
         // их закрыл (CLOSED_BY), и релиз этого PR (SHIPPED_IN). Не разбор note_md.
@@ -3299,6 +3361,22 @@ public final class LoreSlices {
         slice("tag_entities",
             LoreEdgeFreeFields.entitiesSql("TAGGED_WITH"),
             List.of("tag"), Map.of(), " ORDER BY tagged_at DESC");
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-04 (SPEC-SKILLS-TAGS-062 §9): скиллы роли в проекте. skills — short,
+        // без body_md (каталог); skills_full — то же с телом процедуры. Фильтры project/role/status складываются
+        // (одно WHERE, дальше AND — compose). Роли — коды agent_profile на конце APPLIES_TO_ROLE, проекты — slug
+        // на конце BELONGS_TO_PROJECT, extends — skill_id на конце SKILL_EXTENDS, owner — kc_sub владельца.
+        slice("skills",
+            "SELECT skill_id, name, title, status, version, source, " + SKILL_LINK_COLS + ", updated_at FROM KnowSkill",
+            List.of(), SKILL_FILTERS, " ORDER BY skill_id");
+        slice("skills_full",
+            "SELECT skill_id, name, title, status, version, source, body_md, " + SKILL_LINK_COLS + ", updated_at FROM KnowSkill",
+            List.of(), SKILL_FILTERS, " ORDER BY skill_id");
+        // KREG-06 (§10 инвариант 1): скилл-висяк — без проекта или без роли. Читает рутина qg-lore-skill-tag;
+        // общий срез, а не скоупный: висяк без проекта под скоупом по проекту не был бы виден никому.
+        slice("skills_dangling",
+            "SELECT skill_id, status, out('BELONGS_TO_PROJECT').size() AS projects, out('APPLIES_TO_ROLE').size() AS roles "
+            + "FROM KnowSkill WHERE out('BELONGS_TO_PROJECT').size() = 0 OR out('APPLIES_TO_ROLE').size() = 0",
+            List.of(), Map.of(), " ORDER BY skill_id");
         // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
         // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 
@@ -3522,6 +3600,9 @@ public final class LoreSlices {
         Map.entry("docs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("runbooks",  "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("specs",     "out('BELONGS_TO_PROJECT').slug"),
+        // SKILL-04: скилл виден по проекту (BELONGS_TO_PROJECT, §5 «чтение — по скоупам проекта»)
+        Map.entry("skills",      "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("skills_full", "out('BELONGS_TO_PROJECT').slug"),
         // Решение: своё ребро ИЛИ проект родительского ADR (DECIDED_IN).
         Map.entry("decisions",
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
@@ -3570,6 +3651,8 @@ public final class LoreSlices {
         // S9-05 A: задачи человека и агента — проект через спринт, как у прочих задач.
         Map.entry("user_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("agent_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        // MD-05: задачи PR — проект через спринт, как у прочих задач.
+        Map.entry("pr_tasks", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_by_uids", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("tasks_of_sprints_batch", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("sprint_totals", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
@@ -3592,6 +3675,8 @@ public final class LoreSlices {
         Map.entry("task_created_dates", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_starts", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("user_task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("agent_task_status_versions", "in('HAS_STATE').out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         Map.entry("phases_of_sprint", "out('PART_OF').out('BELONGS_TO_PROJECT').slug"),
         // Спринты мимо sprints.
         Map.entry("timeline_sprints", "out('BELONGS_TO_PROJECT').slug"),
@@ -3687,6 +3772,7 @@ public final class LoreSlices {
         Map.entry("projects_without_role", "сторож ролей — служебный"),
         Map.entry("project_role_events", "журнал смены ролей — служебный"),
         Map.entry("entities_without_project", "сторож сирот — по определению сущности БЕЗ проекта"),
+        Map.entry("skills_dangling", "сторож висяков (KREG-06) — по определению скилл без проекта или без роли"),
         Map.entry("scope_orphans", "сторож сирот скоупа — по определению без проекта"),
         Map.entry("history_hygiene", "сторож истории — служебный"),
         Map.entry("asset_orphans", "сторож ассетов — служебный"),
@@ -3716,7 +3802,10 @@ public final class LoreSlices {
      */
     public static final Set<String> ADMIN_ONLY = Set.of(
         "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points",
-        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix");
+        "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
+        // AP-MACHINE-PASSPORT × AP-PEOPLE-PAGE (сборка зонтика 25.11): паспорт машины живёт только в админке
+        // и отдаёт client_id агентов машины — поле уровня admin. Не-админу — 403, а не учётка в ответе.
+        "machine_by_id", "machines_graph");
 
     /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
     public static boolean adminOnlyDenied(String id, String role) {
@@ -3745,6 +3834,8 @@ public final class LoreSlices {
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
+        Map.entry("machine_by_id", "паспорт машины (AP-MACHINE-PASSPORT) — служебный, как machine_acl: машины видны в админке"),
+        Map.entry("machines_graph", "машины графа (AP-MACHINE-PASSPORT, 3б) — служебный, как machine_acl"),
         Map.entry("pr_by_id", "паспорт PR (MD-05): KnowPR — путь через релиз или задачу, как release_prs"),
         Map.entry("pr_ship_lag", "KnowPR — путь через релиз (графики 19.11, №9)"),
         Map.entry("findings", "находки — решение владелицы"),

@@ -826,7 +826,7 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
   const fwd = (p: string) => p.replace(/\\/g, '/');
   const MODEL_LINE = '[LORE MIGRATE] схема собрана из модели (LoreModelSchema) — журнал шагов V не сверяется';
 
-  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '') {
+  function stepRun(step: string, stateLines: string[], logLine: string, versionJson = '', migrateLine = '') {
     const d = mkdtempSync(join(tmpdir(), 'lore-pl-model-'));
     writeFileSync(join(d, 'lore-host-deploy.sh'), read('.github/scripts/lore-host-deploy.sh'));
     writeFileSync(join(d, 'bundle-probe.sh'), '#!/usr/bin/env bash\nexit 0\n');
@@ -840,6 +840,7 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
       '  *":4400/"*) echo \'<script src="/assets/index-V1.js"></script>\' ;;',
       '  *":4402/"*) echo \'<script src="/assets/index-V2.js"></script>\' ;;',
       '  *"compose logs"*) printf "%s\\n" "$LOG_LINE" ;;',
+      '  *"compose run"*"lore-migrate"*) printf "%s\\n" "$MIGRATE_LINE" ;;',
       'esac', '',
     ].join('\n'));
     chmodSync(join(d, 'r.sh'), 0o755);
@@ -848,18 +849,34 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
     const rlog = join(d, 'r.log'); writeFileSync(rlog, '');
     const r = run(fwd(join(d, 'lore-host-deploy.sh')), [step], {
       DEPLOY_STATE: fwd(st), R: fwd(join(d, 'r.sh')), R_LOG: fwd(rlog), LOG_LINE: logLine, TAG: 'v1.18.0',
-      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1',
+      PROBE_CURL: mcpCurl, PROBE_ATTEMPTS: '1', MIGRATE_LINE: migrateLine,
     });
     const state = readFileSync(st, 'utf8'); const calls = readFileSync(rlog, 'utf8');
     rmSync(d, { recursive: true, force: true });
     return { ...r, state, calls };
   }
 
-  it('db: схема прода «из модели» — ни бэкапа, ни накатки, шаг зелёный', () => {
-    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE);
+  // 25.11.2026 (владелец: «доделай из модели и подчисти версионирование»): на базе из модели шаги V по-прежнему не
+  // катятся, но схема ДОВОДИТСЯ до кода (LoreSchemaAdditive) — бэкап и шаг накатки на каждой выкатке. Прежде db
+  // писал «накатка не нужна», и всё, что после 1.18 делалось шагами V (KnowKind, KnowSkill, посевы), до прода не доезжало.
+  const ADDITIVE_LINE = '[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V не применяются; '
+    + 'доводка схемы кода v1 (54761523d90deed8): типов +6, свойств +27, индексов +5, посеяно 18 — записи [know_skill]; '
+    + 'процесс завершается (шаг накатки CD)';
+
+  it('db: схема прода «из модели» — бэкап и доводка схемы кода, что сделано — в выводе, шаг зелёный', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE, '', ADDITIVE_LINE);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/собрана из модели/);
-    expect(r.calls).not.toMatch(/remote-backup|lore-migrate/);
+    expect(r.out).toMatch(/доводка схемы кода v1 .*типов \+6/);
+    expect(r.calls).toMatch(/remote-backup/);
+    expect(r.calls).toMatch(/compose run .*lore-migrate/);
+  });
+
+  it('db: база из модели, а образ без доводки («шаги V пропущены») — красный', () => {
+    const r = stepRun('db', ['CODE_SCHEMA=95', 'PROD_SCHEMA=model', 'PROD_DB=system_aida_lore'], MODEL_LINE, '',
+      '[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)');
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/доводки схемы кода нет/);
   });
 
   it('probe: в логе нового бэкенда «схема собрана из модели» — проба зелёная', () => {
@@ -880,6 +897,22 @@ describe.skipIf(!bashBin)('1.18: выкатка прода на базу, соб
     expect(r.out).not.toMatch(/::error::/);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/schema_version=model:1/);
+  });
+
+  // 25.11.2026: доводка схемы кода — после шага db база не отстаёт от кода (/lore/version: code_schema_behind)
+  it('probe на базе из модели: доводка схемы кода = код — зелёная', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], 'что-то другое',
+      '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","code_schema_version":1,"code_schema_expected":1,"code_schema_behind":false}');
+    expect(r.out).not.toMatch(/::error::/);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/доводка схемы кода v1 = код/);
+  });
+
+  it('probe на базе из модели: база отстаёт от схемы кода — красная', () => {
+    const r = stepRun('probe', [...PROBE_STATE, 'MODEL_VERSION=1'], 'что-то другое',
+      '{"commit":"0123456789abcdef","schema_version":"model:1","schema_source":"model","code_schema_version":null,"code_schema_expected":1,"code_schema_behind":true}');
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/база отстаёт от схемы кода/);
   });
 
   it('probe на базе из модели: версия по хэшу, а не номер модели тега — красная', () => {
@@ -1633,5 +1666,173 @@ describe('публикация образов наружу не зависит �
 
   it('наружу уезжает только то, что в main', () => {
     expect(ghcr()).toMatch(/merge-base --is-ancestor/);
+  });
+});
+
+// ── Выпуск в зеркале SeidrStudio (23.11.2026) ────────────────────────────────
+// Замечание владельца после v1.19.0: «не вижу зеркала выпуска в SeidrStudio, только зеркало репозитория».
+// Шаг «Mirror main + tag to SeidrStudio» пушил только main и тег — объект Release с описанием и вложениями
+// в зеркале не появлялся ни разу. Друг, которому дали доступ к зеркалу, видел исходники, но не мог скачать
+// установщик. Решение владельца: отдельная мини-труба переноса выпуска + шаг в основной трубе после пуша.
+// SPRINT_CICD_OPS_2611/CO-MIRRORS-AUTOSYNC.
+const MIRROR_REL_SH = '.github/scripts/mirror-release.sh';
+const MIRROR_REL_WF = '.github/workflows/lore-mirror-release.yml';
+
+describe('выпуск в зеркале SeidrStudio: мини-труба и шаг в основной', () => {
+  it('мини-труба: ручной запуск по тегу, тот же скрипт, токен зеркала', () => {
+    expect(has(MIRROR_REL_WF), 'файла мини-трубы нет').toBe(true);
+    const wf = code(read(MIRROR_REL_WF));
+    expect(wf).toMatch(/workflow_dispatch:/);
+    expect(wf).toMatch(/^ {6}tag:$/m);
+    expect(wf).toContain(MIRROR_REL_SH);
+    expect(wf).toMatch(/secrets\.MIRROR_PUSH_TOKEN/);
+  });
+
+  // Владелец 23.11: «чтение — MIRROR_PULL_TOKEN, PUSH — на запись; нельзя в одном разные права раздавать».
+  // Прогон 10897: токен записи для AIDA/UnlimitedLORE отвечал 404, токен прогона веб-скачивание не проходит.
+  it('два токена: источник читается MIRROR_PULL_TOKEN, зеркало пишется MIRROR_PUSH_TOKEN — в обеих трубах', () => {
+    const rel = steps(job(REL, 'publish')).find((s) => s.body.includes(MIRROR_REL_SH))!.body;
+    for (const t of [code(read(MIRROR_REL_WF)), rel]) {
+      expect(t).toMatch(/SRC_TOKEN: \$\{\{ secrets\.MIRROR_PULL_TOKEN \}\}/);
+      expect(t).toMatch(/DST_TOKEN: \$\{\{ secrets\.MIRROR_PUSH_TOKEN \}\}/);
+      expect(t, 'токен прогона источник не читает').not.toMatch(/SRC_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN/);
+    }
+  });
+
+  it('основная труба: шаг после пуша в зеркало, не роняет релиз, но красит прогон вердиктом', () => {
+    const st = steps(job(REL, 'publish'));
+    const iPush = st.findIndex((s) => /Mirror main \+ tag to SeidrStudio/.test(s.name));
+    const iRel = st.findIndex((s) => s.body.includes(MIRROR_REL_SH));
+    expect(iPush, 'шаг пуша в зеркало').toBeGreaterThan(-1);
+    expect(iRel, 'шаг переноса выпуска стоит после пуша тега').toBeGreaterThan(iPush);
+    const b = st[iRel].body;
+    expect(b).toMatch(/id: mirror_seidr_release/);
+    expect(b).toMatch(/continue-on-error: true/);
+    expect(b, 'без тега в зеркале выпуск не завести — только после удачного пуша').toMatch(/steps\.mirror_seidr\.outcome == 'success'/);
+    const v = st.find((s) => /Вердикт выпуска в зеркале/.test(s.name));
+    expect(v, 'шага-вердикта нет').toBeTruthy();
+    expect(v!.body).toMatch(/always\(\)/);
+    expect(v!.body).toMatch(/steps\.mirror_seidr_release\.outcome == 'failure'/);
+  });
+});
+
+describe.skipIf(!bashBin)('mirror-release.sh', { timeout: SPAWN_TIMEOUT }, () => {
+  const mbin = mkdtempSync(join(tmpdir(), 'lore-mirror-bin-'));
+  afterAll(() => rmSync(mbin, { recursive: true, force: true }));
+  const fwd = (p: string) => p.replace(/\\/g, '/');
+  const SRC ='http://forgejo:3000/api/v1/repos/AIDA/UnlimitedLORE';
+  const DST = 'http://forgejo:3000/api/v1/repos/SeidrStudio/UnlimitedLORE';
+  const SRC_REL = JSON.stringify({
+    id: 1, tag_name: 'v9.9.0', name: 'LORE v9.9.0', body: 'описание', prerelease: false,
+    assets: [{ id: 11, name: 'a.tar.gz', size: 5, uuid: 'u-a' }, { id: 12, name: 'b.mjs', size: 5, uuid: 'u-b' }],
+  });
+
+  // curl: ответ по методу и адресу; журнал «МЕТОД адрес».
+  const curl = join(mbin, 'curl');
+  writeFileSync(curl, `#!/usr/bin/env bash
+o=""; prev=""; url=""; m=GET
+for a in "$@"; do
+  [ "$prev" = "-o" ] && o="$a"
+  [ "$prev" = "-X" ] && m="$a"
+  case "$a" in http*) url="$a" ;; esac
+  prev="$a"
+done
+echo "$m $url" >> "$CURL_LOG"
+code=200; body='{}'
+case "$m $url" in
+  "GET ${SRC}/releases/tags/"*) if [ -n "\${STUB_SRC_MISSING:-}" ]; then code=404; else body='${SRC_REL}'; fi ;;
+  "GET ${DST}/tags/"*) [ -n "\${STUB_DST_TAG_MISSING:-}" ] && code=404 ;;
+  "GET ${DST}/releases/tags/"*) if [ -n "\${STUB_DST_REL:-}" ]; then body="$STUB_DST_REL"; else code=404; fi ;;
+  "POST ${DST}/releases") code=201; body='{"id":900,"assets":[]}' ;;
+  "PATCH ${DST}/releases/"*) body='{"id":900}' ;;
+  "POST ${DST}/releases/"*"/assets"*) code=201; body='{"id":5}' ;;
+  # Прогоны 10893/10894 (23.11): /releases/download/ отвечал 404 и с токеном прогона, и с учёткой зеркала.
+  # Заглушка пускает ровно одним способом (/attachments/<uuid> + basic учёткой зеркала) — скрипт обязан
+  # найти его пробой и назвать в журнале. Остальные способы — 404, как на живом Forgejo.
+  "GET http://forgejo:3000/attachments/"*) case " $* " in *" -u mirror:src "*) body='bytes' ;; *) code=404 ;; esac ;;
+  "GET "*"/releases/download/"*) code=404 ;;
+  *) code=599 ;;
+esac
+if [ -n "$o" ]; then printf '%s' "$body" > "$o"; else printf '%s' "$body"; fi
+case "$*" in *-w*) printf '%s' "$code" ;; esac
+exit 0
+`.replace(/\r\n/g, '\n'));
+  chmodSync(curl, 0o755);
+
+  function mirror(env: Record<string, string> = {}) {
+    const d = mkdtempSync(join(tmpdir(), 'lore-mirror-'));
+    const r = spawnSync(bashBin!, [fwd(resolve(repo, MIRROR_REL_SH))], {
+      encoding: 'utf8',
+      cwd: repo,
+      env: {
+        ...process.env,
+        TAG: 'v9.9.0',
+        HOST: 'http://forgejo:3000',
+        SRC_REPO: 'AIDA/UnlimitedLORE',
+        DST_REPO: 'SeidrStudio/UnlimitedLORE',
+        SRC_TOKEN: 'src',
+        DST_TOKEN: 'dst',
+        WORK_DIR: fwd(d),
+        CURL_BIN: fwd(curl),
+        CURL_LOG: fwd(join(d, 'curl.log')),
+        ...env,
+      },
+    });
+    const log = existsSync(join(d, 'curl.log')) ? readFileSync(join(d, 'curl.log'), 'utf8') : '';
+    rmSync(d, { recursive: true, force: true });
+    return { code: r.status, out: `${r.stdout}${r.stderr}`, calls: log.split('\n').filter(Boolean) };
+  }
+
+  it('нет токена зеркала — громкий BLOCKED, ни одного обращения', () => {
+    const r = mirror({ DST_TOKEN: '' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/BLOCKED/);
+    expect(r.calls).toEqual([]);
+  });
+
+  it('нет токена чтения источника — громкий BLOCKED с именем секрета, ни одного обращения', () => {
+    const r = mirror({ SRC_TOKEN: '' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/BLOCKED.*MIRROR_PULL_TOKEN/);
+    expect(r.calls).toEqual([]);
+  });
+
+  it('догонка vX.Y.Z (Z>0) не переносится — зеркала выносятся при смене x.y', () => {
+    const r = mirror({ TAG: 'v9.9.1' });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/не трогаем/);
+    expect(r.calls).toEqual([]);
+  });
+
+  it('в источнике нет выпуска — ошибка, а не пустой выпуск в зеркале', () => {
+    const r = mirror({ STUB_SRC_MISSING: '1' });
+    expect(r.code).toBe(1);
+    expect(r.calls.some((c) => c.startsWith(`POST ${DST}`))).toBe(false);
+  });
+
+  it('в зеркале нет тега — ошибка с подсказкой, выпуск не заводится', () => {
+    const r = mirror({ STUB_DST_TAG_MISSING: '1' });
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/тега .* в зеркале нет/);
+    expect(r.calls.some((c) => c.startsWith(`POST ${DST}`))).toBe(false);
+  });
+
+  it('выпуска в зеркале нет — заводит его и переносит все вложения', () => {
+    const r = mirror();
+    expect(r.code, r.out).toBe(0);
+    expect(r.calls).toContain(`POST ${DST}/releases`);
+    expect(r.out, 'выбранный способ скачивания назван в журнале').toMatch(/скачиваем способом att-basic/);
+    expect(r.calls.filter((c) => c.includes('/attachments/')).length, 'проба (1) + второе вложение (1)').toBe(2);
+    expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=a.tar.gz`);
+    expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=b.mjs`);
+  });
+
+  it('повтор идемпотентен: выпуск не дублируется, совпавшее по имени и размеру вложение не перекачивается', () => {
+    const r = mirror({ STUB_DST_REL: JSON.stringify({ id: 900, assets: [{ id: 7, name: 'a.tar.gz', size: 5 }] }) });
+    expect(r.code, r.out).toBe(0);
+    expect(r.calls).not.toContain(`POST ${DST}/releases`);
+    expect(r.calls).toContain(`PATCH ${DST}/releases/900`);
+    expect(r.calls.some((c) => c.endsWith('/attachments/u-a'))).toBe(false);
+    expect(r.calls).toContain(`POST ${DST}/releases/900/assets?name=b.mjs`);
   });
 });

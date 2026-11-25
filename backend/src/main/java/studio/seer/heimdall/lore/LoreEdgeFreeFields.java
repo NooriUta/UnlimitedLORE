@@ -182,8 +182,11 @@ final class LoreEdgeFreeFields {
     }
 
     /**
-     * Рёбра тега с полями: начало — запись типа-владельца, конец — вершина тега. Параметр — {@code :tag}.
-     * Ключ и название записи — по графу модели (ключ у каждого типа свой).
+     * Рёбра тега с полями: начало — запись типа-владельца, конец — вершина тега.
+     * Параметры — {@code :tag} (как прислали) и {@code :tag_geoid} (геоид-форма,
+     * TagRename#geoid): вершины легаси ключаются свободным токеном, новые — tag:<slug>,
+     * срез обязан находить обе. Ключ и название записи — по графу модели
+     * (ключ у каждого типа свой).
      */
     static String entitiesSql(String edge) {
         Spec s = spec(edge);
@@ -196,7 +199,8 @@ final class LoreEdgeFreeFields {
         return "SELECT @out.@type AS vertex, coalesce(" + String.join(", ", keys) + ") AS id, " +
             "coalesce(@out.name, @out.title) AS title, " + s.property() + " AS fields, " +
             String.join(", ", s.stamp()) + " " +
-            "FROM " + edge + " WHERE @in.@type = '" + s.vertex() + "' AND @in." + s.key() + " = :tag " +
+            "FROM " + edge + " WHERE @in.@type = '" + s.vertex() + "' AND (@in." + s.key() + " = :tag " +
+            "OR @in." + s.key() + " = :tag_geoid) " +
             "AND @out.@type IN [" + String.join(", ", quoted) + "]";
     }
 

@@ -165,7 +165,7 @@ public class LoreSchemaInitializer {
     }
 
     // ── Vertex types ──────────────────────────────────────────────────────────
-    static final List<String> DDL = List.of(
+    private static final List<String> BASE_DDL = List.of(
         // ArcadeDB's own base types — NOT auto-present on a freshly `create
         // database`'d instance (only discovered via C5's testcontainer run
         // against a genuinely empty DB; the shared system_aida_lore has had
@@ -810,6 +810,15 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowTaskHist.note_md       IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowTaskHist (note_md)       FULL_TEXT"
     );
+
+    /**
+     * DDL свежей установки шагами V: базовая схема + реестр видов KnowKind/KnowKindHist (KREG-01). KnowKind — ССЫЛКА на
+     * список доводки ({@link LoreSchemaAdditive#KNOW_KIND_DDL}), не копия: V66 (hist_change_author) объявляет changed_by
+     * по реестру HIST_VALID_FROM_TEMPORAL и на свежей базе бежит раньше V94 — без KnowKindHist здесь он упал бы
+     * «Type with name KnowKindHist was not found». Новое изменение схемы сюда НЕ добавляется — только в
+     * LoreSchemaAdditive.CHANGES (сторож LoreSchemaAdditiveGuardTest: стейтментов вне доводки здесь не прибавляется).
+     */
+    static final List<String> DDL = java.util.stream.Stream.concat(BASE_DDL.stream(), LoreSchemaAdditive.KNOW_KIND_DDL.stream()).toList();
 
     /**
      * RM-P12: объявления {@code valid_from} для *Hist с текстовым ISO-8601 UTC.

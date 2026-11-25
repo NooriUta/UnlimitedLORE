@@ -200,16 +200,28 @@ public class LoreRepositoryResource extends LoreResourceBase {
             if (!exists("KnowRepository", "url", k.url())) return targetNotFound("репозитория " + k.url() + " нет");
             if (!exists(vertex, key, targetKey)) return targetNotFound(vertex + " " + targetKey + " нет");
             String role = req.role() == null || req.role().isBlank() ? null : req.role().trim();
-            String setRole = role == null ? "" : " SET role = :role";
-            String sql = fromRepo
-                ? "CREATE EDGE " + rel + " FROM (SELECT FROM KnowRepository WHERE url = :url) "
-                  + "TO (SELECT FROM " + vertex + " WHERE " + key + " = :t)" + setRole + " IF NOT EXISTS"
-                : "CREATE EDGE " + rel + " FROM (SELECT FROM " + vertex + " WHERE " + key + " = :t) "
-                  + "TO (SELECT FROM KnowRepository WHERE url = :url)" + setRole + " IF NOT EXISTS";
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("url", k.url());
             p.put("t", targetKey);
             if (role != null) p.put("role", role);
+            if (had && role != null) {
+                // Связь уже есть: IF NOT EXISTS её не тронет — роль правится отдельно, если она другая.
+                String was = currentRole(rel, key, fromRepo, k.url(), targetKey);
+                if (roleChanges(was, role)) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        setRoleSql(rel, key, fromRepo), p)).await().indefinitely();
+                    String now = currentRole(rel, key, fromRepo, k.url(), targetKey);   // DBR-17: исход из факта
+                    if (!role.equals(now))
+                        return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(new LoreError("NOT_WRITTEN",
+                            "роль связи не записалась: ждали " + role + ", в базе " + now)));
+                    base.put("action", "added");
+                    base.put("role", role);
+                    base.put("previous_role", was);
+                    base.put("outcome", LoreOutcome.UPDATED);
+                    return noStore(Response.ok(base));
+                }
+            }
+            String sql = createEdgeSql(rel, vertex, key, fromRepo, role != null);
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sql", sql, p)).await().indefinitely().result();
@@ -224,6 +236,52 @@ public class LoreRepositoryResource extends LoreResourceBase {
             LOG.warnf("[LORE REPO LINK] %s %s %s: %s", k.url(), req.rel(), targetKey, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
         }
+    }
+
+    /**
+     * Создание ребра реестра. AP-REPO-LINK-ROLE: в ArcadeDB {@code IF NOT EXISTS} стоит ПЕРЕД {@code SET}
+     * (как в AgentSourceTrail и LoreCanvasResource); прежний порядок «SET role … IF NOT EXISTS» давал синтаксическую
+     * ошибку и 502 на любую связь с ролью.
+     */
+    static String createEdgeSql(String rel, String vertex, String key, boolean fromRepo, boolean withRole) {
+        String setRole = withRole ? " SET role = :role" : "";
+        return fromRepo
+            ? "CREATE EDGE " + rel + " FROM (SELECT FROM KnowRepository WHERE url = :url) "
+              + "TO (SELECT FROM " + vertex + " WHERE " + key + " = :t) IF NOT EXISTS" + setRole
+            : "CREATE EDGE " + rel + " FROM (SELECT FROM " + vertex + " WHERE " + key + " = :t) "
+              + "TO (SELECT FROM KnowRepository WHERE url = :url) IF NOT EXISTS" + setRole;
+    }
+
+    /**
+     * Роль УЖЕ существующей связи: {@code IF NOT EXISTS} существующее ребро не трогает, поэтому повторная связь с
+     * ролью проставляет её отдельной правкой — иначе ребро, заведённое без роли, навсегда осталось бы с role = null.
+     * Условие по самой роли — идемпотентный переход (сторож UpdateAffectedRowsGuardTest): 0 строк = роль уже такая;
+     * настоящий промах (связь удалили) ловит перечитывание роли после записи (DBR-17).
+     */
+    static String setRoleSql(String rel, String key, boolean fromRepo) {
+        return fromRepo
+            ? "UPDATE " + rel + " SET role = :role WHERE @out.url = :url AND @in." + key + " = :t" + LoreEdgeHistory.andCurrent(rel) + " AND (role IS NULL OR role <> :role)"
+            : "UPDATE " + rel + " SET role = :role WHERE @out." + key + " = :t AND @in.url = :url" + LoreEdgeHistory.andCurrent(rel) + " AND (role IS NULL OR role <> :role)";
+    }
+
+    /**
+     * Надо ли править роль существующей связи. Роль не передана — имеющуюся не стираем. Сторожа «один primary на
+     * проект» нет намеренно: D-2026-LORE-PROJECT-SEVERAL-PRIMARY-REPOS (проект из нескольких частей — несколько primary).
+     */
+    static boolean roleChanges(String current, String requested) {
+        return requested != null && !requested.equals(current);
+    }
+
+    /** Текущая роль связи; сбой чтения летит наверх — «не смогли проверить» ≠ «роли нет». */
+    String currentRole(String rel, String key, boolean fromRepo, String url, String target) {
+        String where = fromRepo
+            ? "@out.url = :url AND @in." + key + " = :t"
+            : "@out." + key + " = :t AND @in.url = :url";
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT role FROM " + rel + " WHERE " + where + LoreEdgeHistory.andCurrent(rel) + " LIMIT 1",
+            Map.of("url", url, "t", target));
+        Object r = rows.isEmpty() ? null : rows.get(0).get("role");
+        return r == null ? null : String.valueOf(r);
     }
 
     /** Есть ли в схеме вершина репозитория. Сбой чтения летит наверх: «не смогли проверить» ≠ «нет». */

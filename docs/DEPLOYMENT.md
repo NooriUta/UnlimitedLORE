@@ -86,6 +86,7 @@ docker compose up -d lore-backend
 | `ARCADEDB_USER` | пользователь ArcadeDB | `root` |
 | `ARCADEDB_ROOT_PASSWORD` | пароль ArcadeDB | `unset` — **обязательно задать** |
 | `LORE_BOOTSTRAP` | прогонять ли DDL при старте | `false` |
+| `LORE_DB` | имя базы LORE в ArcadeDB (свойство `lore.db`) — любое; на пустой базе ядро и схема поднимаются сами | `system_aida_lore` |
 
 Backend слушает `:9100` (публикуется наружу — так и MCP-сервер на хосте, и dev
 frontend через vite-proxy до него достучатся).
@@ -105,6 +106,10 @@ docker compose up -d lore-app
 
 Слушает `:4400`. Открыть `http://localhost:4400/lore?section=plan`.
 
+`LORE_PUBLIC_URL` — канонический https-адрес установки. Пустой (по умолчанию) — редирект выключен:
+LORE открывается по тому адресу, по которому пришли; вход по OIDC на голом IP тогда не работает (PKCE
+требует HTTPS или localhost).
+
 Для локальной разработки (hot reload) вместо докер-образа:
 
 ```bash
@@ -123,6 +128,11 @@ npm install
 npm run build       # tsc → dist/index.js
 ```
 
+MCP-сервер работает в одном из двух транспортов, выбор — `LORE_MCP_TRANSPORT`: по умолчанию
+`stdio` (процесс на машине агента, как ниже), `http` — Streamable HTTP (`LORE_MCP_PORT`, в пакете
+установки это сервис `lore-mcp` за nginx веба: агент ходит на `https://<хост>/mcp`, проверка —
+`/mcp/health`; подробно — `deploy/install/README.md`, раздел «Подключить агента к MCP»).
+
 Зарегистрировать **в user-скоупе** Claude Code (`~/.claude.json`), а не
 проектным `.mcp.json`. С #1298 `.mcp.json` не отслеживается git, а забытая
 локальная копия в чекауте **перекрывает** user-скоуп: 13.11.2026 в ней лежал
@@ -134,6 +144,11 @@ claude mcp add --scope user aida-lore \
   -e LORE_BACKEND_URL=http://localhost:9100 -e LORE_SEER_ROLE=admin \
   -- node /абсолютный/путь/mcp-server/dist/index.js
 ```
+
+Роль: обычной записи хватает `LORE_SEER_ROLE=admin`; создание проекта (`project_new`) требует
+`LORE_SEER_ROLE=superadmin` — одним словом (так роль называется во всех проверках бэкенда; роль realm
+Keycloak — `super-admin`, и это написание в заголовке принимается синонимом). Отказ 403 называет роль,
+которой не хватило.
 
 Против стенда — то же плюс `LORE_OIDC_ISSUER`, `LORE_MCP_CLIENT_ID`,
 `LORE_MCP_CLIENT_SECRET`, `LORE_MACHINE_ID` (полная команда —
@@ -156,8 +171,8 @@ Claude Code, `lore-mcp-full_<harness>` — остальные (например,
 ## Частые проблемы
 
 - **Backend поднялся, но слайсы пустые/ошибка 500** — проверить, что схема
-  реально развёрнута (шаг 2) и БД называется именно `system_aida_lore`
-  (`lore.db` в `application.properties`).
+  реально развёрнута (шаг 2) и имя БД совпадает с `LORE_DB` бэкенда
+  (по умолчанию `system_aida_lore`, свойство `lore.db`).
 - **Правки в Java не попадают в контейнер** — забыли `./gradlew build` перед
   `docker compose build lore-backend` (см. память `feedback_backend_build_prebuilt_jar.md`).
 - **Frontend service не поднимается / контейнер называется не так** — сервис

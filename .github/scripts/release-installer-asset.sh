@@ -166,7 +166,7 @@ cmd_pack() {
   # Исходники LORE — для install.sh --build-from-source. Без них у получателя остаётся только путь
   # «готовые образы из реестра», а README обещает оба (разбор документации 22.11.2026: обещал и не прикладывал).
   if [ "$WITH_SOURCES" = true ]; then
-    if node "$ROOT/scripts/model-migration/source-archive.mjs" --out "$OUT" --version "$TAG"; then
+    if node "$ROOT/scripts/model-migration/source-archive.mjs" --out "$OUT" --version "${TAG#v}"; then
       local src
       src="$(ls "$OUT"/src/lore-*.tar.gz 2>/dev/null | head -1)"
       if [ -n "$src" ] && [ -f "$src" ]; then

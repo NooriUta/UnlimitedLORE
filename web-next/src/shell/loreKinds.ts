@@ -61,6 +61,8 @@ export function loreKinds(lang: KitLang): KitConfig['kinds'] {
     pr: { title: t('shell.sec.pr'), icon: 'branch-arrow' },
     user: { title: t('shell.sec.user'), icon: 'person' },
     agent: { title: t('shell.sec.agent'), icon: 'robot-golem' },
+    // AP-MACHINE-PASSPORT: машина — паспорт только в админке («Доступ к машинам»).
+    machine: { title: t('shell.sec.machine'), icon: 'laptop' },
     product: { title: t('shell.sec.product'), icon: SECTION_ICONS.value },
     actor: { title: t('shell.sec.actor'), icon: 'hooded-figure' },
     pain: { title: t('shell.sec.pain'), icon: 'thorn-helix' },

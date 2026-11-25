@@ -382,7 +382,7 @@ plan() {
   done
   echo "  compose: бэкап docker-compose.yml.bak-$TAG в $DIR_BE и $DIR_NEXT, замена тегов на :${SRC8:-?}"
   if [ -z "${CODE_SCHEMA:-}" ]; then echo "  база: прод ${PROD_SCHEMA:+схема }${PROD_SCHEMA:-?}, версия схемы кода не определена (resolve)"
-  elif [ "${PROD_SCHEMA:-}" = model ]; then echo "  база: прода собрана из модели (1.18) — шагов V нет, ни бэкапа, ни накатки"
+  elif [ "${PROD_SCHEMA:-}" = model ]; then echo "  база: прода собрана из модели — шагов V нет; бэкап $PROD_DB и доводка схемы кода (LoreSchemaAdditive) отдельным compose run"
   elif [ -z "${PROD_SCHEMA:-}" ] || [ "${PROD_SCHEMA:-}" = steps ]; then echo "  база: версия прода неизвестна → бэкап $PROD_DB и накатка (безопасная сторона)"
   elif [ "${CODE_SCHEMA:-0}" -gt "$PROD_SCHEMA" ]; then echo "  база: прод v$PROD_SCHEMA < код v$CODE_SCHEMA → бэкап $PROD_DB и накатка отдельным compose run"
   elif [ "${CODE_SCHEMA:-0}" -eq "$PROD_SCHEMA" ]; then echo "  база: прод v$PROD_SCHEMA = код v$CODE_SCHEMA → накатка не нужна"
@@ -462,14 +462,14 @@ db() {
   load
   local need=no
   if [ "${PROD_SCHEMA:-}" = model ]; then
-    # 1.18: схему собрал установщик из модели — журнала шагов V нет по построению, накатывать нечего.
-    echo "база прода собрана из модели (LoreModelSchema, 1.18) — шагов V нет, бэкап и накатка не нужны"
-    summary "- база: собрана из модели (1.18) — накатка не нужна"
-    return 0
-  fi
-  if [ -z "${PROD_SCHEMA:-}" ] || [ "${PROD_SCHEMA:-}" = steps ]; then
+    # 1.18: схему собрал установщик из модели — журнала шагов V нет по построению. 25.11.2026: шаги V не катятся,
+    # но схема ДОВОДИТСЯ до кода (LoreSchemaAdditive: всё, что после 1.18) — бэкап и шаг накатки на каждой выкатке;
+    # доводка идемпотентна, на доведённой базе — «типов +0 … база уже на схеме кода».
+    echo "база прода собрана из модели (LoreModelSchema) — шагов V нет; бэкап и доводка схемы кода"
+    need=yes
+  elif [ -z "${PROD_SCHEMA:-}" ] || [ "${PROD_SCHEMA:-}" = steps ]; then
     # 1.18.3: «вида не определили» и «вид — шаги V, номера нет» ведут себя одинаково: бэкап и накатка.
-    # Накатка идемпотентна, а на базе из модели она честно скажет «шаги V пропущены» (ниже это успех).
+    # Накатка идемпотентна, а на базе из модели она доводит схему до кода и пишет строку «доводка схемы кода» (ниже это успех).
     echo "::warning::версия схемы прода не определена (/lore/version без номера или строки «схема сверена» нет в логе) — бэкап и накатка на всякий случай: накатка идемпотентна"
     need=yes
   elif [ "$CODE_SCHEMA" -gt "$PROD_SCHEMA" ]; then
@@ -486,11 +486,18 @@ db() {
   local rc=0
   r "cd $DIR_BE && timeout 1800 docker compose run --rm --no-deps -T lore-migrate" > /tmp/migrate.log 2>&1 || rc=$?
   grep -E "LORE MIGRATE|LORE MART|ERROR|Exception" /tmp/migrate.log | tail -80 || true
-  if [ "$rc" = 0 ] && grep -q "схема собрана из модели (LoreModelSchema), шаги V пропущены" /tmp/migrate.log; then
-    # Версия прода была неизвестна, а база оказалась собранной из модели: накатывать нечего — это успех.
-    echo "база прода собрана из модели (1.18) — шаги V пропущены, накатка не нужна"
-    summary "- база: бэкап $PROD_DB; собрана из модели (1.18) — накатка не нужна"
+  local add
+  add="$(grep -o "схема собрана из модели (LoreModelSchema), шаги V не применяются; доводка схемы кода.*" /tmp/migrate.log | tail -1)"
+  if [ "$rc" = 0 ] && [ -n "$add" ]; then
+    # База из модели: шаги V не катятся, схема доведена до кода (LoreSchemaAdditive) — строка говорит, что сделано.
+    echo "база прода собрана из модели — ${add#*; }"
+    summary "- база: бэкап $PROD_DB; из модели — ${add#*; }"
     return 0
+  fi
+  if [ "$rc" = 0 ] && grep -q "схема собрана из модели (LoreModelSchema), шаги V пропущены" /tmp/migrate.log; then
+    err "база из модели, а доводки схемы кода нет («шаги V пропущены») — образ без LoreSchemaAdditive; работающие контейнеры НЕ подменены"
+    restore_compose
+    exit 1
   fi
   if [ "$rc" != 0 ] || ! grep -q "lore.migrate.only=true — схема накатана" /tmp/migrate.log; then
     err "накатка на проде не подтверждена (код $rc) — работающие контейнеры НЕ подменены, compose возвращается из бэкапа"
@@ -567,7 +574,10 @@ probe() {
     got="$(r "curl -s -m 10 -H 'Host: $2' http://127.0.0.1:$3/" | grep -oE "$BUNDLE_RE" | head -1)"
     if [ "$got" = "$4" ]; then echo "ok: $1 на lore-host:$3 отдаёт $got"; else err "$1 на lore-host:$3 отдаёт ${got:-<нет>}, ждали $4"; rc=1; fi
   done
-  bash "$here/bundle-probe.sh" "v1 прод" "$BUNDLE_V1" "https://$HOST_V1/" || rc=1
+  # Публичное имя HOST_V1 после переезда прода ведёт на v2 (v1.19.0: lore.odal отдал бандл v2) — v1 живёт
+  # только на lore-host:4400 и сверен строкой выше. Какой фронт стоит за именем — LORE_PROD_V1_HOST_SERVES (v2|v1).
+  want_v1_public="$BUNDLE_V2"; [ "${LORE_PROD_V1_HOST_SERVES:-v2}" = v1 ] && want_v1_public="$BUNDLE_V1"
+  bash "$here/bundle-probe.sh" "прод по имени $HOST_V1 (${LORE_PROD_V1_HOST_SERVES:-v2})" "$want_v1_public" "https://$HOST_V1/" || rc=1
   bash "$here/bundle-probe.sh" "v2 прод" "$BUNDLE_V2" "https://$HOST_V2/" || rc=1
   # /lore/version — через nginx ОБОИХ фронтов (SPRINT_UXR_S8_SWITCH/S8-01): шаблон
   # nginx общий, но после переключения основной адрес — v2, и телефон с MCP идут
@@ -595,7 +605,15 @@ probe() {
     else
       err "/lore/version: ждали schema_source=model и schema_version=model:$MODEL_VERSION, есть schema_source=${src:-?}, schema_version=${sv:-?}"; rc=1
     fi
-    schema_note="модель v${MODEL_VERSION:-?}"
+    # 25.11.2026: доводка схемы кода (LoreSchemaAdditive) — база не должна отставать от кода после шага db.
+    local behind cs
+    behind="$(json_field code_schema_behind "$ver")"; cs="$(json_field code_schema_version "$ver")"
+    case "$behind" in
+      false) echo "ok: /lore/version — доводка схемы кода v$cs = код" ;;
+      true)  err "/lore/version: база отстаёт от схемы кода (code_schema_version=${cs:-null}, код $(json_field code_schema_expected "$ver")) — доводка на шаге db не выполнилась"; rc=1 ;;
+      *)     echo "::warning::/lore/version не отдал code_schema_behind — номер доводки схемы кода не сверен" ;;
+    esac
+    schema_note="модель v${MODEL_VERSION:-?}, схема кода v${cs:-?}"
   else
     # База шагов V (schema_source=steps) или /lore/version не прочитан — строка сверки в логе НОВОГО бэкенда.
     line="$(schema_log_line "--since $UP_AT")"

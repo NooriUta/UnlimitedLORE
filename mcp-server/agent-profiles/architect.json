@@ -15,6 +15,7 @@
     "find": "allow",
     "adr_*": "allow",
     "component_*": "allow",
+    "skill_*": "allow",
     "tech_*": "allow",
     "spec_*": "allow",
     "runbook_*": "allow",

@@ -69,6 +69,23 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
         return p.equals("lore") || p.startsWith("lore/");
     }
 
+    /** Роль, которой создаётся проект, — одно слово, как её кладёт сюда мост Keycloak. */
+    static final String SUPERADMIN = "superadmin";
+
+    /**
+     * SPRINT_LORE_EXT_AUDIT_1190/AUD-SUPERADMIN (issue SeidrStudio/UnlimitedLORE#8): одно написание
+     * роли во всём LORE — {@code superadmin}. Роль realm Keycloak называется {@code super-admin}, и
+     * человек, поставивший {@code LORE_SEER_ROLE=super-admin}, получал 403. Теперь {@code super-admin}
+     * и {@code super_admin} (любой регистр, пробелы по краям) — синонимы; остальные роли не меняются.
+     */
+    static String normalizeRole(String role) {
+        if (role == null) return null;
+        String r = role.trim();
+        String k = r.toLowerCase(java.util.Locale.ROOT);
+        if (k.equals("super-admin") || k.equals("super_admin") || k.equals(SUPERADMIN)) return SUPERADMIN;
+        return r;
+    }
+
     /** Открытый путь настройки входа (без ведущего «/»). */
     static final String AUTH_CONFIG_PATH = "lore/auth/config";
 
@@ -93,7 +110,13 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
                         .build());
                 }
             }
-            return; // OIDC off (dev/local): leave X-Seer-Role as received, today's behaviour
+            // OIDC off (dev/local, пакет установки): X-Seer-Role принимается как прислан, но в
+            // ОДНОМ написании — AUD-SUPERADMIN (issue SeidrStudio#8): «super-admin» (имя роли realm
+            // Keycloak) приводится к «superadmin», которое ждут все проверки.
+            String sent = ctx.getHeaderString("X-Seer-Role");
+            String norm = normalizeRole(sent);
+            if (sent != null && !sent.equals(norm)) ctx.getHeaders().putSingle("X-Seer-Role", norm);
+            return;
         }
         final String role;
         if (identity.hasRole("super-admin")) {

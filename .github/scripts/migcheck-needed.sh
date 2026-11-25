@@ -11,7 +11,7 @@
 # Вход (env): EVENT_NAME, BASE_REF; CI_SCOPE_FILES — список путей вместо git (тесты).
 set -uo pipefail
 
-PATTERN='^(backend/src/main/java/studio/seer/heimdall/lore/LoreSchema(Migrations|MigrationRunner|Initializer)\.java|backend/db-schema/|scripts/migrate-live-check|\.github/workflows/lore-migrate-live-check\.yml|\.github/scripts/migcheck-needed\.sh)'
+PATTERN='^(backend/src/main/java/studio/seer/heimdall/lore/(LoreSchema(Migrations|MigrationRunner|Initializer|Additive)|SkillSeed|AreaDictSeed|StatusDictCoreSeed)\.java|backend/db-schema/|scripts/migrate-live-check|\.github/workflows/lore-migrate-live-check\.yml|\.github/scripts/migcheck-needed\.sh)'
 
 emit() { echo "$1=$2"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1=$2" >> "$GITHUB_OUTPUT"; return 0; }
 
@@ -23,6 +23,9 @@ if [ "${1:-}" = "--selftest" ]; then
   }
   t true  "backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrations.java"
   t true  "scripts/migrate-live-check/inventory.py"
+  # 25.11.2026: изменения схемы после 1.18 — доводка схемы кода (LoreSchemaAdditive) и её посевы
+  t true  "backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaAdditive.java"
+  t true  "backend/src/main/java/studio/seer/heimdall/lore/SkillSeed.java"
   t false "web-next/src/App.tsx"
   t false $'docs/x.md\nbackend/src/main/java/studio/seer/heimdall/lore/KcBridge.java'
   got="$(EVENT_NAME=workflow_dispatch GITHUB_OUTPUT= bash "$0" | sed -n 's/^run=//p')"

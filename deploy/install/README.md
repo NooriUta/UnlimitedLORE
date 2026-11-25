@@ -94,9 +94,9 @@ bash install.sh --dir /opt/lore
 Что в нём по группам:
 
 - **Версия и образы** — `LORE_VERSION`, `LORE_SRC` (каталог исходников, заполняет `install.sh`), `LORE_BACKEND_IMAGE` и `LORE_WEB_IMAGE` (готовые образы, тогда сборки нет).
-- **База** — `ARCADEDB_VERSION`, `LORE_DB`, `ARCADEDB_ROOT_PASSWORD`.
+- **База** — `ARCADEDB_VERSION`, `LORE_DB`, `ARCADEDB_ROOT_PASSWORD`. `LORE_DB` — имя базы LORE в ArcadeDB, по умолчанию `system_aida_lore`; установщик заводит базу с этим именем сам, бэкенд и сторож входов берут его из той же переменной.
 - **Файлы** — `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` (см. «Хранилище файлов»).
-- **Сеть** — `LORE_BIND` (по умолчанию `127.0.0.1`), `LORE_HTTP_PORT` (4400), `LORE_PUBLIC_URL` (https-адрес за reverse proxy).
+- **Сеть** — `LORE_BIND` (по умолчанию `127.0.0.1`), `LORE_HTTP_PORT` (4400), `LORE_PUBLIC_URL` (https-адрес за reverse proxy). `LORE_PUBLIC_URL` пустой — редирект на канонический адрес выключен: LORE открывается по тому адресу, по которому пришли (IP, localhost), а вход через Keycloak по голому IP не заработает — ему нужен HTTPS.
 - **Вход** — `LORE_AUTH_ENABLED`, `LORE_OIDC_ISSUER`, `LORE_OIDC_ORIGIN`, `LORE_OIDC_CLIENT_ID` (см. «Keycloak»).
 - **Völva** — `LORE_VOLVA_ORIGIN`, `LORE_VOLVA_EMBED_SITE_URL`, `LORE_VOLVA_EMBED_ISSUER` (см. «Völva»).
 - **Forgejo** — `COMPOSE_PROFILES`, `FORGEJO_*` (см. «Forgejo и forgejo-mcp»).
@@ -253,7 +253,10 @@ bash deploy/install/install.sh --dir /opt/lore --verify
 
 MCP-сервер LORE ставится вместе со стеком (сервис `lore-mcp`). Своего порта у него нет: агент ходит на `https://<хост>/mcp` через nginx веба — тот же адрес и порт, что у веба LORE (`LORE_PUBLIC_URL`). Проверка без входа — `https://<хост>/mcp/health`. После установки `install.sh` проверяет оба адреса: `/mcp/health` отвечает 200, `POST /mcp` без входа — 401 (или 405). 502 значит, что nginx не достал `lore-mcp`, 404 — что `/mcp` не проксируется.
 
-- **Вход выключен** (`LORE_AUTH_ENABLED=false`, по умолчанию). `/mcp` всё равно ждёт заголовок `Authorization: Bearer <что-нибудь>`, но бэкенд без входа токен не проверяет. Пускайте агентов только с этой машины или через свой прокси с авторизацией: MCP пишет в базу так же, как веб (см. «Безопасность»).
+Транспорт выбирает переменная `LORE_MCP_TRANSPORT`: в сервисе `lore-mcp` пакета она уже стоит `http` (Streamable HTTP на порту 9200 внутри сети compose, наружу — только `/mcp` через nginx). Без неё MCP-сервер работает по stdio — так его запускают из исходников на машине агента (`node mcp-server/dist/index.js`).
+
+- **Вход выключен** (`LORE_AUTH_ENABLED=false`, по умолчанию). `/mcp` всё равно ждёт заголовок `Authorization: Bearer <что-нибудь>`, бэкенд без входа токен не проверяет. Чтение по `/mcp` работает. Запись по `/mcp` без Keycloak в этой версии получает 403: HTTP-режим не передаёт бэкенду роль (`X-Seer-Role`), а без входа роль берётся только из этого заголовка. Писать без Keycloak — через stdio-подключение на машине агента: `LORE_BACKEND_URL=http://127.0.0.1:4400` (адрес веба, без `/mcp`) и `LORE_SEER_ROLE=admin`. Пускайте агентов только с этой машины или через свой прокси с авторизацией: MCP пишет в базу так же, как веб (см. «Безопасность»).
+- **Роль записи.** Обычной записи хватает `admin`. Создание проекта (`project_new`) требует `superadmin` — одним словом: `LORE_SEER_ROLE=superadmin` в stdio-подключении, роль realm `super-admin` в Keycloak. Написание `super-admin` в заголовке принимается синонимом. Отказ 403 называет роль, которой не хватило.
 - **Вход через Keycloak.** У каждого агента своя учётка `lore-mcp-<роль>[_<harness>]`, её заводит окно установщика (раздел «Keycloak» выше). Секрет учётки лежит под ключом `LORE_MCP_CLIENT_SECRET_<РОЛЬ>[_<HARNESS>]`, например `LORE_MCP_CLIENT_SECRET_FULL` для Claude Code или `LORE_MCP_CLIENT_SECRET_FULL_OPENCODE`. Переменная `LORE_MCP_SECRET_VAR` называет ключ, из которого подключение берёт секрет; без неё берётся `LORE_MCP_CLIENT_SECRET`. Значение секрета держите в окружении машины агента или в Infisical, в файлы настроек его не вписывайте. Подагенту младшей роли — своя учётка и свой ключ.
 - **Без MCP.** Если образа `lore-mcp` нет (своего `LORE_MCP_IMAGE` нет, а в реестре выпуска его не оказалось), установка не падает. Она громко пишет «MCP не будет запущен», а проверка показывает строку «НЕТ lore-mcp». Выход — свой `LORE_MCP_IMAGE` или повтор с `--build`.
 

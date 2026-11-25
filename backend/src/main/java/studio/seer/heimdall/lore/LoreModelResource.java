@@ -81,11 +81,14 @@ public class LoreModelResource extends LoreResourceBase {
         }
         Map<String, Object> doc = LoreModel.build(dict, schema, declared, mandatory);
         // MC-05 (SPEC-LORE-MODEL-CONFIG-STORE §2): источник модели — сведения о документе, а не его
-        // содержимое: в отпечаток версии не входят. Модель из файла по сбою — строкой в warnings, не молча.
+        // содержимое: в отпечаток версии не входят. Модель из файла по сбою — строкой в warnings
+        // и полем config.warning, плюс заголовок X-Lore-Model-Source на 200 и 304 (KREG-08), не молча.
         Map<String, Object> config = new java.util.LinkedHashMap<>();
         config.put("source", store.source());
         config.put("hash", store.hash());
         config.put("seed_drift", store.seedDrift());
+        // KREG-08: причина отказа чтения — рядом с флагом источника, а не только в общем warnings.
+        config.put("warning", store.warning());
         doc.put("config", config);
         // MC-09: версия сервера рядом с моделью — с ней клиент сравнивает since контракта списка (404 UNKNOWN_SLICE
         // на сервере старше since — «раздел ещё не отдаётся», а не «пусто»). Как config — вне отпечатка версии.
@@ -95,11 +98,19 @@ public class LoreModelResource extends LoreResourceBase {
             ws.add("config: " + store.warning());
             doc.put("warnings", ws);
         }
+        // KREG-09 (SPEC-MODEL-EXPORT-064 §4): meta model/1 — release деплоя, model_etag артефакта релиза,
+        // warnings (потолок 50), источник. Аддитивно и вне отпечатка версии, как config/server.
+        doc.put("meta", LoreModelMeta.meta(System.getenv("LORE_RELEASE_TAG"),
+            doc.get("warnings") instanceof List<?> w ? w : List.of(), store.source(), store.seedDrift()));
         String version = String.valueOf(doc.get("version"));
         EntityTag tag = new EntityTag(version);
+        // KREG-08: fallback громкий и для условного запроса — 304 тела не несёт, а заголовок несёт.
+        String sourceHeader = store.source();
         if (LoreEtag.matches(ifNoneMatch, version)) {
-            return Response.notModified(tag).header("Cache-Control", "no-cache").build();
+            return Response.notModified(tag).header("Cache-Control", "no-cache")
+                .header("X-Lore-Model-Source", sourceHeader).build();
         }
-        return Response.ok(doc).tag(tag).header("Cache-Control", "no-cache").build();
+        return Response.ok(doc).tag(tag).header("Cache-Control", "no-cache")
+            .header("X-Lore-Model-Source", sourceHeader).build();
     }
 }

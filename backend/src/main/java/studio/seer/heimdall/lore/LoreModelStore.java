@@ -64,11 +64,27 @@ public class LoreModelStore {
     static final String OPEN_SQL = "SELECT state_uid, content, content_hash, changed_by FROM KnowModelConfigHist "
         + "WHERE in('HAS_STATE').config_id CONTAINS :id AND valid_to IS NULL";
 
+    /**
+     * KREG-08: fallback громкий — точка сигнала в ряд ARC-02 при отказе чтения модели из LORE
+     * (на проде 24.11.2026 fallback был виден только строкой лога). Форма — как у соседних
+     * писателей ряда ({@code LoreRequestStats.METRIC_INSERT_SQL}): value 0 — работа по файлу,
+     * 1 — модель из LORE; точка пишется только при отказе. Сбой самой точки не роняет старт:
+     * сигнал лучшее, что есть, но не обязательное — fallback всё равно работает по файлу.
+     */
+    static final String FALLBACK_METRIC_SQL = "INSERT INTO MetricSnapshot SET ts=:ts, object_type='model_config', "
+        + "object_id=:oid, metric=:m, source='lore-model-store', segment=:seg, value=:v";
+
     @ConfigProperty(name = "lore.enabled", defaultValue = "false")
     boolean enabled;
 
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
     String db;
+
+    /** KREG-08 (follow-up, разбор migrate-live-check #1797): в режиме одноразовой накатки
+        сигнальная точка fallback не пишется — иначе каждый старт миграционного раннера
+        даёт MetricSnapshot +1 и ломает повторную сверку инвентаря (проверка на снимке прода). */
+    @ConfigProperty(name = "lore.migrate.only", defaultValue = "false")
+    boolean migrateOnly;
 
     @Inject
     MartCredentials mart;
@@ -124,6 +140,31 @@ public class LoreModelStore {
             warning = "модель из LORE не прочитана — работаю по файлу репозитория: " + e.getMessage();
             source = "file";
             LOG.warnf("[LORE MODEL] %s", warning);
+            recordFallback(e);
+        }
+    }
+
+    /**
+     * KREG-08: fallback — громкий, а не молчаливый: точка в {@code MetricSnapshot} видна метриками
+     * и админке, а не только строкой лога. Сама точка — лучшее, что есть (читать не из чего,
+     * значит и писать, вероятно, некуда), поэтому её сбой ловится и уходит в лог, не роняя старт.
+     */
+    private void recordFallback(RuntimeException e) {
+        if (migrateOnly) {
+            LOG.warnf("[LORE MODEL] fallback-метрика пропущена: режим lore.migrate.only (одноразовая накатка, наблюдателю нечего смотреть)");
+            return;
+        }
+        try {
+            client.command(db, mart.basicAuth(), new LoreCommandClient.LoreCommand("sql", FALLBACK_METRIC_SQL,
+                Map.of("ts", System.currentTimeMillis(),
+                    "oid", CONFIG_ID,
+                    "m", "lore.model.source",
+                    "seg", e.getClass().getSimpleName(),
+                    "v", 0.0)))
+                .subscribe().with(ok -> { }, ex ->
+                    LOG.warnf("[LORE MODEL] сигнальная точка fallback не записана: %s", LoreUpstream.detail(ex)));
+        } catch (Exception ex) {
+            LOG.warnf("[LORE MODEL] сигнальная точка fallback не записана: %s", LoreUpstream.detail(ex));
         }
     }
 

@@ -175,7 +175,11 @@ class LorePassportLinksContractTest {
         Map.entry("FORMALIZED_AS", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("INCLUDES", "объявлено DDL, ни записи, ни чтения в коде нет (сценарии — UC_INCLUDES)"),
         Map.entry("RELEASED_IN", "объявлено DDL, ни записи, ни чтения в коде нет (релиз — IMPLEMENTED_IN_RELEASE)"),
-        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"));
+        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"),
+        // SKILL-01/02 (V96): у вида skill:* паспорта v2 ещё нет (KnowSkill вне модели 1.18) — связи навыка читаются
+        // колонками срезов skills/skills_full и карточкой describe skill:*, а не связью паспорта
+        Map.entry("APPLIES_TO_ROLE", "навык → роль агента (skill:*, V96): паспорта у навыка нет, колонка roles среза skills"),
+        Map.entry("SKILL_EXTENDS", "навык → навык (skill:*, V96): паспорта у навыка нет, колонка extends_ids среза skills"));
 
     /**
      * Сущности графа без паспорта v2: их конец ребра не показывается — причина здесь, одна на
@@ -666,7 +670,10 @@ class LorePassportLinksContractTest {
         Map.entry("track|projects", "трек — справочник студии, проекта нет (MDL-13)"),
         Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"),
         // MD-05: у PR компонентов нет — ни ребра, ни наследования; работа PR видна через задачи (вкладка «Закрывает задачи»).
-        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"));
+        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"),
+        // AP-MACHINE-PASSPORT: машина — вершина-наблюдение, проектов и компонентов у неё нет; проекты — у допусков шлюза.
+        Map.entry("machine|projects", "у машины проектов нет: проекты — у допусков её шлюза (MACHINE_ACCESS, админка)"),
+        Map.entry("machine|components", "у машины компонентов нет: ни ребра, ни наследования"));
 
     @Test
     void chipValuesHaveADeclaredField() {
@@ -685,7 +692,10 @@ class LorePassportLinksContractTest {
      * Исключение, которое больше не объявлено в модели, — протухло и тоже красное.
      */
     static final Map<String, String> DERIVED_REF = Map.of(
-        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05");
+        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05",
+        // AP-MACHINE-PASSPORT: владелец и шлюз — у актора-шлюза minilore-link-<имя> (ADR-MINILORE-007 В4), не ребро KnowMachine.
+        "machine.owner", "владелец машины — OWNED_BY её шлюза minilore-link-<имя> (срез machine_by_id)",
+        "machine.gateway", "шлюз машины — актор с client_id minilore-link-<имя> (срез machine_by_id)");
 
     /** Поле-ссылка без ребра — только унаследованные чипы (своего ребра у типа нет) или выводной путь из DERIVED_REF. */
     @Test

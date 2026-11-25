@@ -86,7 +86,8 @@ describe('registerLoreWrite', () => {
     // + entity_upsert/entity_link/entity_delete/entity_move (SPRINT_LORE_MCP_V2/MCPV2-3 —
     //   обобщённая CRUD-консолидация; дефолтная full-поверхность скрывает 59 покрытых
     //   per-entity имён через гейт в index.ts, сами инструменты регистрируются всегда)
-    expect(names).toHaveLength(92);
+    // + skill_new/skill_set/skill_link (SPRINT_LORE_KNOW_REGISTRY/SKILL-01/02 — вид skill:* на текущем MCP)
+    expect(names).toHaveLength(95);
   });
 
   it('registers project_role_set (DS-1 — роль в проекте выдаётся без захода в админку)', () => {

@@ -21,6 +21,9 @@ class AdminOnlySlicesGateTest {
         "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
         "agent_action_points");
 
+    /** Паспорт машины (AP-MACHINE-PASSPORT): только админка; отдаёт client_id агентов — поле уровня admin (AP-PEOPLE-PAGE). */
+    private static final List<String> ADMIN_PASSPORTS = List.of("machine_by_id", "machines_graph");
+
     @Test
     void журналыЗакрытыДляНеАдминов() {
         for (String id : JOURNALS) {
@@ -28,6 +31,16 @@ class AdminOnlySlicesGateTest {
             for (String role : new String[] {null, "", "viewer", "reader", "editor", "developer"}) {
                 assertTrue(LoreSlices.adminOnlyDenied(id, role), id + " для роли " + role);
             }
+        }
+    }
+
+    @Test
+    void паспортМашиныЗакрытДляНеАдминов() {
+        for (String id : ADMIN_PASSPORTS) {
+            assertTrue(LoreSlices.get(id) != null, "срез существует: " + id);
+            for (String role : new String[] {null, "", "viewer", "reader", "editor", "developer"})
+                assertTrue(LoreSlices.adminOnlyDenied(id, role), id + " для роли " + role);
+            assertFalse(LoreSlices.adminOnlyDenied(id, "admin"), id);
         }
     }
 
@@ -57,6 +70,6 @@ class AdminOnlySlicesGateTest {
                 assertTrue(LoreSlices.ADMIN_ONLY.contains(id), "срез " + id + " помечен «" + why + "», а гейта роли нет");
             }
         });
-        assertEquals(JOURNALS.size(), LoreSlices.ADMIN_ONLY.size(), "состав ADMIN_ONLY: " + LoreSlices.ADMIN_ONLY);
+        assertEquals(JOURNALS.size() + ADMIN_PASSPORTS.size(), LoreSlices.ADMIN_ONLY.size(), "состав ADMIN_ONLY: " + LoreSlices.ADMIN_ONLY);
     }
 }

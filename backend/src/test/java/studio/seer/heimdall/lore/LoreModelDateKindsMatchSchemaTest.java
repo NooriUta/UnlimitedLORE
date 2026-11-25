@@ -41,7 +41,10 @@ class LoreModelDateKindsMatchSchemaTest {
         "quality_gate.retired_at", "QualityGate без даты снятия: то же исключение QG",
         // MD-05: тип pr заведён в graph после снятия снимка (19.11): KnowPR в снимке нет. В схеме установщика
         // KnowPR.merged_at — DATETIME (scripts/model-migration/schema/all-objects.json), модель — precision datetime.
-        "pr.merged_at", "KnowPR нет в снимке схемы (тип pr в graph с MD-05); у установщика merged_at — DATETIME");
+        "pr.merged_at", "KnowPR нет в снимке схемы (тип pr в graph с MD-05); у установщика merged_at — DATETIME",
+        // AP-MACHINE-PASSPORT: тип machine заведён в graph после снятия снимка; KnowMachine (V79) — свойства STRING ISO-время.
+        "machine.last_seen_at", "KnowMachine нет в снимке схемы (тип machine с AP-MACHINE-PASSPORT); V79 — STRING ISO-время",
+        "machine.first_seen_at", "KnowMachine нет в снимке схемы (тип machine с AP-MACHINE-PASSPORT); V79 — STRING ISO-время");
 
     /**
      * Поля, у которых вид в модели и тип в схеме переноса расходятся сознательно, — с причиной.

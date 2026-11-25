@@ -41,6 +41,8 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   // SUPERTAGS-SPIKE: тег со свободными полями на ребре ADR/решения
   { what: 'Теги с полями', api: '/lore/tag/apply', humanOnly: false, agents: ['full', 'architect', 'developer'] },
   { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
+  // SKILL-01 (SPEC-SKILLS-TAGS-062 §5): навыки ролей skill:* — запись только full и architect
+  { what: 'Навыки ролей', api: '/lore/skill*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
   { what: 'Спринты и вехи', api: '/lore/sprint*, milestone*', humanOnly: false, agents: ['full', 'pm'] },
   { what: 'Зависимости (задача, фаза, спринт, веха)', api: '/lore/dep', humanOnly: false, agents: ['full', 'pm'] },

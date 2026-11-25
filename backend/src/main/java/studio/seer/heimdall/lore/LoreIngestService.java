@@ -41,7 +41,7 @@ public class LoreIngestService {
     @Inject
     MartCredentials mart;
 
-    @ConfigProperty(name = "team-docs.root", defaultValue = "C:/AIDA/docs")
+    @ConfigProperty(name = "team-docs.root", defaultValue = "/team-docs")
     String defaultDocsRoot;
 
     // ── Public API ────────────────────────────────────────────────────────────

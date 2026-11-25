@@ -53,6 +53,9 @@ services:
       # (смоук 21.11: MA2/MA3/MA7). Отчёт кладёт lore-migration-snapshot.yml после этапа full
       # (.github/scripts/migration-report-publish.sh); правила людей (decisions.json) живут здесь же.
       - lore.migration.dir=/migration
+      # SPRINT_LORE_KNOW_REGISTRY/KREG-09, решение владельца 25.11 («по линии б … 2a»): импорт реестра видов
+      # KnowKind при старте включён только на препроде — первая живая проверка; на проде флаг по умолчанию выкл.
+      - lore.know-registry.import=true
     volumes:
       - lore-preprod-migration:/migration
     labels:

@@ -21,15 +21,15 @@ services:
     image: unlimitedlore-lore-app-next:a2dc70bc
     restart: unless-stopped
     environment:
-      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-https://new.lore.odal.seidrstudio.pro}
-      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-https://odal.seidrstudio.pro}
-      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:-https://volva.odal.seidrstudio.pro}
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:?LORE_PUBLIC_URL не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:?LORE_OIDC_ORIGIN не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
+      LORE_VOLVA_ORIGIN: ${LORE_VOLVA_ORIGIN:?LORE_VOLVA_ORIGIN не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
       LORE_BACKEND_URL: http://lore-backend:9100
       LORE_BACKEND_HOST: lore-backend
       # Вход — настройка ЗАПУСКА (SELF-PROVISION-STANDALONE): образ ничего не впекает, скрипт старта кладёт это в
       # /config.json. Прод — realm omilore (образ собран на препроде и больше не везёт его realm).
       LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-true}
-      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-https://odal.seidrstudio.pro/kc/realms/omilore}
+      LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:?LORE_OIDC_ISSUER не задан — адрес нашего хоста задаётся явно в .env рядом (AUD-DEFAULTS)}
       LORE_OIDC_CLIENT_ID: ${LORE_OIDC_CLIENT_ID:-lore-app}
       LORE_FRONT: v2
     ports:
