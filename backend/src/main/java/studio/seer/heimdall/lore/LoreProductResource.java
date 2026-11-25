@@ -2149,7 +2149,7 @@ public class LoreProductResource extends LoreResourceBase {
 
     private CheckOutcome checkWorkQualityTasks() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT task_uid, title, work_class, " +
+            "SELECT task_uid, title, work_class, task_type, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('TAGGED_WITH').component_id AS own_components, " +
@@ -2168,8 +2168,8 @@ public class LoreProductResource extends LoreResourceBase {
             Object eff = r.get("effort_days");
             Double effort = eff instanceof Number n ? n.doubleValue() : null;
             WorkQuality.Result res = WorkQuality.evaluateTask(
-                str(r.get("status_raw")), effort, str(r.get("work_class")),
-                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
+                str(r.get("status_raw")), effort, str(r.get("work_class")), str(r.get("task_type")),
+                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"), null);
             if (res.score() < res.max()) {
                 found++;
                 if (findings.size() < SELF_CHECK_FINDINGS_CAP) {

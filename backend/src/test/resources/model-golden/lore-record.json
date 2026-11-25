@@ -390,13 +390,17 @@
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
         },
-        "required_level" : "warn",
+        "required_level" : null,
         "required_rules" : [ {
           "level" : "warn",
           "source" : "quality",
           "code" : "component",
-          "message" : "Компонент привязан (BELONGS_TO)",
-          "when" : null
+          "message" : "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи",
+          "when" : {
+            "field" : "has_tech_tasks",
+            "eq" : "true",
+            "text" : "когда «в спринте есть технические задачи (design/dev/ops/test)» = true"
+          }
         } ]
       }, {
         "key" : "effort_days",
@@ -961,16 +965,6 @@
       }, {
         "level" : "warn",
         "source" : "quality",
-        "code" : "component",
-        "message" : "Компонент привязан (BELONGS_TO)",
-        "when" : null,
-        "targets" : [ {
-          "kind" : "field",
-          "key" : "components"
-        } ]
-      }, {
-        "level" : "warn",
-        "source" : "quality",
         "code" : "planned_dates",
         "message" : "Плановые даты заданы (начало и конец)",
         "when" : null,
@@ -980,6 +974,20 @@
         }, {
           "kind" : "field",
           "key" : "planned_end_date"
+        } ]
+      }, {
+        "level" : "warn",
+        "source" : "quality",
+        "code" : "component",
+        "message" : "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи",
+        "when" : {
+          "field" : "has_tech_tasks",
+          "eq" : "true",
+          "text" : "когда «в спринте есть технические задачи (design/dev/ops/test)» = true"
+        },
+        "targets" : [ {
+          "kind" : "field",
+          "key" : "components"
         } ]
       } ],
       "requirements_block" : "unknown"
@@ -1374,13 +1382,17 @@
           "endpoint" : "/lore/record/{type}/{id}/relation",
           "field" : "BELONGS_TO"
         },
-        "required_level" : "warn",
+        "required_level" : null,
         "required_rules" : [ {
           "level" : "warn",
           "source" : "quality",
           "code" : "component",
-          "message" : "Компонент привязан (BELONGS_TO)",
-          "when" : null
+          "message" : "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи",
+          "when" : {
+            "field" : "has_tech_tasks",
+            "eq" : "true",
+            "text" : "когда «в спринте есть технические задачи (design/dev/ops/test)» = true"
+          }
         } ]
       }, {
         "key" : "effort_days",
@@ -1945,16 +1957,6 @@
       }, {
         "level" : "warn",
         "source" : "quality",
-        "code" : "component",
-        "message" : "Компонент привязан (BELONGS_TO)",
-        "when" : null,
-        "targets" : [ {
-          "kind" : "field",
-          "key" : "components"
-        } ]
-      }, {
-        "level" : "warn",
-        "source" : "quality",
         "code" : "planned_dates",
         "message" : "Плановые даты заданы (начало и конец)",
         "when" : null,
@@ -1964,6 +1966,20 @@
         }, {
           "kind" : "field",
           "key" : "planned_end_date"
+        } ]
+      }, {
+        "level" : "warn",
+        "source" : "quality",
+        "code" : "component",
+        "message" : "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи",
+        "when" : {
+          "field" : "has_tech_tasks",
+          "eq" : "true",
+          "text" : "когда «в спринте есть технические задачи (design/dev/ops/test)» = true"
+        },
+        "targets" : [ {
+          "kind" : "field",
+          "key" : "components"
         } ]
       } ],
       "requirements_block" : "schema"
