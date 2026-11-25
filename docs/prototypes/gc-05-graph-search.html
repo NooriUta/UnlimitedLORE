@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Поиск по графу</title>
+<!--
+  SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05 · прототип UI поиска (процесс UX: прототип → «да» владельца → код).
+  Данные — живой снимок LORE 25.11.2026 через MCP: find (task · search «граф» · проект LORE · открытые),
+  graph (окрестность GC-05, глубина 2), graph_path (GC-05 → KREG-11, k=2). Внешних загрузок нет, кроме шрифтов Google Fonts.
+  Режим — в адресе: ?mode=text|links|path.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#120f09;--bg1:#1a160e;--bg2:#221c12;--bg3:#2c2417;
+  --bd:#3d3324;--bdh:#5a4a33;
+  --t1:#eee4cc;--t2:#a8977a;--t3:#6f6450;
+  --acc:#e0a33a;--acc-bg:color-mix(in srgb,var(--acc) 14%,transparent);
+  --suc:#7dbf78;--wrn:#d4922a;--dng:#d0604e;--inf:#88b8c8;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --head:'Unbounded','Manrope',system-ui,sans-serif;
+  --r:6px;--pill:999px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--sans);font-size:var(--fs-sm);line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.page{max-width:1240px;margin:0 auto;padding:14px 16px 48px}
+header.top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--bd);padding-bottom:10px}
+header.top h1{font-family:var(--head);font-weight:800;font-size:var(--fs-lg);letter-spacing:.02em;margin:0;text-transform:uppercase}
+header.top .sub{color:var(--t2);font-size:var(--fs-xs)}
+.proto{margin-left:auto;font-family:var(--mono);font-size:var(--fs-2xs);color:var(--wrn);border:1px solid color-mix(in srgb,var(--wrn) 50%,var(--bd));border-radius:var(--pill);padding:2px 8px}
+
+.layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;margin-top:12px}
+@media (max-width:760px){.layout{grid-template-columns:minmax(0,1fr)}.rail{order:2}}
+
+.rail{display:flex;flex-direction:column;gap:12px}
+.box{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r)}
+.box h2{margin:0;padding:7px 10px;border-bottom:1px solid var(--bd);font-size:var(--fs-2xs);font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em}
+.views{list-style:none;margin:0;padding:4px}
+.views li button{width:100%;text-align:left;background:none;border:0;border-radius:4px;padding:5px 7px;cursor:pointer;color:var(--t1);display:flex;gap:6px;align-items:center}
+.views li button:hover{background:var(--bg2)}
+.views .n{margin-left:auto;font-family:var(--mono);color:var(--t3);font-size:var(--fs-2xs)}
+.views .new{color:var(--acc)}
+.hint{padding:8px 10px;color:var(--t2);font-size:var(--fs-xs)}
+
+/* строка поиска + режимы */
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px;background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:var(--pill);overflow:hidden;flex:none}
+.seg button{background:none;border:0;padding:4px 12px;cursor:pointer;color:var(--t2);font-weight:600;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em}
+.seg button[aria-pressed="true"]{background:var(--acc-bg);color:var(--acc)}
+.q{flex:1 1 220px;min-width:0;display:flex;align-items:center;gap:6px;background:var(--bg0);border:1px solid var(--bd);border-radius:var(--r);padding:0 8px;height:30px}
+.q input{flex:1;min-width:0;background:none;border:0;outline:none;font-size:var(--fs-md)}
+.q .k{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+.btn{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:4px 10px;cursor:pointer;font-size:var(--fs-xs);white-space:nowrap}
+.btn:hover{border-color:var(--bdh)}
+.btn.acc{border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));color:var(--acc)}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.flabel{font-size:var(--fs-2xs);color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-right:2px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--bd);background:var(--bg1);border-radius:var(--pill);padding:2px 9px;cursor:pointer;font-size:var(--fs-xs);color:var(--t2)}
+.chip[aria-pressed="true"]{border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));color:var(--acc);background:var(--acc-bg)}
+.chip .c{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+.chip.fixed{cursor:default}
+.group-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 8px;border:1px dashed var(--bd);border-radius:var(--r)}
+
+.meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 6px;color:var(--t2);font-size:var(--fs-xs)}
+.meta .ok{color:var(--suc)}.meta .warn{color:var(--wrn)}
+.meta code{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3);overflow-wrap:anywhere;min-width:0}
+
+/* таблица результатов */
+.tbl{width:100%;border-collapse:collapse;background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.tbl th{text-align:left;font-size:var(--fs-2xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg2)}
+.tbl td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.id{font-family:var(--mono);font-size:var(--fs-xs);color:var(--acc);white-space:nowrap}
+.ttl{color:var(--t1)}
+.mut{color:var(--t3);font-size:var(--fs-xs)}
+.pill{display:inline-block;border-radius:var(--pill);padding:1px 7px;font-size:var(--fs-2xs);font-weight:700;letter-spacing:.04em;border:1px solid var(--bd);white-space:nowrap}
+.pill.in_progress{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 45%,var(--bd))}
+.pill.not_started{color:var(--t2)}
+.pill.in_force{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 45%,var(--bd))}
+.pill.finished{color:var(--suc)}
+.type{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2);text-transform:uppercase}
+@media (max-width:760px){
+  .tbl thead{display:none}
+  .tbl tr{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:7px 8px;border-bottom:1px solid var(--bd)}
+  .tbl td{border:0;padding:0}
+  .tbl td.c-title{grid-column:1/-1}
+  .tbl td.c-extra{grid-column:1/-1}
+  .id{white-space:normal;overflow-wrap:anywhere}
+  .root,.group-f,.filters{min-width:0}
+}
+
+details.json{margin-top:8px}
+details.json summary{cursor:pointer;color:var(--t2);font-size:var(--fs-xs)}
+details.json pre{margin:6px 0 0;padding:8px;background:var(--bg0);border:1px solid var(--bd);border-radius:var(--r);font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t2);white-space:pre-wrap;word-break:break-word}
+
+/* связи — группы */
+.grp{margin-top:8px}
+.grp h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2)}
+.grp h3 .c{font-family:var(--mono);color:var(--t3)}
+.root{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px;background:var(--bg2);border:1px solid var(--bdh);border-radius:var(--r);margin-top:8px}
+
+/* путь — цепочка */
+.chain{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;margin-top:8px}
+.node{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:8px;width:230px;display:flex;flex-direction:column;gap:4px}
+.node.end{border-color:color-mix(in srgb,var(--acc) 55%,var(--bd))}
+.node .ttl{font-size:var(--fs-xs);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.edge{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 6px;min-width:110px;color:var(--t2)}
+.edge .rel{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--acc)}
+.edge .arr{font-size:var(--fs-lg);line-height:1}
+@media (max-width:760px){
+  .chain{flex-direction:column}
+  .node{width:100%}
+  .edge{flex-direction:row;gap:6px;padding:4px 0 4px 14px;min-width:0;justify-content:flex-start}
+  .edge .arr{transform:rotate(90deg)}
+}
+.reasons{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;margin-top:12px}
+.reasons div{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:6px 8px;font-size:var(--fs-xs);color:var(--t2)}
+.reasons b{font-family:var(--mono);color:var(--t1);font-weight:600}
+.pathform{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.pathform .q{flex:1 1 240px}
+
+.decide{margin-top:18px}
+.decide ol{margin:0;padding:8px 10px 8px 28px;color:var(--t2);font-size:var(--fs-xs)}
+.decide li{margin-bottom:4px}
+.decide b{color:var(--t1)}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--acc);color:var(--t1);padding:6px 12px;border-radius:var(--pill);font-size:var(--fs-xs);display:none;max-width:calc(100vw - 32px)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <h1>Поиск</h1>
+    <span class="sub">GC-05 · текст, связи и путь в одной строке поиска · данные — живой снимок LORE 25.11.2026</span>
+    <span class="proto">ПРОТОТИП · кода UI нет</span>
+  </header>
+
+  <div class="layout">
+    <aside class="rail">
+      <section class="box" aria-labelledby="v-h">
+        <h2 id="v-h">Сохранённые виды</h2>
+        <ul class="views" id="views"></ul>
+        <div class="hint">Вид = сохранённый запрос find (тип + поля + связь). Открывается в разделе списка как обычный фильтр.</div>
+      </section>
+    </aside>
+
+    <main>
+      <div class="bar" role="search">
+        <div class="seg" role="group" aria-label="Режим поиска">
+          <button type="button" data-mode="text">Текст</button>
+          <button type="button" data-mode="links">Связи</button>
+          <button type="button" data-mode="path">Путь</button>
+        </div>
+        <label class="q" id="qbox"><span class="k" aria-hidden="true">⌕</span>
+          <input id="q" value="граф" aria-label="Запрос">
+          <span class="k">find</span>
+        </label>
+      </div>
+
+      <!-- ТЕКСТ -->
+      <section id="m-text">
+        <div class="filters" aria-label="Фильтры">
+          <span class="flabel">тип</span>
+          <button class="chip" aria-pressed="true" type="button">задача</button>
+          <button class="chip" aria-pressed="false" type="button">спринт</button>
+          <button class="chip" aria-pressed="false" type="button">ADR</button>
+          <span class="flabel">статус</span>
+          <button class="chip" aria-pressed="true" type="button">открытые</button>
+          <span class="flabel">проект</span>
+          <button class="chip" aria-pressed="true" type="button">LORE</button>
+          <span class="flabel">компонент</span>
+          <button class="chip" aria-pressed="false" type="button">любой</button>
+          <span class="flabel">изменено</span>
+          <button class="chip" aria-pressed="false" type="button">за 30 дней</button>
+          <button class="btn acc" type="button" id="save">Сохранить как вид</button>
+        </div>
+        <div class="meta" id="text-meta"></div>
+        <table class="tbl" id="text-tbl">
+          <thead><tr><th>Ключ</th><th>Название</th><th>Статус</th><th>Спринт</th><th>Изменено</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <details class="json"><summary>Запрос, который уйдёт на сервер (POST /lore/find)</summary><pre id="text-json"></pre></details>
+      </section>
+
+      <!-- СВЯЗИ -->
+      <section id="m-links" hidden>
+        <div class="root" id="links-root"></div>
+        <div class="filters">
+          <div class="group-f" aria-label="Через что идти">
+            <span class="flabel">через что идти</span>
+            <span id="walk"></span>
+          </div>
+          <div class="group-f" aria-label="Что вернуть">
+            <span class="flabel">что вернуть</span>
+            <span id="ret"></span>
+          </div>
+        </div>
+        <div class="filters">
+          <span class="flabel">связи</span><span id="rels"></span>
+          <span class="flabel">направление</span>
+          <span class="seg" role="group" aria-label="Направление">
+            <button type="button" data-dir="in">кто зависит</button>
+            <button type="button" data-dir="both" aria-pressed="true">обе</button>
+            <button type="button" data-dir="out">от чего зависит</button>
+          </span>
+          <span class="flabel">глубина</span>
+          <span class="seg" role="group" aria-label="Глубина">
+            <button type="button" data-depth="1">1</button>
+            <button type="button" data-depth="2" aria-pressed="true">2</button>
+            <button type="button" data-depth="3">3</button>
+          </span>
+        </div>
+        <div class="meta" id="links-meta"></div>
+        <div id="groups"></div>
+      </section>
+
+      <!-- ПУТЬ -->
+      <section id="m-path" hidden>
+        <div class="pathform">
+          <label class="q"><span class="k">от</span><input value="task:SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05" aria-label="Откуда"></label>
+          <label class="q"><span class="k">до</span><input value="task:SPRINT_LORE_KNOW_REGISTRY/KREG-11" aria-label="Куда"></label>
+          <button class="btn" type="button">k = 2</button>
+          <button class="btn" type="button">глубина ≤ 4</button>
+        </div>
+        <div class="meta" id="path-meta"></div>
+        <div class="chain" id="chain"></div>
+        <div class="reasons" aria-label="Почему пути нет">
+          <div><b>too_deep</b> — путь есть глубже предела: «увеличить глубину»</div>
+          <div><b>through_hidden</b> — только через записи вне ваших проектов: не показан, но и не «нет»</div>
+          <div><b>no_path</b> — нет до глубины N</div>
+          <div><b>budget</b> — упёрлись в потолок обхода: отсутствие не доказано</div>
+        </div>
+      </section>
+
+      <section class="box decide" aria-labelledby="d-h">
+        <h2 id="d-h">Что решить по прототипу</h2>
+        <ol>
+          <li><b>Где живёт поиск:</b> отдельный экран «Поиск» или режимы внутри общей строки поиска шапки.</li>
+          <li><b>«Путь»:</b> цепочкой карточек (как здесь) или сразу на холсте GraphExplorer «Структура».</li>
+          <li><b>«Связи»:</b> фильтры «через что идти / что вернуть» видны всегда или прячутся под «ещё».</li>
+          <li><b>Сохранённый вид:</b> личный или общий для проекта.</li>
+        </ol>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// ── снимок LORE 25.11.2026 (MCP find / graph / graph_path) ──
+const TEXT_ROWS = [
+  {id:'SPRINT_LORE_UNIVERSAL_WORKFLOW/UW-02',title:'Подключить LangGraph4j для дерева исполнения универсальных workflow (гарды записи — нодами графа)',cat:'not_started',st:'PLANNED',sprint:'SPRINT_LORE_UNIVERSAL_WORKFLOW',at:'2026-11-24'},
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-02',title:'Договор kit на графовые виды: «узлы + рёбра (from, rel, to)» на входе, три отрисовщика',cat:'in_progress',st:'PARTIAL',sprint:'SPRINT_SEIDRKIT_GRAPH_CANVAS',at:'2026-11-20'},
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05',title:'Поиск по графу в UI и MCP: «нашёл и контекст», влияние, путь, find',cat:'in_progress',st:'ACTIVE',sprint:'SPRINT_SEIDRKIT_GRAPH_CANVAS',at:'2026-11-25'},
+  {id:'SPRINT_UXR_S7C_WHY_CANVAS/S7C-05',title:'Стрелки между стикерами — типизированные рёбра графа (ADDRESSES/RELIEVES/…)',cat:'in_progress',st:'ACTIVE',sprint:'SPRINT_UXR_S7C_WHY_CANVAS',at:'2026-11-23'}
+];
+const ROOT = {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05',type:'task',title:'Поиск по графу в UI и MCP',cat:'in_progress'};
+const NB = [
+  {id:'ADR-LORE-057',type:'adr',title:'KnowRegistry: мета-модель LORE как данные графа',cat:'in_progress',d:1,rel:'JUSTIFIED_BY',dir:'out'},
+  {id:'ADR-LORE-056',type:'adr',title:'Поверхность MCP: search + execute + describe',cat:'in_progress',d:2,rel:'DEPENDS_ON',dir:'in'},
+  {id:'ADR-LORE-057-R1',type:'decision',title:'R1: форма KnowKind — DDL-атрибуты с индексами, SCD2-история',cat:'in_progress',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'ADR-LORE-057-R2',type:'decision',title:'R2: производные генерируются из реестра',cat:'in_progress',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'ADR-LORE-057-R3',type:'decision',title:'R3: обратный импорт живых видов',cat:'in_progress',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'ADR-LORE-057-R4',type:'decision',title:'R4: миграция диспетчеров entity_*',cat:'in_progress',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'D-2026-GRAPH-SEARCH-ENTITY-DESCRIBE',type:'decision',title:'MCP описывает сущности и связи из модели',cat:'in_force',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'D-2026-GRAPH-SEARCH-ENTITY-UNIFIED',type:'decision',title:'Поиск унифицирован по сущности: entity_find / entity_graph / entity_search',cat:'in_force',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'D-2026-GRAPH-SEARCH-VECTOR-PROBE',type:'decision',title:'Векторный поиск — проба на копии',cat:'in_force',d:2,rel:'DECIDED_IN',dir:'in'},
+  {id:'SPRINT_LORE_KNOW_REGISTRY',type:'sprint',title:'KnowRegistry: реестр видов в графе',cat:'in_progress',d:2,rel:'IMPLEMENTED_IN',dir:'out'},
+  ...[['KREG-01','Миграция схемы: KnowKind + KnowKindHist'],['KREG-02','Генератор KnowRegistry из DDL + модели kit'],['KREG-03','Обратный импорт tag:*'],
+     ['KREG-04','Обратный импорт slice:*'],['KREG-05','R-сущности ADR-LORE-057'],['KREG-06','QG-инварианты skill/tag'],['KREG-07','Describe-генератор карточек'],
+     ['KREG-08','Fallback модели на проде — громким'],['KREG-09','Экспорт модели SPEC-MODEL-EXPORT-064'],['KREG-10','Дозаполнить модель: labelKey ×85'],
+     ['KREG-11','task_link rel="dep": DEPENDS_ON задача→задача'],['SKILL-01','KnowSkill: DDL + skill_new/skill_set'],['SKILL-02','Рёбра скиллов'],
+     ['SKILL-03','Сидирование 3 скиллов'],['SKILL-04','Срез skills + describe-карточки'],['SKILL-05','Супертеги: KnowTag field_schema']]
+    .map(([c,t])=>({id:'SPRINT_LORE_KNOW_REGISTRY/'+c,type:'task',title:t,cat:'in_progress',d:2,rel:'JUSTIFIED_BY',dir:'in'}))
+];
+const RELS = [['JUSTIFIED_BY',17],['DECIDED_IN',7],['DEPENDS_ON',1],['IMPLEMENTED_IN',1]];
+const TYPES = ['task','adr','decision','sprint'];
+const TYPE_RU = {task:'Задачи',adr:'ADR',decision:'Решения',sprint:'Спринты'};
+const PATH = {nodes:[
+  {id:'SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05',type:'task',title:'Поиск по графу в UI и MCP',cat:'in_progress'},
+  {id:'ADR-LORE-057',type:'adr',title:'KnowRegistry: мета-модель LORE как данные графа',cat:'in_progress'},
+  {id:'SPRINT_LORE_KNOW_REGISTRY/KREG-11',type:'task',title:'task_link rel="dep": DEPENDS_ON задача→задача',cat:'in_progress'}],
+  edges:[{rel:'JUSTIFIED_BY',fwd:true},{rel:'JUSTIFIED_BY',fwd:false}]};
+const CAT_RU = {in_progress:'в работе',not_started:'не начата',in_force:'действует',finished:'закрыта'};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pill = c => `<span class="pill ${c}">${esc(CAT_RU[c]||c)}</span>`;
+
+let views = [
+  {name:'Открытые задачи LORE', n:'—', find:{type:'task',project:'LORE',where:[{field:'status_category',op:'!=',value:['finished','withdrawn']}]}},
+  {name:'Задачи SEIDRKIT_GRAPH', n:'—', find:{type:'task',links_to:{id:'component:SEIDRKIT_GRAPH',rels:['TAGGED_WITH']}}}
+];
+function renderViews(){
+  $('#views').innerHTML = views.map((v,i)=>`<li><button type="button" data-v="${i}" class="${v.fresh?'new':''}"><span>${esc(v.name)}</span><span class="n">${esc(v.n)}</span></button></li>`).join('');
+}
+
+function findBody(){
+  const q = $('#q').value.trim();
+  const b = {type:'task'};
+  if (q) b.search = q;
+  b.project = 'LORE';
+  b.where = [{field:'status_category',op:'!=',value:['finished','withdrawn']}];
+  b.fields = ['status_raw','sprint_id','changed_at'];
+  return b;
+}
+function renderText(){
+  const q = $('#q').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const rows = TEXT_ROWS.filter(r => q.every(w => (r.id+' '+r.title).toLowerCase().includes(w)));
+  $('#text-tbl tbody').innerHTML = rows.map(r=>`<tr><td class="id">${esc(r.id.split('/').pop())}</td><td class="c-title ttl">${esc(r.title)}</td><td>${pill(r.cat)}</td><td class="c-extra mut">${esc(r.sprint)}</td><td class="mut">${esc(r.at)}</td></tr>`).join('')
+    || `<tr><td colspan="5" class="mut">Ничего не нашлось — <b>no_match</b> (не путать с «скрыто скоупом»: тогда здесь было бы hidden_by_scope = N)</td></tr>`;
+  $('#text-meta').innerHTML = `<span class="ok">● полный ответ</span><span>найдено ${rows.length}</span><span>скрыто скоупом 0</span><code>meta.search.mode = substring</code>`;
+  $('#text-json').textContent = JSON.stringify(findBody(), null, 2);
+}
+
+const lstate = {walk:new Set(TYPES), ret:new Set(TYPES), rels:new Set(RELS.map(r=>r[0])), dir:'both', depth:2};
+function chips(el, items, set, label){
+  el.innerHTML = items.map(([k,c])=>`<button type="button" class="chip" data-k="${esc(k)}" aria-pressed="${set.has(k)}">${esc(label?label(k):k)}${c!=null?` <span class="c">${c}</span>`:''}</button>`).join(' ');
+  el.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ const k=b.dataset.k; set.has(k)?set.delete(k):set.add(k); renderLinks(); });
+}
+function renderLinks(){
+  $('#links-root').innerHTML = `<span class="type">${ROOT.type}</span><span class="id">${esc(ROOT.id)}</span><span class="ttl">${esc(ROOT.title)}</span>${pill(ROOT.cat)}`;
+  const cnt = t => NB.filter(n=>n.type===t).length;
+  chips($('#walk'), TYPES.map(t=>[t,null]), lstate.walk, t=>TYPE_RU[t]);
+  chips($('#ret'), TYPES.map(t=>[t,cnt(t)]), lstate.ret, t=>TYPE_RU[t]);
+  chips($('#rels'), RELS, lstate.rels);
+  const ok = n => n.d<=lstate.depth && lstate.rels.has(n.rel) && (lstate.dir==='both'||n.dir===lstate.dir)
+    // глубина 2 проходит через ADR-LORE-057: если ADR не «через что идти», второго кольца нет
+    && (n.d===1 || lstate.walk.has('adr'));
+  const shown = NB.filter(n=>ok(n) && lstate.ret.has(n.type));
+  const walkedOnly = NB.filter(n=>ok(n) && !lstate.ret.has(n.type)).length;
+  $('#groups').innerHTML = TYPES.filter(t=>lstate.ret.has(t)).map(t=>{
+    const rows = shown.filter(n=>n.type===t);
+    if (!rows.length) return '';
+    return `<div class="grp"><h3>${TYPE_RU[t]} <span class="c">${rows.length}</span></h3><table class="tbl"><thead><tr><th>Ключ</th><th>Название</th><th>Связь</th><th>Шаг</th><th>Статус</th></tr></thead><tbody>${
+      rows.map(n=>`<tr><td class="id">${esc(n.id)}</td><td class="c-title ttl">${esc(n.title)}</td><td class="mut">${n.dir==='in'?'←':'→'} ${esc(n.rel)}</td><td class="mut">${n.d}</td><td>${pill(n.cat)}</td></tr>`).join('')}</tbody></table></div>`;
+  }).join('') || `<p class="mut">Под фильтрами ничего — смените «что вернуть» или связи.</p>`;
+  $('#links-meta').innerHTML = `<span class="ok">● окрестность полная</span><span>узлов ${shown.length}</span>`
+    + (walkedOnly?`<span class="warn">пройдено, но не возвращено: ${walkedOnly} (схлопнуто в via)</span>`:'')
+    + `<span>скрыто скоупом 0</span><code>GET /lore/graph?type=task&depth=${lstate.depth}&dir=${lstate.dir}&walk_types=${[...lstate.walk].join(',')}&return_types=${[...lstate.ret].join(',')}</code>`;
+}
+document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{lstate.dir=b.dataset.dir;document.querySelectorAll('[data-dir]').forEach(x=>x.setAttribute('aria-pressed',x===b));renderLinks();});
+document.querySelectorAll('[data-depth]').forEach(b=>b.onclick=()=>{lstate.depth=+b.dataset.depth;document.querySelectorAll('[data-depth]').forEach(x=>x.setAttribute('aria-pressed',x===b));renderLinks();});
+
+function renderPath(){
+  const n = PATH.nodes, e = PATH.edges;
+  let h = '';
+  n.forEach((x,i)=>{
+    h += `<div class="node${i===0||i===n.length-1?' end':''}"><span class="type">${x.type}</span><span class="id">${esc(x.id)}</span><span class="ttl">${esc(x.title)}</span>${pill(x.cat)}</div>`;
+    if (i<e.length) h += `<div class="edge"><span class="rel">${esc(e[i].rel)}</span><span class="arr" aria-hidden="true">${e[i].fwd?'→':'←'}</span><span class="mut">${e[i].fwd?'вперёд':'обратно'}</span></div>`;
+  });
+  $('#chain').innerHTML = h;
+  $('#path-meta').innerHTML = `<span class="ok">● путь найден</span><span>длина 2</span><span>других кратчайших нет (more_paths_possible = false)</span><code>GET /lore/graph/path?k=2&max_depth=4</code>`;
+}
+
+function setMode(m){
+  if (!['text','links','path'].includes(m)) m='text';
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.mode===m));
+  $('#m-text').hidden = m!=='text'; $('#m-links').hidden = m!=='links'; $('#m-path').hidden = m!=='path';
+  $('#qbox').hidden = m==='path';
+  try { const u = new URL(location.href); u.searchParams.set('mode', m); history.replaceState(null,'',u); } catch(e) {}
+  if (m==='text') renderText(); else if (m==='links') renderLinks(); else renderPath();
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+$('#q').addEventListener('input', renderText);
+$('#save').onclick = () => {
+  const q = $('#q').value.trim() || 'все';
+  views.unshift({name:'«'+q+'» · открытые · LORE', n:String(TEXT_ROWS.length), fresh:true, find:findBody()});
+  renderViews();
+  const t = $('#toast'); t.textContent = 'Вид сохранён: запрос find записан целиком, откроется как фильтр списка'; t.style.display='block';
+  setTimeout(()=>t.style.display='none', 2400);
+};
+$('#views').addEventListener('click', ev => { const b = ev.target.closest('button[data-v]'); if (b) setMode('text'); });
+renderViews();
+let initial = 'text'; try { initial = new URL(location.href).searchParams.get('mode') || 'text'; } catch(e) {}
+setMode(initial);
+</script>
+</body>
+</html>

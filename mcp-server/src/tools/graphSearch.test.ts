@@ -145,6 +145,28 @@ describe('find — «тип + поля + связь», пять запросов
     expect(text).toContain('BAD_PARAMS');
   });
 
+  it('GC-05 21.11: схема find объявляет search, project (строка или список) и прежнее scope_projects', () => {
+    const s = tool('find').schema;
+    expect(s.search?.safeParse('граф поиск').success).toBe(true);
+    expect(s.project?.safeParse('LORE').success).toBe(true);
+    expect(s.project?.safeParse(['LORE', 'MINILORE']).success).toBe(true);
+    expect(s.scope_projects?.safeParse(['NooriUta/UnlimitedLORE']).success).toBe(true);
+  });
+
+  it('GC-05 21.11: search + project одним вызовом уходят на бэкенд как есть (короткий код проекта)', async () => {
+    await run('find', { type: 'task', search: 'граф', project: 'LORE', where: [OPEN] });
+    expect(posts[0].body).toEqual({ type: 'task', search: 'граф', project: 'LORE', where: [OPEN] });
+    await run('find', { type: 'task', project: ['LORE', 'MINILORE'] });
+    expect(posts[1].body).toEqual({ type: 'task', project: ['LORE', 'MINILORE'] });
+  });
+
+  it('GC-05 21.11: прежнее имя scope_projects принимается, _warning бэкенда доходит до агента', async () => {
+    answer = { rows: [], meta: { complete: true }, _warning: 'scope_projects — прежнее имя параметра проекта' };
+    const body = JSON.parse((await run('find', { type: 'sprint', scope_projects: ['NooriUta/UnlimitedLORE'] })).text);
+    expect(posts[0].body).toEqual({ type: 'sprint', scope_projects: ['NooriUta/UnlimitedLORE'] });
+    expect(body._warning).toContain('scope_projects');
+  });
+
   it('схема: неизвестный тип и оператор отбиваются до бэкенда, И/ИЛИ/НЕ проходят', () => {
     const s = tool('find').schema;
     expect(s.type.safeParse('nope').success).toBe(false);
