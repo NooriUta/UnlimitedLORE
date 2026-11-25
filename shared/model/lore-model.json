@@ -5642,7 +5642,7 @@
       "labelKey" : "pp.field.fullPath",
       "kind" : "text",
       "group" : "props",
-      "definition" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+      "definition" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
       "layer" : "stable",
       "labelEn" : "Full path",
       "labelPl" : "Pełna ścieżka"

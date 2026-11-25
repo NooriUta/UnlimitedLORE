@@ -6230,7 +6230,7 @@
       "name" : "full_path",
       "type" : "string",
       "required" : false,
-      "desc" : "Хост, владелец на хосте и имя: git.seidrstudio.pro/AIDA/UnlimitedLORE.",
+      "desc" : "Хост, владелец на хосте и имя репозитория, например git.example.com/org/repo.",
       "layer" : "model",
       "property" : "full_path"
     }, {
@@ -6314,7 +6314,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowRepository",
-    "content_hash" : "sha256:eb204951d003799f2580272bb0f5e3d903c93ca46879d4097a497d16114efce0"
+    "content_hash" : "sha256:8f70072be7864f1384dcaa581cb836c26de3933d6bfd2a5777539ecff2f8d157"
   }, {
     "kind" : "entity:runbook",
     "id_field" : "runbook_id",

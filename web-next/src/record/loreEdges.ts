@@ -128,6 +128,9 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   IN_PHASE: { ru: 'в фазе', en: 'in phase', color: '--t3', layer: S },
   TAGGED_WITH: { ru: 'с тегом', en: 'tagged with', color: '--t3', layer: S },
   DOC_CHILD_OF: { ru: 'дочерний документ', en: 'child doc of', color: '--t3', layer: S },
+  // SPRINT_LORE_KNOW_REGISTRY/SKILL-02 (SPEC-SKILLS-TAGS-062 §6): рёбра вида skill:*.
+  APPLIES_TO_ROLE: { ru: 'для роли', en: 'applies to role', color: '--inf' },
+  SKILL_EXTENDS: { ru: 'уточняет скилл', en: 'extends skill', color: '--inf' },
 };
 
 export const LORE_STRUCTURAL_EDGES: ReadonlySet<string> = new Set(
