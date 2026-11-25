@@ -56,6 +56,8 @@ import './ListScreen.css';
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazyChunk(() => import('../record/ListPassport'));
+// Паспорт записи в ленте (BP-01-FULL-PASSPORT-FEED): тот же источник и компоненты, свой чанк.
+const FeedPassport = lazyChunk(() => import('../record/FeedPassport'));
 // Черновик новой записи (S4-24) — тоже свой чанк: в нём TipTap.
 const RecordCreate = lazyChunk(() => import('../record/RecordCreateDock'));
 /**
@@ -608,6 +610,20 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     spec: def.feed, passportType: PASSPORT_OF[screen], rows: body?.rows,
     records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl, t,
   });
+  // Лента паспортов (SPRINT_LORE_BOARD_PASSPORTS/BP-01-FULL-PASSPORT-FEED, прототип принят
+  // 25.11.2026): kit зовёт это только для ВИДИМЫХ записей — паспорт невидимой не грузится.
+  // Раздел без паспорта — переключателя «Полные паспорта» нет: обещать нечего.
+  const feedPassport = useMemo(() => {
+    if (!PASSPORT_OF[screen]) return undefined;
+    return (r: KitRecord) => {
+      const type = passportTypeFor(screen, r.kind) ?? PASSPORT_OF[screen]!;
+      return (
+        <Suspense fallback={<Skeleton lines={4} label={t('pp.loading')} />}>
+          <FeedPassport type={type} id={r.id} fetchImpl={fetchImpl} />
+        </Suspense>
+      );
+    };
+  }, [screen, fetchImpl, t]);
   const viewData = useMemo(() => {
     const base = shownData ?? data;
     if (!base || feed.edges.length === 0) return base;
@@ -714,6 +730,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         onFeedBody={feed.onFeedBody}
         feedUnder={feed.feedUnder}
         onFeedUnder={feed.onFeedUnder}
+        feedPassport={feedPassport}
         urlState={urlState}
         quickIcons={def.quickIcons}
         // Свежие сверху по умолчанию (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS): это

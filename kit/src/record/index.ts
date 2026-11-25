@@ -50,3 +50,5 @@ export * from './RecordSection';
 export * from './ValueChips';
 export * from './RecordCardHead';
 export * from './PeekCard';
+// Паспорт записи в ленте: зоны паспорта подряд, история по раскрытию (BP-01-FULL-PASSPORT-FEED).
+export * from './RecordFeedPassport';

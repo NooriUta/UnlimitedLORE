@@ -459,6 +459,7 @@
   "lists.edge.ANSWERS": "отвечает на вопрос",
   "lists.edge.RAISED_IN": "поднят в",
   "lists.noPassport.head": "Паспорта записей раздела «{{section}}» ещё нет",
+  "lists.feedPassport.failed": "Не смогли загрузить паспорт",
   "lists.noPassport.note": "Список, фильтры и поиск по разделу работают — не сделана только карточка записи.",
   "lists.noPassport.back": "Вернуться к списку",
   "lists.field.effortTotal": "Оценка, дн",

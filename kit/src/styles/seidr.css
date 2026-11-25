@@ -4065,6 +4065,26 @@ a.sk-list__title:hover { color: var(--acc); text-decoration: underline; }
 .sk-feed__cut { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--t3); }
 .sk-feed__page,
 .sk-feed__none { margin: 0; font-size: var(--fs-xs); color: var(--wrn); }
+/* Лента паспортов (SPRINT_LORE_BOARD_PASSPORTS/BP-01-FULL-PASSPORT-FEED, прототип
+   bp-01-passport-feed.html): переключатель «Контекст / Полные паспорта», счёт
+   «показано N из M», хвост с догрузкой. На телефоне всё переносится строкой —
+   горизонтального переполнения у ленты нет. */
+.sk-feed__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.sk-feed__modes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.sk-feed__shown { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); }
+.sk-feed__tail { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 0; font-size: var(--fs-xs); color: var(--t3); }
+.sk-feed__auto { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sk-feed__more { margin-left: auto; }
+.sk-feed__ppopen { align-self: flex-start; margin-top: 4px; }
+.sk-feed__pp { min-width: 0; max-width: 100%; margin-top: 6px; cursor: auto; }
+.sk-feedpp { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sk-feedpp__zone { min-width: 0; border-top: 1px solid var(--bd); padding-top: 6px; overflow-wrap: anywhere; }
+.sk-feedpp__zone:first-child { border-top: 0; padding-top: 0; }
+.sk-feedpp__zone pre,
+.sk-feedpp__zone table { max-width: 100%; overflow-x: auto; display: block; }
+.sk-feedpp__head { margin: 0 0 4px; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--t3); }
+.sk-feedpp__hist > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.sk-feedpp__hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
 /* Двухуровневая лента (SPRINT_UXR_S10_SEIDR_KIT_2/K2-FEED-TWO-LEVEL):
    верхний уровень полосой, под ним то, что в нём двигалось.
 
