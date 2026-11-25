@@ -91,6 +91,13 @@ function idBody(type: PassportType, rec: Ref): Record<string, unknown> {
   if (type === 'adr') return named('adr_id', 'name');
   // S5-DOC-PASSPORT: /lore/doc пишет только переданные поля — имя не нужно и не затирается.
   if (type === 'doc') return { doc_id: rec.id };
+  // AP-PASSPORT-EDIT, волна 1: пути продуктового слоя пишут только переданные поля (UPSERT по коду) —
+  // имя не нужно и не затирается. Роль продукта — KnowProjectActor (путь project-actor, ключ actor_id).
+  const PRODUCT_ID: Partial<Record<PassportType, string>> = {
+    pain: 'pain_id', gain: 'gain_id', job: 'job_id', actor: 'actor_id', feature: 'feature_id',
+  };
+  const key = PRODUCT_ID[type];
+  if (key) return { [key]: rec.id };
   return { id: rec.id };
 }
 

@@ -7,7 +7,7 @@
 // состоит новая запись. Запись — hooks.onCreate. Отказ — словами рядом с
 // кнопкой, набранное остаётся: тихий откат съел бы работу человека. Пути записи
 // нет — так и сказано, а не кнопка, которая ничего не сделает.
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { KitCtx, KitRecord } from '../core/contract';
 import { FieldEditor, type FieldEditorProps } from '../fields/FieldEditor';
 import { isEmptyValue, type FieldEditorDef } from '../fields/fieldKinds';
@@ -27,7 +27,21 @@ export interface RecordCreateSpec {
   /** Редакторы MD и ссылок — слотами приложения, как у FieldEditor. */
   mdEditor?: FieldEditorProps['mdEditor'];
   refEditor?: FieldEditorProps['refEditor'];
+  /**
+   * AP-PASSPORT-EDIT (2б): подсказка значений по набранному (код из названия). Возвращённые ключи
+   * подставляются только в поля, которые человек ещё НЕ правил руками: поправил — подсказка молчит.
+   */
+  suggest?: (values: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * AP-PASSPORT-EDIT (2б): проверка поля ДО записи (свободен ли код). `ok: true` — можно сохранять,
+   * `false` — нельзя (занят), `null` — не смогли проверить: тоже нельзя, «не проверено» ≠ «свободно».
+   * Сообщение — словами приложения, рядом с полем.
+   */
+  check?: { key: string; run: (value: unknown, values: Record<string, unknown>) => Promise<{ ok: boolean | null; message: string }> };
 }
+
+/** Пауза перед проверкой поля: не спрашивать сервер на каждую букву. */
+const CHECK_DELAY_MS = 300;
 
 export function RecordCreate({ record, ctx, spec, className }: { record: KitRecord; ctx: KitCtx; spec: RecordCreateSpec; className?: string }) {
   const lang = useKitLang();
@@ -39,10 +53,43 @@ export function RecordCreate({ record, ctx, spec, className }: { record: KitReco
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  // Поля, которые человек правил руками: подсказка (spec.suggest) их не трогает.
+  const touched = useRef(new Set<string>());
+  const checkKey = spec.check?.key;
+  const checkValue = checkKey ? values[checkKey] : undefined;
+  // Исход проверки — для ТОГО значения, что проверялось: ответ на старое значение не выдаётся за новое.
+  const [checked, setChecked] = useState<{ value: unknown; ok: boolean | null; message: string } | null>(null);
+  const runCheck = spec.check?.run;
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+  useEffect(() => {
+    if (!runCheck || isEmptyValue(checkValue)) { setChecked(null); return; }
+    let live = true;
+    const timer = setTimeout(() => {
+      runCheck(checkValue, valuesRef.current).then(
+        r => { if (live) setChecked({ value: checkValue, ...r }); },
+        e => { if (live) setChecked({ value: checkValue, ok: null, message: e instanceof Error ? e.message : String(e) }); },
+      );
+    }, CHECK_DELAY_MS);
+    return () => { live = false; clearTimeout(timer); };
+  }, [runCheck, checkValue]);
+  const checkFor = checked && checked.value === checkValue ? checked : null;
+  const checkBlocks = !!spec.check && !isEmptyValue(checkValue) && checkFor?.ok !== true;
+
+  const onField = (key: string, v: unknown) => {
+    touched.current.add(key);
+    setValues(prev => {
+      const next = { ...prev, [key]: v };
+      if (!spec.suggest) return next;
+      for (const [k, s] of Object.entries(spec.suggest(next))) if (!touched.current.has(k)) next[k] = s;
+      return next;
+    });
+  };
 
   const missing = spec.fields.filter(f => f.required === 'block' && isEmptyValue(values[f.key])).map(f => f.label);
   const why = !onCreate ? kitT(lang, 'kit.record.create.noPath')
-    : missing.length ? kitT(lang, 'kit.record.create.why', { fields: missing.join(', ') }) : null;
+    : missing.length ? kitT(lang, 'kit.record.create.why', { fields: missing.join(', ') })
+    : checkBlocks ? (checkFor ? checkFor.message : kitT(lang, 'kit.record.create.checking')) : null;
 
   const save = async () => {
     setTried(true);
@@ -74,8 +121,14 @@ export function RecordCreate({ record, ctx, spec, className }: { record: KitReco
           {spec.fields.map(f => (
             <div key={f.key} className="sk-rec-create__field" data-field={f.key}>
               <FieldEditor def={f} value={values[f.key] ?? null} showRequired={tried}
-                onChange={v => setValues(prev => ({ ...prev, [f.key]: v }))}
+                onChange={v => onField(f.key, v)}
                 mdEditor={spec.mdEditor} refEditor={spec.refEditor} />
+              {f.key === checkKey && !isEmptyValue(checkValue) && (
+                <p className="sk-rec-create__check" data-testid="kit-create-check" role="status"
+                  data-state={!checkFor ? 'pending' : checkFor.ok === true ? 'ok' : checkFor.ok === false ? 'bad' : 'unchecked'}>
+                  {checkFor ? checkFor.message : kitT(lang, 'kit.record.create.checking')}
+                </p>
+              )}
             </div>
           ))}
         </div>

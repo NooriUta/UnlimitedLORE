@@ -15611,7 +15611,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -15625,7 +15625,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/feature",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -15960,7 +15963,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -15974,7 +15977,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/feature",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -15984,7 +15990,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Context",
         "short_label_en" : null,
         "definition_en" : null,
@@ -15998,7 +16004,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/feature",
+          "field" : "context_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -16054,13 +16063,19 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/feature",
+            "field" : "body_md"
+          }
         }, {
           "key" : "context_md",
           "label" : "Контекст",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/feature",
+            "field" : "context_md"
+          }
         }, {
           "key" : "scenario_md",
           "label" : "Сценарий",
@@ -16310,7 +16325,7 @@
         "dir" : "out",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -16325,7 +16340,7 @@
         "dir" : "out",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -16340,7 +16355,7 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -16572,7 +16587,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -16586,7 +16601,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/feature",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -16921,7 +16939,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -16935,7 +16953,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/feature",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -16945,7 +16966,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Context",
         "short_label_en" : null,
         "definition_en" : null,
@@ -16959,7 +16980,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/feature",
+          "field" : "context_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -17015,13 +17039,19 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/feature",
+            "field" : "body_md"
+          }
         }, {
           "key" : "context_md",
           "label" : "Контекст",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/feature",
+            "field" : "context_md"
+          }
         }, {
           "key" : "scenario_md",
           "label" : "Сценарий",
@@ -17271,7 +17301,7 @@
         "dir" : "out",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -17286,7 +17316,7 @@
         "dir" : "out",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -17301,7 +17331,7 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20244,7 +20274,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20258,7 +20288,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/project-actor",
+          "field" : "name"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -20268,7 +20301,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Role kind",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20282,7 +20315,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/project-actor",
+          "field" : "kind"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -20323,7 +20359,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20337,7 +20373,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/project-actor",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -20345,8 +20384,11 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/project-actor",
+            "field" : "body_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -20443,7 +20485,7 @@
         "dir" : "in",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20458,7 +20500,7 @@
         "dir" : "in",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20473,7 +20515,7 @@
         "dir" : "in",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20540,7 +20582,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20554,7 +20596,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/project-actor",
+          "field" : "name"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -20564,7 +20609,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Role kind",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20578,7 +20623,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/project-actor",
+          "field" : "kind"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -20619,7 +20667,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20633,7 +20681,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/project-actor",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -20641,8 +20692,11 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/project-actor",
+            "field" : "body_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -20739,7 +20793,7 @@
         "dir" : "in",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20754,7 +20808,7 @@
         "dir" : "in",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20769,7 +20823,7 @@
         "dir" : "in",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -20854,7 +20908,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20868,7 +20922,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/pain",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -20878,7 +20935,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Severity",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20892,7 +20949,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/pain",
+          "field" : "severity"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -20926,7 +20986,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -20940,7 +21000,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/pain",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -20948,8 +21011,11 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/pain",
+            "field" : "body_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -21029,7 +21095,7 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21059,7 +21125,7 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21074,7 +21140,7 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21126,7 +21192,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21140,7 +21206,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/pain",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21150,7 +21219,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Severity",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21164,7 +21233,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/pain",
+          "field" : "severity"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21198,7 +21270,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21212,7 +21284,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/pain",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -21220,8 +21295,11 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/pain",
+            "field" : "body_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -21301,7 +21379,7 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21331,7 +21409,7 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21346,7 +21424,7 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21415,7 +21493,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21429,7 +21507,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21439,7 +21520,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Rank",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21453,7 +21534,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "rank"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21487,7 +21571,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21501,7 +21585,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21511,7 +21598,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Metric",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21525,7 +21612,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "metric_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -21533,13 +21623,19 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/gain",
+            "field" : "body_md"
+          }
         }, {
           "key" : "metric_md",
           "label" : "Метрика",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/gain",
+            "field" : "metric_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -21619,7 +21715,7 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21649,7 +21745,7 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21664,7 +21760,7 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21716,7 +21812,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21730,7 +21826,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21740,7 +21839,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Rank",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21754,7 +21853,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "rank"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21788,7 +21890,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21802,7 +21904,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -21812,7 +21917,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Metric",
         "short_label_en" : null,
         "definition_en" : null,
@@ -21826,7 +21931,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/gain",
+          "field" : "metric_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -21834,13 +21942,19 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/gain",
+            "field" : "body_md"
+          }
         }, {
           "key" : "metric_md",
           "label" : "Метрика",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/gain",
+            "field" : "metric_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -21920,7 +22034,7 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21950,7 +22064,7 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -21965,7 +22079,7 @@
         "dir" : "out",
         "target_type" : "job",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22034,7 +22148,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22048,7 +22162,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -22058,7 +22175,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Job kind",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22072,7 +22189,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "kind"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -22082,7 +22202,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Importance",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22096,7 +22216,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "importance"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -22130,7 +22253,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22144,7 +22267,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -22152,8 +22278,11 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/job",
+            "field" : "body_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -22239,7 +22368,7 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22269,7 +22398,7 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22284,7 +22413,7 @@
         "dir" : "in",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22299,7 +22428,7 @@
         "dir" : "in",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22351,7 +22480,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22365,7 +22494,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "title"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -22375,7 +22507,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Job kind",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22389,7 +22521,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "kind"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -22399,7 +22534,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Importance",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22413,7 +22548,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "importance"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -22447,7 +22585,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Text",
         "short_label_en" : null,
         "definition_en" : null,
@@ -22461,7 +22599,10 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/job",
+          "field" : "body_md"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       } ],
@@ -22469,8 +22610,11 @@
         "body" : [ {
           "key" : "body_md",
           "label" : "Описание",
-          "editable" : false,
-          "write" : null
+          "editable" : true,
+          "write" : {
+            "endpoint" : "/lore/job",
+            "field" : "body_md"
+          }
         } ],
         "props" : [ {
           "section" : null,
@@ -22556,7 +22700,7 @@
         "dir" : "in",
         "target_type" : "feature",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22586,7 +22730,7 @@
         "dir" : "out",
         "target_type" : "actor",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22601,7 +22745,7 @@
         "dir" : "in",
         "target_type" : "pain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -22616,7 +22760,7 @@
         "dir" : "in",
         "target_type" : "gain",
         "place" : "link_tab",
-        "manageable" : false,
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null

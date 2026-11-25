@@ -7435,6 +7435,13 @@ a.sk-act__title:hover, a.sk-act__title:focus-visible { text-decoration: underlin
 .sk-rec-create__err { margin: 0; color: var(--dng); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .sk-rec-create__foot { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
 .sk-rec-create__why { font-size: var(--fs-xs); color: var(--t3); }
+/* AP-PASSPORT-EDIT (2б): проверка поля до записи (код свободен / занят / не проверено). */
+.sk-rec-create__check { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--t3); overflow-wrap: anywhere; }
+.sk-rec-create__check[data-state="ok"] { color: var(--suc); }
+.sk-rec-create__check[data-state="bad"] { color: var(--dng); }
+.sk-rec-create__check[data-state="unchecked"] { color: var(--wrn); }
+/* AP-PASSPORT-EDIT (1б): «+ боль» во вкладке связей — новая запись сразу со связью. */
+.sk-rel__create { align-self: flex-start; }
 
 /* S4-24: поле-связь в «Свойствах» — чипы с «×» и выбор с поиском. */
 .sk-relfield { display: grid; gap: 4px; min-width: 0; }
