@@ -51,19 +51,9 @@ test('код решения — следующий свободный ST-NN', ()
   assert.equal(nextId({ decisions: [{ id: 'ST-01' }, { id: 'ST-11' }, { id: 'X-99' }] }), 'ST-12');
 });
 
-test('палитра установщика — фирменная Amber Forest из kit (seidr.css), светлая и тёмная (17.11: «у тебя не наша фирменная … возьми нашу»)', async () => {
-  const fs = await import('node:fs');
-  const ui = fs.readFileSync(new URL('./ui.mjs', import.meta.url), 'utf8');
-  const kit = fs.readFileSync(new URL('../../kit/src/styles/seidr.css', import.meta.url), 'utf8');
-  const block = (css, sel) => { const i = css.indexOf(sel + '{') >= 0 ? css.indexOf(sel + '{') : css.indexOf(sel + ' {'); const j = css.indexOf('}', i); return css.slice(i, j); };
-  const tok = (txt, k) => { const m = new RegExp('--' + k + ':\\s*(#[0-9a-fA-F]{3,8})').exec(txt); return m && m[1].toLowerCase(); };
-  const kitDark = block(kit, ':root'), kitLight = block(kit, "[data-mode='light']");
-  const uiLight = block(ui, ':root'), uiDark = block(ui, '[data-theme=dark]');
-  for (const k of ['bg0', 'bg1', 'bg2', 'bd', 't1', 't2', 't3', 'acc', 'suc', 'wrn', 'inf', 'dng']) {
-    assert.equal(tok(uiLight, k), tok(kitLight, k), 'светлая --' + k);
-    assert.equal(tok(uiDark, k), tok(kitDark, k), 'тёмная --' + k);
-  }
-});
+// Сверка палитры установщика с фирменной Amber Forest kit (17.11) переехала в web-next/src/installerPalette.test.ts
+// (K5-PACKAGE-DELIVERY, 25.11): kit теперь пакет @seidr/kit в web-next/node_modules, а этот прогон (node --test)
+// идёт без установки зависимостей.
 
 // 20.11.2026, Playwright-проход мастера на ryzenai: «Зв» и «Ж» есть в меню, но по адресу #step-d / #step-w
 // открывался «Старт» — stepFromHash не знал этих шагов (перезагрузка и прямая ссылка уводили на первый экран).

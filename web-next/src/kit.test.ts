@@ -1,21 +1,54 @@
 // SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00a, D-2026-UXR-KIT-REACT: web-next своей
-// копии токенов и элементов не держит — он импортирует Seiðr-kit (kit/ в корне
-// репо). Гварды на файлах: поломка подключения не видна tsc, если копия
-// токенов тихо осталась в web-next, а в образ kit не попал.
+// копии токенов и элементов не держит — он импортирует Seiðr-kit. С 25.11.2026
+// (SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY) kit — пакет @seidr/kit с точной
+// версией из npm-реестра AIDA (репозиторий AIDA/lorekit), папки kit/ в репо нет.
+// Гварды на файлах: поломка подключения не видна tsc, если копия токенов тихо
+// осталась в web-next или kit снова подтянули исходниками.
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PALETTES, resolvePrefs } from '@seidr/kit';
+import { KIT_PKG_DIR } from './test/kitPaths';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const webNext = resolve(here, '..');
 const read = (p: string) => readFileSync(resolve(webNext, p), 'utf8');
+const kitPkg = () => JSON.parse(readFileSync(resolve(KIT_PKG_DIR, 'package.json'), 'utf8'));
 
 describe('web-next ← @seidr/kit', () => {
-  it('kit подключён пакетом из ../kit', () => {
+  it('kit — пакет с точной версией из реестра, а не file:-ссылка на исходники', () => {
     const pkg = JSON.parse(read('package.json'));
-    expect(pkg.dependencies['@seidr/kit']).toBe('file:../kit');
+    expect(pkg.dependencies['@seidr/kit']).toMatch(/^\d+\.\d+\.\d+$/);
+    // установлен ровно тот номер, что записан в манифесте
+    expect(kitPkg().version).toBe(pkg.dependencies['@seidr/kit']);
+  });
+
+  it('адрес реестра @seidr — в web-next/.npmrc, ключа в репозитории нет', () => {
+    // строки-пояснения (#) не в счёт: в них описано, КУДА класть ключ, но самого ключа нет
+    const rc = read('.npmrc').split(/\r?\n/).filter(l => !/^\s*[#;]/.test(l)).join('\n');
+    expect(rc).toMatch(/^@seidr:registry=https:\/\/\S+\/api\/packages\/AIDA\/npm\/$/m);
+    expect(rc).not.toMatch(/_authToken|_auth\s*=|_password/);
+  });
+
+  it('lock берёт kit из реестра, а не из соседней папки', () => {
+    const lock = JSON.parse(read('package-lock.json'));
+    const entry = lock.packages['node_modules/@seidr/kit'];
+    // resolved у kit не пишется (как npm с omit-lockfile-registry-resolved): адрес берётся из .npmrc,
+    // а подлинность — по integrity. Если resolved есть — только реестр AIDA, не file:/путь.
+    if (entry.resolved !== undefined) expect(entry.resolved).toMatch(/^https:\/\/\S+\/api\/packages\/AIDA\/npm\//);
+    expect(entry.version).toBe(JSON.parse(read('package.json')).dependencies['@seidr/kit']);
+    expect(entry.integrity).toMatch(/^sha512-/);
+    expect(entry.link).toBeUndefined();
+    expect(lock.packages['../kit']).toBeUndefined();
+  });
+
+  it('исходники kit не подтягиваются: ни условия «seidr-source», ни путей на ../kit', () => {
+    for (const f of ['vite.config.ts', 'tsconfig.json']) {
+      const body = read(f).replace(/\/\/.*$/gm, '');
+      expect(body, f).not.toMatch(/seidr-source/);
+      expect(body, f).not.toMatch(/\.\.\/kit/);
+    }
   });
 
   it('пакет kit разрешается: тема и палитры приходят из kit', () => {
@@ -41,69 +74,40 @@ describe('web-next ← @seidr/kit', () => {
     expect(main).toMatch(/resolvePrefs\(/);
   });
 
-  it('vite не тянет вторую копию React из kit/node_modules', () => {
+  it('vite держит одну копию React и peer-ов kit', () => {
     const cfg = read('vite.config.ts');
     expect(cfg).toMatch(/dedupe:\s*\[[^\]]*'react'/);
   });
 
-  // K-04: в образе kit/node_modules нет (Dockerfile копирует только src), так
-  // что каждый пакет, который импортирует код kit (его peerDependencies), обязан
-  // быть зависимостью web-next и стоять в dedupe — иначе сборка образа не найдёт
-  // его от /app/kit/src, хотя локально (где kit/node_modules есть) всё зелёное.
+  // K-04: peer-зависимости kit ставит потребитель. Пакет их не везёт, поэтому каждый peer, который
+  // импортирует код kit, обязан быть зависимостью web-next и стоять в dedupe — иначе сборка не найдёт
+  // его или возьмёт вторую копию (React/TipTap держат состояние в модуле).
   it('каждая peer-зависимость kit — в dependencies web-next и в dedupe vite', () => {
-    const kitPkg = JSON.parse(readFileSync(resolve(webNext, '../kit/package.json'), 'utf8'));
     const pkg = JSON.parse(read('package.json'));
     const cfg = read('vite.config.ts');
     const dedupe = /dedupe:\s*\[([^\]]*)\]/.exec(cfg)?.[1] ?? '';
-    const peers = Object.keys(kitPkg.peerDependencies ?? {});
+    const peers = Object.keys(kitPkg().peerDependencies ?? {});
     expect(peers).toContain('marked'); // положительный контроль чтения
     expect(peers.filter(p => !pkg.dependencies[p])).toEqual([]);
     expect(peers.filter(p => !dedupe.includes(`'${p}'`))).toEqual([]);
   });
 
-  // Батч K-01..K-11: dedupe чинит vite, но не tsc — в образе tsc ищет пакет
-  // вверх от /app/kit/src и не находит (так упал katex). Каждой peer-зависимости
-  // нужен путь в tsconfig web-next (сам пакет или его подпуть через /*).
-  it('каждая peer-зависимость kit — в paths tsconfig web-next', () => {
-    const kitPkg = JSON.parse(readFileSync(resolve(webNext, '../kit/package.json'), 'utf8'));
-    const ts = read('tsconfig.json');
-    const keys = [...ts.matchAll(/"([^"]+)":\s*\[/g)].map(m => m[1]);
-    expect(keys).toContain('marked'); // положительный контроль чтения
-    const covered = (p: string) => keys.some(k => k === p || k === p + '/*' || k.startsWith(p + '/')
-      || (k.endsWith('/*') && p.startsWith(k.slice(0, -1))));
-    expect(Object.keys(kitPkg.peerDependencies ?? {}).filter(p => !covered(p))).toEqual([]);
-  });
-
-  it('tsc берёт типы React для исходников kit из web-next, а не ищет вверх от kit/', () => {
-    const ts = read('tsconfig.json');
-    expect(ts).toMatch(/"react":\s*\["\.\/node_modules\/@types\/react"\]/);
-    expect(ts).toMatch(/"react\/\*":\s*\["\.\/node_modules\/@types\/react\/\*"\]/);
+  it('vitest пропускает kit через себя (inline): vi.mock в тестах доходит до импортов внутри kit', () => {
+    expect(read('vite.config.ts')).toMatch(/inline:\s*\['@seidr\/kit'\]/);
   });
 });
 
-describe('образ web-next собирает и kit', () => {
-  it('Dockerfile копирует kit поимённо (без локальных node_modules)', () => {
+describe('образ web-next берёт kit пакетом', () => {
+  it('Dockerfile не копирует kit/ и ставит пакет по манифестам с .npmrc', () => {
     const df = read('Dockerfile');
-    expect(df).toMatch(/^COPY kit\/package\.json /m);
-    expect(df).toMatch(/^COPY kit\/src /m);
-    expect(df).not.toMatch(/^COPY kit\/? /m);
+    expect(df).not.toMatch(/^COPY kit\//m);
+    expect(df).toMatch(/^COPY web-next\/package\.json web-next\/package-lock\.json web-next\/\.npmrc /m);
   });
 
-  // Батч K-01..K-11: каждый каталог kit, на который указывает его exports
-  // (кроме dist — бандл web-next не нужен), обязан копироваться в образ:
-  // так пропал kit/demo — локально зелено, сборка образа красная.
-  it('каждый каталог из exports kit копируется в образ', () => {
+  it('ключ чтения реестра — секретом сборки, а не build-arg (в слой образа не попадает)', () => {
     const df = read('Dockerfile');
-    const kitPkg = JSON.parse(readFileSync(resolve(webNext, '../kit/package.json'), 'utf8'));
-    const dirs = new Set<string>();
-    // K5-PACKAGE-DELIVERY: вход kit — объект условий; образ web-next собирает kit исходниками,
-    // то есть по условию «seidr-source» (dist — только для пакета наружу).
-    for (const raw of Object.values(kitPkg.exports as Record<string, string | Record<string, string>>)) {
-      const target = typeof raw === 'string' ? raw : raw['seidr-source'];
-      const m = /^\.\/([^/]+)\//.exec(target ?? '');
-      if (m && m[1] !== 'dist') dirs.add(m[1]);
-    }
-    expect(dirs.has('src')).toBe(true); // положительный контроль
-    expect([...dirs].filter(d => !new RegExp(`^COPY kit/${d} `, 'm').test(df))).toEqual([]);
+    expect(df).toMatch(/--mount=type=secret,id=npm_token/);
+    expect(df).not.toMatch(/ARG\s+\w*TOKEN/i);
+    expect(df).toMatch(/rm -f \/root\/\.npmrc/);
   });
 });

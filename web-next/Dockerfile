@@ -14,20 +14,24 @@
 # файла v1 (src/, корневой package.json) в образе v2 быть не должно — это
 # сторожит web-next/src/infra.test.ts.
 #
-# Seiðr-kit (kit/, D-2026-UXR-KIT-REACT, S4-00a) — зависимость file:../kit,
-# поэтому раскладка повторяет репозиторий: /app/kit рядом с /app/web-next.
-# Тоже поимённо: kit/node_modules (локальный, для тестов kit) в образ не идёт.
+# Seiðr-kit — пакет @seidr/kit с точной версией из npm-реестра Forgejo организации AIDA
+# (репозиторий AIDA/lorekit, SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY). Папки kit/ в репозитории нет.
+# Реестр закрыт для анонима (401), поэтому ключ чтения приходит секретом сборки BuildKit
+# (id=npm_token): в слой образа и в историю он не попадает, .npmrc с ключом живёт только
+# на время одного RUN. Нет ключа — npm ci упадёт на @seidr/kit с 401: громко, а не молча.
 FROM node:26-alpine AS build
 WORKDIR /app/web-next
-COPY kit/package.json /app/kit/package.json
-COPY web-next/package.json web-next/package-lock.json ./
-# Установка — только по манифестам: kit — file:-зависимость (симлинк), его
-# исходники npm ci не нужны. Правка kit/src не должна сбрасывать этот слой
-# (PR #882: свежий npm ci в образе потерял @rolldown/binding-linux-x64-musl).
-RUN npm ci
-COPY kit/src /app/kit/src
-# Демо-конфиги и фикстуры kit (K-03): страницы /kit/demo/* импортируют @seidr/kit/demo/*.
-COPY kit/demo /app/kit/demo
+COPY web-next/package.json web-next/package-lock.json web-next/.npmrc ./
+# Установка — только по манифестам (PR #882: свежий npm ci в образе потерял
+# @rolldown/binding-linux-x64-musl).
+# Адрес реестра берётся из web-next/.npmrc (строка @seidr:registry=), а не вписан сюда: имён наших
+# хостов в образе быть не должно (сторож web-next/src/noBakedHosts.test.ts).
+RUN --mount=type=secret,id=npm_token,required=false \
+    reg="$(sed -n 's#^@seidr:registry=https\{0,1\}:##p' .npmrc)"; \
+    if [ -s /run/secrets/npm_token ]; then \
+      printf '%s:_authToken=%s\n' "$reg" "$(cat /run/secrets/npm_token)" > /root/.npmrc; \
+    else echo "BLOCKED: нет секрета сборки npm_token — @seidr/kit из реестра не скачается (нужен токен read:package)"; fi; \
+    npm ci; rc=$?; rm -f /root/.npmrc; exit $rc
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
 COPY web-next/src ./src
 

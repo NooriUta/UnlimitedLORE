@@ -5,10 +5,10 @@
 // Выбор владелицы 13.11.2026 (minilore ask): индиго + иконка stamper.
 // Словарь ставит общая настройка тестов (src/test/setup.ts), как main.tsx при старте.
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { KNOWN_STATUSES, TASK_STATUSES, kitT, linkScheme, statusMeta, taskStatusName } from '@seidr/kit';
 import { KIT_COLOR_TOKENS } from '@seidr/kit/core';
+import { KIT_CSS } from './test/kitPaths';
 
 describe('статус uat', () => {
   it('иконка stamper, свой цвет --st-uat, категория «на проверке», как у RFD', () => {
@@ -27,7 +27,7 @@ describe('статус uat', () => {
 
   it('токен цвета разрешён и задан во всех четырёх блоках палитры kit', () => {
     expect(KIT_COLOR_TOKENS).toContain('st-uat');
-    const css = readFileSync(join(process.cwd(), '..', 'kit', 'src', 'styles', 'seidr.css'), 'utf8');
+    const css = readFileSync(KIT_CSS, 'utf8');
     expect(css.match(/--st-uat:/g)?.length).toBe(4);
   });
 

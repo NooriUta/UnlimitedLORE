@@ -283,18 +283,18 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
-      # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT): отдельный пакет со своими
-      # тестами (сверка токенов с v1, STYLE-01, тема). Тесты web-next их не
-      # запускают — поэтому свой шаг, и до web-next: сломанный kit ломает v2.
-      # S4-00e: здесь же единый CSS-слой — снимок голого HTML
-      # (kit/demo/seidr-bare.html, toMatchFileSnapshot; CI=true не пишет снимок,
-      # а валит расхождение) и «у каждого класса kit есть правило в seidr.css».
-      - name: Seiðr-kit (kit) — install + typecheck + test
-        working-directory: kit
+      # Seiðr-kit живёт в AIDA/lorekit (SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY): его тесты, CSS-слой,
+      # снимок голого HTML, паритет i18n и контраст гоняет kit-ci.yml там. Здесь kit — пакет @seidr/kit
+      # из npm-реестра AIDA. Реестр закрыт для анонима (401): ключ чтения — секрет, в ~/.npmrc уходит
+      # ССЫЛКА ${KIT_NPM_READ_TOKEN}, npm раскрывает её сам, значение на диск не пишется.
+      - name: Ключ чтения реестра пакетов AIDA (@seidr/kit)
+        if: steps.scope.outputs.v2 == 'true'
+        env:
+          KIT_NPM_READ_TOKEN: ${{ secrets.KIT_NPM_READ_TOKEN || secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          bash ../.github/scripts/npm-retry.sh ci
-          npm run typecheck
-          npm test
+          [ -n "${KIT_NPM_READ_TOKEN:-}" ] || { echo "::error::BLOCKED: нет ключа чтения реестра AIDA — @seidr/kit не скачается. Как разблокировать: секрет KIT_NPM_READ_TOKEN (токен read:package организации AIDA) — даёт CICDGitHub"; exit 1; }
+          echo '//git.seidrstudio.pro/api/packages/AIDA/npm/:_authToken=${KIT_NPM_READ_TOKEN}' >> ~/.npmrc
+          echo "KIT_NPM_READ_TOKEN=$KIT_NPM_READ_TOKEN" >> "$GITHUB_ENV"
 
       # SPRINT_UXR_S11_TEST_OPT/CT-KIT-FIXTURES: скрипт снятия живых ответов
       # сервера в shared/fixtures (из них читают тесты kit и web-next). Здесь —
@@ -351,7 +351,7 @@ jobs:
       # skip link, цели касания ≥44px через --tap). Новый экран v2 кладёт туда
       # свой *.a11y.test.tsx и попадает под гейт без правки этого шага.
       # Контраст WCAG AA в обеих темах axe в jsdom не считает — его гейт на
-      # токенах (kit/src/styles/contrast.test.ts) в шаге «Seiðr-kit (kit)» выше.
+      # токенах (src/styles/contrast.test.ts) — в kit-ci.yml репозитория AIDA/lorekit.
       # Тот же scope-гард, что у установки web-next выше: без него пуш, не
       # трогающий v2 (например, хотфикс src/ #857), запускал npx vitest без
       # node_modules — npx тянул чужой vitest и падал на vite.config.ts.
@@ -371,8 +371,9 @@ jobs:
             eval "val=\${$v:-}"
             [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
           done
+          # K5-PACKAGE-DELIVERY: ключ чтения реестра — секретом BuildKit, не build-arg (в слой не попадает).
           # shellcheck disable=SC2086
-          docker build $ARGS -f web-next/Dockerfile -t lore-app-next:ci .
+          DOCKER_BUILDKIT=1 docker build $ARGS --secret id=npm_token,env=KIT_NPM_READ_TOKEN -f web-next/Dockerfile -t lore-app-next:ci .
 
       # Образ должен реально отдавать v2 через nginx, а не просто собраться:
       # синтаксис собранного конфига (`nginx -T`, апстримы объявлены заглушками,

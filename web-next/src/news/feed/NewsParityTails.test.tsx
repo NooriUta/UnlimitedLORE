@@ -4,12 +4,12 @@
 // (скелетон загрузки), П23 (что строка говорит о связанном по виду записи).
 // П6/7/15/18/25/28 — на решении владелицы (S7A-11), здесь не трогаются.
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsFeed, type NewsResponse, type NewsSource } from './index';
+import { KIT_CSS } from '../../test/kitPaths';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
@@ -27,7 +27,7 @@ describe('П3 · заголовок дня прилипает к верху', ()
     await screen.findByTestId('news-feed-days');
     const head = document.querySelector('[data-testid^="news-day-"] > h3.sk-news__dayh');
     expect(head, 'заголовок дня — h3.sk-news__dayh внутри секции дня').not.toBeNull();
-    const css = readFileSync(join(process.cwd(), '..', 'kit', 'src', 'styles', 'seidr.css'), 'utf8');
+    const css = readFileSync(KIT_CSS, 'utf8');
     const rule = /\.sk-news__dayh\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
     expect(rule).toMatch(/position:\s*sticky/);
     expect(rule).toMatch(/top:\s*0/);
