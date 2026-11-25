@@ -53,12 +53,13 @@ final class LoreSchemaAdditive {
      * Номер схемы кода. Поднимать при КАЖДОМ изменении {@link #CHANGES} и закреплять новый хэш в {@link #PINNED}
      * (сторож хэша — как у номера модели: «схема сменилась, а номер тот же» — красный).
      */
-    static final int VERSION = 2;
+    static final int VERSION = 3;
 
     /** Номер → хэш доводки. Прежние номера не правятся: их отметка уже лежит в базах. */
     static final Map<Integer, String> PINNED = Map.of(
         1, "54761523d90deed8",
-        2, "1fb90ce03ae56244");
+        2, "1fb90ce03ae56244",
+        3, "7f859c257fe15414");
 
     /** Последний шаг V. Реестр шагов заморожен: новое — только в {@link #CHANGES}. */
     static final int LAST_V_STEP = 100;
@@ -162,7 +163,10 @@ final class LoreSchemaAdditive {
         new Change("area_dict_seed", "SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (бывш. V100): статьи словаря area",
             List.of(), fingerprint(AreaDictSeed.SEEDS), LoreSchemaAdditive::seedAreas),
         new Change("qg_metric_basis", "SPRINT_QG_REBUILD/QG-07 (доводка v2): ClRoutineMetric.basis — отпечаток знаменателя метрики прогона",
-            QG_METRIC_BASIS_DDL, null, null));
+            QG_METRIC_BASIS_DDL, null, null),
+        new Change("ui_dict_seed", "SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD (доводка v3): словари task_type, priority, agent_profile, которые читает UI",
+            List.of(), fingerprint(UiDictSeed.SEEDS) + "|" + new TreeMap<>(UiDictSeed.SYNONYMS.getOrDefault("priority", Map.of())),
+            LoreSchemaAdditive::seedUiDicts));
 
     /** Шаги V после модели 1.18 → запись доводки, которая несёт то же самое на базу из модели. */
     static final Map<Integer, String> FROM_V_STEPS = Map.of(
@@ -392,6 +396,18 @@ final class LoreSchemaAdditive {
         for (String dict : AreaDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(sql, dict));
         List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(AreaDictSeed.SEEDS, existing);
         for (StatusDictCoreSeed.Insert i : plan) sql.run(AreaDictSeed.INSERT_SQL, AreaDictSeed.params(i));
+        return plan.size();
+    }
+
+    /**
+     * Доводка v3 (ISS-02-DICT-SEED-GUARD, владелец 25.11.2026 «словари сеять каких нет»): task_type, priority,
+     * agent_profile — только недостающие статьи; синонимы priority (P0–P3) закрывают свою ступень шкалы.
+     */
+    static int seedUiDicts(Sql sql) {
+        Map<String, Set<String>> existing = new LinkedHashMap<>();
+        for (String dict : UiDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(sql, dict));
+        List<StatusDictCoreSeed.Insert> plan = UiDictSeed.plan(existing);
+        for (StatusDictCoreSeed.Insert i : plan) sql.run(UiDictSeed.INSERT_SQL, UiDictSeed.params(i));
         return plan.size();
     }
 }

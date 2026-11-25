@@ -46,14 +46,11 @@ class UiDictSeedGuardTest {
 
     /**
      * Типы, которые UI читает, а миграции на пустую базу не засевают. Каждый — с причиной; новый сюда не добавлять
-     * без решения владельца (BLOCKED в [[task:SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD]]).
+     * без решения владельца (BLOCKED в [[task:SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD]]). Пусто с 25.11.2026:
+     * task_type, priority, agent_profile засеяны доводкой v3 ({@link UiDictSeed}, решение владельца «словари сеять
+     * каких нет»).
      */
-    static final Map<String, String> KNOWN_GAPS = Map.of(
-        "task_type", "v1-чипы и web-next taskDicts показывают сырые коды; канон значений — ADR-LORE-015; сид не заведён"
-            + " — ждёт решения владельца (номер шага и состав)",
-        "priority", "v1 LoreSprintDetail рисует P0..P3 из констант; сид не заведён — ждёт решения владельца",
-        "agent_profile", "v1 админка «Агенты/Роли» читает профили агентов; миграции только переименовали agent_role"
-            + " (V48), на пустой базе статей нет — ждёт решения владельца");
+    static final Map<String, String> KNOWN_GAPS = Map.of();
 
     /** Константы-фолбэки UI: файл → (имя константы → dict_type). */
     static final Map<String, Map<String, String>> UI_FALLBACKS = Map.of(
@@ -129,6 +126,15 @@ class UiDictSeedGuardTest {
                 new JavaSeed(AreaDictSeed.STEP, AreaDictSeed.SEEDS))) {
             if (!stepNames.contains(js.step())) continue;
             js.seeds().forEach((type, entries) -> entries.forEach(e ->
+                out.computeIfAbsent(type, k -> new TreeSet<>()).add(e.code().toLowerCase())));
+        }
+        // Посевы доводки схемы кода (шаги V заморожены на V100, новое — только LoreSchemaAdditive.CHANGES):
+        // считаются, только если их запись доводки есть и несёт посев.
+        record AdditiveSeed(String change, Map<String, List<StatusDictCoreSeed.Entry>> seeds) {}
+        for (AdditiveSeed as : List.of(new AdditiveSeed("ui_dict_seed", UiDictSeed.SEEDS))) {
+            LoreSchemaAdditive.Change c = LoreSchemaAdditive.change(as.change());
+            if (c == null || c.seed() == null) continue;
+            as.seeds().forEach((type, entries) -> entries.forEach(e ->
                 out.computeIfAbsent(type, k -> new TreeSet<>()).add(e.code().toLowerCase())));
         }
         return out;
