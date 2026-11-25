@@ -137,14 +137,19 @@ class LoreSchemaAdditiveEmbeddedTest {
             assertTrue(areas.stream().anyMatch(a -> e.code().equals(a.get("code"))), "область " + e.code());
         assertEquals(14, areas.size(), "13 областей посева + research; platform не задвоена: " + areas);
         assertEquals("red", areas.stream().filter(a -> "platform".equals(a.get("code"))).findFirst().orElseThrow().get("color"));
-        assertEquals(dictBefore + 3 + 12, count("KnowDictEntry"), "словарь: +3 skill_status, +12 областей (platform уже была)");
+        // посев доводки v3 (ISS-02-DICT-SEED-GUARD): task_type 9, priority 4, agent_profile 5 (full, tester, architect уже были)
+        assertEquals(9, ((Number) sql("SELECT count(*) AS n FROM KnowDictEntry WHERE dict_type = 'task_type'", Map.of()).get(0).get("n")).intValue());
+        assertEquals(4, ((Number) sql("SELECT count(*) AS n FROM KnowDictEntry WHERE dict_type = 'priority'", Map.of()).get(0).get("n")).intValue());
+        assertEquals(8, ((Number) sql("SELECT count(*) AS n FROM KnowDictEntry WHERE dict_type = 'agent_profile'", Map.of()).get(0).get("n")).intValue(),
+            "профили не задвоены");
+        assertEquals(dictBefore + 3 + 12 + 18, count("KnowDictEntry"), "словарь: +3 skill_status, +12 областей (platform уже была), +18 словарей UI");
 
         // отчёт доводки — что она сделала
         assertTrue(first.changed(), "первая доводка что-то сделала: " + first);
         assertTrue(first.types() >= 6, "типов заведено: " + first);
         assertTrue(first.properties() >= 6, "свойств заведено: " + first);
         assertTrue(first.indexes() >= 4, "индексов заведено: " + first);
-        assertEquals(3 + 3 + 12, first.seeded(), "посеяно: skill_status 3 + скиллы 3 + области 12: " + first);
+        assertEquals(3 + 3 + 12 + 18, first.seeded(), "посеяно: skill_status 3 + скиллы 3 + области 12 + словари UI 18: " + first);
 
         // отметка схемы кода: номер и хэш кода
         Map<String, Object> m1 = marker();
@@ -197,7 +202,7 @@ class LoreSchemaAdditiveEmbeddedTest {
         LoreSchemaAdditive.Report first = LoreSchemaAdditive.apply(exec);
         assertTrue(first.changes().contains("qg_metric_basis"), "запись доводки qg_metric_basis применена: " + first);
         assertTrue(db.getSchema().getType("ClRoutineMetric").existsProperty("basis"), "ClRoutineMetric.basis после доводки v2");
-        assertEquals(2, ((Number) marker().get("version")).intValue(), "отметка схемы кода — v2");
+        assertEquals(LoreSchemaAdditive.VERSION, ((Number) marker().get("version")).intValue(), "отметка схемы кода — текущий номер (v2 и новее)");
         assertEquals(1, count("ClRoutineMetric"), "замеры не тронуты");
 
         LoreSchemaAdditive.Report second = LoreSchemaAdditive.apply(exec);

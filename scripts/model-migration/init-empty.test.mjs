@@ -74,3 +74,21 @@ test('связи модели заводятся видом, даже без д�
   for (const E of ['HAS_STATE', 'BELONGS_TO_PROJECT', 'HAS_PROJECT_ROLE', 'PART_OF', 'HAS_REPOSITORY'])
     assert.ok(db.types.has(E), 'нет связи ' + E);
 });
+
+// SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD: UI читает task_type, priority, agent_profile — свежая установка
+// обязана их содержать (решение владельца 25.11.2026 «словари сеять каких нет»). Коды и цвета — те же, что у доводки
+// схемы кода (UiDictSeed.java): установщик и доводка не расходятся, доводка на такой базе ничего не добавляет.
+test('свежая установка сеет словари, которые читает UI: task_type (ADR-LORE-015), priority, agent_profile — с цветами', () => {
+  const rows = dictEntriesFromRules();
+  const codes = d => rows.filter(r => r.dict_type === d).map(r => r.code);
+  assert.deepEqual(codes('task_type'), ['planning', 'design', 'dev', 'test', 'ops', 'research', 'analytics', 'docs', 'content']);
+  assert.deepEqual(codes('priority'), ['critical', 'high', 'normal', 'low']);
+  assert.deepEqual(codes('agent_profile'), ['full', 'architect', 'developer', 'tester', 'pm', 'analyst', 'marketer', 'product-analyst']);
+  for (const d of ['task_type', 'priority', 'agent_profile'])
+    for (const r of rows.filter(x => x.dict_type === d)) {
+      assert.ok(r.color, `${d}.${r.code}: нет цвета`);
+      assert.ok(r.label_en, `${d}.${r.code}: нет подписи en`);
+    }
+  assert.equal(rows.find(r => r.dict_type === 'priority' && r.code === 'critical').color, 'var(--dng)');
+  assert.equal(rows.find(r => r.dict_type === 'task_type' && r.code === 'dev').icon, 'gears');
+});
