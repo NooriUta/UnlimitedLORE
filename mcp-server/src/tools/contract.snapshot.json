@@ -885,9 +885,9 @@
       "action": "enum(add|remove)?",
       "fields": "record<unknown>?",
       "id": "string",
-      "rel": "enum(actor|adr|answers|blocks|builds_on|component|decision|delivers|dep|depends_on|desired_by|extends|felt_by|file|fills_role|gain|gates|includes|job|milestone|mirror|pain|parent|performed_by|performs|phase|pr|produced_by|product|project|raised_in|release|relieves|rubric|serves|shipped_in|sprint|success_of|supersedes|tag|task|uses)",
+      "rel": "enum(actor|adr|answers|blocks|builds_on|component|decision|delivers|dep|depends_on|desired_by|extends|felt_by|file|fills_role|gain|gates|includes|job|milestone|mirror|owner|pain|parent|performed_by|performs|phase|pr|produced_by|product|project|raised_in|release|relieves|role|rubric|serves|shipped_in|sprint|success_of|supersedes|tag|task|uses)",
       "target_id": "number | number | string[] | string?",
-      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|phase|product|question|release|repository|runbook|spec|sprint|task|uc|vp)"
+      "type": "enum(actor|adr|bragi_keyword|bragi_publication|bragi_variant|decision|doc|feature|insight|milestone|phase|product|question|release|repository|runbook|skill|spec|sprint|task|uc|vp)"
     },
     "output": {
       "content": [
@@ -926,7 +926,7 @@
     "input": {
       "fields": "record<unknown>?",
       "id": "string?",
-      "type": "enum(actor|adr|bragi_campaign|bragi_channel|bragi_integration|bragi_keyword|bragi_page|bragi_publication|bragi_rubric|bragi_variant|component|decision|dict|doc|feature|gain|insight|job|milestone|pain|phase|project|project_actor|question|release|repository|runbook|spec|sprint|task|tech|uc)"
+      "type": "enum(actor|adr|bragi_campaign|bragi_channel|bragi_integration|bragi_keyword|bragi_page|bragi_publication|bragi_rubric|bragi_variant|component|decision|dict|doc|feature|gain|insight|job|milestone|pain|phase|project|project_actor|question|release|repository|runbook|skill|spec|sprint|task|tech|uc)"
     },
     "output": {
       "content": [
@@ -2103,6 +2103,80 @@
     "input": {
       "limit": "number?",
       "ref": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "skill_link": {
+    "input": {
+      "action": "enum(add|remove)?",
+      "rel": "enum(extends|owner|project|role)",
+      "skill_id": "string",
+      "target_id": "string"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "skill_new": {
+    "input": {
+      "body_md": "string?",
+      "extends": "string[]?",
+      "name": "string?",
+      "owner": "string?",
+      "projects": "string[]?",
+      "roles": "string[]?",
+      "skill_id": "string",
+      "source": "enum(agent|human|seed)?",
+      "status": "enum(active|deprecated|draft)?",
+      "title": "string?",
+      "version": "string?"
+    },
+    "output": {
+      "content": [
+        {
+          "type": "text",
+          "text": {
+            "id": "string",
+            "ok": "boolean",
+            "rows": []
+          }
+        }
+      ]
+    }
+  },
+  "skill_set": {
+    "input": {
+      "body_md": "string?",
+      "extends": "string[]?",
+      "name": "string?",
+      "owner": "string?",
+      "projects": "string[]?",
+      "roles": "string[]?",
+      "skill_id": "string",
+      "source": "enum(agent|human|seed)?",
+      "status": "enum(active|deprecated|draft)?",
+      "title": "string?",
+      "version": "string?"
     },
     "output": {
       "content": [

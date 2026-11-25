@@ -35,6 +35,8 @@ final class LoreOutcome {
     static final String UNCHANGED = "unchanged";
     /** Не сделано. Обязано нести причину. */
     static final String NOOP = "noop";
+    /** Сделано частично: остаток назван в отчёте ответа (061 §4, 062 §7 — rename с несопоставленными). */
+    static final String PARTIAL_FAILURE = "partial_failure";
 
     /**
      * Исход связывания.

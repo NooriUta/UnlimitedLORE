@@ -35,7 +35,8 @@ public class LoreAdminFlags extends LoreResourceBase {
         new Flag("lore.migrate", false, "миграции схемы при старте"),
         new Flag("lore.migrate.backup", true, "бэкап перед миграцией"),
         new Flag("lore.migrate.only", false, "только миграции, без старта API"),
-        new Flag("lore.bootstrap", false, "первичное наполнение пустой базы"));
+        new Flag("lore.bootstrap", false, "первичное наполнение пустой базы"),
+        new Flag("lore.know-registry.import", false, "импорт реестра видов KnowKind при старте релиза (KREG-09, OQ-064-KNOWKIND-IMPORT)"));
 
     static Map<String, Object> row(Flag f, boolean value) {
         Map<String, Object> m = new LinkedHashMap<>();

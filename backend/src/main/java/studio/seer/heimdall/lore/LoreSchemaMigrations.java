@@ -1864,6 +1864,60 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowKindHist.changed_by IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowKindHist.changed_by_kind IF NOT EXISTS STRING")),
 
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-05 (SPEC-SKILLS-TAGS-062 §4, SPEC-MODEL-EXPORT-064 §3a):
+        // супертеги — вершина KnowTag из свободного токена ≤64 становится записью класса.
+        // Обязательные name/title/source; field_schema — MAP-подсказка класса (НЕ DDL
+        // полей: значения по-прежнему живут на ребре TAGGED_WITH, LoreEdgeFreeFields);
+        // synonyms — LIST бывших имён (сторож переименования, TagRename); owner —
+        // ref на kc_sub владельца, необязателен. Типы контейнеров — MAP/LIST: в Type
+        // enum ArcadeDB 26.10 EMBEDDED*-имён нет (замерено падением старта на
+        // «No enum constant Type.EMBEDDEDMAP»). Геоид-ключ — tag:<slug> (созидание
+        // пишет геоид-форму, LoreTagResource#apply; легаси-токены доживают до rename).
+        // Аддитивно, major 17; данных не трогает — обязательные поля легаси-вершин
+        // добираются лениво на записи тем же ресурсом. V95, не V94: V94 взял
+        // параллельный KREG-01 (KnowKind/KnowKindHist) — леджер по номеру, дубль
+        // означал бы молчаливый пропуск одного из шагов на живой БД.
+        new Step(95, 17, "knowtag_supertag_fields", List.of(
+            "CREATE PROPERTY KnowTag.name         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTag.title        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTag.source       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTag.field_schema IF NOT EXISTS MAP",
+            "CREATE PROPERTY KnowTag.synonyms     IF NOT EXISTS LIST OF STRING",
+            "CREATE PROPERTY KnowTag.owner        IF NOT EXISTS STRING")),
+
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-02 (SPEC-SKILLS-TAGS-062 §5–§6, ADR-LORE-057):
+        // вид skill:* — вершина KnowSkill (процедура роли: body_md, status по словарю skill_status,
+        // source seed/agent/human) и её рёбра. Обязательные при создании BELONGS_TO_PROJECT и
+        // APPLIES_TO_ROLE держит гард записи (LoreSkillResource/SkillRules), не схема. Истории SCD2 у
+        // скилла нет (спека её не требует): свежесть — updated_at, как у вопроса. UNIQUE на skill_id —
+        // гард двойников на новом типе (v1 о нём не знает). Рёбра: APPLIES_TO_ROLE (скилл → роль
+        // агента, KnowDictEntry agent_profile), SKILL_EXTENDS (скилл → скилл, ацикличность — гард
+        // записи). Имя SKILL_EXTENDS, а не EXTENDS спеки: EXTENDS — ключевое слово SQL ArcadeDB
+        // (CREATE TYPE … EXTENDS …), прецедент — UC_EXTENDS сценариев; в API связь зовётся rel=extends.
+        // BELONGS_TO_PROJECT и OWNED_BY существуют давно (V20, V30-е) — не переобъявляются.
+        // V96, не V95: V95 у SKILL-05 (PR #1797). Аддитивно, major 17.
+        new Step(96, 17, "know_skill", List.of(
+            "CREATE VERTEX TYPE KnowSkill IF NOT EXISTS",
+            "CREATE PROPERTY KnowSkill.skill_id   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.name       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.title      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.body_md    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.version    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.status     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.source     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.created_at IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSkill.updated_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowSkill (skill_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowSkill (status) NOTUNIQUE",
+            "CREATE EDGE TYPE APPLIES_TO_ROLE IF NOT EXISTS",
+            "CREATE EDGE TYPE SKILL_EXTENDS IF NOT EXISTS")),
+
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-03 (окно OQ-062-SKILL-SEED): словарь skill_status
+        // (draft/active/deprecated) и три посевных скилла release-cutover, qg-triage, adr-review с
+        // обязательными рёбрами. Java-шаг как V90/V93: только INSERT недостающего (SkillSeed.plan),
+        // существующее не переписывается. Аддитивно, major 17.
+        new Step(97, 17, SkillSeed.STEP, List.of()),
+
         // SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (issue SeidrStudio/UnlimitedLORE#2): статьи словаря
         // area для областей компонентов — на чистой базе были только research/business (V89), цвет рисовался
         // из констант фронта, правка в админке ни на что не влияла. Java-шаг как V90/V93: только INSERT

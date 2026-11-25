@@ -642,7 +642,48 @@ public class LoreSchemaMigrationRunner {
         if (version == 89) retireLegacyStatusTypes();
         if (version == 90) seedCoreStatuses();
         if (version == 93) seedQgStatuses();
+        if (version == 97) seedSkills();
         if (version == 100) seedAreas();
+    }
+
+    /**
+     * V97 (SKILL-01 + SKILL-03): словарь skill_status и посевные скиллы — только недостающее.
+     * Ребро ставится, лишь когда его конец есть в базе: на свежей базе без проекта или роли
+     * скилл остаётся висяком, и это видит QG-инвариант «висяк = 0» (KREG-06), а не молчание.
+     */
+    int seedSkills() {
+        Map<String, java.util.Set<String>> existing = new java.util.LinkedHashMap<>();
+        for (String dict : SkillSeed.DICT_SEEDS.keySet()) existing.put(dict, codesOf(dict));
+        List<StatusDictCoreSeed.Insert> dictPlan = StatusDictCoreSeed.plan(SkillSeed.DICT_SEEDS, existing);
+        for (StatusDictCoreSeed.Insert i : dictPlan) sqlRows(StatusDictCoreSeed.INSERT_SQL, i.params());
+        java.util.Set<String> have = new java.util.HashSet<>();
+        for (Map<String, Object> r : sqlRows(SkillSeed.EXISTING_SQL, Map.of()))
+            if (r.get("skill_id") != null) have.add(String.valueOf(r.get("skill_id")));
+        List<SkillSeed.Skill> plan = SkillSeed.plan(have);
+        String now = Instant.now().toString();
+        boolean owner = !sqlRows("SELECT @rid FROM KnowUser WHERE login = :login LIMIT 1",
+            Map.of("login", SkillSeed.OWNER_LOGIN)).isEmpty();
+        int missingEnds = 0;
+        for (SkillSeed.Skill s : plan) {
+            Map<String, Object> p = new java.util.LinkedHashMap<>();
+            p.put("skill_id", s.skillId()); p.put("name", s.name()); p.put("title", s.title());
+            p.put("version", s.version()); p.put("status", s.status()); p.put("source", s.source());
+            p.put("body_md", s.bodyMd()); p.put("now", now);
+            sqlRows(SkillSeed.INSERT_SQL, p);
+            for (String slug : s.projects()) {
+                if (sqlRows("SELECT @rid FROM KnowGitProject WHERE slug = :slug LIMIT 1", Map.of("slug", slug)).isEmpty()) { missingEnds++; continue; }
+                sqlRows(SkillSeed.PROJECT_EDGE_SQL, Map.of("skill_id", s.skillId(), "slug", slug));
+            }
+            for (String code : s.roles()) {
+                if (sqlRows("SELECT @rid FROM KnowDictEntry WHERE dict_type = 'agent_profile' AND code = :code LIMIT 1",
+                    Map.of("code", code)).isEmpty()) { missingEnds++; continue; }
+                sqlRows(SkillSeed.ROLE_EDGE_SQL, Map.of("skill_id", s.skillId(), "code", code));
+            }
+            if (owner) sqlRows(SkillSeed.OWNER_EDGE_SQL, Map.of("skill_id", s.skillId(), "login", SkillSeed.OWNER_LOGIN));
+        }
+        LOG.infof("[V97] skill_status: вставлено %d строк; скиллов посеяно %d (было %d); концов рёбер не нашлось: %d; владелец %s",
+            dictPlan.size(), plan.size(), have.size(), missingEnds, owner ? SkillSeed.OWNER_LOGIN : "не найден — OWNED_BY не ставится");
+        return plan.size();
     }
 
     /** V100: статьи словаря area для областей компонентов — только недостающие (как V90/V93). */

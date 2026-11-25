@@ -175,7 +175,11 @@ class LorePassportLinksContractTest {
         Map.entry("FORMALIZED_AS", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("INCLUDES", "объявлено DDL, ни записи, ни чтения в коде нет (сценарии — UC_INCLUDES)"),
         Map.entry("RELEASED_IN", "объявлено DDL, ни записи, ни чтения в коде нет (релиз — IMPLEMENTED_IN_RELEASE)"),
-        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"));
+        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"),
+        // SKILL-01/02 (V96): у вида skill:* паспорта v2 ещё нет (KnowSkill вне модели 1.18) — связи навыка читаются
+        // колонками срезов skills/skills_full и карточкой describe skill:*, а не связью паспорта
+        Map.entry("APPLIES_TO_ROLE", "навык → роль агента (skill:*, V96): паспорта у навыка нет, колонка roles среза skills"),
+        Map.entry("SKILL_EXTENDS", "навык → навык (skill:*, V96): паспорта у навыка нет, колонка extends_ids среза skills"));
 
     /**
      * Сущности графа без паспорта v2: их конец ребра не показывается — причина здесь, одна на

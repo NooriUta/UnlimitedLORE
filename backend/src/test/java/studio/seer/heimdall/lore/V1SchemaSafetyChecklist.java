@@ -115,6 +115,13 @@ final class V1SchemaSafetyChecklist {
         // план через тот же StatusDictCoreSeed.plan): только INSERT строк НОВОГО справочника qg_status, v1 его не знает.
         "java__qg_status_dict_seed",
         "посев недостающих строк qg_status (новый справочник, v1 о нём не знает); существующие не переписываются",
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-03, V97. Доказательство — KnowSkillSchemaTest
+        // (skillStatusDictIsTheLifecycle: существующие строки справочника не трогаются; seedPlanSkipsExistingSkills:
+        // существующие скиллы не трогаются): только INSERT строк НОВОГО справочника skill_status и вершин НОВОГО
+        // типа KnowSkill (V96) с рёбрами от них; v1 не знает ни справочника, ни типа.
+        "java__skill_seed",
+        "посев skill_status и трёх скиллов нового типа KnowSkill (V96); существующее не переписывается",
+
         // SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS, V100. Доказательство — AreaDictSeedTest (существующие
         // не трогаются, план через тот же StatusDictCoreSeed.plan, вставка — INSERT, не UPSERT): только INSERT
         // недостающих строк area в KnowDictEntry. v1 читает area из словаря (dictColor) — новые строки он и ждёт.
