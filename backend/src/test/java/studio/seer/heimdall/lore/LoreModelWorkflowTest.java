@@ -29,7 +29,9 @@ class LoreModelWorkflowTest {
     void kindsCoverPrototypeIncludingOpsAndResearch() {
         assertEquals(List.of("dev", "doc", "ops", "research", "external", "funnel", "routine", "content", "hardware"),
             List.copyOf(wf().kinds().keySet()));
-        assertEquals(List.of("pr", "release"), wf().kinds().get("dev").evidence().stream().map(LoreModelWorkflow.Evidence::type).toList());
+        // Решение владельца 27 (26.11.2026): «релиз — то, что в uat или done, по слову человека»; «релиз — это стадия
+        // веток в git, dev — не релиз». Доказательство dev — влитый PR; релиз — отдельная стадия поставки (workflow.delivery).
+        assertEquals(List.of("pr"), wf().kinds().get("dev").evidence().stream().map(LoreModelWorkflow.Evidence::type).toList());
         assertEquals(List.of("probe", "pr"), wf().kinds().get("ops").evidence().stream().map(LoreModelWorkflow.Evidence::type).toList());
         assertEquals(List.of("stand_check", "uat"), wf().kinds().get("dev").review_stages(), "развилка А: UAT — стадия review");
     }

@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "1661d9ac82e2142f",
+  "version" : "80013090c6a820ef",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -17691,9 +17691,6 @@
         "evidence" : [ {
           "type" : "pr",
           "label" : "PR (влит)"
-        }, {
-          "type" : "release",
-          "label" : "релиз"
         } ],
         "flow" : [ {
           "stage" : "design",
@@ -17709,7 +17706,7 @@
           "consumes" : [ "code", "tests", "pr" ]
         }, {
           "stage" : "stand_check",
-          "produces" : [ "stand_report", "release", "review_report" ],
+          "produces" : [ "stand_report", "review_report" ],
           "consumes" : [ "pr", "ci_run" ]
         }, {
           "stage" : "uat",
@@ -18057,7 +18054,42 @@
         "source" : "stage",
         "evidence" : "doc"
       }
-    }
+    },
+    "delivery" : [ {
+      "stage" : "feature",
+      "from" : "feature/* · fix/*",
+      "to" : "umbrella/<тема>-<ддмм>",
+      "pr" : "feature",
+      "gate" : "auto",
+      "task_status" : "ready_for_deploy",
+      "label" : "PR задачи в зонтик; CI на PR; после мержа задача — ready_for_deploy"
+    }, {
+      "stage" : "umbrella",
+      "from" : "umbrella/<тема>-<ддмм>",
+      "to" : "develop",
+      "pr" : "umbrella",
+      "env" : "dev",
+      "gate" : "human",
+      "label" : "зонтик → develop одним PR, полный CI; вливается только по слову владельца; develop не деплоит"
+    }, {
+      "stage" : "promote",
+      "from" : "promote/<дата>-<sha8> (снимок develop)",
+      "to" : "preprod",
+      "pr" : "promote",
+      "env" : "preprod",
+      "gate" : "agent",
+      "task_status" : "uat",
+      "label" : "снимок develop → preprod без отдельного разрешения; выкатка на стенд, смоук; внутренняя приёмка агентом → uat"
+    }, {
+      "stage" : "release",
+      "from" : "preprod",
+      "to" : "main",
+      "pr" : "release",
+      "env" : "prod",
+      "gate" : "human",
+      "tag_from" : "main",
+      "label" : "preprod → main, затем тег vX.Y.Z на коммите main (тег обязан содержаться в main) и RELEASE-<tag>.md; в релиз входят задачи в uat или done; только по слову владельца"
+    } ]
   },
   "palettes" : {
     "source" : "settings:palette",
