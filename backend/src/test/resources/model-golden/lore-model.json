@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "4581f0f63695aa19",
+  "version" : "4bcf709dd8e3ed51",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -17694,6 +17694,26 @@
         }, {
           "type" : "release",
           "label" : "релиз"
+        } ],
+        "flow" : [ {
+          "stage" : "design",
+          "produces" : [ "spec" ],
+          "consumes" : [ "uc", "adr" ]
+        }, {
+          "stage" : "implement",
+          "produces" : [ "branch", "pr" ],
+          "consumes" : [ "spec" ]
+        }, {
+          "stage" : "test",
+          "produces" : [ "ci_run" ],
+          "consumes" : [ "pr" ]
+        }, {
+          "stage" : "stand_check",
+          "produces" : [ "stand_report", "release" ],
+          "consumes" : [ "pr", "ci_run" ]
+        }, {
+          "stage" : "uat",
+          "consumes" : [ "stand_report" ]
         } ]
       },
       "doc" : {
@@ -17704,6 +17724,18 @@
         "evidence" : [ {
           "type" : "lore",
           "label" : "запись LORE: спека, док, runbook, ADR"
+        } ],
+        "flow" : [ {
+          "stage" : "draft",
+          "produces" : [ "draft" ],
+          "consumes" : [ "uc", "adr" ]
+        }, {
+          "stage" : "review_text",
+          "produces" : [ "doc" ],
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "owner_read",
+          "consumes" : [ "doc" ]
         } ]
       },
       "ops" : {
@@ -17717,6 +17749,22 @@
         }, {
           "type" : "pr",
           "label" : "PR, если менялся код"
+        } ],
+        "flow" : [ {
+          "stage" : "diagnose",
+          "produces" : [ "diagnosis" ]
+        }, {
+          "stage" : "fix",
+          "produces" : [ "branch", "pr" ],
+          "consumes" : [ "diagnosis" ]
+        }, {
+          "stage" : "measure",
+          "produces" : [ "measurement" ],
+          "consumes" : [ "pr" ]
+        }, {
+          "stage" : "stand_check",
+          "produces" : [ "stand_report" ],
+          "consumes" : [ "measurement" ]
         } ]
       },
       "research" : {
@@ -17727,6 +17775,21 @@
         "evidence" : [ {
           "type" : "lore",
           "label" : "запись LORE с выводом: док, спека или решение"
+        } ],
+        "flow" : [ {
+          "stage" : "collect",
+          "produces" : [ "sources" ]
+        }, {
+          "stage" : "analyse",
+          "produces" : [ "findings" ],
+          "consumes" : [ "sources" ]
+        }, {
+          "stage" : "write",
+          "produces" : [ "doc", "decision" ],
+          "consumes" : [ "findings" ]
+        }, {
+          "stage" : "owner_read",
+          "consumes" : [ "doc" ]
         } ]
       },
       "external" : {
@@ -17738,7 +17801,22 @@
           "type" : "doc",
           "label" : "документ, номер заявки или решения"
         } ],
-        "failed" : "отказ"
+        "failed" : "отказ",
+        "flow" : [ {
+          "stage" : "preparing",
+          "produces" : [ "draft" ]
+        }, {
+          "stage" : "submitted",
+          "produces" : [ "submission" ],
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "under_review",
+          "consumes" : [ "submission" ]
+        }, {
+          "stage" : "decision_in",
+          "produces" : [ "external_decision" ],
+          "consumes" : [ "submission" ]
+        } ]
       },
       "funnel" : {
         "label" : "воронка",
@@ -17749,7 +17827,24 @@
           "type" : "doc",
           "label" : "LOI, договор, оффер принят, доклад принят"
         } ],
-        "failed" : "проиграли, отказ"
+        "failed" : "проиграли, отказ",
+        "flow" : [ {
+          "stage" : "lead",
+          "produces" : [ "lead" ]
+        }, {
+          "stage" : "contacted",
+          "consumes" : [ "lead" ]
+        }, {
+          "stage" : "meeting",
+          "consumes" : [ "lead" ]
+        }, {
+          "stage" : "pilot",
+          "consumes" : [ "lead" ]
+        }, {
+          "stage" : "answer_in",
+          "produces" : [ "agreement" ],
+          "consumes" : [ "lead" ]
+        } ]
       },
       "routine" : {
         "label" : "регламент",
@@ -17760,7 +17855,17 @@
           "type" : "doc",
           "label" : "закрытый период + отчёт"
         } ],
-        "failed" : "просрочен"
+        "failed" : "просрочен",
+        "flow" : [ {
+          "stage" : "period_open"
+        }, {
+          "stage" : "reconciling",
+          "produces" : [ "findings" ]
+        }, {
+          "stage" : "report",
+          "produces" : [ "period_report" ],
+          "consumes" : [ "findings" ]
+        } ]
       },
       "content" : {
         "label" : "контент",
@@ -17770,6 +17875,17 @@
         "evidence" : [ {
           "type" : "url",
           "label" : "URL публикации"
+        } ],
+        "flow" : [ {
+          "stage" : "draft",
+          "produces" : [ "draft" ]
+        }, {
+          "stage" : "ready",
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "scheduled",
+          "produces" : [ "publication" ],
+          "consumes" : [ "draft" ]
         } ]
       },
       "hardware" : {
@@ -17781,7 +17897,129 @@
           "type" : "doc",
           "label" : "протокол испытаний, сертификат"
         } ],
-        "failed" : "не прошло испытания"
+        "failed" : "не прошло испытания",
+        "flow" : [ {
+          "stage" : "prototype",
+          "produces" : [ "prototype" ]
+        }, {
+          "stage" : "testing",
+          "produces" : [ "test_protocol" ],
+          "consumes" : [ "prototype" ]
+        }, {
+          "stage" : "waiting_supplier"
+        }, {
+          "stage" : "protocol",
+          "consumes" : [ "test_protocol" ]
+        } ]
+      }
+    },
+    "artifacts" : {
+      "uc" : {
+        "label" : "сценарий (KnowUseCase) — основание класса uc",
+        "source" : "record"
+      },
+      "adr" : {
+        "label" : "ADR — основание класса enb",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "spec" : {
+        "label" : "спека",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "doc" : {
+        "label" : "док или runbook",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "decision" : {
+        "label" : "решение",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "branch" : {
+        "label" : "ветка с правкой",
+        "source" : "stage"
+      },
+      "pr" : {
+        "label" : "PR (влит)",
+        "source" : "stage",
+        "evidence" : "pr"
+      },
+      "ci_run" : {
+        "label" : "прогон CI",
+        "source" : "stage",
+        "evidence" : "probe"
+      },
+      "release" : {
+        "label" : "релиз",
+        "source" : "stage",
+        "evidence" : "release"
+      },
+      "stand_report" : {
+        "label" : "отчёт смоука стенда, скрины",
+        "source" : "stage",
+        "evidence" : "probe"
+      },
+      "diagnosis" : {
+        "label" : "диагноз: лог, метрика, причина",
+        "source" : "stage"
+      },
+      "measurement" : {
+        "label" : "замер после правки",
+        "source" : "stage",
+        "evidence" : "probe"
+      },
+      "sources" : {
+        "label" : "собранные источники",
+        "source" : "stage"
+      },
+      "findings" : {
+        "label" : "выводы анализа",
+        "source" : "stage"
+      },
+      "draft" : {
+        "label" : "черновик текста",
+        "source" : "stage"
+      },
+      "submission" : {
+        "label" : "поданный документ, номер заявки",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "external_decision" : {
+        "label" : "внешнее решение",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "lead" : {
+        "label" : "контакт воронки",
+        "source" : "stage"
+      },
+      "agreement" : {
+        "label" : "LOI, договор, оффер, доклад принят",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "period_report" : {
+        "label" : "закрытый период + отчёт",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "publication" : {
+        "label" : "публикация (URL)",
+        "source" : "stage",
+        "evidence" : "url"
+      },
+      "prototype" : {
+        "label" : "прототип изделия",
+        "source" : "stage"
+      },
+      "test_protocol" : {
+        "label" : "протокол испытаний, сертификат",
+        "source" : "stage",
+        "evidence" : "doc"
       }
     }
   },
