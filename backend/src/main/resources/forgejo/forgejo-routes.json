@@ -989,6 +989,66 @@
       }
     },
     {
+      "name": "create_tag",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/tags",
+      "desc": "Create a tag (v* release tag — full only, with human approval)",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "tag_name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "body"
+        },
+        "target": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "in": "body",
+          "desc": "branch or commit sha"
+        },
+        "message": {
+          "required": false,
+          "type": "string",
+          "in": "body"
+        }
+      },
+      "rules": [
+        {
+          "kind": "escalate",
+          "param": "tag_name",
+          "pattern": "^v[0-9]",
+          "risk": "high",
+          "roles": [
+            "full"
+          ],
+          "reason": "тег релиза v* — только по слову владельца (CLAUDE.md проекта: релиз preprod → main + тег)"
+        }
+      ]
+    },
+    {
       "name": "create_team",
       "method": "POST",
       "pathTemplate": "/orgs/{org}/teams",
@@ -1075,7 +1135,19 @@
           "max": 255,
           "in": "path"
         }
-      }
+      },
+      "rules": [
+        {
+          "kind": "refuse",
+          "param": "branch",
+          "values": [
+            "develop",
+            "preprod",
+            "main"
+          ],
+          "reason": "защищённая ветка (develop → preprod → main, CLAUDE.md проекта) — удаляется только владельцем в Forgejo, не агентом"
+        }
+      ]
     },
     {
       "name": "delete_file",
@@ -1272,6 +1344,48 @@
       }
     },
     {
+      "name": "delete_release_asset",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}",
+      "desc": "Delete a release attachment",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "attachment_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
       "name": "delete_repo",
       "method": "DELETE",
       "pathTemplate": "/repos/{owner}/{repo}",
@@ -1296,6 +1410,41 @@
           "pattern": "^[a-zA-Z0-9_.-]+$",
           "max": 255,
           "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_tag",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/tags/{tag}",
+      "desc": "Delete a tag",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "tag": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "path",
+          "format": "branch"
         }
       }
     },
@@ -2133,6 +2282,44 @@
       }
     },
     {
+      "name": "get_job",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/jobs/{job_id}",
+      "desc": "Get a workflow run job with its steps, Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "job_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_run_jobs (jobs[].id)"
+        }
+      }
+    },
+    {
       "name": "get_job_log",
       "method": "GET",
       "pathTemplate": null,
@@ -2178,7 +2365,54 @@
         }
       },
       "capability": "actions-log-volume",
-      "note": "не REST: чтение .log.zst с диска Forgejo; вольюм логов не подключён к бэкенду LORE (OQ-060-LOGS-VOLUME)"
+      "note": "капабилити «том журналов» не подключена: на Forgejo 17 журнал отдаёт REST — маршрут get_job_logs (job_id из list_run_jobs)"
+    },
+    {
+      "name": "get_job_logs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs",
+      "desc": "Plain-text log of a job via Forgejo REST (>= 17). In the dialogue: tail + error lines with meta.log; full log only with truncate=false",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "response": "log",
+      "note": "замена get_job_log (том .log.zst) на REST Forgejo 17; job_id — из list_run_jobs, не task_id. Читает ли журналы из базы (log_in_storage=f) — проверить живым прогоном",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "job_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_run_jobs (jobs[].id)"
+        },
+        "step": {
+          "required": false,
+          "type": "int",
+          "min": 0,
+          "in": "query",
+          "desc": "only this step"
+        }
+      }
     },
     {
       "name": "get_label",
@@ -3916,6 +4150,90 @@
       }
     },
     {
+      "name": "list_run_jobs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/runs/{run_id}/jobs",
+      "desc": "List jobs of a workflow run (job ids for get_job_logs), Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "run_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_runs (workflow_runs[].id)"
+        }
+      }
+    },
+    {
+      "name": "list_runs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/runs",
+      "desc": "List workflow runs of a repository (run ids for list_run_jobs), Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
       "name": "list_tags",
       "method": "GET",
       "pathTemplate": "/repos/{owner}/{repo}/tags",
@@ -4752,6 +5070,50 @@
           "items": "string",
           "desc": "List of topic names to set",
           "in": "body"
+        }
+      }
+    },
+    {
+      "name": "upload_release_asset",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets",
+      "desc": "Upload a release attachment (multipart — not supported by the miniapp yet)",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "capability": "multipart-upload",
+      "note": "исполнитель шлёт только JSON; загрузка файла (multipart) — отдельная capability, пока не подключена",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "query"
         }
       }
     }
